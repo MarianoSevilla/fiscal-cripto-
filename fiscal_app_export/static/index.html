@@ -556,13 +556,12 @@
           <span class="exchange-name">Bit2Me</span>
         </button>
         <button class="exchange-btn" data-exchange="bitvavo" onclick="selectExchange(this)">
-          <div class="exchange-logo logo-kraken">BV</div>
+          <div class="exchange-logo logo-bitvavo">BV</div>
           <span class="exchange-name">Bitvavo</span>
         </button>
-        <button class="exchange-btn coming-soon" data-exchange="kraken" disabled>
+        <button class="exchange-btn" data-exchange="kraken" onclick="selectExchange(this)">
           <div class="exchange-logo logo-kraken">K</div>
           <span class="exchange-name">Kraken</span>
-          <span class="soon-tag">Pronto</span>
         </button>
         <button class="exchange-btn coming-soon" data-exchange="coinbase" disabled>
           <div class="exchange-logo logo-coinbase">C</div>
@@ -817,6 +816,11 @@
       hint: 'Fichero .csv exportado desde Bitvavo',
       step1: { title: 'Bitvavo → Cuenta → Historial de transacciones', desc: 'Accede a tu cuenta de Bitvavo y ve a la sección de historial.' },
       step2: { title: 'Exportar → Selecciona el período completo', desc: 'Elige el año fiscal completo (1 enero – 31 dic) y descarga el CSV.' },
+    },
+    kraken: {
+      hint: 'Fichero .csv de Ledgers exportado desde Kraken',
+      step1: { title: 'Kraken → Historial → Exportar', desc: 'Accede a tu cuenta de Kraken, ve a Historial y haz clic en Exportar.' },
+      step2: { title: 'Tipo: Ledgers → Selecciona el período completo', desc: 'Elige "Ledgers" como tipo de exportación, el año fiscal completo (1 enero – 31 dic) y descarga el CSV.' },
     },
   };
 
@@ -1147,6 +1151,8 @@
   function mensajeAmigable(error) {
     if (!error) return 'Error desconocido. Por favor inténtalo de nuevo.';
     if (error.includes('no parece ser un CSV')) return error;
+    if (error.includes('Historial de Operaciones Spot')) return error;
+    if (error.includes('Ledgers')) return error;
     if (error.includes('extensión .csv')) return error;
     if (error.includes('vacío')) return error;
     if (error.includes('grande')) return error;

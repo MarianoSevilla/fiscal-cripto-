@@ -30,6 +30,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from clasificador import ClasificadorBinance
 from clasificador_bit2me import ClasificadorBit2Me
 from clasificador_bitvavo import ClasificadorBitvavo
+from clasificador_kraken import ClasificadorKraken
 from motor_fifo import MotorFIFO
 from generador_pdf import generar_pdf, generar_pdf_bit2me
 
@@ -87,6 +88,7 @@ AÑO_MAX = datetime.now().year + 1
 BINANCE_SIGNATURES = ["Tiempo", "Operación", "Moneda", "Cambio", "Cuenta"]
 BIT2ME_SIGNATURES  = ["Bit", "2Me", "Informe Fiscal", "Estimado"]
 BITVAVO_SIGNATURES = ["Timezone", "Date", "Time", "Type", "Currency", "Amount"]
+KRAKEN_SIGNATURES  = ["txid", "refid", "aclass", "subtype"]
 
 
 def _sanitizar_texto(texto: str, max_len: int = 100) -> str:
@@ -135,11 +137,13 @@ def _validar_csv(filepath: str, exchange: str) -> tuple[bool, str]:
         "binance": BINANCE_SIGNATURES,
         "bit2me":  BIT2ME_SIGNATURES,
         "bitvavo": BITVAVO_SIGNATURES,
+        "kraken":  KRAKEN_SIGNATURES,
     }
     nombres = {
         "binance": "Binance",
         "bit2me":  "Bit2Me",
         "bitvavo": "Bitvavo",
+        "kraken":  "Kraken",
     }
     if exchange in sigs:
         if not any(sig in primeras for sig in sigs[exchange]):
@@ -147,6 +151,21 @@ def _validar_csv(filepath: str, exchange: str) -> tuple[bool, str]:
                 f"El fichero no parece ser un CSV de {nombres[exchange]}. "
                 f"Asegúrate de exportar el historial desde tu cuenta de {nombres[exchange]}."
             )
+
+    # Binance: detectar el formato "Historial de Transacciones" (incorrecto para FIFO)
+    if exchange == "binance":
+        try:
+            with open(filepath, encoding="utf-8", errors="replace") as f:
+                muestra = "".join(f.readline() for _ in range(100))
+            if "Buy Crypto With Fiat" in muestra:
+                return False, (
+                    "El CSV de Binance no es el correcto para calcular el FIFO. "
+                    "Has exportado el 'Historial de Transacciones', que no incluye el importe en euros de cada compra. "
+                    "Necesitas el 'Historial de Operaciones Spot': "
+                    "en Binance ve a Órdenes → Historial de operaciones → selecciona el rango de fechas → Exportar."
+                )
+        except Exception:
+            pass
 
     return True, ""
 
@@ -201,6 +220,10 @@ def procesar_binance(filepath: str) -> tuple:
 
 def procesar_bitvavo(filepath: str) -> tuple:
     return procesar_con_fifo(ClasificadorBitvavo(filepath).clasificar())
+
+
+def procesar_kraken(filepath: str) -> tuple:
+    return procesar_con_fifo(ClasificadorKraken(filepath).clasificar())
 
 
 def procesar_bit2me(filepath: str) -> tuple:
@@ -343,7 +366,7 @@ def analizar():
     exchange  = _sanitizar_texto(request.form.get("exchange", "binance"), max_len=20).lower()
 
     # Validar exchange
-    if exchange not in ("binance", "bit2me", "bitvavo"):
+    if exchange not in ("binance", "bit2me", "bitvavo", "kraken"):
         return jsonify({"error": "Exchange no soportado."}), 400
 
     # Validar ejercicio fiscal
@@ -380,6 +403,13 @@ def analizar():
             advertencias = motor.advertencias
             rendimientos_json = _rendimientos_a_json(rendimientos)
             pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Bitvavo", rendimientos)
+
+        elif exchange == "kraken":
+            motor, rendimientos = procesar_kraken(tmp_path)
+            resumen, posicion, operaciones = _motor_a_json(motor)
+            advertencias = motor.advertencias
+            rendimientos_json = _rendimientos_a_json(rendimientos)
+            pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Kraken", rendimientos)
 
         else:  # binance
             motor, rendimientos = procesar_binance(tmp_path)
