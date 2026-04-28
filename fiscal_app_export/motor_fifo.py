@@ -125,8 +125,13 @@ class MotorFIFO:
             )
             return
 
-        # 1) Procesar como venta del activo entregado
-        precio_transmision = cantidad_recibida  # valor recibido en la contraparte
+        # 1) Calcular el coste EUR del activo entregado (vista previa FIFO sin consumir)
+        #    Este coste se usa como precio de transmisión: sin precios históricos de mercado
+        #    no es posible conocer el valor real en EUR, así que se usa el coste de adquisición.
+        #    Esto neutraliza la ganancia/pérdida del swap y traslada el coste al activo recibido,
+        #    evitando valores ficticios derivados de usar cantidades crudas de cripto como EUR.
+        coste_eur_entregado = self._calcular_coste_previo(activo_entregado, cantidad_entregada)
+        precio_transmision  = coste_eur_entregado if coste_eur_entregado > 0 else cantidad_recibida
 
         resultado = self._consumir_fifo(
             dt=dt,
@@ -139,9 +144,9 @@ class MotorFIFO:
         if resultado:
             self.resultados.append(resultado)
 
-        # 2) Registrar el activo recibido como nueva compra al valor de mercado
+        # 2) Registrar el activo recibido con el coste EUR del activo entregado
         if cantidad_recibida > 0:
-            precio_unitario_recibido = precio_transmision / cantidad_recibida if cantidad_recibida > 0 else 0
+            precio_unitario_recibido = precio_transmision / cantidad_recibida
             lote = Lote(
                 fecha=dt,
                 cantidad_original=cantidad_recibida,
@@ -176,6 +181,19 @@ class MotorFIFO:
             self.resultados.append(resultado)
 
     # ── MOTOR FIFO INTERNO ────────────────────
+
+    def _calcular_coste_previo(self, activo: str, cantidad: float) -> float:
+        """Calcula el coste EUR de una cantidad de activo según FIFO sin consumir lotes."""
+        cola = self.inventario.get(activo, [])
+        pendiente = cantidad
+        coste = 0.0
+        for lote in cola:
+            if pendiente <= 0:
+                break
+            consumir = min(lote.cantidad_restante, pendiente)
+            coste += consumir * lote.precio_coste_unitario
+            pendiente -= consumir
+        return coste
 
     def _consumir_fifo(self, dt: datetime, activo: str, cantidad: float,
                         precio_transmision: float, tipo: str,

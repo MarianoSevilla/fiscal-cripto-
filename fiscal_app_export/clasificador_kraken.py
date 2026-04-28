@@ -105,9 +105,26 @@ class ClasificadorKraken:
             return
 
         self._procesadas.update(filas.index.tolist())
-        grupos = filas.groupby("refid")
+        grupos_dict = {refid: grp for refid, grp in filas.groupby("refid")}
 
-        for refid, grupo in grupos:
+        # Primer paso: recopilar conversiones fiat→EUR (ej. USD→EUR)
+        # Clave: (activo_origen, importe_redondeado) → importe_EUR
+        # Necesario para ventas de cripto liquidadas en USD que luego se convierten a EUR
+        fiat_a_eur: dict = {}
+        for refid, grupo in grupos_dict.items():
+            spend  = grupo[grupo["type"] == "spend"]
+            recv   = grupo[grupo["type"] == "receive"]
+            if spend.empty or recv.empty:
+                continue
+            a_spent = spend.iloc[0]["asset"]
+            a_recv  = recv.iloc[0]["asset"]
+            if a_spent in STABLES and a_recv == "EUR":
+                amt_spent = abs(float(spend.iloc[0]["amount"]))
+                amt_recv  = abs(float(recv.iloc[0]["amount"]))
+                fiat_a_eur[(a_spent, round(amt_spent, 2))] = amt_recv
+
+        # Segundo paso: clasificar todas las operaciones
+        for refid, grupo in grupos_dict.items():
             spend   = grupo[grupo["type"] == "spend"]
             receive = grupo[grupo["type"] == "receive"]
 
@@ -141,10 +158,18 @@ class ClasificadorKraken:
                 ))
             elif not spent_fiat and recv_fiat:
                 # Crypto → fiat: VENTA
+                importe    = amount_recv
+                contraparte = asset_recv
+                # Si la venta se liquidó en fiat no-EUR (ej. USD), buscar la conversión a EUR
+                if asset_recv != "EUR" and asset_recv in STABLES:
+                    clave = (asset_recv, round(amount_recv, 2))
+                    if clave in fiat_a_eur:
+                        importe     = fiat_a_eur[clave]
+                        contraparte = "EUR"
                 self.compraventas.append(OperacionCompraventa(
                     fecha=fecha, tipo="VENTA",
                     activo=asset_spent, cantidad=amount_spent,
-                    contraparte=asset_recv, importe=amount_recv,
+                    contraparte=contraparte, importe=importe,
                     fee_activo=fee_asset, fee_cantidad=fee_amount
                 ))
             elif not spent_fiat and not recv_fiat:
@@ -155,7 +180,7 @@ class ClasificadorKraken:
                     activo_recibido=asset_recv,   cantidad_recibida=amount_recv
                 ))
             else:
-                # Fiat → fiat: movimiento
+                # Fiat → fiat: movimiento (ej. conversión USD→EUR ya capturada arriba)
                 self.movimientos.append(OperacionMovimiento(
                     fecha=fecha, subtipo="fiat_exchange",
                     activo=asset_recv, cantidad=amount_recv,
