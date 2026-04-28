@@ -180,7 +180,7 @@ def _portada(story, styles, resumen, nombre_usuario, ejercicio, exchange, period
     story.append(Spacer(1, 5*mm))
 
     nota_data = [[
-        Paragraph("METODOLOGIA", styles["nota_label"]),
+        Paragraph("METODOLOGÍA", styles["nota_label"]),
         Paragraph(
             "Método FIFO obligatorio (art. 37.2 LIRPF). Las comisiones de compra incrementan el precio de coste "
             "del lote. Las comisiones de venta reducen el valor de transmisión. Los swaps entre criptoactivos "
@@ -188,7 +188,7 @@ def _portada(story, styles, resumen, nombre_usuario, ejercicio, exchange, period
             "Los depósitos y retiradas de exchange no generan hecho imponible.",
             styles["nota_body"])
     ]]
-    t3 = Table(nota_data, colWidths=[22*mm, 146*mm])
+    t3 = Table(nota_data, colWidths=[30*mm, 138*mm])
     t3.setStyle(TableStyle([
         ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#1A1800")),
         ("BOX",           (0, 0), (-1, -1), 0.5, colors.HexColor("#3A3500")),
