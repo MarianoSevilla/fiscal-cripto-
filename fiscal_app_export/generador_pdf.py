@@ -50,10 +50,11 @@ def _build_styles():
         "th": ParagraphStyle("th", fontName="Helvetica-Bold", fontSize=7, textColor=MUTED, leading=9),
         "th_right": ParagraphStyle("th_right", fontName="Helvetica-Bold", fontSize=7, textColor=MUTED, leading=9, alignment=TA_RIGHT),
         "td": ParagraphStyle("td", fontName="Helvetica", fontSize=7.5, textColor=WHITE, leading=10),
-        "td_mono": ParagraphStyle("td_mono", fontName="Courier", fontSize=7, textColor=WHITE, leading=10),
-        "td_green": ParagraphStyle("td_green", fontName="Helvetica-Bold", fontSize=7.5, textColor=GREEN, leading=10),
-        "td_red": ParagraphStyle("td_red", fontName="Helvetica-Bold", fontSize=7.5, textColor=RED_C, leading=10),
+        "td_mono": ParagraphStyle("td_mono", fontName="Courier", fontSize=7, textColor=WHITE, leading=10, alignment=TA_RIGHT),
+        "td_green": ParagraphStyle("td_green", fontName="Helvetica-Bold", fontSize=7.5, textColor=GREEN, leading=10, alignment=TA_RIGHT),
+        "td_red": ParagraphStyle("td_red", fontName="Helvetica-Bold", fontSize=7.5, textColor=RED_C, leading=10, alignment=TA_RIGHT),
         "td_muted": ParagraphStyle("td_muted", fontName="Helvetica", fontSize=7, textColor=MUTED, leading=10),
+        "td_muted_right": ParagraphStyle("td_muted_right", fontName="Helvetica", fontSize=7, textColor=MUTED, leading=10, alignment=TA_RIGHT),
         "nota_label": ParagraphStyle("nota_label", fontName="Helvetica-Bold", fontSize=8, textColor=AMBER, leading=12),
         "nota_body": ParagraphStyle("nota_body", fontName="Helvetica", fontSize=8, textColor=colors.HexColor("#C8B870"), leading=12),
     }
@@ -225,7 +226,7 @@ def _tabla_resumen_activos(resultados, styles):
         neto_style = styles["td_green"] if neto >= 0 else styles["td_red"]
         rows.append([
             Paragraph(activo, styles["td"]),
-            Paragraph(str(datos["ops"]), styles["td_muted"]),
+            Paragraph(str(datos["ops"]), styles["td_muted_right"]),
             Paragraph(f"+{datos['ganancias']:,.4f}" if datos["ganancias"] else "-", styles["td_green"]),
             Paragraph(f"{datos['perdidas']:,.4f}" if datos["perdidas"] else "-", styles["td_red"]),
             Paragraph(f"+{neto:,.4f}" if neto >= 0 else f"{neto:,.4f}", neto_style),
@@ -264,14 +265,14 @@ def _tabla_operaciones(resultados, styles):
         gp_style = styles["td_green"] if gp >= 0 else styles["td_red"]
         gp_str   = f"+{gp:,.4f}" if gp >= 0 else f"{gp:,.4f}"
         rows.append([
-            Paragraph(r.fecha.strftime("%d/%m/%Y"), styles["td_muted"]),
+            Paragraph(r.fecha.strftime("%d/%m/%Y"), styles["td_muted_right"]),
             Paragraph(r.tipo_operacion.upper(), styles["td"]),
             Paragraph(r.activo, styles["td"]),
             Paragraph(f"{r.cantidad_vendida:,.6f}", styles["td_mono"]),
             Paragraph(f"{r.precio_transmision:,.4f}", styles["td_mono"]),
             Paragraph(f"{r.precio_coste:,.4f}", styles["td_mono"]),
             Paragraph(gp_str, gp_style),
-            Paragraph(str(int(r.periodo_dias)), styles["td_muted"]),
+            Paragraph(str(int(r.periodo_dias)), styles["td_muted_right"]),
         ])
     col_w = [20*mm, 13*mm, 16*mm, 26*mm, 26*mm, 26*mm, 24*mm, 13*mm]
     t = Table(rows, colWidths=col_w, repeatRows=1)
@@ -345,7 +346,7 @@ def _tabla_rendimientos(rendimientos: list, styles) -> object:
         rows.append([
             Paragraph(activo, styles["td"]),
             Paragraph(subtipo.replace("_", " ").capitalize(), styles["td_muted"]),
-            Paragraph(str(datos["ops"]), styles["td_muted"]),
+            Paragraph(str(datos["ops"]), styles["td_muted_right"]),
             Paragraph(f"{datos['cantidad']:,.6f}", styles["td_mono"]),
         ])
 
@@ -563,7 +564,7 @@ def generar_pdf_bit2me(clasificador, nombre_usuario="", ejercicio="") -> bytes:
             gp = r.ganancia_perdida
             gp_s = styles["td_green"] if gp >= 0 else styles["td_red"]
             rows.append([
-                Paragraph(r.fecha_venta[:10], styles["td_muted"]),
+                Paragraph(r.fecha_venta[:10], styles["td_muted_right"]),
                 Paragraph(r.tipo_op.upper(), styles["td"]),
                 Paragraph(r.activo, styles["td"]),
                 Paragraph(f"{r.cantidad:,.6f}", styles["td_mono"]),
