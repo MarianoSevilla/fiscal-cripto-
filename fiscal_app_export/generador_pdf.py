@@ -216,7 +216,7 @@ def _tabla_resumen_activos(resultados, styles):
         Paragraph("ACTIVO",          styles["th"]),
         Paragraph("Nº OPS",          styles["th_right"]),
         Paragraph("GANANCIAS (EUR)", styles["th_right"]),
-        Paragraph("PERDIDAS (EUR)",  styles["th_right"]),
+        Paragraph("PÉRDIDAS (EUR)",  styles["th_right"]),
         Paragraph("NETO (EUR)",      styles["th_right"]),
     ]
     rows = [cabecera]
@@ -253,10 +253,10 @@ def _tabla_operaciones(resultados, styles):
         Paragraph("TIPO",              styles["th"]),
         Paragraph("ACTIVO",            styles["th"]),
         Paragraph("CANTIDAD",          styles["th_right"]),
-        Paragraph("PRECIO TRANSMISION",styles["th_right"]),
+        Paragraph("PRECIO TRANSMISIÓN",styles["th_right"]),
         Paragraph("COSTE FIFO",        styles["th_right"]),
         Paragraph("G / P (EUR)",       styles["th_right"]),
-        Paragraph("DIAS",              styles["th_right"]),
+        Paragraph("DÍAS",              styles["th_right"]),
     ]
     rows = [cabecera]
     for r in resultados:
