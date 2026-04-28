@@ -48,6 +48,7 @@ def _build_styles():
         "warning": ParagraphStyle("warning", fontName="Helvetica", fontSize=8, textColor=colors.HexColor("#C8A5A4"), leading=12),
         "disclaimer": ParagraphStyle("disclaimer", fontName="Helvetica-Oblique", fontSize=7.5, textColor=MUTED, leading=11),
         "th": ParagraphStyle("th", fontName="Helvetica-Bold", fontSize=7, textColor=MUTED, leading=9),
+        "th_right": ParagraphStyle("th_right", fontName="Helvetica-Bold", fontSize=7, textColor=MUTED, leading=9, alignment=TA_RIGHT),
         "td": ParagraphStyle("td", fontName="Helvetica", fontSize=7.5, textColor=WHITE, leading=10),
         "td_mono": ParagraphStyle("td_mono", fontName="Courier", fontSize=7, textColor=WHITE, leading=10),
         "td_green": ParagraphStyle("td_green", fontName="Helvetica-Bold", fontSize=7.5, textColor=GREEN, leading=10),
@@ -152,7 +153,7 @@ def _portada(story, styles, resumen, nombre_usuario, ejercicio, exchange, period
 
     resumen_data = [
         [Paragraph("BASE DEL AHORRO — Transmisiones de criptoactivos (art. 33 LIRPF)", styles["th"]),
-         Paragraph("IMPORTE (EUR)", styles["th"])],
+         Paragraph("IMPORTE (EUR)", styles["th_right"])],
         [Paragraph("Suma de ganancias patrimoniales", styles["resumen_label"]),
          Paragraph(f"+{ganancias:,.2f}", styles["resumen_value_green"])],
         [Paragraph("Suma de pérdidas patrimoniales", styles["resumen_label"]),
@@ -211,7 +212,13 @@ def _tabla_resumen_activos(resultados, styles):
         else:
             por_activo[r.activo]["perdidas"] += gp
 
-    cabecera = [Paragraph(h, styles["th"]) for h in ["ACTIVO", "Nº OPS", "GANANCIAS (EUR)", "PERDIDAS (EUR)", "NETO (EUR)"]]
+    cabecera = [
+        Paragraph("ACTIVO",          styles["th"]),
+        Paragraph("Nº OPS",          styles["th_right"]),
+        Paragraph("GANANCIAS (EUR)", styles["th_right"]),
+        Paragraph("PERDIDAS (EUR)",  styles["th_right"]),
+        Paragraph("NETO (EUR)",      styles["th_right"]),
+    ]
     rows = [cabecera]
     for activo, datos in sorted(por_activo.items()):
         neto = datos["ganancias"] + datos["perdidas"]
@@ -241,8 +248,16 @@ def _tabla_resumen_activos(resultados, styles):
 
 
 def _tabla_operaciones(resultados, styles):
-    cabecera = [Paragraph(h, styles["th"]) for h in
-                ["FECHA", "TIPO", "ACTIVO", "CANTIDAD", "PRECIO TRANSMISION", "COSTE FIFO", "G / P (EUR)", "DIAS"]]
+    cabecera = [
+        Paragraph("FECHA",             styles["th"]),
+        Paragraph("TIPO",              styles["th"]),
+        Paragraph("ACTIVO",            styles["th"]),
+        Paragraph("CANTIDAD",          styles["th_right"]),
+        Paragraph("PRECIO TRANSMISION",styles["th_right"]),
+        Paragraph("COSTE FIFO",        styles["th_right"]),
+        Paragraph("G / P (EUR)",       styles["th_right"]),
+        Paragraph("DIAS",              styles["th_right"]),
+    ]
     rows = [cabecera]
     for r in resultados:
         gp = r.ganancia_perdida
@@ -276,8 +291,12 @@ def _tabla_operaciones(resultados, styles):
 
 
 def _tabla_posicion(posiciones, styles):
-    cabecera = [Paragraph(h, styles["th"]) for h in
-                ["ACTIVO", "CANTIDAD EN CARTERA", "PRECIO MEDIO ADQUISICION", "COSTE TOTAL"]]
+    cabecera = [
+        Paragraph("ACTIVO",                   styles["th"]),
+        Paragraph("CANTIDAD EN CARTERA",       styles["th_right"]),
+        Paragraph("PRECIO MEDIO ADQUISICION",  styles["th_right"]),
+        Paragraph("COSTE TOTAL",               styles["th_right"]),
+    ]
     rows = [cabecera]
     for pos in posiciones:
         rows.append([
@@ -315,8 +334,12 @@ def _tabla_rendimientos(rendimientos: list, styles) -> object:
         agrupado[key]["ops"] += 1
         agrupado[key]["subtipo"] = r.subtipo
 
-    cabecera = [Paragraph(h, styles["th"]) for h in
-                ["ACTIVO", "TIPO", "Nº ABONOS", "CANTIDAD TOTAL"]]
+    cabecera = [
+        Paragraph("ACTIVO",         styles["th"]),
+        Paragraph("TIPO",           styles["th"]),
+        Paragraph("Nº ABONOS",      styles["th_right"]),
+        Paragraph("CANTIDAD TOTAL", styles["th_right"]),
+    ]
     rows = [cabecera]
     for (activo, subtipo), datos in sorted(agrupado.items()):
         rows.append([
@@ -526,8 +549,15 @@ def generar_pdf_bit2me(clasificador, nombre_usuario="", ejercicio="") -> bytes:
         ))
         story.append(Spacer(1, 3*mm))
 
-        cabecera = [Paragraph(h, styles["th"]) for h in
-                    ["FECHA", "TIPO", "ACTIVO", "CANTIDAD", "PRECIO TRANSMISIÓN", "COSTE ADQUISICIÓN", "G / P (EUR)"]]
+        cabecera = [
+            Paragraph("FECHA",              styles["th"]),
+            Paragraph("TIPO",               styles["th"]),
+            Paragraph("ACTIVO",             styles["th"]),
+            Paragraph("CANTIDAD",           styles["th_right"]),
+            Paragraph("PRECIO TRANSMISIÓN", styles["th_right"]),
+            Paragraph("COSTE ADQUISICIÓN",  styles["th_right"]),
+            Paragraph("G / P (EUR)",        styles["th_right"]),
+        ]
         rows = [cabecera]
         for r in clasificador.resultados:
             gp = r.ganancia_perdida
