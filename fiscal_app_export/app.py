@@ -483,7 +483,7 @@ def fiscal():
 
 @app.route("/binance")
 def page_binance():
-    return render_template("tool.html", **EXCHANGE_PAGES["binance"])
+    return render_template("binance.html", **EXCHANGE_PAGES["binance"])
 
 
 @app.route("/kraken")
