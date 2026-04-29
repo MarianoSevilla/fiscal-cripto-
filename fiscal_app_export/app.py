@@ -40,6 +40,19 @@ app = Flask(__name__, static_folder="static", template_folder="templates")
 # ── DATOS POR EXCHANGE ────────────────────────
 BASE_URL = "https://marianosevilla.com"
 
+_HOW_TO_STEP2 = {
+    "title": "La herramienta aplica el método FIFO obligatorio",
+    "desc":  "Sube el CSV y la herramienta clasifica automáticamente compras, ventas, "
+             "swaps y comisiones. Aplica el método FIFO (art. 37.2 LIRPF) y calcula "
+             "tus ganancias y pérdidas patrimoniales ejercicio a ejercicio.",
+}
+_HOW_TO_STEP3 = {
+    "title": "Descarga el informe PDF listo para Hacienda",
+    "desc":  "En segundos obtienes el PDF con el detalle de todas las operaciones del "
+             "ejercicio, el resultado neto y los importes exactos para las casillas 1626 "
+             "y 1627 de la declaración de la renta.",
+}
+
 _TOOL_GENERIC = {
     "exchange_id":   "",
     "exchange_name": "tu exchange",
@@ -52,6 +65,7 @@ _TOOL_GENERIC = {
     "page_schema_name": "Calculadora FIFO Criptomonedas — Mariano Sevilla",
     "page_h1":    "",
     "hero_desc":  "",
+    "how_to":     [],
 }
 
 EXCHANGE_PAGES = {
@@ -67,6 +81,16 @@ EXCHANGE_PAGES = {
         "page_schema_name": "Informe FIFO Binance — Mariano Sevilla",
         "page_h1":   "Genera tu informe fiscal de Binance para Hacienda",
         "hero_desc": "Sube el CSV del historial de operaciones de Binance y obtén el informe FIFO con tus ganancias y pérdidas patrimoniales. Listo para la declaración de la renta.",
+        "how_to": [
+            {
+                "title": "Exporta el CSV de Binance (Transaction History)",
+                "desc":  "En tu cuenta de Binance ve a Wallet → Historial de transacciones → "
+                         "Exportar. Selecciona «All Transactions», elige el rango completo "
+                         "desde tu primera operación hasta hoy y descarga el fichero CSV.",
+            },
+            _HOW_TO_STEP2,
+            _HOW_TO_STEP3,
+        ],
     },
     "kraken": {
         "exchange_id":   "kraken",
@@ -80,6 +104,16 @@ EXCHANGE_PAGES = {
         "page_schema_name": "Informe FIFO Kraken — Mariano Sevilla",
         "page_h1":   "Genera tu informe fiscal de Kraken para Hacienda",
         "hero_desc": "Sube el CSV de Ledgers de Kraken y obtén el informe FIFO con tus ganancias y pérdidas patrimoniales. Listo para la declaración de la renta.",
+        "how_to": [
+            {
+                "title": "Exporta el CSV de Ledgers desde Kraken",
+                "desc":  "En tu cuenta de Kraken ve a Historial → Exportar. Selecciona "
+                         "tipo «Ledgers» (no «Trades»), elige el período completo desde "
+                         "tu primera operación hasta hoy y descarga el fichero CSV.",
+            },
+            _HOW_TO_STEP2,
+            _HOW_TO_STEP3,
+        ],
     },
     "bitvavo": {
         "exchange_id":   "bitvavo",
@@ -93,6 +127,16 @@ EXCHANGE_PAGES = {
         "page_schema_name": "Informe FIFO Bitvavo — Mariano Sevilla",
         "page_h1":   "Genera tu informe fiscal de Bitvavo para Hacienda",
         "hero_desc": "Sube el CSV del historial de transacciones de Bitvavo y obtén el informe FIFO con tus ganancias y pérdidas patrimoniales. Listo para la declaración de la renta.",
+        "how_to": [
+            {
+                "title": "Exporta el CSV de transacciones desde Bitvavo",
+                "desc":  "En tu cuenta de Bitvavo ve a Cuenta → Historial de transacciones "
+                         "→ Exportar. Selecciona el período completo desde tu primera "
+                         "operación hasta hoy y descarga el fichero en formato CSV.",
+            },
+            _HOW_TO_STEP2,
+            _HOW_TO_STEP3,
+        ],
     },
     "bit2me": {
         "exchange_id":   "bit2me",
@@ -106,6 +150,16 @@ EXCHANGE_PAGES = {
         "page_schema_name": "Informe FIFO Bit2Me — Mariano Sevilla",
         "page_h1":   "Genera tu informe fiscal de Bit2Me para Hacienda",
         "hero_desc": "Sube el CSV del informe fiscal de Bit2Me y obtén el cálculo FIFO con tus ganancias y pérdidas patrimoniales. Listo para la declaración de la renta.",
+        "how_to": [
+            {
+                "title": "Descarga el informe fiscal CSV desde Bit2Me",
+                "desc":  "En tu cuenta de Bit2Me ve a Mi cuenta → Informes fiscales. "
+                         "Selecciona el ejercicio fiscal, elige el período completo desde "
+                         "tu primera operación y descarga el informe en formato CSV.",
+            },
+            _HOW_TO_STEP2,
+            _HOW_TO_STEP3,
+        ],
     },
 }
 

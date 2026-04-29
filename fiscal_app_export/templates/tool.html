@@ -483,6 +483,45 @@
   }
   .step-mini-body p { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
 
+  /* HOW-TO SECTION (páginas de exchange) */
+  .how-to-wrap {
+    max-width: 1060px; margin: 0 auto;
+    padding: 0 2rem 3rem;
+  }
+  .how-to-label {
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.12em; color: var(--muted);
+    margin-bottom: 1rem;
+  }
+  .how-to-h2 {
+    font-family: var(--font-display);
+    font-size: clamp(1.25rem, 2.8vw, 1.7rem);
+    font-weight: 700; letter-spacing: -0.025em;
+    line-height: 1.2; margin-bottom: 1.5rem;
+  }
+  .how-to-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 1px; background: var(--border);
+    border: 1px solid var(--border); border-radius: 12px;
+    overflow: hidden;
+  }
+  .how-to-card {
+    background: var(--surface); padding: 1.5rem;
+  }
+  .how-to-num {
+    width: 28px; height: 28px; border-radius: 6px;
+    background: var(--accent-dim); border: 1px solid rgba(0,200,150,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-size: 12px; font-weight: 700;
+    color: var(--accent); margin-bottom: 1rem; flex-shrink: 0;
+  }
+  .how-to-card h3 {
+    font-family: var(--font-display); font-size: 0.93rem;
+    font-weight: 700; letter-spacing: -0.01em; margin-bottom: 0.5rem;
+    line-height: 1.3;
+  }
+  .how-to-card p { font-size: 0.85rem; color: var(--muted); line-height: 1.65; }
+
   /* FOOTER */
   footer {
     text-align: center; padding: 2.5rem 2rem;
@@ -507,6 +546,8 @@
     .hero { padding: 7.5rem 1rem 2.5rem; }
     .info-strip { box-sizing: border-box; width: 100%; }
     .exchange-grid { box-sizing: border-box; width: 100%; }
+    .how-to-wrap { padding: 0 1rem 2rem; }
+    .how-to-grid { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -531,6 +572,22 @@
     Sube el CSV de tu exchange — Binance, Kraken, Bitvavo o Bit2Me —
     aplica FIFO automático según normativa española y descarga el informe PDF listo para tu gestor.
   </p>
+</div>
+{% endif %}
+
+{% if exchange_id and how_to %}
+<div class="how-to-wrap">
+  <div class="how-to-label">Cómo funciona</div>
+  <h2 class="how-to-h2">Tres pasos para declarar {{ exchange_name }} en Hacienda</h2>
+  <div class="how-to-grid">
+    {% for step in how_to %}
+    <div class="how-to-card">
+      <div class="how-to-num">{{ loop.index }}</div>
+      <h3>{{ step.title }}</h3>
+      <p>{{ step.desc }}</p>
+    </div>
+    {% endfor %}
+  </div>
 </div>
 {% endif %}
 
