@@ -557,12 +557,12 @@
   }
   .bar-exchange-change a { color: var(--accent); text-decoration: none; }
   .bar-dropzone {
-    flex: 1; min-width: 0;
+    flex: 1 1 0; min-width: 0; max-width: unset;
     border: 1.5px dashed var(--border-hover);
     border-radius: 10px; padding: 10px 16px;
     cursor: pointer; display: flex; align-items: center; gap: 10px;
     transition: border-color 0.2s, background 0.2s;
-    position: relative;
+    position: relative; overflow: hidden;
   }
   .bar-dropzone:hover, .bar-dropzone.drag-over {
     border-color: var(--accent); background: var(--accent-dim);
@@ -570,11 +570,12 @@
   .bar-dropzone.error-zone { border-color: var(--red); background: var(--red-dim); }
   .bar-dropzone input[type="file"] {
     position: absolute; inset: 0;
-    opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    opacity: 0; cursor: pointer; width: 100% !important; height: 100%;
   }
   .bar-drop-text {
     font-size: 13px; color: var(--muted);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    min-width: 0;
   }
   .bar-input {
     background: var(--surface2);
@@ -582,12 +583,13 @@
     color: var(--text); font-family: var(--font-body);
     font-size: 14px; padding: 10px 13px;
     outline: none; transition: border-color 0.2s;
-    flex-shrink: 0;
+    flex-shrink: 0; flex-grow: 0;
   }
   .bar-input:focus { border-color: var(--accent); }
   .bar-input.field-error { border-color: var(--red); }
-  .bar-input-nombre { width: 160px; }
-  .bar-input-year   { width: 76px; }
+  /* flex-basis anula el width:100% heredado del input[type="text"] global */
+  .bar-input-nombre { flex-basis: 160px; width: 160px !important; }
+  .bar-input-year   { flex-basis:  76px; width:  76px !important; }
   .bar-btn {
     flex-shrink: 0; padding: 10px 22px;
     background: var(--accent); color: #0a0a0a;
