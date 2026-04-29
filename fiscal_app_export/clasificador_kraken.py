@@ -11,6 +11,7 @@ Formato CSV de Kraken (Ledgers):
 
 import pandas as pd
 from dataclasses import dataclass
+from collections import defaultdict
 
 
 # ── CONSTANTES ────────────────────────────────
@@ -45,6 +46,7 @@ class OperacionSwap:
     activo_recibido: str
     cantidad_recibida: float
     nota: str = ""
+    precio_fmv_eur: float = 0.0   # valor de mercado EUR del activo recibido en el momento del swap
 
 @dataclass
 class OperacionRendimiento:
@@ -89,6 +91,9 @@ class ClasificadorKraken:
         self.df.columns = [c.strip() for c in self.df.columns]
         self.df["time"] = pd.to_datetime(self.df["time"])
         self.df = self.df.sort_values("time").reset_index(drop=True)
+
+        # Construir tabla de precios EUR implícitos antes de clasificar swaps
+        self._tabla_precios: dict = self._construir_tabla_precios()
 
         self._procesar_trades()
         self._procesar_resto()
@@ -174,10 +179,15 @@ class ClasificadorKraken:
                 ))
             elif not spent_fiat and not recv_fiat:
                 # Crypto → crypto: SWAP
+                # FMV: precio EUR del activo recibido en el momento del swap
+                ts_swap = spend.iloc[0]["time"]
+                pu_fmv  = self._precio_mas_cercano(asset_recv, ts_swap)
+                fmv_eur = round(pu_fmv * amount_recv, 6) if pu_fmv > 0 else 0.0
                 self.swaps.append(OperacionSwap(
                     fecha=fecha,
                     activo_entregado=asset_spent, cantidad_entregada=amount_spent,
-                    activo_recibido=asset_recv,   cantidad_recibida=amount_recv
+                    activo_recibido=asset_recv,   cantidad_recibida=amount_recv,
+                    precio_fmv_eur=fmv_eur
                 ))
             else:
                 # Fiat → fiat: movimiento (ej. conversión USD→EUR ya capturada arriba)
@@ -186,6 +196,56 @@ class ClasificadorKraken:
                     activo=asset_recv, cantidad=amount_recv,
                     observacion=f"{asset_spent} → {asset_recv}"
                 ))
+
+    # ── TABLA DE PRECIOS EUR IMPLÍCITOS ──────────
+
+    def _construir_tabla_precios(self) -> dict:
+        """
+        Extrae precios EUR/unidad de cada activo a partir de las operaciones
+        EUR del propio CSV (compras y ventas contra EUR).
+        Retorna: {asset: [(timestamp, eur_por_unidad), ...]} ordenado por tiempo.
+        """
+        tabla: dict = defaultdict(list)
+        mask  = self.df["type"].isin(["spend", "receive"])
+        filas = self.df[mask].copy()
+        if filas.empty:
+            return tabla
+
+        for refid, grupo in filas.groupby("refid"):
+            spend = grupo[grupo["type"] == "spend"]
+            recv  = grupo[grupo["type"] == "receive"]
+            if spend.empty or recv.empty:
+                continue
+
+            a_spent   = spend.iloc[0]["asset"]
+            a_recv    = recv.iloc[0]["asset"]
+            amt_spent = abs(float(spend.iloc[0]["amount"]))
+            amt_recv  = abs(float(recv.iloc[0]["amount"]))
+            ts        = spend.iloc[0]["time"]   # Timestamp pandas
+
+            # Venta cripto → EUR
+            if a_spent not in STABLES and a_recv == "EUR" and amt_spent > 0:
+                tabla[a_spent].append((ts, amt_recv / amt_spent))
+
+            # Compra EUR → cripto
+            elif a_spent == "EUR" and a_recv not in STABLES and amt_recv > 0:
+                tabla[a_recv].append((ts, amt_spent / amt_recv))
+
+        # Ordenar cronológicamente
+        for asset in tabla:
+            tabla[asset].sort(key=lambda x: x[0])
+        return tabla
+
+    def _precio_mas_cercano(self, asset: str, ts) -> float:
+        """
+        Devuelve el precio EUR/unidad más cercano en tiempo para el activo.
+        Retorna 0.0 si no hay datos de referencia.
+        """
+        puntos = self._tabla_precios.get(asset, [])
+        if not puntos:
+            return 0.0
+        mejor = min(puntos, key=lambda x: abs((x[0] - ts).total_seconds()))
+        return mejor[1]
 
     # ── RENDIMIENTOS, MOVIMIENTOS Y RESTO ─────
 

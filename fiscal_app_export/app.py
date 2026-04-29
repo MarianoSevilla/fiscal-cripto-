@@ -329,7 +329,8 @@ def _pipeline_motor(clasificador) -> MotorFIFO:
                 cantidad_entregada=op.cantidad_entregada,
                 activo_recibido=op.activo_recibido,
                 cantidad_recibida=op.cantidad_recibida,
-                nota=op.nota
+                nota=op.nota,
+                precio_fmv_eur=getattr(op, "precio_fmv_eur", 0.0),
             )
     return motor
 

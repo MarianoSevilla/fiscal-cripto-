@@ -7,6 +7,7 @@ v1.1 — maneja swaps multi-fila y timestamps desfasados 1s
 import pandas as pd
 from dataclasses import dataclass
 from datetime import timedelta
+from collections import defaultdict
 
 
 # ──────────────────────────────────────────────
@@ -66,6 +67,7 @@ class OperacionSwap:
     activo_recibido: str
     cantidad_recibida: float
     nota: str = ""
+    precio_fmv_eur: float = 0.0   # valor de mercado EUR del activo recibido en el momento del swap
 
 @dataclass
 class OperacionRendimiento:
@@ -112,6 +114,8 @@ class ClasificadorBinance:
 
     def clasificar(self):
         self._procesar_compraventas()
+        # Construir tabla de precios EUR implícitos antes de clasificar swaps
+        self._tabla_precios: dict = self._construir_tabla_precios()
         self._procesar_swaps()
         self._procesar_resto()
         return self
@@ -222,12 +226,64 @@ class ClasificadorBinance:
 
             nota = "Múltiples cuentas involucradas" if len(grupo["Cuenta"].unique()) > 1 else ""
 
+            # FMV: precio EUR del activo recibido en el momento del swap
+            ts_swap = grupo.iloc[0]["Tiempo"]  # ya es pd.Timestamp desde __init__
+            pu_fmv  = self._precio_mas_cercano(activo_rec, ts_swap)
+            fmv_eur = round(pu_fmv * cant_rec, 6) if pu_fmv > 0 else 0.0
+
             self.swaps.append(OperacionSwap(
                 fecha=fecha,
                 activo_entregado=activo_ent, cantidad_entregada=cant_ent,
                 activo_recibido=activo_rec,  cantidad_recibida=cant_rec,
-                nota=nota
+                nota=nota,
+                precio_fmv_eur=fmv_eur
             ))
+
+    # ── TABLA DE PRECIOS EUR IMPLÍCITOS ──────────
+
+    def _construir_tabla_precios(self) -> dict:
+        """
+        Extrae precios EUR/unidad de cada activo a partir de las operaciones
+        Transaction Buy/Spend donde uno de los lados es EUR o stable.
+        Retorna: {asset: [(timestamp, eur_por_unidad), ...]} ordenado por tiempo.
+        """
+        tabla: dict = defaultdict(list)
+        mask  = self.df["Operación"].isin(["Transaction Buy", "Transaction Spend"])
+        filas = self.df[mask]
+
+        for ts, grupo in filas.groupby("Tiempo"):
+            buy   = grupo[grupo["Operación"] == "Transaction Buy"]
+            spend = grupo[grupo["Operación"] == "Transaction Spend"]
+            if buy.empty or spend.empty:
+                continue
+
+            a_buy   = buy.iloc[0]["Moneda"]
+            c_buy   = float(buy.iloc[0]["Cambio"])          # positivo
+            a_spend = spend.iloc[0]["Moneda"]
+            c_spend = abs(float(spend.iloc[0]["Cambio"]))   # positivo
+
+            # COMPRA: EUR/stable → cripto
+            if a_spend in STABLES and a_buy not in STABLES and c_buy > 0:
+                tabla[a_buy].append((ts, c_spend / c_buy))
+
+            # VENTA: cripto → EUR/stable
+            elif a_buy in STABLES and a_spend not in STABLES and c_spend > 0:
+                tabla[a_spend].append((ts, c_buy / c_spend))
+
+        for asset in tabla:
+            tabla[asset].sort(key=lambda x: x[0])
+        return tabla
+
+    def _precio_mas_cercano(self, asset: str, ts) -> float:
+        """
+        Devuelve el precio EUR/unidad más cercano en tiempo para el activo.
+        Retorna 0.0 si no hay datos de referencia.
+        """
+        puntos = self._tabla_precios.get(asset, [])
+        if not puntos:
+            return 0.0
+        mejor = min(puntos, key=lambda x: abs((x[0] - ts).total_seconds()))
+        return mejor[1]
 
     # ── RESTO ─────────────────────────────────
 

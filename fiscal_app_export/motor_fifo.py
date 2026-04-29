@@ -110,11 +110,15 @@ class MotorFIFO:
     def registrar_swap(self, fecha: str,
                         activo_entregado: str, cantidad_entregada: float,
                         activo_recibido: str, cantidad_recibida: float,
-                        nota: str = ""):
+                        nota: str = "",
+                        precio_fmv_eur: float = 0.0):
         """
         Un swap es fiscalmente una venta del activo entregado
-        y una compra inmediata del activo recibido.
-        El precio de transmisión es el valor del activo recibido.
+        y una compra inmediata del activo recibido (permuta, art. 37 LIRPF).
+
+        Precio de transmisión (por orden de preferencia):
+          1. FMV en EUR del activo recibido en el momento del swap (AEAT-correcto).
+          2. Coste FIFO del activo entregado (fallback sin precios de mercado).
         """
         dt = self._parsear_fecha(fecha)
 
@@ -125,13 +129,12 @@ class MotorFIFO:
             )
             return
 
-        # 1) Calcular el coste EUR del activo entregado (vista previa FIFO sin consumir)
-        #    Este coste se usa como precio de transmisión: sin precios históricos de mercado
-        #    no es posible conocer el valor real en EUR, así que se usa el coste de adquisición.
-        #    Esto neutraliza la ganancia/pérdida del swap y traslada el coste al activo recibido,
-        #    evitando valores ficticios derivados de usar cantidades crudas de cripto como EUR.
-        coste_eur_entregado = self._calcular_coste_previo(activo_entregado, cantidad_entregada)
-        precio_transmision  = coste_eur_entregado if coste_eur_entregado > 0 else cantidad_recibida
+        # 1) Precio de transmisión: FMV si está disponible, coste FIFO como fallback
+        if precio_fmv_eur > 0:
+            precio_transmision = precio_fmv_eur
+        else:
+            coste_eur_entregado = self._calcular_coste_previo(activo_entregado, cantidad_entregada)
+            precio_transmision  = coste_eur_entregado if coste_eur_entregado > 0 else cantidad_recibida
 
         resultado = self._consumir_fifo(
             dt=dt,
