@@ -80,7 +80,7 @@ EXCHANGE_PAGES = {
         "page_og_desc":     "Sube el CSV de Binance y calcula las plusvalías crypto con FIFO. Informe PDF para tu gestor. Gratis.",
         "page_schema_name": "Informe FIFO Binance — Mariano Sevilla",
         "page_h1":   "Genera tu informe fiscal de Binance para Hacienda",
-        "hero_desc": "Sube el CSV del historial de operaciones de Binance y obtén el informe FIFO con tus ganancias y pérdidas patrimoniales. Listo para la declaración de la renta.",
+        "hero_desc": "La herramienta lee el CSV de transacciones de Binance, aplica el método FIFO obligatorio según la normativa española y calcula tus plusvalías y pérdidas patrimoniales ejercicio a ejercicio. Descarga el informe PDF con los importes exactos para las casillas 1626 y 1627 de la declaración de la renta.",
         "how_to": [
             {
                 "title": "Exporta el CSV de Binance (Transaction History)",
