@@ -283,13 +283,26 @@ def _validar_csv(filepath: str, exchange: str) -> tuple[bool, str]:
     if exchange == "binance":
         try:
             with open(filepath, encoding="utf-8", errors="replace") as f:
-                muestra = "".join(f.readline() for _ in range(100))
-            if "Buy Crypto With Fiat" in muestra:
+                primera_linea = f.readline()
+                resto = "".join(f.readline() for _ in range(99))
+            muestra = primera_linea + resto
+
+            # El CSV correcto (Historial de Operaciones Spot) tiene estas columnas en la 1ª fila
+            COLS_SPOT = ["Tiempo", "Operación", "Moneda", "Cambio"]
+            tiene_cols_spot = sum(1 for c in COLS_SPOT if c in primera_linea) >= 2
+
+            # El Historial de Transacciones incluye este tipo de operación en los datos
+            es_trans_history = "Buy Crypto With Fiat" in muestra
+
+            if es_trans_history and not tiene_cols_spot:
                 return False, (
-                    "El CSV de Binance no es el correcto para calcular el FIFO. "
-                    "Has exportado el 'Historial de Transacciones', que no incluye el importe en euros de cada compra. "
-                    "Necesitas el 'Historial de Operaciones Spot': "
-                    "en Binance ve a Órdenes → Historial de operaciones → selecciona el rango de fechas → Exportar."
+                    "CSV incorrecto: has exportado el Historial de Transacciones de Binance, "
+                    "que no incluye el precio en euros de cada operación y no permite calcular el FIFO.\n"
+                    "Sigue estos pasos para exportar el CSV correcto:\n"
+                    "1. Inicia sesión en Binance.\n"
+                    "2. Ve a Órdenes → Historial de operaciones spot.\n"
+                    "3. Haz clic en Exportar, selecciona el rango de fechas completo y descarga el fichero.\n"
+                    "El CSV correcto tiene las columnas: Tiempo, Operación, Moneda, Cambio, Cuenta."
                 )
         except Exception:
             pass

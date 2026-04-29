@@ -1245,6 +1245,7 @@
     if (!error) return 'Error desconocido. Por favor inténtalo de nuevo.';
     if (error.includes('no parece ser un CSV')) return error;
     if (error.includes('Historial de Operaciones Spot')) return error;
+    if (error.includes('CSV incorrecto')) return error;
     if (error.includes('Ledgers')) return error;
     if (error.includes('extensión .csv')) return error;
     if (error.includes('vacío')) return error;
@@ -1254,6 +1255,16 @@
     if (error.includes('permitido')) return error;
     // Error técnico — mensaje genérico
     return 'No se ha podido procesar el fichero. Comprueba que es un CSV válido exportado desde tu exchange y vuelve a intentarlo.';
+  }
+
+  function mostrarErrorApi(msg) {
+    // Renderiza el mensaje de error convirtiendo \n en <br> de forma segura (sin XSS)
+    const safe = msg
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>');
+    errorMsg.innerHTML = safe;
   }
 
   // ── SUBMIT ───────────────────────────────
@@ -1289,7 +1300,7 @@
       const data = await res.json();
 
       if (!res.ok || !data.ok) {
-        errorMsg.textContent = mensajeAmigable(data.error);
+        mostrarErrorApi(mensajeAmigable(data.error));
         showState('error');
         selectedFile = null;
         csvInput.value = '';
