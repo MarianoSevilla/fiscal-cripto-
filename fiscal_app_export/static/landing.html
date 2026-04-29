@@ -570,14 +570,43 @@
     <div class="section-label">Disponible ahora — gratis</div>
     <h2>Calcula tus plusvalías crypto con FIFO obligatorio</h2>
     <p class="form-desc">
-      Sube el CSV de tu exchange y la herramienta aplica el método FIFO según la normativa española
-      (art. 37.2 LIRPF). Descarga el informe PDF con tus ganancias patrimoniales y dáselo a tu gestor.
+      Selecciona tu exchange, sube el CSV y la herramienta aplica el método FIFO según la normativa española
+      (art. 37.2 LIRPF). Descarga el informe PDF listo para tu gestor.
       Sin registro. Tu fichero no se almacena.
     </p>
-    <a href="/fiscal" class="btn-submit" style="display:inline-block; text-align:center; text-decoration:none; margin-top:1rem; width:100%; padding:14px;">
-      Usar la herramienta →
-    </a>
-    <p class="form-legal" style="margin-top:1rem;">
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:1.5rem;">
+      <a href="/binance" style="display:flex; align-items:center; gap:12px; background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:14px 16px; text-decoration:none; color:var(--text); transition:border-color 0.2s, background 0.2s;" onmouseover="this.style.borderColor='rgba(255,255,255,0.18)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'">
+        <div style="width:36px;height:36px;border-radius:8px;background:#F0B90B;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#000;flex-shrink:0;">B</div>
+        <div>
+          <div style="font-family:var(--font-display);font-weight:700;font-size:0.95rem;">Binance</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Genera tu informe →</div>
+        </div>
+      </a>
+      <a href="/kraken" style="display:flex; align-items:center; gap:12px; background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:14px 16px; text-decoration:none; color:var(--text); transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(255,255,255,0.18)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'">
+        <div style="width:36px;height:36px;border-radius:8px;background:#5741D9;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff;flex-shrink:0;">K</div>
+        <div>
+          <div style="font-family:var(--font-display);font-weight:700;font-size:0.95rem;">Kraken</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Genera tu informe →</div>
+        </div>
+      </a>
+      <a href="/bitvavo" style="display:flex; align-items:center; gap:12px; background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:14px 16px; text-decoration:none; color:var(--text); transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(255,255,255,0.18)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'">
+        <div style="width:36px;height:36px;border-radius:8px;background:#1A53F0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:#fff;flex-shrink:0;">BV</div>
+        <div>
+          <div style="font-family:var(--font-display);font-weight:700;font-size:0.95rem;">Bitvavo</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Genera tu informe →</div>
+        </div>
+      </a>
+      <a href="/bit2me" style="display:flex; align-items:center; gap:12px; background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:14px 16px; text-decoration:none; color:var(--text); transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(255,255,255,0.18)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'">
+        <div style="width:36px;height:36px;border-radius:8px;background:#0057FF;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:#fff;flex-shrink:0;">B2</div>
+        <div>
+          <div style="font-family:var(--font-display);font-weight:700;font-size:0.95rem;">Bit2Me</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Genera tu informe →</div>
+        </div>
+      </a>
+    </div>
+
+    <p class="form-legal" style="margin-top:1.25rem;">
       Sin registro. Tu CSV no se almacena.<br>
       No asesoramiento fiscal ni legal — consulta siempre con un gestor autorizado.
     </p>

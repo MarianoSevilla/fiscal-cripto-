@@ -20,7 +20,7 @@ import tempfile
 import traceback
 import threading
 from datetime import datetime
-from flask import Flask, request, jsonify, send_file, send_from_directory
+from flask import Flask, request, jsonify, send_file, send_from_directory, render_template
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_cors import CORS
@@ -34,7 +34,80 @@ from clasificador_kraken import ClasificadorKraken
 from motor_fifo import MotorFIFO
 from generador_pdf import generar_pdf, generar_pdf_bit2me
 
-app = Flask(__name__, static_folder="static")
+app = Flask(__name__, static_folder="static", template_folder="templates")
+
+
+# ── DATOS POR EXCHANGE ────────────────────────
+BASE_URL = "https://marianosevilla.com"
+
+_TOOL_GENERIC = {
+    "exchange_id":   "",
+    "exchange_name": "tu exchange",
+    "exchange_logo": "&#x25CF;",
+    "page_title":       "Calculadora FIFO Criptomonedas — Informe para Hacienda | Mariano Sevilla",
+    "page_meta_desc":   "Sube el CSV de Binance, Kraken o Bitvavo y calcula las ganancias y pérdidas patrimoniales con FIFO obligatorio. Descarga el informe PDF listo para tu declaración de la renta.",
+    "page_canonical":   f"{BASE_URL}/fiscal",
+    "page_og_title":    "Calculadora FIFO Criptomonedas para Hacienda — Mariano Sevilla",
+    "page_og_desc":     "Sube el CSV de tu exchange y calcula ganancias y pérdidas patrimoniales con FIFO. Informe PDF listo para tu declaración de la renta. Gratis.",
+    "page_schema_name": "Calculadora FIFO Criptomonedas — Mariano Sevilla",
+    "page_h1":    "",
+    "hero_desc":  "",
+}
+
+EXCHANGE_PAGES = {
+    "binance": {
+        "exchange_id":   "binance",
+        "exchange_name": "Binance",
+        "exchange_logo": "B",
+        "page_title":       "Informe FIFO Binance para Hacienda — Declarar Binance en la Renta | Mariano Sevilla",
+        "page_meta_desc":   "Sube el CSV de Binance y calcula tus ganancias y pérdidas patrimoniales con FIFO obligatorio. Informe PDF listo para declarar Binance en la declaración de la renta.",
+        "page_canonical":   f"{BASE_URL}/binance",
+        "page_og_title":    "Informe fiscal Binance para Hacienda — FIFO automático | Mariano Sevilla",
+        "page_og_desc":     "Sube el CSV de Binance y calcula las plusvalías crypto con FIFO. Informe PDF para tu gestor. Gratis.",
+        "page_schema_name": "Informe FIFO Binance — Mariano Sevilla",
+        "page_h1":   "Genera tu informe fiscal de Binance para Hacienda",
+        "hero_desc": "Sube el CSV del historial de operaciones de Binance y obtén el informe FIFO con tus ganancias y pérdidas patrimoniales. Listo para la declaración de la renta.",
+    },
+    "kraken": {
+        "exchange_id":   "kraken",
+        "exchange_name": "Kraken",
+        "exchange_logo": "K",
+        "page_title":       "Informe FIFO Kraken para Hacienda — Declarar Kraken en la Renta | Mariano Sevilla",
+        "page_meta_desc":   "Sube el CSV de Ledgers de Kraken y calcula ganancias y pérdidas patrimoniales con FIFO obligatorio. Informe PDF listo para declarar Kraken en Hacienda.",
+        "page_canonical":   f"{BASE_URL}/kraken",
+        "page_og_title":    "Informe fiscal Kraken para Hacienda — FIFO automático | Mariano Sevilla",
+        "page_og_desc":     "Sube el CSV de Ledgers de Kraken y calcula las plusvalías crypto con FIFO. Informe PDF para tu gestor. Gratis.",
+        "page_schema_name": "Informe FIFO Kraken — Mariano Sevilla",
+        "page_h1":   "Genera tu informe fiscal de Kraken para Hacienda",
+        "hero_desc": "Sube el CSV de Ledgers de Kraken y obtén el informe FIFO con tus ganancias y pérdidas patrimoniales. Listo para la declaración de la renta.",
+    },
+    "bitvavo": {
+        "exchange_id":   "bitvavo",
+        "exchange_name": "Bitvavo",
+        "exchange_logo": "BV",
+        "page_title":       "Informe FIFO Bitvavo para Hacienda — Declarar Bitvavo en España | Mariano Sevilla",
+        "page_meta_desc":   "Sube el CSV de Bitvavo y calcula tus ganancias y pérdidas patrimoniales con FIFO obligatorio. Informe PDF listo para la declaración de la renta en España.",
+        "page_canonical":   f"{BASE_URL}/bitvavo",
+        "page_og_title":    "Informe fiscal Bitvavo para Hacienda — FIFO automático | Mariano Sevilla",
+        "page_og_desc":     "Sube el CSV de Bitvavo y calcula las plusvalías crypto con FIFO. Informe PDF para tu gestor. Gratis.",
+        "page_schema_name": "Informe FIFO Bitvavo — Mariano Sevilla",
+        "page_h1":   "Genera tu informe fiscal de Bitvavo para Hacienda",
+        "hero_desc": "Sube el CSV del historial de transacciones de Bitvavo y obtén el informe FIFO con tus ganancias y pérdidas patrimoniales. Listo para la declaración de la renta.",
+    },
+    "bit2me": {
+        "exchange_id":   "bit2me",
+        "exchange_name": "Bit2Me",
+        "exchange_logo": "B2",
+        "page_title":       "Informe FIFO Bit2Me para Hacienda — Declarar Bit2Me en el IRPF | Mariano Sevilla",
+        "page_meta_desc":   "Sube el CSV fiscal de Bit2Me y calcula tus ganancias y pérdidas patrimoniales con FIFO obligatorio. Informe PDF listo para la declaración de la renta.",
+        "page_canonical":   f"{BASE_URL}/bit2me",
+        "page_og_title":    "Informe fiscal Bit2Me para Hacienda — FIFO automático | Mariano Sevilla",
+        "page_og_desc":     "Sube el CSV fiscal de Bit2Me y calcula las plusvalías crypto con FIFO. Informe PDF para tu gestor. Gratis.",
+        "page_schema_name": "Informe FIFO Bit2Me — Mariano Sevilla",
+        "page_h1":   "Genera tu informe fiscal de Bit2Me para Hacienda",
+        "hero_desc": "Sube el CSV del informe fiscal de Bit2Me y obtén el cálculo FIFO con tus ganancias y pérdidas patrimoniales. Listo para la declaración de la renta.",
+    },
+}
 
 
 # ── CORS ──────────────────────────────────────
@@ -351,7 +424,27 @@ def landing():
 
 @app.route("/fiscal")
 def fiscal():
-    return send_from_directory("static", "index.html")
+    return render_template("tool.html", **_TOOL_GENERIC)
+
+
+@app.route("/binance")
+def page_binance():
+    return render_template("tool.html", **EXCHANGE_PAGES["binance"])
+
+
+@app.route("/kraken")
+def page_kraken():
+    return render_template("tool.html", **EXCHANGE_PAGES["kraken"])
+
+
+@app.route("/bitvavo")
+def page_bitvavo():
+    return render_template("tool.html", **EXCHANGE_PAGES["bitvavo"])
+
+
+@app.route("/bit2me")
+def page_bit2me():
+    return render_template("tool.html", **EXCHANGE_PAGES["bit2me"])
 
 
 @app.route("/api/analizar", methods=["POST"])
