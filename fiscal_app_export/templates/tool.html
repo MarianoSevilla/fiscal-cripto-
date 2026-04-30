@@ -118,8 +118,8 @@
 
   /* HERO */
   .hero {
-    padding: 9rem 2rem 4rem;
-    max-width: 760px; margin: 0 auto;
+    padding: 9rem 2rem 2rem;
+    max-width: 1060px; margin: 0 auto;
   }
   .hero-label {
     display: inline-flex; align-items: center; gap: 8px;
@@ -140,52 +140,60 @@
   h1 em { font-style: normal; color: var(--accent); }
   .hero-sub {
     font-size: 1.05rem; color: var(--muted);
-    max-width: 560px; margin-bottom: 2.5rem; line-height: 1.7;
+    margin-bottom: 2rem; line-height: 1.7;
   }
 
-  /* STRIPS */
-  .info-strip {
-    background: var(--accent-dim);
-    border: 1px solid rgba(0,200,150,0.2);
-    border-radius: 12px; padding: 0.85rem 1.25rem;
-    display: flex; gap: 10px; align-items: flex-start;
-  }
-  .info-strip-icon { flex-shrink: 0; font-size: 16px; margin-top: 2px; }
-  .info-strip-text { font-size: 0.88rem; color: #a5d9cc; line-height: 1.55; }
-  .info-strip-text strong { color: var(--text); font-weight: 500; }
-
-  /* MAIN LAYOUT */
-  .main-wrap {
+  /* HOW-TO SECTION */
+  .how-to-wrap {
     max-width: 1060px; margin: 0 auto;
-    padding: 0 2rem 6rem;
-    display: grid;
-    grid-template-columns: 360px 1fr;
-    gap: 2rem;
-    align-items: start;
+    padding: 0 2rem 3rem;
+  }
+  .how-to-label {
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.12em; color: var(--muted);
+    margin-bottom: 1rem;
+  }
+  .how-to-h2 {
+    font-family: var(--font-display);
+    font-size: clamp(1.25rem, 2.8vw, 1.7rem);
+    font-weight: 700; letter-spacing: -0.025em;
+    line-height: 1.2; margin-bottom: 1.5rem;
+  }
+  .how-to-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 1px; background: var(--border);
+    border: 1px solid var(--border); border-radius: 12px;
     overflow: hidden;
   }
-
-  /* PANEL UPLOAD */
-  .panel {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 2rem;
-    position: sticky; top: 90px;
-    overflow: hidden;
-    min-width: 0;
+  .how-to-card {
+    background: var(--surface); padding: 1.5rem;
   }
-  .panel-title {
-    font-family: var(--font-display); font-size: 1.1rem;
-    font-weight: 700; letter-spacing: -0.02em;
-    margin-bottom: 1.5rem;
+  .how-to-num {
+    width: 28px; height: 28px; border-radius: 6px;
+    background: var(--accent-dim); border: 1px solid rgba(0,200,150,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-size: 12px; font-weight: 700;
+    color: var(--accent); margin-bottom: 1rem; flex-shrink: 0;
   }
+  .how-to-card h3 {
+    font-family: var(--font-display); font-size: 0.93rem;
+    font-weight: 700; letter-spacing: -0.01em; margin-bottom: 0.5rem;
+    line-height: 1.3;
+  }
+  .how-to-card p { font-size: 0.85rem; color: var(--muted); line-height: 1.65; }
 
-  /* EXCHANGE SELECTOR */
-  .exchange-selector { margin-bottom: 1.25rem; }
+  /* ── EXCHANGE SELECTOR (página genérica) ── */
+  .exchange-selector-wrap {
+    max-width: 1060px; margin: 0 auto;
+    padding: 0 2rem 1rem;
+  }
+  .exchange-selector-label {
+    font-size: 12px; font-weight: 500; color: var(--muted);
+    letter-spacing: 0.02em; margin-bottom: 0.6rem;
+  }
   .exchange-grid {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 8px; margin-top: 6px; width: 100%;
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
   }
   .exchange-btn {
     background: var(--surface2);
@@ -205,9 +213,7 @@
     border-color: var(--accent);
     background: var(--accent-dim);
   }
-  .exchange-btn.coming-soon {
-    opacity: 0.38; cursor: not-allowed;
-  }
+  .exchange-btn.coming-soon { opacity: 0.38; cursor: not-allowed; }
   .exchange-logo {
     width: 22px; height: 22px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
@@ -216,6 +222,7 @@
   .logo-binance  { background: #F0B90B; color: #000; }
   .logo-bitvavo  { background: #1A56F0; }
   .logo-kraken   { background: #5741D9; }
+  .logo-bit2me   { background: #0066FF; }
   .logo-coinbase { background: #0052FF; }
   .exchange-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .soon-tag {
@@ -224,114 +231,159 @@
     color: var(--muted); padding: 2px 6px; border-radius: 4px;
   }
 
-  /* DROP ZONE */
-  .drop-zone {
-    border: 2px dashed var(--border-hover);
-    border-radius: 12px;
-    padding: 2.5rem 1.5rem;
-    text-align: center;
-    cursor: pointer;
+  /* ── UPLOAD BAR (layout dos columnas) ── */
+  .upload-bar-wrap {
+    max-width: 1060px; margin: 0 auto;
+    padding: 0 2rem 1.5rem;
+  }
+  .bar-privacy {
+    display: flex; align-items: flex-start; gap: 8px;
+    font-size: 12px; color: var(--muted);
+    margin-bottom: 0.75rem; line-height: 1.5;
+    background: var(--accent-dim);
+    border: 1px solid rgba(0,200,150,0.2);
+    border-radius: 10px; padding: 0.65rem 1rem;
+  }
+  .bar-privacy strong { color: var(--text); font-weight: 500; }
+
+  /* Contenedor principal: dos columnas */
+  .upload-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.25rem;
+    display: grid;
+    grid-template-columns: 1fr 200px;
+    gap: 1rem;
+    min-height: 200px;
+  }
+
+  /* Columna izquierda: dropzone + inputs */
+  .bar-left {
+    display: flex; flex-direction: column; gap: 0.75rem;
+  }
+  .bar-dropzone {
+    flex: 1;
+    border: 1.5px dashed var(--border-hover);
+    border-radius: 10px; padding: 1rem 1.25rem;
+    cursor: pointer; display: flex; align-items: center; gap: 10px;
     transition: border-color 0.2s, background 0.2s;
-    margin-bottom: 1.25rem;
-    position: relative;
+    position: relative; overflow: hidden;
   }
-  .drop-zone:hover, .drop-zone.drag-over {
-    border-color: var(--accent);
-    background: var(--accent-dim);
+  .bar-dropzone:hover, .bar-dropzone.drag-over {
+    border-color: var(--accent); background: var(--accent-dim);
   }
-  .drop-zone.error-zone {
-    border-color: var(--red);
-    background: var(--red-dim);
-  }
-  .drop-zone input[type="file"] {
+  .bar-dropzone.error-zone { border-color: var(--red); background: var(--red-dim); }
+  .bar-dropzone input[type="file"] {
     position: absolute; inset: 0;
-    opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    opacity: 0; cursor: pointer; width: 100% !important; height: 100%;
   }
-  .drop-icon { font-size: 2rem; margin-bottom: 0.75rem; }
-  .drop-label { font-size: 0.9rem; color: var(--muted); line-height: 1.5; }
-  .drop-label strong { color: var(--text); display: block; margin-bottom: 4px; }
-  .drop-accent { color: var(--accent); font-weight: 500; }
-
-  .file-selected {
-    display: none;
-    background: var(--accent-dim);
-    border: 1px solid rgba(0,200,150,0.3);
-    border-radius: 8px; padding: 10px 14px;
-    font-size: 0.85rem; color: var(--accent);
-    display: flex; align-items: center; gap: 8px;
-    margin-bottom: 1.25rem;
+  .bar-drop-text {
+    font-size: 13px; color: var(--muted); line-height: 1.4;
+    overflow: hidden;
   }
-  .file-selected.hidden { display: none; }
-
-  /* CAMPOS */
-  .field { margin-bottom: 1rem; }
-  label {
+  .bar-inputs-row {
+    display: flex; gap: 0.75rem; align-items: flex-end;
+  }
+  .bar-field {
+    display: flex; flex-direction: column; gap: 5px;
+  }
+  .bar-field-nombre { flex: 1; }
+  .bar-field-year   { flex-shrink: 0; }
+  .bar-field label {
     display: block; font-size: 12px; font-weight: 500;
-    color: var(--muted); margin-bottom: 5px; letter-spacing: 0.02em;
+    color: var(--muted); letter-spacing: 0.02em; margin-bottom: 0;
   }
-  input[type="text"] {
-    width: 100%; background: var(--surface2);
+  .bar-input {
+    background: var(--surface2);
     border: 1px solid var(--border); border-radius: 8px;
     color: var(--text); font-family: var(--font-body);
-    font-size: 14px; padding: 9px 13px; outline: none;
-    transition: border-color 0.2s;
+    font-size: 14px; padding: 10px 13px;
+    outline: none; transition: border-color 0.2s;
+    width: 100%;
   }
-  input[type="text"]:focus { border-color: var(--accent); }
+  .bar-input:focus { border-color: var(--accent); }
+  .bar-input.field-error { border-color: var(--red); }
+  .bar-input-year { width: 80px !important; flex-shrink: 0; }
 
-  /* BTN */
-  .btn-submit {
-    width: 100%; margin-top: 1.25rem;
-    padding: 14px; background: var(--accent);
-    color: #0a0a0a; border: none; border-radius: 10px;
+  /* Columna derecha: exchange badge arriba + botón generar abajo */
+  .bar-right {
+    display: flex; flex-direction: column;
+    justify-content: space-between; gap: 0.75rem;
+  }
+  .bar-exchange {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--accent-dim); border: 1px solid rgba(0,200,150,0.25);
+    border-radius: 8px; padding: 10px 14px;
+  }
+  .bar-exchange-name {
+    font-family: var(--font-display); font-weight: 700; font-size: 14px;
+    flex: 1;
+  }
+  .bar-exchange-change {
+    font-size: 11px; color: var(--muted); white-space: nowrap;
+  }
+  .bar-exchange-change a { color: var(--accent); text-decoration: none; }
+  .bar-btn {
+    width: 100%; padding: 13px 16px;
+    background: var(--accent); color: #0a0a0a;
+    border: none; border-radius: 10px;
     font-family: var(--font-display); font-size: 1rem;
-    font-weight: 700; letter-spacing: -0.01em;
-    cursor: pointer; transition: opacity 0.2s, transform 0.1s;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-weight: 700; cursor: pointer;
+    transition: opacity 0.2s; white-space: nowrap;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
   }
-  .btn-submit:hover { opacity: 0.9; }
-  .btn-submit:active { transform: scale(0.99); }
-  .btn-submit:disabled { opacity: 0.45; cursor: not-allowed; }
+  .bar-btn:hover { opacity: 0.9; }
+  .bar-btn:active { transform: scale(0.99); }
+  .bar-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
-  .btn-download {
-    width: 100%; margin-top: 0.75rem;
-    padding: 13px; background: transparent;
+  .bar-meta {
+    display: flex; align-items: center; gap: 1rem;
+    margin-top: 0.65rem; flex-wrap: wrap;
+  }
+  .bar-warning {
+    font-size: 12px; color: #c8b870; line-height: 1.5; flex: 1;
+  }
+  .bar-warning strong { color: #F0B90B; }
+  .bar-file-selected {
+    display: none; font-size: 12px; color: var(--accent);
+    align-items: center; gap: 6px;
+  }
+  .bar-file-selected.visible { display: flex; }
+  .bar-error-msg {
+    display: none; font-size: 12px; color: var(--red); margin-top: 4px;
+  }
+  .bar-error-msg.visible { display: block; }
+  .bar-btn-download {
+    display: none; padding: 8px 18px;
     color: var(--accent); border: 1.5px solid var(--accent);
-    border-radius: 10px; font-family: var(--font-display);
-    font-size: 0.95rem; font-weight: 700;
-    cursor: pointer; transition: background 0.2s;
-    display: none; align-items: center; justify-content: center; gap: 8px;
-    text-decoration: none;
+    background: transparent; border-radius: 8px;
+    font-family: var(--font-display); font-size: 13px;
+    font-weight: 700; cursor: pointer; transition: background 0.2s;
+    text-decoration: none; align-items: center; gap: 6px;
   }
-  .btn-download:hover { background: var(--accent-dim); }
-  .btn-download.visible { display: flex; }
-
-  .btn-nuevo {
-    width: 100%; margin-top: 0.5rem;
-    padding: 11px; background: transparent;
-    color: var(--muted); border: 1px solid var(--border);
-    border-radius: 10px; font-family: var(--font-body);
-    font-size: 0.9rem; cursor: pointer;
-    transition: all 0.2s; display: none;
+  .bar-btn-download:hover { background: var(--accent-dim); }
+  .bar-btn-download.visible { display: flex; }
+  .bar-btn-nuevo {
+    display: none; padding: 8px 16px;
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 8px; color: var(--muted);
+    font-size: 13px; cursor: pointer; transition: all 0.2s;
   }
-  .btn-nuevo:hover { border-color: var(--border-hover); color: var(--text); }
-  .btn-nuevo.visible { display: block; }
+  .bar-btn-nuevo:hover { border-color: var(--border-hover); color: var(--text); }
+  .bar-btn-nuevo.visible { display: block; }
 
-  .aviso-multianyio {
-    background: rgba(240,185,11,0.08);
-    border: 1px solid rgba(240,185,11,0.2);
-    border-radius: 10px; padding: 10px 14px;
-    font-size: 12px; color: #c8b870; line-height: 1.5;
-    margin-bottom: 1.25rem;
+  /* ── RESULTS FULL WIDTH ── */
+  .results-wrap {
+    max-width: 1060px; margin: 0 auto;
+    padding: 0 2rem 6rem;
   }
-  .aviso-multianyio strong { color: #F0B90B; }
-
-  .form-legal {
-    margin-top: 1rem; font-size: 11px;
-    color: var(--muted); text-align: center; line-height: 1.5;
+  .results-heading {
+    font-family: var(--font-display);
+    font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+    font-weight: 700; letter-spacing: -0.02em;
+    color: var(--text); margin-bottom: 1.25rem;
   }
-
-  /* PANEL RESULTADOS */
-  .results-panel { min-height: 400px; min-width: 0; }
 
   /* ESTADO VACÍO */
   .empty-state {
@@ -461,67 +513,6 @@
   .badge-swap  { background: rgba(0,200,150,0.1);  color: var(--accent); }
   .badge-venta { background: rgba(226,75,74,0.1);  color: var(--red); }
 
-  /* STEPS */
-  .steps-mini {
-    border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
-    margin-bottom: 2rem;
-  }
-  .step-mini {
-    display: flex; gap: 1rem; padding: 1.1rem 1.25rem;
-    border-bottom: 1px solid var(--border); align-items: flex-start;
-  }
-  .step-mini:last-child { border-bottom: none; }
-  .step-num-mini {
-    flex-shrink: 0; width: 26px; height: 26px; border-radius: 6px;
-    background: var(--accent-dim); border: 1px solid rgba(0,200,150,0.2);
-    display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-display); font-size: 12px;
-    font-weight: 700; color: var(--accent); margin-top: 1px;
-  }
-  .step-mini-body h4 {
-    font-size: 0.9rem; font-weight: 600; margin-bottom: 2px;
-  }
-  .step-mini-body p { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
-
-  /* HOW-TO SECTION (páginas de exchange) */
-  .how-to-wrap {
-    max-width: 1060px; margin: 0 auto;
-    padding: 0 2rem 3rem;
-  }
-  .how-to-label {
-    font-size: 11px; text-transform: uppercase;
-    letter-spacing: 0.12em; color: var(--muted);
-    margin-bottom: 1rem;
-  }
-  .how-to-h2 {
-    font-family: var(--font-display);
-    font-size: clamp(1.25rem, 2.8vw, 1.7rem);
-    font-weight: 700; letter-spacing: -0.025em;
-    line-height: 1.2; margin-bottom: 1.5rem;
-  }
-  .how-to-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr);
-    gap: 1px; background: var(--border);
-    border: 1px solid var(--border); border-radius: 12px;
-    overflow: hidden;
-  }
-  .how-to-card {
-    background: var(--surface); padding: 1.5rem;
-  }
-  .how-to-num {
-    width: 28px; height: 28px; border-radius: 6px;
-    background: var(--accent-dim); border: 1px solid rgba(0,200,150,0.2);
-    display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-display); font-size: 12px; font-weight: 700;
-    color: var(--accent); margin-bottom: 1rem; flex-shrink: 0;
-  }
-  .how-to-card h3 {
-    font-family: var(--font-display); font-size: 0.93rem;
-    font-weight: 700; letter-spacing: -0.01em; margin-bottom: 0.5rem;
-    line-height: 1.3;
-  }
-  .how-to-card p { font-size: 0.85rem; color: var(--muted); line-height: 1.65; }
-
   /* FOOTER */
   footer {
     text-align: center; padding: 2.5rem 2rem;
@@ -536,18 +527,22 @@
     to   { opacity: 1; transform: translateY(0); }
   }
   .hero { animation: fadeUp 0.4s ease both; }
-  .main-wrap { animation: fadeUp 0.4s ease 0.1s both; }
+  .upload-bar-wrap { animation: fadeUp 0.4s ease 0.1s both; }
 
   @media (max-width: 780px) {
-    .main-wrap { grid-template-columns: 1fr; overflow: hidden; padding: 0 1rem 4rem; }
-    .panel { position: static; padding: 1.25rem; width: 100%; box-sizing: border-box; }
-    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
     nav { padding: 1rem; }
-    .hero { padding: 7.5rem 1rem 2.5rem; }
-    .info-strip { box-sizing: border-box; width: 100%; }
-    .exchange-grid { box-sizing: border-box; width: 100%; }
+    .hero { padding: 7.5rem 1rem 1.5rem; }
     .how-to-wrap { padding: 0 1rem 2rem; }
     .how-to-grid { grid-template-columns: 1fr; }
+    .exchange-selector-wrap { padding: 0 1rem 1rem; }
+    .exchange-grid { grid-template-columns: 1fr 1fr; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .upload-bar-wrap { padding: 0 1rem 1.5rem; }
+    .upload-bar { grid-template-columns: 1fr; min-height: unset; }
+    .bar-right { flex-direction: row; align-items: center; }
+    .bar-exchange { flex: 1; }
+    .bar-btn { width: auto; flex-shrink: 0; }
+    .results-wrap { padding: 0 1rem 4rem; }
   }
 </style>
 </head>
@@ -591,272 +586,222 @@
 </div>
 {% endif %}
 
-<div class="main-wrap">
-
-  <!-- PANEL IZQUIERDA: UPLOAD -->
-  <aside class="panel">
-    <div class="panel-title">Genera tu informe fiscal</div>
-
-    <!-- AVISO PRIVACIDAD -->
-    <div class="info-strip" style="margin: 0 0 1.25rem; max-width: 100%;">
-      <div class="info-strip-icon">🔒</div>
-      <div class="info-strip-text">
-        <strong>Tu CSV no se almacena.</strong>
-        El fichero —incluyendo los datos personales que pueda contener— se procesa en memoria
-        y se elimina automáticamente tras generar el informe. El PDF generado se borra en cuanto lo descargas.
-        Cumplimiento RGPD.
-      </div>
-    </div>
-
-    <!-- SELECTOR EXCHANGE (solo en página genérica) -->
-    {% if not exchange_id %}
-    <div class="exchange-selector">
-      <label>1. Selecciona tu exchange</label>
-      <div class="exchange-grid">
-        <button class="exchange-btn active" data-exchange="binance" onclick="selectExchange(this)">
-          <div class="exchange-logo logo-binance">B</div>
-          <span class="exchange-name">Binance</span>
-        </button>
-        <button class="exchange-btn" data-exchange="bit2me" onclick="selectExchange(this)">
-          <div class="exchange-logo logo-bitvavo">B2</div>
-          <span class="exchange-name">Bit2Me</span>
-        </button>
-        <button class="exchange-btn" data-exchange="bitvavo" onclick="selectExchange(this)">
-          <div class="exchange-logo logo-bitvavo">BV</div>
-          <span class="exchange-name">Bitvavo</span>
-        </button>
-        <button class="exchange-btn" data-exchange="kraken" onclick="selectExchange(this)">
-          <div class="exchange-logo logo-kraken">K</div>
-          <span class="exchange-name">Kraken</span>
-        </button>
-        <button class="exchange-btn coming-soon" data-exchange="coinbase" disabled>
-          <div class="exchange-logo logo-coinbase">C</div>
-          <span class="exchange-name">Coinbase</span>
-          <span class="soon-tag">Pronto</span>
-        </button>
-      </div>
-    </div>
-    {% else %}
-    <!-- Página de exchange específico: badge identificador -->
-    <div class="exchange-selector">
-      <label>Exchange seleccionado</label>
-      <div style="display:flex; align-items:center; gap:10px; background:var(--accent-dim); border:1px solid rgba(0,200,150,0.25); border-radius:10px; padding:10px 14px;">
-        <div class="exchange-logo logo-{{ exchange_id }}" style="flex-shrink:0;">{{ exchange_logo }}</div>
-        <span style="font-weight:600; font-family:var(--font-display);">{{ exchange_name }}</span>
-        <span style="margin-left:auto; font-size:12px; color:var(--muted);">Seleccionado · <a href="https://marianosevilla.com" style="color:var(--accent); text-decoration:none;">Cambiar</a></span>
-      </div>
-    </div>
-    {% endif %}
-
-    <!-- AVISO HISTÓRICO MULTI-AÑO -->
-    <div class="aviso-multianyio">
-      <strong>⚠ Importante:</strong> Para que el cálculo FIFO sea correcto, el CSV debe incluir
-      <strong>todo el historial desde tu primera operación</strong>, no solo el año que quieres declarar.
-      Si vendiste en 2024 algo que compraste en 2022, el CSV debe incluir también las compras de 2022.
-    </div>
-
-    <!-- DROP ZONE -->
-    <label style="margin-bottom: 6px; display:block;">2. Sube tu CSV</label>
-    <div class="drop-zone" id="dropZone">
-      <input type="file" id="csvInput" accept=".csv">
-      <div class="drop-icon">📂</div>
-      <div class="drop-label">
-        <strong>Arrastra el fichero aquí</strong>
-        o <span class="drop-accent">haz clic para seleccionar</span><br>
-        <span id="dropHint">Fichero .csv exportado desde Binance</span>
-      </div>
-    </div>
-
-    <div class="file-selected hidden" id="fileSelected">
-      <span>📄</span>
-      <span id="fileName">—</span>
-    </div>
-
-    <label style="margin-bottom: 6px; display:block;">3. Datos opcionales</label>
-    <div class="field">
-      <label for="nombre">Tu nombre</label>
-      <input type="text" id="nombre" placeholder="Para el encabezado del informe">
-    </div>
-    <div class="field">
-      <label for="ejercicio">Ejercicio fiscal</label>
-      <input type="text" id="ejercicio" placeholder="Ej: 2024" maxlength="4" pattern="\d{4}">
-      <span class="field-error-msg" id="ejercicio-error">Introduce un año válido (entre 2009 y el año actual)</span>
-    </div>
-
-    <button class="btn-submit" id="btnAnalizar" disabled>
-      <span id="btnText">Generar informe</span>
+{% if not exchange_id %}
+<!-- Selector de exchange — solo en página genérica /fiscal -->
+<div class="exchange-selector-wrap">
+  <div class="exchange-selector-label">Selecciona tu exchange</div>
+  <div class="exchange-grid">
+    <button class="exchange-btn active" data-exchange="binance" onclick="selectExchange(this)">
+      <div class="exchange-logo logo-binance">B</div>
+      <span class="exchange-name">Binance</span>
     </button>
+    <button class="exchange-btn" data-exchange="kraken" onclick="selectExchange(this)">
+      <div class="exchange-logo logo-kraken">K</div>
+      <span class="exchange-name">Kraken</span>
+    </button>
+    <button class="exchange-btn" data-exchange="bitvavo" onclick="selectExchange(this)">
+      <div class="exchange-logo logo-bitvavo">BV</div>
+      <span class="exchange-name">Bitvavo</span>
+    </button>
+    <button class="exchange-btn" data-exchange="bit2me" onclick="selectExchange(this)">
+      <div class="exchange-logo logo-bit2me">B2</div>
+      <span class="exchange-name">Bit2Me</span>
+    </button>
+    <button class="exchange-btn coming-soon" disabled>
+      <div class="exchange-logo logo-coinbase">C</div>
+      <span class="exchange-name">Coinbase</span>
+      <span class="soon-tag">Pronto</span>
+    </button>
+  </div>
+</div>
+{% endif %}
 
-    <a class="btn-download" id="btnDownload" href="#" download="informe_fiscal_cripto.pdf">
-      ⬇ Descargar informe PDF
+<!-- ── UPLOAD BAR ── -->
+<div class="upload-bar-wrap">
+
+  <div class="bar-privacy">
+    <span>⚠️</span>
+    <span><strong>Tu CSV no se almacena:</strong> El fichero se procesa en memoria y se elimina automáticamente. Cumplimiento RGPD.</span>
+  </div>
+
+  <div class="upload-bar">
+
+    <!-- Columna izquierda: drop zone + nombre/año -->
+    <div class="bar-left">
+      <div class="bar-dropzone" id="dropZone">
+        <input type="file" id="csvInput" accept=".csv">
+        <span style="font-size:22px;flex-shrink:0;">📂</span>
+        {% if exchange_id %}
+        <span class="bar-drop-text" id="dropHint">Arrastra aquí el CSV de {{ exchange_name }} o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Solo ficheros .csv</span></span>
+        {% else %}
+        <span class="bar-drop-text" id="dropHint">Arrastra aquí tu CSV o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Solo ficheros .csv</span></span>
+        {% endif %}
+      </div>
+      <div class="bar-inputs-row">
+        <div class="bar-field bar-field-nombre">
+          <label for="nombre">Tu nombre</label>
+          <input type="text" id="nombre" class="bar-input" placeholder="Para el encabezado del informe">
+        </div>
+        <div class="bar-field bar-field-year">
+          <label for="ejercicio">Ejercicio fiscal</label>
+          <input type="text" id="ejercicio" class="bar-input bar-input-year" placeholder="2024" maxlength="4" pattern="\d{4}">
+        </div>
+      </div>
+    </div>
+
+    <!-- Columna derecha: exchange badge arriba + botón generar abajo -->
+    <div class="bar-right">
+      {% if exchange_id %}
+      <div class="bar-exchange">
+        <div class="exchange-logo logo-{{ exchange_id }}" style="width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">{{ exchange_logo }}</div>
+        <span class="bar-exchange-name">{{ exchange_name }}</span>
+        <span class="bar-exchange-change"><a href="https://marianosevilla.com">Cambiar</a></span>
+      </div>
+      {% endif %}
+      <button class="bar-btn" id="btnAnalizar" disabled>
+        <span id="btnText">Generar →</span>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Meta: warning + estado fichero + botones post-análisis -->
+  <div class="bar-meta">
+    <div class="bar-warning">
+      <strong>⚠ Importante:</strong> El CSV debe incluir todo el historial desde tu primera operación, no solo el año que quieres declarar.
+    </div>
+    <div class="bar-file-selected" id="fileSelected">
+      <span>📄</span><span id="fileName">—</span>
+    </div>
+    <a class="bar-btn-download" id="btnDownload" href="#" download="informe_fiscal_cripto.pdf">
+      ⬇ Descargar PDF
     </a>
-    <button class="btn-nuevo" id="btnNuevo">
-      ↩ Analizar otro CSV
-    </button>
+    <button class="bar-btn-nuevo" id="btnNuevo">↩ Nuevo análisis</button>
+  </div>
 
-    <!-- INSTRUCCIONES POST-DESCARGA -->
-    <div id="instruccionesPost" style="display:none; margin-top:1.25rem; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:1rem;">
-      <div style="font-size:11px; color:var(--accent); font-weight:600; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:8px;">¿Y ahora qué?</div>
-      <div style="font-size:12px; color:var(--muted); line-height:1.6;">
-        <p>1. Descarga el PDF y envíaselo a tu gestor fiscal junto con el historial oficial de tu exchange.</p>
-        <p style="margin-top:6px;">2. Las <strong style="color:var(--text);">ganancias y pérdidas patrimoniales</strong> van en la <strong style="color:var(--text);">casilla 1626</strong> de la declaración de la renta (Base del Ahorro).</p>
-        <p style="margin-top:6px;">3. Los <strong style="color:var(--text);">rendimientos por staking</strong> van en la <strong style="color:var(--text);">casilla 0033</strong> como rendimientos del capital mobiliario.</p>
-        <p style="margin-top:6px; color:#888580; font-size:11px;">Este informe complementa pero no sustituye al informe oficial de tu exchange.</p>
+  <div class="bar-error-msg" id="ejercicio-error">Introduce un año válido (entre 2009 y el año actual)</div>
+
+  <!-- Instrucciones post-descarga -->
+  <div id="instruccionesPost" style="display:none; margin-top:0.75rem; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:1rem;">
+    <div style="font-size:11px; color:var(--accent); font-weight:600; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:8px;">¿Y ahora qué?</div>
+    <div style="font-size:12px; color:var(--muted); line-height:1.6; display:flex; gap:2rem; flex-wrap:wrap;">
+      <p style="flex:1;min-width:200px;">1. Descarga el PDF y envíaselo a tu gestor fiscal junto con el historial oficial de tu exchange.</p>
+      <p style="flex:1;min-width:200px;">2. Las <strong style="color:var(--text);">ganancias y pérdidas patrimoniales</strong> van en la <strong style="color:var(--text);">casilla 1626</strong> de la declaración de la renta.</p>
+      <p style="flex:1;min-width:200px;">3. Los <strong style="color:var(--text);">rendimientos por staking</strong> van en la <strong style="color:var(--text);">casilla 0033</strong> como rendimientos del capital mobiliario.</p>
+    </div>
+  </div>
+
+  <p style="margin-top:0.5rem; font-size:11px; color:var(--muted);">No asesoramiento fiscal ni legal. Consulta siempre con un gestor autorizado.</p>
+</div>
+
+<!-- ── RESULTADOS FULL WIDTH ── -->
+<div class="results-wrap">
+
+  <h2 class="results-heading">Resultado del análisis</h2>
+
+  <!-- ESTADO VACÍO -->
+  <div class="empty-state" id="emptyState">
+    <div class="empty-icon">📊</div>
+    <h3>Aún no hay resultados</h3>
+    <p>Sube tu CSV en el formulario de arriba y en unos segundos verás aquí el resumen fiscal completo.</p>
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading-state" id="loadingState">
+    <div class="spinner"></div>
+    <p id="loadingMsg">Leyendo CSV…</p>
+  </div>
+
+  <!-- ERROR -->
+  <div class="error-state" id="errorState">
+    <strong>Error al procesar el fichero</strong>
+    <span id="errorMsg"></span>
+  </div>
+
+  <!-- RESULTADOS -->
+  <div class="results-content" id="resultsContent">
+
+    <!-- KPIs -->
+    <div class="kpi-grid" id="kpiGrid">
+      <div class="kpi-card">
+        <div class="kpi-label">Operaciones</div>
+        <div class="kpi-value" id="kpiOps">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Ganancias brutas</div>
+        <div class="kpi-value green" id="kpiGain">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Pérdidas brutas</div>
+        <div class="kpi-value red" id="kpiLoss">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Resultado neto</div>
+        <div class="kpi-value" id="kpiNeto">—</div>
       </div>
     </div>
 
-    <p class="form-legal">
-      No asesoramiento fiscal ni legal.<br>
-      Consulta siempre con un gestor autorizado.
-    </p>
-
-    <div style="margin-top: 2rem; border-top: 1px solid var(--border); padding-top: 1.5rem;">
-      <div style="font-size: 11px; color: var(--muted); margin-bottom: 1rem; letter-spacing: 0.05em; text-transform: uppercase;">Cómo exportar el CSV</div>
-      <div class="steps-mini" id="exportSteps">
-        <div class="step-mini" id="step1">
-          <div class="step-num-mini">1</div>
-          <div class="step-mini-body" id="step1-body">
-            <h4>Binance → Wallet → Transaction History</h4>
-            <p>Accede a tu cuenta de Binance y ve a la sección de historial.</p>
-          </div>
-        </div>
-        <div class="step-mini" id="step2">
-          <div class="step-num-mini">2</div>
-          <div class="step-mini-body" id="step2-body">
-            <h4>Export → Custom Range</h4>
-            <p>Selecciona el período completo del ejercicio fiscal (1 enero – 31 dic).</p>
-          </div>
-        </div>
-        <div class="step-mini">
-          <div class="step-num-mini">3</div>
-          <div class="step-mini-body">
-            <h4>Descarga el CSV y súbelo aquí</h4>
-            <p>El fichero incluye todas las operaciones: compras, ventas, swaps y fees.</p>
-          </div>
-        </div>
-      </div>
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="operaciones">Operaciones</button>
+      <button class="tab-btn" data-tab="posicion">Posición actual</button>
+      <button class="tab-btn" data-tab="rendimientos">Rendimientos <span id="rendBadge"></span></button>
+      <button class="tab-btn" data-tab="advertencias">Advertencias <span id="warnBadge"></span></button>
     </div>
-  </aside>
+    <div class="tab-content">
 
-  <!-- PANEL DERECHA: RESULTADOS -->
-  <div class="results-panel">
-
-    <!-- ESTADO VACÍO -->
-    <div class="empty-state" id="emptyState">
-      <div class="empty-icon">📊</div>
-      <h3>Esperando tu CSV</h3>
-      <p>Sube el fichero y en unos segundos verás el resumen fiscal completo aquí.</p>
-    </div>
-
-    <!-- LOADING -->
-    <div class="loading-state" id="loadingState">
-      <div class="spinner"></div>
-      <p id="loadingMsg">Leyendo CSV…</p>
-    </div>
-
-    <!-- ERROR -->
-    <div class="error-state" id="errorState">
-      <strong>Error al procesar el fichero</strong>
-      <span id="errorMsg"></span>
-    </div>
-
-    <!-- RESULTADOS -->
-    <div class="results-content" id="resultsContent">
-
-      <!-- KPIs -->
-      <div class="kpi-grid" id="kpiGrid">
-        <div class="kpi-card">
-          <div class="kpi-label">Operaciones</div>
-          <div class="kpi-value" id="kpiOps">—</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-label">Ganancias brutas</div>
-          <div class="kpi-value green" id="kpiGain">—</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-label">Pérdidas brutas</div>
-          <div class="kpi-value red" id="kpiLoss">—</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-label">Resultado neto</div>
-          <div class="kpi-value" id="kpiNeto">—</div>
+      <!-- TAB: OPERACIONES -->
+      <div class="tab-pane active" id="tab-operaciones">
+        <div class="tbl-wrap">
+          <table id="tblOps">
+            <thead>
+              <tr>
+                <th>Fecha</th><th>Tipo</th><th>Activo</th><th>Cantidad</th>
+                <th>Transmisión</th><th>Coste FIFO</th><th>G/P</th><th>Días</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyOps"></tbody>
+          </table>
         </div>
       </div>
 
-      <!-- TABS -->
-      <div class="tabs">
-        <button class="tab-btn active" data-tab="operaciones">Operaciones</button>
-        <button class="tab-btn" data-tab="posicion">Posición actual</button>
-        <button class="tab-btn" data-tab="rendimientos">Rendimientos <span id="rendBadge"></span></button>
-        <button class="tab-btn" data-tab="advertencias">Advertencias <span id="warnBadge"></span></button>
+      <!-- TAB: POSICIÓN -->
+      <div class="tab-pane" id="tab-posicion">
+        <div class="tbl-wrap">
+          <table id="tblPos">
+            <thead>
+              <tr>
+                <th>Activo</th><th>Cantidad</th><th>Precio medio</th><th>Coste total</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyPos"></tbody>
+          </table>
+        </div>
       </div>
-      <div class="tab-content">
 
-        <!-- TAB: OPERACIONES -->
-        <div class="tab-pane active" id="tab-operaciones">
-          <div class="tbl-wrap">
-            <table id="tblOps">
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Tipo</th>
-                  <th>Activo</th>
-                  <th>Cantidad</th>
-                  <th>Transmisión</th>
-                  <th>Coste FIFO</th>
-                  <th>G/P</th>
-                  <th>Días</th>
-                </tr>
-              </thead>
-              <tbody id="tbodyOps"></tbody>
-            </table>
+      <!-- TAB: RENDIMIENTOS -->
+      <div class="tab-pane" id="tab-rendimientos">
+        <div class="tbl-wrap">
+          <table id="tblRend">
+            <thead>
+              <tr>
+                <th>Tipo</th><th>Activo</th><th>Nº operaciones</th>
+                <th>Cantidad total</th><th>Valor aprox. (EUR)</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyRend"></tbody>
+          </table>
+          <div id="noRendimientos" style="display:none; padding:2rem; text-align:center; color:var(--muted); font-size:0.9rem;">
+            No se han detectado rendimientos (staking, rebates, etc.) en este CSV.
           </div>
         </div>
-
-        <!-- TAB: POSICIÓN -->
-        <div class="tab-pane" id="tab-posicion">
-          <div class="tbl-wrap">
-            <table id="tblPos">
-              <thead>
-                <tr>
-                  <th>Activo</th>
-                  <th>Cantidad</th>
-                  <th>Precio medio</th>
-                  <th>Coste total</th>
-                </tr>
-              </thead>
-              <tbody id="tbodyPos"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- TAB: RENDIMIENTOS -->
-        <div class="tab-pane" id="tab-rendimientos">
-          <div class="tbl-wrap">
-            <table id="tblRend">
-              <thead>
-                <tr>
-                  <th>Tipo</th>
-                  <th>Activo</th>
-                  <th>Nº operaciones</th>
-                  <th>Cantidad total</th>
-                  <th>Valor aprox. (EUR)</th>
-                </tr>
-              </thead>
-              <tbody id="tbodyRend"></tbody>
-            </table>
-            <div id="noRendimientos" style="display:none; padding:2rem; text-align:center; color:var(--muted); font-size:0.9rem;">
-              No se han detectado rendimientos (staking, rebates, etc.) en este CSV.
-            </div>
-          </div>
-        </div>
-
-        <!-- TAB: ADVERTENCIAS -->
-        <div class="tab-pane" id="tab-advertencias">
-          <div id="warnContainer"></div>
-        </div>
-
       </div>
+
+      <!-- TAB: ADVERTENCIAS -->
+      <div class="tab-pane" id="tab-advertencias">
+        <div id="warnContainer"></div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -875,32 +820,21 @@
 </footer>
 
 <script>
-  // ── EXCHANGE SELECTOR ────────────────────
-  // En páginas de exchange específico (ej. /binance) el exchange viene fijado por el servidor.
-  // En /fiscal (genérico) el usuario lo selecciona con el botón.
-  const EXCHANGE_PAGE = '{{ exchange_id }}';   // '' si es página genérica
+  const EXCHANGE_PAGE = '{{ exchange_id }}';
   let selectedExchange = EXCHANGE_PAGE || 'binance';
 
   const instrucciones = {
     binance: {
-      hint: 'Fichero .csv exportado desde Binance',
-      step1: { title: 'Binance → Wallet → Transaction History', desc: 'Accede a tu cuenta de Binance y ve a la sección de historial.' },
-      step2: { title: 'Export → Custom Range', desc: 'Selecciona el período completo del ejercicio fiscal (1 enero – 31 dic).' },
-    },
-    bit2me: {
-      hint: 'Fichero .csv exportado desde Bit2Me',
-      step1: { title: 'Bit2Me → Mi cuenta → Informes fiscales', desc: 'Accede a tu cuenta de Bit2Me y ve a la sección de informes fiscales.' },
-      step2: { title: 'Selecciona el ejercicio y descarga el CSV', desc: 'Elige el año fiscal completo y descarga el informe en formato CSV.' },
-    },
-    bitvavo: {
-      hint: 'Fichero .csv exportado desde Bitvavo',
-      step1: { title: 'Bitvavo → Cuenta → Historial de transacciones', desc: 'Accede a tu cuenta de Bitvavo y ve a la sección de historial.' },
-      step2: { title: 'Exportar → Selecciona el período completo', desc: 'Elige el año fiscal completo (1 enero – 31 dic) y descarga el CSV.' },
+      hint: 'Arrastra aquí el CSV de Binance o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Historial de Operaciones Spot · solo ficheros .csv</span>',
     },
     kraken: {
-      hint: 'Fichero .csv de Ledgers exportado desde Kraken',
-      step1: { title: 'Kraken → Historial → Exportar', desc: 'Accede a tu cuenta de Kraken, ve a Historial y haz clic en Exportar.' },
-      step2: { title: 'Tipo: Ledgers → Selecciona el período completo', desc: 'Elige "Ledgers" como tipo de exportación, el año fiscal completo (1 enero – 31 dic) y descarga el CSV.' },
+      hint: 'Arrastra aquí el CSV de Kraken o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Exportación de Ledgers · solo ficheros .csv</span>',
+    },
+    bitvavo: {
+      hint: 'Arrastra aquí el CSV de Bitvavo o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Historial de transacciones · solo ficheros .csv</span>',
+    },
+    bit2me: {
+      hint: 'Arrastra aquí el CSV de Bit2Me o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Informe fiscal · solo ficheros .csv</span>',
     },
   };
 
@@ -909,32 +843,33 @@
     btn.classList.add('active');
     selectedExchange = btn.dataset.exchange;
     const info = instrucciones[selectedExchange] || instrucciones.binance;
-    document.getElementById('dropHint').textContent = info.hint;
-    document.getElementById('step1-body').innerHTML = `<h4>${info.step1.title}</h4><p>${info.step1.desc}</p>`;
-    document.getElementById('step2-body').innerHTML = `<h4>${info.step2.title}</h4><p>${info.step2.desc}</p>`;
+    document.getElementById('dropHint').innerHTML = info.hint;
   }
 
-  // Si es página de exchange específico, actualizar instrucciones al cargar
+  // Si es página de exchange específico, actualizar hint al cargar
   if (EXCHANGE_PAGE) {
     const info = instrucciones[EXCHANGE_PAGE] || instrucciones.binance;
     document.addEventListener('DOMContentLoaded', () => {
       const hintEl = document.getElementById('dropHint');
-      const s1 = document.getElementById('step1-body');
-      const s2 = document.getElementById('step2-body');
-      if (hintEl) hintEl.textContent = info.hint;
-      if (s1) s1.innerHTML = `<h4>${info.step1.title}</h4><p>${info.step1.desc}</p>`;
-      if (s2) s2.innerHTML = `<h4>${info.step2.title}</h4><p>${info.step2.desc}</p>`;
+      if (hintEl) hintEl.innerHTML = info.hint;
     });
   }
 
-  const csvInput    = document.getElementById('csvInput');
-  const dropZone    = document.getElementById('dropZone');
+  const csvInput     = document.getElementById('csvInput');
+  const dropZone     = document.getElementById('dropZone');
   const fileSelected = document.getElementById('fileSelected');
-  const fileName    = document.getElementById('fileName');
-  const btnAnalizar = document.getElementById('btnAnalizar');
-  const btnText     = document.getElementById('btnText');
-  const btnDownload = document.getElementById('btnDownload');
-  const btnNuevo    = document.getElementById('btnNuevo');
+  const fileName     = document.getElementById('fileName');
+  const btnAnalizar  = document.getElementById('btnAnalizar');
+  const btnText      = document.getElementById('btnText');
+  const btnDownload  = document.getElementById('btnDownload');
+  const btnNuevo     = document.getElementById('btnNuevo');
+
+  function showFile()    { fileSelected.classList.add('visible'); }
+  function hideFile()    { fileSelected.classList.remove('visible'); }
+  function showDownload(){ btnDownload.classList.add('visible'); }
+  function hideDownload(){ btnDownload.classList.remove('visible'); }
+  function showNuevo()   { btnNuevo.classList.add('visible'); }
+  function hideNuevo()   { btnNuevo.classList.remove('visible'); }
 
   // ── MENSAJES DE PROGRESO ─────────────────
   const mensajesProgreso = [
@@ -964,21 +899,21 @@
   function resetearFormulario() {
     selectedFile = null;
     csvInput.value = '';
-    fileSelected.classList.add('hidden');
+    hideFile();
     fileName.textContent = '—';
     btnAnalizar.disabled = true;
-    btnDownload.classList.remove('visible');
-    btnNuevo.classList.remove('visible');
+    hideDownload();
+    hideNuevo();
     document.getElementById('instruccionesPost').style.display = 'none';
     showState('empty');
   }
 
   btnNuevo.addEventListener('click', resetearFormulario);
 
-  const emptyState   = document.getElementById('emptyState');
-  const loadingState = document.getElementById('loadingState');
-  const errorState   = document.getElementById('errorState');
-  const errorMsg     = document.getElementById('errorMsg');
+  const emptyState     = document.getElementById('emptyState');
+  const loadingState   = document.getElementById('loadingState');
+  const errorState     = document.getElementById('errorState');
+  const errorMsg       = document.getElementById('errorMsg');
   const resultsContent = document.getElementById('resultsContent');
 
   let selectedFile = null;
@@ -986,7 +921,6 @@
 
   // ── VALIDACIÓN FRONTEND ──────────────────
   function mostrarErrorArchivo(msg) {
-    // Mostrar error inline en la drop zone sin usar alert()
     const zona = document.getElementById('dropZone');
     zona.classList.add('error-zone');
     const hint = document.getElementById('dropHint');
@@ -996,7 +930,7 @@
       zona.classList.remove('error-zone');
       hint.style.color = '';
       const info = instrucciones[selectedExchange] || instrucciones.binance;
-      hint.textContent = info.hint;
+      hint.innerHTML = info.hint;
     }, 4000);
   }
 
@@ -1017,7 +951,7 @@
     if (!val) {
       ejercicioInput.classList.remove('field-error', 'field-ok');
       ejercicioError.classList.remove('visible');
-      return true; // opcional — vacío es válido
+      return true;
     }
     const año = parseInt(val, 10);
     if (!/^\d{4}$/.test(val) || año < AÑO_MIN || año > AÑO_MAX) {
@@ -1032,11 +966,8 @@
     return true;
   }
 
-  // Evalúa ambas condiciones y actualiza el botón
   function actualizarBoton() {
-    const ejercicioOk = validarEjercicio();
-    const archivoOk = !!selectedFile;
-    btnAnalizar.disabled = !(ejercicioOk && archivoOk);
+    btnAnalizar.disabled = !(validarEjercicio() && !!selectedFile);
   }
 
   ejercicioInput.addEventListener('blur', actualizarBoton);
@@ -1045,49 +976,30 @@
   // ── FILE SELECTION ───────────────────────
   function handleFile(file) {
     if (!file) return;
-
-    // Validar extensión en el cliente antes de cualquier otra operación
     const nombre = file.name.toLowerCase();
     if (!nombre.endsWith('.csv')) {
       mostrarErrorArchivo('Solo se aceptan ficheros .csv — selecciona el fichero correcto');
-      selectedFile = null;
-      actualizarBoton();
-      return;
+      selectedFile = null; actualizarBoton(); return;
     }
-
-    // Validar tamaño máximo (10 MB)
     if (file.size > 10 * 1024 * 1024) {
       mostrarErrorArchivo('El fichero es demasiado grande. Máximo 10 MB.');
-      selectedFile = null;
-      actualizarBoton();
-      return;
+      selectedFile = null; actualizarBoton(); return;
     }
-
     if (file.size === 0) {
       mostrarErrorArchivo('El fichero está vacío.');
-      selectedFile = null;
-      actualizarBoton();
-      return;
+      selectedFile = null; actualizarBoton(); return;
     }
-
     selectedFile = file;
     fileName.textContent = file.name;
-    fileSelected.classList.remove('hidden');
+    showFile();
     actualizarBoton();
   }
 
-  csvInput.addEventListener('change', () => {
-    if (csvInput.files[0]) handleFile(csvInput.files[0]);
-  });
-
-  dropZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropZone.classList.add('drag-over');
-  });
+  csvInput.addEventListener('change', () => { if (csvInput.files[0]) handleFile(csvInput.files[0]); });
+  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
   dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
   dropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropZone.classList.remove('drag-over');
+    e.preventDefault(); dropZone.classList.remove('drag-over');
     const file = e.dataTransfer.files[0];
     if (file) handleFile(file);
   });
@@ -1104,56 +1016,44 @@
 
   // ── ESTADOS UI ───────────────────────────
   function showState(state) {
-    emptyState.style.display    = state === 'empty'   ? 'block' : 'none';
-    loadingState.style.display  = state === 'loading' ? 'block' : 'none';
-    errorState.style.display    = state === 'error'   ? 'block' : 'none';
+    emptyState.style.display     = state === 'empty'   ? 'block' : 'none';
+    loadingState.style.display   = state === 'loading' ? 'block' : 'none';
+    errorState.style.display     = state === 'error'   ? 'block' : 'none';
     resultsContent.style.display = state === 'results' ? 'block' : 'none';
   }
   showState('empty');
 
   // ── FORMATEO ─────────────────────────────
   function fmt(n, dec = 4) {
-    return Number(n).toLocaleString('es-ES', {
-      minimumFractionDigits: dec, maximumFractionDigits: dec
-    });
-  }
-  function fmtGP(n) {
-    const s = n >= 0 ? `+${fmt(n)}` : fmt(n);
-    return s;
+    return Number(n).toLocaleString('es-ES', { minimumFractionDigits: dec, maximumFractionDigits: dec });
   }
 
   // ── RENDER RESULTADOS ─────────────────────
   function renderResultados(data) {
     const r = data.resumen;
 
-    // KPIs
     document.getElementById('kpiOps').textContent  = r.operaciones_con_resultado;
     document.getElementById('kpiGain').textContent = '+' + fmt(r.ganancias_brutas, 2);
     document.getElementById('kpiLoss').textContent = fmt(r.perdidas_brutas, 2);
     const netoEl = document.getElementById('kpiNeto');
-    netoEl.textContent = fmtGP(r.resultado_neto).replace('+', '+').replace(/(\d)(?=(\d{3})+\.)/g, '$1,');
     netoEl.className = 'kpi-value ' + (r.resultado_neto >= 0 ? 'green' : 'red');
     netoEl.textContent = (r.resultado_neto >= 0 ? '+' : '') + fmt(r.resultado_neto, 2);
 
-    // Tabla operaciones — usar textContent para evitar XSS
     const tbodyOps = document.getElementById('tbodyOps');
     tbodyOps.innerHTML = '';
     data.operaciones.forEach(op => {
       const gp = op.ganancia_perdida;
       const tr = document.createElement('tr');
-
-      const celdas = [
-        { text: op.fecha, cls: '' },
-        { text: op.tipo, cls: 'type-badge', badge: true },
-        { text: op.activo, cls: '' },
-        { text: fmt(op.cantidad, 6), cls: '' },
-        { text: fmt(op.transmision), cls: '' },
-        { text: fmt(op.coste_fifo), cls: '' },
-        { text: (gp >= 0 ? '+' : '') + fmt(gp), cls: gp >= 0 ? 'gain' : 'loss' },
-        { text: op.periodo_dias + 'd', cls: '' },
-      ];
-
-      celdas.forEach(c => {
+      [
+        { text: op.fecha,                                          cls: '' },
+        { text: op.tipo,                                           cls: 'type-badge', badge: true },
+        { text: op.activo,                                         cls: '' },
+        { text: fmt(op.cantidad, 6),                               cls: '' },
+        { text: fmt(op.transmision),                               cls: '' },
+        { text: fmt(op.coste_fifo),                                cls: '' },
+        { text: (gp >= 0 ? '+' : '') + fmt(gp),                   cls: gp >= 0 ? 'gain' : 'loss' },
+        { text: op.periodo_dias + 'd',                             cls: '' },
+      ].forEach(c => {
         const td = document.createElement('td');
         td.className = c.cls;
         if (c.badge) {
@@ -1166,56 +1066,47 @@
         }
         tr.appendChild(td);
       });
-
       tbodyOps.appendChild(tr);
     });
 
-    // Tabla posición
     const tbodyPos = document.getElementById('tbodyPos');
     tbodyPos.innerHTML = '';
     data.posicion.forEach(p => {
       const tr = document.createElement('tr');
       [p.activo, fmt(p.cantidad, 6), fmt(p.precio_medio), fmt(p.coste_total)].forEach((val, i) => {
         const td = document.createElement('td');
-        if (i === 0) { const strong = document.createElement('strong'); strong.textContent = val; td.appendChild(strong); }
+        if (i === 0) { const s = document.createElement('strong'); s.textContent = val; td.appendChild(s); }
         else td.textContent = val;
         tr.appendChild(td);
       });
       tbodyPos.appendChild(tr);
     });
 
-    // Tabla rendimientos
-    const rends = data.rendimientos || [];
-    const rendBadge = document.getElementById('rendBadge');
+    const rends   = data.rendimientos || [];
     const tbodyRend = document.getElementById('tbodyRend');
     const noRend    = document.getElementById('noRendimientos');
-    rendBadge.textContent = rends.length ? `(${rends.length})` : '';
+    document.getElementById('rendBadge').textContent = rends.length ? `(${rends.length})` : '';
     tbodyRend.innerHTML = '';
-    if (rends.length === 0) {
-      noRend.style.display = 'block';
-    } else {
-      noRend.style.display = 'none';
-      rends.forEach(rend => {
-        const tr = document.createElement('tr');
-        const hayEur = rend.valor_eur && rend.valor_eur > 0;
-        [
-          rend.subtipo.replace(/_/g, ' '),
-          rend.activo,
-          rend.operaciones.toString(),
-          fmt(rend.cantidad, 6),
-          hayEur ? fmt(rend.valor_eur, 4) + ' EUR' : '—',
-        ].forEach((val, i) => {
-          const td = document.createElement('td');
-          td.textContent = val;
-          if (i === 0) td.style.textTransform = 'capitalize';
-          if (i === 4 && hayEur) td.className = 'gain';
-          tr.appendChild(td);
-        });
-        tbodyRend.appendChild(tr);
+    noRend.style.display = rends.length === 0 ? 'block' : 'none';
+    rends.forEach(rend => {
+      const tr = document.createElement('tr');
+      const hayEur = rend.valor_eur && rend.valor_eur > 0;
+      [
+        rend.subtipo.replace(/_/g, ' '),
+        rend.activo,
+        rend.operaciones.toString(),
+        fmt(rend.cantidad, 6),
+        hayEur ? fmt(rend.valor_eur, 4) + ' EUR' : '—',
+      ].forEach((val, i) => {
+        const td = document.createElement('td');
+        td.textContent = val;
+        if (i === 0) td.style.textTransform = 'capitalize';
+        if (i === 4 && hayEur) td.className = 'gain';
+        tr.appendChild(td);
       });
-    }
+      tbodyRend.appendChild(tr);
+    });
 
-    // Advertencias
     const warns = data.advertencias || [];
     document.getElementById('warnBadge').textContent = warns.length ? `(${warns.length})` : '';
     const warnContainer = document.getElementById('warnContainer');
@@ -1253,16 +1144,12 @@
     if (error.includes('ejercicio')) return error;
     if (error.includes('exchange')) return error;
     if (error.includes('permitido')) return error;
-    // Error técnico — mensaje genérico
     return 'No se ha podido procesar el fichero. Comprueba que es un CSV válido exportado desde tu exchange y vuelve a intentarlo.';
   }
 
   function mostrarErrorApi(msg) {
-    // Renderiza el mensaje de error convirtiendo \n en <br> de forma segura (sin XSS)
     const safe = msg
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/\n/g, '<br>');
     errorMsg.innerHTML = safe;
   }
@@ -1270,22 +1157,16 @@
   // ── SUBMIT ───────────────────────────────
   btnAnalizar.addEventListener('click', async () => {
     if (!selectedFile) return;
-
     if (!selectedFile.name.toLowerCase().endsWith('.csv')) {
       mostrarErrorArchivo('El fichero debe ser un .csv. Selecciona el fichero correcto.');
       return;
     }
-
-    // Validar ejercicio antes de enviar
-    if (!validarEjercicio()) {
-      ejercicioInput.focus();
-      return;
-    }
+    if (!validarEjercicio()) { ejercicioInput.focus(); return; }
 
     btnAnalizar.disabled = true;
     btnText.textContent  = 'Procesando…';
-    btnDownload.classList.remove('visible');
-    btnNuevo.classList.remove('visible');
+    hideDownload();
+    hideNuevo();
     iniciarProgreso();
     showState('loading');
 
@@ -1302,40 +1183,29 @@
       if (!res.ok || !data.ok) {
         mostrarErrorApi(mensajeAmigable(data.error));
         showState('error');
-        selectedFile = null;
-        csvInput.value = '';
-        fileSelected.classList.add('hidden');
-        fileName.textContent = '—';
-        btnAnalizar.disabled = true;
+        selectedFile = null; csvInput.value = ''; hideFile();
+        fileName.textContent = '—'; btnAnalizar.disabled = true;
         return;
       }
 
       currentToken = data.token;
       renderResultados(data);
-
       btnDownload.href = `/api/descargar/${currentToken}`;
-      btnDownload.classList.add('visible');
-      btnNuevo.classList.add('visible');
+      showDownload();
+      showNuevo();
       document.getElementById('instruccionesPost').style.display = 'block';
 
-      // Resetear el campo de fichero
-      selectedFile = null;
-      csvInput.value = '';
-      fileSelected.classList.add('hidden');
-      fileName.textContent = '—';
-      btnAnalizar.disabled = true;
+      selectedFile = null; csvInput.value = ''; hideFile();
+      fileName.textContent = '—'; btnAnalizar.disabled = true;
 
     } catch (err) {
       errorMsg.textContent = 'No se pudo conectar con el servidor.';
       showState('error');
-      selectedFile = null;
-      csvInput.value = '';
-      fileSelected.classList.add('hidden');
-      fileName.textContent = '—';
-      btnAnalizar.disabled = true;
+      selectedFile = null; csvInput.value = ''; hideFile();
+      fileName.textContent = '—'; btnAnalizar.disabled = true;
     } finally {
       detenerProgreso();
-      btnText.textContent  = 'Generar informe';
+      btnText.textContent = 'Generar →';
     }
   });
 </script>
