@@ -4,3 +4,4 @@ flask-cors
 reportlab
 pandas
 gunicorn
+matplotlib
