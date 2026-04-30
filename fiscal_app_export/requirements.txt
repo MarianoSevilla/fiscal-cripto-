@@ -1,6 +1,7 @@
 flask
 flask-limiter
 flask-cors
+flask-compress
 reportlab
 pandas
 gunicorn

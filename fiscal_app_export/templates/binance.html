@@ -10,6 +10,7 @@
 <meta name="author" content="Mariano Sevilla">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="{{ page_canonical }}">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
 
 <!-- OPEN GRAPH -->
 <meta property="og:type" content="website">
@@ -684,6 +685,53 @@
   }
   footer a { color: var(--muted); text-underline-offset: 3px; }
 
+  /* ── FAQ + ENLACES INTERNOS ── */
+  .faq-wrap {
+    max-width: 1060px; margin: 0 auto;
+    padding: 0 2rem 4rem;
+  }
+  .faq-label {
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.12em; color: var(--muted);
+    margin-bottom: 0.75rem;
+  }
+  .faq-h2 {
+    font-family: var(--font-display);
+    font-size: clamp(1.15rem, 2.5vw, 1.5rem);
+    font-weight: 700; letter-spacing: -0.025em;
+    line-height: 1.2; margin-bottom: 1.5rem;
+  }
+  .faq-list {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 1px; background: var(--border);
+    border: 1px solid var(--border); border-radius: 12px;
+    overflow: hidden; margin-bottom: 1.5rem;
+  }
+  .faq-item {
+    background: var(--surface); padding: 1.25rem 1.5rem;
+  }
+  .faq-item h3 {
+    font-family: var(--font-display); font-size: 0.9rem;
+    font-weight: 700; margin-bottom: 0.4rem; letter-spacing: -0.01em;
+  }
+  .faq-item p { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+  .also-wrap {
+    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+    padding: 1rem 1.25rem;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .also-label { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .also-links { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .also-link {
+    font-size: 12px; font-weight: 600;
+    color: var(--text); text-decoration: none;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 5px 12px;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .also-link:hover { border-color: var(--accent); color: var(--accent); }
+
   /* ANIM */
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(16px); }
@@ -704,6 +752,8 @@
     .bar-exchange { flex: 1; }
     .bar-btn { width: auto; flex-shrink: 0; }
     .results-wrap { padding: 0 1rem 4rem; }
+    .faq-wrap { padding: 0 1rem 3rem; }
+    .faq-list { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -927,6 +977,40 @@
         <div id="warnContainer"></div>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- ── FAQ + ENLACES INTERNOS ── -->
+<div class="faq-wrap">
+  <div class="faq-label">Preguntas frecuentes</div>
+  <h2 class="faq-h2">Dudas habituales sobre declarar {{ exchange_name }} en Hacienda</h2>
+  <div class="faq-list">
+    <div class="faq-item">
+      <h3>¿Qué CSV debo exportar desde {{ exchange_name }}?</h3>
+      <p>El historial completo de transacciones en formato CSV desde tu primera operación hasta hoy. La sección «Cómo funciona» de esta página explica los pasos exactos en tu cuenta de {{ exchange_name }}.</p>
+    </div>
+    <div class="faq-item">
+      <h3>¿Por qué es obligatorio el método FIFO?</h3>
+      <p>El artículo 37.2 de la LIRPF establece que en la transmisión de valores homogéneos se considera que los adquiridos en primer lugar son los transmitidos primero. Las criptomonedas se consideran valores a estos efectos.</p>
+    </div>
+    <div class="faq-item">
+      <h3>¿Necesito todo el historial o solo el año a declarar?</h3>
+      <p>Debes subir el historial completo desde tu primera operación. El método FIFO requiere conocer el coste de adquisición de cada activo desde el origen, no solo las operaciones del ejercicio que declaras.</p>
+    </div>
+    <div class="faq-item">
+      <h3>¿Qué incluye el informe PDF generado?</h3>
+      <p>El informe detalla todas las operaciones del ejercicio, las ganancias y pérdidas patrimoniales netas, los importes para las casillas 1626 y 1627 de la declaración, y los rendimientos por staking si los hubiera.</p>
+    </div>
+  </div>
+
+  <div class="also-wrap">
+    <span class="also-label">También disponible para:</span>
+    <div class="also-links">
+      <a href="/kraken" class="also-link">Kraken</a>
+      <a href="/bitvavo" class="also-link">Bitvavo</a>
+      <a href="/bit2me" class="also-link">Bit2Me</a>
+      <a href="https://marianosevilla.com" class="also-link">Página principal</a>
     </div>
   </div>
 </div>
