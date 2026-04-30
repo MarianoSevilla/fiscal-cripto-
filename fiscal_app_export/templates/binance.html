@@ -213,8 +213,10 @@
     width: 22px; height: 22px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     font-size: 11px; font-weight: 700; flex-shrink: 0; color: #fff;
+    overflow: hidden;
   }
-  .logo-binance  { background: #F0B90B; color: #000; }
+  .exchange-logo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .logo-binance  { background: #F0B90B; }
   .logo-bitvavo  { background: #1A56F0; }
   .logo-kraken   { background: #5741D9; }
   .logo-coinbase { background: #0052FF; }
@@ -829,7 +831,7 @@
     <!-- Columna derecha: exchange badge arriba + botón generar abajo -->
     <div class="bar-right">
       <div class="bar-exchange">
-        <div class="exchange-logo logo-{{ exchange_id }}" style="width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">{{ exchange_logo }}</div>
+        <div class="exchange-logo logo-{{ exchange_id }}" style="width:22px;height:22px;border-radius:50%;overflow:hidden;flex-shrink:0;"><img src="/static/images/{{ exchange_id }}{% if exchange_id in ['kraken','bitvavo'] %}.png{% else %}.jpg{% endif %}" alt="{{ exchange_name }}" style="width:100%;height:100%;object-fit:cover;display:block;"></div>
         <span class="bar-exchange-name">{{ exchange_name }}</span>
         <span class="bar-exchange-change"><a href="https://marianosevilla.com">Cambiar</a></span>
       </div>
