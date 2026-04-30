@@ -243,6 +243,8 @@ def _grafico_gp_activos(resultados, width_mm=168):
     # Etiquetas de valor: dentro de la barra si es ancha (>30 % del eje),
     # fuera si es estrecha — evita que las etiquetas se salgan del área.
     max_abs = max(abs(v) for v in valores) if valores else 1.0
+    if max_abs == 0:
+        max_abs = 1.0          # evitar división por cero si todos los valores son 0
     pad     = max_abs * 0.025
     for bar, val in zip(bars, valores):
         x         = bar.get_width()
