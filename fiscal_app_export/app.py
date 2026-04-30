@@ -280,29 +280,22 @@ def _validar_csv(filepath: str, exchange: str) -> tuple[bool, str]:
             )
 
     # Binance: detectar el formato "Historial de Transacciones" (incorrecto para FIFO)
+    # "Buy Crypto With Fiat" es una operación exclusiva del Historial de Transacciones
+    # (compras con tarjeta/banco directa). El Historial de Operaciones Spot usa
+    # "Transaction Buy" + "Transaction Spend" e incluye el importe en EUR de cada compra.
     if exchange == "binance":
         try:
             with open(filepath, encoding="utf-8", errors="replace") as f:
-                primera_linea = f.readline()
-                resto = "".join(f.readline() for _ in range(99))
-            muestra = primera_linea + resto
-
-            # El CSV correcto (Historial de Operaciones Spot) tiene estas columnas en la 1ª fila
-            COLS_SPOT = ["Tiempo", "Operación", "Moneda", "Cambio"]
-            tiene_cols_spot = sum(1 for c in COLS_SPOT if c in primera_linea) >= 2
-
-            # El Historial de Transacciones incluye este tipo de operación en los datos
-            es_trans_history = "Buy Crypto With Fiat" in muestra
-
-            if es_trans_history and not tiene_cols_spot:
+                muestra = "".join(f.readline() for _ in range(100))
+            if "Buy Crypto With Fiat" in muestra:
                 return False, (
                     "CSV incorrecto: has exportado el Historial de Transacciones de Binance, "
-                    "que no incluye el precio en euros de cada operación y no permite calcular el FIFO.\n"
+                    "que no incluye el precio en euros de cada compra y no es válido para calcular el FIFO.\n"
                     "Sigue estos pasos para exportar el CSV correcto:\n"
                     "1. Inicia sesión en Binance.\n"
                     "2. Ve a Órdenes → Historial de operaciones spot.\n"
                     "3. Haz clic en Exportar, selecciona el rango de fechas completo y descarga el fichero.\n"
-                    "El CSV correcto tiene las columnas: Tiempo, Operación, Moneda, Cambio, Cuenta."
+                    "El CSV correcto muestra las columnas Transaction Buy y Transaction Spend con el importe en euros de cada operación."
                 )
         except Exception:
             pass
