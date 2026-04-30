@@ -669,6 +669,12 @@
     max-width: 1060px; margin: 0 auto;
     padding: 0 2rem 6rem;
   }
+  .results-heading {
+    font-family: var(--font-display);
+    font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+    font-weight: 700; letter-spacing: -0.02em;
+    color: var(--text); margin-bottom: 1.25rem;
+  }
 
   /* FOOTER */
   footer {
@@ -816,11 +822,13 @@
 <!-- ── RESULTADOS FULL WIDTH ── -->
 <div class="results-wrap">
 
+  <h2 class="results-heading">Resultado del análisis</h2>
+
   <!-- ESTADO VACÍO -->
   <div class="empty-state" id="emptyState">
     <div class="empty-icon">📊</div>
-    <h3>Esperando tu CSV</h3>
-    <p>Sube el fichero y en unos segundos verás el resumen fiscal completo aquí.</p>
+    <h3>Aún no hay resultados</h3>
+    <p>Sube tu CSV en el formulario de arriba y en unos segundos verás aquí el resumen fiscal completo.</p>
   </div>
 
   <!-- LOADING -->
