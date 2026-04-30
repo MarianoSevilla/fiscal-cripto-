@@ -222,15 +222,22 @@ def _grafico_gp_activos(resultados, width_mm=168):
     if not por_activo:
         return None
 
-    # Ordenar: pérdidas abajo, ganancias arriba
-    items   = sorted(por_activo.items(), key=lambda x: x[1])
+    # Limitar a los 20 activos con mayor impacto absoluto (evita páginas enormes)
+    MAX_ACTIVOS = 20
+    todos = sorted(por_activo.items(), key=lambda x: abs(x[1]), reverse=True)
+    if len(todos) > MAX_ACTIVOS:
+        todos = todos[:MAX_ACTIVOS]
+
+    # Ordenar para el gráfico: pérdidas abajo, ganancias arriba
+    items   = sorted(todos, key=lambda x: x[1])
     activos = [i[0] for i in items]
     valores = [i[1] for i in items]
     colores = ["#E24B4A" if v < 0 else "#00C896" for v in valores]
 
     n          = len(activos)
     fig_w_in   = 7.2
-    fig_h_in   = max(2.4, n * 0.44 + 0.7)
+    # Altura proporcional al nº de barras, con techo para que quepa en la página
+    fig_h_in   = min(max(2.4, n * 0.44 + 0.7), 7.0)
 
     fig, ax = plt.subplots(figsize=(fig_w_in, fig_h_in))
     fig.patch.set_facecolor("#1A1A1A")
