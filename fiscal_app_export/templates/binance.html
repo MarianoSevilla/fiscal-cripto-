@@ -574,7 +574,16 @@
     overflow: hidden;
   }
   .bar-inputs-row {
-    display: flex; gap: 0.75rem;
+    display: flex; gap: 0.75rem; align-items: flex-end;
+  }
+  .bar-field {
+    display: flex; flex-direction: column; gap: 5px;
+  }
+  .bar-field-nombre { flex: 1; }
+  .bar-field-year   { flex-shrink: 0; }
+  .bar-field label {
+    display: block; font-size: 12px; font-weight: 500;
+    color: var(--muted); letter-spacing: 0.02em; margin-bottom: 0;
   }
   .bar-input {
     background: var(--surface2);
@@ -750,8 +759,14 @@
         <span class="bar-drop-text" id="dropHint">Arrastra el CSV de {{ exchange_name }} aquí<br><span style="font-size:11px;opacity:0.7;">o haz clic para seleccionar</span></span>
       </div>
       <div class="bar-inputs-row">
-        <input type="text" id="nombre" class="bar-input bar-input-nombre" placeholder="Nombre (opcional)">
-        <input type="text" id="ejercicio" class="bar-input bar-input-year" placeholder="2024" maxlength="4" pattern="\d{4}">
+        <div class="bar-field bar-field-nombre">
+          <label for="nombre">Tu nombre</label>
+          <input type="text" id="nombre" class="bar-input bar-input-nombre" placeholder="Para el encabezado del informe">
+        </div>
+        <div class="bar-field bar-field-year">
+          <label for="ejercicio">Ejercicio fiscal</label>
+          <input type="text" id="ejercicio" class="bar-input bar-input-year" placeholder="2024" maxlength="4" pattern="\d{4}">
+        </div>
       </div>
     </div>
 
