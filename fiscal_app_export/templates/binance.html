@@ -756,7 +756,7 @@
       <div class="bar-dropzone" id="dropZone">
         <input type="file" id="csvInput" accept=".csv">
         <span style="font-size:22px;flex-shrink:0;">📂</span>
-        <span class="bar-drop-text" id="dropHint">Arrastra el CSV de {{ exchange_name }} aquí<br><span style="font-size:11px;opacity:0.7;">o haz clic para seleccionar</span></span>
+        <span class="bar-drop-text" id="dropHint">Arrastra aquí el CSV de {{ exchange_name }} o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Solo ficheros .csv</span></span>
       </div>
       <div class="bar-inputs-row">
         <div class="bar-field bar-field-nombre">
@@ -945,22 +945,22 @@
 
   const instrucciones = {
     binance: {
-      hint: 'Fichero .csv exportado desde Binance',
+      hint: 'Arrastra aquí el CSV de Binance o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Historial de Operaciones Spot · solo ficheros .csv</span>',
       step1: { title: 'Binance → Wallet → Transaction History', desc: 'Accede a tu cuenta de Binance y ve a la sección de historial.' },
       step2: { title: 'Export → Custom Range', desc: 'Selecciona el período completo del ejercicio fiscal (1 enero – 31 dic).' },
     },
     bit2me: {
-      hint: 'Fichero .csv exportado desde Bit2Me',
+      hint: 'Arrastra aquí el CSV de Bit2Me o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Informe fiscal · solo ficheros .csv</span>',
       step1: { title: 'Bit2Me → Mi cuenta → Informes fiscales', desc: 'Accede a tu cuenta de Bit2Me y ve a la sección de informes fiscales.' },
       step2: { title: 'Selecciona el ejercicio y descarga el CSV', desc: 'Elige el año fiscal completo y descarga el informe en formato CSV.' },
     },
     bitvavo: {
-      hint: 'Fichero .csv exportado desde Bitvavo',
+      hint: 'Arrastra aquí el CSV de Bitvavo o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Historial de transacciones · solo ficheros .csv</span>',
       step1: { title: 'Bitvavo → Cuenta → Historial de transacciones', desc: 'Accede a tu cuenta de Bitvavo y ve a la sección de historial.' },
       step2: { title: 'Exportar → Selecciona el período completo', desc: 'Elige el año fiscal completo (1 enero – 31 dic) y descarga el CSV.' },
     },
     kraken: {
-      hint: 'Fichero .csv de Ledgers exportado desde Kraken',
+      hint: 'Arrastra aquí el CSV de Kraken o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Exportación de Ledgers · solo ficheros .csv</span>',
       step1: { title: 'Kraken → Historial → Exportar', desc: 'Accede a tu cuenta de Kraken, ve a Historial y haz clic en Exportar.' },
       step2: { title: 'Tipo: Ledgers → Selecciona el período completo', desc: 'Elige "Ledgers" como tipo de exportación, el año fiscal completo (1 enero – 31 dic) y descarga el CSV.' },
     },
@@ -971,7 +971,7 @@
     btn.classList.add('active');
     selectedExchange = btn.dataset.exchange;
     const info = instrucciones[selectedExchange] || instrucciones.binance;
-    document.getElementById('dropHint').textContent = info.hint;
+    document.getElementById('dropHint').innerHTML = info.hint;
     document.getElementById('step1-body').innerHTML = `<h4>${info.step1.title}</h4><p>${info.step1.desc}</p>`;
     document.getElementById('step2-body').innerHTML = `<h4>${info.step2.title}</h4><p>${info.step2.desc}</p>`;
   }
@@ -983,7 +983,7 @@
       const hintEl = document.getElementById('dropHint');
       const s1 = document.getElementById('step1-body');
       const s2 = document.getElementById('step2-body');
-      if (hintEl) hintEl.textContent = info.hint;
+      if (hintEl) hintEl.innerHTML = info.hint;
       if (s1) s1.innerHTML = `<h4>${info.step1.title}</h4><p>${info.step1.desc}</p>`;
       if (s2) s2.innerHTML = `<h4>${info.step2.title}</h4><p>${info.step2.desc}</p>`;
     });
@@ -1066,7 +1066,7 @@
       zona.classList.remove('error-zone');
       hint.style.color = '';
       const info = instrucciones[selectedExchange] || instrucciones.binance;
-      hint.textContent = info.hint;
+      hint.innerHTML = info.hint;
     }, 4000);
   }
 
