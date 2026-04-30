@@ -240,15 +240,23 @@ def _grafico_gp_activos(resultados, width_mm=168):
                    edgecolor="none", zorder=3)
     ax.axvline(0, color="#555555", linewidth=0.7, zorder=2)
 
-    # Etiquetas de valor al extremo de cada barra
+    # Etiquetas de valor: dentro de la barra si es ancha (>30 % del eje),
+    # fuera si es estrecha — evita que las etiquetas se salgan del área.
     max_abs = max(abs(v) for v in valores) if valores else 1.0
     pad     = max_abs * 0.025
     for bar, val in zip(bars, valores):
-        x    = bar.get_width()
-        ha   = "left" if x >= 0 else "right"
-        xpos = x + (pad if x >= 0 else -pad)
-        col  = "#00C896" if val >= 0 else "#E24B4A"
-        lbl  = f"+{val:,.2f} €" if val >= 0 else f"{val:,.2f} €"
+        x         = bar.get_width()
+        bar_ratio = abs(x) / max_abs
+        inside    = bar_ratio > 0.30
+        lbl       = f"+{val:,.2f} €" if val >= 0 else f"{val:,.2f} €"
+        if val >= 0:
+            ha   = "right" if inside else "left"
+            xpos = x - pad  if inside else x + pad
+            col  = "#111111" if inside else "#00C896"
+        else:
+            ha   = "left"  if inside else "right"
+            xpos = x + pad  if inside else x - pad
+            col  = "#F0EDE6" if inside else "#E24B4A"
         ax.text(xpos, bar.get_y() + bar.get_height() / 2, lbl,
                 va="center", ha=ha, fontsize=6.5, color=col, fontweight="bold")
 
