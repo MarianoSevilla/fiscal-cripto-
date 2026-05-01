@@ -404,17 +404,36 @@
   /* LOADING */
   .loading-state {
     display: none; border: 1px solid var(--border);
-    border-radius: 16px; padding: 4rem 2rem; text-align: center;
+    border-radius: 16px; padding: 3.5rem 2rem; text-align: center;
   }
-  .spinner {
-    width: 44px; height: 44px; border-radius: 50%;
-    border: 3px solid var(--border);
-    border-top-color: var(--accent);
-    animation: spin 0.8s linear infinite;
-    margin: 0 auto 1.5rem;
+  .progress-wrap { max-width: 340px; margin: 0 auto; }
+  .progress-track {
+    height: 4px; background: var(--surface2);
+    border-radius: 100px; overflow: hidden; margin-bottom: 0.6rem;
   }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-state p { color: var(--muted); font-size: 0.95rem; }
+  .progress-fill {
+    height: 100%; background: var(--accent);
+    border-radius: 100px; width: 0%;
+    transition: width 0.7s ease;
+  }
+  .progress-meta {
+    display: flex; justify-content: space-between;
+    font-size: 11px; font-family: var(--font-mono);
+  }
+  .progress-meta #loadingMsg { color: var(--muted); }
+  .progress-meta #progressPct { color: var(--accent); }
+
+  /* AVISO COSTE CERO */
+  .coste-cero-aviso {
+    display: none;
+    background: rgba(240,185,11,0.07); border: 1px solid rgba(240,185,11,0.25);
+    border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1.25rem;
+  }
+  .coste-cero-title {
+    font-size: 11px; font-weight: 700; color: #F0B90B;
+    letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 5px;
+  }
+  .coste-cero-body { font-size: 12px; color: #c8b870; line-height: 1.6; }
 
   /* ERROR STATE */
   .error-state {
@@ -760,8 +779,15 @@
 
   <!-- LOADING -->
   <div class="loading-state" id="loadingState">
-    <div class="spinner"></div>
-    <p id="loadingMsg">Leyendo CSV…</p>
+    <div class="progress-wrap">
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="progress-meta">
+        <span id="loadingMsg">Leyendo CSV…</span>
+        <span id="progressPct">0%</span>
+      </div>
+    </div>
   </div>
 
   <!-- ERROR -->
@@ -772,6 +798,12 @@
 
   <!-- RESULTADOS -->
   <div class="results-content" id="resultsContent">
+
+    <!-- AVISO COSTE CERO -->
+    <div class="coste-cero-aviso" id="costeCeroAviso">
+      <div class="coste-cero-title">⚠ Coste de adquisición desconocido</div>
+      <div class="coste-cero-body" id="costeCeroMsg"></div>
+    </div>
 
     <!-- KPIs -->
     <div class="kpi-grid" id="kpiGrid">
@@ -960,7 +992,7 @@
   function showNuevo()   { btnNuevo.classList.add('visible'); }
   function hideNuevo()   { btnNuevo.classList.remove('visible'); }
 
-  // ── MENSAJES DE PROGRESO ─────────────────
+  // ── PROGRESO ─────────────────────────────
   const mensajesProgreso = [
     'Leyendo CSV…',
     'Clasificando operaciones…',
@@ -970,18 +1002,28 @@
   ];
   let intervaloProgreso = null;
 
+  function setProgress(p) {
+    const fill = document.getElementById('progressFill');
+    const pct  = document.getElementById('progressPct');
+    if (fill) fill.style.width = p + '%';
+    if (pct)  pct.textContent  = p + '%';
+  }
+
   function iniciarProgreso() {
     let i = 0;
     const el = document.getElementById('loadingMsg');
     if (el) el.textContent = mensajesProgreso[0];
+    setProgress(10);
     intervaloProgreso = setInterval(() => {
-      i = (i + 1) % mensajesProgreso.length;
+      i = Math.min(i + 1, mensajesProgreso.length - 1);
       if (el) el.textContent = mensajesProgreso[i];
+      setProgress(Math.round((i + 1) / mensajesProgreso.length * 85));
     }, 2500);
   }
 
   function detenerProgreso() {
     if (intervaloProgreso) { clearInterval(intervaloProgreso); intervaloProgreso = null; }
+    setProgress(100);
   }
 
   // ── RESETEAR TODO ────────────────────────
@@ -994,6 +1036,8 @@
     hideDownload();
     hideNuevo();
     document.getElementById('instruccionesPost').style.display = 'none';
+    document.getElementById('costeCeroAviso').style.display = 'none';
+    setProgress(0);
     showState('empty');
   }
 
@@ -1215,6 +1259,26 @@
         list.appendChild(item);
       });
       warnContainer.appendChild(list);
+    }
+
+    // ── AVISO COSTE CERO ─────────────────────
+    const opsSinCoste = data.operaciones.filter(op =>
+      (op.tipo === 'venta' || op.tipo === 'swap') &&
+      Number(op.coste_fifo) < 0.001 &&
+      Number(op.transmision) > 0
+    );
+    const avisoCero = document.getElementById('costeCeroAviso');
+    if (opsSinCoste.length > 0) {
+      const totalEur = opsSinCoste.reduce((s, op) => s + Number(op.transmision), 0);
+      const n = opsSinCoste.length;
+      document.getElementById('costeCeroMsg').textContent =
+        `${n} operación${n > 1 ? 'es' : ''} con coste de adquisición cero `
+        + `(valor de transmisión: ${fmt(totalEur, 2)} EUR). `
+        + `Es probable que esos activos fueran comprados en otro exchange o wallet externo. `
+        + `El FIFO se ha calculado con coste cero — la ganancia declarada es la máxima posible para esas operaciones.`;
+      avisoCero.style.display = 'block';
+    } else {
+      avisoCero.style.display = 'none';
     }
 
     showState('results');
