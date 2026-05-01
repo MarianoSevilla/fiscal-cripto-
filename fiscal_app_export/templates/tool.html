@@ -226,7 +226,6 @@
   .logo-bitvavo  { background: #1A56F0; }
   .logo-kraken   { background: #5741D9; }
   .logo-bit2me   { background: #0066FF; }
-  .logo-coinbase { background: #0052FF; }
   .exchange-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .soon-tag {
     font-size: 9px; font-weight: 600; text-transform: uppercase;
@@ -705,8 +704,13 @@
       <span class="exchange-name">Bit2Me</span>
     </button>
     <button class="exchange-btn coming-soon" disabled>
-      <div class="exchange-logo logo-coinbase">C</div>
+      <div class="exchange-logo"><img src="/static/images/coinbase.png" alt="Coinbase"></div>
       <span class="exchange-name">Coinbase</span>
+      <span class="soon-tag">Pronto</span>
+    </button>
+    <button class="exchange-btn coming-soon" disabled>
+      <div class="exchange-logo"><img src="/static/images/bybit.jpg" alt="Bybit"></div>
+      <span class="exchange-name">Bybit</span>
       <span class="soon-tag">Pronto</span>
     </button>
   </div>
