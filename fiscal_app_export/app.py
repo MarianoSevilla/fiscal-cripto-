@@ -32,6 +32,7 @@ from clasificador import ClasificadorBinance
 from clasificador_bit2me import ClasificadorBit2Me
 from clasificador_bitvavo import ClasificadorBitvavo
 from clasificador_kraken import ClasificadorKraken
+from clasificador_coinbase import ClasificadorCoinbase
 from motor_fifo import MotorFIFO
 from generador_pdf import generar_pdf, generar_pdf_bit2me
 
@@ -163,6 +164,30 @@ EXCHANGE_PAGES = {
             _HOW_TO_STEP3,
         ],
     },
+    "coinbase": {
+        "exchange_id":   "coinbase",
+        "exchange_name": "Coinbase",
+        "exchange_logo": "C",
+        "page_title":       "Informe FIFO Coinbase para Hacienda | Mariano Sevilla",
+        "page_meta_desc":   "Sube el CSV de Coinbase y calcula tus ganancias y pérdidas patrimoniales con FIFO obligatorio. Informe PDF listo para la declaración de la renta.",
+        "page_canonical":   f"{BASE_URL}/coinbase",
+        "page_og_title":    "Informe fiscal Coinbase para Hacienda — FIFO automático | Mariano Sevilla",
+        "page_og_desc":     "Sube el CSV de Coinbase y calcula las plusvalías crypto con FIFO. Informe PDF para tu gestor. Gratis.",
+        "page_schema_name": "Informe FIFO Coinbase — Mariano Sevilla",
+        "page_h1":   "Genera tu informe fiscal de Coinbase para Hacienda",
+        "hero_desc": "Sube el CSV del historial de transacciones de Coinbase y obtén el informe FIFO con tus ganancias y pérdidas patrimoniales. Listo para la declaración de la renta.",
+        "how_to": [
+            {
+                "title": "Exporta el CSV del historial de transacciones de Coinbase",
+                "desc":  "En tu cuenta de Coinbase ve a Perfil → Extractos → "
+                         "Historial de transacciones. Haz clic en «Generar extracto», "
+                         "selecciona el rango completo desde tu primera operación hasta "
+                         "hoy y descarga el fichero CSV.",
+            },
+            _HOW_TO_STEP2,
+            _HOW_TO_STEP3,
+        ],
+    },
 }
 
 
@@ -214,10 +239,11 @@ MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
 AÑO_MIN = 2009
 AÑO_MAX = datetime.now().year + 1
 
-BINANCE_SIGNATURES = ["Tiempo", "Operación", "Moneda", "Cambio", "Cuenta"]
-BIT2ME_SIGNATURES  = ["Bit", "2Me", "Informe Fiscal", "Estimado"]
-BITVAVO_SIGNATURES = ["Timezone", "Date", "Time", "Type", "Currency", "Amount"]
-KRAKEN_SIGNATURES  = ["txid", "refid", "aclass", "subtype"]
+BINANCE_SIGNATURES  = ["Tiempo", "Operación", "Moneda", "Cambio", "Cuenta"]
+BIT2ME_SIGNATURES   = ["Bit", "2Me", "Informe Fiscal", "Estimado"]
+BITVAVO_SIGNATURES  = ["Timezone", "Date", "Time", "Type", "Currency", "Amount"]
+KRAKEN_SIGNATURES   = ["txid", "refid", "aclass", "subtype"]
+COINBASE_SIGNATURES = ["Timestamp", "Transaction Type", "Quantity Transacted"]
 
 
 def _sanitizar_texto(texto: str, max_len: int = 100) -> str:
@@ -263,16 +289,18 @@ def _validar_csv(filepath: str, exchange: str) -> tuple[bool, str]:
 
     # Validar exchange
     sigs = {
-        "binance": BINANCE_SIGNATURES,
-        "bit2me":  BIT2ME_SIGNATURES,
-        "bitvavo": BITVAVO_SIGNATURES,
-        "kraken":  KRAKEN_SIGNATURES,
+        "binance":  BINANCE_SIGNATURES,
+        "bit2me":   BIT2ME_SIGNATURES,
+        "bitvavo":  BITVAVO_SIGNATURES,
+        "kraken":   KRAKEN_SIGNATURES,
+        "coinbase": COINBASE_SIGNATURES,
     }
     nombres = {
-        "binance": "Binance",
-        "bit2me":  "Bit2Me",
-        "bitvavo": "Bitvavo",
-        "kraken":  "Kraken",
+        "binance":  "Binance",
+        "bit2me":   "Bit2Me",
+        "bitvavo":  "Bitvavo",
+        "kraken":   "Kraken",
+        "coinbase": "Coinbase",
     }
     if exchange in sigs:
         if not any(sig in primeras for sig in sigs[exchange]):
@@ -360,6 +388,10 @@ def procesar_bitvavo(filepath: str) -> tuple:
 
 def procesar_kraken(filepath: str) -> tuple:
     return procesar_con_fifo(ClasificadorKraken(filepath).clasificar())
+
+
+def procesar_coinbase(filepath: str) -> tuple:
+    return procesar_con_fifo(ClasificadorCoinbase(filepath).clasificar())
 
 
 def procesar_bit2me(filepath: str) -> tuple:
@@ -510,6 +542,11 @@ def page_bit2me():
     return render_template("tool.html", **EXCHANGE_PAGES["bit2me"])
 
 
+@app.route("/coinbase")
+def page_coinbase():
+    return render_template("tool.html", **EXCHANGE_PAGES["coinbase"])
+
+
 @app.route("/api/analizar", methods=["POST"])
 @limiter.limit("1 per 10 minutes")  # máx 1 análisis por 10 minutos por IP
 def analizar():
@@ -522,7 +559,7 @@ def analizar():
     exchange  = _sanitizar_texto(request.form.get("exchange", "binance"), max_len=20).lower()
 
     # Validar exchange
-    if exchange not in ("binance", "bit2me", "bitvavo", "kraken"):
+    if exchange not in ("binance", "bit2me", "bitvavo", "kraken", "coinbase"):
         return jsonify({"error": "Exchange no soportado."}), 400
 
     # Validar ejercicio fiscal
@@ -566,6 +603,13 @@ def analizar():
             advertencias = motor.advertencias
             rendimientos_json = _rendimientos_a_json(rendimientos)
             pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Kraken", rendimientos)
+
+        elif exchange == "coinbase":
+            motor, rendimientos = procesar_coinbase(tmp_path)
+            resumen, posicion, operaciones = _motor_a_json(motor)
+            advertencias = motor.advertencias
+            rendimientos_json = _rendimientos_a_json(rendimientos)
+            pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Coinbase", rendimientos)
 
         else:  # binance
             motor, rendimientos = procesar_binance(tmp_path)

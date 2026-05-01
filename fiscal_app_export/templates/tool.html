@@ -703,10 +703,9 @@
       <div class="exchange-logo logo-bit2me"><img src="/static/images/bit2me.jpg" alt="Bit2Me"></div>
       <span class="exchange-name">Bit2Me</span>
     </button>
-    <button class="exchange-btn coming-soon" disabled>
-      <div class="exchange-logo"><img src="/static/images/coinbase.png" alt="Coinbase"></div>
+    <button class="exchange-btn" data-exchange="coinbase" onclick="selectExchange(this)">
+      <div class="exchange-logo logo-coinbase"><img src="/static/images/coinbase.png" alt="Coinbase"></div>
       <span class="exchange-name">Coinbase</span>
-      <span class="soon-tag">Pronto</span>
     </button>
     <button class="exchange-btn coming-soon" disabled>
       <div class="exchange-logo"><img src="/static/images/bybit.jpg" alt="Bybit"></div>
@@ -754,7 +753,7 @@
     <div class="bar-right">
       {% if exchange_id %}
       <div class="bar-exchange">
-        <div class="exchange-logo logo-{{ exchange_id }}" style="width:22px;height:22px;border-radius:50%;overflow:hidden;flex-shrink:0;"><img src="/static/images/{{ exchange_id }}{% if exchange_id in ['kraken','bitvavo'] %}.png{% else %}.jpg{% endif %}" alt="{{ exchange_name }}" style="width:100%;height:100%;object-fit:cover;display:block;"></div>
+        <div class="exchange-logo logo-{{ exchange_id }}" style="width:22px;height:22px;border-radius:50%;overflow:hidden;flex-shrink:0;"><img src="/static/images/{{ exchange_id }}{% if exchange_id in ['kraken','bitvavo','coinbase'] %}.png{% else %}.jpg{% endif %}" alt="{{ exchange_name }}" style="width:100%;height:100%;object-fit:cover;display:block;"></div>
         <span class="bar-exchange-name">{{ exchange_name }}</span>
         <span class="bar-exchange-change"><a href="https://marianosevilla.com">Cambiar</a></span>
       </div>
@@ -978,6 +977,7 @@
       {% if exchange_id != 'kraken' %}<a href="/kraken" class="also-link">Kraken</a>{% endif %}
       {% if exchange_id != 'bitvavo' %}<a href="/bitvavo" class="also-link">Bitvavo</a>{% endif %}
       {% if exchange_id != 'bit2me' %}<a href="/bit2me" class="also-link">Bit2Me</a>{% endif %}
+      {% if exchange_id != 'coinbase' %}<a href="/coinbase" class="also-link">Coinbase</a>{% endif %}
       <a href="https://marianosevilla.com" class="also-link">Página principal</a>
     </div>
   </div>
@@ -1013,6 +1013,9 @@
     },
     bit2me: {
       hint: 'Arrastra aquí el CSV de Bit2Me o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Informe fiscal · solo ficheros .csv</span>',
+    },
+    coinbase: {
+      hint: 'Arrastra aquí el CSV de Coinbase o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Historial de transacciones · solo ficheros .csv</span>',
     },
   };
 
