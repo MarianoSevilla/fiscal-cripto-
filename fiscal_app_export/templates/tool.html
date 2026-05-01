@@ -442,7 +442,20 @@
     border-radius: 16px; padding: 2rem;
     color: #c8a5a4; font-size: 0.9rem;
   }
-  .error-state strong { color: var(--red); display: block; margin-bottom: 6px; font-size: 1rem; }
+  .error-header { display: flex; align-items: flex-start; gap: 0.65rem; margin-bottom: 0.65rem; }
+  .error-icon { font-size: 1.35rem; flex-shrink: 0; line-height: 1.25; }
+  .error-header strong { color: var(--red); font-size: 1rem; line-height: 1.3; }
+  .error-desc { margin: 0 0 0.8rem 0; line-height: 1.65; }
+  .error-pasos { margin: 0.1rem 0 0.9rem 1.4rem; padding-left: 0; line-height: 1.85; }
+  .error-pasos li { font-size: 0.875rem; margin-bottom: 0.15rem; }
+  .btn-retry {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.45rem 1.1rem; border: 1px solid rgba(226,75,74,0.4);
+    border-radius: 8px; background: transparent; color: var(--red);
+    font-size: 0.8rem; cursor: pointer; transition: background 0.15s;
+    font-family: inherit;
+  }
+  .btn-retry:hover { background: rgba(226,75,74,0.12); }
 
   /* RESULTS */
   .results-content { display: none; }
@@ -792,8 +805,13 @@
 
   <!-- ERROR -->
   <div class="error-state" id="errorState">
-    <strong>Error al procesar el fichero</strong>
-    <span id="errorMsg"></span>
+    <div class="error-header">
+      <span class="error-icon" id="errorIcon">✕</span>
+      <strong id="errorTitulo">Error al procesar el fichero</strong>
+    </div>
+    <p class="error-desc" id="errorDesc"></p>
+    <ol class="error-pasos" id="errorPasos"></ol>
+    <button class="btn-retry" id="btnRetry">← Volver a intentarlo</button>
   </div>
 
   <!-- RESULTADOS -->
@@ -1046,8 +1064,9 @@
   const emptyState     = document.getElementById('emptyState');
   const loadingState   = document.getElementById('loadingState');
   const errorState     = document.getElementById('errorState');
-  const errorMsg       = document.getElementById('errorMsg');
   const resultsContent = document.getElementById('resultsContent');
+
+  document.getElementById('btnRetry').addEventListener('click', resetearFormulario);
 
   let selectedFile = null;
   let currentToken = null;
@@ -1285,26 +1304,99 @@
   }
 
   // ── MENSAJES DE ERROR AMIGABLES ──────────
-  function mensajeAmigable(error) {
-    if (!error) return 'Error desconocido. Por favor inténtalo de nuevo.';
-    if (error.includes('no parece ser un CSV')) return error;
-    if (error.includes('Historial de Operaciones Spot')) return error;
-    if (error.includes('CSV incorrecto')) return error;
-    if (error.includes('Ledgers')) return error;
-    if (error.includes('extensión .csv')) return error;
-    if (error.includes('vacío')) return error;
-    if (error.includes('grande')) return error;
-    if (error.includes('ejercicio')) return error;
-    if (error.includes('exchange')) return error;
-    if (error.includes('permitido')) return error;
-    return 'No se ha podido procesar el fichero. Comprueba que es un CSV válido exportado desde tu exchange y vuelve a intentarlo.';
+  const ERRORES = {
+    rateLimitado: {
+      icono: '⏱', titulo: 'Límite de análisis alcanzado',
+      desc: 'Has realizado demasiados análisis seguidos. <strong>Espera 10 minutos</strong> y vuelve a intentarlo.',
+      pasos: [],
+    },
+    csvIncorrectoBinance: {
+      icono: '📄', titulo: 'CSV de Binance incorrecto',
+      desc: 'Has exportado el <strong>Historial de Transacciones</strong>, que no incluye el precio en euros y no es válido para el cálculo FIFO. Necesitas el <strong>Historial de Operaciones Spot</strong>:',
+      pasos: [
+        'Inicia sesión en Binance.',
+        'Ve a <strong>Órdenes → Historial de operaciones spot</strong>.',
+        'Haz clic en <strong>Exportar</strong>, selecciona el rango de fechas completo y descarga el fichero.',
+      ],
+    },
+    exchangeEquivocado: {
+      icono: '🔀', titulo: 'Fichero de exchange incorrecto',
+      desc: '', pasos: [],
+    },
+    ficheroGrande: {
+      icono: '📦', titulo: 'Fichero demasiado grande',
+      desc: 'El fichero supera el límite de <strong>10 MB</strong>. Exporta el CSV con un rango de fechas más reducido e inténtalo de nuevo.',
+      pasos: [],
+    },
+    ficheroVacio: {
+      icono: '📭', titulo: 'Fichero vacío',
+      desc: 'El CSV está vacío. Asegúrate de exportar el historial desde tu exchange y de que el fichero contiene datos.',
+      pasos: [],
+    },
+    formatoIncorrecto: {
+      icono: '📂', titulo: 'Formato incorrecto',
+      desc: 'El fichero debe ser un <strong>.csv</strong> exportado directamente desde tu exchange.',
+      pasos: [],
+    },
+    noSeLee: {
+      icono: '🔒', titulo: 'No se puede leer el fichero',
+      desc: 'El fichero no es un CSV válido. Si lo abriste con Excel y lo guardaste de nuevo, puede haberse corrompido. <strong>Descarga el original desde tu exchange</strong> sin abrirlo.',
+      pasos: [],
+    },
+    columnasIncorrectas: {
+      icono: '🗂', titulo: 'Columnas incorrectas',
+      desc: 'El CSV no tiene las columnas esperadas. Exporta el historial completo desde tu exchange <strong>sin modificarlo</strong>.',
+      pasos: [],
+    },
+    errorServidor: {
+      icono: '🌐', titulo: 'Error de conexión',
+      desc: 'No se pudo conectar con el servidor. Comprueba tu conexión a internet y vuelve a intentarlo.',
+      pasos: [],
+    },
+    generico: {
+      icono: '✕', titulo: 'Error al procesar el fichero',
+      desc: 'No se ha podido procesar el CSV. Comprueba que es un fichero exportado directamente desde tu exchange sin modificaciones.',
+      pasos: [],
+    },
+  };
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
-  function mostrarErrorApi(msg) {
-    const safe = msg
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/\n/g, '<br>');
-    errorMsg.innerHTML = safe;
+  function parsearError(errorRaw) {
+    if (!errorRaw) return { ...ERRORES.generico };
+    const e = errorRaw;
+    if (e === '__servidor__') return { ...ERRORES.errorServidor };
+    if (e.includes('límite de análisis') || e.includes('429') || e.includes('espera')) return { ...ERRORES.rateLimitado };
+    if (e.includes('CSV incorrecto') || e.includes('Historial de Transacciones') || e.includes('Buy Crypto With Fiat') || e.includes('Historial de Operaciones Spot')) return { ...ERRORES.csvIncorrectoBinance };
+    if (e.includes('no parece ser un CSV de')) return { ...ERRORES.exchangeEquivocado, desc: esc(e) };
+    if (e.includes('grande') || e.includes('10 MB')) return { ...ERRORES.ficheroGrande };
+    if (e.includes('vacío')) return { ...ERRORES.ficheroVacio };
+    if (e.includes('extensión')) return { ...ERRORES.formatoIncorrecto };
+    if (e.includes('no se pudo leer') || e.includes('codec') || e.includes('unicode') || e.includes('Unicode') || e.includes('válido')) return { ...ERRORES.noSeLee };
+    if (e.includes('columnas') || e.includes('formato esperado')) return { ...ERRORES.columnasIncorrectas };
+    if (e.includes('ejercicio') || e.includes('dígitos') || e.includes('anterior a') || e.includes('posterior a')) {
+      return { icono: '📅', titulo: 'Año fiscal inválido', desc: esc(e), pasos: [] };
+    }
+    return { ...ERRORES.generico };
+  }
+
+  function mostrarErrorApi(errorRaw) {
+    const err = parsearError(errorRaw);
+    document.getElementById('errorIcon').textContent   = err.icono;
+    document.getElementById('errorTitulo').textContent = err.titulo;
+    const descEl  = document.getElementById('errorDesc');
+    const pasosEl = document.getElementById('errorPasos');
+    descEl.innerHTML     = err.desc || '';
+    descEl.style.display = err.desc ? '' : 'none';
+    if (err.pasos && err.pasos.length) {
+      pasosEl.innerHTML     = err.pasos.map(p => `<li>${p}</li>`).join('');
+      pasosEl.style.display = '';
+    } else {
+      pasosEl.innerHTML     = '';
+      pasosEl.style.display = 'none';
+    }
   }
 
   // ── SUBMIT ───────────────────────────────
@@ -1334,7 +1426,7 @@
       const data = await res.json();
 
       if (!res.ok || !data.ok) {
-        mostrarErrorApi(mensajeAmigable(data.error));
+        mostrarErrorApi(data.error);
         showState('error');
         selectedFile = null; csvInput.value = ''; hideFile();
         fileName.textContent = '—'; btnAnalizar.disabled = true;
@@ -1353,7 +1445,7 @@
       fileName.textContent = '—'; btnAnalizar.disabled = true;
 
     } catch (err) {
-      errorMsg.textContent = 'No se pudo conectar con el servidor.';
+      mostrarErrorApi('__servidor__');
       showState('error');
       selectedFile = null; csvInput.value = ''; hideFile();
       fileName.textContent = '—'; btnAnalizar.disabled = true;
