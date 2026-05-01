@@ -405,6 +405,19 @@
   }
   .btn-retry:hover { background: rgba(226,75,74,0.12); }
 
+  /* YEAR SELECTOR */
+  .year-bar { display: flex; align-items: center; gap: 0.65rem; margin-bottom: 1rem; flex-wrap: wrap; }
+  .year-bar-label { font-size: 11px; font-family: var(--font-mono); color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; flex-shrink: 0; }
+  .year-pills { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+  .year-pill {
+    padding: 0.2rem 0.7rem; border: 1px solid var(--border);
+    border-radius: 100px; background: transparent; color: var(--text2);
+    font-size: 12px; font-family: var(--font-mono); cursor: pointer;
+    transition: all 0.15s; line-height: 1.6;
+  }
+  .year-pill:hover { border-color: var(--accent); color: var(--accent); }
+  .year-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
   /* RESULTS */
   .results-content { display: none; }
 
@@ -942,6 +955,12 @@
   <!-- RESULTADOS -->
   <div class="results-content" id="resultsContent">
 
+    <!-- SELECTOR DE AÑO -->
+    <div class="year-bar" id="yearBar" style="display:none">
+      <span class="year-bar-label">Ejercicio:</span>
+      <div class="year-pills" id="yearPills"></div>
+    </div>
+
     <!-- AVISO COSTE CERO -->
     <div class="coste-cero-aviso" id="costeCeroAviso">
       <div class="coste-cero-title">⚠ Coste de adquisición desconocido</div>
@@ -1195,6 +1214,10 @@
     hideNuevo();
     document.getElementById('instruccionesPost').style.display = 'none';
     document.getElementById('costeCeroAviso').style.display = 'none';
+    document.getElementById('yearBar').style.display = 'none';
+    document.getElementById('yearPills').innerHTML = '';
+    allData = null;
+    añoActivo = 'todos';
     setProgress(0);
     showState('empty');
   }
@@ -1210,6 +1233,8 @@
 
   let selectedFile = null;
   let currentToken = null;
+  let allData      = null;
+  let añoActivo    = 'todos';
 
   // ── VALIDACIÓN FRONTEND ──────────────────
   function mostrarErrorArchivo(msg) {
@@ -1350,25 +1375,26 @@
   }
 
   // ── RENDER RESULTADOS ─────────────────────
-  function renderResultados(data) {
-    const r = data.resumen;
-
-    // KPIs
-    document.getElementById('kpiOps').textContent  = r.operaciones_con_resultado;
-    document.getElementById('kpiGain').textContent = '+' + fmt(r.ganancias_brutas, 2);
-    document.getElementById('kpiLoss').textContent = fmt(r.perdidas_brutas, 2);
+  // ── KPIs (recalculados desde ops para soportar filtro por año) ──
+  function renderKpis(ops) {
+    const ganancias = ops.reduce((s, op) => s + (op.ganancia_perdida > 0 ? Number(op.ganancia_perdida) : 0), 0);
+    const perdidas  = ops.reduce((s, op) => s + (op.ganancia_perdida < 0 ? Number(op.ganancia_perdida) : 0), 0);
+    const neto = ganancias + perdidas;
+    document.getElementById('kpiOps').textContent  = ops.length;
+    document.getElementById('kpiGain').textContent = '+' + fmt(ganancias, 2);
+    document.getElementById('kpiLoss').textContent = fmt(perdidas, 2);
     const netoEl = document.getElementById('kpiNeto');
-    netoEl.textContent = fmtGP(r.resultado_neto).replace('+', '+').replace(/(\d)(?=(\d{3})+\.)/g, '$1,');
-    netoEl.className = 'kpi-value ' + (r.resultado_neto >= 0 ? 'green' : 'red');
-    netoEl.textContent = (r.resultado_neto >= 0 ? '+' : '') + fmt(r.resultado_neto, 2);
+    netoEl.className   = 'kpi-value ' + (neto >= 0 ? 'green' : 'red');
+    netoEl.textContent = (neto >= 0 ? '+' : '') + fmt(neto, 2);
+  }
 
-    // Tabla operaciones — usar textContent para evitar XSS
+  // ── TABLA OPERACIONES ────────────────────
+  function renderTablaOps(ops) {
     const tbodyOps = document.getElementById('tbodyOps');
     tbodyOps.innerHTML = '';
-    data.operaciones.forEach(op => {
+    ops.forEach(op => {
       const gp = op.ganancia_perdida;
       const tr = document.createElement('tr');
-
       const celdas = [
         { text: op.fecha, cls: '' },
         { text: op.tipo, cls: 'type-badge', badge: true },
@@ -1379,7 +1405,6 @@
         { text: (gp >= 0 ? '+' : '') + fmt(gp), cls: gp >= 0 ? 'gain' : 'loss' },
         { text: op.periodo_dias + 'd', cls: '' },
       ];
-
       celdas.forEach(c => {
         const td = document.createElement('td');
         td.className = c.cls;
@@ -1393,9 +1418,72 @@
         }
         tr.appendChild(td);
       });
-
       tbodyOps.appendChild(tr);
     });
+  }
+
+  // ── AVISO COSTE CERO ─────────────────────
+  function actualizarAvisoCosteCero(ops) {
+    const opsSinCoste = ops.filter(op =>
+      (op.tipo === 'venta' || op.tipo === 'swap') &&
+      Number(op.coste_fifo) < 0.001 &&
+      Number(op.transmision) > 0
+    );
+    const avisoCero = document.getElementById('costeCeroAviso');
+    if (opsSinCoste.length > 0) {
+      const totalEur = opsSinCoste.reduce((s, op) => s + Number(op.transmision), 0);
+      const n = opsSinCoste.length;
+      document.getElementById('costeCeroMsg').textContent =
+        `${n} operación${n > 1 ? 'es' : ''} con coste de adquisición cero `
+        + `(valor de transmisión: ${fmt(totalEur, 2)} EUR). `
+        + `Es probable que esos activos fueran comprados en otro exchange o wallet externo. `
+        + `El FIFO se ha calculado con coste cero — la ganancia declarada es la máxima posible para esas operaciones.`;
+      avisoCero.style.display = 'block';
+    } else {
+      avisoCero.style.display = 'none';
+    }
+  }
+
+  // ── FILTRO POR AÑO ───────────────────────
+  function aplicarFiltroAño() {
+    const ops = añoActivo === 'todos'
+      ? allData.operaciones
+      : allData.operaciones.filter(op => op.fecha.startsWith(añoActivo));
+    renderKpis(ops);
+    renderTablaOps(ops);
+    actualizarAvisoCosteCero(ops);
+  }
+
+  // ── RENDER COMPLETO ──────────────────────
+  function renderResultados(data) {
+    allData = data;
+    añoActivo = 'todos';
+
+    // Selector de año (solo si hay más de un año en las operaciones)
+    const años = [...new Set(data.operaciones.map(op => op.fecha.slice(0, 4)))].sort();
+    const yearBar   = document.getElementById('yearBar');
+    const yearPills = document.getElementById('yearPills');
+    yearPills.innerHTML = '';
+    if (años.length > 1) {
+      ['todos', ...años].forEach(a => {
+        const btn = document.createElement('button');
+        btn.className   = 'year-pill' + (a === 'todos' ? ' active' : '');
+        btn.textContent = a === 'todos' ? 'Todos' : a;
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.year-pill').forEach(p => p.classList.remove('active'));
+          btn.classList.add('active');
+          añoActivo = a;
+          aplicarFiltroAño();
+        });
+        yearPills.appendChild(btn);
+      });
+      yearBar.style.display = '';
+    } else {
+      yearBar.style.display = 'none';
+    }
+
+    renderKpis(data.operaciones);
+    renderTablaOps(data.operaciones);
 
     // Tabla posición
     const tbodyPos = document.getElementById('tbodyPos');
@@ -1464,26 +1552,7 @@
       warnContainer.appendChild(list);
     }
 
-    // ── AVISO COSTE CERO ─────────────────────
-    const opsSinCoste = data.operaciones.filter(op =>
-      (op.tipo === 'venta' || op.tipo === 'swap') &&
-      Number(op.coste_fifo) < 0.001 &&
-      Number(op.transmision) > 0
-    );
-    const avisoCero = document.getElementById('costeCeroAviso');
-    if (opsSinCoste.length > 0) {
-      const totalEur = opsSinCoste.reduce((s, op) => s + Number(op.transmision), 0);
-      const n = opsSinCoste.length;
-      document.getElementById('costeCeroMsg').textContent =
-        `${n} operación${n > 1 ? 'es' : ''} con coste de adquisición cero `
-        + `(valor de transmisión: ${fmt(totalEur, 2)} EUR). `
-        + `Es probable que esos activos fueran comprados en otro exchange o wallet externo. `
-        + `El FIFO se ha calculado con coste cero — la ganancia declarada es la máxima posible para esas operaciones.`;
-      avisoCero.style.display = 'block';
-    } else {
-      avisoCero.style.display = 'none';
-    }
-
+    actualizarAvisoCosteCero(data.operaciones);
     showState('results');
   }
 
