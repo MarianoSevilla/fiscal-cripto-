@@ -142,12 +142,12 @@
     overflow-x: hidden;
   }
 
-  /* NAV */
+  /* ── NAV ──────────────────────────────────── */
   nav {
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
     padding: 1rem 2rem;
     display: flex; align-items: center; justify-content: space-between;
-    background: rgba(10,10,10,0.85);
+    background: rgba(10,10,10,0.88);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
   }
@@ -160,48 +160,53 @@
     text-decoration: none;
   }
   .nav-logo span { color: var(--accent); }
-  .nav-badge {
-    font-size: 11px;
+  .nav-link {
+    font-size: 13px;
     font-weight: 500;
-    background: var(--accent-dim);
-    color: var(--accent);
-    border: 1px solid rgba(0,200,150,0.25);
-    padding: 4px 10px;
-    border-radius: 100px;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    color: var(--text);
+    text-decoration: none;
+    padding: 7px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: border-color 0.2s, background 0.2s;
   }
+  .nav-link:hover { border-color: var(--border-hover); background: var(--surface); }
 
-  /* HERO */
+  /* ── HERO ─────────────────────────────────── */
   .hero {
-    padding: 6rem 2rem 1.5rem;
+    padding: 7rem 2rem 3rem;
     max-width: 760px;
     margin: 0 auto;
   }
-  .hero-label {
+  .hero-pill {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    font-size: 12px;
+    gap: 6px;
+    font-size: 11px;
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: var(--muted);
-    margin-bottom: 2rem;
+    color: var(--accent);
+    background: var(--accent-dim);
+    border: 1px solid rgba(0,200,150,0.2);
+    padding: 5px 12px;
+    border-radius: 100px;
+    margin-bottom: 1.75rem;
   }
-  .hero-label::before {
+  .hero-pill::before {
     content: '';
-    display: block;
-    width: 24px; height: 1px;
-    background: var(--muted);
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
   }
   h1 {
     font-family: var(--font-display);
-    font-size: clamp(1.9rem, 5vw, 3.4rem);
+    font-size: clamp(2rem, 5.5vw, 3.6rem);
     font-weight: 800;
-    line-height: 1.08;
+    line-height: 1.06;
     letter-spacing: -0.03em;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.25rem;
   }
   h1 em {
     font-style: normal;
@@ -210,44 +215,55 @@
   .hero-sub {
     font-size: 1.1rem;
     color: var(--muted);
-    max-width: 100%;
-    margin-bottom: 0;
+    max-width: 580px;
     line-height: 1.7;
+    margin-bottom: 2rem;
   }
+  .hero-sub strong { color: var(--text); font-weight: 500; }
 
-  /* PROBLEMA */
-  .problem-strip {
-    background: var(--red-dim);
-    border: 1px solid rgba(226,75,74,0.2);
-    border-radius: 12px;
-    padding: 1.25rem 1.5rem;
+  .hero-ctas {
     display: flex;
-    gap: 12px;
+    flex-direction: column;
     align-items: flex-start;
-    margin: 0 auto 3rem;
-    max-width: 760px;
-    box-sizing: border-box;
-    width: calc(100% - 4rem);
+    gap: 1rem;
   }
-  .problem-icon {
-    flex-shrink: 0;
-    width: 20px; height: 20px;
-    border-radius: 50%;
-    background: var(--red);
-    display: flex; align-items: center; justify-content: center;
+  .btn-hero {
+    display: inline-block;
+    padding: 14px 28px;
+    background: var(--accent);
+    color: #0a0a0a;
+    border-radius: 10px;
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-decoration: none;
+    transition: opacity 0.2s, transform 0.1s;
+    white-space: nowrap;
+  }
+  .btn-hero:hover { opacity: 0.88; }
+  .btn-hero:active { transform: scale(0.99); }
+
+  .hero-trust {
+    display: flex;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+  }
+  .hero-trust span {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .hero-trust span::before {
+    content: '✓';
+    color: var(--accent);
     font-size: 11px;
     font-weight: 700;
-    color: #fff;
-    margin-top: 2px;
   }
-  .problem-text {
-    font-size: 0.9rem;
-    color: #c8a5a4;
-    line-height: 1.6;
-  }
-  .problem-text strong { color: #f0ede6; font-weight: 500; }
 
-  /* SECCIÓN GENERAL */
+  /* ── SECCIÓN GENERAL ──────────────────────── */
   section {
     max-width: 760px;
     margin: 0 auto;
@@ -261,25 +277,114 @@
     text-transform: uppercase;
     letter-spacing: 0.12em;
     color: var(--muted);
-    margin-bottom: 1.5rem;
+    margin-bottom: 0.75rem;
   }
   h2 {
     font-family: var(--font-display);
     font-size: clamp(1.5rem, 3.5vw, 2rem);
     font-weight: 700;
     letter-spacing: -0.025em;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
     line-height: 1.2;
   }
+  .section-desc {
+    font-size: 0.95rem;
+    color: var(--muted);
+    margin-bottom: 2rem;
+    line-height: 1.65;
+    max-width: 560px;
+  }
 
-  /* CÓMO FUNCIONA */
+  /* ── EXCHANGES ────────────────────────────── */
+  .exchange-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .exchange-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 18px;
+    text-decoration: none;
+    color: var(--text);
+    transition: border-color 0.2s, background 0.2s, transform 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .exchange-card:hover {
+    border-color: rgba(0,200,150,0.35);
+    background: var(--surface2);
+    transform: translateY(-1px);
+  }
+  .exchange-card:active { transform: translateY(0); }
+  .exchange-logo {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: var(--surface2);
+  }
+  .exchange-logo img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .exchange-logo-letter {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: #fff;
+  }
+  .exchange-name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: -0.01em;
+  }
+  .exchange-cta {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 3px;
+    transition: color 0.2s;
+  }
+  .exchange-card:hover .exchange-cta { color: var(--accent); }
+
+  .exchange-card.coming-soon {
+    opacity: 0.45;
+    cursor: default;
+    pointer-events: none;
+  }
+  .coming-soon-badge {
+    position: absolute;
+    top: 10px; right: 12px;
+    font-size: 9px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 2px 7px;
+  }
+
+  /* ── CÓMO FUNCIONA ────────────────────────── */
   .steps {
     display: flex;
     flex-direction: column;
     gap: 0;
     margin-top: 2rem;
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 14px;
     overflow: hidden;
   }
   .step {
@@ -303,21 +408,94 @@
     font-weight: 700;
     color: var(--accent);
     margin-top: 2px;
+    flex-shrink: 0;
   }
   .step-body h3 {
     font-family: var(--font-display);
     font-size: 1rem;
     font-weight: 700;
-    margin-bottom: 4px;
+    margin-bottom: 5px;
     letter-spacing: -0.01em;
   }
   .step-body p {
     font-size: 0.9rem;
     color: var(--muted);
-    line-height: 1.6;
+    line-height: 1.65;
   }
 
-  /* FORMULARIO */
+  /* ── QUÉ INCLUYE EL INFORME ───────────────── */
+  .features-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 2rem;
+  }
+  .feature-card {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.1rem;
+    transition: border-color 0.2s;
+  }
+  .feature-card:hover { border-color: rgba(0,200,150,0.2); }
+  .feature-check {
+    flex-shrink: 0;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--accent-dim);
+    border: 1px solid rgba(0,200,150,0.25);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-top: 1px;
+  }
+  .feature-title {
+    font-family: var(--font-display);
+    font-size: 0.875rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-bottom: 3px;
+  }
+  .feature-desc {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  /* ── FAQ ──────────────────────────────────── */
+  .faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 2rem;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .faq-item {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .faq-item:last-child { border-bottom: none; }
+  .faq-item h3 {
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+    letter-spacing: -0.01em;
+  }
+  .faq-item p {
+    font-size: 0.875rem;
+    color: var(--muted);
+    line-height: 1.65;
+  }
+  .faq-item p strong { color: var(--text); font-weight: 500; }
+
+  /* ── FORMULARIO ───────────────────────────── */
   .form-section {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -329,11 +507,9 @@
     color: var(--muted);
     font-size: 0.95rem;
     margin-bottom: 2rem;
+    line-height: 1.65;
   }
-
-  .field {
-    margin-bottom: 1.25rem;
-  }
+  .field { margin-bottom: 1.25rem; }
   label {
     display: block;
     font-size: 13px;
@@ -359,46 +535,23 @@
     appearance: none;
     -webkit-appearance: none;
   }
-  input:focus, select:focus, textarea:focus {
-    border-color: var(--accent);
-  }
-  input.field-error {
-    border-color: var(--red);
-    background: rgba(226,75,74,0.05);
-  }
-  input.field-ok {
-    border-color: var(--accent);
-  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  input.field-error { border-color: var(--red); background: rgba(226,75,74,0.05); }
+  input.field-ok { border-color: var(--accent); }
   .field-error-msg {
-    display: none;
-    font-size: 12px;
-    color: var(--red);
-    margin-top: 5px;
+    display: none; font-size: 12px; color: var(--red); margin-top: 5px;
   }
-  .field-error-msg.visible {
-    display: block;
-  }
-  select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888580' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 14px center;
-    padding-right: 36px;
-    cursor: pointer;
-  }
-  select option { background: #1a1a1a; }
+  .field-error-msg.visible { display: block; }
   textarea { resize: vertical; min-height: 90px; line-height: 1.5; }
   ::placeholder { color: #555; }
 
-  /* checkbox group */
   .checkbox-group {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 8px;
   }
   .check-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    display: flex; align-items: center; gap: 8px;
     background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: 8px;
@@ -411,74 +564,21 @@
   .check-item input[type="checkbox"] {
     width: 15px; height: 15px;
     accent-color: var(--accent);
-    flex-shrink: 0;
-    cursor: pointer;
+    flex-shrink: 0; cursor: pointer;
   }
   .check-item.checked {
     border-color: rgba(0,200,150,0.35);
     background: var(--accent-dim);
   }
 
-  /* radio group precio */
-  .radio-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .radio-pill {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 100px;
-    padding: 7px 16px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: border-color 0.2s, background 0.2s;
-  }
-  .radio-pill:hover { border-color: var(--border-hover); }
-  .radio-pill input[type="radio"] {
-    width: 14px; height: 14px;
-    accent-color: var(--accent);
-    cursor: pointer;
-  }
-  .radio-pill.selected {
-    border-color: rgba(0,200,150,0.35);
-    background: var(--accent-dim);
-    color: var(--accent);
-  }
-
-  /* CTA HERO */
-  .btn-hero {
-    display: inline-block;
-    margin-top: 2rem;
-    padding: 14px 28px;
-    background: var(--accent);
-    color: #0a0a0a;
-    border-radius: 10px;
-    font-family: var(--font-display);
-    font-size: 1rem;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    text-decoration: none;
-    transition: opacity 0.2s, transform 0.1s;
-  }
-  .btn-hero:hover { opacity: 0.9; }
-  .btn-hero:active { transform: scale(0.99); }
-
-  /* CTA */
   .btn-submit {
-    width: 100%;
-    margin-top: 2rem;
+    width: 100%; margin-top: 2rem;
     padding: 14px;
     background: var(--accent);
     color: #0a0a0a;
-    border: none;
-    border-radius: 10px;
+    border: none; border-radius: 10px;
     font-family: var(--font-display);
-    font-size: 1rem;
-    font-weight: 700;
+    font-size: 1rem; font-weight: 700;
     letter-spacing: -0.01em;
     cursor: pointer;
     transition: opacity 0.2s, transform 0.1s;
@@ -486,160 +586,248 @@
   .btn-submit:hover { opacity: 0.9; }
   .btn-submit:active { transform: scale(0.99); }
   .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; }
-
   .form-legal {
-    margin-top: 1rem;
-    font-size: 12px;
-    color: var(--muted);
-    text-align: center;
-    line-height: 1.5;
+    margin-top: 1rem; font-size: 12px;
+    color: var(--muted); text-align: center; line-height: 1.5;
   }
 
-  /* ÉXITO */
+  /* ── ÉXITO ────────────────────────────────── */
   .success-state {
-    display: none;
-    text-align: center;
-    padding: 3rem 1rem;
+    display: none; text-align: center; padding: 3rem 1rem;
   }
   .success-icon {
-    width: 56px; height: 56px;
-    border-radius: 50%;
+    width: 56px; height: 56px; border-radius: 50%;
     background: var(--accent-dim);
     border: 1px solid rgba(0,200,150,0.3);
     display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 1.5rem;
-    font-size: 22px;
+    margin: 0 auto 1.5rem; font-size: 22px;
   }
   .success-state h3 {
     font-family: var(--font-display);
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin-bottom: 0.75rem;
+    font-size: 1.5rem; font-weight: 700; margin-bottom: 0.75rem;
   }
   .success-state p { color: var(--muted); font-size: 0.95rem; }
 
-  /* FOOTER */
+  /* ── FOOTER ───────────────────────────────── */
   footer {
-    text-align: center;
-    padding: 3rem 2rem;
+    text-align: center; padding: 3rem 2rem;
     border-top: 1px solid var(--border);
-    font-size: 13px;
-    color: var(--muted);
+    font-size: 13px; color: var(--muted);
   }
   footer a { color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
 
-  /* ANIMACIONES */
+  /* ── ANIMACIONES ──────────────────────────── */
   @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
-  .hero, .problem-strip, section, .form-section {
-    animation: fadeUp 0.5s ease both;
-  }
-  .hero { animation-delay: 0.05s; }
-  .problem-strip { animation-delay: 0.1s; }
+  .hero    { animation: fadeUp 0.5s ease 0.05s both; }
+  section  { animation: fadeUp 0.5s ease 0.1s both; }
 
+  /* ── RESPONSIVE ───────────────────────────── */
   @media (max-width: 600px) {
     nav { padding: 1rem; }
-    .hero { padding: 8rem 1.25rem 3rem; }
+    .hero { padding: 6.5rem 1.25rem 2.5rem; }
     section { padding: 3rem 1.25rem; }
     .form-section { padding: 1.75rem 1.25rem; }
-    .problem-strip { margin: 0 1.25rem 2rem; }
+    .exchange-grid { grid-template-columns: 1fr; }
+    .features-grid { grid-template-columns: 1fr; }
     .checkbox-group { grid-template-columns: 1fr 1fr; }
+    .hero-trust { gap: 0.75rem; }
   }
 </style>
 </head>
 <body>
 
 <nav>
-  <a href="#" class="nav-logo">mariano<span>sevilla</span>.com</a>
-  <span class="nav-badge">Ya disponible</span>
+  <a href="/" class="nav-logo">mariano<span>sevilla</span>.com</a>
+  <a href="#exchanges" class="nav-link">Generar informe →</a>
 </nav>
 
+<!-- ── HERO ───────────────────────────────────────── -->
 <div class="hero">
-  <div class="hero-label">Herramienta fiscal — Cero Vendehumos</div>
+  <div class="hero-pill">IRPF · Método FIFO obligatorio · Gratis</div>
   <h1>Declara tus criptomonedas<br>en Hacienda sin <em>errores</em>.</h1>
   <p class="hero-sub">
-    La herramienta aplica el <strong style="color:var(--text);font-weight:500;">método FIFO obligatorio</strong> (art. 37.2 LIRPF) sobre el historial de operaciones de tu exchange y calcula tus <strong style="color:var(--text);font-weight:500;">ganancias y pérdidas patrimoniales</strong> ejercicio a ejercicio. Compatible con Binance, Kraken, Bitvavo y Bit2Me. Descarga el informe PDF listo para entregar a tu gestor o para rellenar la <strong style="color:var(--text);font-weight:500;">declaración de la renta</strong> tú mismo.
+    Sube el CSV de tu exchange. La herramienta aplica el <strong>método FIFO obligatorio</strong> (art. 37.2 LIRPF), calcula tus ganancias y pérdidas patrimoniales y genera el <strong>informe PDF</strong> listo para tu gestor o para rellenar la declaración tú mismo.
   </p>
+  <div class="hero-ctas">
+    <a href="#exchanges" class="btn-hero">Generar mi informe →</a>
+    <div class="hero-trust">
+      <span>Sin registro</span>
+      <span>Tu CSV no se almacena</span>
+      <span>100% gratis</span>
+    </div>
+  </div>
 </div>
 
-<section style="padding-top: 2rem;">
-  <div class="form-section">
-    <div class="section-label">Disponible ahora — gratis</div>
-    <h2>Calcula tus plusvalías crypto con FIFO obligatorio</h2>
-    <p class="form-desc">
-      Selecciona tu exchange, sube el CSV y la herramienta aplica el método FIFO según la normativa española
-      (art. 37.2 LIRPF). Descarga el informe PDF listo para tu gestor.
-      Sin registro. Tu fichero no se almacena.
-    </p>
+<!-- ── EXCHANGES ──────────────────────────────────── -->
+<section id="exchanges" style="padding-top: 2rem;">
+  <div class="section-label">Exchanges compatibles</div>
+  <h2>Elige tu exchange y empieza ahora</h2>
+  <p class="section-desc">Exporta el historial de operaciones desde tu cuenta y súbelo. La herramienta hace el resto.</p>
 
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:1.5rem;">
-      <a href="/binance" style="display:flex; align-items:center; gap:12px; background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:14px 16px; text-decoration:none; color:var(--text); transition:border-color 0.2s, background 0.2s;" onmouseover="this.style.borderColor='rgba(255,255,255,0.18)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'">
-        <div style="width:36px;height:36px;border-radius:8px;overflow:hidden;flex-shrink:0;"><img src="/static/images/binance.jpg" alt="Binance" style="width:100%;height:100%;object-fit:cover;display:block;"></div>
-        <div>
-          <div style="font-family:var(--font-display);font-weight:700;font-size:0.95rem;">Binance</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Genera tu informe →</div>
-        </div>
-      </a>
-      <a href="/kraken" style="display:flex; align-items:center; gap:12px; background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:14px 16px; text-decoration:none; color:var(--text); transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(255,255,255,0.18)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'">
-        <div style="width:36px;height:36px;border-radius:8px;overflow:hidden;flex-shrink:0;"><img src="/static/images/kraken.png" alt="Kraken" style="width:100%;height:100%;object-fit:cover;display:block;"></div>
-        <div>
-          <div style="font-family:var(--font-display);font-weight:700;font-size:0.95rem;">Kraken</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Genera tu informe →</div>
-        </div>
-      </a>
-      <a href="/bitvavo" style="display:flex; align-items:center; gap:12px; background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:14px 16px; text-decoration:none; color:var(--text); transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(255,255,255,0.18)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'">
-        <div style="width:36px;height:36px;border-radius:8px;overflow:hidden;flex-shrink:0;"><img src="/static/images/bitvavo.png" alt="Bitvavo" style="width:100%;height:100%;object-fit:cover;display:block;"></div>
-        <div>
-          <div style="font-family:var(--font-display);font-weight:700;font-size:0.95rem;">Bitvavo</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Genera tu informe →</div>
-        </div>
-      </a>
-      <a href="/bit2me" style="display:flex; align-items:center; gap:12px; background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:14px 16px; text-decoration:none; color:var(--text); transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(255,255,255,0.18)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'">
-        <div style="width:36px;height:36px;border-radius:8px;overflow:hidden;flex-shrink:0;"><img src="/static/images/bit2me.jpg" alt="Bit2Me" style="width:100%;height:100%;object-fit:cover;display:block;"></div>
-        <div>
-          <div style="font-family:var(--font-display);font-weight:700;font-size:0.95rem;">Bit2Me</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Genera tu informe →</div>
-        </div>
-      </a>
+  <div class="exchange-grid">
+    <a href="/binance" class="exchange-card">
+      <div class="exchange-logo"><img src="/static/images/binance.jpg" alt="Binance"></div>
+      <div>
+        <div class="exchange-name">Binance</div>
+        <div class="exchange-cta">Generar informe →</div>
+      </div>
+    </a>
+    <a href="/kraken" class="exchange-card">
+      <div class="exchange-logo"><img src="/static/images/kraken.png" alt="Kraken"></div>
+      <div>
+        <div class="exchange-name">Kraken</div>
+        <div class="exchange-cta">Generar informe →</div>
+      </div>
+    </a>
+    <a href="/bitvavo" class="exchange-card">
+      <div class="exchange-logo"><img src="/static/images/bitvavo.png" alt="Bitvavo"></div>
+      <div>
+        <div class="exchange-name">Bitvavo</div>
+        <div class="exchange-cta">Generar informe →</div>
+      </div>
+    </a>
+    <a href="/bit2me" class="exchange-card">
+      <div class="exchange-logo"><img src="/static/images/bit2me.jpg" alt="Bit2Me"></div>
+      <div>
+        <div class="exchange-name">Bit2Me</div>
+        <div class="exchange-cta">Generar informe →</div>
+      </div>
+    </a>
+    <div class="exchange-card coming-soon">
+      <div class="exchange-logo-letter" style="background:#1c1c1c;">By</div>
+      <div>
+        <div class="exchange-name">Bybit</div>
+        <div class="exchange-cta">En desarrollo</div>
+      </div>
+      <span class="coming-soon-badge">Próximamente</span>
     </div>
-
-    <p class="form-legal" style="margin-top:1.25rem;">
-      Sin registro. Tu CSV no se almacena.<br>
-      No asesoramiento fiscal ni legal — consulta siempre con un gestor autorizado.
-    </p>
+    <div class="exchange-card coming-soon">
+      <div class="exchange-logo-letter" style="background:#1c1c1c;">Co</div>
+      <div>
+        <div class="exchange-name">Coinbase</div>
+        <div class="exchange-cta">En desarrollo</div>
+      </div>
+      <span class="coming-soon-badge">Próximamente</span>
+    </div>
   </div>
 </section>
 
+<!-- ── CÓMO FUNCIONA ──────────────────────────────── -->
+<section>
+  <div class="section-label">El proceso</div>
+  <h2>Tres pasos. Sin complicaciones.</h2>
+  <p class="section-desc">No necesitas saber de fiscalidad ni de programación. Solo exportar un fichero.</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h3>Exporta el historial de tu exchange</h3>
+        <p>Ve al historial de operaciones de tu exchange y descarga el CSV. La herramienta te indica exactamente qué fichero necesitas y qué opciones seleccionar en la exportación.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h3>Sube el fichero — FIFO aplicado automáticamente</h3>
+        <p>La herramienta clasifica todas tus operaciones, aplica el <strong style="color:var(--text);font-weight:500;">método FIFO</strong> (art. 37.2 LIRPF) y calcula las ganancias y pérdidas patrimoniales. Puedes ver los resultados por ejercicio fiscal antes de descargar nada.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h3>Descarga el informe PDF y declara</h3>
+        <p>Un documento completo con los importes para las <strong style="color:var(--text);font-weight:500;">casillas 1626 y 1627</strong>, el desglose por activo, la alerta de Modelo 721 si aplica y las notas legales. Listo para entregar a tu gestor o para rellenar tú mismo.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── QUÉ INCLUYE EL INFORME ─────────────────────── -->
+<section>
+  <div class="section-label">El informe PDF</div>
+  <h2>Todo lo que necesitas para declarar correctamente</h2>
+  <p class="section-desc">El informe incluye los cálculos, el desglose y las referencias normativas que necesita tu gestor.</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-check">✓</div>
+      <div>
+        <div class="feature-title">Casillas 1626 y 1627</div>
+        <div class="feature-desc">Importes exactos de ganancias y pérdidas para trasladar a tu declaración de la renta.</div>
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-check">✓</div>
+      <div>
+        <div class="feature-title">Desglose por criptoactivo</div>
+        <div class="feature-desc">Resultado neto de ganancias y pérdidas para cada moneda, con gráfico incluido.</div>
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-check">✓</div>
+      <div>
+        <div class="feature-title">Alerta Modelo 721</div>
+        <div class="feature-desc">Aviso automático si el coste FIFO de tu cartera supera el umbral de 50.000 EUR.</div>
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-check">✓</div>
+      <div>
+        <div class="feature-title">Compensación de pérdidas</div>
+        <div class="feature-desc">Integración y compensación de rentas del ahorro según el art. 49 LIRPF.</div>
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-check">✓</div>
+      <div>
+        <div class="feature-title">Posición actual en cartera</div>
+        <div class="feature-desc">Activos que no han generado hecho imponible: cantidad, precio medio y coste FIFO.</div>
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-check">✓</div>
+      <div>
+        <div class="feature-title">Rendimientos de staking</div>
+        <div class="feature-desc">Clasificación de ingresos por staking y rewards como rendimientos de capital mobiliario.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FAQ ────────────────────────────────────────── -->
 <section>
   <div class="section-label">Preguntas frecuentes</div>
-  <h2>Todo lo que necesitas saber para declarar tus criptomonedas</h2>
+  <h2>Todo lo que necesitas saber para declarar tus cripto</h2>
 
-  <div class="steps" style="margin-top: 2rem;">
-    <div class="step" style="flex-direction: column; gap: 0.5rem;">
-      <h3 style="font-family: var(--font-display); font-size: 1rem; font-weight: 700; letter-spacing: -0.01em;">¿Tengo que declarar mis criptomonedas en Hacienda?</h3>
-      <p style="font-size: 0.9rem; color: var(--muted); line-height: 1.6;">Sí. En España, cualquier venta o intercambio de criptomonedas genera una ganancia o pérdida patrimonial que debes incluir en la declaración de la renta. También puede ser obligatorio presentar el <strong style="color: var(--text); font-weight: 500;">Modelo 721</strong> si tienes criptoactivos en exchanges extranjeros por valor superior a 50.000 euros.</p>
+  <div class="faq-list">
+    <div class="faq-item">
+      <h3>¿Tengo que declarar mis criptomonedas en Hacienda?</h3>
+      <p>Sí. En España, cualquier venta o intercambio de criptomonedas genera una ganancia o pérdida patrimonial que debes incluir en la declaración de la renta. También puede ser obligatorio presentar el <strong>Modelo 721</strong> si tienes criptoactivos en exchanges extranjeros por valor superior a 50.000 euros.</p>
     </div>
-    <div class="step" style="flex-direction: column; gap: 0.5rem;">
-      <h3 style="font-family: var(--font-display); font-size: 1rem; font-weight: 700; letter-spacing: -0.01em;">¿Qué es el método FIFO y por qué es obligatorio?</h3>
-      <p style="font-size: 0.9rem; color: var(--muted); line-height: 1.6;">FIFO (First In, First Out) significa que las primeras unidades compradas son las primeras en considerarse vendidas al calcular la plusvalía. En España es el único criterio válido para criptomonedas según el <strong style="color: var(--text); font-weight: 500;">artículo 37.2 de la Ley del IRPF</strong>. No es optativo.</p>
+    <div class="faq-item">
+      <h3>¿Qué es el método FIFO y por qué es obligatorio?</h3>
+      <p>FIFO (First In, First Out) significa que las primeras unidades compradas son las primeras en considerarse vendidas al calcular la plusvalía. En España es el único criterio válido para criptomonedas según el <strong>artículo 37.2 de la Ley del IRPF</strong>. No es optativo.</p>
     </div>
-    <div class="step" style="flex-direction: column; gap: 0.5rem;">
-      <h3 style="font-family: var(--font-display); font-size: 1rem; font-weight: 700; letter-spacing: -0.01em;">¿Qué exchanges soporta la herramienta?</h3>
-      <p style="font-size: 0.9rem; color: var(--muted); line-height: 1.6;">Actualmente procesa los CSV de <strong style="color: var(--text); font-weight: 500;">Binance, Kraken, Bitvavo y Bit2Me</strong>. Solo tienes que exportar el historial de operaciones desde tu exchange y subirlo. La herramienta detecta el formato automáticamente.</p>
+    <div class="faq-item">
+      <h3>¿Qué exchanges soporta la herramienta?</h3>
+      <p>Actualmente procesa los CSV de <strong>Binance, Kraken, Bitvavo y Bit2Me</strong>. Se están añadiendo Bybit y Coinbase. Solo tienes que exportar el historial desde tu exchange y subirlo.</p>
     </div>
-    <div class="step" style="flex-direction: column; gap: 0.5rem;">
-      <h3 style="font-family: var(--font-display); font-size: 1rem; font-weight: 700; letter-spacing: -0.01em;">¿En qué casillas de la renta se declaran las criptomonedas?</h3>
-      <p style="font-size: 0.9rem; color: var(--muted); line-height: 1.6;">Las ganancias y pérdidas patrimoniales por criptomonedas van en las <strong style="color: var(--text); font-weight: 500;">casillas 1626 y 1627</strong> del modelo 100. El informe PDF indica exactamente qué importes trasladar a cada casilla.</p>
+    <div class="faq-item">
+      <h3>¿En qué casillas de la renta se declaran las criptomonedas?</h3>
+      <p>Las ganancias y pérdidas patrimoniales por criptomonedas van en las <strong>casillas 1626 y 1627</strong> del modelo 100. El informe PDF indica exactamente qué importes trasladar a cada casilla.</p>
     </div>
-    <div class="step" style="flex-direction: column; gap: 0.5rem;">
-      <h3 style="font-family: var(--font-display); font-size: 1rem; font-weight: 700; letter-spacing: -0.01em;">¿Es seguro subir mi CSV con mis operaciones?</h3>
-      <p style="font-size: 0.9rem; color: var(--muted); line-height: 1.6;">Sí. El fichero se procesa en el momento y <strong style="color: var(--text); font-weight: 500;">no se almacena en ningún servidor</strong>. La herramienta no guarda ni comparte tus datos.</p>
+    <div class="faq-item">
+      <h3>¿Es seguro subir mi CSV con mis operaciones?</h3>
+      <p>Sí. El fichero se procesa en el momento y <strong>no se almacena en ningún servidor</strong>. La herramienta no guarda ni comparte tus datos.</p>
     </div>
   </div>
 </section>
 
+<!-- ── EMAIL SIGNUP ───────────────────────────────── -->
 <section>
   <div class="form-section">
     <div class="section-label">Novedades y mejoras</div>
@@ -654,16 +842,14 @@
         <label for="nombre">Nombre</label>
         <input type="text" id="nombre" name="nombre" placeholder="Tu nombre" required>
       </div>
-
       <div class="field">
         <label for="email">Email</label>
         <input type="email" id="email" name="email" placeholder="tu@email.com" required>
         <span class="field-error-msg" id="email-error">Introduce un email válido (debe contener @)</span>
       </div>
-
       <div class="field">
         <label>¿Qué exchange(s) usas? (puedes marcar varios)</label>
-        <div class="checkbox-group" id="exchanges">
+        <div class="checkbox-group" id="exchanges-check">
           <label class="check-item"><input type="checkbox" name="exchange" value="Bitvavo"> Bitvavo</label>
           <label class="check-item"><input type="checkbox" name="exchange" value="Binance"> Binance</label>
           <label class="check-item"><input type="checkbox" name="exchange" value="Kraken"> Kraken</label>
@@ -672,12 +858,10 @@
           <label class="check-item"><input type="checkbox" name="exchange" value="Otro"> Otro</label>
         </div>
       </div>
-
       <div class="field">
         <label for="problema">¿Qué es lo que más te preocupa de tus cripto y Hacienda? (opcional)</label>
         <textarea id="problema" name="problema" placeholder="Cuéntame qué es lo que más te preocupa o lo que has intentado sin éxito..."></textarea>
       </div>
-
       <button type="submit" class="btn-submit" id="submit-btn">Quiero estar al día</button>
       <p class="form-legal">Sin spam. Solo novedades relevantes.<br>Puedes darte de baja cuando quieras.</p>
     </form>
@@ -696,22 +880,19 @@
 </footer>
 
 <script>
-  const form = document.getElementById('waitlist-form');
+  const form      = document.getElementById('waitlist-form');
   const successEl = document.getElementById('success');
   const submitBtn = document.getElementById('submit-btn');
   const emailInput = document.getElementById('email');
   const emailError = document.getElementById('email-error');
 
-  // ── VALIDACIÓN EMAIL ─────────────────────
   function esEmailValido(valor) {
-    // Comprobación robusta: debe tener @, algo antes y dominio con punto después
     return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(valor);
   }
 
   function validarEmail() {
     const valor = emailInput.value.trim();
     if (!valor) {
-      // Campo vacío — quitar estados pero no mostrar error todavía
       emailInput.classList.remove('field-error', 'field-ok');
       emailError.classList.remove('visible');
       return false;
@@ -728,17 +909,13 @@
     return true;
   }
 
-  // Validar al perder el foco
   emailInput.addEventListener('blur', validarEmail);
-
-  // Quitar error mientras escribe si ya era válido
   emailInput.addEventListener('input', () => {
     if (emailInput.classList.contains('field-ok') || emailInput.classList.contains('field-error')) {
       validarEmail();
     }
   });
 
-  // Checkbox highlight
   document.querySelectorAll('.check-item').forEach(item => {
     const cb = item.querySelector('input[type="checkbox"]');
     cb.addEventListener('change', () => {
@@ -746,57 +923,29 @@
     });
   });
 
-  // Radio highlight
-  document.querySelectorAll('.radio-pill').forEach(pill => {
-    const rb = pill.querySelector('input[type="radio"]');
-    rb.addEventListener('change', () => {
-      document.querySelectorAll('.radio-pill').forEach(p => p.classList.remove('selected'));
-      if (rb.checked) pill.classList.add('selected');
-    });
-  });
-
-  // Submit
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-
     const nombre = document.getElementById('nombre').value.trim();
     const email  = emailInput.value.trim();
 
-    if (!nombre) {
-      alert('Por favor, introduce tu nombre.');
-      return;
-    }
-
-    if (!email || !esEmailValido(email)) {
-      validarEmail();
-      emailInput.focus();
-      return;
-    }
+    if (!nombre) { alert('Por favor, introduce tu nombre.'); return; }
+    if (!email || !esEmailValido(email)) { validarEmail(); emailInput.focus(); return; }
 
     const exchanges = [...document.querySelectorAll('input[name="exchange"]:checked')].map(cb => cb.value);
     const problema  = document.getElementById('problema').value.trim();
 
-    const payload = {
-      timestamp: new Date().toISOString(),
-      nombre,
-      email,
-      exchanges,
-      problema
-    };
+    const payload = { timestamp: new Date().toISOString(), nombre, email, exchanges, problema };
 
     submitBtn.disabled = true;
     submitBtn.textContent = 'Enviando...';
 
     try {
       await fetch('https://script.google.com/macros/s/AKfycbwqZDVvpdYXwrz_9EP3C9BcWdpITUYSA0PCXkruKZNN5j2M5Ui5Ft3dQqHv5mm-BlKx9Q/exec', {
-        method: 'POST',
-        mode: 'no-cors',
+        method: 'POST', mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-    } catch (err) {
-      console.error('Error al enviar:', err);
-    }
+    } catch (err) { console.error('Error al enviar:', err); }
 
     form.style.display = 'none';
     successEl.style.display = 'block';
