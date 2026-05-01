@@ -865,6 +865,7 @@
     <!-- TABS -->
     <div class="tabs">
       <button class="tab-btn active" data-tab="operaciones">Operaciones</button>
+      <button class="tab-btn" data-tab="activos">Por activo</button>
       <button class="tab-btn" data-tab="posicion">Posición actual</button>
       <button class="tab-btn" data-tab="rendimientos">Rendimientos <span id="rendBadge"></span></button>
       <button class="tab-btn" data-tab="advertencias">Advertencias <span id="warnBadge"></span></button>
@@ -878,10 +879,25 @@
             <thead>
               <tr>
                 <th>Fecha</th><th>Tipo</th><th>Activo</th><th>Cantidad</th>
-                <th>Transmisión</th><th>Coste FIFO</th><th>G/P</th><th>Días</th>
+                <th>P. transmisión</th><th>Coste FIFO</th><th>G/P (EUR)</th><th>Días</th>
               </tr>
             </thead>
             <tbody id="tbodyOps"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB: POR ACTIVO -->
+      <div class="tab-pane" id="tab-activos">
+        <div class="tbl-wrap">
+          <table id="tblActivos">
+            <thead>
+              <tr>
+                <th>Activo</th><th>Ops</th>
+                <th>Ganancias (EUR)</th><th>Pérdidas (EUR)</th><th>Neto (EUR)</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyActivos"></tbody>
           </table>
         </div>
       </div>
@@ -1220,6 +1236,12 @@
   }
 
   // ── TABLA OPERACIONES ────────────────────
+  function fmtFecha(iso) {
+    // "YYYY-MM-DD" → "DD/MM/YYYY"
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y}`;
+  }
+
   function renderTablaOps(ops) {
     const tbodyOps = document.getElementById('tbodyOps');
     tbodyOps.innerHTML = '';
@@ -1227,14 +1249,14 @@
       const gp = op.ganancia_perdida;
       const tr = document.createElement('tr');
       [
-        { text: op.fecha,                          cls: '' },
+        { text: fmtFecha(op.fecha),                cls: '' },
         { text: op.tipo,                           cls: 'type-badge', badge: true },
         { text: op.activo,                         cls: '' },
         { text: fmt(op.cantidad, 6),               cls: '' },
         { text: fmt(op.transmision),               cls: '' },
         { text: fmt(op.coste_fifo),                cls: '' },
         { text: (gp >= 0 ? '+' : '') + fmt(gp),   cls: gp >= 0 ? 'gain' : 'loss' },
-        { text: op.periodo_dias + 'd',             cls: '' },
+        { text: String(op.periodo_dias),           cls: '' },
       ].forEach(c => {
         const td = document.createElement('td');
         td.className = c.cls;
@@ -1274,6 +1296,44 @@
     }
   }
 
+  // ── TABLA POR ACTIVO ─────────────────────
+  function renderTablaActivos(ops) {
+    const por = {};
+    ops.forEach(op => {
+      if (!por[op.activo]) por[op.activo] = { ops: 0, ganancias: 0, perdidas: 0 };
+      por[op.activo].ops++;
+      const gp = Number(op.ganancia_perdida);
+      if (gp >= 0) por[op.activo].ganancias += gp;
+      else         por[op.activo].perdidas  += gp;
+    });
+    const tbody = document.getElementById('tbodyActivos');
+    tbody.innerHTML = '';
+    Object.keys(por).sort().forEach(activo => {
+      const d    = por[activo];
+      const neto = d.ganancias + d.perdidas;
+      const tr   = document.createElement('tr');
+      [
+        { text: activo,                                       cls: '',              strong: true },
+        { text: String(d.ops),                               cls: '' },
+        { text: d.ganancias ? '+' + fmt(d.ganancias) : '—', cls: d.ganancias ? 'gain' : '' },
+        { text: d.perdidas  ? fmt(d.perdidas)        : '—', cls: d.perdidas  ? 'loss' : '' },
+        { text: (neto >= 0 ? '+' : '') + fmt(neto),         cls: neto >= 0 ? 'gain' : 'loss' },
+      ].forEach(c => {
+        const td = document.createElement('td');
+        td.className = c.cls;
+        if (c.strong) {
+          const s = document.createElement('strong');
+          s.textContent = c.text;
+          td.appendChild(s);
+        } else {
+          td.textContent = c.text;
+        }
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  }
+
   // ── FILTRO POR AÑO ───────────────────────
   function aplicarFiltroAño() {
     const ops = añoActivo === 'todos'
@@ -1281,6 +1341,7 @@
       : allData.operaciones.filter(op => op.fecha.startsWith(añoActivo));
     renderKpis(ops);
     renderTablaOps(ops);
+    renderTablaActivos(ops);
     actualizarAvisoCosteCero(ops);
   }
 
@@ -1314,6 +1375,7 @@
 
     renderKpis(data.operaciones);
     renderTablaOps(data.operaciones);
+    renderTablaActivos(data.operaciones);
 
     const tbodyPos = document.getElementById('tbodyPos');
     tbodyPos.innerHTML = '';
