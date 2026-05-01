@@ -796,6 +796,18 @@
   </div>
 
   <p style="margin-top:0.5rem; font-size:11px; color:var(--muted);">No asesoramiento fiscal ni legal. Consulta siempre con un gestor autorizado.</p>
+
+  <!-- ── LEAD CAPTURE POST-GENERACIÓN ── -->
+  <div id="leadCapture" style="display:none; margin-top:1rem; background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:1.25rem 1.5rem;">
+    <div style="font-size:11px; color:var(--accent); font-weight:600; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:0.5rem;">¿Quieres estar al día?</div>
+    <p style="font-size:13px; color:var(--muted); margin-bottom:1rem; line-height:1.5;">Te aviso cuando añada soporte para nuevos exchanges o haya cambios de Hacienda que te afecten.</p>
+    <div id="leadForm" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:flex-end;">
+      <input type="email" id="leadEmail" placeholder="tu@email.com" style="flex:1; min-width:180px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:9px 12px; color:var(--text); font-size:13px; font-family:var(--font-body); outline:none;">
+      <button onclick="enviarLead()" style="background:var(--accent); color:#0a0a0a; border:none; border-radius:8px; padding:9px 18px; font-size:13px; font-family:var(--font-display); font-weight:700; cursor:pointer; white-space:nowrap;">Avisarme →</button>
+    </div>
+    <div id="leadOk" style="display:none; font-size:13px; color:var(--accent); margin-top:0.5rem;">✓ Anotado. Te avisaré cuando haya novedades.</div>
+    <p style="font-size:11px; color:var(--muted); margin-top:0.75rem;">Sin spam. Puedes darte de baja cuando quieras.</p>
+  </div>
 </div>
 
 <!-- ── RESULTADOS FULL WIDTH ── -->
@@ -1051,9 +1063,23 @@
 
   function showFile()    { fileSelected.classList.add('visible'); }
   function hideFile()    { fileSelected.classList.remove('visible'); }
-  function showDownload(){ btnDownload.classList.add('visible'); }
-  function hideDownload(){ btnDownload.classList.remove('visible'); }
+  function showDownload(){ btnDownload.classList.add('visible'); document.getElementById('leadCapture').style.display = 'block'; }
+  function hideDownload(){ btnDownload.classList.remove('visible'); document.getElementById('leadCapture').style.display = 'none'; }
   function showNuevo()   { btnNuevo.classList.add('visible'); }
+
+  async function enviarLead() {
+    const email = document.getElementById('leadEmail').value.trim();
+    if (!email || !email.includes('@')) { document.getElementById('leadEmail').focus(); return; }
+    try {
+      await fetch('https://script.google.com/macros/s/AKfycbwqZDVvpdYXwrz_9EP3C9BcWdpITUYSA0PCXkruKZNN5j2M5Ui5Ft3dQqHv5mm-BlKx9Q/exec', {
+        method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timestamp: new Date().toISOString(), email, origen: 'post-informe', exchange: selectedExchange })
+      });
+    } catch(e) {}
+    document.getElementById('leadForm').style.display = 'none';
+    document.getElementById('leadOk').style.display = 'block';
+  }
   function hideNuevo()   { btnNuevo.classList.remove('visible'); }
 
   // ── PROGRESO ─────────────────────────────

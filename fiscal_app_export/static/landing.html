@@ -227,9 +227,10 @@
 
   .hero-ctas {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
   }
   .btn-hero {
     display: inline-block;
@@ -247,6 +248,23 @@
   }
   .btn-hero:hover { opacity: 0.88; }
   .btn-hero:active { transform: scale(0.99); }
+
+  .btn-hero-secondary {
+    display: inline-block;
+    padding: 14px 28px;
+    background: transparent;
+    color: var(--text);
+    border: 1.5px solid var(--border-hover);
+    border-radius: 10px;
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-decoration: none;
+    transition: border-color 0.2s, background 0.2s;
+    white-space: nowrap;
+  }
+  .btn-hero-secondary:hover { border-color: var(--accent); color: var(--accent); }
 
   .hero-trust {
     display: flex;
@@ -657,11 +675,12 @@
   </p>
   <div class="hero-ctas">
     <a href="#exchanges" class="btn-hero">Generar mi informe →</a>
-    <div class="hero-trust">
-      <span>Sin registro</span>
-      <span>Tu CSV no se almacena</span>
-      <span>100% gratis</span>
-    </div>
+    <a href="#signup" class="btn-hero-secondary">Recibir novedades</a>
+  </div>
+  <div class="hero-trust" style="margin-top:0.75rem;">
+    <span>Sin registro</span>
+    <span>Tu CSV no se almacena</span>
+    <span>100% gratis</span>
   </div>
 </div>
 
@@ -831,7 +850,7 @@
 </section>
 
 <!-- ── EMAIL SIGNUP ───────────────────────────────── -->
-<section>
+<section id="signup">
   <div class="form-section">
     <div class="section-label">Novedades y mejoras</div>
     <h2>Recibe avisos cuando haya cambios que te afecten</h2>
