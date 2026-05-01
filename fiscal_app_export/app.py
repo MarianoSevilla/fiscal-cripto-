@@ -517,6 +517,11 @@ def landing():
     return send_from_directory("static", "landing.html")
 
 
+@app.route("/sitemap.xml")
+def sitemap():
+    return send_from_directory("static", "sitemap.xml", mimetype="application/xml")
+
+
 @app.route("/fiscal")
 def fiscal():
     return render_template("tool.html", **_TOOL_GENERIC)
