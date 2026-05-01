@@ -1579,7 +1579,7 @@
 
       currentToken = data.token;
       renderResultados(data);
-      btnDownload.href     = `/api/descargar/${currentToken}`;
+      btnDownload.href     = `/api/descargar/${currentToken}?exchange=${selectedExchange}`;
       btnDownload.download = `informe_fiscal_cripto_${selectedExchange}.pdf`;
       showDownload();
       showNuevo();

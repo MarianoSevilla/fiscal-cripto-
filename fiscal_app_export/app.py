@@ -666,11 +666,14 @@ def descargar(token):
 
     threading.Thread(target=borrar_pdf, daemon=True).start()
 
+    exchange_param = _sanitizar_texto(request.args.get("exchange", ""), max_len=20).lower()
+    nombre_pdf = f"informe_fiscal_cripto_{exchange_param}.pdf" if exchange_param else "informe_fiscal_cripto.pdf"
+
     return send_file(
         pdf_path,
         mimetype="application/pdf",
         as_attachment=True,
-        download_name="informe_fiscal_cripto.pdf"
+        download_name=nombre_pdf
     )
 
 
