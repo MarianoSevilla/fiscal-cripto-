@@ -224,17 +224,10 @@ nav {
 }
 .exchange-card:not(.soon):hover { border-color: var(--border-hover); transform: translateY(-2px); }
 .exchange-card.soon { opacity: .45; }
-.xlogo-lg {
+.exchange-img {
   width: 64px; height: 64px; border-radius: 16px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 22px; font-weight: 800; color: #fff; flex-shrink: 0;
+  object-fit: contain; background: var(--surface2);
 }
-.xlogo-b  { background: #F0B90B; color: #000; }
-.xlogo-bv { background: #1A56F0; }
-.xlogo-b2 { background: #f97316; }
-.xlogo-k  { background: #5741D9; }
-.xlogo-c  { background: #0052FF; }
-.xlogo-more { background: var(--surface2); border: 1px dashed var(--border); color: var(--muted); font-size: 28px; }
 .exchange-card-name { font-size: 1rem; font-weight: 600; color: var(--text); }
 .exchange-card-badge {
   font-size: 10px; font-weight: 600; text-transform: uppercase;
@@ -606,34 +599,34 @@ footer {
   <h2>Compatible con los principales exchanges</h2>
   <div class="exchanges-grid">
     <div class="exchange-card">
-      <div class="xlogo-lg xlogo-b">B</div>
+      <img src="/static/images/binance.jpg" alt="Binance" class="exchange-img">
       <span class="exchange-card-name">Binance</span>
       <span class="exchange-card-badge active">Disponible</span>
     </div>
     <div class="exchange-card">
-      <div class="xlogo-lg xlogo-bv">BV</div>
+      <img src="/static/images/bitvavo.png" alt="Bitvavo" class="exchange-img">
       <span class="exchange-card-name">Bitvavo</span>
       <span class="exchange-card-badge active">Disponible</span>
     </div>
     <div class="exchange-card">
-      <div class="xlogo-lg xlogo-b2">B2</div>
+      <img src="/static/images/bit2me.jpg" alt="Bit2Me" class="exchange-img">
       <span class="exchange-card-name">Bit2Me</span>
       <span class="exchange-card-badge active">Disponible</span>
     </div>
     <div class="exchange-card soon">
-      <div class="xlogo-lg xlogo-k">K</div>
+      <img src="/static/images/kraken.png" alt="Kraken" class="exchange-img">
       <span class="exchange-card-name">Kraken</span>
       <span class="exchange-card-badge soon-badge">Próximamente</span>
     </div>
     <div class="exchange-card soon">
-      <div class="xlogo-lg xlogo-c">C</div>
+      <img src="/static/images/coinbase.png" alt="Coinbase" class="exchange-img">
       <span class="exchange-card-name">Coinbase</span>
       <span class="exchange-card-badge soon-badge">Próximamente</span>
     </div>
     <div class="exchange-card soon">
-      <div class="xlogo-lg xlogo-more">+</div>
-      <span class="exchange-card-name">Más exchanges</span>
-      <span class="exchange-card-badge soon-badge">En desarrollo</span>
+      <img src="/static/images/bybit.jpg" alt="Bybit" class="exchange-img">
+      <span class="exchange-card-name">Bybit</span>
+      <span class="exchange-card-badge soon-badge">Próximamente</span>
     </div>
   </div>
 </div>
