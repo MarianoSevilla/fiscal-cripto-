@@ -57,10 +57,11 @@ if not _secret:
     _secret = "dev-only-insecure-key-change-me"
 
 app.config["SECRET_KEY"] = _secret
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
-    "DATABASE_URL",
-    f"sqlite:///{os.path.join(_BASE_DIR, 'fiscal_users.db')}"
-)
+# Railway usa "postgres://" pero SQLAlchemy requiere "postgresql://"
+_db_url = os.environ.get("DATABASE_URL", f"sqlite:///{os.path.join(_BASE_DIR, 'fiscal_users.db')}")
+if _db_url.startswith("postgres://"):
+    _db_url = _db_url.replace("postgres://", "postgresql://", 1)
+app.config["SQLALCHEMY_DATABASE_URI"] = _db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # Cookies de sesión seguras

@@ -6,6 +6,7 @@ flask-limiter
 flask-cors
 authlib
 requests
+psycopg2-binary
 reportlab
 pandas
 gunicorn
