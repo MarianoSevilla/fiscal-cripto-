@@ -804,7 +804,7 @@ def descargar(token):
         pdf_path,
         mimetype="application/pdf",
         as_attachment=True,
-        download_name="informe_fiscal_cripto.pdf"
+        download_name=f"informe_fiscal_cripto_{re.sub(r'[^a-z0-9]', '', (request.args.get('exchange', '') or 'cripto').lower())}.pdf"
     )
 
 
