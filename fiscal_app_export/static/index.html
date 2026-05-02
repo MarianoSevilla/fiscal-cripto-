@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <!-- SEO BÁSICO -->
-<title>Calculadora FIFO Criptomonedas — Informe para Hacienda | Mariano Sevilla</title>
-<meta name="description" content="Sube el CSV de Binance, Kraken o Bitvavo y calcula las ganancias y pérdidas patrimoniales con FIFO obligatorio. Descarga el informe PDF listo para tu declaración de la renta.">
+<title>Herramienta Fiscal Cripto — Mariano Sevilla | FIFO automático para España</title>
+<meta name="description" content="Sube el CSV de Binance, aplica FIFO automático según normativa española y descarga el informe PDF listo para tu gestor. Sin errores. Sin sorpresas. De Mariano Sevilla — Cero Vendehumos.">
+<meta name="keywords" content="declarar criptomonedas España, FIFO criptomonedas, IRPF cripto, informe fiscal criptomonedas, Binance hacienda, criptomonedas declaración renta, ganancias criptomonedas, modelo 721, base del ahorro cripto, herramienta fiscal cripto">
 <meta name="author" content="Mariano Sevilla">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://fiscal.marianosevilla.com/">
@@ -14,21 +15,21 @@
 <!-- OPEN GRAPH (WhatsApp, Telegram, LinkedIn, Facebook) -->
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://fiscal.marianosevilla.com/">
-<meta property="og:title" content="Calculadora FIFO Criptomonedas para Hacienda — Mariano Sevilla">
-<meta property="og:description" content="Sube el CSV de tu exchange y calcula ganancias y pérdidas patrimoniales con FIFO obligatorio. Informe PDF listo para tu declaración de la renta. Gratis.">
+<meta property="og:title" content="Tus cripto y Hacienda. Sin errores. Sin sorpresas.">
+<meta property="og:description" content="Sube el CSV de Binance. FIFO obligatorio aplicado automáticamente. Informe PDF listo para tu gestor fiscal. Gratis. De Mariano Sevilla — Cero Vendehumos.">
 <meta property="og:image" content="https://marianosevilla.com/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Calculadora FIFO criptomonedas para declarar en Hacienda — Mariano Sevilla">
-<meta property="og:site_name" content="Mariano Sevilla">
+<meta property="og:image:alt" content="Herramienta Fiscal Cripto — Mariano Sevilla">
+<meta property="og:site_name" content="Mariano Sevilla — Cero Vendehumos">
 <meta property="og:locale" content="es_ES">
 
 <!-- TWITTER / X CARD -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@MarianoSevilla">
 <meta name="twitter:creator" content="@MarianoSevilla">
-<meta name="twitter:title" content="Calculadora FIFO Criptomonedas para Hacienda — Mariano Sevilla">
-<meta name="twitter:description" content="Sube el CSV de tu exchange y calcula ganancias y pérdidas patrimoniales con FIFO obligatorio. Informe PDF listo para tu declaración de la renta. Gratis.">
+<meta name="twitter:title" content="Tus cripto y Hacienda. Sin errores. Sin sorpresas.">
+<meta name="twitter:description" content="Sube el CSV de Binance. FIFO obligatorio aplicado. Informe PDF listo para tu gestor. Gratis. De Mariano Sevilla — Cero Vendehumos.">
 <meta name="twitter:image" content="https://marianosevilla.com/og-image.png">
 
 <!-- DATOS ESTRUCTURADOS (Google) -->
@@ -36,9 +37,9 @@
 {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  "name": "Calculadora FIFO Criptomonedas — Mariano Sevilla",
+  "name": "Herramienta Fiscal Cripto — Mariano Sevilla",
   "url": "https://fiscal.marianosevilla.com",
-  "description": "Calcula ganancias y pérdidas patrimoniales de criptomonedas con método FIFO obligatorio (art. 37.2 LIRPF). Sube el CSV de Binance, Kraken, Bitvavo o Bit2Me y descarga el informe PDF para tu declaración de la renta.",
+  "description": "Sube el CSV de Binance, aplica el método FIFO obligatorio según normativa española (art. 37.2 LIRPF) y genera un informe PDF listo para tu gestor fiscal.",
   "applicationCategory": "FinanceApplication",
   "operatingSystem": "Web",
   "inLanguage": "es-ES",
@@ -46,7 +47,7 @@
   "author": {
     "@type": "Person",
     "name": "Mariano Sevilla",
-    "url": "https://marianosevilla.com",
+    "url": "https://youtube.com/@MarianoSevilla",
     "sameAs": [
       "https://youtube.com/@MarianoSevilla",
       "https://linktr.ee/MarianoSevilla",
@@ -55,7 +56,6 @@
   },
   "offers": {
     "@type": "Offer",
-    "availability": "https://schema.org/InStock",
     "price": "0",
     "priceCurrency": "EUR"
   }
@@ -331,7 +331,7 @@
   }
 
   /* PANEL RESULTADOS */
-  .results-panel { min-height: 400px; min-width: 0; }
+  .results-panel { min-height: 400px; }
 
   /* ESTADO VACÍO */
   .empty-state {
@@ -388,7 +388,7 @@
     color: var(--muted); margin-bottom: 6px;
   }
   .kpi-value {
-    font-family: var(--font-display); font-size: clamp(1rem, 2.2vw, 1.4rem);
+    font-family: var(--font-display); font-size: 1.6rem;
     font-weight: 800; letter-spacing: -0.03em;
   }
   .kpi-value.green { color: var(--accent); }
@@ -508,13 +508,107 @@
     .info-strip { box-sizing: border-box; width: 100%; }
     .exchange-grid { box-sizing: border-box; width: 100%; }
   }
+
+  /* ── AUTH NAV ─────────────────────────────── */
+  .nav-btn-auth {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); border-radius: 8px; padding: 6px 14px;
+    font-family: var(--font-body); font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: border-color 0.15s; white-space: nowrap;
+  }
+  .nav-btn-auth:hover { border-color: var(--border-hover); }
+  .nav-user-info { display: flex; align-items: center; gap: 10px; }
+  .nav-user-email {
+    font-size: 12px; color: var(--muted);
+    max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .nav-btn-logout {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    border-radius: 8px; padding: 5px 10px; font-family: var(--font-body);
+    font-size: 12px; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .nav-btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+  /* ── AUTH MODAL ───────────────────────────── */
+  .auth-dialog {
+    background: var(--surface); border: 1px solid var(--border-hover);
+    border-radius: 16px; padding: 0; width: min(420px, 92vw);
+    color: var(--text); box-shadow: 0 24px 48px rgba(0,0,0,0.7);
+  }
+  .auth-dialog::backdrop {
+    background: rgba(0,0,0,0.72); backdrop-filter: blur(4px);
+  }
+  .auth-inner { padding: 1.75rem; }
+  .auth-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 1.25rem;
+  }
+  .auth-title {
+    font-family: var(--font-display); font-size: 1.15rem;
+    font-weight: 700; letter-spacing: -0.02em;
+  }
+  .auth-close {
+    background: none; border: none; color: var(--muted); font-size: 1.35rem;
+    line-height: 1; cursor: pointer; padding: 4px 8px; border-radius: 6px;
+    transition: background 0.15s;
+  }
+  .auth-close:hover { background: var(--surface2); color: var(--text); }
+  .auth-tabs {
+    display: flex; background: var(--surface2); border-radius: 8px;
+    padding: 3px; margin-bottom: 1.5rem; gap: 0;
+  }
+  .auth-tab {
+    flex: 1; padding: 7px 10px; background: none; border: none; border-radius: 6px;
+    color: var(--muted); font-family: var(--font-body); font-size: 13px;
+    font-weight: 500; cursor: pointer; transition: all 0.15s;
+  }
+  .auth-tab.active {
+    background: var(--surface); color: var(--text);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+  }
+  .auth-form { display: flex; flex-direction: column; gap: 1rem; }
+  .auth-field label {
+    display: block; font-size: 12px; font-weight: 500;
+    color: var(--muted); margin-bottom: 5px; letter-spacing: 0.02em;
+  }
+  .auth-field input[type="email"],
+  .auth-field input[type="password"] {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-family: var(--font-body);
+    font-size: 14px; padding: 10px 13px; outline: none; box-sizing: border-box;
+    transition: border-color 0.2s;
+  }
+  .auth-field input:focus { border-color: var(--accent); }
+  .auth-remember {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--muted); cursor: pointer; user-select: none;
+  }
+  .auth-remember input { width: auto; cursor: pointer; }
+  .auth-error {
+    background: var(--red-dim); border: 1px solid rgba(226,75,74,0.25);
+    border-radius: 8px; padding: 9px 13px; font-size: 13px; color: #c8a5a4;
+  }
+  .auth-btn-primary {
+    width: 100%; padding: 13px; background: var(--accent); color: #0a0a0a;
+    border: none; border-radius: 10px; font-family: var(--font-display);
+    font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: opacity 0.2s;
+  }
+  .auth-btn-primary:hover { opacity: 0.9; }
+  .auth-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 </style>
 </head>
 <body>
 
 <nav>
   <a href="https://marianosevilla.com" class="nav-logo">mariano<span>sevilla</span>.com</a>
-  <span class="nav-badge">Beta · Binance · Bit2Me · Bitvavo</span>
+  <div style="display:flex;align-items:center;gap:0.75rem;">
+    <span class="nav-badge">Beta · Binance · Bit2Me · Bitvavo</span>
+    <button class="nav-btn-auth" id="navBtnLogin">Iniciar sesión</button>
+    <div class="nav-user-info" id="navUserInfo" hidden>
+      <span class="nav-user-email" id="navUserEmail"></span>
+      <button class="nav-btn-logout" id="navBtnLogout">Salir</button>
+    </div>
+  </div>
 </nav>
 
 <div class="hero">
@@ -556,12 +650,13 @@
           <span class="exchange-name">Bit2Me</span>
         </button>
         <button class="exchange-btn" data-exchange="bitvavo" onclick="selectExchange(this)">
-          <div class="exchange-logo logo-bitvavo">BV</div>
+          <div class="exchange-logo logo-kraken">BV</div>
           <span class="exchange-name">Bitvavo</span>
         </button>
-        <button class="exchange-btn" data-exchange="kraken" onclick="selectExchange(this)">
+        <button class="exchange-btn coming-soon" data-exchange="kraken" disabled>
           <div class="exchange-logo logo-kraken">K</div>
           <span class="exchange-name">Kraken</span>
+          <span class="soon-tag">Pronto</span>
         </button>
         <button class="exchange-btn coming-soon" data-exchange="coinbase" disabled>
           <div class="exchange-logo logo-coinbase">C</div>
@@ -797,6 +892,183 @@
   </p>
 </footer>
 
+<dialog id="authModal" class="auth-dialog">
+  <div class="auth-inner">
+    <div class="auth-header">
+      <span class="auth-title">Accede a tu cuenta</span>
+      <button class="auth-close" id="authModalClose" aria-label="Cerrar">×</button>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-tab="login">Iniciar sesión</button>
+      <button class="auth-tab" data-tab="register">Crear cuenta</button>
+    </div>
+
+    <!-- LOGIN -->
+    <form id="authFormLogin" class="auth-form" novalidate>
+      <div class="auth-field">
+        <label for="authLoginEmail">Email</label>
+        <input type="email" id="authLoginEmail" name="email" required autocomplete="email" placeholder="tu@email.com">
+      </div>
+      <div class="auth-field">
+        <label for="authLoginPass">Contraseña</label>
+        <input type="password" id="authLoginPass" name="password" required autocomplete="current-password" minlength="8">
+      </div>
+      <label class="auth-remember">
+        <input type="checkbox" name="remember"> Recordarme
+      </label>
+      <div class="auth-error" hidden></div>
+      <button type="submit" class="auth-btn-primary">Entrar</button>
+    </form>
+
+    <!-- REGISTRO -->
+    <form id="authFormReg" class="auth-form" novalidate hidden>
+      <div class="auth-field">
+        <label for="authRegEmail">Email</label>
+        <input type="email" id="authRegEmail" name="email" required autocomplete="email" placeholder="tu@email.com">
+      </div>
+      <div class="auth-field">
+        <label for="authRegPass">Contraseña</label>
+        <input type="password" id="authRegPass" name="password" required autocomplete="new-password" minlength="8" placeholder="Mínimo 8 caracteres">
+      </div>
+      <div class="auth-error" hidden></div>
+      <button type="submit" class="auth-btn-primary">Crear cuenta</button>
+    </form>
+  </div>
+</dialog>
+
+<script>
+  // ── AUTH STATE ────────────────────────────
+  const AuthState = (() => {
+    let _user = null;
+    const _listeners = new Set();
+    function _notify() { _listeners.forEach(fn => fn(_user)); }
+
+    async function init() {
+      try {
+        const r = await fetch('/api/me', { credentials: 'include' });
+        const d = await r.json();
+        _user = d.user || null;
+      } catch { _user = null; }
+      _notify();
+    }
+    async function login(email, password, remember) {
+      const r = await fetch('/api/login', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, remember }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Error al iniciar sesión');
+      _user = d;
+      _notify();
+    }
+    async function register(email, password) {
+      const r = await fetch('/api/register', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Error al crear la cuenta');
+      _user = d;
+      _notify();
+    }
+    async function logout() {
+      await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+      _user = null;
+      _notify();
+    }
+    function onChange(fn) { _listeners.add(fn); }
+    function isLoggedIn() { return !!_user; }
+    return { init, login, register, logout, onChange, isLoggedIn };
+  })();
+
+  // ── AUTH MODAL ────────────────────────────
+  const _authModal = document.getElementById('authModal');
+
+  function abrirAuthModal(tab) {
+    _authSwitchTab(tab || 'login');
+    _authModal.showModal();
+  }
+
+  function _authSwitchTab(tab) {
+    document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+    document.getElementById('authFormLogin').hidden = tab !== 'login';
+    document.getElementById('authFormReg').hidden   = tab !== 'register';
+  }
+
+  function _authSetLoading(form, loading, label) {
+    const btn = form.querySelector('.auth-btn-primary');
+    btn.disabled    = loading;
+    btn.textContent = loading ? 'Un momento…' : label;
+  }
+
+  function _authShowError(form, msg) {
+    const el = form.querySelector('.auth-error');
+    el.textContent = msg;
+    el.removeAttribute('hidden');
+  }
+
+  document.getElementById('authModalClose').addEventListener('click', () => _authModal.close());
+
+  document.querySelectorAll('.auth-tab').forEach(tab =>
+    tab.addEventListener('click', () => _authSwitchTab(tab.dataset.tab))
+  );
+
+  document.getElementById('authFormLogin').addEventListener('submit', async e => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    form.querySelector('.auth-error').setAttribute('hidden', '');
+    _authSetLoading(form, true, 'Entrar');
+    try {
+      await AuthState.login(
+        form.querySelector('[name=email]').value.trim().toLowerCase(),
+        form.querySelector('[name=password]').value,
+        form.querySelector('[name=remember]').checked
+      );
+      form.reset();
+      _authModal.close();
+    } catch (err) {
+      _authShowError(form, err.message);
+    } finally {
+      _authSetLoading(form, false, 'Entrar');
+    }
+  });
+
+  document.getElementById('authFormReg').addEventListener('submit', async e => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    form.querySelector('.auth-error').setAttribute('hidden', '');
+    _authSetLoading(form, true, 'Crear cuenta');
+    try {
+      await AuthState.register(
+        form.querySelector('[name=email]').value.trim().toLowerCase(),
+        form.querySelector('[name=password]').value
+      );
+      form.reset();
+      _authModal.close();
+    } catch (err) {
+      _authShowError(form, err.message);
+    } finally {
+      _authSetLoading(form, false, 'Crear cuenta');
+    }
+  });
+
+  document.getElementById('navBtnLogin').addEventListener('click', () => abrirAuthModal('login'));
+
+  document.getElementById('navBtnLogout').addEventListener('click', async () => {
+    await AuthState.logout();
+  });
+
+  AuthState.onChange(user => {
+    document.getElementById('navBtnLogin').hidden   = !!user;
+    document.getElementById('navUserInfo').hidden   = !user;
+    if (user) document.getElementById('navUserEmail').textContent = user.email;
+  });
+
+  AuthState.init();
+</script>
+
 <script>
   // ── EXCHANGE SELECTOR ────────────────────
   let selectedExchange = 'binance';
@@ -816,11 +1088,6 @@
       hint: 'Fichero .csv exportado desde Bitvavo',
       step1: { title: 'Bitvavo → Cuenta → Historial de transacciones', desc: 'Accede a tu cuenta de Bitvavo y ve a la sección de historial.' },
       step2: { title: 'Exportar → Selecciona el período completo', desc: 'Elige el año fiscal completo (1 enero – 31 dic) y descarga el CSV.' },
-    },
-    kraken: {
-      hint: 'Fichero .csv de Ledgers exportado desde Kraken',
-      step1: { title: 'Kraken → Historial → Exportar', desc: 'Accede a tu cuenta de Kraken, ve a Historial y haz clic en Exportar.' },
-      step2: { title: 'Tipo: Ledgers → Selecciona el período completo', desc: 'Elige "Ledgers" como tipo de exportación, el año fiscal completo (1 enero – 31 dic) y descarga el CSV.' },
     },
   };
 
@@ -1152,7 +1419,6 @@
     if (!error) return 'Error desconocido. Por favor inténtalo de nuevo.';
     if (error.includes('no parece ser un CSV')) return error;
     if (error.includes('Historial de Operaciones Spot')) return error;
-    if (error.includes('Ledgers')) return error;
     if (error.includes('extensión .csv')) return error;
     if (error.includes('vacío')) return error;
     if (error.includes('grande')) return error;
@@ -1166,6 +1432,11 @@
   // ── SUBMIT ───────────────────────────────
   btnAnalizar.addEventListener('click', async () => {
     if (!selectedFile) return;
+
+    if (!AuthState.isLoggedIn()) {
+      abrirAuthModal('login');
+      return;
+    }
 
     if (!selectedFile.name.toLowerCase().endsWith('.csv')) {
       mostrarErrorArchivo('El fichero debe ser un .csv. Selecciona el fichero correcto.');
@@ -1192,7 +1463,17 @@
     formData.append('ejercicio', sanitizarTexto(document.getElementById('ejercicio').value.trim()));
 
     try {
-      const res  = await fetch('/api/analizar', { method: 'POST', body: formData });
+      const res = await fetch('/api/analizar', { method: 'POST', body: formData, credentials: 'include' });
+
+      if (res.status === 401) {
+        detenerProgreso();
+        btnText.textContent = 'Generar informe';
+        btnAnalizar.disabled = false;
+        showState('empty');
+        abrirAuthModal('login');
+        return;
+      }
+
       const data = await res.json();
 
       if (!res.ok || !data.ok) {
