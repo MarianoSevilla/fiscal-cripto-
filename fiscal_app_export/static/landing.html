@@ -124,25 +124,36 @@ nav {
   transition: opacity .15s; white-space: nowrap;
 }
 .btn-primary:hover { opacity: .88; }
-.nav-user { display: flex; align-items: center; gap: .6rem; }
-.nav-user-email {
-  font-size: 12px; color: var(--muted); max-width: 160px;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+/* ── AVATAR + DROPDOWN ── */
+.nav-avatar-wrap { position: relative; }
+.nav-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--accent); color: #0a0a0a;
+  font-family: var(--font-h); font-size: 14px; font-weight: 700;
+  border: 2px solid transparent; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity .15s, border-color .15s; user-select: none;
 }
-.btn-tool {
-  background: var(--accent-dim); border: 1px solid rgba(0,200,150,.25);
-  color: var(--accent); border-radius: 8px; padding: 7px 14px;
-  font-family: var(--font-b); font-size: 13px; font-weight: 500;
-  cursor: pointer; transition: background .15s; white-space: nowrap;
-  text-decoration: none; display: inline-block;
+.nav-avatar:hover { opacity: .85; border-color: rgba(0,200,150,.4); }
+.nav-dropdown {
+  position: absolute; right: 0; top: calc(100% + 10px);
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 14px; min-width: 190px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.5);
+  padding: 6px; z-index: 200; display: none;
 }
-.btn-tool:hover { background: rgba(0,200,150,.18); }
-.btn-logout {
-  background: none; border: 1px solid var(--border); color: var(--muted2);
-  border-radius: 8px; padding: 6px 12px; font-family: var(--font-b);
-  font-size: 12px; cursor: pointer; transition: all .15s;
+.nav-dropdown.open { display: block; }
+.nav-dd-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 13px; border-radius: 9px;
+  color: var(--text); font-family: var(--font-b); font-size: 14px; font-weight: 500;
+  cursor: pointer; text-decoration: none; transition: background .12s;
+  background: none; border: none; width: 100%; text-align: left;
 }
-.btn-logout:hover { border-color: var(--red); color: var(--red); }
+.nav-dd-item:hover { background: var(--surface); }
+.nav-dd-divider { height: 1px; background: var(--border); margin: 4px 0; }
+.nav-dd-item.danger { color: #e55; }
+.nav-dd-item.danger:hover { background: rgba(220,60,60,.1); }
 
 /* ── HERO ───────────────────────────────────── */
 .hero {
@@ -559,10 +570,14 @@ footer {
         <button class="btn-primary" id="navBtnRegister">Crear cuenta</button>
       </div>
       <!-- Estado: autenticado -->
-      <div class="nav-user" id="navUser" hidden>
-        <span class="nav-user-email" id="navUserEmail"></span>
-        <a href="/fiscal" class="btn-tool">Ir a la herramienta →</a>
-        <button class="btn-logout" id="navBtnLogout">Salir</button>
+      <div class="nav-avatar-wrap" id="navUser" hidden>
+        <button class="nav-avatar" id="navAvatar" aria-label="Menú de usuario">U</button>
+        <div class="nav-dropdown" id="navDropdown">
+          <a href="/pricing" class="nav-dd-item">💎&nbsp; Planes</a>
+          <a href="/account" class="nav-dd-item">👤&nbsp; Mi cuenta</a>
+          <div class="nav-dd-divider"></div>
+          <button class="nav-dd-item danger" id="navBtnLogout">↩&nbsp; Cerrar sesión</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1051,13 +1066,29 @@ document.getElementById('navBtnRegister').addEventListener('click', () => window
 document.getElementById('heroBtnRegister').addEventListener('click',() => window.location.href = '/signup/');
 document.getElementById('ctaBtnRegister').addEventListener('click', () => window.location.href = '/signup/');
 document.getElementById('ctaBtnLogin').addEventListener('click',    () => window.location.href = '/login/');
-document.getElementById('navBtnLogout').addEventListener('click', async () => { await AuthState.logout(); });
+// Avatar dropdown
+const _avatar   = document.getElementById('navAvatar');
+const _dropdown = document.getElementById('navDropdown');
+_avatar.addEventListener('click', e => {
+  e.stopPropagation();
+  _dropdown.classList.toggle('open');
+});
+document.addEventListener('click', () => _dropdown.classList.remove('open'));
+
+// Logout
+document.getElementById('navBtnLogout').addEventListener('click', async () => {
+  await AuthState.logout();
+  window.location.href = '/';
+});
 
 // Auth state → UI
 AuthState.onChange(user => {
-  document.getElementById('navAnon').style.display = user ? 'none'  : 'flex';
+  document.getElementById('navAnon').style.display = user ? 'none' : 'flex';
   document.getElementById('navUser').hidden         = !user;
-  if (user) document.getElementById('navUserEmail').textContent = user.email;
+  if (user) {
+    // Muestra la inicial del email en el avatar
+    _avatar.textContent = user.email.charAt(0).toUpperCase();
+  }
 });
 AuthState.init();
 
