@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Herramienta Fiscal Cripto</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --black:      #0a0a0a;
+  --surface:    #111111;
+  --surface2:   #1a1a1a;
+  --surface3:   #222222;
+  --border:     rgba(255,255,255,0.07);
+  --border-hover: rgba(255,255,255,0.15);
+  --text:       #f0f0f0;
+  --muted:      #888888;
+  --muted2:     #555555;
+  --accent:     #00C896;
+  --accent-dim: rgba(0,200,150,0.10);
+  --max:        1080px;
+  --r:          12px;
+  --font-d:     'Syne', sans-serif;
+  --font-b:     'DM Sans', sans-serif;
+}
+
+html, body {
+  min-height: 100%; background: var(--black);
+  font-family: var(--font-b); color: var(--text);
+  font-size: 16px; line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+a { color: inherit; text-decoration: none; }
+img { display: block; max-width: 100%; }
+.accent { color: var(--accent); }
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  border-bottom: 1px solid var(--border);
+  background: rgba(10,10,10,0.88); backdrop-filter: blur(14px);
+}
+.nav-inner {
+  max-width: var(--max); margin: 0 auto; padding: 0 2rem;
+  height: 64px; display: flex; align-items: center; justify-content: space-between;
+}
+.nav-logo {
+  font-family: var(--font-d); font-weight: 800; font-size: 1.05rem;
+  letter-spacing: -0.02em; color: var(--text);
+}
+.nav-logo span { color: var(--accent); }
+.nav-right { display: flex; align-items: center; gap: 0.6rem; }
+
+/* Avatar dropdown */
+.nav-avatar-wrap { position: relative; }
+.nav-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--accent); color: #0a0a0a;
+  font-family: var(--font-d); font-size: 14px; font-weight: 700;
+  border: 2px solid transparent; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity .15s, border-color .15s;
+}
+.nav-avatar:hover { opacity: .85; border-color: rgba(0,200,150,.4); }
+.nav-dropdown {
+  position: absolute; right: 0; top: calc(100% + 10px);
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 14px; min-width: 190px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.5);
+  padding: 6px; z-index: 200; display: none;
+}
+.nav-dropdown.open { display: block; }
+.nav-dd-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 13px; border-radius: 9px;
+  color: var(--text); font-family: var(--font-b); font-size: 14px; font-weight: 500;
+  cursor: pointer; text-decoration: none; transition: background .12s;
+  background: none; border: none; width: 100%; text-align: left;
+}
+.nav-dd-item:hover { background: var(--surface); }
+.nav-dd-divider { height: 1px; background: var(--border); margin: 4px 0; }
+.nav-dd-item.danger { color: #e55; }
+.nav-dd-item.danger:hover { background: rgba(220,60,60,.1); }
+
+/* ── MAIN ── */
+main {
+  max-width: var(--max); margin: 0 auto;
+  padding: 6rem 2rem 4rem;
+}
+.dash-header { margin-bottom: 2rem; }
+.dash-title {
+  font-family: var(--font-d); font-size: clamp(1.4rem, 2.5vw, 1.9rem);
+  font-weight: 800; letter-spacing: -.03em; margin-bottom: .35rem;
+}
+.dash-sub { font-size: .95rem; color: var(--muted); }
+
+/* ── EXCHANGE GRID ── */
+.ex-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .75rem;
+}
+.ex-card {
+  display: flex; align-items: center; gap: 1rem;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 1.1rem 1.25rem;
+  cursor: pointer; text-decoration: none; color: var(--text);
+  transition: border-color .15s, background .15s, transform .12s;
+}
+.ex-card:not(.disabled):hover {
+  border-color: var(--border-hover);
+  background: var(--surface2);
+  transform: translateY(-1px);
+}
+.ex-card.disabled {
+  opacity: .38; cursor: default; pointer-events: none;
+}
+.ex-img {
+  width: 42px; height: 42px; border-radius: 10px;
+  object-fit: contain; background: var(--surface2); flex-shrink: 0;
+}
+.ex-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ex-name {
+  font-family: var(--font-d); font-size: .95rem; font-weight: 700;
+  letter-spacing: -.01em; white-space: nowrap;
+}
+.ex-badge {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--muted2);
+}
+.ex-badge.available { color: var(--accent); }
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  margin-top: 4rem;
+}
+.footer-inner {
+  max-width: var(--max); margin: 0 auto; padding: 2.5rem 2rem 1.5rem;
+}
+.footer-bottom {
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 1rem;
+}
+.footer-legal { font-size: .78rem; color: var(--muted2); line-height: 1.6; }
+.footer-social { display: flex; gap: 1.5rem; }
+.footer-social a { font-size: .82rem; color: var(--muted); transition: color .15s; }
+.footer-social a:hover { color: var(--text); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .ex-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  .ex-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">mariano<span>sevilla</span>.com</a>
+    <div class="nav-right">
+      <div class="nav-avatar-wrap">
+        <button class="nav-avatar" id="navAvatar" aria-label="Menú de usuario">U</button>
+        <div class="nav-dropdown" id="navDropdown">
+          <a href="/pricing" class="nav-dd-item">💎&nbsp; Planes</a>
+          <a href="/account" class="nav-dd-item">👤&nbsp; Mi cuenta</a>
+          <div class="nav-dd-divider"></div>
+          <button class="nav-dd-item danger" id="navBtnLogout">↩&nbsp; Cerrar sesión</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ── DASHBOARD ── -->
+<main>
+  <div class="dash-header">
+    <h1 class="dash-title">Selecciona tu exchange</h1>
+    <p class="dash-sub">Elige el exchange desde el que vas a importar tu historial de operaciones.</p>
+  </div>
+
+  <div class="ex-grid">
+
+    <!-- Disponibles -->
+    <a href="/fiscal?exchange=binance" class="ex-card">
+      <img src="/static/images/binance.jpg" alt="Binance" class="ex-img">
+      <div class="ex-info">
+        <span class="ex-name">Binance</span>
+        <span class="ex-badge available">Disponible</span>
+      </div>
+    </a>
+
+    <a href="/fiscal?exchange=bitvavo" class="ex-card">
+      <img src="/static/images/bitvavo.png" alt="Bitvavo" class="ex-img">
+      <div class="ex-info">
+        <span class="ex-name">Bitvavo</span>
+        <span class="ex-badge available">Disponible</span>
+      </div>
+    </a>
+
+    <a href="/fiscal?exchange=bit2me" class="ex-card">
+      <img src="/static/images/bit2me.jpg" alt="Bit2Me" class="ex-img">
+      <div class="ex-info">
+        <span class="ex-name">Bit2Me</span>
+        <span class="ex-badge available">Disponible</span>
+      </div>
+    </a>
+
+    <a href="/fiscal?exchange=kraken" class="ex-card">
+      <img src="/static/images/kraken.png" alt="Kraken" class="ex-img">
+      <div class="ex-info">
+        <span class="ex-name">Kraken</span>
+        <span class="ex-badge available">Disponible</span>
+      </div>
+    </a>
+
+    <a href="/fiscal?exchange=coinbase" class="ex-card">
+      <img src="/static/images/coinbase.png" alt="Coinbase" class="ex-img">
+      <div class="ex-info">
+        <span class="ex-name">Coinbase</span>
+        <span class="ex-badge available">Disponible</span>
+      </div>
+    </a>
+
+    <!-- Próximamente -->
+    <div class="ex-card disabled">
+      <img src="/static/images/bybit.jpg" alt="Bybit" class="ex-img">
+      <div class="ex-info">
+        <span class="ex-name">Bybit</span>
+        <span class="ex-badge">Próximamente</span>
+      </div>
+    </div>
+
+    <div class="ex-card disabled">
+      <img src="/static/images/kucoin.png" alt="KuCoin" class="ex-img" onerror="this.style.display='none'">
+      <div class="ex-info">
+        <span class="ex-name">KuCoin</span>
+        <span class="ex-badge">Próximamente</span>
+      </div>
+    </div>
+
+    <div class="ex-card disabled">
+      <div class="ex-img" style="background:var(--surface3);display:flex;align-items:center;justify-content:center;color:var(--muted2);font-size:1.4rem;">+</div>
+      <div class="ex-info">
+        <span class="ex-name">Más exchanges</span>
+        <span class="ex-badge">En desarrollo</span>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-bottom">
+      <p class="footer-legal">
+        © 2025 Mariano Sevilla. Auxiliar de organización fiscal. No constituye asesoramiento fiscal ni legal.
+      </p>
+      <div class="footer-social">
+        <a href="https://youtube.com/@MarianoSevilla" target="_blank" rel="noopener noreferrer">YouTube</a>
+        <a href="https://linktr.ee/MarianoSevilla" target="_blank" rel="noopener noreferrer">Linktree</a>
+        <a href="https://t.me/marianosevillacripto" target="_blank" rel="noopener noreferrer">Telegram</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ── Redirige a login si no hay sesión ──────────
+(async () => {
+  try {
+    const r = await fetch('/api/me', { credentials: 'include' });
+    const d = await r.json();
+    if (!d.user) { window.location.replace('/login/'); return; }
+    // Muestra inicial del email en el avatar
+    document.getElementById('navAvatar').textContent = d.user.email.charAt(0).toUpperCase();
+  } catch {
+    window.location.replace('/login/');
+  }
+})();
+
+// ── Avatar dropdown ────────────────────────────
+const _avatar   = document.getElementById('navAvatar');
+const _dropdown = document.getElementById('navDropdown');
+_avatar.addEventListener('click', e => {
+  e.stopPropagation();
+  _dropdown.classList.toggle('open');
+});
+document.addEventListener('click', () => _dropdown.classList.remove('open'));
+
+// ── Logout ─────────────────────────────────────
+document.getElementById('navBtnLogout').addEventListener('click', async () => {
+  await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+  window.location.href = '/';
+});
+</script>
+</body>
+</html>

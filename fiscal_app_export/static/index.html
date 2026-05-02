@@ -1089,6 +1089,15 @@
     document.getElementById('step2-body').innerHTML = `<h4>${info.step2.title}</h4><p>${info.step2.desc}</p>`;
   }
 
+  // Preselecciona exchange desde URL (?exchange=binance)
+  (function () {
+    const param = new URLSearchParams(location.search).get('exchange');
+    if (param) {
+      const btn = document.querySelector(`.exchange-btn[data-exchange="${param}"]`);
+      if (btn && !btn.disabled) selectExchange(btn);
+    }
+  })();
+
   const csvInput    = document.getElementById('csvInput');
   const dropZone    = document.getElementById('dropZone');
   const fileSelected = document.getElementById('fileSelected');

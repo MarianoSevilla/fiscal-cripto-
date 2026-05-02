@@ -442,6 +442,12 @@ def fiscal():
     return send_from_directory("static", "index.html")
 
 
+@app.route("/dashboard", strict_slashes=False)
+def dashboard():
+    """Dashboard principal: selector de exchange. Requiere autenticación (gestionada en JS)."""
+    return send_from_directory("static", "dashboard.html")
+
+
 @app.route("/login/", strict_slashes=False)
 def login_page():
     """Página dedicada de inicio de sesión."""
@@ -498,7 +504,7 @@ def auth_google_callback():
     user.last_login = datetime.utcnow()
     db.session.commit()
     login_user(user, remember=True)
-    return redirect("/fiscal")
+    return redirect("/dashboard")
 
 
 @app.route("/binance")
