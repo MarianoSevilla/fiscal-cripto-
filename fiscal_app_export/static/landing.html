@@ -508,6 +508,13 @@ footer {
 }
 .auth-btn:hover { opacity: .88; }
 .auth-btn:disabled { opacity: .45; cursor: not-allowed; }
+.auth-switch { margin-top: .75rem; text-align: center; font-size: 13px; color: var(--muted); }
+.auth-switch-btn {
+  background: none; border: none; color: var(--accent); font-size: 13px;
+  cursor: pointer; padding: 0; font-family: var(--font-b);
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.auth-switch-btn:hover { opacity: .8; }
 
 /* ── ANIMACIONES ────────────────────────────── */
 @keyframes fadeUp {
@@ -902,12 +909,8 @@ footer {
 <dialog id="authModal" class="auth-dialog">
   <div class="auth-inner">
     <div class="auth-header">
-      <span class="auth-title">Accede a tu cuenta</span>
+      <span class="auth-title" id="authModalTitle">Iniciar sesión</span>
       <button class="auth-close" id="authModalClose" aria-label="Cerrar">×</button>
-    </div>
-    <div class="auth-tabs">
-      <button class="auth-tab active" data-tab="login">Iniciar sesión</button>
-      <button class="auth-tab" data-tab="register">Crear cuenta</button>
     </div>
     <form id="authFormLogin" class="auth-form" novalidate>
       <div class="auth-field">
@@ -921,6 +924,7 @@ footer {
       <label class="auth-remember"><input type="checkbox" name="remember"> Recordarme</label>
       <div class="auth-error" hidden></div>
       <button type="submit" class="auth-btn">Entrar</button>
+      <p class="auth-switch">¿No tienes cuenta? <button type="button" class="auth-switch-btn" id="switchToRegister">Crear cuenta</button></p>
     </form>
     <form id="authFormReg" class="auth-form" novalidate hidden>
       <div class="auth-field">
@@ -933,6 +937,7 @@ footer {
       </div>
       <div class="auth-error" hidden></div>
       <button type="submit" class="auth-btn">Crear cuenta</button>
+      <p class="auth-switch">¿Ya tienes cuenta? <button type="button" class="auth-switch-btn" id="switchToLogin">Iniciar sesión</button></p>
     </form>
   </div>
 </dialog>
@@ -984,16 +989,11 @@ const AuthState = (() => {
 const _modal = document.getElementById('authModal');
 
 function abrirModal(tab) {
-  _switchTab(tab || 'login');
+  const isLogin = (tab || 'login') === 'login';
+  document.getElementById('authFormLogin').hidden = !isLogin;
+  document.getElementById('authFormReg').hidden   = isLogin;
+  document.getElementById('authModalTitle').textContent = isLogin ? 'Iniciar sesión' : 'Crear cuenta';
   _modal.showModal();
-}
-
-function _switchTab(tab) {
-  document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-  document.getElementById('authFormLogin').hidden = tab !== 'login';
-  document.getElementById('authFormReg').hidden   = tab !== 'register';
-  _modal.querySelector('.auth-title').textContent =
-    tab === 'login' ? 'Iniciar sesión' : 'Crear cuenta';
 }
 
 function _setLoading(form, on, label) {
@@ -1009,7 +1009,8 @@ function _hideError(form) {
 }
 
 document.getElementById('authModalClose').addEventListener('click', () => _modal.close());
-document.querySelectorAll('.auth-tab').forEach(t => t.addEventListener('click', () => _switchTab(t.dataset.tab)));
+document.getElementById('switchToRegister').addEventListener('click', () => abrirModal('register'));
+document.getElementById('switchToLogin').addEventListener('click',    () => abrirModal('login'));
 
 // Login
 document.getElementById('authFormLogin').addEventListener('submit', async e => {

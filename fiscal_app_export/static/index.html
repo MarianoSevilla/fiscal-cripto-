@@ -553,18 +553,13 @@
     transition: background 0.15s;
   }
   .auth-close:hover { background: var(--surface2); color: var(--text); }
-  .auth-tabs {
-    display: flex; background: var(--surface2); border-radius: 8px;
-    padding: 3px; margin-bottom: 1.5rem; gap: 0;
+  .auth-switch {
+    text-align: center; font-size: 13px; color: var(--muted); margin: 0.25rem 0 0;
   }
-  .auth-tab {
-    flex: 1; padding: 7px 10px; background: none; border: none; border-radius: 6px;
-    color: var(--muted); font-family: var(--font-body); font-size: 13px;
-    font-weight: 500; cursor: pointer; transition: all 0.15s;
-  }
-  .auth-tab.active {
-    background: var(--surface); color: var(--text);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+  .auth-switch-btn {
+    background: none; border: none; color: var(--accent); font-size: 13px;
+    font-family: var(--font-body); cursor: pointer; padding: 0;
+    text-decoration: underline; text-underline-offset: 2px;
   }
   .auth-form { display: flex; flex-direction: column; gap: 1rem; }
   .auth-field label {
@@ -895,12 +890,8 @@
 <dialog id="authModal" class="auth-dialog">
   <div class="auth-inner">
     <div class="auth-header">
-      <span class="auth-title">Accede a tu cuenta</span>
+      <span class="auth-title" id="authModalTitle">Iniciar sesión</span>
       <button class="auth-close" id="authModalClose" aria-label="Cerrar">×</button>
-    </div>
-    <div class="auth-tabs">
-      <button class="auth-tab active" data-tab="login">Iniciar sesión</button>
-      <button class="auth-tab" data-tab="register">Crear cuenta</button>
     </div>
 
     <!-- LOGIN -->
@@ -918,6 +909,7 @@
       </label>
       <div class="auth-error" hidden></div>
       <button type="submit" class="auth-btn-primary">Entrar</button>
+      <p class="auth-switch">¿No tienes cuenta? <button type="button" class="auth-switch-btn" id="switchToRegister">Crear cuenta</button></p>
     </form>
 
     <!-- REGISTRO -->
@@ -932,6 +924,7 @@
       </div>
       <div class="auth-error" hidden></div>
       <button type="submit" class="auth-btn-primary">Crear cuenta</button>
+      <p class="auth-switch">¿Ya tienes cuenta? <button type="button" class="auth-switch-btn" id="switchToLogin">Iniciar sesión</button></p>
     </form>
   </div>
 </dialog>
@@ -987,14 +980,11 @@
   const _authModal = document.getElementById('authModal');
 
   function abrirAuthModal(tab) {
-    _authSwitchTab(tab || 'login');
+    const isLogin = (tab || 'login') === 'login';
+    document.getElementById('authFormLogin').hidden = !isLogin;
+    document.getElementById('authFormReg').hidden   = isLogin;
+    document.getElementById('authModalTitle').textContent = isLogin ? 'Iniciar sesión' : 'Crear cuenta';
     _authModal.showModal();
-  }
-
-  function _authSwitchTab(tab) {
-    document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-    document.getElementById('authFormLogin').hidden = tab !== 'login';
-    document.getElementById('authFormReg').hidden   = tab !== 'register';
   }
 
   function _authSetLoading(form, loading, label) {
@@ -1010,10 +1000,8 @@
   }
 
   document.getElementById('authModalClose').addEventListener('click', () => _authModal.close());
-
-  document.querySelectorAll('.auth-tab').forEach(tab =>
-    tab.addEventListener('click', () => _authSwitchTab(tab.dataset.tab))
-  );
+  document.getElementById('switchToRegister').addEventListener('click', () => abrirAuthModal('register'));
+  document.getElementById('switchToLogin').addEventListener('click', () => abrirAuthModal('login'));
 
   document.getElementById('authFormLogin').addEventListener('submit', async e => {
     e.preventDefault();
