@@ -21,7 +21,7 @@ import tempfile
 import traceback
 import threading
 from datetime import datetime
-from flask import Flask, request, jsonify, send_file, send_from_directory, redirect, url_for
+from flask import Flask, request, jsonify, send_file, send_from_directory, redirect, url_for, render_template
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_cors import CORS
@@ -105,6 +105,131 @@ if _google_oauth_enabled:
 
 with app.app_context():
     db.create_all()
+
+
+# ── DATOS SEO POR EXCHANGE ─────────────────────
+_BASE_URL = "https://marianosevilla.com"
+
+_HOW_TO_STEP2 = {
+    "title": "La herramienta aplica el método FIFO obligatorio",
+    "desc":  "La herramienta clasifica automáticamente compras, ventas, swaps y comisiones. "
+             "Aplica el método FIFO (art. 37.2 LIRPF) y calcula tus ganancias y pérdidas "
+             "patrimoniales ejercicio a ejercicio.",
+}
+_HOW_TO_STEP3 = {
+    "title": "Descarga el informe PDF listo para Hacienda",
+    "desc":  "En segundos obtienes el PDF con el detalle de todas las operaciones del "
+             "ejercicio, el resultado neto y los importes exactos para las casillas 1626 "
+             "y 1627 de la declaración de la renta.",
+}
+
+_TOOL_GENERIC = {
+    "exchange_id":      "",
+    "exchange_name":    "tu exchange",
+    "exchange_logo":    "&#x25CF;",
+    "page_title":       "Calculadora FIFO Cripto para Hacienda | Mariano Sevilla",
+    "page_meta_desc":   "Sube el CSV de tu exchange y calcula ganancias con FIFO obligatorio. Informe PDF listo para tu declaración de la renta.",
+    "page_canonical":   f"{_BASE_URL}/fiscal",
+    "page_og_title":    "Calculadora FIFO Criptomonedas para Hacienda — Mariano Sevilla",
+    "page_og_desc":     "Sube el CSV de tu exchange y calcula ganancias y pérdidas patrimoniales con FIFO. Informe PDF listo para tu declaración de la renta.",
+    "page_schema_name": "Calculadora FIFO Criptomonedas — Mariano Sevilla",
+    "page_h1":          "",
+    "hero_desc":        "",
+    "how_to":           [],
+}
+
+EXCHANGE_PAGES = {
+    "binance": {
+        "exchange_id":      "binance",
+        "exchange_name":    "Binance",
+        "exchange_logo":    "B",
+        "page_title":       "Informe FIFO Binance para Hacienda | Mariano Sevilla",
+        "page_meta_desc":   "Sube el CSV de Binance y calcula ganancias y pérdidas con FIFO obligatorio. Informe PDF para declarar Binance en la declaración de la renta.",
+        "page_canonical":   f"{_BASE_URL}/binance",
+        "page_og_title":    "Informe fiscal Binance para Hacienda — FIFO automático | Mariano Sevilla",
+        "page_og_desc":     "Sube el CSV de Binance y calcula las plusvalías crypto con FIFO. Informe PDF para tu gestor.",
+        "page_schema_name": "Informe FIFO Binance — Mariano Sevilla",
+        "page_h1":          "Genera tu informe fiscal de Binance para Hacienda",
+        "hero_desc":        "La herramienta lee el CSV de Binance, aplica el método FIFO obligatorio según la normativa española y calcula tus plusvalías y pérdidas patrimoniales. Descarga el informe PDF con los importes exactos para las casillas 1626 y 1627 de la declaración de la renta.",
+        "how_to": [
+            {"title": "Exporta el CSV de Binance (Transaction History)",
+             "desc":  "En tu cuenta de Binance ve a Wallet → Historial de transacciones → Exportar. Selecciona «All Transactions», elige el rango completo desde tu primera operación hasta hoy y descarga el fichero CSV."},
+            _HOW_TO_STEP2, _HOW_TO_STEP3,
+        ],
+    },
+    "bitvavo": {
+        "exchange_id":      "bitvavo",
+        "exchange_name":    "Bitvavo",
+        "exchange_logo":    "BV",
+        "page_title":       "Informe FIFO Bitvavo para Hacienda | Mariano Sevilla",
+        "page_meta_desc":   "Sube el CSV de Bitvavo y calcula tus ganancias y pérdidas patrimoniales con FIFO obligatorio. Informe PDF listo para la declaración de la renta.",
+        "page_canonical":   f"{_BASE_URL}/bitvavo",
+        "page_og_title":    "Informe fiscal Bitvavo para Hacienda — FIFO automático | Mariano Sevilla",
+        "page_og_desc":     "Sube el CSV de Bitvavo y calcula las plusvalías crypto con FIFO. Informe PDF para tu gestor.",
+        "page_schema_name": "Informe FIFO Bitvavo — Mariano Sevilla",
+        "page_h1":          "Genera tu informe fiscal de Bitvavo para Hacienda",
+        "hero_desc":        "Sube el CSV del historial de transacciones de Bitvavo y obtén el informe FIFO con tus ganancias y pérdidas patrimoniales. Listo para la declaración de la renta.",
+        "how_to": [
+            {"title": "Exporta el CSV de transacciones desde Bitvavo",
+             "desc":  "En tu cuenta de Bitvavo ve a Cuenta → Historial de transacciones → Exportar. Selecciona el período completo desde tu primera operación hasta hoy y descarga el fichero CSV."},
+            _HOW_TO_STEP2, _HOW_TO_STEP3,
+        ],
+    },
+    "bit2me": {
+        "exchange_id":      "bit2me",
+        "exchange_name":    "Bit2Me",
+        "exchange_logo":    "B2",
+        "page_title":       "Informe FIFO Bit2Me para Hacienda | Mariano Sevilla",
+        "page_meta_desc":   "Sube el CSV fiscal de Bit2Me y calcula tus ganancias y pérdidas patrimoniales con FIFO obligatorio. Informe PDF listo para la declaración de la renta.",
+        "page_canonical":   f"{_BASE_URL}/bit2me",
+        "page_og_title":    "Informe fiscal Bit2Me para Hacienda — FIFO automático | Mariano Sevilla",
+        "page_og_desc":     "Sube el CSV fiscal de Bit2Me y calcula las plusvalías crypto con FIFO. Informe PDF para tu gestor.",
+        "page_schema_name": "Informe FIFO Bit2Me — Mariano Sevilla",
+        "page_h1":          "Genera tu informe fiscal de Bit2Me para Hacienda",
+        "hero_desc":        "Sube el CSV del informe fiscal de Bit2Me y obtén el cálculo FIFO con tus ganancias y pérdidas patrimoniales. Listo para la declaración de la renta.",
+        "how_to": [
+            {"title": "Descarga el informe fiscal CSV desde Bit2Me",
+             "desc":  "En tu cuenta de Bit2Me ve a Mi cuenta → Informes fiscales. Selecciona el ejercicio fiscal, elige el período completo desde tu primera operación y descarga el informe en formato CSV."},
+            _HOW_TO_STEP2, _HOW_TO_STEP3,
+        ],
+    },
+    "kraken": {
+        "exchange_id":      "kraken",
+        "exchange_name":    "Kraken",
+        "exchange_logo":    "K",
+        "page_title":       "Informe FIFO Kraken para Hacienda | Mariano Sevilla",
+        "page_meta_desc":   "Sube el CSV de Ledgers de Kraken y calcula ganancias y pérdidas patrimoniales con FIFO obligatorio. Informe PDF listo para declarar Kraken en Hacienda.",
+        "page_canonical":   f"{_BASE_URL}/kraken",
+        "page_og_title":    "Informe fiscal Kraken para Hacienda — FIFO automático | Mariano Sevilla",
+        "page_og_desc":     "Sube el CSV de Ledgers de Kraken y calcula las plusvalías crypto con FIFO. Informe PDF para tu gestor.",
+        "page_schema_name": "Informe FIFO Kraken — Mariano Sevilla",
+        "page_h1":          "Genera tu informe fiscal de Kraken para Hacienda",
+        "hero_desc":        "Sube el CSV de Ledgers de Kraken y obtén el informe FIFO con tus ganancias y pérdidas patrimoniales. Listo para la declaración de la renta.",
+        "how_to": [
+            {"title": "Exporta el CSV de Ledgers desde Kraken",
+             "desc":  "En tu cuenta de Kraken ve a Historial → Exportar. Selecciona tipo «Ledgers» (no «Trades»), elige el período completo desde tu primera operación hasta hoy y descarga el fichero CSV."},
+            _HOW_TO_STEP2, _HOW_TO_STEP3,
+        ],
+    },
+    "coinbase": {
+        "exchange_id":      "coinbase",
+        "exchange_name":    "Coinbase",
+        "exchange_logo":    "C",
+        "page_title":       "Informe FIFO Coinbase para Hacienda | Mariano Sevilla",
+        "page_meta_desc":   "Sube el CSV de Coinbase y calcula tus ganancias y pérdidas patrimoniales con FIFO obligatorio. Informe PDF listo para la declaración de la renta.",
+        "page_canonical":   f"{_BASE_URL}/coinbase",
+        "page_og_title":    "Informe fiscal Coinbase para Hacienda — FIFO automático | Mariano Sevilla",
+        "page_og_desc":     "Sube el CSV de Coinbase y calcula las plusvalías crypto con FIFO. Informe PDF para tu gestor.",
+        "page_schema_name": "Informe FIFO Coinbase — Mariano Sevilla",
+        "page_h1":          "Genera tu informe fiscal de Coinbase para Hacienda",
+        "hero_desc":        "Sube el CSV del historial de transacciones de Coinbase y obtén el informe FIFO con tus ganancias y pérdidas patrimoniales. Listo para la declaración de la renta.",
+        "how_to": [
+            {"title": "Exporta el CSV del historial de transacciones de Coinbase",
+             "desc":  "En tu cuenta de Coinbase ve a Perfil → Extractos → Historial de transacciones. Haz clic en «Generar extracto», selecciona el rango completo desde tu primera operación hasta hoy y descarga el fichero CSV."},
+            _HOW_TO_STEP2, _HOW_TO_STEP3,
+        ],
+    },
+}
 
 
 # ── CORS ──────────────────────────────────────
@@ -438,8 +563,9 @@ def landing():
 
 
 @app.route("/fiscal")
+@login_required
 def fiscal():
-    return send_from_directory("static", "index.html")
+    return render_template("tool.html", **_TOOL_GENERIC)
 
 
 @app.route("/dashboard", strict_slashes=False)
@@ -508,13 +634,33 @@ def auth_google_callback():
 
 
 @app.route("/binance")
+@login_required
+def page_binance():
+    return render_template("tool.html", **EXCHANGE_PAGES["binance"])
+
+
 @app.route("/bitvavo")
-@app.route("/kraken")
+@login_required
+def page_bitvavo():
+    return render_template("tool.html", **EXCHANGE_PAGES["bitvavo"])
+
+
 @app.route("/bit2me")
+@login_required
+def page_bit2me():
+    return render_template("tool.html", **EXCHANGE_PAGES["bit2me"])
+
+
+@app.route("/kraken")
+@login_required
+def page_kraken():
+    return render_template("tool.html", **EXCHANGE_PAGES["kraken"])
+
+
 @app.route("/coinbase")
-def exchange_redirect():
-    """Redirige las URLs de exchange al tool principal (301 permanente)."""
-    return redirect("/fiscal", 301)
+@login_required
+def page_coinbase():
+    return render_template("tool.html", **EXCHANGE_PAGES["coinbase"])
 
 
 @app.route("/api/analizar", methods=["POST"])

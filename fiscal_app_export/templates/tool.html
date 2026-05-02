@@ -121,6 +121,38 @@
     letter-spacing: 0.04em; text-transform: uppercase;
   }
 
+  /* ── NAV AVATAR ── */
+  .nav-right { display: flex; align-items: center; gap: 0.6rem; }
+  .nav-avatar-wrap { position: relative; }
+  .nav-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--accent); color: #0a0a0a;
+    font-family: var(--font-display); font-size: 14px; font-weight: 700;
+    border: 2px solid transparent; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity .15s, border-color .15s;
+  }
+  .nav-avatar:hover { opacity: .85; border-color: rgba(0,200,150,.4); }
+  .nav-dropdown {
+    position: absolute; right: 0; top: calc(100% + 10px);
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 14px; min-width: 200px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.5);
+    padding: 6px; z-index: 200; display: none;
+  }
+  .nav-dropdown.open { display: block; }
+  .nav-dd-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 13px; border-radius: 9px;
+    color: var(--text); font-family: var(--font-body); font-size: 14px; font-weight: 500;
+    cursor: pointer; text-decoration: none; transition: background .12s;
+    background: none; border: none; width: 100%; text-align: left;
+  }
+  .nav-dd-item:hover { background: var(--surface); }
+  .nav-dd-divider { height: 1px; background: var(--border); margin: 4px 0; }
+  .nav-dd-item.danger { color: #e55; }
+  .nav-dd-item.danger:hover { background: rgba(220,60,60,.1); }
+
   /* HERO */
   .hero {
     padding: 9rem 2rem 2rem;
@@ -649,8 +681,19 @@
 <body>
 
 <nav>
-  <a href="https://marianosevilla.com" class="nav-logo">mariano<span>sevilla</span>.com</a>
-  <span class="nav-badge">Binance · Kraken · Bitvavo · Bit2Me</span>
+  <a href="/" class="nav-logo">mariano<span>sevilla</span>.com</a>
+  <div class="nav-right">
+    <div class="nav-avatar-wrap">
+      <button class="nav-avatar" id="navAvatar" aria-label="Menú de usuario">U</button>
+      <div class="nav-dropdown" id="navDropdown">
+        <a href="/dashboard" class="nav-dd-item">🏠&nbsp; Dashboard</a>
+        <a href="/pricing" class="nav-dd-item">💎&nbsp; Planes</a>
+        <a href="/account" class="nav-dd-item">👤&nbsp; Mi cuenta</a>
+        <div class="nav-dd-divider"></div>
+        <button class="nav-dd-item danger" id="navBtnLogout">↩&nbsp; Cerrar sesión</button>
+      </div>
+    </div>
+  </div>
 </nav>
 
 {% if exchange_id %}
@@ -759,7 +802,7 @@
       <div class="bar-exchange">
         <div class="exchange-logo logo-{{ exchange_id }}" style="width:22px;height:22px;border-radius:50%;overflow:hidden;flex-shrink:0;"><img src="/static/images/{{ exchange_id }}{% if exchange_id in ['kraken','bitvavo','coinbase'] %}.png{% else %}.jpg{% endif %}" alt="{{ exchange_name }}" style="width:100%;height:100%;object-fit:cover;display:block;"></div>
         <span class="bar-exchange-name">{{ exchange_name }}</span>
-        <span class="bar-exchange-change"><a href="https://marianosevilla.com">Cambiar</a></span>
+        <span class="bar-exchange-change"><a href="/dashboard">← Cambiar</a></span>
       </div>
       {% endif %}
       <button class="bar-btn" id="btnAnalizar" disabled>
@@ -797,17 +840,6 @@
 
   <p style="margin-top:0.5rem; font-size:11px; color:var(--muted);">No asesoramiento fiscal ni legal. Consulta siempre con un gestor autorizado.</p>
 
-  <!-- ── LEAD CAPTURE POST-GENERACIÓN ── -->
-  <div id="leadCapture" style="display:none; margin-top:1rem; background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:1.25rem 1.5rem;">
-    <div style="font-size:11px; color:var(--accent); font-weight:600; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:0.5rem;">¿Quieres estar al día?</div>
-    <p style="font-size:13px; color:var(--muted); margin-bottom:1rem; line-height:1.5;">Te aviso cuando añada soporte para nuevos exchanges o haya cambios de Hacienda que te afecten.</p>
-    <div id="leadForm" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:flex-end;">
-      <input type="email" id="leadEmail" placeholder="tu@email.com" style="flex:1; min-width:180px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:9px 12px; color:var(--text); font-size:13px; font-family:var(--font-body); outline:none;">
-      <button onclick="enviarLead()" style="background:var(--accent); color:#0a0a0a; border:none; border-radius:8px; padding:9px 18px; font-size:13px; font-family:var(--font-display); font-weight:700; cursor:pointer; white-space:nowrap;">Avisarme →</button>
-    </div>
-    <div id="leadOk" style="display:none; font-size:13px; color:var(--accent); margin-top:0.5rem;">✓ Anotado. Te avisaré cuando haya novedades.</div>
-    <p style="font-size:11px; color:var(--muted); margin-top:0.75rem;">Sin spam. Puedes darte de baja cuando quieras.</p>
-  </div>
 </div>
 
 <!-- ── RESULTADOS FULL WIDTH ── -->
@@ -1063,23 +1095,9 @@
 
   function showFile()    { fileSelected.classList.add('visible'); }
   function hideFile()    { fileSelected.classList.remove('visible'); }
-  function showDownload(){ btnDownload.classList.add('visible'); document.getElementById('leadCapture').style.display = 'block'; }
-  function hideDownload(){ btnDownload.classList.remove('visible'); document.getElementById('leadCapture').style.display = 'none'; }
+  function showDownload(){ btnDownload.classList.add('visible'); }
+  function hideDownload(){ btnDownload.classList.remove('visible'); }
   function showNuevo()   { btnNuevo.classList.add('visible'); }
-
-  async function enviarLead() {
-    const email = document.getElementById('leadEmail').value.trim();
-    if (!email || !email.includes('@')) { document.getElementById('leadEmail').focus(); return; }
-    try {
-      await fetch('https://script.google.com/macros/s/AKfycbwqZDVvpdYXwrz_9EP3C9BcWdpITUYSA0PCXkruKZNN5j2M5Ui5Ft3dQqHv5mm-BlKx9Q/exec', {
-        method: 'POST', mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ timestamp: new Date().toISOString(), email, origen: 'post-informe', exchange: selectedExchange })
-      });
-    } catch(e) {}
-    document.getElementById('leadForm').style.display = 'none';
-    document.getElementById('leadOk').style.display = 'block';
-  }
   function hideNuevo()   { btnNuevo.classList.remove('visible'); }
 
   // ── PROGRESO ─────────────────────────────
@@ -1596,7 +1614,7 @@
     formData.append('ejercicio', sanitizarTexto(document.getElementById('ejercicio').value.trim()));
 
     try {
-      const res  = await fetch('/api/analizar', { method: 'POST', body: formData });
+      const res  = await fetch('/api/analizar', { method: 'POST', body: formData, credentials: 'include' });
       const data = await res.json();
 
       if (!res.ok || !data.ok) {
@@ -1627,6 +1645,33 @@
       detenerProgreso();
       btnText.textContent = 'Generar →';
     }
+  });
+
+  // ── AUTH: comprueba sesión y rellena avatar ──
+  (async () => {
+    try {
+      const r = await fetch('/api/me', { credentials: 'include' });
+      const d = await r.json();
+      if (!d.user) { window.location.replace('/login/'); return; }
+      document.getElementById('navAvatar').textContent = d.user.email.charAt(0).toUpperCase();
+    } catch {
+      window.location.replace('/login/');
+    }
+  })();
+
+  // ── AVATAR DROPDOWN ──────────────────────────
+  const _avatar   = document.getElementById('navAvatar');
+  const _dropdown = document.getElementById('navDropdown');
+  _avatar.addEventListener('click', e => {
+    e.stopPropagation();
+    _dropdown.classList.toggle('open');
+  });
+  document.addEventListener('click', () => _dropdown.classList.remove('open'));
+
+  // ── LOGOUT ───────────────────────────────────
+  document.getElementById('navBtnLogout').addEventListener('click', async () => {
+    await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+    window.location.href = '/';
   });
 </script>
 </body>
