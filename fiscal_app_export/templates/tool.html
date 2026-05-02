@@ -102,14 +102,16 @@
   /* NAV */
   nav {
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    padding: 1rem 2rem;
-    display: flex; align-items: center; justify-content: space-between;
     background: rgba(10,10,10,0.9);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
   }
+  .nav-inner {
+    max-width: 1060px; margin: 0 auto; padding: 0 2rem;
+    height: 64px; display: flex; align-items: center; justify-content: space-between;
+  }
   .nav-logo {
-    font-family: var(--font-display); font-weight: 800; font-size: 1rem;
+    font-family: var(--font-display); font-weight: 800; font-size: 0.95rem;
     letter-spacing: -0.02em; color: var(--text); text-decoration: none;
   }
   .nav-logo span { color: var(--accent); }
@@ -681,16 +683,18 @@
 <body>
 
 <nav>
-  <a href="/" class="nav-logo">mariano<span>sevilla</span>.com</a>
-  <div class="nav-right">
-    <div class="nav-avatar-wrap">
-      <button class="nav-avatar" id="navAvatar" aria-label="Menú de usuario">U</button>
-      <div class="nav-dropdown" id="navDropdown">
-        <a href="/dashboard" class="nav-dd-item">🏠&nbsp; Dashboard</a>
-        <a href="/pricing" class="nav-dd-item">💎&nbsp; Planes</a>
-        <a href="/account" class="nav-dd-item">👤&nbsp; Mi cuenta</a>
-        <div class="nav-dd-divider"></div>
-        <button class="nav-dd-item danger" id="navBtnLogout">↩&nbsp; Cerrar sesión</button>
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">mariano<span>sevilla</span>.com</a>
+    <div class="nav-right">
+      <div class="nav-avatar-wrap">
+        <button class="nav-avatar" id="navAvatar" aria-label="Menú de usuario">U</button>
+        <div class="nav-dropdown" id="navDropdown">
+          <a href="/dashboard" class="nav-dd-item">🏠&nbsp; Dashboard</a>
+          <a href="/pricing" class="nav-dd-item">💎&nbsp; Planes</a>
+          <a href="/account" class="nav-dd-item">👤&nbsp; Mi cuenta</a>
+          <div class="nav-dd-divider"></div>
+          <button class="nav-dd-item danger" id="navBtnLogout">↩&nbsp; Cerrar sesión</button>
+        </div>
       </div>
     </div>
   </div>
