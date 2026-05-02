@@ -4,6 +4,8 @@ flask-sqlalchemy
 flask-bcrypt
 flask-limiter
 flask-cors
+authlib
+requests
 reportlab
 pandas
 gunicorn

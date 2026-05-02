@@ -21,11 +21,12 @@ import tempfile
 import traceback
 import threading
 from datetime import datetime
-from flask import Flask, request, jsonify, send_file, send_from_directory, redirect
+from flask import Flask, request, jsonify, send_file, send_from_directory, redirect, url_for
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_cors import CORS
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from authlib.integrations.flask_client import OAuth
 from models import db, bcrypt, User
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -37,6 +38,10 @@ from motor_fifo import MotorFIFO
 from generador_pdf import generar_pdf, generar_pdf_bit2me
 
 app = Flask(__name__, static_folder="static")
+
+# Proxy fix: necesario para que url_for() genere https:// en producción detrás de nginx
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 
 # ── CONFIGURACIÓN ─────────────────────────────
@@ -76,8 +81,26 @@ def load_user(user_id: str):
 
 @login_manager.unauthorized_handler
 def unauthorized():
-    """Devuelve JSON 401 en lugar de redirigir a una página de login."""
-    return jsonify({"error": "Autenticación requerida"}), 401
+    """JSON 401 para rutas API; redirect a /login/ para rutas de navegador."""
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "Autenticación requerida"}), 401
+    return redirect("/login/")
+
+
+# ── GOOGLE OAUTH ──────────────────────────────
+_GOOGLE_CLIENT_ID     = os.environ.get("GOOGLE_CLIENT_ID")
+_GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
+_google_oauth_enabled = bool(_GOOGLE_CLIENT_ID and _GOOGLE_CLIENT_SECRET)
+
+oauth = OAuth(app)
+if _google_oauth_enabled:
+    google_oauth = oauth.register(
+        name="google",
+        client_id=_GOOGLE_CLIENT_ID,
+        client_secret=_GOOGLE_CLIENT_SECRET,
+        server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+        client_kwargs={"scope": "openid email profile"},
+    )
 
 with app.app_context():
     db.create_all()
@@ -416,6 +439,65 @@ def landing():
 @app.route("/fiscal")
 def fiscal():
     return send_from_directory("static", "index.html")
+
+
+@app.route("/login/", strict_slashes=False)
+def login_page():
+    """Página dedicada de inicio de sesión."""
+    if current_user.is_authenticated:
+        return redirect("/fiscal")
+    return send_from_directory("static", "login.html")
+
+
+@app.route("/signup/", strict_slashes=False)
+def signup_page():
+    """Página dedicada de registro."""
+    if current_user.is_authenticated:
+        return redirect("/fiscal")
+    return send_from_directory("static", "signup.html")
+
+
+@app.route("/auth/google")
+def auth_google():
+    """Inicia el flujo OAuth con Google."""
+    if not _google_oauth_enabled:
+        return redirect("/login/?error=google_not_configured")
+    redirect_uri = url_for("auth_google_callback", _external=True)
+    return google_oauth.authorize_redirect(redirect_uri)
+
+
+@app.route("/auth/google/callback")
+def auth_google_callback():
+    """Callback OAuth de Google: busca/crea usuario y hace login."""
+    if not _google_oauth_enabled:
+        return redirect("/login/?error=google_not_configured")
+    try:
+        token     = google_oauth.authorize_access_token()
+        user_info = token.get("userinfo") or {}
+    except Exception:
+        return redirect("/login/?error=oauth_failed")
+
+    email = (user_info.get("email") or "").strip().lower()
+    if not email:
+        return redirect("/login/?error=no_email")
+
+    google_id = user_info.get("sub", "")
+    user      = User.query.filter_by(email=email).first()
+
+    if not user:
+        user = User(email=email, google_id=google_id)
+        db.session.add(user)
+    else:
+        if not user.google_id:
+            user.google_id = google_id
+
+    if not user.is_active:
+        return redirect("/login/?error=account_disabled")
+
+    user.last_login = datetime.utcnow()
+    db.session.commit()
+    login_user(user, remember=True)
+    return redirect("/fiscal")
 
 
 @app.route("/binance")

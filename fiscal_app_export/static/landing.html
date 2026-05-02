@@ -1045,12 +1045,12 @@ document.getElementById('authFormReg').addEventListener('submit', async e => {
   finally { _setLoading(form, false, 'Crear cuenta'); }
 });
 
-// Nav
-document.getElementById('navBtnLogin').addEventListener('click',    () => abrirModal('login'));
-document.getElementById('navBtnRegister').addEventListener('click', () => abrirModal('register'));
-document.getElementById('heroBtnRegister').addEventListener('click',() => abrirModal('register'));
-document.getElementById('ctaBtnRegister').addEventListener('click', () => abrirModal('register'));
-document.getElementById('ctaBtnLogin').addEventListener('click',    () => abrirModal('login'));
+// Nav y CTAs → páginas dedicadas
+document.getElementById('navBtnLogin').addEventListener('click',    () => window.location.href = '/login/');
+document.getElementById('navBtnRegister').addEventListener('click', () => window.location.href = '/signup/');
+document.getElementById('heroBtnRegister').addEventListener('click',() => window.location.href = '/signup/');
+document.getElementById('ctaBtnRegister').addEventListener('click', () => window.location.href = '/signup/');
+document.getElementById('ctaBtnLogin').addEventListener('click',    () => window.location.href = '/login/');
 document.getElementById('navBtnLogout').addEventListener('click', async () => { await AuthState.logout(); });
 
 // Auth state → UI
