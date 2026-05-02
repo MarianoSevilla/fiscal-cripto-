@@ -545,7 +545,10 @@ footer {
 <!-- ── NAV ────────────────────────────────── -->
 <nav>
   <div class="nav-inner">
-    <a href="/" class="nav-logo">mariano<span>sevilla</span>.com</a>
+    <div style="display:flex;align-items:center;gap:2rem;">
+      <a href="/" class="nav-logo">mariano<span>sevilla</span>.com</a>
+      <a href="/dashboard" id="navLinkDashboard" style="display:none;font-size:14px;font-weight:500;color:var(--muted);transition:color .15s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">Dashboard</a>
+    </div>
     <div class="nav-right" id="navRight">
       <!-- Estado: no autenticado -->
       <div id="navAnon" style="display:flex;align-items:center;gap:.6rem;">
@@ -553,16 +556,15 @@ footer {
         <button class="btn-primary" id="navBtnRegister">Crear cuenta</button>
       </div>
       <!-- Estado: autenticado -->
-      <div id="navUser" style="display:none;align-items:center;gap:.6rem;">
-        <a href="/dashboard" class="btn-ghost">Dashboard</a>
+      <div id="navUser" style="display:none;align-items:center;">
         <div class="nav-avatar-wrap">
-        <button class="nav-avatar" id="navAvatar" aria-label="Menú de usuario">U</button>
-        <div class="nav-dropdown" id="navDropdown">
-          <a href="/pricing" class="nav-dd-item">💎&nbsp; Planes</a>
-          <a href="/account" class="nav-dd-item">👤&nbsp; Mi cuenta</a>
-          <div class="nav-dd-divider"></div>
-          <button class="nav-dd-item danger" id="navBtnLogout">↩&nbsp; Cerrar sesión</button>
-        </div>
+          <button class="nav-avatar" id="navAvatar" aria-label="Menú de usuario">U</button>
+          <div class="nav-dropdown" id="navDropdown">
+            <a href="/pricing" class="nav-dd-item">💎&nbsp; Planes</a>
+            <a href="/account" class="nav-dd-item">👤&nbsp; Mi cuenta</a>
+            <div class="nav-dd-divider"></div>
+            <button class="nav-dd-item danger" id="navBtnLogout">↩&nbsp; Cerrar sesión</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1086,8 +1088,9 @@ document.getElementById('navBtnLogout').addEventListener('click', async () => {
 
 // Auth state → UI
 AuthState.onChange(user => {
-  document.getElementById('navAnon').style.display = user ? 'none' : 'flex';
-  document.getElementById('navUser').style.display = user ? 'flex' : 'none';
+  document.getElementById('navAnon').style.display          = user ? 'none'  : 'flex';
+  document.getElementById('navUser').style.display          = user ? 'flex'  : 'none';
+  document.getElementById('navLinkDashboard').style.display = user ? 'block' : 'none';
   if (user) {
     // Muestra la inicial del email en el avatar
     _avatar.textContent = user.email.charAt(0).toUpperCase();
