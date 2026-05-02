@@ -1034,11 +1034,11 @@
     <span class="also-label">También disponible para:</span>
     <div class="also-links">
       {% if exchange_id != 'binance' %}<a href="/binance" class="also-link">Binance</a>{% endif %}
-      {% if exchange_id != 'kraken' %}<a href="/kraken" class="also-link">Kraken</a>{% endif %}
       {% if exchange_id != 'bitvavo' %}<a href="/bitvavo" class="also-link">Bitvavo</a>{% endif %}
       {% if exchange_id != 'bit2me' %}<a href="/bit2me" class="also-link">Bit2Me</a>{% endif %}
+      {% if exchange_id != 'kraken' %}<a href="/kraken" class="also-link">Kraken</a>{% endif %}
       {% if exchange_id != 'coinbase' %}<a href="/coinbase" class="also-link">Coinbase</a>{% endif %}
-      <a href="https://marianosevilla.com" class="also-link">Página principal</a>
+      {% if exchange_id != 'nexo' %}<a href="/nexo" class="also-link">Nexo</a>{% endif %}
     </div>
   </div>
 </div>
