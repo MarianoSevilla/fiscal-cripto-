@@ -157,7 +157,7 @@ nav {
 
 /* ── HERO ───────────────────────────────────── */
 .hero {
-  padding: 9rem 2rem 6rem; max-width: 860px; margin: 0 auto;
+  padding: 9rem 2rem 6rem; max-width: var(--max); margin: 0 auto;
   position: relative; text-align: left;
 }
 .hero::before {
@@ -399,14 +399,14 @@ nav {
 /* ── CTA FINAL ──────────────────────────────── */
 .cta-block {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r-lg); padding: 4rem 2rem; text-align: center;
+  border-radius: var(--r-lg); padding: 4rem 2rem; text-align: left;
   position: relative; overflow: hidden;
 }
 .cta-block::before {
   content: '';
-  position: absolute; top: -60px; left: 50%; transform: translateX(-50%);
+  position: absolute; top: -60px; left: 0;
   width: 400px; height: 200px;
-  background: radial-gradient(ellipse at center, var(--accent-glow), transparent 70%);
+  background: radial-gradient(ellipse at left, var(--accent-glow), transparent 70%);
   pointer-events: none;
 }
 .cta-block h2 {
@@ -415,10 +415,10 @@ nav {
   position: relative;
 }
 .cta-block p {
-  font-size: 1rem; color: var(--muted); max-width: 500px;
-  margin: 0 auto 2rem; line-height: 1.7; position: relative;
+  font-size: 1rem; color: var(--muted);
+  margin: 0 0 2rem; line-height: 1.7; position: relative;
 }
-.cta-block .hero-cta { position: relative; }
+.cta-block .hero-cta { position: relative; justify-content: center; }
 
 /* ── FOOTER ─────────────────────────────────── */
 footer {
@@ -576,10 +576,12 @@ footer {
 <!-- ── HERO ───────────────────────────────── -->
 <div class="hero">
   <div class="hero-kicker">✦ Herramienta fiscal para criptomonedas en España</div>
-  <h1>Declara tus criptomonedas<br>en Hacienda sin <em>errores</em>.</h1>
+  <h1>Declara tus criptomonedas<br>en Hacienda sin <span class="accent">errores</span>.</h1>
   <p class="hero-sub">
-    La única herramienta española que aplica el método FIFO obligatorio según el art. 37.2 LIRPF,
-    compatible con Binance, Bitvavo y Bit2Me. Tu informe PDF listo para el gestor en segundos.
+    La herramienta aplica el método FIFO obligatorio (art. 37.2 LIRPF) sobre el historial de operaciones
+    de tu exchange y calcula tus ganancias y pérdidas patrimoniales ejercicio a ejercicio.
+    Compatible con Binance, Kraken, Bitvavo y Bit2Me. Descarga el informe PDF listo para entregar
+    a tu gestor o para rellenar la declaración de la renta tú mismo.
   </p>
   <div class="hero-cta">
     <button class="btn-cta-primary" id="heroBtnRegister">Empezar gratis</button>
@@ -613,15 +615,15 @@ footer {
       <span class="exchange-card-name">Bit2Me</span>
       <span class="exchange-card-badge active">Disponible</span>
     </div>
-    <div class="exchange-card soon">
+    <div class="exchange-card">
       <img src="/static/images/kraken.png" alt="Kraken" class="exchange-img">
       <span class="exchange-card-name">Kraken</span>
-      <span class="exchange-card-badge soon-badge">Próximamente</span>
+      <span class="exchange-card-badge active">Disponible</span>
     </div>
-    <div class="exchange-card soon">
+    <div class="exchange-card">
       <img src="/static/images/coinbase.png" alt="Coinbase" class="exchange-img">
       <span class="exchange-card-name">Coinbase</span>
-      <span class="exchange-card-badge soon-badge">Próximamente</span>
+      <span class="exchange-card-badge active">Disponible</span>
     </div>
     <div class="exchange-card soon">
       <img src="/static/images/bybit.jpg" alt="Bybit" class="exchange-img">
@@ -675,13 +677,11 @@ footer {
 
 <!-- ── CÓMO FUNCIONA ──────────────────────── -->
 <div class="section" id="como-funciona">
-  <div style="max-width:560px;">
-    <p class="section-kicker">Cómo funciona</p>
-    <h2>Tres pasos para declarar tus criptomonedas en España</h2>
-    <p class="section-lead" style="margin:0 0 0;">
-      Sin complicaciones. Sin conocimientos fiscales previos.
-    </p>
-  </div>
+  <p class="section-kicker">Cómo funciona</p>
+  <h2>Tres pasos para declarar tus criptomonedas en España</h2>
+  <p class="section-lead" style="margin:0 0 0;">
+    Sin complicaciones. Sin conocimientos fiscales previos.
+  </p>
   <div class="steps-wrap">
     <div class="steps-list">
       <div class="step-item">
@@ -794,7 +794,7 @@ footer {
 <div class="section">
   <p class="section-kicker">Preguntas frecuentes</p>
   <h2>Todo lo que necesitas saber</h2>
-  <div class="faq-list" style="max-width:720px;">
+  <div class="faq-list">
 
     <div class="faq-item">
       <button class="faq-q">
