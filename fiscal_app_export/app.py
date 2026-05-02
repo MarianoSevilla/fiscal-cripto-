@@ -501,6 +501,7 @@ def analizar():
 
 
 @app.route("/api/descargar/<token>")
+@login_required
 @limiter.limit("5 per minute")
 def descargar(token):
     """Sirve el PDF y lo borra inmediatamente después."""
