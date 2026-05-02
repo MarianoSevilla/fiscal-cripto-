@@ -21,7 +21,7 @@ import tempfile
 import traceback
 import threading
 from datetime import datetime
-from flask import Flask, request, jsonify, send_file, send_from_directory
+from flask import Flask, request, jsonify, send_file, send_from_directory, redirect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_cors import CORS
@@ -416,6 +416,16 @@ def landing():
 @app.route("/fiscal")
 def fiscal():
     return send_from_directory("static", "index.html")
+
+
+@app.route("/binance")
+@app.route("/bitvavo")
+@app.route("/kraken")
+@app.route("/bit2me")
+@app.route("/coinbase")
+def exchange_redirect():
+    """Redirige las URLs de exchange al tool principal (301 permanente)."""
+    return redirect("/fiscal", 301)
 
 
 @app.route("/api/analizar", methods=["POST"])
