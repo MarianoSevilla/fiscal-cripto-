@@ -553,13 +553,16 @@ footer {
         <button class="btn-primary" id="navBtnRegister">Crear cuenta</button>
       </div>
       <!-- Estado: autenticado -->
-      <div class="nav-avatar-wrap" id="navUser" hidden>
+      <div id="navUser" style="display:none;align-items:center;gap:.6rem;">
+        <a href="/dashboard" class="btn-ghost">Dashboard</a>
+        <div class="nav-avatar-wrap">
         <button class="nav-avatar" id="navAvatar" aria-label="Menú de usuario">U</button>
         <div class="nav-dropdown" id="navDropdown">
           <a href="/pricing" class="nav-dd-item">💎&nbsp; Planes</a>
           <a href="/account" class="nav-dd-item">👤&nbsp; Mi cuenta</a>
           <div class="nav-dd-divider"></div>
           <button class="nav-dd-item danger" id="navBtnLogout">↩&nbsp; Cerrar sesión</button>
+        </div>
         </div>
       </div>
     </div>
@@ -1084,7 +1087,7 @@ document.getElementById('navBtnLogout').addEventListener('click', async () => {
 // Auth state → UI
 AuthState.onChange(user => {
   document.getElementById('navAnon').style.display = user ? 'none' : 'flex';
-  document.getElementById('navUser').hidden         = !user;
+  document.getElementById('navUser').style.display = user ? 'flex' : 'none';
   if (user) {
     // Muestra la inicial del email en el avatar
     _avatar.textContent = user.email.charAt(0).toUpperCase();
