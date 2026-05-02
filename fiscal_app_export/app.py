@@ -11,6 +11,7 @@ Seguridad aplicada:
 - Sanitización de inputs de texto
 - PDF borrado automáticamente tras descarga
 - Protección path traversal en tokens
+- Autenticación: Flask-Login + SQLAlchemy + bcrypt
 """
 
 import os
@@ -20,175 +21,66 @@ import tempfile
 import traceback
 import threading
 from datetime import datetime
-from flask import Flask, request, jsonify, send_file, send_from_directory, render_template
+from flask import Flask, request, jsonify, send_file, send_from_directory
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_cors import CORS
-from flask_compress import Compress
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from models import db, bcrypt, User
 
 sys.path.insert(0, os.path.dirname(__file__))
 
 from clasificador import ClasificadorBinance
 from clasificador_bit2me import ClasificadorBit2Me
 from clasificador_bitvavo import ClasificadorBitvavo
-from clasificador_kraken import ClasificadorKraken
-from clasificador_coinbase import ClasificadorCoinbase
 from motor_fifo import MotorFIFO
 from generador_pdf import generar_pdf, generar_pdf_bit2me
 
-app = Flask(__name__, static_folder="static", template_folder="templates")
-Compress(app)
+app = Flask(__name__, static_folder="static")
 
 
-# ── DATOS POR EXCHANGE ────────────────────────
-BASE_URL = "https://marianosevilla.com"
+# ── CONFIGURACIÓN ─────────────────────────────
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-_HOW_TO_STEP2 = {
-    "title": "La herramienta aplica el método FIFO obligatorio",
-    "desc":  "Sube el CSV y la herramienta clasifica automáticamente compras, ventas, "
-             "swaps y comisiones. Aplica el método FIFO (art. 37.2 LIRPF) y calcula "
-             "tus ganancias y pérdidas patrimoniales ejercicio a ejercicio.",
-}
-_HOW_TO_STEP3 = {
-    "title": "Descarga el informe PDF listo para Hacienda",
-    "desc":  "En segundos obtienes el PDF con el detalle de todas las operaciones del "
-             "ejercicio, el resultado neto y los importes exactos para las casillas 1626 "
-             "y 1627 de la declaración de la renta.",
-}
+# SECRET_KEY obligatoria. En desarrollo se usa un valor por defecto con aviso.
+_secret = os.environ.get("SECRET_KEY")
+if not _secret:
+    if os.environ.get("FLASK_ENV") == "production":
+        raise RuntimeError("SECRET_KEY no está configurada. Define la variable de entorno antes de arrancar.")
+    import warnings
+    warnings.warn("SECRET_KEY no definida — usando clave de desarrollo. NO uses esto en producción.", stacklevel=1)
+    _secret = "dev-only-insecure-key-change-me"
 
-_TOOL_GENERIC = {
-    "exchange_id":   "",
-    "exchange_name": "tu exchange",
-    "exchange_logo": "&#x25CF;",
-    "page_title":       "Calculadora FIFO Cripto para Hacienda | Mariano Sevilla",
-    "page_meta_desc":   "Sube el CSV de Binance, Kraken o Bitvavo y calcula ganancias con FIFO obligatorio. Informe PDF listo para tu declaración de la renta.",
-    "page_canonical":   f"{BASE_URL}/fiscal",
-    "page_og_title":    "Calculadora FIFO Criptomonedas para Hacienda — Mariano Sevilla",
-    "page_og_desc":     "Sube el CSV de tu exchange y calcula ganancias y pérdidas patrimoniales con FIFO. Informe PDF listo para tu declaración de la renta. Gratis.",
-    "page_schema_name": "Calculadora FIFO Criptomonedas — Mariano Sevilla",
-    "page_h1":    "",
-    "hero_desc":  "",
-    "how_to":     [],
-}
+app.config["SECRET_KEY"] = _secret
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
+    "DATABASE_URL",
+    f"sqlite:///{os.path.join(_BASE_DIR, 'fiscal_users.db')}"
+)
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-EXCHANGE_PAGES = {
-    "binance": {
-        "exchange_id":   "binance",
-        "exchange_name": "Binance",
-        "exchange_logo": "B",
-        "page_title":       "Informe FIFO Binance para Hacienda | Mariano Sevilla",
-        "page_meta_desc":   "Sube el CSV de Binance y calcula ganancias y pérdidas con FIFO obligatorio. Informe PDF para declarar Binance en la declaración de la renta.",
-        "page_canonical":   f"{BASE_URL}/binance",
-        "page_og_title":    "Informe fiscal Binance para Hacienda — FIFO automático | Mariano Sevilla",
-        "page_og_desc":     "Sube el CSV de Binance y calcula las plusvalías crypto con FIFO. Informe PDF para tu gestor. Gratis.",
-        "page_schema_name": "Informe FIFO Binance — Mariano Sevilla",
-        "page_h1":   "Genera tu informe fiscal de Binance para Hacienda",
-        "hero_desc": "La herramienta lee el CSV de transacciones de Binance, aplica el método FIFO obligatorio según la normativa española y calcula tus plusvalías y pérdidas patrimoniales ejercicio a ejercicio. Descarga el informe PDF con los importes exactos para las casillas 1626 y 1627 de la declaración de la renta.",
-        "how_to": [
-            {
-                "title": "Exporta el CSV de Binance (Transaction History)",
-                "desc":  "En tu cuenta de Binance ve a Wallet → Historial de transacciones → "
-                         "Exportar. Selecciona «All Transactions», elige el rango completo "
-                         "desde tu primera operación hasta hoy y descarga el fichero CSV.",
-            },
-            _HOW_TO_STEP2,
-            _HOW_TO_STEP3,
-        ],
-    },
-    "kraken": {
-        "exchange_id":   "kraken",
-        "exchange_name": "Kraken",
-        "exchange_logo": "K",
-        "page_title":       "Informe FIFO Kraken para Hacienda | Mariano Sevilla",
-        "page_meta_desc":   "Sube el CSV de Ledgers de Kraken y calcula ganancias y pérdidas patrimoniales con FIFO obligatorio. Informe PDF listo para declarar Kraken en Hacienda.",
-        "page_canonical":   f"{BASE_URL}/kraken",
-        "page_og_title":    "Informe fiscal Kraken para Hacienda — FIFO automático | Mariano Sevilla",
-        "page_og_desc":     "Sube el CSV de Ledgers de Kraken y calcula las plusvalías crypto con FIFO. Informe PDF para tu gestor. Gratis.",
-        "page_schema_name": "Informe FIFO Kraken — Mariano Sevilla",
-        "page_h1":   "Genera tu informe fiscal de Kraken para Hacienda",
-        "hero_desc": "Sube el CSV de Ledgers de Kraken y obtén el informe FIFO con tus ganancias y pérdidas patrimoniales. Listo para la declaración de la renta.",
-        "how_to": [
-            {
-                "title": "Exporta el CSV de Ledgers desde Kraken",
-                "desc":  "En tu cuenta de Kraken ve a Historial → Exportar. Selecciona "
-                         "tipo «Ledgers» (no «Trades»), elige el período completo desde "
-                         "tu primera operación hasta hoy y descarga el fichero CSV.",
-            },
-            _HOW_TO_STEP2,
-            _HOW_TO_STEP3,
-        ],
-    },
-    "bitvavo": {
-        "exchange_id":   "bitvavo",
-        "exchange_name": "Bitvavo",
-        "exchange_logo": "BV",
-        "page_title":       "Informe FIFO Bitvavo para Hacienda | Mariano Sevilla",
-        "page_meta_desc":   "Sube el CSV de Bitvavo y calcula tus ganancias y pérdidas patrimoniales con FIFO obligatorio. Informe PDF listo para la declaración de la renta en España.",
-        "page_canonical":   f"{BASE_URL}/bitvavo",
-        "page_og_title":    "Informe fiscal Bitvavo para Hacienda — FIFO automático | Mariano Sevilla",
-        "page_og_desc":     "Sube el CSV de Bitvavo y calcula las plusvalías crypto con FIFO. Informe PDF para tu gestor. Gratis.",
-        "page_schema_name": "Informe FIFO Bitvavo — Mariano Sevilla",
-        "page_h1":   "Genera tu informe fiscal de Bitvavo para Hacienda",
-        "hero_desc": "Sube el CSV del historial de transacciones de Bitvavo y obtén el informe FIFO con tus ganancias y pérdidas patrimoniales. Listo para la declaración de la renta.",
-        "how_to": [
-            {
-                "title": "Exporta el CSV de transacciones desde Bitvavo",
-                "desc":  "En tu cuenta de Bitvavo ve a Cuenta → Historial de transacciones "
-                         "→ Exportar. Selecciona el período completo desde tu primera "
-                         "operación hasta hoy y descarga el fichero en formato CSV.",
-            },
-            _HOW_TO_STEP2,
-            _HOW_TO_STEP3,
-        ],
-    },
-    "bit2me": {
-        "exchange_id":   "bit2me",
-        "exchange_name": "Bit2Me",
-        "exchange_logo": "B2",
-        "page_title":       "Informe FIFO Bit2Me para Hacienda | Mariano Sevilla",
-        "page_meta_desc":   "Sube el CSV fiscal de Bit2Me y calcula tus ganancias y pérdidas patrimoniales con FIFO obligatorio. Informe PDF listo para la declaración de la renta.",
-        "page_canonical":   f"{BASE_URL}/bit2me",
-        "page_og_title":    "Informe fiscal Bit2Me para Hacienda — FIFO automático | Mariano Sevilla",
-        "page_og_desc":     "Sube el CSV fiscal de Bit2Me y calcula las plusvalías crypto con FIFO. Informe PDF para tu gestor. Gratis.",
-        "page_schema_name": "Informe FIFO Bit2Me — Mariano Sevilla",
-        "page_h1":   "Genera tu informe fiscal de Bit2Me para Hacienda",
-        "hero_desc": "Sube el CSV del informe fiscal de Bit2Me y obtén el cálculo FIFO con tus ganancias y pérdidas patrimoniales. Listo para la declaración de la renta.",
-        "how_to": [
-            {
-                "title": "Descarga el informe fiscal CSV desde Bit2Me",
-                "desc":  "En tu cuenta de Bit2Me ve a Mi cuenta → Informes fiscales. "
-                         "Selecciona el ejercicio fiscal, elige el período completo desde "
-                         "tu primera operación y descarga el informe en formato CSV.",
-            },
-            _HOW_TO_STEP2,
-            _HOW_TO_STEP3,
-        ],
-    },
-    "coinbase": {
-        "exchange_id":   "coinbase",
-        "exchange_name": "Coinbase",
-        "exchange_logo": "C",
-        "page_title":       "Informe FIFO Coinbase para Hacienda | Mariano Sevilla",
-        "page_meta_desc":   "Sube el CSV de Coinbase y calcula tus ganancias y pérdidas patrimoniales con FIFO obligatorio. Informe PDF listo para la declaración de la renta.",
-        "page_canonical":   f"{BASE_URL}/coinbase",
-        "page_og_title":    "Informe fiscal Coinbase para Hacienda — FIFO automático | Mariano Sevilla",
-        "page_og_desc":     "Sube el CSV de Coinbase y calcula las plusvalías crypto con FIFO. Informe PDF para tu gestor. Gratis.",
-        "page_schema_name": "Informe FIFO Coinbase — Mariano Sevilla",
-        "page_h1":   "Genera tu informe fiscal de Coinbase para Hacienda",
-        "hero_desc": "Sube el CSV del historial de transacciones de Coinbase y obtén el informe FIFO con tus ganancias y pérdidas patrimoniales. Listo para la declaración de la renta.",
-        "how_to": [
-            {
-                "title": "Exporta el CSV del historial de transacciones de Coinbase",
-                "desc":  "En tu cuenta de Coinbase ve a Perfil → Extractos → "
-                         "Historial de transacciones. Haz clic en «Generar extracto», "
-                         "selecciona el rango completo desde tu primera operación hasta "
-                         "hoy y descarga el fichero CSV.",
-            },
-            _HOW_TO_STEP2,
-            _HOW_TO_STEP3,
-        ],
-    },
-}
+# Cookies de sesión seguras
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SECURE"]   = os.environ.get("FLASK_ENV") == "production"
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
+
+# ── EXTENSIONES ───────────────────────────────
+db.init_app(app)
+bcrypt.init_app(app)
+
+login_manager = LoginManager(app)
+
+@login_manager.user_loader
+def load_user(user_id: str):
+    return db.session.get(User, int(user_id))
+
+@login_manager.unauthorized_handler
+def unauthorized():
+    """Devuelve JSON 401 en lugar de redirigir a una página de login."""
+    return jsonify({"error": "Autenticación requerida"}), 401
+
+with app.app_context():
+    db.create_all()
 
 
 # ── CORS ──────────────────────────────────────
@@ -199,7 +91,13 @@ ALLOWED_ORIGINS = [
     "http://localhost:5050",
     "http://127.0.0.1:5050",
 ]
-CORS(app, origins=ALLOWED_ORIGINS, methods=["GET", "POST"], allow_headers=["Content-Type"])
+CORS(
+    app,
+    origins=ALLOWED_ORIGINS,
+    methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type"],
+    supports_credentials=True,   # necesario para que las cookies de sesión funcionen entre origen y API
+)
 
 
 # ── RATE LIMITING ─────────────────────────────
@@ -233,17 +131,34 @@ def set_security_headers(response):
     return response
 
 
+# ── VALIDACIÓN AUTH ───────────────────────────
+
+def _validar_email(email: str) -> tuple[bool, str]:
+    """Valida formato de email. Permite + y - en la parte local."""
+    if not email or len(email) > 254:
+        return False, "Email inválido."
+    if not re.match(r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$", email):
+        return False, "Email inválido."
+    return True, ""
+
+
+def _validar_password(password: str) -> tuple[bool, str]:
+    if not password or len(password) < 8:
+        return False, "La contraseña debe tener al menos 8 caracteres."
+    if len(password) > 128:
+        return False, "La contraseña es demasiado larga."
+    return True, ""
+
+
 # ── VALIDACIÓN Y SANITIZACIÓN ─────────────────
 
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
 AÑO_MIN = 2009
 AÑO_MAX = datetime.now().year + 1
 
-BINANCE_SIGNATURES  = ["Tiempo", "Operación", "Moneda", "Cambio", "Cuenta"]
-BIT2ME_SIGNATURES   = ["Bit", "2Me", "Informe Fiscal", "Estimado"]
-BITVAVO_SIGNATURES  = ["Timezone", "Date", "Time", "Type", "Currency", "Amount"]
-KRAKEN_SIGNATURES   = ["txid", "refid", "aclass", "subtype"]
-COINBASE_SIGNATURES = ["Timestamp", "Transaction Type", "Quantity Transacted"]
+BINANCE_SIGNATURES = ["Tiempo", "Operación", "Moneda", "Cambio", "Cuenta"]
+BIT2ME_SIGNATURES  = ["Bit", "2Me", "Informe Fiscal", "Estimado"]
+BITVAVO_SIGNATURES = ["Timezone", "Date", "Time", "Type", "Currency", "Amount"]
 
 
 def _sanitizar_texto(texto: str, max_len: int = 100) -> str:
@@ -289,18 +204,14 @@ def _validar_csv(filepath: str, exchange: str) -> tuple[bool, str]:
 
     # Validar exchange
     sigs = {
-        "binance":  BINANCE_SIGNATURES,
-        "bit2me":   BIT2ME_SIGNATURES,
-        "bitvavo":  BITVAVO_SIGNATURES,
-        "kraken":   KRAKEN_SIGNATURES,
-        "coinbase": COINBASE_SIGNATURES,
+        "binance": BINANCE_SIGNATURES,
+        "bit2me":  BIT2ME_SIGNATURES,
+        "bitvavo": BITVAVO_SIGNATURES,
     }
     nombres = {
-        "binance":  "Binance",
-        "bit2me":   "Bit2Me",
-        "bitvavo":  "Bitvavo",
-        "kraken":   "Kraken",
-        "coinbase": "Coinbase",
+        "binance": "Binance",
+        "bit2me":  "Bit2Me",
+        "bitvavo": "Bitvavo",
     }
     if exchange in sigs:
         if not any(sig in primeras for sig in sigs[exchange]):
@@ -310,22 +221,16 @@ def _validar_csv(filepath: str, exchange: str) -> tuple[bool, str]:
             )
 
     # Binance: detectar el formato "Historial de Transacciones" (incorrecto para FIFO)
-    # "Buy Crypto With Fiat" es una operación exclusiva del Historial de Transacciones
-    # (compras con tarjeta/banco directa). El Historial de Operaciones Spot usa
-    # "Transaction Buy" + "Transaction Spend" e incluye el importe en EUR de cada compra.
     if exchange == "binance":
         try:
             with open(filepath, encoding="utf-8", errors="replace") as f:
                 muestra = "".join(f.readline() for _ in range(100))
             if "Buy Crypto With Fiat" in muestra:
                 return False, (
-                    "CSV incorrecto: has exportado el Historial de Transacciones de Binance, "
-                    "que no incluye el precio en euros de cada compra y no es válido para calcular el FIFO.\n"
-                    "Sigue estos pasos para exportar el CSV correcto:\n"
-                    "1. Inicia sesión en Binance.\n"
-                    "2. Ve a Órdenes → Historial de operaciones spot.\n"
-                    "3. Haz clic en Exportar, selecciona el rango de fechas completo y descarga el fichero.\n"
-                    "El CSV correcto muestra las columnas Transaction Buy y Transaction Spend con el importe en euros de cada operación."
+                    "El CSV de Binance no es el correcto para calcular el FIFO. "
+                    "Has exportado el 'Historial de Transacciones', que no incluye el importe en euros de cada compra. "
+                    "Necesitas el 'Historial de Operaciones Spot': "
+                    "en Binance ve a Órdenes → Historial de operaciones → selecciona el rango de fechas → Exportar."
                 )
         except Exception:
             pass
@@ -365,8 +270,7 @@ def _pipeline_motor(clasificador) -> MotorFIFO:
                 cantidad_entregada=op.cantidad_entregada,
                 activo_recibido=op.activo_recibido,
                 cantidad_recibida=op.cantidad_recibida,
-                nota=op.nota,
-                precio_fmv_eur=getattr(op, "precio_fmv_eur", 0.0),
+                nota=op.nota
             )
     return motor
 
@@ -384,14 +288,6 @@ def procesar_binance(filepath: str) -> tuple:
 
 def procesar_bitvavo(filepath: str) -> tuple:
     return procesar_con_fifo(ClasificadorBitvavo(filepath).clasificar())
-
-
-def procesar_kraken(filepath: str) -> tuple:
-    return procesar_con_fifo(ClasificadorKraken(filepath).clasificar())
-
-
-def procesar_coinbase(filepath: str) -> tuple:
-    return procesar_con_fifo(ClasificadorCoinbase(filepath).clasificar())
 
 
 def procesar_bit2me(filepath: str) -> tuple:
@@ -517,43 +413,14 @@ def landing():
     return send_from_directory("static", "landing.html")
 
 
-@app.route("/sitemap.xml")
-def sitemap():
-    return send_from_directory("static", "sitemap.xml", mimetype="application/xml")
-
-
 @app.route("/fiscal")
 def fiscal():
-    return render_template("tool.html", **_TOOL_GENERIC)
-
-
-@app.route("/binance")
-def page_binance():
-    return render_template("binance.html", **EXCHANGE_PAGES["binance"])
-
-
-@app.route("/kraken")
-def page_kraken():
-    return render_template("tool.html", **EXCHANGE_PAGES["kraken"])
-
-
-@app.route("/bitvavo")
-def page_bitvavo():
-    return render_template("tool.html", **EXCHANGE_PAGES["bitvavo"])
-
-
-@app.route("/bit2me")
-def page_bit2me():
-    return render_template("tool.html", **EXCHANGE_PAGES["bit2me"])
-
-
-@app.route("/coinbase")
-def page_coinbase():
-    return render_template("tool.html", **EXCHANGE_PAGES["coinbase"])
+    return send_from_directory("static", "index.html")
 
 
 @app.route("/api/analizar", methods=["POST"])
-@limiter.limit("1 per 10 minutes")  # máx 1 análisis por 10 minutos por IP
+@login_required
+@limiter.limit("1 per 10 minutes")
 def analizar():
     if "csv" not in request.files:
         return jsonify({"error": "No se recibió ningún fichero."}), 400
@@ -564,7 +431,7 @@ def analizar():
     exchange  = _sanitizar_texto(request.form.get("exchange", "binance"), max_len=20).lower()
 
     # Validar exchange
-    if exchange not in ("binance", "bit2me", "bitvavo", "kraken", "coinbase"):
+    if exchange not in ("binance", "bit2me", "bitvavo"):
         return jsonify({"error": "Exchange no soportado."}), 400
 
     # Validar ejercicio fiscal
@@ -601,20 +468,6 @@ def analizar():
             advertencias = motor.advertencias
             rendimientos_json = _rendimientos_a_json(rendimientos)
             pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Bitvavo", rendimientos)
-
-        elif exchange == "kraken":
-            motor, rendimientos = procesar_kraken(tmp_path)
-            resumen, posicion, operaciones = _motor_a_json(motor)
-            advertencias = motor.advertencias
-            rendimientos_json = _rendimientos_a_json(rendimientos)
-            pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Kraken", rendimientos)
-
-        elif exchange == "coinbase":
-            motor, rendimientos = procesar_coinbase(tmp_path)
-            resumen, posicion, operaciones = _motor_a_json(motor)
-            advertencias = motor.advertencias
-            rendimientos_json = _rendimientos_a_json(rendimientos)
-            pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Coinbase", rendimientos)
 
         else:  # binance
             motor, rendimientos = procesar_binance(tmp_path)
@@ -671,15 +524,79 @@ def descargar(token):
 
     threading.Thread(target=borrar_pdf, daemon=True).start()
 
-    exchange_param = _sanitizar_texto(request.args.get("exchange", ""), max_len=20).lower()
-    nombre_pdf = f"informe_fiscal_cripto_{exchange_param}.pdf" if exchange_param else "informe_fiscal_cripto.pdf"
-
     return send_file(
         pdf_path,
         mimetype="application/pdf",
         as_attachment=True,
-        download_name=nombre_pdf
+        download_name="informe_fiscal_cripto.pdf"
     )
+
+
+# ── RUTAS AUTH ────────────────────────────────
+
+@app.route("/api/register", methods=["POST"])
+@limiter.limit("5 per hour")
+def register():
+    data     = request.get_json(silent=True) or {}
+    email    = (data.get("email") or "").strip().lower()
+    password = data.get("password") or ""
+
+    ok, err = _validar_email(email)
+    if not ok:
+        return jsonify({"error": err}), 400
+
+    ok, err = _validar_password(password)
+    if not ok:
+        return jsonify({"error": err}), 400
+
+    if User.query.filter_by(email=email).first():
+        return jsonify({"error": "Ya existe una cuenta con ese email."}), 409
+
+    user = User(email=email)
+    user.set_password(password)
+    db.session.add(user)
+    db.session.commit()
+
+    login_user(user, remember=False)
+    return jsonify({"message": "Cuenta creada correctamente.", "email": user.email, "plan": user.plan}), 201
+
+
+@app.route("/api/login", methods=["POST"])
+@limiter.limit("10 per 15 minutes")
+def login():
+    data     = request.get_json(silent=True) or {}
+    email    = (data.get("email") or "").strip().lower()
+    password = data.get("password") or ""
+    remember = bool(data.get("remember", False))
+
+    # Mensaje genérico: no revelar si el email existe o no
+    user = User.query.filter_by(email=email).first()
+    if not user or not user.check_password(password):
+        return jsonify({"error": "Credenciales incorrectas."}), 401
+
+    if not user.is_active:
+        return jsonify({"error": "Cuenta desactivada. Contacta con soporte."}), 403
+
+    user.last_login = datetime.utcnow()
+    db.session.commit()
+
+    login_user(user, remember=remember)
+    return jsonify({"message": "Sesión iniciada.", "email": user.email, "plan": user.plan})
+
+
+@app.route("/api/logout", methods=["POST"])
+@login_required
+def logout():
+    logout_user()
+    return jsonify({"message": "Sesión cerrada."})
+
+
+@app.route("/api/me")
+def me():
+    """Devuelve los datos del usuario autenticado, o null si no hay sesión."""
+    if not current_user.is_authenticated:
+        return jsonify({"user": None})
+    return jsonify({"user": {"email": current_user.email, "plan": current_user.plan}})
 
 
 @app.errorhandler(429)

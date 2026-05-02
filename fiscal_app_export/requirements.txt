@@ -1,8 +1,9 @@
 flask
+flask-login
+flask-sqlalchemy
+flask-bcrypt
 flask-limiter
 flask-cors
-flask-compress
 reportlab
 pandas
 gunicorn
-matplotlib
