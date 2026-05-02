@@ -231,6 +231,24 @@ EXCHANGE_PAGES = {
             _HOW_TO_STEP2, _HOW_TO_STEP3,
         ],
     },
+    "nexo": {
+        "exchange_id":      "nexo",
+        "exchange_name":    "Nexo",
+        "exchange_logo":    "N",
+        "page_title":       "Informe FIFO Nexo para Hacienda | Mariano Sevilla",
+        "page_meta_desc":   "Sube el CSV de Nexo y calcula tus ganancias, pérdidas e intereses con FIFO obligatorio. Informe PDF listo para la declaración de la renta en España.",
+        "page_canonical":   f"{_BASE_URL}/nexo",
+        "page_og_title":    "Informe fiscal Nexo para Hacienda — FIFO automático | Mariano Sevilla",
+        "page_og_desc":     "Sube el CSV de Nexo y calcula las plusvalías e intereses crypto con FIFO. Informe PDF para tu gestor.",
+        "page_schema_name": "Informe FIFO Nexo — Mariano Sevilla",
+        "page_h1":          "Genera tu informe fiscal de Nexo para Hacienda",
+        "hero_desc":        "Sube el CSV del historial de transacciones de Nexo y obtén el informe FIFO con tus ganancias, pérdidas patrimoniales e intereses. Los intereses tributan como rendimientos del capital mobiliario (casilla 0033). Listo para la declaración de la renta.",
+        "how_to": [
+            {"title": "Exporta el CSV de transacciones desde Nexo",
+             "desc":  "En tu cuenta de Nexo ve a Perfil → Declaración de activos → Historial de transacciones. Selecciona el rango de fechas completo desde tu primera operación hasta hoy y descarga el fichero CSV."},
+            _HOW_TO_STEP2, _HOW_TO_STEP3,
+        ],
+    },
 }
 
 
@@ -677,6 +695,12 @@ def page_kraken():
 @login_required
 def page_coinbase():
     return render_template("tool.html", **EXCHANGE_PAGES["coinbase"])
+
+
+@app.route("/nexo")
+@login_required
+def page_nexo():
+    return render_template("tool.html", **EXCHANGE_PAGES["nexo"])
 
 
 @app.route("/api/analizar", methods=["POST"])
