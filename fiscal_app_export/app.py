@@ -17,10 +17,12 @@ Seguridad aplicada:
 import os
 import re
 import sys
+import time
 import tempfile
 import traceback
 import threading
 from datetime import datetime
+from threading import Lock
 from flask import Flask, request, jsonify, send_file, send_from_directory, redirect, url_for, render_template
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -124,6 +126,37 @@ if _google_oauth_enabled:
 
 with app.app_context():
     db.create_all()
+
+
+# ── PDF TOKEN STORE (Row-Level Security) ───────
+# Mapea token → (user_id, expira_en). El PDF solo lo puede descargar
+# el usuario que lo generó y caduca a los 5 minutos.
+_pdf_tokens: dict[str, tuple[int, float]] = {}
+_pdf_lock = Lock()
+_PDF_TTL  = 300  # segundos
+
+def _guardar_token_pdf(token: str) -> None:
+    with _pdf_lock:
+        ahora = time.time()
+        # limpiar tokens expirados aprovechando el paso
+        expirados = [k for k, (_, exp) in _pdf_tokens.items() if exp < ahora]
+        for k in expirados:
+            del _pdf_tokens[k]
+        _pdf_tokens[token] = (current_user.id, ahora + _PDF_TTL)
+
+def _consumir_token_pdf(token: str) -> bool:
+    """Valida propiedad y elimina el token (uso único)."""
+    with _pdf_lock:
+        entry = _pdf_tokens.get(token)
+        if not entry:
+            return False
+        uid, exp = entry
+        del _pdf_tokens[token]
+        if time.time() > exp:
+            return False
+        if uid != current_user.id:
+            return False
+        return True
 
 
 # ── DATOS SEO POR EXCHANGE ─────────────────────
@@ -287,33 +320,48 @@ CORS(
 
 
 # ── RATE LIMITING ─────────────────────────────
+def _rate_limit_key() -> str:
+    """Usuarios autenticados → rate limit por user_id (no por IP compartida)."""
+    if current_user.is_authenticated:
+        return f"user:{current_user.id}"
+    return get_remote_address()
+
 limiter = Limiter(
-    get_remote_address,
+    _rate_limit_key,
     app=app,
     default_limits=["100 per day", "20 per hour"],
-    storage_uri="memory://",
+    # En producción con múltiples workers usar REDIS_URL para compartir contadores
+    storage_uri=os.environ.get("REDIS_URL", "memory://"),
 )
 
 
 # ── SECURITY HEADERS ──────────────────────────
 @app.after_request
 def set_security_headers(response):
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["X-Frame-Options"]                   = "DENY"
+    response.headers["X-Content-Type-Options"]             = "nosniff"
+    # X-XSS-Protection: 0 — desactiva el auditor XSS del navegador (deprecated y
+    # con bugs conocidos). La protección real la provee la CSP de abajo.
+    response.headers["X-XSS-Protection"]                  = "0"
+    response.headers["Referrer-Policy"]                    = "strict-origin-when-cross-origin"
+    response.headers["Cross-Origin-Opener-Policy"]         = "same-origin"
+    response.headers["Cross-Origin-Resource-Policy"]       = "same-origin"
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
         "script-src 'self' 'unsafe-inline'; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' data:; "
-        "connect-src 'self' https://script.google.com; "
+        "connect-src 'self'; "
         "frame-ancestors 'none'; "
-        "form-action 'self';"
+        "form-action 'self'; "
+        "base-uri 'self';"
     )
-    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
+    response.headers["Permissions-Policy"] = (
+        "camera=(), microphone=(), geolocation=(), payment=(), "
+        "usb=(), bluetooth=(), serial=()"
+    )
     return response
 
 
@@ -810,6 +858,9 @@ def analizar():
         with open(pdf_tmp, "wb") as f:
             f.write(pdf_bytes)
 
+        token = os.path.basename(pdf_tmp)
+        _guardar_token_pdf(token)   # RLS: liga el token al usuario actual
+
         return jsonify({
             "ok": True,
             "resumen": resumen,
@@ -817,7 +868,7 @@ def analizar():
             "posicion": posicion,
             "rendimientos": rendimientos_json,
             "advertencias": advertencias,
-            "token": os.path.basename(pdf_tmp),
+            "token": token,
         })
 
     except Exception as e:
@@ -841,6 +892,11 @@ def descargar(token):
     pdf_path = os.path.join(tempfile.gettempdir(), token)
     if not os.path.realpath(pdf_path).startswith(os.path.realpath(tempfile.gettempdir())):
         return jsonify({"error": "Token inválido."}), 400
+
+    # RLS: solo el usuario que generó el PDF puede descargarlo
+    if not _consumir_token_pdf(token):
+        return jsonify({"error": "Token inválido o expirado."}), 403
+
     if not os.path.exists(pdf_path):
         return jsonify({"error": "Informe no encontrado o ya descargado."}), 404
 
