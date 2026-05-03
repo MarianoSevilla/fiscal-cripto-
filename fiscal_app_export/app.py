@@ -684,6 +684,11 @@ def terminos():
     return send_from_directory("static", "terminos.html")
 
 
+@app.route("/aviso-legal", strict_slashes=False)
+def aviso_legal():
+    return send_from_directory("static", "aviso-legal.html")
+
+
 @app.route("/dashboard", strict_slashes=False)
 def dashboard():
     """Dashboard principal: selector de exchange. Requiere autenticación (gestionada en JS)."""
