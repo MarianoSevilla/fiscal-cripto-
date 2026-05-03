@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Preferencias de Cookies | Mariano Sevilla</title>
+<meta name="description" content="Gestiona tus preferencias de cookies en marianosevilla.com.">
+<meta name="robots" content="noindex, follow">
+<link rel="canonical" href="https://marianosevilla.com/preferencias">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --black:#0a0a0a; --surface:#111111; --surface2:#1a1a1a;
+  --border:rgba(255,255,255,0.07); --text:#f0ede6;
+  --muted:#888580; --muted2:#5a5754; --accent:#00C896;
+  --accent-dim:rgba(0,200,150,0.08);
+  --font-d:'Syne',sans-serif; --font-b:'DM Sans',sans-serif; --max:1080px;
+}
+html { scroll-behavior: smooth; }
+body { background:var(--black); color:var(--text); font-family:var(--font-b); font-size:16px; line-height:1.7; min-height:100vh; -webkit-font-smoothing:antialiased; }
+a { color:var(--accent); text-decoration:none; }
+a:hover { text-decoration:underline; }
+
+nav { position:fixed; top:0; left:0; right:0; z-index:200; border-bottom:1px solid var(--border); background:rgba(10,10,10,0.88); backdrop-filter:blur(14px); }
+.nav-inner { max-width:var(--max); margin:0 auto; padding:0 2rem; height:64px; display:flex; align-items:center; justify-content:space-between; }
+.nav-logo { font-family:var(--font-d); font-weight:800; font-size:0.95rem; letter-spacing:-0.02em; color:var(--text); }
+.nav-logo span { color:var(--accent); }
+.nav-back { font-size:14px; color:var(--muted); transition:color .15s; }
+.nav-back:hover { color:var(--text); text-decoration:none; }
+
+.page-wrap { max-width:720px; margin:0 auto; padding:7rem 2rem 5rem; }
+.page-kicker { font-size:11px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--accent); margin-bottom:1rem; display:block; }
+.page-wrap h1 { font-family:var(--font-d); font-size:clamp(1.8rem,4vw,2.4rem); font-weight:800; line-height:1.2; margin-bottom:0.5rem; }
+.page-lead { font-size:15px; color:var(--muted); margin-bottom:3rem; padding-bottom:2rem; border-bottom:1px solid var(--border); }
+
+/* tarjeta de categoría */
+.pref-card {
+  background:var(--surface2); border:1px solid var(--border);
+  border-radius:12px; padding:1.5rem;
+  margin-bottom:1rem;
+  display:flex; align-items:flex-start; justify-content:space-between; gap:1.5rem;
+}
+.pref-card-body { flex:1; }
+.pref-card-body h3 { font-family:var(--font-d); font-size:1rem; font-weight:700; color:var(--text); margin-bottom:0.3rem; display:flex; align-items:center; gap:0.5rem; }
+.pref-card-body p { font-size:14px; color:var(--muted); line-height:1.5; }
+.badge { display:inline-block; font-size:11px; font-weight:600; padding:2px 8px; border-radius:4px; }
+.badge-green { background:rgba(0,200,150,0.12); color:var(--accent); }
+.badge-muted { background:rgba(255,255,255,0.05); color:var(--muted); }
+
+/* toggle */
+.toggle-wrap { flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:0.4rem; padding-top:2px; }
+.toggle {
+  position:relative; width:44px; height:24px;
+  background:var(--accent); border-radius:12px;
+  cursor:default;
+  transition:background .2s;
+}
+.toggle.disabled {
+  background:rgba(255,255,255,0.1);
+  cursor:not-allowed;
+}
+.toggle-knob {
+  position:absolute; top:3px; width:18px; height:18px;
+  background:#fff; border-radius:50%;
+  transition:transform .2s;
+}
+.toggle:not(.disabled) .toggle-knob { transform:translateX(22px); }
+.toggle.disabled .toggle-knob { transform:translateX(3px); }
+.toggle-label { font-size:11px; color:var(--muted); white-space:nowrap; }
+
+/* bloque "sin cookies opcionales" */
+.empty-state {
+  background:var(--accent-dim); border:1px solid rgba(0,200,150,0.2);
+  border-radius:12px; padding:2rem 1.5rem;
+  text-align:center; margin:2rem 0;
+}
+.empty-state .icon { font-size:2rem; margin-bottom:0.75rem; display:block; }
+.empty-state h3 { font-family:var(--font-d); font-size:1rem; font-weight:700; color:var(--text); margin-bottom:0.5rem; }
+.empty-state p { font-size:14px; color:var(--muted); max-width:440px; margin:0 auto; }
+
+footer { border-top:1px solid var(--border); padding:2rem; text-align:center; }
+.footer-legal { font-size:12px; color:var(--muted2); line-height:1.6; }
+.footer-legal a { color:var(--muted); }
+.footer-legal a:hover { color:var(--text); text-decoration:underline; }
+
+@media (max-width:540px) {
+  .page-wrap { padding:6rem 1.25rem 3rem; }
+  .pref-card { flex-direction:column; gap:1rem; }
+  .toggle-wrap { flex-direction:row; align-items:center; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">mariano<span>sevilla</span>.com</a>
+    <a href="/" class="nav-back">← Volver al inicio</a>
+  </div>
+</nav>
+
+<div class="page-wrap">
+
+  <span class="page-kicker">Cookies</span>
+  <h1>Preferencias de cookies</h1>
+  <p class="page-lead">
+    Aquí puedes ver qué cookies utiliza este sitio. Puedes obtener más información en nuestra <a href="/cookies">Política de Cookies</a>.
+  </p>
+
+  <!-- Necesarias — siempre activas -->
+  <div class="pref-card">
+    <div class="pref-card-body">
+      <h3>Cookies estrictamente necesarias <span class="badge badge-green">Siempre activas</span></h3>
+      <p>
+        Son imprescindibles para que el sitio funcione. Incluyen la cookie de sesión que mantiene tu cuenta iniciada. Sin ellas no es posible usar el servicio. No pueden desactivarse.
+      </p>
+    </div>
+    <div class="toggle-wrap">
+      <div class="toggle">
+        <div class="toggle-knob"></div>
+      </div>
+      <span class="toggle-label">Activas</span>
+    </div>
+  </div>
+
+  <!-- Analítica — desactivada -->
+  <div class="pref-card">
+    <div class="pref-card-body">
+      <h3>Cookies analíticas <span class="badge badge-muted">No se usan</span></h3>
+      <p>
+        Permiten medir el tráfico y el comportamiento de los usuarios para mejorar el servicio. <strong style="color:var(--text)">Actualmente no utilizamos ninguna herramienta de analítica.</strong>
+      </p>
+    </div>
+    <div class="toggle-wrap">
+      <div class="toggle disabled">
+        <div class="toggle-knob"></div>
+      </div>
+      <span class="toggle-label">Inactivas</span>
+    </div>
+  </div>
+
+  <!-- Marketing — desactivada -->
+  <div class="pref-card">
+    <div class="pref-card-body">
+      <h3>Cookies de marketing <span class="badge badge-muted">No se usan</span></h3>
+      <p>
+        Se usan para mostrar publicidad personalizada. <strong style="color:var(--text)">Este sitio no muestra publicidad ni utiliza cookies de seguimiento publicitario.</strong>
+      </p>
+    </div>
+    <div class="toggle-wrap">
+      <div class="toggle disabled">
+        <div class="toggle-knob"></div>
+      </div>
+      <span class="toggle-label">Inactivas</span>
+    </div>
+  </div>
+
+  <div class="empty-state">
+    <span class="icon">✓</span>
+    <h3>No hay cookies opcionales que gestionar</h3>
+    <p>Este sitio solo usa la cookie de sesión estrictamente necesaria. No instalamos tracking, analítica ni publicidad.</p>
+  </div>
+
+</div>
+
+<footer>
+  <p class="footer-legal">
+    © 2026 Mariano Sevilla &nbsp;·&nbsp;
+    <a href="/cookies">Política de cookies</a> &nbsp;·&nbsp;
+    <a href="/preferencias">Preferencias</a> &nbsp;·&nbsp;
+    <a href="/privacidad">Política de privacidad</a> &nbsp;·&nbsp;
+    <a href="/terminos">Términos de servicio</a>
+  </p>
+</footer>
+
+</body>
+</html>

@@ -694,6 +694,16 @@ def seguridad():
     return send_from_directory("static", "seguridad.html")
 
 
+@app.route("/cookies", strict_slashes=False)
+def cookies():
+    return send_from_directory("static", "cookies.html")
+
+
+@app.route("/preferencias", strict_slashes=False)
+def preferencias():
+    return send_from_directory("static", "preferencias.html")
+
+
 @app.route("/dashboard", strict_slashes=False)
 def dashboard():
     """Dashboard principal: selector de exchange. Requiere autenticación (gestionada en JS)."""
