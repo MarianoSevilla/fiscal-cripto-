@@ -36,6 +36,7 @@ from clasificador_bit2me import ClasificadorBit2Me
 from clasificador_bitvavo import ClasificadorBitvavo
 from clasificador_kraken import ClasificadorKraken
 from clasificador_coinbase import ClasificadorCoinbase
+from clasificador_nexo import ClasificadorNexo
 from motor_fifo import MotorFIFO
 from generador_pdf import generar_pdf, generar_pdf_bit2me
 
@@ -59,6 +60,22 @@ if not _secret:
     _secret = "dev-only-insecure-key-change-me"
 
 app.config["SECRET_KEY"] = _secret
+
+# Emails de administrador: sin rate-limit en /api/analizar
+# Configura en Railway: ADMIN_EMAILS=mario@ejemplo.com,otro@ejemplo.com
+ADMIN_EMAILS: set[str] = {
+    e.strip().lower()
+    for e in os.environ.get("ADMIN_EMAILS", "").split(",")
+    if e.strip()
+}
+
+def _is_admin() -> bool:
+    """True si el usuario autenticado está en la lista de admins."""
+    return (
+        current_user.is_authenticated
+        and current_user.email.strip().lower() in ADMIN_EMAILS
+    )
+
 # Railway usa "postgres://" pero SQLAlchemy requiere "postgresql://"
 _db_url = os.environ.get("DATABASE_URL", f"sqlite:///{os.path.join(_BASE_DIR, 'fiscal_users.db')}")
 if _db_url.startswith("postgres://"):
@@ -330,6 +347,7 @@ BIT2ME_SIGNATURES   = ["Bit", "2Me", "Informe Fiscal", "Estimado"]
 BITVAVO_SIGNATURES  = ["Timezone", "Date", "Time", "Type", "Currency", "Amount"]
 KRAKEN_SIGNATURES   = ["txid", "refid", "time", "type", "asset", "amount", "fee"]
 COINBASE_SIGNATURES = ["Timestamp", "Transaction Type", "Quantity Transacted"]
+NEXO_SIGNATURES     = ["Transaction", "Type", "Input Currency", "Output Currency"]
 
 
 def _sanitizar_texto(texto: str, max_len: int = 100) -> str:
@@ -380,6 +398,7 @@ def _validar_csv(filepath: str, exchange: str) -> tuple[bool, str]:
         "bitvavo":  BITVAVO_SIGNATURES,
         "kraken":   KRAKEN_SIGNATURES,
         "coinbase": COINBASE_SIGNATURES,
+        "nexo":     NEXO_SIGNATURES,
     }
     nombres = {
         "binance":  "Binance",
@@ -387,6 +406,7 @@ def _validar_csv(filepath: str, exchange: str) -> tuple[bool, str]:
         "bitvavo":  "Bitvavo",
         "kraken":   "Kraken",
         "coinbase": "Coinbase",
+        "nexo":     "Nexo",
     }
     if exchange in sigs:
         if not any(sig in primeras for sig in sigs[exchange]):
@@ -471,6 +491,10 @@ def procesar_kraken(filepath: str) -> tuple:
 
 def procesar_coinbase(filepath: str) -> tuple:
     return procesar_con_fifo(ClasificadorCoinbase(filepath).clasificar())
+
+
+def procesar_nexo(filepath: str) -> tuple:
+    return procesar_con_fifo(ClasificadorNexo(filepath).clasificar())
 
 
 def procesar_bit2me(filepath: str) -> tuple:
@@ -705,7 +729,7 @@ def page_nexo():
 
 @app.route("/api/analizar", methods=["POST"])
 @login_required
-@limiter.limit("1 per 10 minutes")
+@limiter.limit("1 per 10 minutes", exempt_when=_is_admin)
 def analizar():
     if "csv" not in request.files:
         return jsonify({"error": "No se recibió ningún fichero."}), 400
@@ -716,7 +740,7 @@ def analizar():
     exchange  = _sanitizar_texto(request.form.get("exchange", "binance"), max_len=20).lower()
 
     # Validar exchange
-    if exchange not in ("binance", "bit2me", "bitvavo", "kraken", "coinbase"):
+    if exchange not in ("binance", "bit2me", "bitvavo", "kraken", "coinbase", "nexo"):
         return jsonify({"error": "Exchange no soportado."}), 400
 
     # Validar ejercicio fiscal
@@ -767,6 +791,13 @@ def analizar():
             advertencias = motor.advertencias
             rendimientos_json = _rendimientos_a_json(rendimientos)
             pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Coinbase", rendimientos)
+
+        elif exchange == "nexo":
+            motor, rendimientos = procesar_nexo(tmp_path)
+            resumen, posicion, operaciones = _motor_a_json(motor)
+            advertencias = motor.advertencias
+            rendimientos_json = _rendimientos_a_json(rendimientos)
+            pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Nexo", rendimientos)
 
         else:  # binance
             motor, rendimientos = procesar_binance(tmp_path)

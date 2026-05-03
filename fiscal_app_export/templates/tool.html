@@ -654,6 +654,7 @@
     color: var(--text); text-decoration: none;
     background: var(--surface2); border: 1px solid var(--border);
     border-radius: 6px; padding: 5px 12px;
+    width: 90px; text-align: center;
     transition: border-color 0.15s, color 0.15s;
   }
   .also-link:hover { border-color: var(--accent); color: var(--accent); }
@@ -1030,15 +1031,22 @@
     </div>
   </div>
 
+  {%- set all_exchanges = [
+      ('binance',  'Binance'),
+      ('bitvavo',  'Bitvavo'),
+      ('bit2me',   'Bit2Me'),
+      ('kraken',   'Kraken'),
+      ('coinbase', 'Coinbase'),
+      ('nexo',     'Nexo'),
+  ] %}
+  {%- set others = [] %}
+  {%- for slug, label in all_exchanges %}
+    {%- if slug != exchange_id %}{% set _ = others.append((slug, label)) %}{% endif %}
+  {%- endfor %}
   <div class="also-wrap">
     <span class="also-label">También disponible para:</span>
     <div class="also-links">
-      {% if exchange_id != 'binance' %}<a href="/binance" class="also-link">Binance</a>{% endif %}
-      {% if exchange_id != 'bitvavo' %}<a href="/bitvavo" class="also-link">Bitvavo</a>{% endif %}
-      {% if exchange_id != 'bit2me' %}<a href="/bit2me" class="also-link">Bit2Me</a>{% endif %}
-      {% if exchange_id != 'kraken' %}<a href="/kraken" class="also-link">Kraken</a>{% endif %}
-      {% if exchange_id != 'coinbase' %}<a href="/coinbase" class="also-link">Coinbase</a>{% endif %}
-      {% if exchange_id != 'nexo' %}<a href="/nexo" class="also-link">Nexo</a>{% endif %}
+      {% for slug, label in others[:6] %}<a href="/{{ slug }}" class="also-link">{{ label }}</a>{% endfor %}
     </div>
   </div>
 </div>
