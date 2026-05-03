@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seguridad | Mariano Sevilla</title>
+<meta name="description" content="Cómo protegemos tu cuenta y tus datos en la herramienta fiscal para criptomonedas de Mariano Sevilla.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://marianosevilla.com/seguridad">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --black:       #0a0a0a;
+  --surface:     #111111;
+  --surface2:    #1a1a1a;
+  --border:      rgba(255,255,255,0.07);
+  --text:        #f0ede6;
+  --muted:       #888580;
+  --muted2:      #5a5754;
+  --accent:      #00C896;
+  --accent-dim:  rgba(0,200,150,0.08);
+  --font-d: 'Syne', sans-serif;
+  --font-b: 'DM Sans', sans-serif;
+  --max: 1080px;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--black); color: var(--text);
+  font-family: var(--font-b); font-size: 16px; line-height: 1.7;
+  min-height: 100vh; -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  border-bottom: 1px solid var(--border);
+  background: rgba(10,10,10,0.88); backdrop-filter: blur(14px);
+}
+.nav-inner {
+  max-width: var(--max); margin: 0 auto; padding: 0 2rem;
+  height: 64px; display: flex; align-items: center; justify-content: space-between;
+}
+.nav-logo {
+  font-family: var(--font-d); font-weight: 800; font-size: 0.95rem;
+  letter-spacing: -0.02em; color: var(--text);
+}
+.nav-logo span { color: var(--accent); }
+.nav-back { font-size: 14px; color: var(--muted); transition: color .15s; }
+.nav-back:hover { color: var(--text); text-decoration: none; }
+
+.page-wrap {
+  max-width: 720px; margin: 0 auto;
+  padding: 7rem 2rem 5rem;
+}
+.page-kicker {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--accent);
+  margin-bottom: 1rem; display: block;
+}
+.page-wrap h1 {
+  font-family: var(--font-d); font-size: clamp(1.8rem, 4vw, 2.4rem);
+  font-weight: 800; line-height: 1.2; margin-bottom: 0.5rem;
+}
+.page-meta {
+  font-size: 13px; color: var(--muted);
+  margin-bottom: 3rem; padding-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── GRID DE TARJETAS ── */
+.security-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 3rem;
+}
+.sec-card {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 1.25rem 1.5rem;
+}
+.sec-card-icon {
+  font-size: 1.5rem; margin-bottom: 0.6rem; display: block;
+}
+.sec-card h3 {
+  font-family: var(--font-d); font-size: 0.9rem; font-weight: 700;
+  color: var(--text); margin-bottom: 0.4rem;
+}
+.sec-card p {
+  font-size: 13px; color: var(--muted); line-height: 1.5;
+}
+
+/* ── SECCIONES ── */
+.policy-section { margin-bottom: 2.5rem; }
+.policy-section h2 {
+  font-family: var(--font-d); font-size: 1.1rem; font-weight: 700;
+  color: var(--text); margin-bottom: 0.75rem;
+  padding-bottom: 0.4rem; border-bottom: 1px solid var(--border);
+}
+.policy-section p {
+  color: var(--muted); font-size: 15px; margin-bottom: 0.75rem;
+}
+.policy-section p:last-child { margin-bottom: 0; }
+.policy-section ul {
+  list-style: none; padding: 0;
+  display: flex; flex-direction: column; gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.policy-section ul li {
+  font-size: 15px; color: var(--muted);
+  padding-left: 1.5rem; position: relative;
+}
+.policy-section ul li::before {
+  content: "✓"; position: absolute; left: 0;
+  color: var(--accent); font-size: 13px; font-weight: 700;
+}
+
+/* ── AVISO REPORTE ── */
+.report-box {
+  background: var(--accent-dim); border: 1px solid rgba(0,200,150,0.2);
+  border-radius: 12px; padding: 1.5rem;
+  margin-top: 2rem;
+}
+.report-box h3 {
+  font-family: var(--font-d); font-size: 1rem; font-weight: 700;
+  color: var(--text); margin-bottom: 0.5rem;
+}
+.report-box p { font-size: 14px; color: var(--muted); margin-bottom: 0.5rem; }
+.report-box p:last-child { margin-bottom: 0; }
+
+footer { border-top: 1px solid var(--border); padding: 2rem; text-align: center; }
+.footer-legal { font-size: 12px; color: var(--muted2); line-height: 1.6; }
+.footer-legal a { color: var(--muted); }
+.footer-legal a:hover { color: var(--text); text-decoration: underline; }
+
+@media (max-width: 640px) {
+  .page-wrap { padding: 6rem 1.25rem 3rem; }
+  .security-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">mariano<span>sevilla</span>.com</a>
+    <a href="/" class="nav-back">← Volver al inicio</a>
+  </div>
+</nav>
+
+<div class="page-wrap">
+
+  <span class="page-kicker">Seguridad</span>
+  <h1>Cómo protegemos tus datos</h1>
+  <p class="page-meta">Última actualización: mayo de 2026</p>
+
+  <!-- GRID RESUMEN -->
+  <div class="security-grid">
+    <div class="sec-card">
+      <span class="sec-card-icon">🔒</span>
+      <h3>Sin almacenamiento de CSVs</h3>
+      <p>Tu historial de operaciones se procesa en memoria y se elimina inmediatamente. Nunca se guarda en disco.</p>
+    </div>
+    <div class="sec-card">
+      <span class="sec-card-icon">🗑</span>
+      <h3>PDFs de un solo uso</h3>
+      <p>El informe PDF se borra automáticamente en cuanto lo descargas. Nadie más puede acceder a él.</p>
+    </div>
+    <div class="sec-card">
+      <span class="sec-card-icon">🔑</span>
+      <h3>Contraseñas hasheadas</h3>
+      <p>Las contraseñas se almacenan con bcrypt (factor de coste ≥ 12). Nunca en texto plano ni reversible.</p>
+    </div>
+    <div class="sec-card">
+      <span class="sec-card-icon">🛡</span>
+      <h3>Conexión cifrada</h3>
+      <p>Todo el tráfico viaja por HTTPS/TLS. HSTS activado para evitar conexiones no seguras.</p>
+    </div>
+  </div>
+
+  <!-- 1 -->
+  <div class="policy-section">
+    <h2>Tus datos financieros</h2>
+    <p>
+      El CSV con tu historial de transacciones es la información más sensible que manejas en esta herramienta. Hemos diseñado el sistema para que nunca quede expuesto:
+    </p>
+    <ul>
+      <li>El fichero CSV se carga, se procesa en memoria del servidor y se elimina del disco de forma inmediata, antes de devolver el resultado.</li>
+      <li>El informe PDF generado se asocia de forma exclusiva a tu sesión: ningún otro usuario puede descargarlo aunque conozca la URL.</li>
+      <li>El PDF se borra automáticamente del servidor en cuanto se descarga. No hay copias de seguridad ni registros históricos de tus informes.</li>
+      <li>No guardamos en ninguna base de datos tus operaciones, saldos, activos ni resultados fiscales.</li>
+    </ul>
+  </div>
+
+  <!-- 2 -->
+  <div class="policy-section">
+    <h2>Seguridad de la cuenta</h2>
+    <ul>
+      <li><strong>Hash de contraseñas con bcrypt:</strong> las contraseñas se transforman con un algoritmo de hash unidireccional con factor de coste elevado. Ni nosotros mismos podemos recuperar tu contraseña.</li>
+      <li><strong>Autenticación con Google:</strong> si usas «Continuar con Google», la contraseña nunca pasa por nuestros servidores. Google gestiona íntegramente la autenticación.</li>
+      <li><strong>Cookies de sesión seguras:</strong> las sesiones viajan solo por HTTPS (Secure), son inaccesibles desde JavaScript (HttpOnly) y están protegidas contra ataques CSRF (SameSite=Lax).</li>
+      <li><strong>Rate limiting por usuario:</strong> los intentos de inicio de sesión están limitados para bloquear ataques de fuerza bruta.</li>
+    </ul>
+  </div>
+
+  <!-- 3 -->
+  <div class="policy-section">
+    <h2>Seguridad de la aplicación</h2>
+    <ul>
+      <li><strong>Cabeceras de seguridad HTTP:</strong> Content Security Policy (CSP), X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, Cross-Origin-Opener-Policy y Strict-Transport-Security (HSTS con preload).</li>
+      <li><strong>Protección contra inyección SQL:</strong> todas las consultas a la base de datos se realizan a través de un ORM con consultas parametrizadas. No se construyen consultas SQL con datos del usuario.</li>
+      <li><strong>Protección contra XSS:</strong> los datos introducidos por el usuario se sanean antes de procesarse. La CSP limita la ejecución de scripts no autorizados.</li>
+      <li><strong>Validación estricta de ficheros:</strong> los CSV se validan por extensión, tamaño (máx. 10 MB), contenido y formato antes de procesarse. Se detectan y rechazan intentos de inyección de fórmulas.</li>
+      <li><strong>CORS restringido:</strong> la API solo acepta peticiones desde los dominios oficiales de marianosevilla.com.</li>
+      <li><strong>Protección path traversal:</strong> los tokens de descarga de PDF son validados con una expresión regular estricta para evitar acceso a ficheros fuera del directorio permitido.</li>
+    </ul>
+  </div>
+
+  <!-- 4 -->
+  <div class="policy-section">
+    <h2>Infraestructura</h2>
+    <p>
+      La aplicación se despliega sobre <a href="https://railway.app" target="_blank" rel="noopener noreferrer">Railway</a>, una plataforma de infraestructura en la nube con aislamiento de contenedores y actualizaciones de seguridad automatizadas. Las variables de entorno sensibles (claves de API, secreto de sesión) nunca están en el código fuente y se gestionan como secretos de entorno cifrados.
+    </p>
+  </div>
+
+  <!-- 5 — REPORTE -->
+  <div class="report-box">
+    <h3>¿Has encontrado una vulnerabilidad?</h3>
+    <p>
+      Si descubres un problema de seguridad en este sitio, te pedimos que nos lo comuniques de forma responsable antes de hacerlo público. Apreciamos enormemente la colaboración de la comunidad para mantener el servicio seguro.
+    </p>
+    <p>
+      Escríbenos a <a href="mailto:colab.marianosevilla@gmail.com">colab.marianosevilla@gmail.com</a> con el asunto <strong>«Vulnerabilidad de seguridad»</strong> y una descripción del problema. Nos comprometemos a responder en un plazo máximo de 72 horas.
+    </p>
+  </div>
+
+</div>
+
+<footer>
+  <p class="footer-legal">
+    © 2026 Mariano Sevilla &nbsp;·&nbsp;
+    <a href="/seguridad">Seguridad</a> &nbsp;·&nbsp;
+    <a href="/privacidad">Política de privacidad</a> &nbsp;·&nbsp;
+    <a href="/terminos">Términos de servicio</a> &nbsp;·&nbsp;
+    <a href="/aviso-legal">Aviso legal</a>
+  </p>
+</footer>
+
+</body>
+</html>
