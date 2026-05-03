@@ -212,19 +212,19 @@ nav {
 
 /* ── EXCHANGES GRID ─────────────────────────── */
 .exchanges-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr);
+  display: grid; grid-template-columns: repeat(4, 1fr);
   gap: 1rem; margin-top: 2.5rem;
 }
 .exchange-card {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: 16px; padding: 2rem 1.5rem;
-  display: flex; flex-direction: column; align-items: center; gap: .75rem;
+  border-radius: 16px; padding: 1.25rem 1rem;
+  display: flex; flex-direction: column; align-items: center; gap: .6rem;
   text-align: center; transition: border-color .2s, transform .15s;
 }
 .exchange-card:not(.soon):hover { border-color: var(--border-hover); transform: translateY(-2px); }
 .exchange-card.soon { opacity: .45; }
 .exchange-img {
-  width: 64px; height: 64px; border-radius: 16px;
+  width: 52px; height: 52px; border-radius: 12px;
   object-fit: contain; background: var(--surface2);
 }
 .exchange-card-name { font-size: 1rem; font-weight: 600; color: var(--text); }
@@ -532,6 +532,10 @@ footer {
   .why-grid { grid-template-columns: 1fr; }
   .footer-top { grid-template-columns: 1fr; }
   .footer-links-grid { gap: 2rem; flex-wrap: wrap; }
+  .exchanges-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 540px) {
+  .exchanges-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 600px) {
   .nav-inner { padding: 0 1rem; }
