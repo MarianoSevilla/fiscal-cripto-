@@ -22,7 +22,6 @@ import tempfile
 import traceback
 import threading
 from datetime import datetime
-from threading import Lock
 from flask import Flask, request, jsonify, send_file, send_from_directory, redirect, url_for, render_template
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -132,34 +131,32 @@ with app.app_context():
 
 
 # ── PDF TOKEN STORE (Row-Level Security) ───────
-# Mapea token → (user_id, expira_en). El PDF solo lo puede descargar
-# el usuario que lo generó y caduca a los 5 minutos.
-_pdf_tokens: dict[str, tuple[int, float]] = {}
-_pdf_lock = Lock()
-_PDF_TTL  = 300  # segundos
+# El token se guarda en la sesión Flask (cookie firmada), que viaja con el
+# usuario independientemente del worker de Gunicorn que atienda la petición.
+# Esto evita el problema de dicts en memoria que no se comparten entre workers.
+_PDF_TTL = 300  # segundos
 
 def _guardar_token_pdf(token: str) -> None:
-    with _pdf_lock:
-        ahora = time.time()
-        # limpiar tokens expirados aprovechando el paso
-        expirados = [k for k, (_, exp) in _pdf_tokens.items() if exp < ahora]
-        for k in expirados:
-            del _pdf_tokens[k]
-        _pdf_tokens[token] = (current_user.id, ahora + _PDF_TTL)
+    """Guarda el token en la sesión del usuario con su TTL."""
+    from flask import session
+    session["pdf_token"]     = token
+    session["pdf_token_uid"] = current_user.id
+    session["pdf_token_exp"] = time.time() + _PDF_TTL
 
 def _consumir_token_pdf(token: str) -> bool:
-    """Valida propiedad y elimina el token (uso único)."""
-    with _pdf_lock:
-        entry = _pdf_tokens.get(token)
-        if not entry:
-            return False
-        uid, exp = entry
-        del _pdf_tokens[token]
-        if time.time() > exp:
-            return False
-        if uid != current_user.id:
-            return False
-        return True
+    """Valida propiedad y elimina el token de la sesión (uso único)."""
+    from flask import session
+    if session.get("pdf_token") != token:
+        return False
+    if session.get("pdf_token_uid") != current_user.id:
+        return False
+    if time.time() > session.get("pdf_token_exp", 0):
+        return False
+    # Consumir (uso único)
+    session.pop("pdf_token",     None)
+    session.pop("pdf_token_uid", None)
+    session.pop("pdf_token_exp", None)
+    return True
 
 
 # ── DATOS SEO POR EXCHANGE ─────────────────────
