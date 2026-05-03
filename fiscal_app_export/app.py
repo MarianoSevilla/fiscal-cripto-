@@ -27,6 +27,7 @@ from flask import Flask, request, jsonify, send_file, send_from_directory, redir
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_cors import CORS
+from flask_compress import Compress
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from authlib.integrations.flask_client import OAuth
 from models import db, bcrypt, User
@@ -47,6 +48,8 @@ app = Flask(__name__, static_folder="static")
 # Proxy fix: necesario para que url_for() genere https:// en producción detrás de nginx
 from werkzeug.middleware.proxy_fix import ProxyFix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
+Compress(app)
 
 
 # ── CONFIGURACIÓN ─────────────────────────────
@@ -333,6 +336,13 @@ limiter = Limiter(
     # En producción con múltiples workers usar REDIS_URL para compartir contadores
     storage_uri=os.environ.get("REDIS_URL", "memory://"),
 )
+
+
+# ── WWW REDIRECT ──────────────────────────────
+@app.before_request
+def redirect_www():
+    if request.host.startswith("www."):
+        return redirect(request.url.replace("://www.", "://", 1), 301)
 
 
 # ── SECURITY HEADERS ──────────────────────────

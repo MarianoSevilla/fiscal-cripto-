@@ -4,6 +4,7 @@ flask-sqlalchemy
 flask-bcrypt
 flask-limiter
 flask-cors
+flask-compress
 authlib
 requests
 psycopg2-binary
