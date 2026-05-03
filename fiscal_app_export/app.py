@@ -679,6 +679,11 @@ def privacidad():
     return send_from_directory("static", "privacidad.html")
 
 
+@app.route("/terminos", strict_slashes=False)
+def terminos():
+    return send_from_directory("static", "terminos.html")
+
+
 @app.route("/dashboard", strict_slashes=False)
 def dashboard():
     """Dashboard principal: selector de exchange. Requiere autenticación (gestionada en JS)."""
