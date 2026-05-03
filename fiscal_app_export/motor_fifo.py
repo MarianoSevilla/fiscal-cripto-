@@ -89,11 +89,13 @@ class MotorFIFO:
         # pero el coste total es el mismo → precio unitario real más alto
         cantidad_neta = cantidad  # la fee ya está descontada por Binance en el Cambio
 
-        if importe <= 0 or cantidad_neta <= 0:
+        if importe < 0 or cantidad_neta <= 0:
             self.advertencias.append(f"{fecha} | COMPRA {activo} — importe o cantidad inválidos")
             return
 
-        precio_unitario = importe / cantidad_neta
+        # importe == 0 es válido (ej. dust conversions, airdrops sin valor declarado)
+        # → el lote entra al inventario con coste base cero
+        precio_unitario = importe / cantidad_neta if cantidad_neta > 0 else 0.0
 
         lote = Lote(
             fecha=dt,
@@ -110,15 +112,11 @@ class MotorFIFO:
     def registrar_swap(self, fecha: str,
                         activo_entregado: str, cantidad_entregada: float,
                         activo_recibido: str, cantidad_recibida: float,
-                        nota: str = "",
-                        precio_fmv_eur: float = 0.0):
+                        nota: str = ""):
         """
         Un swap es fiscalmente una venta del activo entregado
-        y una compra inmediata del activo recibido (permuta, art. 37 LIRPF).
-
-        Precio de transmisión (por orden de preferencia):
-          1. FMV en EUR del activo recibido en el momento del swap (AEAT-correcto).
-          2. Coste FIFO del activo entregado (fallback sin precios de mercado).
+        y una compra inmediata del activo recibido.
+        El precio de transmisión es el valor del activo recibido.
         """
         dt = self._parsear_fecha(fecha)
 
@@ -129,12 +127,8 @@ class MotorFIFO:
             )
             return
 
-        # 1) Precio de transmisión: FMV si está disponible, coste FIFO como fallback
-        if precio_fmv_eur > 0:
-            precio_transmision = precio_fmv_eur
-        else:
-            coste_eur_entregado = self._calcular_coste_previo(activo_entregado, cantidad_entregada)
-            precio_transmision  = coste_eur_entregado if coste_eur_entregado > 0 else cantidad_recibida
+        # 1) Procesar como venta del activo entregado
+        precio_transmision = cantidad_recibida  # valor recibido en la contraparte
 
         resultado = self._consumir_fifo(
             dt=dt,
@@ -147,9 +141,9 @@ class MotorFIFO:
         if resultado:
             self.resultados.append(resultado)
 
-        # 2) Registrar el activo recibido con el coste EUR del activo entregado
+        # 2) Registrar el activo recibido como nueva compra al valor de mercado
         if cantidad_recibida > 0:
-            precio_unitario_recibido = precio_transmision / cantidad_recibida
+            precio_unitario_recibido = precio_transmision / cantidad_recibida if cantidad_recibida > 0 else 0
             lote = Lote(
                 fecha=dt,
                 cantidad_original=cantidad_recibida,
@@ -184,19 +178,6 @@ class MotorFIFO:
             self.resultados.append(resultado)
 
     # ── MOTOR FIFO INTERNO ────────────────────
-
-    def _calcular_coste_previo(self, activo: str, cantidad: float) -> float:
-        """Calcula el coste EUR de una cantidad de activo según FIFO sin consumir lotes."""
-        cola = self.inventario.get(activo, [])
-        pendiente = cantidad
-        coste = 0.0
-        for lote in cola:
-            if pendiente <= 0:
-                break
-            consumir = min(lote.cantidad_restante, pendiente)
-            coste += consumir * lote.precio_coste_unitario
-            pendiente -= consumir
-        return coste
 
     def _consumir_fifo(self, dt: datetime, activo: str, cantidad: float,
                         precio_transmision: float, tipo: str,

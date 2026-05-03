@@ -156,6 +156,20 @@ class ClasificadorNexo:
                 valor_eur=round(valor_eur, 6),
             ))
 
+            # Los tokens recibidos como rendimiento (intereses, cashback) entran
+            # al inventario FIFO como adquisición al valor de mercado en el momento
+            # del abono. Esto es necesario para que el motor pueda calcular
+            # correctamente el G/P cuando esos tokens se vendan o swapeen.
+            # El coste de adquisición = valor declarado como rendimiento.
+            if qty_in > 0 and input_cur not in STABLES_EUR:
+                contraparte = "USD" if input_cur not in STABLES_EUR else "EUR"
+                self.compraventas.append(OperacionCompraventa(
+                    fecha=fecha, tipo="COMPRA",
+                    activo=input_cur, cantidad=qty_in,
+                    contraparte=contraparte, importe=round(valor_eur, 6),
+                    fee_activo="", fee_cantidad=0.0,
+                ))
+
         # ── MOVIMIENTOS INTERNOS ──────────────────────────────────────────────
         elif tipo in TIPOS_MOVIMIENTO_INTERNO:
             self.movimientos.append(OperacionMovimiento(
