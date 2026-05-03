@@ -674,6 +674,11 @@ def fiscal():
     return render_template("tool.html", **_TOOL_GENERIC)
 
 
+@app.route("/privacidad", strict_slashes=False)
+def privacidad():
+    return send_from_directory("static", "privacidad.html")
+
+
 @app.route("/dashboard", strict_slashes=False)
 def dashboard():
     """Dashboard principal: selector de exchange. Requiere autenticación (gestionada en JS)."""

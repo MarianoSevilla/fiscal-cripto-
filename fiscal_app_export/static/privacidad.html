@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Política de Privacidad | Mariano Sevilla</title>
+<meta name="description" content="Política de privacidad de la herramienta fiscal para criptomonedas de Mariano Sevilla. Información sobre el tratamiento de datos personales conforme al RGPD.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://marianosevilla.com/privacidad">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --black:       #0a0a0a;
+  --surface:     #111111;
+  --surface2:    #1a1a1a;
+  --surface3:    #222222;
+  --border:      rgba(255,255,255,0.07);
+  --border-soft: rgba(255,255,255,0.04);
+  --text:        #f0ede6;
+  --muted:       #888580;
+  --muted2:      #5a5754;
+  --accent:      #00C896;
+  --font-d: 'Syne', sans-serif;
+  --font-b: 'DM Sans', sans-serif;
+  --max: 1080px;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--black); color: var(--text);
+  font-family: var(--font-b); font-size: 16px; line-height: 1.7;
+  min-height: 100vh; -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  border-bottom: 1px solid var(--border);
+  background: rgba(10,10,10,0.88); backdrop-filter: blur(14px);
+}
+.nav-inner {
+  max-width: var(--max); margin: 0 auto; padding: 0 2rem;
+  height: 64px; display: flex; align-items: center; justify-content: space-between;
+}
+.nav-logo {
+  font-family: var(--font-d); font-weight: 800; font-size: 0.95rem;
+  letter-spacing: -0.02em; color: var(--text);
+}
+.nav-logo span { color: var(--accent); }
+.nav-back {
+  font-size: 14px; color: var(--muted);
+  transition: color .15s;
+}
+.nav-back:hover { color: var(--text); text-decoration: none; }
+
+/* ── CONTENIDO ── */
+.page-wrap {
+  max-width: 720px; margin: 0 auto;
+  padding: 7rem 2rem 5rem;
+}
+
+.page-kicker {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--accent);
+  margin-bottom: 1rem; display: block;
+}
+
+.page-wrap h1 {
+  font-family: var(--font-d); font-size: clamp(1.8rem, 4vw, 2.4rem);
+  font-weight: 800; line-height: 1.2; margin-bottom: 0.5rem;
+}
+
+.page-meta {
+  font-size: 13px; color: var(--muted);
+  margin-bottom: 3rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── SECCIONES ── */
+.policy-section {
+  margin-bottom: 2.5rem;
+}
+.policy-section h2 {
+  font-family: var(--font-d); font-size: 1.1rem; font-weight: 700;
+  color: var(--text); margin-bottom: 0.75rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+.policy-section p {
+  color: var(--muted); font-size: 15px; margin-bottom: 0.75rem;
+}
+.policy-section p:last-child { margin-bottom: 0; }
+.policy-section ul {
+  list-style: none; padding: 0;
+  display: flex; flex-direction: column; gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+.policy-section ul li {
+  font-size: 15px; color: var(--muted);
+  padding-left: 1.2rem; position: relative;
+}
+.policy-section ul li::before {
+  content: "·"; position: absolute; left: 0;
+  color: var(--accent); font-weight: 700;
+}
+
+/* ── TABLA DE DATOS ── */
+.data-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 14px; margin: 0.75rem 0 1rem;
+}
+.data-table th {
+  background: var(--surface2); color: var(--text);
+  font-family: var(--font-d); font-weight: 700; font-size: 12px;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  padding: 10px 12px; text-align: left;
+  border: 1px solid var(--border);
+}
+.data-table td {
+  padding: 9px 12px; color: var(--muted);
+  border: 1px solid var(--border);
+  vertical-align: top;
+}
+.data-table tr:nth-child(even) td { background: var(--surface); }
+
+/* ── AVISO ── */
+.notice {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px; padding: 1rem 1.2rem;
+  font-size: 14px; color: var(--muted);
+  margin: 0.75rem 0;
+}
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 2rem;
+  text-align: center;
+}
+.footer-legal {
+  font-size: 12px; color: var(--muted2); line-height: 1.6;
+}
+.footer-legal a { color: var(--muted); }
+.footer-legal a:hover { color: var(--text); text-decoration: underline; }
+
+@media (max-width: 640px) {
+  .page-wrap { padding: 6rem 1.25rem 3rem; }
+  .data-table { font-size: 13px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">mariano<span>sevilla</span>.com</a>
+    <a href="/" class="nav-back">← Volver al inicio</a>
+  </div>
+</nav>
+
+<!-- ── CONTENIDO ── -->
+<div class="page-wrap">
+
+  <span class="page-kicker">Legal</span>
+  <h1>Política de Privacidad</h1>
+  <p class="page-meta">Última actualización: mayo de 2026 &nbsp;·&nbsp; Versión 1.0</p>
+
+  <!-- 1 -->
+  <div class="policy-section">
+    <h2>1. Responsable del tratamiento</h2>
+    <p>
+      El responsable del tratamiento de los datos personales recogidos a través de este sitio web es:
+    </p>
+    <ul>
+      <li><strong>Nombre:</strong> Mariano Sevilla Trujillo</li>
+      <li><strong>Localización:</strong> Valencia, España</li>
+      <li><strong>Contacto:</strong> <a href="mailto:colab.marianosevilla@gmail.com">colab.marianosevilla@gmail.com</a></li>
+      <li><strong>Sitio web:</strong> <a href="https://marianosevilla.com">marianosevilla.com</a></li>
+    </ul>
+  </div>
+
+  <!-- 2 -->
+  <div class="policy-section">
+    <h2>2. Qué datos recogemos y por qué</h2>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Dato</th>
+          <th>Finalidad</th>
+          <th>Base legal</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Dirección de email</td>
+          <td>Identificación y acceso a tu cuenta</td>
+          <td>Ejecución del contrato (art. 6.1.b RGPD)</td>
+        </tr>
+        <tr>
+          <td>Contraseña (hash bcrypt)</td>
+          <td>Autenticación segura. Nunca se guarda en texto plano</td>
+          <td>Ejecución del contrato (art. 6.1.b RGPD)</td>
+        </tr>
+        <tr>
+          <td>Google ID (solo si usas «Continuar con Google»)</td>
+          <td>Autenticación mediante Google OAuth 2.0</td>
+          <td>Ejecución del contrato (art. 6.1.b RGPD)</td>
+        </tr>
+        <tr>
+          <td>Fecha del último inicio de sesión</td>
+          <td>Seguridad y detección de accesos no autorizados</td>
+          <td>Interés legítimo (art. 6.1.f RGPD)</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="notice">
+      <strong>Tus ficheros CSV y los informes PDF no se almacenan.</strong> El CSV con tu historial de operaciones se procesa exclusivamente en memoria del servidor y se elimina de forma inmediata. El PDF generado se borra en cuanto lo descargas. En ningún momento guardamos tus datos financieros.
+    </div>
+  </div>
+
+  <!-- 3 -->
+  <div class="policy-section">
+    <h2>3. Plazos de conservación</h2>
+    <p>
+      Los datos de tu cuenta (email, contraseña hasheada) se conservan mientras mantengas la cuenta activa. Si solicitas la eliminación de tu cuenta, los datos se borran de forma permanente en un plazo máximo de 30 días, salvo que una obligación legal exija conservarlos durante más tiempo.
+    </p>
+    <p>
+      Los registros de actividad (fecha de último acceso) se conservan un máximo de 12 meses con fines de seguridad.
+    </p>
+  </div>
+
+  <!-- 4 -->
+  <div class="policy-section">
+    <h2>4. Encargados del tratamiento</h2>
+    <p>
+      Para prestar el servicio contamos con los siguientes proveedores externos que actúan como encargados del tratamiento y con los que existen las garantías adecuadas conforme al artículo 46 del RGPD:
+    </p>
+    <ul>
+      <li>
+        <strong>Railway</strong> — Proveedor de infraestructura y alojamiento del servidor (EE. UU.).
+        Datos transferidos: email, contraseña hasheada, fecha de último acceso.
+        Garantías: cláusulas contractuales tipo (SCCs).
+      </li>
+      <li>
+        <strong>Google LLC</strong> — Proveedor de autenticación OAuth 2.0 (EE. UU.), únicamente si utilizas «Continuar con Google».
+        Datos transferidos: email y Google ID.
+        Garantías: cláusulas contractuales tipo (SCCs) y
+        <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">política de privacidad de Google</a>.
+      </li>
+    </ul>
+    <p>
+      No vendemos, cedemos ni compartimos tus datos con terceros con fines comerciales o publicitarios.
+    </p>
+  </div>
+
+  <!-- 5 -->
+  <div class="policy-section">
+    <h2>5. Transferencias internacionales</h2>
+    <p>
+      Railway y Google LLC están ubicados en Estados Unidos. Las transferencias de datos a estos proveedores se realizan con las garantías adecuadas previstas en el artículo 46 del RGPD, mediante cláusulas contractuales tipo adoptadas por la Comisión Europea.
+    </p>
+  </div>
+
+  <!-- 6 -->
+  <div class="policy-section">
+    <h2>6. Tus derechos</h2>
+    <p>
+      De acuerdo con el RGPD y la Ley Orgánica 3/2018 (LOPDGDD), tienes derecho a:
+    </p>
+    <ul>
+      <li><strong>Acceso:</strong> solicitar una copia de los datos personales que tratamos sobre ti.</li>
+      <li><strong>Rectificación:</strong> corregir datos inexactos o incompletos.</li>
+      <li><strong>Supresión:</strong> solicitar el borrado de tus datos («derecho al olvido»).</li>
+      <li><strong>Oposición:</strong> oponerte al tratamiento basado en interés legítimo.</li>
+      <li><strong>Portabilidad:</strong> recibir tus datos en formato estructurado y de uso común.</li>
+      <li><strong>Limitación:</strong> solicitar que se restrinja el tratamiento en determinadas circunstancias.</li>
+    </ul>
+    <p>
+      Para ejercer cualquiera de estos derechos, escríbenos a
+      <a href="mailto:colab.marianosevilla@gmail.com">colab.marianosevilla@gmail.com</a>
+      indicando el derecho que deseas ejercer y adjuntando una copia de tu documento de identidad.
+      Responderemos en el plazo máximo de un mes.
+    </p>
+    <p>
+      Si consideras que el tratamiento de tus datos no es conforme a la normativa, puedes presentar una reclamación ante la
+      <a href="https://www.aepd.es" target="_blank" rel="noopener noreferrer">Agencia Española de Protección de Datos (AEPD)</a>.
+    </p>
+  </div>
+
+  <!-- 7 -->
+  <div class="policy-section">
+    <h2>7. Cookies</h2>
+    <p>
+      Este sitio utiliza exclusivamente cookies técnicas estrictamente necesarias para el funcionamiento del servicio: una cookie de sesión que mantiene tu sesión iniciada mientras navegas. No se utilizan cookies de seguimiento, analítica ni publicidad.
+    </p>
+    <p>
+      Las cookies técnicas necesarias no requieren tu consentimiento según la normativa vigente (Directiva ePrivacy y LSSI).
+    </p>
+  </div>
+
+  <!-- 8 -->
+  <div class="policy-section">
+    <h2>8. Menores de edad</h2>
+    <p>
+      Este servicio no está dirigido a menores de 14 años. No recogemos conscientemente datos de menores. Si eres padre, madre o tutor y crees que tu hijo ha facilitado datos personales, contáctanos para eliminarlos.
+    </p>
+  </div>
+
+  <!-- 9 -->
+  <div class="policy-section">
+    <h2>9. Cambios en esta política</h2>
+    <p>
+      Podemos actualizar esta política de privacidad para reflejar cambios en el servicio o en la normativa aplicable. Cuando lo hagamos, actualizaremos la fecha de «Última actualización» que aparece al inicio del documento. Te recomendamos revisarla periódicamente.
+    </p>
+  </div>
+
+</div>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <p class="footer-legal">
+    © 2026 Mariano Sevilla &nbsp;·&nbsp;
+    <a href="/privacidad">Política de privacidad</a> &nbsp;·&nbsp;
+    <a href="mailto:colab.marianosevilla@gmail.com">colab.marianosevilla@gmail.com</a>
+  </p>
+</footer>
+
+</body>
+</html>
