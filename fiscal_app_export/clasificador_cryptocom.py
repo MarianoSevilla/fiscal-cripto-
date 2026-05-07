@@ -78,6 +78,7 @@ class ClasificadorCryptoCom:
     def __init__(self, filepath: str):
         self.df = pd.read_csv(filepath)
         self.compraventas: list[OperacionCompraventa] = []
+        self.swaps:        list                       = []
         self.rendimientos: list[OperacionRendimiento] = []
         self.movimientos:  list[OperacionMovimiento]  = []
         self.desconocidas: list[OperacionDesconocida] = []
