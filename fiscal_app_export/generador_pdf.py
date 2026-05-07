@@ -202,6 +202,220 @@ def _portada(story, styles, resumen, nombre_usuario, ejercicio, exchange, period
     story.append(t3)
 
 
+def _grafico_gp_activos(resultados, width_mm=168):
+    """
+    Gráfico de barras horizontal G/P neta por activo.
+    Devuelve un flowable Image de ReportLab o None si matplotlib no está disponible.
+    """
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        import matplotlib.ticker as mticker
+    except ImportError:
+        return None
+
+    from collections import defaultdict
+    por_activo = defaultdict(float)
+    for r in resultados:
+        por_activo[r.activo] += r.ganancia_perdida
+    if not por_activo:
+        return None
+
+    MAX_ACTIVOS = 20
+    todos = sorted(por_activo.items(), key=lambda x: abs(x[1]), reverse=True)
+    if len(todos) > MAX_ACTIVOS:
+        todos = todos[:MAX_ACTIVOS]
+
+    items   = sorted(todos, key=lambda x: x[1])
+    activos = [i[0] for i in items]
+    valores = [i[1] for i in items]
+    colores = ["#E24B4A" if v < 0 else "#00C896" for v in valores]
+
+    n        = len(activos)
+    fig_w_in = 7.2
+    fig_h_in = min(max(2.4, n * 0.44 + 0.7), 7.0)
+
+    fig, ax = plt.subplots(figsize=(fig_w_in, fig_h_in))
+    fig.patch.set_facecolor("#1A1A1A")
+    ax.set_facecolor("#111111")
+
+    bars = ax.barh(activos, valores, color=colores, height=0.60,
+                   edgecolor="none", zorder=3)
+    ax.axvline(0, color="#555555", linewidth=0.7, zorder=2)
+
+    max_abs = max(abs(v) for v in valores) if valores else 1.0
+    if max_abs == 0:
+        max_abs = 1.0
+    pad = max_abs * 0.025
+    for bar, val in zip(bars, valores):
+        x         = bar.get_width()
+        bar_ratio = abs(x) / max_abs
+        inside    = bar_ratio > 0.30
+        lbl       = f"+{val:,.2f} €" if val >= 0 else f"{val:,.2f} €"
+        if val >= 0:
+            ha   = "right" if inside else "left"
+            xpos = x - pad  if inside else x + pad
+            col  = "#111111" if inside else "#00C896"
+        else:
+            ha   = "left"  if inside else "right"
+            xpos = x + pad  if inside else x - pad
+            col  = "#F0EDE6" if inside else "#E24B4A"
+        ax.text(xpos, bar.get_y() + bar.get_height() / 2, lbl,
+                va="center", ha=ha, fontsize=6.5, color=col, fontweight="bold")
+
+    for spine in ax.spines.values():
+        spine.set_color("#2A2A2A")
+    ax.tick_params(colors="#888580", labelsize=7.5)
+    ax.xaxis.grid(True, color="#222222", linewidth=0.5, zorder=0)
+    ax.set_axisbelow(True)
+    ax.xaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"{x:,.0f}"))
+    ax.set_xlabel("EUR", fontsize=7, color="#888580", labelpad=4)
+
+    plt.tight_layout(pad=0.6)
+
+    img_buf = io.BytesIO()
+    plt.savefig(img_buf, format="png", dpi=150, bbox_inches="tight",
+                facecolor="#1A1A1A", edgecolor="none")
+    plt.close(fig)
+    img_buf.seek(0)
+
+    from reportlab.platypus import Image as RLImage
+    pdf_w = width_mm * mm
+    pdf_h = pdf_w * (fig_h_in / fig_w_in)
+    return RLImage(img_buf, width=pdf_w, height=pdf_h)
+
+
+def _bloque_compensaciones(ganancias, perdidas, neto, rendimientos_list, styles):
+    """Bloque de compensaciones fiscales (art. 49 LIRPF). Devuelve lista de flowables."""
+    flowables = []
+    rcm_total = sum(getattr(r, "valor_eur", 0.0) for r in rendimientos_list) if rendimientos_list else 0.0
+
+    flowables.append(Spacer(1, 5*mm))
+    flowables.append(Paragraph("Compensaciones Fiscales Aplicables", styles["section"]))
+    flowables.append(Paragraph(
+        "Integración y compensación de rentas del ahorro según art. 49 LIRPF.",
+        styles["body_muted"]
+    ))
+    flowables.append(Spacer(1, 3*mm))
+
+    rows = [
+        [Paragraph("BASE DEL AHORRO — Integración y compensación (art. 49 LIRPF)", styles["th"]),
+         Paragraph("IMPORTE (EUR)", styles["th_right"])],
+        [Paragraph("Suma de ganancias patrimoniales (transmisiones)", styles["resumen_label"]),
+         Paragraph(f"+{ganancias:,.2f}", styles["resumen_value_green"])],
+        [Paragraph("Suma de pérdidas patrimoniales (transmisiones)", styles["resumen_label"]),
+         Paragraph(f"{perdidas:,.2f}", styles["resumen_value_red"])],
+        [Paragraph("SALDO NETO DE TRANSMISIONES", styles["subsection"]),
+         Paragraph(f"{neto:+,.2f}",
+                   styles["resumen_value_green"] if neto >= 0 else styles["resumen_value_red"])],
+    ]
+
+    if rcm_total > 0:
+        rows.append([
+            Paragraph("Rendimientos de capital mobiliario (staking / rewards)", styles["resumen_label"]),
+            Paragraph(f"+{rcm_total:,.2f}", styles["resumen_value_green"])
+        ])
+
+    if neto < 0:
+        if rcm_total > 0:
+            limite_25 = rcm_total * 0.25
+            comp_rcm  = min(abs(neto), limite_25)
+            pendiente = abs(neto) - comp_rcm
+            rows.append([
+                Paragraph(
+                    f"Compensación aplicable con RCM (límite 25% del RCM = {limite_25:,.2f} EUR)",
+                    styles["resumen_label"]),
+                Paragraph(f"-{comp_rcm:,.2f}", styles["resumen_value_red"])
+            ])
+            if pendiente > 0.005:
+                rows.append([
+                    Paragraph(
+                        "Pérdida pendiente · compensable con ganancias de los 4 ejercicios siguientes",
+                        styles["resumen_label"]),
+                    Paragraph(f"-{pendiente:,.2f}", styles["resumen_value_red"])
+                ])
+        else:
+            rows.append([
+                Paragraph(
+                    "Pérdida patrimonial · compensable con ganancias de los 4 ejercicios siguientes (art. 49.1)",
+                    styles["resumen_label"]),
+                Paragraph(f"{neto:,.2f}", styles["resumen_value_red"])
+            ])
+    else:
+        rows.append([
+            Paragraph("Sin pérdidas pendientes de compensar en ejercicios futuros", styles["resumen_label"]),
+            Paragraph("—", styles["resumen_value"])
+        ])
+
+    highlight_row = 3
+    t = Table(rows, colWidths=[128*mm, 40*mm])
+    t.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, 0),                SURFACE),
+        ("LINEBELOW",     (0, 0), (-1, 0),                1, GREEN),
+        ("BACKGROUND",    (0, 1), (-1, highlight_row-1),  BLACK),
+        ("BACKGROUND",    (0, highlight_row), (-1, highlight_row), SURFACE2),
+        ("LINEABOVE",     (0, highlight_row), (-1, highlight_row), 0.5, BORDER),
+        ("BACKGROUND",    (0, highlight_row+1), (-1, -1), BLACK),
+        ("GRID",          (0, 0), (-1, -1),               0.3, BORDER),
+        ("VALIGN",        (0, 0), (-1, -1),               "MIDDLE"),
+        ("TOPPADDING",    (0, 0), (-1, -1),               6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1),               6),
+        ("LEFTPADDING",   (0, 0), (-1, -1),               8),
+        ("RIGHTPADDING",  (0, 0), (-1, -1),               8),
+    ]))
+    flowables.append(t)
+    return flowables
+
+
+def _bloque_modelo_721(posiciones, styles):
+    """Alerta Modelo 721. Devuelve lista de flowables."""
+    coste_total = sum(p.coste_total for p in posiciones) if posiciones else 0.0
+
+    if coste_total >= 50_000:
+        bg      = colors.HexColor("#180800")
+        border  = colors.HexColor("#FF6B2B")
+        t_color = colors.HexColor("#FF8C4B")
+        b_color = colors.HexColor("#C8966A")
+        titulo  = "⚠  MODELO 721 — POSIBLEMENTE OBLIGATORIO"
+        texto   = (
+            f"El coste de adquisición FIFO de los activos en cartera asciende a {coste_total:,.2f} EUR. "
+            "Si el valor de mercado a 31 de diciembre supera 50.000 EUR en exchanges extranjeros "
+            "(como Binance o Kraken), deberás presentar el Modelo 721 antes del 31 de marzo "
+            "del ejercicio siguiente. Consulta con tu asesor fiscal."
+        )
+    else:
+        bg      = colors.HexColor("#091400")
+        border  = colors.HexColor("#00C896")
+        t_color = colors.HexColor("#00C896")
+        b_color = colors.HexColor("#5A9070")
+        titulo  = "✓  MODELO 721 — EN PRINCIPIO NO OBLIGATORIO"
+        texto   = (
+            f"El coste de adquisición FIFO de los activos en cartera es de {coste_total:,.2f} EUR, "
+            "por debajo del umbral de 50.000 EUR. Verifica igualmente el valor de mercado "
+            "a 31 de diciembre para confirmar que no supera dicho umbral antes de descartar "
+            "la presentación del Modelo 721."
+        )
+
+    t_style = ParagraphStyle("m721t", fontName="Helvetica-Bold", fontSize=8.5,
+                              textColor=t_color, leading=13)
+    b_style = ParagraphStyle("m721b", fontName="Helvetica",      fontSize=7.5,
+                              textColor=b_color, leading=11.5)
+
+    data = [[Paragraph(titulo, t_style), Paragraph(texto, b_style)]]
+    t = Table(data, colWidths=[70*mm, 98*mm])
+    t.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, -1), bg),
+        ("BOX",           (0, 0), (-1, -1), 0.8, border),
+        ("VALIGN",        (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING",    (0, 0), (-1, -1), 8),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
+    ]))
+    return [Spacer(1, 4*mm), t]
+
+
 def _tabla_resumen_activos(resultados, styles):
     from collections import defaultdict
     por_activo = defaultdict(lambda: {"ops": 0, "ganancias": 0.0, "perdidas": 0.0})
@@ -213,7 +427,13 @@ def _tabla_resumen_activos(resultados, styles):
         else:
             por_activo[r.activo]["perdidas"] += gp
 
-    cabecera = [Paragraph(h, styles["th"]) for h in ["ACTIVO", "Nº OPS", "GANANCIAS (EUR)", "PERDIDAS (EUR)", "NETO (EUR)"]]
+    cabecera = [
+        Paragraph("ACTIVO",          styles["th"]),
+        Paragraph("Nº OPS",          styles["th_right"]),
+        Paragraph("GANANCIAS (EUR)", styles["th_right"]),
+        Paragraph("PERDIDAS (EUR)",  styles["th_right"]),
+        Paragraph("NETO (EUR)",      styles["th_right"]),
+    ]
     rows = [cabecera]
     for activo, datos in sorted(por_activo.items()):
         neto = datos["ganancias"] + datos["perdidas"]
@@ -243,8 +463,16 @@ def _tabla_resumen_activos(resultados, styles):
 
 
 def _tabla_operaciones(resultados, styles):
-    cabecera = [Paragraph(h, styles["th"]) for h in
-                ["FECHA", "TIPO", "ACTIVO", "CANTIDAD", "PRECIO TRANSMISION", "COSTE FIFO", "G / P (EUR)", "DIAS"]]
+    cabecera = [
+        Paragraph("FECHA",              styles["th"]),
+        Paragraph("TIPO",               styles["th"]),
+        Paragraph("ACTIVO",             styles["th"]),
+        Paragraph("CANTIDAD",           styles["th_right"]),
+        Paragraph("PRECIO TRANSMISION", styles["th_right"]),
+        Paragraph("COSTE FIFO",         styles["th_right"]),
+        Paragraph("G / P (EUR)",        styles["th_right"]),
+        Paragraph("DIAS",               styles["th_right"]),
+    ]
     rows = [cabecera]
     for r in resultados:
         gp = r.ganancia_perdida
@@ -278,8 +506,12 @@ def _tabla_operaciones(resultados, styles):
 
 
 def _tabla_posicion(posiciones, styles):
-    cabecera = [Paragraph(h, styles["th"]) for h in
-                ["ACTIVO", "CANTIDAD EN CARTERA", "PRECIO MEDIO ADQUISICION", "COSTE TOTAL"]]
+    cabecera = [
+        Paragraph("ACTIVO",                   styles["th"]),
+        Paragraph("CANTIDAD EN CARTERA",      styles["th_right"]),
+        Paragraph("PRECIO MEDIO ADQUISICION", styles["th_right"]),
+        Paragraph("COSTE TOTAL",              styles["th_right"]),
+    ]
     rows = [cabecera]
     for pos in posiciones:
         rows.append([
@@ -317,8 +549,12 @@ def _tabla_rendimientos(rendimientos: list, styles) -> object:
         agrupado[key]["ops"] += 1
         agrupado[key]["subtipo"] = r.subtipo
 
-    cabecera = [Paragraph(h, styles["th"]) for h in
-                ["ACTIVO", "TIPO", "Nº ABONOS", "CANTIDAD TOTAL"]]
+    cabecera = [
+        Paragraph("ACTIVO",         styles["th"]),
+        Paragraph("TIPO",           styles["th"]),
+        Paragraph("Nº ABONOS",      styles["th_right"]),
+        Paragraph("CANTIDAD TOTAL", styles["th_right"]),
+    ]
     rows = [cabecera]
     for (activo, subtipo), datos in sorted(agrupado.items()):
         rows.append([
@@ -364,15 +600,27 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
     # 1. PORTADA
     _portada(story, styles, resumen, nombre_usuario, ejercicio, exchange)
 
-    # 2. RESUMEN POR ACTIVO
+    # 2. COMPENSACIONES + MODELO 721
+    for fl in _bloque_compensaciones(
+            resumen["ganancias_brutas"], resumen["perdidas_brutas"],
+            resumen["resultado_neto"], rendimientos, styles):
+        story.append(fl)
+    for fl in _bloque_modelo_721(posiciones, styles):
+        story.append(fl)
+
+    # 3. RESUMEN POR ACTIVO + GRÁFICO
     if motor.resultados:
         story.append(PageBreak())
         story.append(Paragraph("Resumen de Ganancias y Pérdidas por Activo", styles["section"]))
         story.append(Paragraph("Resultado agregado por criptoactivo para el período analizado.", styles["body_muted"]))
         story.append(Spacer(1, 3*mm))
+        grafico = _grafico_gp_activos(motor.resultados)
+        if grafico:
+            story.append(grafico)
+            story.append(Spacer(1, 4*mm))
         story.append(_tabla_resumen_activos(motor.resultados, styles))
 
-    # 3. DETALLE OPERACIONES
+    # 4. DETALLE OPERACIONES
     if motor.resultados:
         story.append(PageBreak())
         story.append(Paragraph("Extracto de Operaciones con Resultado Fiscal", styles["section"]))
@@ -386,7 +634,7 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
         story.append(Spacer(1, 3*mm))
         story.append(_tabla_operaciones(motor.resultados, styles))
 
-    # 4. POSICION ACTUAL
+    # 5. POSICION ACTUAL
     if posiciones:
         story.append(PageBreak())
         story.append(Paragraph("Visión General de Valores en Cartera", styles["section"]))
@@ -398,7 +646,7 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
         story.append(Spacer(1, 3*mm))
         story.append(_tabla_posicion(posiciones, styles))
 
-    # 5. RENDIMIENTOS (staking, rebates, etc.)
+    # 6. RENDIMIENTOS (staking, rebates, etc.)
     if rendimientos:
         story.append(Spacer(1, 8*mm))
         story.append(Paragraph("Rendimientos de Capital Mobiliario", styles["section"]))
@@ -411,7 +659,7 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
         story.append(Spacer(1, 3*mm))
         story.append(_tabla_rendimientos(rendimientos, styles))
 
-    # 6. ADVERTENCIAS
+    # 7. ADVERTENCIAS
     if motor.advertencias:
         story.append(Spacer(1, 8*mm))
         story.append(KeepTogether([
@@ -432,7 +680,7 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
         ]))
         story.append(t_warn)
 
-    # 6. NOTAS EXPLICATIVAS
+    # 8. NOTAS EXPLICATIVAS
     story.append(PageBreak())
     story.append(Paragraph("Notas Explicativas", styles["section"]))
 
@@ -528,8 +776,15 @@ def generar_pdf_bit2me(clasificador, nombre_usuario="", ejercicio="") -> bytes:
         ))
         story.append(Spacer(1, 3*mm))
 
-        cabecera = [Paragraph(h, styles["th"]) for h in
-                    ["FECHA", "TIPO", "ACTIVO", "CANTIDAD", "PRECIO TRANSMISIÓN", "COSTE ADQUISICIÓN", "G / P (EUR)"]]
+        cabecera = [
+            Paragraph("FECHA",              styles["th"]),
+            Paragraph("TIPO",               styles["th"]),
+            Paragraph("ACTIVO",             styles["th"]),
+            Paragraph("CANTIDAD",           styles["th_right"]),
+            Paragraph("PRECIO TRANSMISIÓN", styles["th_right"]),
+            Paragraph("COSTE ADQUISICIÓN",  styles["th_right"]),
+            Paragraph("G / P (EUR)",        styles["th_right"]),
+        ]
         rows = [cabecera]
         for r in clasificador.resultados:
             gp = r.ganancia_perdida
