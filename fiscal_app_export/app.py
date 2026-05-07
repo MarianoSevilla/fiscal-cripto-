@@ -39,6 +39,7 @@ from clasificador_bitvavo import ClasificadorBitvavo
 from clasificador_kraken import ClasificadorKraken
 from clasificador_coinbase import ClasificadorCoinbase
 from clasificador_nexo import ClasificadorNexo
+from clasificador_cryptocom import ClasificadorCryptoCom
 from motor_fifo import MotorFIFO
 from generador_pdf import generar_pdf, generar_pdf_bit2me
 
@@ -299,6 +300,24 @@ EXCHANGE_PAGES = {
             _HOW_TO_STEP2, _HOW_TO_STEP3,
         ],
     },
+    "cryptocom": {
+        "exchange_id":      "cryptocom",
+        "exchange_name":    "Crypto.com",
+        "exchange_logo":    "C.C",
+        "page_title":       "Informe FIFO Crypto.com para Hacienda | Mariano Sevilla",
+        "page_meta_desc":   "Sube el CSV de Crypto.com y calcula tus ganancias, pérdidas e intereses con FIFO obligatorio. Informe PDF listo para la declaración de la renta en España.",
+        "page_canonical":   f"{_BASE_URL}/cryptocom",
+        "page_og_title":    "Informe fiscal Crypto.com para Hacienda — FIFO automático | Mariano Sevilla",
+        "page_og_desc":     "Sube el CSV de Crypto.com y calcula las plusvalías e intereses crypto con FIFO. Informe PDF para tu gestor.",
+        "page_schema_name": "Informe FIFO Crypto.com — Mariano Sevilla",
+        "page_h1":          "Genera tu informe fiscal de Crypto.com para Hacienda",
+        "hero_desc":        "Sube el CSV del historial de transacciones de Crypto.com App y obtén el informe FIFO con tus ganancias y pérdidas patrimoniales. Los intereses de Crypto Earn tributan como rendimientos del capital mobiliario (casilla 0033). Listo para la declaración de la renta.",
+        "how_to": [
+            {"title": "Exporta el CSV de transacciones desde Crypto.com",
+             "desc":  "En la app de Crypto.com ve a Cuenta → Declaración de activos → Historial de transacciones. Selecciona el rango de fechas completo desde tu primera operación hasta hoy y descarga el fichero CSV (crypto_transactions_record_*.csv)."},
+            _HOW_TO_STEP2, _HOW_TO_STEP3,
+        ],
+    },
 }
 
 
@@ -397,12 +416,13 @@ MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
 AÑO_MIN = 2009
 AÑO_MAX = datetime.now().year + 1
 
-BINANCE_SIGNATURES  = ["Tiempo", "Operación", "Moneda", "Cambio", "Cuenta"]
-BIT2ME_SIGNATURES   = ["Bit", "2Me", "Informe Fiscal", "Estimado"]
-BITVAVO_SIGNATURES  = ["Timezone", "Date", "Time", "Type", "Currency", "Amount"]
-KRAKEN_SIGNATURES   = ["txid", "refid", "time", "type", "asset", "amount", "fee"]
-COINBASE_SIGNATURES = ["Timestamp", "Transaction Type", "Quantity Transacted"]
-NEXO_SIGNATURES     = ["Transaction", "Type", "Input Currency", "Output Currency"]
+BINANCE_SIGNATURES   = ["Tiempo", "Operación", "Moneda", "Cambio", "Cuenta"]
+BIT2ME_SIGNATURES    = ["Bit", "2Me", "Informe Fiscal", "Estimado"]
+BITVAVO_SIGNATURES   = ["Timezone", "Date", "Time", "Type", "Currency", "Amount"]
+KRAKEN_SIGNATURES    = ["txid", "refid", "time", "type", "asset", "amount", "fee"]
+COINBASE_SIGNATURES  = ["Timestamp", "Transaction Type", "Quantity Transacted"]
+NEXO_SIGNATURES      = ["Transaction", "Type", "Input Currency", "Output Currency"]
+CRYPTOCOM_SIGNATURES = ["Timestamp (UTC)", "Transaction Description", "Transaction Kind"]
 
 
 def _sanitizar_texto(texto: str, max_len: int = 100) -> str:
@@ -448,20 +468,22 @@ def _validar_csv(filepath: str, exchange: str) -> tuple[bool, str]:
 
     # Validar exchange
     sigs = {
-        "binance":  BINANCE_SIGNATURES,
-        "bit2me":   BIT2ME_SIGNATURES,
-        "bitvavo":  BITVAVO_SIGNATURES,
-        "kraken":   KRAKEN_SIGNATURES,
-        "coinbase": COINBASE_SIGNATURES,
-        "nexo":     NEXO_SIGNATURES,
+        "binance":   BINANCE_SIGNATURES,
+        "bit2me":    BIT2ME_SIGNATURES,
+        "bitvavo":   BITVAVO_SIGNATURES,
+        "kraken":    KRAKEN_SIGNATURES,
+        "coinbase":  COINBASE_SIGNATURES,
+        "nexo":      NEXO_SIGNATURES,
+        "cryptocom": CRYPTOCOM_SIGNATURES,
     }
     nombres = {
-        "binance":  "Binance",
-        "bit2me":   "Bit2Me",
-        "bitvavo":  "Bitvavo",
-        "kraken":   "Kraken",
-        "coinbase": "Coinbase",
-        "nexo":     "Nexo",
+        "binance":   "Binance",
+        "bit2me":    "Bit2Me",
+        "bitvavo":   "Bitvavo",
+        "kraken":    "Kraken",
+        "coinbase":  "Coinbase",
+        "nexo":      "Nexo",
+        "cryptocom": "Crypto.com",
     }
     if exchange in sigs:
         if not any(sig in primeras for sig in sigs[exchange]):
@@ -550,6 +572,10 @@ def procesar_coinbase(filepath: str) -> tuple:
 
 def procesar_nexo(filepath: str) -> tuple:
     return procesar_con_fifo(ClasificadorNexo(filepath).clasificar())
+
+
+def procesar_cryptocom(filepath: str) -> tuple:
+    return procesar_con_fifo(ClasificadorCryptoCom(filepath).clasificar())
 
 
 def procesar_bit2me(filepath: str) -> tuple:
@@ -812,6 +838,12 @@ def page_nexo():
     return render_template("tool.html", **EXCHANGE_PAGES["nexo"])
 
 
+@app.route("/cryptocom")
+@login_required
+def page_cryptocom():
+    return render_template("tool.html", **EXCHANGE_PAGES["cryptocom"])
+
+
 @app.route("/api/analizar", methods=["POST"])
 @login_required
 @limiter.limit("1 per 10 minutes", exempt_when=_is_admin)
@@ -825,7 +857,7 @@ def analizar():
     exchange  = _sanitizar_texto(request.form.get("exchange", "binance"), max_len=20).lower()
 
     # Validar exchange
-    if exchange not in ("binance", "bit2me", "bitvavo", "kraken", "coinbase", "nexo"):
+    if exchange not in ("binance", "bit2me", "bitvavo", "kraken", "coinbase", "nexo", "cryptocom"):
         return jsonify({"error": "Exchange no soportado."}), 400
 
     # Validar ejercicio fiscal
@@ -883,6 +915,13 @@ def analizar():
             advertencias = motor.advertencias
             rendimientos_json = _rendimientos_a_json(rendimientos)
             pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Nexo", rendimientos)
+
+        elif exchange == "cryptocom":
+            motor, rendimientos = procesar_cryptocom(tmp_path)
+            resumen, posicion, operaciones = _motor_a_json(motor)
+            advertencias = motor.advertencias
+            rendimientos_json = _rendimientos_a_json(rendimientos)
+            pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Crypto.com", rendimientos)
 
         else:  # binance
             motor, rendimientos = procesar_binance(tmp_path)
