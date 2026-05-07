@@ -1265,6 +1265,21 @@ def change_password():
     return jsonify({"message": "Contraseña actualizada correctamente."})
 
 
+@app.route("/api/delete-account", methods=["POST"])
+@login_required
+def delete_account():
+    """Anonimiza la cuenta: borra PII pero mantiene la fila para estadísticas."""
+    uid = current_user.id
+    current_user.email             = f"deleted_{uid}@deleted"
+    current_user.password_hash     = None
+    current_user.google_id         = None
+    current_user.is_active         = False
+    current_user.email_verified_at = None
+    db.session.commit()
+    logout_user()
+    return jsonify({"message": "Cuenta eliminada correctamente."})
+
+
 @app.errorhandler(429)
 def ratelimit_error(e):
     return jsonify({

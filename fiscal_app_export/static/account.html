@@ -364,10 +364,18 @@ document.getElementById('pwBtn').addEventListener('click', async () => {
 });
 
 // ── Eliminar cuenta ─────────────────────────────
-document.getElementById('btnDeleteAccount').addEventListener('click', () => {
-  if (!confirm('¿Seguro que quieres eliminar tu cuenta? Esta acción no se puede deshacer.')) return;
-  // Por ahora redirige a soporte — se implementará en Fase 2
-  alert('Para eliminar tu cuenta contacta con soporte@marianosevilla.com');
+document.getElementById('btnDeleteAccount').addEventListener('click', async () => {
+  if (!confirm('¿Seguro que quieres eliminar tu cuenta? Se borrarán tus datos personales y no podrás volver a iniciar sesión. Esta acción no se puede deshacer.')) return;
+  const btn = document.getElementById('btnDeleteAccount');
+  btn.disabled = true; btn.textContent = 'Eliminando…';
+  try {
+    const res = await fetch('/api/delete-account', { method: 'POST', credentials: 'include' });
+    if (!res.ok) throw new Error();
+    window.location.replace('/');
+  } catch {
+    btn.disabled = false; btn.textContent = 'Eliminar mi cuenta';
+    alert('Error al eliminar la cuenta. Inténtalo de nuevo.');
+  }
 });
 </script>
 </body>
