@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stats — Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/static/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --black:      #0a0a0a;
+  --surface:    #111111;
+  --surface2:   #1a1a1a;
+  --surface3:   #222222;
+  --border:     rgba(255,255,255,0.07);
+  --text:       #f0f0f0;
+  --muted:      #888888;
+  --accent:     #00C896;
+  --accent-dim: rgba(0,200,150,0.10);
+  --red:        #f87171;
+  --max:        1080px;
+  --r:          12px;
+  --font-d:     'Syne', sans-serif;
+  --font-b:     'DM Sans', sans-serif;
+}
+
+html, body {
+  min-height: 100%; background: var(--black);
+  font-family: var(--font-b); color: var(--text);
+  font-size: 16px; line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+
+nav {
+  position: sticky; top: 0; z-index: 100;
+  border-bottom: 1px solid var(--border);
+  background: rgba(10,10,10,0.92); backdrop-filter: blur(14px);
+}
+.nav-inner {
+  max-width: var(--max); margin: 0 auto; padding: 0 2rem;
+  height: 64px; display: flex; align-items: center; justify-content: space-between;
+}
+.nav-logo { font-family: var(--font-d); font-weight: 800; font-size: 0.95rem; }
+.nav-logo span { color: var(--accent); }
+.nav-badge {
+  background: var(--accent-dim); border: 1px solid var(--accent);
+  color: var(--accent); font-size: 11px; font-weight: 700;
+  padding: 3px 10px; border-radius: 20px; letter-spacing: 0.05em;
+}
+.nav-back {
+  font-size: 13px; color: var(--muted);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 14px; transition: color 0.15s, border-color 0.15s;
+}
+.nav-back:hover { color: var(--text); border-color: var(--border-hover); }
+
+main {
+  max-width: var(--max); margin: 0 auto;
+  padding: 2.5rem 2rem 4rem;
+}
+
+h1 {
+  font-family: var(--font-d); font-size: clamp(1.5rem, 3vw, 2rem);
+  margin-bottom: 0.25rem;
+}
+.page-sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; }
+
+/* ── Sección ── */
+.section { margin-bottom: 2.5rem; }
+.section-title {
+  font-family: var(--font-d); font-size: 1rem; font-weight: 700;
+  color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em;
+  margin-bottom: 1rem;
+}
+
+/* ── Stat cards ── */
+.cards { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 1.25rem 1.4rem;
+}
+.card-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+.card-value { font-family: var(--font-d); font-size: 2rem; font-weight: 800; line-height: 1; }
+.card-value.accent { color: var(--accent); }
+.card-value.red    { color: var(--red); }
+
+/* ── Charts ── */
+.charts-row { display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; }
+@media (max-width: 680px) { .charts-row { grid-template-columns: 1fr; } }
+
+.chart-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 1.25rem 1.4rem;
+}
+.chart-box-title { font-size: 13px; color: var(--muted); margin-bottom: 1rem; }
+.chart-wrap { position: relative; height: 200px; }
+
+/* ── Tables ── */
+.table-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); overflow: hidden;
+}
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  font-size: 11px; color: var(--muted); text-transform: uppercase;
+  letter-spacing: 0.06em; padding: 10px 16px; text-align: left;
+  background: var(--surface2); border-bottom: 1px solid var(--border);
+}
+tbody td {
+  padding: 11px 16px; font-size: 14px;
+  border-bottom: 1px solid var(--border);
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--surface2); }
+.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+.tables-row { display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; }
+@media (max-width: 680px) { .tables-row { grid-template-columns: 1fr; } }
+
+.loading { color: var(--muted); font-size: 14px; padding: 2rem; text-align: center; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span class="nav-logo">mariano<span>sevilla</span>.com</span>
+      <span class="nav-badge">ADMIN</span>
+    </div>
+    <a href="/dashboard" class="nav-back">← Dashboard</a>
+  </div>
+</nav>
+
+<main>
+  <h1>Estadísticas de uso</h1>
+  <p class="page-sub" id="pageDate">Cargando…</p>
+
+  <div id="loadingMsg" class="loading">Cargando datos…</div>
+  <div id="content" hidden>
+
+    <!-- USUARIOS -->
+    <div class="section">
+      <p class="section-title">Usuarios</p>
+      <div class="cards" style="margin-bottom:1rem;">
+        <div class="card">
+          <div class="card-label">Total registrados</div>
+          <div class="card-value accent" id="cTotalUsers">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Email verificado</div>
+          <div class="card-value" id="cVerified">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Sin verificar</div>
+          <div class="card-value red" id="cUnverified">—</div>
+        </div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-box-title">Nuevos registros por mes — últimos 6 meses</div>
+        <div class="chart-wrap"><canvas id="chartUsers"></canvas></div>
+      </div>
+    </div>
+
+    <!-- INFORMES -->
+    <div class="section">
+      <p class="section-title">Informes FIFO</p>
+      <div class="cards" style="margin-bottom:1rem;">
+        <div class="card">
+          <div class="card-label">Total generados</div>
+          <div class="card-value accent" id="cTotalGen">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Descargados</div>
+          <div class="card-value" id="cTotalDl">—</div>
+        </div>
+      </div>
+      <div class="tables-row">
+        <div class="table-box">
+          <table>
+            <thead><tr><th>Exchange</th><th class="num">Informes</th></tr></thead>
+            <tbody id="tbExchange"></tbody>
+          </table>
+        </div>
+        <div class="table-box">
+          <table>
+            <thead><tr><th>Ejercicio</th><th class="num">Informes</th></tr></thead>
+            <tbody id="tbEjercicio"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ERRORES -->
+    <div class="section">
+      <p class="section-title">Errores de procesamiento</p>
+      <div class="chart-box">
+        <div class="chart-box-title">CSVs fallidos por mes — últimos 6 meses</div>
+        <div class="chart-wrap"><canvas id="chartErrors"></canvas></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<script>
+const ACCENT = '#00C896';
+const RED    = '#f87171';
+
+Chart.defaults.color           = '#888';
+Chart.defaults.borderColor     = 'rgba(255,255,255,0.07)';
+Chart.defaults.font.family     = "'DM Sans', sans-serif";
+
+function barChart(id, labels, data, color) {
+  return new Chart(document.getElementById(id), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: color + '33',
+        borderColor:     color,
+        borderWidth:     2,
+        borderRadius:    6,
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: {
+        title: t => t[0].label,
+        label: t => ' ' + t.raw + ' ' + (id === 'chartUsers' ? 'usuarios' : 'errores'),
+      }}},
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } },
+      },
+    },
+  });
+}
+
+function fillMonthlyChart(id, data, color) {
+  // Genera eje con los últimos 6 meses aunque la BD no tenga datos en todos
+  const today  = new Date();
+  const months = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    months.push(d.toISOString().slice(0, 7));
+  }
+  const byMonth = {};
+  data.forEach(r => { byMonth[r.mes] = r.total; });
+  const values = months.map(m => byMonth[m] || 0);
+  const labels = months.map(m => {
+    const [y, mo] = m.split('-');
+    return new Date(y, mo - 1).toLocaleString('es', { month: 'short', year: '2-digit' });
+  });
+  barChart(id, labels, values, color);
+}
+
+function fillTable(tbodyId, rows, keyLabel, keyNum) {
+  const tb = document.getElementById(tbodyId);
+  if (!rows.length) {
+    tb.innerHTML = '<tr><td colspan="2" style="color:var(--muted);text-align:center;padding:20px;">Sin datos</td></tr>';
+    return;
+  }
+  tb.innerHTML = rows.map(r =>
+    `<tr><td>${r[keyLabel]}</td><td class="num">${r[keyNum]}</td></tr>`
+  ).join('');
+}
+
+(async () => {
+  try {
+    const res  = await fetch('/api/stats', { credentials: 'include' });
+    if (!res.ok) { window.location.replace('/dashboard'); return; }
+    const d = await res.json();
+
+    document.getElementById('pageDate').textContent =
+      'Datos en tiempo real · ' + new Date().toLocaleString('es', { dateStyle: 'long', timeStyle: 'short' });
+
+    // Cards usuarios
+    document.getElementById('cTotalUsers').textContent = d.usuarios.total;
+    document.getElementById('cVerified').textContent   = d.usuarios.verificados;
+    document.getElementById('cUnverified').textContent = d.usuarios.sin_verificar;
+
+    // Cards informes
+    document.getElementById('cTotalGen').textContent = d.informes.total_generados;
+    document.getElementById('cTotalDl').textContent  = d.informes.total_descargados;
+
+    // Charts
+    fillMonthlyChart('chartUsers',  d.usuarios.por_mes,    ACCENT);
+    fillMonthlyChart('chartErrors', d.errores.por_mes,     RED);
+
+    // Tables
+    fillTable('tbExchange',  d.informes.por_exchange,  'exchange',  'total');
+    fillTable('tbEjercicio', d.informes.por_ejercicio, 'ejercicio', 'total');
+
+    document.getElementById('loadingMsg').hidden = true;
+    document.getElementById('content').hidden    = false;
+
+  } catch (err) {
+    document.getElementById('loadingMsg').textContent = 'Error al cargar los datos.';
+  }
+})();
+</script>
+</body>
+</html>

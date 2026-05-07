@@ -32,6 +32,7 @@ from flask_migrate import Migrate
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from authlib.integrations.flask_client import OAuth
 import resend
+from sqlalchemy import func, extract
 from models import db, bcrypt, User, FifoReport
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -1369,6 +1370,108 @@ def delete_account():
     db.session.commit()
     logout_user()
     return jsonify({"message": "Cuenta eliminada correctamente."})
+
+
+# ── ADMIN STATS ──────────────────────────────────────────────────────────────
+
+@app.route("/stats")
+@login_required
+def stats_page():
+    if not _is_admin():
+        return redirect("/dashboard")
+    return send_from_directory("static", "stats.html")
+
+
+@app.route("/api/stats")
+@login_required
+def api_stats():
+    if not _is_admin():
+        return jsonify({"error": "Acceso denegado."}), 403
+
+    now = datetime.utcnow()
+
+    # ── Usuarios ─────────────────────────────────────────────────────────────
+    total_users     = User.query.count()
+    verified_users  = User.query.filter(User.email_verified_at.isnot(None)).count()
+    unverified_users = total_users - verified_users
+
+    # Nuevos usuarios por mes — últimos 6 meses
+    usuarios_por_mes = (
+        db.session.query(
+            func.date_trunc("month", User.created_at).label("mes"),
+            func.count(User.id).label("total"),
+        )
+        .filter(User.created_at >= func.date_trunc("month", func.now()) - func.cast("5 months", db.Interval))
+        .group_by("mes")
+        .order_by("mes")
+        .all()
+    )
+    usuarios_por_mes_json = [
+        {"mes": str(row.mes)[:7], "total": row.total}
+        for row in usuarios_por_mes
+    ]
+
+    # ── Informes FIFO ────────────────────────────────────────────────────────
+    total_generados  = FifoReport.query.filter_by(status="generated").count()
+    total_descargados = FifoReport.query.filter(
+        FifoReport.status == "generated",
+        FifoReport.downloaded_at.isnot(None),
+    ).count()
+
+    por_exchange = (
+        db.session.query(FifoReport.exchange, func.count(FifoReport.id).label("total"))
+        .filter_by(status="generated")
+        .group_by(FifoReport.exchange)
+        .order_by(func.count(FifoReport.id).desc())
+        .all()
+    )
+    por_exchange_json = [{"exchange": r.exchange, "total": r.total} for r in por_exchange]
+
+    por_ejercicio = (
+        db.session.query(FifoReport.fiscal_year, func.count(FifoReport.id).label("total"))
+        .filter_by(status="generated")
+        .group_by(FifoReport.fiscal_year)
+        .order_by(FifoReport.fiscal_year.desc())
+        .all()
+    )
+    por_ejercicio_json = [{"ejercicio": r.fiscal_year, "total": r.total} for r in por_ejercicio]
+
+    # ── Errores por mes — últimos 6 meses ────────────────────────────────────
+    errores_por_mes = (
+        db.session.query(
+            func.date_trunc("month", FifoReport.created_at).label("mes"),
+            func.count(FifoReport.id).label("total"),
+        )
+        .filter(
+            FifoReport.status == "failed",
+            FifoReport.created_at >= func.date_trunc("month", func.now()) - func.cast("5 months", db.Interval),
+        )
+        .group_by("mes")
+        .order_by("mes")
+        .all()
+    )
+    errores_por_mes_json = [
+        {"mes": str(row.mes)[:7], "total": row.total}
+        for row in errores_por_mes
+    ]
+
+    return jsonify({
+        "usuarios": {
+            "total":       total_users,
+            "verificados": verified_users,
+            "sin_verificar": unverified_users,
+            "por_mes":     usuarios_por_mes_json,
+        },
+        "informes": {
+            "total_generados":  total_generados,
+            "total_descargados": total_descargados,
+            "por_exchange":     por_exchange_json,
+            "por_ejercicio":    por_ejercicio_json,
+        },
+        "errores": {
+            "por_mes": errores_por_mes_json,
+        },
+    })
 
 
 @app.errorhandler(429)
