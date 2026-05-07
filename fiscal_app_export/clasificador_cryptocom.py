@@ -1,7 +1,7 @@
 """
 Clasificador fiscal de operaciones Crypto.com App
 Mariano Sevilla — marianosevilla.com
-v1.0
+v1.1
 
 Formato CSV: crypto_transactions_record_*.csv
 Columnas: Timestamp (UTC), Transaction Description, Currency, Amount,
@@ -9,13 +9,16 @@ Columnas: Timestamp (UTC), Transaction Description, Currency, Amount,
           Native Amount (in USD), Transaction Kind, Transaction Hash
 
 Tipos de transacción:
-- crypto_purchase              → COMPRA directa (Currency=coin, NativeAmount=EUR)
-- viban_purchase               → COMPRA vía IBAN (ToCurrency=coin, ToAmount=qty)
-- crypto_viban_exchange        → VENTA (Currency=coin, Amount<0, NativeAmount=EUR recibido)
-- crypto_earn_program_created  → MOVIMIENTO (coins bloqueadas en Earn)
-- crypto_earn_program_withdrawn→ MOVIMIENTO (coins devueltas de Earn)
-- crypto_earn_interest_paid    → RENDIMIENTO + COMPRA a precio de mercado
-- reward.loyalty_program.*     → RENDIMIENTO (rebates en CRO)
+- crypto_purchase / trading.crypto_purchase.google_pay → COMPRA directa
+- viban_purchase / trading.limit_order.*purchase_commit → COMPRA vía IBAN/limit order
+- crypto_viban_exchange        → VENTA
+- crypto_earn_program_created / finance.dpos.staking.*   → MOVIMIENTO
+- crypto_earn_program_withdrawn / finance.dpos.unstaking.* → MOVIMIENTO
+- trading.limit_order.*.purchase_lock / crypto_withdrawal  → MOVIMIENTO
+- crypto_earn_interest_paid / finance.dpos.*interest.*    → RENDIMIENTO
+- rewards_platform_deposit_credited / campaign_reward     → RENDIMIENTO
+- reward.*                    → RENDIMIENTO (rebates)
+- crypto_wallet_swap_* / dust_conversion_* → SWAP (par debit+credit)
 """
 
 import pandas as pd
@@ -24,12 +27,28 @@ from dataclasses import dataclass
 
 STABLES = {"EUR", "USD", "USDC", "USDT", "BUSD", "DAI", "FDUSD"}
 
-TIPOS_COMPRA_DIRECTA = {"crypto_purchase"}
-TIPOS_COMPRA_IBAN    = {"viban_purchase"}
+TIPOS_COMPRA_DIRECTA = {"crypto_purchase", "trading.crypto_purchase.google_pay"}
+TIPOS_COMPRA_IBAN    = {"viban_purchase", "trading.limit_order.cash_account.purchase_commit"}
 TIPOS_VENTA          = {"crypto_viban_exchange"}
-TIPOS_EARN_LOCK      = {"crypto_earn_program_created"}
-TIPOS_EARN_UNLOCK    = {"crypto_earn_program_withdrawn"}
-TIPOS_EARN_INTERES   = {"crypto_earn_interest_paid"}
+TIPOS_EARN_LOCK      = {
+    "crypto_earn_program_created",
+    "finance.dpos.staking.crypto_wallet",
+}
+TIPOS_EARN_UNLOCK    = {
+    "crypto_earn_program_withdrawn",
+    "finance.dpos.unstaking.crypto_wallet",
+}
+TIPOS_EARN_INTERES   = {
+    "crypto_earn_interest_paid",
+    "finance.dpos.non_compound_interest.crypto_wallet",
+}
+TIPOS_RENDIMIENTO    = {"rewards_platform_deposit_credited", "campaign_reward"}
+TIPOS_MOVIMIENTO     = {
+    "trading.limit_order.cash_account.purchase_lock",
+    "crypto_withdrawal",
+}
+TIPOS_SWAP_DEBIT     = {"crypto_wallet_swap_debited", "dust_conversion_debited"}
+TIPOS_SWAP_CREDIT    = {"crypto_wallet_swap_credited", "dust_conversion_credited"}
 
 
 # ── DATACLASSES (compatibles con motor_fifo) ──
@@ -55,6 +74,15 @@ class OperacionRendimiento:
     valor_eur: float = 0.0
 
 @dataclass
+class OperacionSwap:
+    fecha: str
+    activo_entregado: str
+    cantidad_entregada: float
+    activo_recibido: str
+    cantidad_recibida: float
+    nota: str = ""
+
+@dataclass
 class OperacionMovimiento:
     fecha: str
     subtipo: str
@@ -77,19 +105,24 @@ class ClasificadorCryptoCom:
 
     def __init__(self, filepath: str):
         self.df = pd.read_csv(filepath)
-        self.compraventas: list[OperacionCompraventa] = []
-        self.swaps:        list                       = []
-        self.rendimientos: list[OperacionRendimiento] = []
-        self.movimientos:  list[OperacionMovimiento]  = []
-        self.desconocidas: list[OperacionDesconocida] = []
-        self.advertencias: list[str] = []
+        self.compraventas = []
+        self.swaps        = []
+        self.rendimientos = []
+        self.movimientos  = []
+        self.desconocidas = []
+        self.advertencias = []
 
     def clasificar(self):
         self.df.columns = [c.strip() for c in self.df.columns]
         self.df["Timestamp (UTC)"] = pd.to_datetime(self.df["Timestamp (UTC)"])
         self.df = self.df.sort_values("Timestamp (UTC)").reset_index(drop=True)
 
-        for _, fila in self.df.iterrows():
+        procesadas = self._procesar_swaps()
+
+        for idx, fila in self.df.iterrows():
+            if idx in procesadas:
+                continue
+
             kind          = str(fila.get("Transaction Kind", "")).strip()
             fecha         = str(fila["Timestamp (UTC)"])
             moneda        = str(fila.get("Currency", "")).strip()
@@ -125,6 +158,16 @@ class ClasificadorCryptoCom:
             elif kind in TIPOS_EARN_INTERES:
                 self._procesar_earn_interes(fecha, moneda, amount, native_moneda, native_amount, kind, fila)
 
+            elif kind in TIPOS_RENDIMIENTO:
+                self._procesar_rebate(fecha, moneda, amount, native_moneda, native_amount)
+
+            elif kind in TIPOS_MOVIMIENTO:
+                self.movimientos.append(OperacionMovimiento(
+                    fecha=fecha, subtipo=kind,
+                    activo=moneda, cantidad=amount,
+                    observacion=""
+                ))
+
             elif kind.startswith("reward."):
                 self._procesar_rebate(fecha, moneda, amount, native_moneda, native_amount)
 
@@ -132,6 +175,45 @@ class ClasificadorCryptoCom:
                 self._registrar_desconocida(fecha, kind, moneda, amount)
 
         return self
+
+    # ── SWAPS ─────────────────────────────────
+
+    def _procesar_swaps(self):
+        """
+        Empareja filas debited+credited de swap/dust_conversion por timestamp exacto.
+        Devuelve el conjunto de índices procesados.
+        """
+        procesadas = set()
+        mask_debit  = self.df["Transaction Kind"].isin(TIPOS_SWAP_DEBIT)
+        mask_credit = self.df["Transaction Kind"].isin(TIPOS_SWAP_CREDIT)
+
+        debits  = self.df[mask_debit].copy()
+        credits = self.df[mask_credit].copy()
+
+        for ts, grupo_credit in credits.groupby("Timestamp (UTC)"):
+            grupo_debit = debits[debits["Timestamp (UTC)"] == ts]
+            if grupo_debit.empty:
+                continue
+
+            recibido       = grupo_credit.iloc[0]
+            cant_recibida  = self._float(recibido["Amount"])
+            activo_recibido = str(recibido["Currency"]).strip()
+
+            for _, debit in grupo_debit.iterrows():
+                cant_entregada = abs(self._float(debit["Amount"]))
+                activo_entregado = str(debit["Currency"]).strip()
+                self.swaps.append(OperacionSwap(
+                    fecha=str(ts),
+                    activo_entregado=activo_entregado,
+                    cantidad_entregada=cant_entregada,
+                    activo_recibido=activo_recibido,
+                    cantidad_recibida=cant_recibida,
+                ))
+                procesadas.add(debit.name)
+
+            procesadas.update(grupo_credit.index.tolist())
+
+        return procesadas
 
     # ── COMPRAS ───────────────────────────────
 
