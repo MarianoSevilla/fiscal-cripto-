@@ -107,11 +107,12 @@ def _portada(story, styles, resumen, nombre_usuario, ejercicio, exchange, period
     if nombre_usuario:
         story.append(Paragraph(f"Preparado para: {nombre_usuario.upper()}", styles["subtitle"]))
     if ejercicio:
-        story.append(Paragraph(f"Ejercicio: {ejercicio}", styles["subtitle"]))
+        story.append(Paragraph(f"Ejercicio fiscal: {ejercicio}", styles["subtitle"]))
     elif periodo and periodo.get("fecha_min"):
         story.append(Paragraph(f"Período analizado: {periodo['fecha_min']} — {periodo['fecha_max']}", styles["subtitle"]))
     if exchange:
         story.append(Paragraph(f"Exchange: {exchange}", styles["subtitle"]))
+    story.append(Paragraph(f"Generado el: {datetime.utcnow().strftime('%d/%m/%Y')}", styles["subtitle"]))
     story.append(Paragraph("Método FIFO · Art. 37.2 LIRPF", styles["subtitle"]))
 
     story.append(Spacer(1, 6*mm))
@@ -181,7 +182,6 @@ def _portada(story, styles, resumen, nombre_usuario, ejercicio, exchange, period
     story.append(Spacer(1, 5*mm))
 
     nota_data = [[
-        Paragraph("METODOLOGÍA", styles["nota_label"]),
         Paragraph(
             "Método FIFO obligatorio (art. 37.2 LIRPF). Las comisiones de compra incrementan el precio de coste "
             "del lote. Las comisiones de venta reducen el valor de transmisión. Los swaps entre criptoactivos "
@@ -189,7 +189,7 @@ def _portada(story, styles, resumen, nombre_usuario, ejercicio, exchange, period
             "Los depósitos y retiradas de exchange no generan hecho imponible.",
             styles["nota_body"])
     ]]
-    t3 = Table(nota_data, colWidths=[30*mm, 138*mm])
+    t3 = Table(nota_data, colWidths=[168*mm])
     t3.setStyle(TableStyle([
         ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#1A1800")),
         ("BOX",           (0, 0), (-1, -1), 0.5, colors.HexColor("#3A3500")),
@@ -440,7 +440,7 @@ def _tabla_resumen_activos(resultados, styles):
         neto_style = styles["td_green"] if neto >= 0 else styles["td_red"]
         rows.append([
             Paragraph(activo, styles["td"]),
-            Paragraph(str(datos["ops"]), styles["td_muted"]),
+            Paragraph(str(datos["ops"]), styles["td_muted_right"]),
             Paragraph(f"+{datos['ganancias']:,.4f}" if datos["ganancias"] else "-", styles["td_green"]),
             Paragraph(f"{datos['perdidas']:,.4f}" if datos["perdidas"] else "-", styles["td_red"]),
             Paragraph(f"+{neto:,.4f}" if neto >= 0 else f"{neto:,.4f}", neto_style),
@@ -486,7 +486,7 @@ def _tabla_operaciones(resultados, styles):
             Paragraph(f"{r.precio_transmision:,.4f}", styles["td_mono"]),
             Paragraph(f"{r.precio_coste:,.4f}", styles["td_mono"]),
             Paragraph(gp_str, gp_style),
-            Paragraph(str(int(r.periodo_dias)), styles["td_muted"]),
+            Paragraph(str(int(r.periodo_dias)), styles["td_muted_right"]),
         ])
     col_w = [20*mm, 13*mm, 16*mm, 26*mm, 26*mm, 26*mm, 24*mm, 13*mm]
     t = Table(rows, colWidths=col_w, repeatRows=1)
@@ -560,7 +560,7 @@ def _tabla_rendimientos(rendimientos: list, styles) -> object:
         rows.append([
             Paragraph(activo, styles["td"]),
             Paragraph(subtipo.replace("_", " ").capitalize(), styles["td_muted"]),
-            Paragraph(str(datos["ops"]), styles["td_muted"]),
+            Paragraph(str(datos["ops"]), styles["td_muted_right"]),
             Paragraph(f"{datos['cantidad']:,.6f}", styles["td_mono"]),
         ])
 
