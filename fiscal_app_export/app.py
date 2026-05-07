@@ -37,6 +37,7 @@ from models import db, bcrypt, User, FifoReport
 sys.path.insert(0, os.path.dirname(__file__))
 
 from clasificador import ClasificadorBinance
+from clasificador_binance_tx import ClasificadorBinanceTx
 from clasificador_bit2me import ClasificadorBit2Me
 from clasificador_bitvavo import ClasificadorBitvavo
 from clasificador_kraken import ClasificadorKraken
@@ -553,21 +554,6 @@ def _validar_csv(filepath: str, exchange: str) -> tuple[bool, str]:
                 f"Asegúrate de exportar el historial desde tu cuenta de {nombres[exchange]}."
             )
 
-    # Binance: detectar el formato "Historial de Transacciones" (incorrecto para FIFO)
-    if exchange == "binance":
-        try:
-            with open(filepath, encoding="utf-8", errors="replace") as f:
-                muestra = "".join(f.readline() for _ in range(100))
-            if "Buy Crypto With Fiat" in muestra:
-                return False, (
-                    "El CSV de Binance no es el correcto para calcular el FIFO. "
-                    "Has exportado el 'Historial de Transacciones', que no incluye el importe en euros de cada compra. "
-                    "Necesitas el 'Historial de Operaciones Spot': "
-                    "en Binance ve a Órdenes → Historial de operaciones → selecciona el rango de fechas → Exportar."
-                )
-        except Exception:
-            pass
-
     return True, ""
 
 
@@ -615,8 +601,24 @@ def procesar_con_fifo(clasificador) -> tuple:
     return motor, rendimientos
 
 
+def _detectar_formato_binance(filepath: str) -> str:
+    """Devuelve 'tx' para Historial de Transacciones o 'spot' para Historial de Operaciones Spot."""
+    try:
+        with open(filepath, encoding="utf-8", errors="replace") as f:
+            muestra = "".join(f.readline() for _ in range(20))
+        if "Buy Crypto With Fiat" in muestra or "Sell Crypto To Fiat" in muestra or "ID de usuario" in muestra:
+            return "tx"
+    except Exception:
+        pass
+    return "spot"
+
+
 def procesar_binance(filepath: str) -> tuple:
     return procesar_con_fifo(ClasificadorBinance(filepath).clasificar())
+
+
+def procesar_binance_tx(filepath: str) -> tuple:
+    return procesar_con_fifo(ClasificadorBinanceTx(filepath).clasificar())
 
 
 def procesar_bitvavo(filepath: str) -> tuple:
@@ -1095,8 +1097,11 @@ def analizar():
             rendimientos_json = _rendimientos_a_json(rendimientos)
             pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Crypto.com", rendimientos)
 
-        else:  # binance
-            motor, rendimientos = procesar_binance(tmp_path)
+        else:  # binance — auto-detectar formato
+            if _detectar_formato_binance(tmp_path) == "tx":
+                motor, rendimientos = procesar_binance_tx(tmp_path)
+            else:
+                motor, rendimientos = procesar_binance(tmp_path)
             resumen, posicion, operaciones = _motor_a_json(motor)
             advertencias = motor.advertencias
             rendimientos_json = _rendimientos_a_json(rendimientos)
