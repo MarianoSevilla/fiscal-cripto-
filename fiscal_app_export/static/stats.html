@@ -5,7 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Stats — Admin</title>
 <meta name="robots" content="noindex, nofollow">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
 <link rel="icon" href="/static/favicon.ico">
+<link rel="manifest" href="/static/site.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -19,8 +23,10 @@
   --surface2:   #1a1a1a;
   --surface3:   #222222;
   --border:     rgba(255,255,255,0.07);
+  --border-hover: rgba(255,255,255,0.15);
   --text:       #f0f0f0;
   --muted:      #888888;
+  --muted2:     #555555;
   --accent:     #00C896;
   --accent-dim: rgba(0,200,150,0.10);
   --red:        #f87171;
@@ -35,53 +41,79 @@ html, body {
   font-family: var(--font-b); color: var(--text);
   font-size: 16px; line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 a { color: inherit; text-decoration: none; }
 
+/* ── NAV (idéntico al dashboard) ── */
 nav {
-  position: sticky; top: 0; z-index: 100;
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
   border-bottom: 1px solid var(--border);
-  background: rgba(10,10,10,0.92); backdrop-filter: blur(14px);
+  background: rgba(10,10,10,0.88); backdrop-filter: blur(14px);
 }
 .nav-inner {
   max-width: var(--max); margin: 0 auto; padding: 0 2rem;
   height: 64px; display: flex; align-items: center; justify-content: space-between;
 }
-.nav-logo { font-family: var(--font-d); font-weight: 800; font-size: 0.95rem; }
+.nav-logo {
+  font-family: var(--font-d); font-weight: 800; font-size: 0.95rem;
+  letter-spacing: -0.02em; color: var(--text);
+}
 .nav-logo span { color: var(--accent); }
-.nav-badge {
-  background: var(--accent-dim); border: 1px solid var(--accent);
-  color: var(--accent); font-size: 11px; font-weight: 700;
-  padding: 3px 10px; border-radius: 20px; letter-spacing: 0.05em;
-}
-.nav-back {
-  font-size: 13px; color: var(--muted);
-  border: 1px solid var(--border); border-radius: 8px;
-  padding: 6px 14px; transition: color 0.15s, border-color 0.15s;
-}
-.nav-back:hover { color: var(--text); border-color: var(--border-hover); }
+.nav-right { display: flex; align-items: center; gap: 0.6rem; }
 
+.nav-avatar-wrap { position: relative; }
+.nav-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--accent); color: #0a0a0a;
+  font-family: var(--font-d); font-size: 14px; font-weight: 700;
+  border: 2px solid transparent; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity .15s, border-color .15s;
+}
+.nav-avatar:hover { opacity: .85; border-color: rgba(0,200,150,.4); }
+.nav-dropdown {
+  position: absolute; right: 0; top: calc(100% + 10px);
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 14px; min-width: 190px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.5);
+  padding: 6px; z-index: 200; display: none;
+}
+.nav-dropdown.open { display: block; }
+.nav-dd-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 13px; border-radius: 9px;
+  color: var(--text); font-family: var(--font-b); font-size: 14px; font-weight: 500;
+  cursor: pointer; text-decoration: none; transition: background .12s;
+  background: none; border: none; width: 100%; text-align: left;
+}
+.nav-dd-item:hover { background: var(--surface); }
+.nav-dd-divider { height: 1px; background: var(--border); margin: 4px 0; }
+.nav-dd-item.danger { color: #e55; }
+.nav-dd-item.danger:hover { background: rgba(220,60,60,.1); }
+
+/* ── MAIN ── */
 main {
   max-width: var(--max); margin: 0 auto;
-  padding: 2.5rem 2rem 4rem;
+  padding: 6rem 2rem 4rem;
 }
 
 h1 {
-  font-family: var(--font-d); font-size: clamp(1.5rem, 3vw, 2rem);
-  margin-bottom: 0.25rem;
+  font-family: var(--font-d); font-size: clamp(1.4rem, 2.5vw, 1.9rem);
+  font-weight: 800; letter-spacing: -.03em; margin-bottom: .25rem;
 }
 .page-sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; }
 
-/* ── Sección ── */
+/* ── Secciones ── */
 .section { margin-bottom: 2.5rem; }
 .section-title {
-  font-family: var(--font-d); font-size: 1rem; font-weight: 700;
+  font-family: var(--font-d); font-size: 0.85rem; font-weight: 700;
   color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em;
   margin-bottom: 1rem;
 }
 
 /* ── Stat cards ── */
-.cards { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.cards { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-bottom: 1rem; }
 .card {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--r); padding: 1.25rem 1.4rem;
@@ -92,9 +124,6 @@ h1 {
 .card-value.red    { color: var(--red); }
 
 /* ── Charts ── */
-.charts-row { display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; }
-@media (max-width: 680px) { .charts-row { grid-template-columns: 1fr; } }
-
 .chart-box {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--r); padding: 1.25rem 1.4rem;
@@ -103,6 +132,9 @@ h1 {
 .chart-wrap { position: relative; height: 200px; }
 
 /* ── Tables ── */
+.tables-row { display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; }
+@media (max-width: 680px) { .tables-row { grid-template-columns: 1fr; } }
+
 .table-box {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--r); overflow: hidden;
@@ -113,29 +145,32 @@ thead th {
   letter-spacing: 0.06em; padding: 10px 16px; text-align: left;
   background: var(--surface2); border-bottom: 1px solid var(--border);
 }
-tbody td {
-  padding: 11px 16px; font-size: 14px;
-  border-bottom: 1px solid var(--border);
-}
+tbody td { padding: 11px 16px; font-size: 14px; border-bottom: 1px solid var(--border); }
 tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover { background: var(--surface2); }
 .num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
 
-.tables-row { display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; }
-@media (max-width: 680px) { .tables-row { grid-template-columns: 1fr; } }
-
-.loading { color: var(--muted); font-size: 14px; padding: 2rem; text-align: center; }
+.loading { color: var(--muted); font-size: 14px; padding: 4rem; text-align: center; }
 </style>
 </head>
 <body>
 
 <nav>
   <div class="nav-inner">
-    <div style="display:flex;align-items:center;gap:12px;">
-      <span class="nav-logo">mariano<span>sevilla</span>.com</span>
-      <span class="nav-badge">ADMIN</span>
+    <a href="/" class="nav-logo">mariano<span>sevilla</span>.com</a>
+    <div class="nav-right">
+      <div class="nav-avatar-wrap">
+        <button class="nav-avatar" id="navAvatar" aria-label="Menú de usuario">U</button>
+        <div class="nav-dropdown" id="navDropdown">
+          <a href="/dashboard" class="nav-dd-item">🏠&nbsp; Dashboard</a>
+          <a href="/pricing" class="nav-dd-item">💎&nbsp; Planes</a>
+          <a href="/account" class="nav-dd-item">👤&nbsp; Mi cuenta</a>
+          <a href="/stats" class="nav-dd-item" style="color:var(--accent);">📊&nbsp; Stats</a>
+          <div class="nav-dd-divider"></div>
+          <button class="nav-dd-item danger" id="navBtnLogout">↩&nbsp; Cerrar sesión</button>
+        </div>
+      </div>
     </div>
-    <a href="/dashboard" class="nav-back">← Dashboard</a>
   </div>
 </nav>
 
@@ -149,7 +184,7 @@ tbody tr:hover { background: var(--surface2); }
     <!-- USUARIOS -->
     <div class="section">
       <p class="section-title">Usuarios</p>
-      <div class="cards" style="margin-bottom:1rem;">
+      <div class="cards">
         <div class="card">
           <div class="card-label">Total registrados</div>
           <div class="card-value accent" id="cTotalUsers">—</div>
@@ -172,7 +207,7 @@ tbody tr:hover { background: var(--surface2); }
     <!-- INFORMES -->
     <div class="section">
       <p class="section-title">Informes FIFO</p>
-      <div class="cards" style="margin-bottom:1rem;">
+      <div class="cards">
         <div class="card">
           <div class="card-label">Total generados</div>
           <div class="card-value accent" id="cTotalGen">—</div>
@@ -207,36 +242,50 @@ tbody tr:hover { background: var(--surface2); }
       </div>
     </div>
 
-  </div><!-- /content -->
+  </div>
 </main>
 
 <script>
+// ── Sesión y avatar ──────────────────────────────────────────────────────────
+(async () => {
+  try {
+    const r = await fetch('/api/me', { credentials: 'include' });
+    const d = await r.json();
+    if (!d.user || !d.user.is_admin) { window.location.replace('/dashboard'); return; }
+    document.getElementById('navAvatar').textContent = d.user.email.charAt(0).toUpperCase();
+  } catch {
+    window.location.replace('/login/');
+  }
+})();
+
+const _avatar   = document.getElementById('navAvatar');
+const _dropdown = document.getElementById('navDropdown');
+_avatar.addEventListener('click', e => { e.stopPropagation(); _dropdown.classList.toggle('open'); });
+document.addEventListener('click', () => _dropdown.classList.remove('open'));
+
+document.getElementById('navBtnLogout').addEventListener('click', async () => {
+  await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+  window.location.href = '/';
+});
+
+// ── Charts ───────────────────────────────────────────────────────────────────
 const ACCENT = '#00C896';
 const RED    = '#f87171';
 
-Chart.defaults.color           = '#888';
-Chart.defaults.borderColor     = 'rgba(255,255,255,0.07)';
-Chart.defaults.font.family     = "'DM Sans', sans-serif";
+Chart.defaults.color       = '#888';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.07)';
+Chart.defaults.font.family = "'DM Sans', sans-serif";
 
 function barChart(id, labels, data, color) {
-  return new Chart(document.getElementById(id), {
+  new Chart(document.getElementById(id), {
     type: 'bar',
     data: {
       labels,
-      datasets: [{
-        data,
-        backgroundColor: color + '33',
-        borderColor:     color,
-        borderWidth:     2,
-        borderRadius:    6,
-      }],
+      datasets: [{ data, backgroundColor: color + '33', borderColor: color, borderWidth: 2, borderRadius: 6 }],
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { callbacks: {
-        title: t => t[0].label,
-        label: t => ' ' + t.raw + ' ' + (id === 'chartUsers' ? 'usuarios' : 'errores'),
-      }}},
+      plugins: { legend: { display: false } },
       scales: {
         x: { grid: { display: false } },
         y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } },
@@ -246,7 +295,6 @@ function barChart(id, labels, data, color) {
 }
 
 function fillMonthlyChart(id, data, color) {
-  // Genera eje con los últimos 6 meses aunque la BD no tenga datos en todos
   const today  = new Date();
   const months = [];
   for (let i = 5; i >= 0; i--) {
@@ -269,34 +317,28 @@ function fillTable(tbodyId, rows, keyLabel, keyNum) {
     tb.innerHTML = '<tr><td colspan="2" style="color:var(--muted);text-align:center;padding:20px;">Sin datos</td></tr>';
     return;
   }
-  tb.innerHTML = rows.map(r =>
-    `<tr><td>${r[keyLabel]}</td><td class="num">${r[keyNum]}</td></tr>`
-  ).join('');
+  tb.innerHTML = rows.map(r => `<tr><td>${r[keyLabel]}</td><td class="num">${r[keyNum]}</td></tr>`).join('');
 }
 
+// ── Carga de datos ───────────────────────────────────────────────────────────
 (async () => {
   try {
-    const res  = await fetch('/api/stats', { credentials: 'include' });
+    const res = await fetch('/api/stats', { credentials: 'include' });
     if (!res.ok) { window.location.replace('/dashboard'); return; }
     const d = await res.json();
 
     document.getElementById('pageDate').textContent =
       'Datos en tiempo real · ' + new Date().toLocaleString('es', { dateStyle: 'long', timeStyle: 'short' });
 
-    // Cards usuarios
     document.getElementById('cTotalUsers').textContent = d.usuarios.total;
     document.getElementById('cVerified').textContent   = d.usuarios.verificados;
     document.getElementById('cUnverified').textContent = d.usuarios.sin_verificar;
+    document.getElementById('cTotalGen').textContent   = d.informes.total_generados;
+    document.getElementById('cTotalDl').textContent    = d.informes.total_descargados;
 
-    // Cards informes
-    document.getElementById('cTotalGen').textContent = d.informes.total_generados;
-    document.getElementById('cTotalDl').textContent  = d.informes.total_descargados;
+    fillMonthlyChart('chartUsers',  d.usuarios.por_mes, ACCENT);
+    fillMonthlyChart('chartErrors', d.errores.por_mes,  RED);
 
-    // Charts
-    fillMonthlyChart('chartUsers',  d.usuarios.por_mes,    ACCENT);
-    fillMonthlyChart('chartErrors', d.errores.por_mes,     RED);
-
-    // Tables
     fillTable('tbExchange',  d.informes.por_exchange,  'exchange',  'total');
     fillTable('tbEjercicio', d.informes.por_ejercicio, 'ejercicio', 'total');
 
@@ -304,7 +346,7 @@ function fillTable(tbodyId, rows, keyLabel, keyNum) {
     document.getElementById('content').hidden    = false;
 
   } catch (err) {
-    document.getElementById('loadingMsg').textContent = 'Error al cargar los datos.';
+    document.getElementById('loadingMsg').textContent = 'Error al cargar los datos. Recarga la página.';
   }
 })();
 </script>

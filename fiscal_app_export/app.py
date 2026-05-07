@@ -1391,9 +1391,17 @@ def api_stats():
 
     now = datetime.utcnow()
 
+    # Primer día del mes de hace 5 meses (= inicio de la ventana de 6 meses)
+    m = now.month - 5
+    y = now.year
+    if m <= 0:
+        m += 12
+        y -= 1
+    seis_meses_atras = datetime(y, m, 1)
+
     # ── Usuarios ─────────────────────────────────────────────────────────────
-    total_users     = User.query.count()
-    verified_users  = User.query.filter(User.email_verified_at.isnot(None)).count()
+    total_users      = User.query.count()
+    verified_users   = User.query.filter(User.email_verified_at.isnot(None)).count()
     unverified_users = total_users - verified_users
 
     # Nuevos usuarios por mes — últimos 6 meses
@@ -1402,7 +1410,7 @@ def api_stats():
             func.date_trunc("month", User.created_at).label("mes"),
             func.count(User.id).label("total"),
         )
-        .filter(User.created_at >= func.date_trunc("month", func.now()) - func.cast("5 months", db.Interval))
+        .filter(User.created_at >= seis_meses_atras)
         .group_by("mes")
         .order_by("mes")
         .all()
@@ -1445,7 +1453,7 @@ def api_stats():
         )
         .filter(
             FifoReport.status == "failed",
-            FifoReport.created_at >= func.date_trunc("month", func.now()) - func.cast("5 months", db.Interval),
+            FifoReport.created_at >= seis_meses_atras,
         )
         .group_by("mes")
         .order_by("mes")
