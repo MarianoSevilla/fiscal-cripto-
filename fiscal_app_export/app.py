@@ -72,7 +72,7 @@ app.config["SECRET_KEY"] = _secret
 
 # Emails de administrador: sin rate-limit en /api/analizar
 # Configura en Railway: ADMIN_EMAILS=mario@ejemplo.com,otro@ejemplo.com
-ADMIN_EMAILS: set[str] = {
+ADMIN_EMAILS = {
     e.strip().lower()
     for e in os.environ.get("ADMIN_EMAILS", "").split(",")
     if e.strip()
@@ -694,18 +694,19 @@ def _detectar_periodo(motor=None, clasificador=None) -> dict:
 
 def _error_amigable(e: Exception) -> str:
     """Convierte excepciones técnicas en mensajes amigables para el usuario."""
+    etype = type(e).__name__
     msg = str(e)
-    if "NoneType" in msg or "AttributeError" in msg:
-        return "El fichero CSV no tiene el formato esperado. Asegúrate de exportarlo directamente desde tu exchange."
-    if "UnicodeDecodeError" in msg or "codec" in msg:
-        return "El fichero no puede leerse. Descárgalo de nuevo desde tu exchange sin abrirlo con Excel."
-    if "KeyError" in msg or "column" in msg.lower():
+    if isinstance(e, KeyError) or etype == "KeyError" or "column" in msg.lower():
         return "El fichero CSV no tiene las columnas esperadas. Exporta el historial completo desde tu exchange."
-    if "MemoryError" in msg:
+    if "NoneType" in msg or etype == "AttributeError":
+        return "El fichero CSV no tiene el formato esperado. Asegúrate de exportarlo directamente desde tu exchange."
+    if etype in ("UnicodeDecodeError", "UnicodeError") or "codec" in msg:
+        return "El fichero no puede leerse. Descárgalo de nuevo desde tu exchange sin abrirlo con Excel."
+    if etype == "MemoryError":
         return "El fichero es demasiado grande para procesarse. Intenta con un rango de fechas más reducido."
     if "JSON" in msg or "float" in msg.lower() or "range" in msg.lower() or "serializ" in msg.lower():
         return "Error al generar el informe. Comprueba que el CSV no ha sido modificado y vuelve a intentarlo."
-    if "ParserError" in msg or "tokeniz" in msg.lower():
+    if etype == "ParserError" or "tokeniz" in msg.lower():
         return "El fichero CSV está mal formado. Descárgalo de nuevo desde tu exchange sin abrirlo con Excel."
     return "No se ha podido procesar el fichero. Comprueba que es el CSV exportado desde tu exchange y vuelve a intentarlo."
 
