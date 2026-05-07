@@ -293,12 +293,12 @@ DO UPDATE SET used = usage_counters.used + 1;
 ## Roadmap de implementación
 
 ### Fase 1 — Autenticación y usuarios (ACTUAL)
-- [ ] Añadir `email_verified_at` a la tabla `users`
-- [ ] Flujo de verificación para **nuevos registros**: al registrarse reciben email con enlace, acceso completo solo tras verificar
-- [ ] Flujo de verificación para **usuarios existentes**: email informativo con enlace de verificación, sin bloqueo inmediato
-- [ ] Página de aviso "Verifica tu email" tras el registro
-- [ ] Endpoint de confirmación (`/verify-email?token=...`)
-- [ ] Reenvío de email de verificación
+- [x] Añadir `email_verified_at` a la tabla `users`
+- [x] Flujo de verificación para **nuevos registros**: al registrarse reciben email con enlace, acceso completo solo tras verificar
+- [x] Flujo de verificación para **usuarios existentes**: email informativo con enlace de verificación, sin bloqueo inmediato
+- [x] Página de aviso "Verifica tu email" tras el registro
+- [x] Endpoint de confirmación (`/verify-email?token=...`)
+- [x] Reenvío de email de verificación
 
 ### Fase 2 — Planes y suscripciones (MVP SaaS)
 - [ ] Tablas: `plans`, `plan_limits`, `subscriptions`, `subscription_limits_snapshot`

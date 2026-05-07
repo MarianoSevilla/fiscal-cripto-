@@ -151,6 +151,19 @@ html, body {
       </div>
     </div>
 
+    <!-- PENDING (login de usuario existente sin verificar) -->
+    <div id="statePending" hidden>
+      <div class="icon">📧</div>
+      <h1 class="card-title">Verifica tu email</h1>
+      <p class="card-body">Tu sesión está activa, pero tu email aún no está verificado. Te hemos enviado un enlace de confirmación. Verifícalo para asegurar el acceso a tu cuenta.</p>
+      <a href="/dashboard" class="btn btn-primary" style="display:block;text-align:center;margin-bottom:14px;">Continuar al dashboard</a>
+      <div class="resend-form">
+        <input type="email" id="pendingEmail" placeholder="tu@email.com" autocomplete="email">
+        <button class="btn btn-secondary" id="pendingResendBtn" style="width:100%;">Reenviar enlace de verificación</button>
+        <p id="pendingMsg" hidden></p>
+      </div>
+    </div>
+
     <!-- INVALID -->
     <div id="stateInvalid" hidden>
       <div class="icon">❌</div>
@@ -195,7 +208,7 @@ html, body {
 
 // Show correct state based on ?status= param
 const status = new URLSearchParams(location.search).get('status') || 'invalid';
-const states = { success: 'stateSuccess', already: 'stateAlready', expired: 'stateExpired', invalid: 'stateInvalid' };
+const states = { success: 'stateSuccess', already: 'stateAlready', expired: 'stateExpired', invalid: 'stateInvalid', pending: 'statePending' };
 document.getElementById(states[status] || 'stateInvalid').hidden = false;
 
 // Resend helper
@@ -232,6 +245,14 @@ document.getElementById('invalidResendBtn').addEventListener('click', () =>
     document.getElementById('invalidEmail').value.trim().toLowerCase(),
     document.getElementById('invalidMsg'),
     document.getElementById('invalidResendBtn')
+  )
+);
+
+document.getElementById('pendingResendBtn').addEventListener('click', () =>
+  resendVerification(
+    document.getElementById('pendingEmail').value.trim().toLowerCase(),
+    document.getElementById('pendingMsg'),
+    document.getElementById('pendingResendBtn')
   )
 );
 </script>

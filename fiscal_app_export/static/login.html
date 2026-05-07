@@ -267,7 +267,11 @@ form.addEventListener('submit', async e => {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Error al iniciar sesión');
-    window.location.href = '/dashboard';
+    if (data.pending_verification) {
+      window.location.href = '/verify-email-result?status=pending';
+    } else {
+      window.location.href = '/dashboard';
+    }
   } catch (err) {
     errorEl.textContent = err.message;
     errorEl.hidden      = false;

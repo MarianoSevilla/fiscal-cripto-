@@ -1256,6 +1256,16 @@ def login():
     db.session.commit()
 
     login_user(user, remember=remember)
+
+    if not user.email_verified_at:
+        _send_verification_email(user)
+        return jsonify({
+            "message": "Sesión iniciada.",
+            "email": user.email,
+            "plan": user.plan,
+            "pending_verification": True,
+        })
+
     return jsonify({"message": "Sesión iniciada.", "email": user.email, "plan": user.plan})
 
 
