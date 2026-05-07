@@ -229,7 +229,8 @@ class ClasificadorCryptoCom:
     @staticmethod
     def _float(val) -> float:
         try:
-            return float(val)
+            v = float(val)
+            return v if v == v else 0.0  # NaN != NaN → devuelve 0.0
         except Exception:
             return 0.0
 

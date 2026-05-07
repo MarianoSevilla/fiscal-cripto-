@@ -814,7 +814,7 @@
     <div class="bar-right">
       {% if exchange_id %}
       <div class="bar-exchange">
-        <div class="exchange-logo logo-{{ exchange_id }}" style="width:22px;height:22px;border-radius:50%;overflow:hidden;flex-shrink:0;"><img src="/static/images/{{ exchange_id }}{% if exchange_id in ['kraken','bitvavo','coinbase'] %}.png{% else %}.jpg{% endif %}" alt="{{ exchange_name }}" style="width:100%;height:100%;object-fit:cover;display:block;"></div>
+        <div class="exchange-logo logo-{{ exchange_id }}" style="width:22px;height:22px;border-radius:50%;overflow:hidden;flex-shrink:0;"><img src="/static/images/{% if exchange_id == 'cryptocom' %}crypto.png{% elif exchange_id in ['kraken','bitvavo','coinbase'] %}{{ exchange_id }}.png{% else %}{{ exchange_id }}.jpg{% endif %}" alt="{{ exchange_name }}" style="width:100%;height:100%;object-fit:cover;display:block;"></div>
         <span class="bar-exchange-name">{{ exchange_name }}</span>
         <span class="bar-exchange-change"><a href="/dashboard">← Cambiar</a></span>
       </div>
@@ -1085,6 +1085,9 @@
     },
     coinbase: {
       hint: 'Arrastra aquí el CSV de Coinbase o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Historial de transacciones · solo ficheros .csv</span>',
+    },
+    cryptocom: {
+      hint: 'Arrastra aquí el CSV de Crypto.com o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">crypto_transactions_record_*.csv · solo ficheros .csv</span>',
     },
   };
 
