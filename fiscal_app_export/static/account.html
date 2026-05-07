@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mi cuenta — Herramienta Fiscal Cripto</title>
+<meta name="robots" content="noindex">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+<link rel="icon" href="/static/favicon.ico">
+<link rel="manifest" href="/static/site.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --black:      #0a0a0a;
+  --surface:    #111111;
+  --surface2:   #1a1a1a;
+  --surface3:   #222222;
+  --border:     rgba(255,255,255,0.07);
+  --border-hover: rgba(255,255,255,0.15);
+  --text:       #f0f0f0;
+  --muted:      #888888;
+  --muted2:     #555555;
+  --accent:     #00C896;
+  --accent-dim: rgba(0,200,150,0.10);
+  --red:        #E24B4A;
+  --red-dim:    rgba(226,75,74,0.10);
+  --red-brd:    rgba(226,75,74,0.22);
+  --max:        720px;
+  --r:          12px;
+  --font-d:     'Syne', sans-serif;
+  --font-b:     'DM Sans', sans-serif;
+}
+
+html, body {
+  min-height: 100%; background: var(--black);
+  font-family: var(--font-b); color: var(--text);
+  font-size: 16px; line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+a { color: inherit; text-decoration: none; }
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  border-bottom: 1px solid var(--border);
+  background: rgba(10,10,10,0.88); backdrop-filter: blur(14px);
+}
+.nav-inner {
+  max-width: 1080px; margin: 0 auto; padding: 0 2rem;
+  height: 64px; display: flex; align-items: center; justify-content: space-between;
+}
+.nav-logo {
+  font-family: var(--font-d); font-weight: 800; font-size: 0.95rem;
+  letter-spacing: -0.02em; color: var(--text);
+}
+.nav-logo span { color: var(--accent); }
+.nav-right { display: flex; align-items: center; gap: 0.6rem; }
+
+.nav-avatar-wrap { position: relative; }
+.nav-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--accent); color: #0a0a0a;
+  font-family: var(--font-d); font-size: 14px; font-weight: 700;
+  border: 2px solid transparent; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity .15s, border-color .15s;
+}
+.nav-avatar:hover { opacity: .85; border-color: rgba(0,200,150,.4); }
+.nav-dropdown {
+  position: absolute; right: 0; top: calc(100% + 10px);
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 14px; min-width: 190px;
+  padding: 6px; opacity: 0; pointer-events: none;
+  transform: translateY(-6px); transition: opacity .15s, transform .15s;
+}
+.nav-dropdown.open { opacity: 1; pointer-events: auto; transform: translateY(0); }
+.nav-dd-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 12px; border-radius: 8px; font-size: 13.5px;
+  color: var(--text); background: none; border: none;
+  cursor: pointer; width: 100%; text-align: left;
+  transition: background .12s;
+}
+.nav-dd-item:hover { background: var(--surface3); }
+.nav-dd-item.danger { color: var(--red); }
+.nav-dd-item.active { background: var(--accent-dim); color: var(--accent); }
+.nav-dd-divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+/* ── MAIN ── */
+main {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 104px 2rem 4rem;
+}
+
+.page-title {
+  font-family: var(--font-d); font-size: 1.8rem; font-weight: 800;
+  letter-spacing: -0.03em; margin-bottom: 0.4rem;
+}
+.page-sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 2.5rem; }
+
+/* ── SECTIONS ── */
+.section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.75rem;
+  margin-bottom: 1.25rem;
+}
+.section-title {
+  font-family: var(--font-d); font-size: 0.75rem; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 1.25rem;
+}
+
+/* ── ROWS ── */
+.row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.row:last-child { border-bottom: none; padding-bottom: 0; }
+.row:first-of-type { padding-top: 0; }
+.row-label { font-size: 13px; color: var(--muted); }
+.row-value { font-size: 14px; font-weight: 500; }
+.row-value.accent { color: var(--accent); }
+
+/* ── BADGE ── */
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11.5px; font-weight: 600; padding: 3px 9px;
+  border-radius: 20px; letter-spacing: 0.02em;
+}
+.badge-free { background: var(--surface3); color: var(--muted); }
+.badge-pro  { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(0,200,150,.25); }
+.badge-verified   { background: rgba(0,200,150,0.10); color: var(--accent); }
+.badge-unverified { background: var(--red-dim); color: var(--red); border: 1px solid var(--red-brd); }
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  cursor: pointer; border: none; transition: opacity .15s;
+}
+.btn:hover { opacity: .85; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn-danger {
+  background: var(--red-dim); color: var(--red);
+  border: 1px solid var(--red-brd);
+}
+.btn-muted {
+  background: var(--surface3); color: var(--muted);
+  border: 1px solid var(--border);
+}
+.btn-accent { background: var(--accent); color: #0a0a0a; }
+
+/* ── CHANGE PASSWORD FORM ── */
+.pw-form { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+.pw-form input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-family: var(--font-b);
+  font-size: 14px; padding: 11px 14px; outline: none;
+  transition: border-color .2s;
+}
+.pw-form input:focus { border-color: var(--accent); }
+.pw-form input::placeholder { color: var(--muted2); }
+.form-msg { font-size: 12.5px; margin-top: 2px; }
+.form-msg.ok  { color: var(--accent); }
+.form-msg.err { color: var(--red); }
+
+/* ── DANGER ZONE ── */
+.danger-zone {
+  background: var(--red-dim);
+  border: 1px solid var(--red-brd);
+  border-radius: 16px;
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1.25rem;
+}
+.danger-zone .section-title { color: var(--red); }
+.danger-desc { font-size: 13px; color: var(--muted); margin-bottom: 1rem; }
+
+@media (max-width: 480px) {
+  main { padding: 88px 1.25rem 3rem; }
+  .page-title { font-size: 1.5rem; }
+  .row { flex-direction: column; align-items: flex-start; gap: 0.4rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav>
+  <div class="nav-inner">
+    <a href="/dashboard" class="nav-logo">mariano<span>sevilla</span>.com</a>
+    <div class="nav-right">
+      <div class="nav-avatar-wrap">
+        <button class="nav-avatar" id="navAvatar" aria-label="Menú de usuario">U</button>
+        <div class="nav-dropdown" id="navDropdown">
+          <a href="/dashboard" class="nav-dd-item">⚡&nbsp; Dashboard</a>
+          <a href="/account" class="nav-dd-item active">👤&nbsp; Mi cuenta</a>
+          <div class="nav-dd-divider"></div>
+          <button class="nav-dd-item danger" id="navBtnLogout">↩&nbsp; Cerrar sesión</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ── MAIN ── -->
+<main>
+  <h1 class="page-title">Mi cuenta</h1>
+  <p class="page-sub">Gestiona tu perfil y preferencias.</p>
+
+  <!-- Información de cuenta -->
+  <div class="section">
+    <p class="section-title">Información de cuenta</p>
+    <div class="row">
+      <span class="row-label">Email</span>
+      <span class="row-value" id="infoEmail">—</span>
+    </div>
+    <div class="row">
+      <span class="row-label">Estado del email</span>
+      <span id="infoVerified">—</span>
+    </div>
+    <div class="row">
+      <span class="row-label">Plan</span>
+      <span id="infoPlan">—</span>
+    </div>
+    <div class="row">
+      <span class="row-label">Miembro desde</span>
+      <span class="row-value" id="infoCreated">—</span>
+    </div>
+  </div>
+
+  <!-- Cambiar contraseña (solo cuentas email, no OAuth) -->
+  <div class="section" id="sectionPassword" hidden>
+    <p class="section-title">Contraseña</p>
+    <div class="pw-form" id="pwForm">
+      <input type="password" id="pwCurrent" placeholder="Contraseña actual" autocomplete="current-password">
+      <input type="password" id="pwNew"     placeholder="Nueva contraseña (mín. 8 caracteres)" autocomplete="new-password">
+      <input type="password" id="pwConfirm" placeholder="Confirmar nueva contraseña" autocomplete="new-password">
+      <div>
+        <button class="btn btn-accent" id="pwBtn">Cambiar contraseña</button>
+        <p class="form-msg" id="pwMsg" hidden></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Zona de peligro -->
+  <div class="danger-zone">
+    <p class="section-title">Zona de peligro</p>
+    <p class="danger-desc">Al eliminar tu cuenta se borrarán permanentemente todos tus datos. Esta acción no se puede deshacer.</p>
+    <button class="btn btn-danger" id="btnDeleteAccount">Eliminar mi cuenta</button>
+  </div>
+</main>
+
+<script>
+// ── Cargar datos de usuario ─────────────────────
+(async () => {
+  try {
+    const r = await fetch('/api/me', { credentials: 'include' });
+    const d = await r.json();
+    if (!d.user) { window.location.replace('/login/'); return; }
+
+    const u = d.user;
+    document.getElementById('navAvatar').textContent = u.email.charAt(0).toUpperCase();
+    document.getElementById('infoEmail').textContent = u.email;
+
+    // Estado email
+    const verifiedEl = document.getElementById('infoVerified');
+    if (u.email_verified) {
+      verifiedEl.innerHTML = '<span class="badge badge-verified">✓ Verificado</span>';
+    } else {
+      verifiedEl.innerHTML = '<span class="badge badge-unverified">✗ Sin verificar</span>';
+    }
+
+    // Plan
+    const planEl = document.getElementById('infoPlan');
+    if (u.plan === 'pro') {
+      planEl.innerHTML = '<span class="badge badge-pro">⭐ Pro</span>';
+    } else {
+      planEl.innerHTML = '<span class="badge badge-free">Free</span>';
+    }
+
+    // Fecha de registro
+    if (u.created_at) {
+      const date = new Date(u.created_at);
+      document.getElementById('infoCreated').textContent =
+        date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+
+    // Mostrar sección contraseña solo si no es cuenta Google
+    if (!u.is_google) {
+      document.getElementById('sectionPassword').hidden = false;
+    }
+  } catch {
+    window.location.replace('/login/');
+  }
+})();
+
+// ── Nav dropdown ────────────────────────────────
+const _avatar   = document.getElementById('navAvatar');
+const _dropdown = document.getElementById('navDropdown');
+_avatar.addEventListener('click', e => { e.stopPropagation(); _dropdown.classList.toggle('open'); });
+document.addEventListener('click', () => _dropdown.classList.remove('open'));
+
+// ── Logout ──────────────────────────────────────
+document.getElementById('navBtnLogout').addEventListener('click', async () => {
+  await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+  window.location.href = '/';
+});
+
+// ── Cambiar contraseña ──────────────────────────
+document.getElementById('pwBtn').addEventListener('click', async () => {
+  const btn    = document.getElementById('pwBtn');
+  const msgEl  = document.getElementById('pwMsg');
+  const current = document.getElementById('pwCurrent').value;
+  const newPw   = document.getElementById('pwNew').value;
+  const confirm = document.getElementById('pwConfirm').value;
+
+  msgEl.hidden = true;
+
+  if (!current || !newPw || !confirm) {
+    msgEl.textContent = 'Completa todos los campos.';
+    msgEl.className = 'form-msg err'; msgEl.hidden = false; return;
+  }
+  if (newPw.length < 8) {
+    msgEl.textContent = 'La nueva contraseña debe tener al menos 8 caracteres.';
+    msgEl.className = 'form-msg err'; msgEl.hidden = false; return;
+  }
+  if (newPw !== confirm) {
+    msgEl.textContent = 'Las contraseñas no coinciden.';
+    msgEl.className = 'form-msg err'; msgEl.hidden = false; return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try {
+    const res = await fetch('/api/change-password', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ current_password: current, new_password: newPw }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al cambiar la contraseña');
+    msgEl.textContent = '¡Contraseña actualizada correctamente!';
+    msgEl.className = 'form-msg ok'; msgEl.hidden = false;
+    document.getElementById('pwCurrent').value = '';
+    document.getElementById('pwNew').value = '';
+    document.getElementById('pwConfirm').value = '';
+  } catch (e) {
+    msgEl.textContent = e.message;
+    msgEl.className = 'form-msg err'; msgEl.hidden = false;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Cambiar contraseña';
+  }
+});
+
+// ── Eliminar cuenta ─────────────────────────────
+document.getElementById('btnDeleteAccount').addEventListener('click', () => {
+  if (!confirm('¿Seguro que quieres eliminar tu cuenta? Esta acción no se puede deshacer.')) return;
+  // Por ahora redirige a soporte — se implementará en Fase 2
+  alert('Para eliminar tu cuenta contacta con soporte@marianosevilla.com');
+});
+</script>
+</body>
+</html>

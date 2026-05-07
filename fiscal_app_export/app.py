@@ -766,6 +766,11 @@ def dashboard():
     return send_from_directory("static", "dashboard.html")
 
 
+@app.route("/account", strict_slashes=False)
+def account():
+    return send_from_directory("static", "account.html")
+
+
 # ── EMAIL VERIFICATION ────────────────────────
 
 _VERIFY_TOKEN_SALT = "email-verification-v1"
@@ -1233,7 +1238,31 @@ def me():
     """Devuelve los datos del usuario autenticado, o null si no hay sesión."""
     if not current_user.is_authenticated:
         return jsonify({"user": None})
-    return jsonify({"user": {"email": current_user.email, "plan": current_user.plan}})
+    return jsonify({"user": {
+        "email":          current_user.email,
+        "plan":           current_user.plan,
+        "email_verified": current_user.email_verified_at is not None,
+        "is_google":      current_user.google_id is not None,
+        "created_at":     current_user.created_at.isoformat() if current_user.created_at else None,
+    }})
+
+
+@app.route("/api/change-password", methods=["POST"])
+@login_required
+def change_password():
+    """Cambia la contraseña del usuario autenticado (solo cuentas email, no OAuth)."""
+    if current_user.google_id:
+        return jsonify({"error": "Las cuentas de Google no tienen contraseña."}), 400
+    data        = request.get_json(silent=True) or {}
+    current_pw  = data.get("current_password", "")
+    new_pw      = data.get("new_password", "")
+    if not current_user.check_password(current_pw):
+        return jsonify({"error": "La contraseña actual no es correcta."}), 400
+    if len(new_pw) < 8:
+        return jsonify({"error": "La nueva contraseña debe tener al menos 8 caracteres."}), 400
+    current_user.set_password(new_pw)
+    db.session.commit()
+    return jsonify({"message": "Contraseña actualizada correctamente."})
 
 
 @app.errorhandler(429)
