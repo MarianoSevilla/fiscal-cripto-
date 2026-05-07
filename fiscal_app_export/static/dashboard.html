@@ -229,6 +229,7 @@ footer {
         <div class="nav-dropdown" id="navDropdown">
           <a href="/pricing" class="nav-dd-item">💎&nbsp; Planes</a>
           <a href="/account" class="nav-dd-item">👤&nbsp; Mi cuenta</a>
+          <a href="/stats" class="nav-dd-item" id="navStatsLink" hidden>📊&nbsp; Stats</a>
           <div class="nav-dd-divider"></div>
           <button class="nav-dd-item danger" id="navBtnLogout">↩&nbsp; Cerrar sesión</button>
         </div>
@@ -391,6 +392,7 @@ footer {
     if (!d.user) { window.location.replace('/login/'); return; }
     // Muestra inicial del email en el avatar
     document.getElementById('navAvatar').textContent = d.user.email.charAt(0).toUpperCase();
+    if (d.user.is_admin) document.getElementById('navStatsLink').hidden = false;
   } catch {
     window.location.replace('/login/');
   }
