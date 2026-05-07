@@ -32,7 +32,7 @@ from flask_migrate import Migrate
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from authlib.integrations.flask_client import OAuth
 import resend
-from models import db, bcrypt, User
+from models import db, bcrypt, User, FifoReport
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -156,27 +156,69 @@ with app.app_context():
 # Esto evita el problema de dicts en memoria que no se comparten entre workers.
 _PDF_TTL = 300  # segundos
 
-def _guardar_token_pdf(token: str) -> None:
+def _guardar_token_pdf(token: str, report_id: int | None = None) -> None:
     """Guarda el token en la sesión del usuario con su TTL."""
     from flask import session
-    session["pdf_token"]     = token
-    session["pdf_token_uid"] = current_user.id
-    session["pdf_token_exp"] = time.time() + _PDF_TTL
+    session["pdf_token"]       = token
+    session["pdf_token_uid"]   = current_user.id
+    session["pdf_token_exp"]   = time.time() + _PDF_TTL
+    session["pdf_report_id"]   = report_id
 
-def _consumir_token_pdf(token: str) -> bool:
-    """Valida propiedad y elimina el token de la sesión (uso único)."""
+def _consumir_token_pdf(token: str) -> int | None:
+    """Valida propiedad, elimina el token de la sesión y devuelve el report_id (o None)."""
     from flask import session
     if session.get("pdf_token") != token:
-        return False
+        return None
     if session.get("pdf_token_uid") != current_user.id:
-        return False
+        return None
     if time.time() > session.get("pdf_token_exp", 0):
-        return False
-    # Consumir (uso único)
+        return None
+    report_id = session.get("pdf_report_id")
     session.pop("pdf_token",     None)
     session.pop("pdf_token_uid", None)
     session.pop("pdf_token_exp", None)
-    return True
+    session.pop("pdf_report_id", None)
+    return report_id if report_id is not None else -1
+
+
+def _contar_csv_rows(filepath: str) -> int:
+    """Cuenta filas de datos en el CSV (sin contar la cabecera)."""
+    try:
+        with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+            return max(0, sum(1 for _ in f) - 1)
+    except Exception:
+        return 0
+
+
+def _registrar_informe(
+    exchange: str,
+    fiscal_year: int,
+    csv_rows: int,
+    distinct_assets: int,
+    processing_ms: int,
+    status: str = "generated",
+    error_type: str | None = None,
+) -> int | None:
+    """Crea un registro FifoReport y devuelve su id. No lanza excepciones."""
+    if not current_user.is_authenticated:
+        return None
+    try:
+        report = FifoReport(
+            user_id         = current_user.id,
+            exchange        = exchange,
+            fiscal_year     = fiscal_year,
+            csv_rows        = csv_rows,
+            distinct_assets = distinct_assets,
+            processing_ms   = processing_ms,
+            status          = status,
+            error_type      = error_type,
+        )
+        db.session.add(report)
+        db.session.commit()
+        return report.id
+    except Exception:
+        db.session.rollback()
+        return None
 
 
 # ── DATOS SEO POR EXCHANGE ─────────────────────
@@ -1001,6 +1043,9 @@ def analizar():
         archivo.save(tmp.name)
         tmp_path = tmp.name
 
+    t_start   = time.time()
+    csv_rows  = _contar_csv_rows(tmp_path)
+
     try:
         valido, error_msg = _validar_csv(tmp_path, exchange)
         if not valido:
@@ -1057,12 +1102,22 @@ def analizar():
             rendimientos_json = _rendimientos_a_json(rendimientos)
             pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Binance", rendimientos)
 
+        processing_ms   = int((time.time() - t_start) * 1000)
+        distinct_assets = len({op["activo"] for op in operaciones}) if operaciones else 0
+
         pdf_tmp = tmp_path.replace(".csv", ".pdf")
         with open(pdf_tmp, "wb") as f:
             f.write(pdf_bytes)
 
+        report_id = _registrar_informe(
+            exchange        = exchange,
+            fiscal_year     = int(ejercicio),
+            csv_rows        = csv_rows,
+            distinct_assets = distinct_assets,
+            processing_ms   = processing_ms,
+        )
         token = os.path.basename(pdf_tmp)
-        _guardar_token_pdf(token)   # RLS: liga el token al usuario actual
+        _guardar_token_pdf(token, report_id)
 
         return jsonify({
             "ok": True,
@@ -1076,6 +1131,15 @@ def analizar():
 
     except Exception as e:
         traceback.print_exc()
+        _registrar_informe(
+            exchange        = exchange,
+            fiscal_year     = int(ejercicio) if ejercicio.isdigit() else 0,
+            csv_rows        = csv_rows,
+            distinct_assets = 0,
+            processing_ms   = int((time.time() - t_start) * 1000),
+            status          = "failed",
+            error_type      = type(e).__name__,
+        )
         return jsonify({"error": _error_amigable(e)}), 500
     finally:
         try:
@@ -1097,11 +1161,22 @@ def descargar(token):
         return jsonify({"error": "Token inválido."}), 400
 
     # RLS: solo el usuario que generó el PDF puede descargarlo
-    if not _consumir_token_pdf(token):
+    report_id = _consumir_token_pdf(token)
+    if report_id is None:
         return jsonify({"error": "Token inválido o expirado."}), 403
 
     if not os.path.exists(pdf_path):
         return jsonify({"error": "Informe no encontrado o ya descargado."}), 404
+
+    # Registrar descarga
+    if report_id and report_id > 0:
+        try:
+            report = db.session.get(FifoReport, report_id)
+            if report:
+                report.downloaded_at = datetime.utcnow()
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
 
     # Borrar el PDF en un hilo separado tras servir la respuesta
     def borrar_pdf():
