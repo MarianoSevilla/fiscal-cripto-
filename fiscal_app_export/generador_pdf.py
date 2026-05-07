@@ -38,9 +38,9 @@ def _build_styles():
         "body": ParagraphStyle("body", fontName="Helvetica", fontSize=9, textColor=WHITE, leading=14),
         "body_muted": ParagraphStyle("body_muted", fontName="Helvetica", fontSize=8, textColor=MUTED, leading=12),
         "kpi_label": ParagraphStyle("kpi_label", fontName="Helvetica", fontSize=7.5, textColor=MUTED, leading=11, alignment=TA_CENTER),
-        "kpi_value": ParagraphStyle("kpi_value", fontName="Helvetica-Bold", fontSize=16, textColor=WHITE, leading=20, alignment=TA_CENTER),
-        "kpi_value_green": ParagraphStyle("kpi_value_green", fontName="Helvetica-Bold", fontSize=16, textColor=GREEN, leading=20, alignment=TA_CENTER),
-        "kpi_value_red": ParagraphStyle("kpi_value_red", fontName="Helvetica-Bold", fontSize=16, textColor=RED_C, leading=20, alignment=TA_CENTER),
+        "kpi_value": ParagraphStyle("kpi_value", fontName="Helvetica-Bold", fontSize=14, textColor=WHITE, leading=18, alignment=TA_CENTER),
+        "kpi_value_green": ParagraphStyle("kpi_value_green", fontName="Helvetica-Bold", fontSize=14, textColor=GREEN, leading=18, alignment=TA_CENTER),
+        "kpi_value_red": ParagraphStyle("kpi_value_red", fontName="Helvetica-Bold", fontSize=14, textColor=RED_C, leading=18, alignment=TA_CENTER),
         "resumen_label": ParagraphStyle("resumen_label", fontName="Helvetica", fontSize=9, textColor=MUTED, leading=13),
         "resumen_value": ParagraphStyle("resumen_value", fontName="Helvetica-Bold", fontSize=9, textColor=WHITE, leading=13, alignment=TA_RIGHT),
         "resumen_value_green": ParagraphStyle("resumen_value_green", fontName="Helvetica-Bold", fontSize=9, textColor=GREEN, leading=13, alignment=TA_RIGHT),
@@ -48,11 +48,13 @@ def _build_styles():
         "warning": ParagraphStyle("warning", fontName="Helvetica", fontSize=8, textColor=colors.HexColor("#C8A5A4"), leading=12),
         "disclaimer": ParagraphStyle("disclaimer", fontName="Helvetica-Oblique", fontSize=7.5, textColor=MUTED, leading=11),
         "th": ParagraphStyle("th", fontName="Helvetica-Bold", fontSize=7, textColor=MUTED, leading=9),
+        "th_right": ParagraphStyle("th_right", fontName="Helvetica-Bold", fontSize=7, textColor=MUTED, leading=9, alignment=TA_RIGHT),
         "td": ParagraphStyle("td", fontName="Helvetica", fontSize=7.5, textColor=WHITE, leading=10),
-        "td_mono": ParagraphStyle("td_mono", fontName="Courier", fontSize=7, textColor=WHITE, leading=10),
-        "td_green": ParagraphStyle("td_green", fontName="Helvetica-Bold", fontSize=7.5, textColor=GREEN, leading=10),
-        "td_red": ParagraphStyle("td_red", fontName="Helvetica-Bold", fontSize=7.5, textColor=RED_C, leading=10),
+        "td_mono": ParagraphStyle("td_mono", fontName="Courier", fontSize=7, textColor=WHITE, leading=10, alignment=TA_RIGHT),
+        "td_green": ParagraphStyle("td_green", fontName="Helvetica-Bold", fontSize=7.5, textColor=GREEN, leading=10, alignment=TA_RIGHT),
+        "td_red": ParagraphStyle("td_red", fontName="Helvetica-Bold", fontSize=7.5, textColor=RED_C, leading=10, alignment=TA_RIGHT),
         "td_muted": ParagraphStyle("td_muted", fontName="Helvetica", fontSize=7, textColor=MUTED, leading=10),
+        "td_muted_right": ParagraphStyle("td_muted_right", fontName="Helvetica", fontSize=7, textColor=MUTED, leading=10, alignment=TA_RIGHT),
         "nota_label": ParagraphStyle("nota_label", fontName="Helvetica-Bold", fontSize=8, textColor=AMBER, leading=12),
         "nota_body": ParagraphStyle("nota_body", fontName="Helvetica", fontSize=8, textColor=colors.HexColor("#C8B870"), leading=12),
     }
@@ -152,7 +154,7 @@ def _portada(story, styles, resumen, nombre_usuario, ejercicio, exchange, period
 
     resumen_data = [
         [Paragraph("BASE DEL AHORRO — Transmisiones de criptoactivos (art. 33 LIRPF)", styles["th"]),
-         Paragraph("IMPORTE (EUR)", styles["th"])],
+         Paragraph("IMPORTE (EUR)", styles["th_right"])],
         [Paragraph("Suma de ganancias patrimoniales", styles["resumen_label"]),
          Paragraph(f"+{ganancias:,.2f}", styles["resumen_value_green"])],
         [Paragraph("Suma de pérdidas patrimoniales", styles["resumen_label"]),
@@ -179,7 +181,7 @@ def _portada(story, styles, resumen, nombre_usuario, ejercicio, exchange, period
     story.append(Spacer(1, 5*mm))
 
     nota_data = [[
-        Paragraph("METODOLOGIA", styles["nota_label"]),
+        Paragraph("METODOLOGÍA", styles["nota_label"]),
         Paragraph(
             "Método FIFO obligatorio (art. 37.2 LIRPF). Las comisiones de compra incrementan el precio de coste "
             "del lote. Las comisiones de venta reducen el valor de transmisión. Los swaps entre criptoactivos "
@@ -187,7 +189,7 @@ def _portada(story, styles, resumen, nombre_usuario, ejercicio, exchange, period
             "Los depósitos y retiradas de exchange no generan hecho imponible.",
             styles["nota_body"])
     ]]
-    t3 = Table(nota_data, colWidths=[22*mm, 146*mm])
+    t3 = Table(nota_data, colWidths=[30*mm, 138*mm])
     t3.setStyle(TableStyle([
         ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#1A1800")),
         ("BOX",           (0, 0), (-1, -1), 0.5, colors.HexColor("#3A3500")),
