@@ -206,6 +206,7 @@ main {
         <div class="nav-dropdown" id="navDropdown">
           <a href="/dashboard" class="nav-dd-item">⚡&nbsp; Dashboard</a>
           <a href="/account" class="nav-dd-item active">👤&nbsp; Mi cuenta</a>
+          <a href="/stats" class="nav-dd-item" id="navStatsLink" hidden>📊&nbsp; Stats</a>
           <div class="nav-dd-divider"></div>
           <button class="nav-dd-item danger" id="navBtnLogout">↩&nbsp; Cerrar sesión</button>
         </div>
@@ -272,6 +273,7 @@ main {
 
     const u = d.user;
     document.getElementById('navAvatar').textContent = u.email.charAt(0).toUpperCase();
+    if (u.is_admin) document.getElementById('navStatsLink').hidden = false;
     document.getElementById('infoEmail').textContent = u.email;
 
     // Estado email

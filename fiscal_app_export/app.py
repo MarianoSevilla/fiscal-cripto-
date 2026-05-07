@@ -1389,6 +1389,14 @@ def api_stats():
     if not _is_admin():
         return jsonify({"error": "Acceso denegado."}), 403
 
+    try:
+        return _api_stats_data()
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+def _api_stats_data():
     now = datetime.utcnow()
 
     # Primer día del mes de hace 5 meses (= inicio de la ventana de 6 meses)
