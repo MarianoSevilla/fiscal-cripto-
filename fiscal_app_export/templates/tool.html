@@ -400,16 +400,24 @@
     display: none; font-size: 12px; color: var(--red); margin-top: 4px;
   }
   .bar-error-msg.visible { display: block; }
-  .bar-btn-download {
-    display: none; padding: 8px 18px;
-    color: var(--accent); border: 1.5px solid var(--accent);
-    background: transparent; border-radius: 8px;
-    font-family: var(--font-display); font-size: 13px;
+  .btn-download-hero {
+    display: none; padding: 13px 28px;
+    color: var(--accent); border: 2px solid var(--accent);
+    background: transparent; border-radius: 10px;
+    font-family: var(--font-display); font-size: 1rem;
     font-weight: 700; cursor: pointer; transition: background 0.2s;
-    text-decoration: none; align-items: center; gap: 6px;
+    text-decoration: none; align-items: center; gap: 8px;
+    white-space: nowrap;
   }
-  .bar-btn-download:hover { background: var(--accent-dim); }
-  .bar-btn-download.visible { display: flex; }
+  .btn-download-hero:hover { background: var(--accent-dim); }
+  .btn-download-hero.visible { display: flex; }
+
+  .results-header-row {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    gap: 1rem; margin-bottom: 1.25rem;
+  }
+  .results-header-row .results-heading { margin-bottom: 0; }
   .bar-btn-nuevo {
     display: none; padding: 8px 16px;
     background: transparent; border: 1px solid var(--border);
@@ -682,6 +690,8 @@
     .bar-exchange { flex: 1; }
     .bar-btn { width: auto; flex-shrink: 0; }
     .results-wrap { padding: 0 1rem 4rem; }
+    .results-header-row { flex-direction: column; align-items: flex-start; }
+    .btn-download-hero { width: 100%; justify-content: center; }
     .faq-wrap { padding: 0 1rem 3rem; }
     .faq-list { grid-template-columns: 1fr; }
   }
@@ -834,9 +844,6 @@
     <div class="bar-file-selected" id="fileSelected">
       <span>📄</span><span id="fileName">—</span>
     </div>
-    <a class="bar-btn-download" id="btnDownload" href="#" download="informe_fiscal_cripto_{{ exchange_id or 'cripto' }}.pdf">
-      ⬇ Descargar PDF
-    </a>
     <button class="bar-btn-nuevo" id="btnNuevo">↩ Nuevo análisis</button>
   </div>
 
@@ -859,7 +866,12 @@
 <!-- ── RESULTADOS FULL WIDTH ── -->
 <div class="results-wrap">
 
-  <h2 class="results-heading">Resultado del análisis</h2>
+  <div class="results-header-row">
+    <h2 class="results-heading">Resultado del análisis</h2>
+    <a class="btn-download-hero" id="btnDownload" href="#" download="informe_fiscal_cripto_{{ exchange_id or 'cripto' }}.pdf">
+      ⬇ Descargar PDF
+    </a>
+  </div>
 
   <!-- ESTADO VACÍO -->
   <div class="empty-state" id="emptyState">
