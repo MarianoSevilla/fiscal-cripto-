@@ -1397,9 +1397,11 @@ def api_stats():
 
 
 def _api_stats_data():
+    from collections import defaultdict
+
     now = datetime.utcnow()
 
-    # Primer día del mes de hace 5 meses (= inicio de la ventana de 6 meses)
+    # Primer día del mes de hace 5 meses (= ventana de 6 meses)
     m = now.month - 5
     y = now.year
     if m <= 0:
@@ -1408,68 +1410,51 @@ def _api_stats_data():
     seis_meses_atras = datetime(y, m, 1)
 
     # ── Usuarios ─────────────────────────────────────────────────────────────
-    total_users      = User.query.count()
-    verified_users   = User.query.filter(User.email_verified_at.isnot(None)).count()
+    todos_usuarios   = User.query.all()
+    total_users      = len(todos_usuarios)
+    verified_users   = sum(1 for u in todos_usuarios if u.email_verified_at)
     unverified_users = total_users - verified_users
 
-    # Nuevos usuarios por mes — últimos 6 meses
-    usuarios_por_mes = (
-        db.session.query(
-            func.date_trunc("month", User.created_at).label("mes"),
-            func.count(User.id).label("total"),
-        )
-        .filter(User.created_at >= seis_meses_atras)
-        .group_by("mes")
-        .order_by("mes")
-        .all()
-    )
+    # Nuevos por mes (últimos 6 meses) — agrupado en Python
+    usuarios_bucket = defaultdict(int)
+    for u in todos_usuarios:
+        if u.created_at and u.created_at >= seis_meses_atras:
+            usuarios_bucket[u.created_at.strftime("%Y-%m")] += 1
     usuarios_por_mes_json = [
-        {"mes": str(row.mes)[:7], "total": row.total}
-        for row in usuarios_por_mes
+        {"mes": k, "total": v}
+        for k, v in sorted(usuarios_bucket.items())
     ]
 
     # ── Informes FIFO ────────────────────────────────────────────────────────
-    total_generados  = FifoReport.query.filter_by(status="generated").count()
-    total_descargados = FifoReport.query.filter(
-        FifoReport.status == "generated",
-        FifoReport.downloaded_at.isnot(None),
-    ).count()
+    todos_reports     = FifoReport.query.all()
+    generados         = [r for r in todos_reports if r.status == "generated"]
+    total_generados   = len(generados)
+    total_descargados = sum(1 for r in generados if r.downloaded_at)
 
-    por_exchange = (
-        db.session.query(FifoReport.exchange, func.count(FifoReport.id).label("total"))
-        .filter_by(status="generated")
-        .group_by(FifoReport.exchange)
-        .order_by(func.count(FifoReport.id).desc())
-        .all()
-    )
-    por_exchange_json = [{"exchange": r.exchange, "total": r.total} for r in por_exchange]
+    exchange_bucket = defaultdict(int)
+    for r in generados:
+        exchange_bucket[r.exchange] += 1
+    por_exchange_json = [
+        {"exchange": k, "total": v}
+        for k, v in sorted(exchange_bucket.items(), key=lambda x: -x[1])
+    ]
 
-    por_ejercicio = (
-        db.session.query(FifoReport.fiscal_year, func.count(FifoReport.id).label("total"))
-        .filter_by(status="generated")
-        .group_by(FifoReport.fiscal_year)
-        .order_by(FifoReport.fiscal_year.desc())
-        .all()
-    )
-    por_ejercicio_json = [{"ejercicio": r.fiscal_year, "total": r.total} for r in por_ejercicio]
+    ejercicio_bucket = defaultdict(int)
+    for r in generados:
+        ejercicio_bucket[r.fiscal_year] += 1
+    por_ejercicio_json = [
+        {"ejercicio": k, "total": v}
+        for k, v in sorted(ejercicio_bucket.items(), key=lambda x: -x[0])
+    ]
 
     # ── Errores por mes — últimos 6 meses ────────────────────────────────────
-    errores_por_mes = (
-        db.session.query(
-            func.date_trunc("month", FifoReport.created_at).label("mes"),
-            func.count(FifoReport.id).label("total"),
-        )
-        .filter(
-            FifoReport.status == "failed",
-            FifoReport.created_at >= seis_meses_atras,
-        )
-        .group_by("mes")
-        .order_by("mes")
-        .all()
-    )
+    errores_bucket = defaultdict(int)
+    for r in todos_reports:
+        if r.status == "failed" and r.created_at and r.created_at >= seis_meses_atras:
+            errores_bucket[r.created_at.strftime("%Y-%m")] += 1
     errores_por_mes_json = [
-        {"mes": str(row.mes)[:7], "total": row.total}
-        for row in errores_por_mes
+        {"mes": k, "total": v}
+        for k, v in sorted(errores_bucket.items())
     ]
 
     return jsonify({
