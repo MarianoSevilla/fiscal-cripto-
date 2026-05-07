@@ -201,6 +201,23 @@ html, body {
     </p>
 
     <p class="card-footer">¿Ya tienes cuenta? <a href="/login/">Iniciar sesión</a></p>
+
+    <!-- Estado: verificación pendiente (oculto por defecto) -->
+    <div id="checkInbox" hidden style="text-align:center;padding:8px 0;">
+      <div style="font-size:2.4rem;margin-bottom:16px;">📬</div>
+      <h2 style="font-size:1.25rem;font-weight:700;color:#eef0f6;margin:0 0 10px;">Revisa tu bandeja de entrada</h2>
+      <p style="font-size:14px;color:#7a8099;margin:0 0 20px;line-height:1.6;">
+        Te hemos enviado un enlace de verificación a<br>
+        <strong id="sentToEmail" style="color:#eef0f6;"></strong>
+      </p>
+      <p style="font-size:13px;color:#555c70;margin:0 0 20px;">
+        El enlace caduca en 24 horas. Revisa también la carpeta de spam.
+      </p>
+      <button id="resendBtn" class="btn-submit" style="font-size:13px;padding:10px 20px;background:transparent;border:1px solid rgba(255,255,255,0.12);color:#7a8099;">
+        Reenviar email
+      </button>
+      <p id="resendMsg" hidden style="font-size:13px;color:#00C896;margin-top:12px;"></p>
+    </div>
   </div>
 </div>
 
@@ -254,30 +271,68 @@ const form    = document.getElementById('signupForm');
 const errorEl = document.getElementById('regError');
 const btn     = document.getElementById('regBtn');
 
+let _registeredEmail = '';
+
 form.addEventListener('submit', async e => {
   e.preventDefault();
   errorEl.hidden = true;
   btn.disabled   = true;
   btn.textContent = 'Un momento…';
   try {
+    const email = document.getElementById('regEmail').value.trim().toLowerCase();
     const res = await fetch('/api/register', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email:    document.getElementById('regEmail').value.trim().toLowerCase(),
+        email,
         password: document.getElementById('regPass').value,
       }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Error al crear la cuenta');
-    window.location.href = '/dashboard';
+    // Mostrar pantalla "revisa tu bandeja"
+    _registeredEmail = email;
+    document.getElementById('sentToEmail').textContent = email;
+    form.hidden                                         = true;
+    document.querySelector('.btn-google').hidden        = true;
+    document.querySelector('.divider').hidden           = true;
+    document.querySelector('.legal').hidden             = true;
+    document.querySelector('.card-footer').hidden       = true;
+    document.querySelector('.card-sub').hidden          = true;
+    document.querySelector('.card-title').textContent   = '¡Cuenta creada!';
+    document.getElementById('checkInbox').hidden        = false;
   } catch (err) {
     errorEl.textContent = err.message;
     errorEl.hidden      = false;
   } finally {
     btn.disabled    = false;
     btn.textContent = 'Crear cuenta';
+  }
+});
+
+// Reenviar verificación
+document.getElementById('resendBtn').addEventListener('click', async () => {
+  const resendBtn = document.getElementById('resendBtn');
+  const resendMsg = document.getElementById('resendMsg');
+  resendBtn.disabled    = true;
+  resendBtn.textContent = 'Enviando…';
+  resendMsg.hidden      = true;
+  try {
+    const res = await fetch('/api/resend-verification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: _registeredEmail }),
+    });
+    const data = await res.json();
+    resendMsg.textContent = data.message || 'Email reenviado.';
+    resendMsg.hidden      = false;
+  } catch {
+    resendMsg.textContent = 'Error al reenviar. Inténtalo de nuevo.';
+    resendMsg.hidden      = false;
+  } finally {
+    resendBtn.disabled    = false;
+    resendBtn.textContent = 'Reenviar email';
   }
 });
 </script>

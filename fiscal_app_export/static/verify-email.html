@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verificación de email — Herramienta Fiscal Cripto</title>
+<meta name="robots" content="noindex">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+<link rel="icon" href="/static/favicon.ico">
+<link rel="manifest" href="/static/site.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:      #080c12;
+  --surface: #10141e;
+  --surf2:   #1a1f2e;
+  --border:  rgba(255,255,255,0.09);
+  --text:    #eef0f6;
+  --muted:   #7a8099;
+  --accent:  #00C896;
+  --red:     #E24B4A;
+  --amber:   #F0B90B;
+  --ff-h:    'Syne', sans-serif;
+  --ff-b:    'DM Sans', sans-serif;
+}
+
+html, body {
+  min-height: 100%; background: var(--bg);
+  font-family: var(--ff-b); color: var(--text);
+  overflow-x: hidden;
+}
+
+.bg-shapes { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+.shape { position: absolute; animation: floatUp linear infinite; }
+@keyframes floatUp {
+  0%   { transform: translateY(0)     rotate(0deg); }
+  50%  { transform: translateY(-28px) rotate(180deg); }
+  100% { transform: translateY(0)     rotate(360deg); }
+}
+
+.page {
+  position: relative; z-index: 1;
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 40px 20px;
+}
+
+.brand {
+  position: fixed; top: 28px; left: 32px;
+  font-family: var(--ff-h); font-size: 1rem; font-weight: 700;
+  color: var(--text); text-decoration: none; letter-spacing: -0.01em;
+}
+.brand em { color: var(--accent); font-style: normal; }
+
+.card {
+  width: 100%; max-width: 460px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 44px 40px;
+  text-align: center;
+}
+
+.icon { font-size: 3rem; margin-bottom: 20px; line-height: 1; }
+
+.card-title {
+  font-family: var(--ff-h); font-size: 1.5rem; font-weight: 700;
+  color: var(--text); margin-bottom: 12px;
+}
+
+.card-body {
+  font-size: 15px; color: var(--muted); line-height: 1.65;
+  margin-bottom: 28px;
+}
+
+.btn {
+  display: inline-block;
+  padding: 13px 28px;
+  border-radius: 8px;
+  font-size: 14px; font-weight: 600;
+  text-decoration: none; cursor: pointer;
+  border: none; transition: opacity .2s;
+}
+.btn:hover { opacity: .85; }
+.btn-primary { background: var(--accent); color: #080c12; }
+.btn-secondary {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.12);
+  color: var(--muted);
+}
+
+.resend-form { margin-top: 20px; }
+.resend-form input {
+  width: 100%;
+  padding: 11px 14px;
+  background: var(--surf2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--ff-b);
+  font-size: 14px;
+  margin-bottom: 10px;
+  outline: none;
+}
+.resend-form input:focus { border-color: var(--accent); }
+.msg-ok  { font-size: 13px; color: var(--accent); margin-top: 10px; }
+.msg-err { font-size: 13px; color: var(--red);   margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<div class="bg-shapes" id="bgShapes"></div>
+
+<div class="page">
+  <a href="/" class="brand">mariano<em>sevilla</em>.com</a>
+
+  <div class="card">
+
+    <!-- SUCCESS -->
+    <div id="stateSuccess" hidden>
+      <div class="icon">✅</div>
+      <h1 class="card-title">Email verificado</h1>
+      <p class="card-body">Tu cuenta está activa. Ya puedes iniciar sesión y empezar a generar tus informes fiscales.</p>
+      <a href="/login/" class="btn btn-primary">Iniciar sesión</a>
+    </div>
+
+    <!-- ALREADY VERIFIED -->
+    <div id="stateAlready" hidden>
+      <div class="icon">✅</div>
+      <h1 class="card-title">Ya verificado</h1>
+      <p class="card-body">Este email ya estaba confirmado anteriormente. Puedes iniciar sesión directamente.</p>
+      <a href="/login/" class="btn btn-primary">Iniciar sesión</a>
+    </div>
+
+    <!-- EXPIRED -->
+    <div id="stateExpired" hidden>
+      <div class="icon">⏱️</div>
+      <h1 class="card-title">Enlace caducado</h1>
+      <p class="card-body">El enlace de verificación tiene una validez de 24 horas y ya ha expirado. Introduce tu email para recibir uno nuevo.</p>
+      <div class="resend-form">
+        <input type="email" id="expiredEmail" placeholder="tu@email.com" autocomplete="email">
+        <button class="btn btn-primary" id="expiredResendBtn" style="width:100%;">Enviar nuevo enlace</button>
+        <p id="expiredMsg" hidden></p>
+      </div>
+    </div>
+
+    <!-- INVALID -->
+    <div id="stateInvalid" hidden>
+      <div class="icon">❌</div>
+      <h1 class="card-title">Enlace inválido</h1>
+      <p class="card-body">Este enlace no es válido o ya fue utilizado. Si necesitas verificar tu cuenta, introduce tu email para solicitar uno nuevo.</p>
+      <div class="resend-form">
+        <input type="email" id="invalidEmail" placeholder="tu@email.com" autocomplete="email">
+        <button class="btn btn-primary" id="invalidResendBtn" style="width:100%;">Enviar nuevo enlace</button>
+        <p id="invalidMsg" hidden></p>
+      </div>
+      <div style="margin-top:16px;">
+        <a href="/signup/" class="btn btn-secondary">Crear cuenta nueva</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// Floating shapes
+(function () {
+  const host    = document.getElementById('bgShapes');
+  const palette = ['#00C896','#00bfff','#a78bfa','#fb923c'];
+  const kinds   = ['circle', 'diamond', 'rect'];
+  for (let i = 0; i < 18; i++) {
+    const el   = document.createElement('div');
+    const kind = kinds[i % kinds.length];
+    const size = 10 + Math.random() * 20;
+    const col  = palette[Math.floor(Math.random() * palette.length)];
+    let css = `position:absolute;left:${Math.random()*100}%;top:${Math.random()*100}%;opacity:.10;`
+            + `animation:floatUp ${7+Math.random()*11}s ${-(Math.random()*10)}s linear infinite;`;
+    if (kind === 'circle')
+      css += `width:${size}px;height:${size}px;border-radius:50%;background:${col};`;
+    else if (kind === 'diamond')
+      css += `width:${size}px;height:${size}px;background:${col};transform:rotate(45deg);`;
+    else
+      css += `width:${size*1.4}px;height:${size*0.7}px;background:${col};border-radius:3px;`;
+    el.style.cssText = css;
+    host.appendChild(el);
+  }
+})();
+
+// Show correct state based on ?status= param
+const status = new URLSearchParams(location.search).get('status') || 'invalid';
+const states = { success: 'stateSuccess', already: 'stateAlready', expired: 'stateExpired', invalid: 'stateInvalid' };
+document.getElementById(states[status] || 'stateInvalid').hidden = false;
+
+// Resend helper
+async function resendVerification(email, msgEl, btnEl) {
+  if (!email) { msgEl.textContent = 'Introduce tu email.'; msgEl.className = 'msg-err'; msgEl.hidden = false; return; }
+  btnEl.disabled = true; btnEl.textContent = 'Enviando…'; msgEl.hidden = true;
+  try {
+    const res  = await fetch('/api/resend-verification', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    msgEl.textContent = data.message || 'Enlace enviado.';
+    msgEl.className   = 'msg-ok';
+  } catch {
+    msgEl.textContent = 'Error al enviar. Inténtalo de nuevo.';
+    msgEl.className   = 'msg-err';
+  } finally {
+    msgEl.hidden = false;
+    btnEl.disabled = false; btnEl.textContent = 'Enviar nuevo enlace';
+  }
+}
+
+document.getElementById('expiredResendBtn').addEventListener('click', () =>
+  resendVerification(
+    document.getElementById('expiredEmail').value.trim().toLowerCase(),
+    document.getElementById('expiredMsg'),
+    document.getElementById('expiredResendBtn')
+  )
+);
+
+document.getElementById('invalidResendBtn').addEventListener('click', () =>
+  resendVerification(
+    document.getElementById('invalidEmail').value.trim().toLowerCase(),
+    document.getElementById('invalidMsg'),
+    document.getElementById('invalidResendBtn')
+  )
+);
+</script>
+</body>
+</html>

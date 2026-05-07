@@ -16,14 +16,15 @@ class User(UserMixin, db.Model):
 
     __tablename__ = "users"
 
-    id         = db.Column(db.Integer, primary_key=True)
-    email      = db.Column(db.String(254), unique=True, nullable=False, index=True)
-    password_hash = db.Column(db.String(128), nullable=True)   # None para cuentas OAuth
-    google_id  = db.Column(db.String(128), nullable=True, unique=True, index=True)
-    plan       = db.Column(db.String(20), default="free", nullable=False)  # free | pro
-    is_active  = db.Column(db.Boolean, default=True, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    last_login = db.Column(db.DateTime, nullable=True)
+    id                = db.Column(db.Integer, primary_key=True)
+    email             = db.Column(db.String(254), unique=True, nullable=False, index=True)
+    password_hash     = db.Column(db.String(128), nullable=True)   # None para cuentas OAuth
+    google_id         = db.Column(db.String(128), nullable=True, unique=True, index=True)
+    plan              = db.Column(db.String(20), default="free", nullable=False)  # free | pro
+    is_active         = db.Column(db.Boolean, default=True, nullable=False)
+    email_verified_at = db.Column(db.DateTime, nullable=True)      # None = pendiente de verificar
+    created_at        = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    last_login        = db.Column(db.DateTime, nullable=True)
 
     def set_password(self, plaintext: str) -> None:
         """Hashea la contraseña con bcrypt (cost factor 12)."""

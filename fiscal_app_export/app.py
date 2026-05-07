@@ -28,7 +28,10 @@ from flask_limiter.util import get_remote_address
 from flask_cors import CORS
 from flask_compress import Compress
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask_migrate import Migrate
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from authlib.integrations.flask_client import OAuth
+import resend
 from models import db, bcrypt, User
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -97,6 +100,12 @@ app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 # ── EXTENSIONES ───────────────────────────────
 db.init_app(app)
 bcrypt.init_app(app)
+migrate = Migrate(app, db)
+
+# ── RESEND (email) ────────────────────────────
+resend.api_key = os.environ.get("RESEND_API_KEY", "")
+_RESEND_FROM   = os.environ.get("RESEND_FROM_EMAIL", "noreply@marianosevilla.com")
+_APP_BASE_URL  = os.environ.get("APP_BASE_URL", "https://www.marianosevilla.com")
 
 login_manager = LoginManager(app)
 
@@ -747,6 +756,102 @@ def dashboard():
     return send_from_directory("static", "dashboard.html")
 
 
+# ── EMAIL VERIFICATION ────────────────────────
+
+_VERIFY_TOKEN_SALT = "email-verification-v1"
+_VERIFY_TOKEN_TTL  = 86_400  # 24 horas
+
+
+def _generate_verification_token(email: str) -> str:
+    s = URLSafeTimedSerializer(app.config["SECRET_KEY"])
+    return s.dumps(email.lower(), salt=_VERIFY_TOKEN_SALT)
+
+
+def _confirm_verification_token(token: str):
+    """Devuelve (email, None) o (None, 'expired'|'invalid')."""
+    s = URLSafeTimedSerializer(app.config["SECRET_KEY"])
+    try:
+        email = s.loads(token, salt=_VERIFY_TOKEN_SALT, max_age=_VERIFY_TOKEN_TTL)
+        return email, None
+    except SignatureExpired:
+        return None, "expired"
+    except BadSignature:
+        return None, "invalid"
+
+
+def _send_verification_email(user: User) -> bool:
+    """Envía el email de verificación. Devuelve True si se envió correctamente."""
+    if not resend.api_key:
+        app.logger.warning("RESEND_API_KEY no configurada — email de verificación no enviado.")
+        return False
+
+    token = _generate_verification_token(user.email)
+    verify_url = f"{_APP_BASE_URL}/verify-email?token={token}"
+
+    html = f"""
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#080c12;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#080c12;padding:40px 0;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#10141e;border-radius:12px;border:1px solid rgba(255,255,255,0.08);overflow:hidden;">
+        <tr>
+          <td style="background:#0d1018;padding:28px 40px;border-bottom:1px solid rgba(0,200,150,0.25);">
+            <span style="font-size:18px;font-weight:700;color:#eef0f6;">Mariano</span><span style="font-size:18px;font-weight:700;color:#00C896;">Sevilla</span>
+            <span style="font-size:12px;color:#7a8099;margin-left:10px;">Herramienta Fiscal Cripto</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:36px 40px;">
+            <h1 style="margin:0 0 12px;font-size:22px;color:#eef0f6;font-weight:700;">Verifica tu dirección de email</h1>
+            <p style="margin:0 0 24px;font-size:15px;color:#9aa0b8;line-height:1.6;">
+              Haz clic en el botón para confirmar tu cuenta y empezar a generar informes FIFO.
+            </p>
+            <table cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
+              <tr>
+                <td style="background:#00C896;border-radius:8px;padding:14px 32px;">
+                  <a href="{verify_url}" style="color:#080c12;font-size:15px;font-weight:700;text-decoration:none;display:block;">
+                    Verificar email
+                  </a>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:0 0 8px;font-size:13px;color:#7a8099;line-height:1.5;">
+              Si el botón no funciona, copia y pega este enlace en tu navegador:
+            </p>
+            <p style="margin:0 0 28px;font-size:12px;color:#00C896;word-break:break-all;">{verify_url}</p>
+            <p style="margin:0;font-size:12px;color:#555c70;">
+              Este enlace caduca en 24 horas. Si no creaste esta cuenta, ignora este mensaje.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#0d1018;padding:18px 40px;border-top:1px solid rgba(255,255,255,0.06);">
+            <p style="margin:0;font-size:11px;color:#555c70;">
+              marianosevilla.com · Herramienta Fiscal Cripto para el IRPF español
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>
+"""
+    try:
+        resend.Emails.send({
+            "from":    _RESEND_FROM,
+            "to":      [user.email],
+            "subject": "Verifica tu email — Herramienta Fiscal Cripto",
+            "html":    html,
+        })
+        return True
+    except Exception as exc:
+        app.logger.error("Error enviando email de verificación: %s", exc)
+        return False
+
+
 @app.route("/login/", strict_slashes=False)
 def login_page():
     """Página dedicada de inicio de sesión."""
@@ -791,11 +896,14 @@ def auth_google_callback():
     user      = User.query.filter_by(email=email).first()
 
     if not user:
-        user = User(email=email, google_id=google_id)
+        user = User(email=email, google_id=google_id, email_verified_at=datetime.utcnow())
         db.session.add(user)
     else:
         if not user.google_id:
             user.google_id = google_id
+        # Google garantiza que el email es válido
+        if not user.email_verified_at:
+            user.email_verified_at = datetime.utcnow()
 
     if not user.is_active:
         return redirect("/login/?error=account_disabled")
@@ -1024,8 +1132,12 @@ def register():
     db.session.add(user)
     db.session.commit()
 
-    login_user(user, remember=False)
-    return jsonify({"message": "Cuenta creada correctamente.", "email": user.email, "plan": user.plan}), 201
+    _send_verification_email(user)
+    return jsonify({
+        "pending_verification": True,
+        "email": user.email,
+        "message": "Cuenta creada. Revisa tu bandeja de entrada para verificar tu email.",
+    }), 201
 
 
 @app.route("/api/login", methods=["POST"])
@@ -1056,6 +1168,54 @@ def login():
 def logout():
     logout_user()
     return jsonify({"message": "Sesión cerrada."})
+
+
+@app.route("/verify-email")
+def verify_email():
+    """Procesa el token del enlace enviado por email."""
+    token = request.args.get("token", "")
+    if not token:
+        return redirect("/verify-email-result?status=invalid")
+
+    email, error = _confirm_verification_token(token)
+    if error == "expired":
+        return redirect("/verify-email-result?status=expired")
+    if error == "invalid" or not email:
+        return redirect("/verify-email-result?status=invalid")
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return redirect("/verify-email-result?status=invalid")
+
+    if user.email_verified_at:
+        return redirect("/verify-email-result?status=already")
+
+    user.email_verified_at = datetime.utcnow()
+    db.session.commit()
+    return redirect("/verify-email-result?status=success")
+
+
+@app.route("/verify-email-result")
+def verify_email_result():
+    return send_from_directory("static", "verify-email.html")
+
+
+@app.route("/api/resend-verification", methods=["POST"])
+@limiter.limit("3 per hour")
+def resend_verification():
+    """Reenvía el email de verificación. No requiere sesión activa."""
+    data  = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip().lower()
+    if not email:
+        return jsonify({"error": "Email requerido."}), 400
+
+    user = User.query.filter_by(email=email).first()
+    # Respuesta genérica: no revelar si el email existe
+    if not user or user.email_verified_at:
+        return jsonify({"message": "Si el email existe y no está verificado, recibirás un nuevo enlace."}), 200
+
+    _send_verification_email(user)
+    return jsonify({"message": "Email de verificación reenviado."}), 200
 
 
 @app.route("/api/me")
