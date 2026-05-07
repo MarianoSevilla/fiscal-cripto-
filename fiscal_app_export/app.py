@@ -157,7 +157,7 @@ with app.app_context():
 # Esto evita el problema de dicts en memoria que no se comparten entre workers.
 _PDF_TTL = 300  # segundos
 
-def _guardar_token_pdf(token: str, report_id: int | None = None) -> None:
+def _guardar_token_pdf(token: str, report_id=None) -> None:
     """Guarda el token en la sesión del usuario con su TTL."""
     from flask import session
     session["pdf_token"]       = token
@@ -165,7 +165,7 @@ def _guardar_token_pdf(token: str, report_id: int | None = None) -> None:
     session["pdf_token_exp"]   = time.time() + _PDF_TTL
     session["pdf_report_id"]   = report_id
 
-def _consumir_token_pdf(token: str) -> int | None:
+def _consumir_token_pdf(token: str):
     """Valida propiedad, elimina el token de la sesión y devuelve el report_id (o None)."""
     from flask import session
     if session.get("pdf_token") != token:
@@ -198,8 +198,8 @@ def _registrar_informe(
     distinct_assets: int,
     processing_ms: int,
     status: str = "generated",
-    error_type: str | None = None,
-) -> int | None:
+    error_type=None,
+):
     """Crea un registro FifoReport y devuelve su id. No lanza excepciones."""
     if not current_user.is_authenticated:
         return None
