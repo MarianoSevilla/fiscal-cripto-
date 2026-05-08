@@ -301,7 +301,7 @@ function fillMonthlyChart(id, data, color) {
   const months = [];
   for (let i = 5; i >= 0; i--) {
     const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-    months.push(d.toISOString().slice(0, 7));
+    months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
   }
   const byMonth = {};
   data.forEach(r => { byMonth[r.mes] = r.total; });
