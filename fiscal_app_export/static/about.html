@@ -152,6 +152,34 @@ nav {
   border-top: 1px solid var(--border);
 }
 
+/* ── SECCIONES PROYECTO / ENFOQUE ── */
+.prose-section {
+  max-width: var(--max); margin: 0 auto;
+  padding: 3.5rem 2rem;
+  border-top: 1px solid var(--border);
+}
+.prose-section h2 {
+  font-family: var(--font-d); font-size: clamp(1.25rem, 2.5vw, 1.6rem);
+  font-weight: 800; margin-bottom: 1.25rem; color: var(--text);
+}
+.prose-section p {
+  color: var(--muted); font-size: 15px; line-height: 1.75; margin-bottom: 1rem;
+}
+.prose-section p:last-child { margin-bottom: 0; }
+.prose-section ul {
+  list-style: none; padding: 0;
+  display: flex; flex-direction: column; gap: 0.35rem;
+  margin: 0.25rem 0 1rem;
+}
+.prose-section ul li {
+  font-size: 15px; color: var(--muted);
+  padding-left: 1.4rem; position: relative; line-height: 1.6;
+}
+.prose-section ul li::before {
+  content: "·"; position: absolute; left: 0;
+  color: var(--accent); font-weight: 700; font-size: 1.1rem; top: -1px;
+}
+
 /* ── FRASE CIERRE ── */
 .closing-quote {
   max-width: var(--max); margin: 0 auto;
@@ -212,6 +240,25 @@ footer {
   <h1>Tecnología y fiscalidad,<br>trabajando juntas</h1>
   <p>Detrás de esta herramienta hay dos personas con perfiles complementarios: uno técnico y uno fiscal. Así nació marianosevilla.com.</p>
 </section>
+
+<!-- ── SOBRE EL PROYECTO ── -->
+<div class="prose-section">
+  <h2>Sobre el proyecto</h2>
+  <p>La fiscalidad de las criptomonedas en España se ha convertido en un proceso cada vez más complejo. Operar en múltiples exchanges, realizar cientos de transacciones y calcular correctamente el método FIFO puede convertirse en una tarea difícil de revisar, entender y presentar correctamente.</p>
+  <p>Esta herramienta nace con un objetivo claro: simplificar ese proceso mediante automatización, criterio técnico y un enfoque práctico orientado a usuarios reales.</p>
+  <p>El proyecto combina desarrollo tecnológico y supervisión fiscal para ofrecer una solución clara, comprensible y alineada con las necesidades de los usuarios que operan con criptomonedas en España.</p>
+
+  <h2 style="margin-top: 2.5rem;">Tecnología y criterio fiscal</h2>
+  <p>La plataforma ha sido desarrollada con un enfoque centrado en:</p>
+  <ul>
+    <li>generación automatizada de informes FIFO,</li>
+    <li>compatibilidad con históricos CSV de exchanges,</li>
+    <li>revisión clara y trazable de operaciones,</li>
+    <li>simplificación de procesos complejos,</li>
+    <li>privacidad y control de la información del usuario.</li>
+  </ul>
+  <p>El objetivo no es únicamente automatizar cálculos, sino ofrecer una herramienta que permita entender y revisar cómo se generan los resultados.</p>
+</div>
 
 <!-- ── EQUIPO ── -->
 <div class="team-wrap">
@@ -280,6 +327,18 @@ footer {
   <blockquote>
     Nuestro objetivo no es solo automatizar cálculos, sino ofrecer herramientas y soporte con criterios fiscales sólidos y revisables.
   </blockquote>
+</div>
+
+<!-- ── NUESTRO ENFOQUE ── -->
+<div class="prose-section">
+  <h2>Nuestro enfoque</h2>
+  <p>Creemos que las herramientas fiscales relacionadas con criptomonedas deben cumplir tres principios fundamentales:</p>
+  <ul>
+    <li>claridad en los cálculos,</li>
+    <li>automatización útil,</li>
+    <li>y criterios fiscales revisables.</li>
+  </ul>
+  <p>Por eso el proyecto se desarrolla combinando experiencia tecnológica y supervisión profesional, con el objetivo de ofrecer una herramienta práctica, transparente y orientada a facilitar el cumplimiento tributario de los usuarios.</p>
 </div>
 
 <!-- ── FOOTER ── -->
