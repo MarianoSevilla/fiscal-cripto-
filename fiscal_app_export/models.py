@@ -18,6 +18,7 @@ class User(UserMixin, db.Model):
 
     id                = db.Column(db.Integer, primary_key=True)
     email             = db.Column(db.String(254), unique=True, nullable=False, index=True)
+    full_name         = db.Column(db.String(150), nullable=True)   # Nombre y apellidos
     password_hash     = db.Column(db.String(128), nullable=True)   # None para cuentas OAuth
     google_id         = db.Column(db.String(128), nullable=True, unique=True, index=True)
     plan              = db.Column(db.String(20), default="free", nullable=False)  # free | pro

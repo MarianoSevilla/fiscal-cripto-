@@ -162,6 +162,17 @@ main {
 }
 .btn-accent { background: var(--accent); color: #0a0a0a; }
 
+/* ── NAME FORM ── */
+.name-form { display: flex; flex-direction: column; gap: 0.75rem; }
+.name-form input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-family: var(--font-b);
+  font-size: 14px; padding: 11px 14px; outline: none;
+  transition: border-color .2s;
+}
+.name-form input:focus { border-color: var(--accent); }
+.name-form input::placeholder { color: var(--muted2); }
+
 /* ── CHANGE PASSWORD FORM ── */
 .pw-form { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
 .pw-form input {
@@ -241,6 +252,18 @@ main {
     </div>
   </div>
 
+  <!-- Nombre y apellidos -->
+  <div class="section">
+    <p class="section-title">Nombre y apellidos</p>
+    <div class="name-form">
+      <input type="text" id="nameInput" placeholder="Mariano Sevilla Trujillo" autocomplete="name" maxlength="150">
+      <div>
+        <button class="btn btn-accent" id="nameBtn">Guardar</button>
+        <p class="form-msg" id="nameMsg" hidden></p>
+      </div>
+    </div>
+  </div>
+
   <!-- Cambiar contraseña (solo cuentas email, no OAuth) -->
   <div class="section" id="sectionPassword" hidden>
     <p class="section-title">Contraseña</p>
@@ -272,9 +295,13 @@ main {
     if (!d.user) { window.location.replace('/login/'); return; }
 
     const u = d.user;
-    document.getElementById('navAvatar').textContent = u.email.charAt(0).toUpperCase();
+    document.getElementById('navAvatar').textContent =
+      (u.full_name ? u.full_name.charAt(0) : u.email.charAt(0)).toUpperCase();
     if (u.is_admin) document.getElementById('navStatsLink').hidden = false;
     document.getElementById('infoEmail').textContent = u.email;
+
+    // Nombre
+    if (u.full_name) document.getElementById('nameInput').value = u.full_name;
 
     // Estado email
     const verifiedEl = document.getElementById('infoVerified');
@@ -318,6 +345,39 @@ document.addEventListener('click', () => _dropdown.classList.remove('open'));
 document.getElementById('navBtnLogout').addEventListener('click', async () => {
   await fetch('/api/logout', { method: 'POST', credentials: 'include' });
   window.location.href = '/';
+});
+
+// ── Guardar nombre ──────────────────────────────
+document.getElementById('nameBtn').addEventListener('click', async () => {
+  const btn   = document.getElementById('nameBtn');
+  const msgEl = document.getElementById('nameMsg');
+  const value = document.getElementById('nameInput').value.trim();
+
+  msgEl.hidden = true;
+  if (!value) {
+    msgEl.textContent = 'El nombre no puede estar vacío.';
+    msgEl.className = 'form-msg err'; msgEl.hidden = false; return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try {
+    const res = await fetch('/api/update-profile', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ full_name: value }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al guardar');
+    document.getElementById('nameInput').value = data.full_name;
+    document.getElementById('navAvatar').textContent = data.full_name.charAt(0).toUpperCase();
+    msgEl.textContent = '¡Nombre actualizado correctamente!';
+    msgEl.className = 'form-msg ok'; msgEl.hidden = false;
+  } catch (e) {
+    msgEl.textContent = e.message;
+    msgEl.className = 'form-msg err'; msgEl.hidden = false;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar';
+  }
 });
 
 // ── Cambiar contraseña ──────────────────────────

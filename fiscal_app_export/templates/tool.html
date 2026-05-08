@@ -1684,14 +1684,27 @@
     }
   });
 
-  // ── AUTH: comprueba sesión y rellena avatar ──
+  // ── AUTH: comprueba sesión y rellena avatar + campos del formulario ──
   (async () => {
     try {
       const r = await fetch('/api/me', { credentials: 'include' });
       const d = await r.json();
       if (!d.user) { window.location.replace('/login/'); return; }
-      document.getElementById('navAvatar').textContent = d.user.email.charAt(0).toUpperCase();
-      if (d.user.is_admin) document.getElementById('navStatsLink').hidden = false;
+      const u = d.user;
+      document.getElementById('navAvatar').textContent =
+        (u.full_name ? u.full_name.charAt(0) : u.email.charAt(0)).toUpperCase();
+      if (u.is_admin) document.getElementById('navStatsLink').hidden = false;
+      // Pre-rellenar nombre si el usuario lo tiene guardado
+      if (u.full_name) {
+        const nombreInput = document.getElementById('nombre');
+        if (nombreInput && !nombreInput.value) nombreInput.value = u.full_name;
+      }
+      // Pre-rellenar ejercicio fiscal con el año anterior al actual
+      const ejercicioInput = document.getElementById('ejercicio');
+      if (ejercicioInput && !ejercicioInput.value) {
+        ejercicioInput.value = String(new Date().getFullYear() - 1);
+        actualizarBoton();
+      }
     } catch {
       window.location.replace('/login/');
     }

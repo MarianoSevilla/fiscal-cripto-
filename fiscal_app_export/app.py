@@ -496,6 +496,11 @@ def _sanitizar_texto(texto: str, max_len: int = 100) -> str:
     return texto[:max_len].strip()
 
 
+def _title_case(texto: str) -> str:
+    """Convierte 'mariano sevilla trujillo' → 'Mariano Sevilla Trujillo'."""
+    return " ".join(w.capitalize() for w in texto.strip().split())
+
+
 def _validar_ejercicio(ejercicio: str) -> tuple[bool, str]:
     """Valida que el ejercicio sea un año entre 2009 y año_actual+1."""
     if not ejercicio:
@@ -882,8 +887,11 @@ def _send_verification_email(user: User) -> bool:
               Si el botón no funciona, copia y pega este enlace en tu navegador:
             </p>
             <p style="margin:0 0 28px;font-size:12px;color:#00C896;word-break:break-all;">{verify_url}</p>
-            <p style="margin:0;font-size:12px;color:#555c70;">
+            <p style="margin:0 0 12px;font-size:12px;color:#555c70;">
               Este enlace caduca en 24 horas. Si no creaste esta cuenta, ignora este mensaje.
+            </p>
+            <p style="margin:0;font-size:12px;color:#7a8099;background:rgba(255,255,255,0.04);border-radius:6px;padding:10px 14px;">
+              📬 ¿No ves este email? Revisa tu carpeta de <strong style="color:#eef0f6;">spam o correo no deseado</strong> y márcalo como «No es spam» para recibirlos en el futuro.
             </p>
           </td>
         </tr>
@@ -900,12 +908,22 @@ def _send_verification_email(user: User) -> bool:
 </body>
 </html>
 """
+    text = (
+        f"Verifica tu dirección de email\n\n"
+        f"Haz clic en el siguiente enlace para confirmar tu cuenta:\n{verify_url}\n\n"
+        f"Este enlace caduca en 24 horas.\n"
+        f"Si no ves este email en tu bandeja de entrada, revisa la carpeta de spam.\n\n"
+        f"Si no creaste esta cuenta, ignora este mensaje.\n\n"
+        f"marianosevilla.com — Herramienta Fiscal Cripto"
+    )
+
     try:
         resend.Emails.send({
             "from":    _RESEND_FROM,
             "to":      [user.email],
             "subject": "Verifica tu email — Herramienta Fiscal Cripto",
             "html":    html,
+            "text":    text,
         })
         return True
     except Exception as exc:
@@ -917,7 +935,7 @@ def _send_verification_email(user: User) -> bool:
 def login_page():
     """Página dedicada de inicio de sesión."""
     if current_user.is_authenticated:
-        return redirect("/fiscal")
+        return redirect("/")
     return send_from_directory("static", "login.html")
 
 
@@ -925,7 +943,7 @@ def login_page():
 def signup_page():
     """Página dedicada de registro."""
     if current_user.is_authenticated:
-        return redirect("/fiscal")
+        return redirect("/")
     return send_from_directory("static", "signup.html")
 
 
@@ -956,8 +974,19 @@ def auth_google_callback():
     google_id = user_info.get("sub", "")
     user      = User.query.filter_by(email=email).first()
 
+    # Obtener nombre desde perfil de Google
+    given_name  = (user_info.get("given_name") or "").strip()
+    family_name = (user_info.get("family_name") or "").strip()
+    google_name = (given_name + " " + family_name).strip() or (user_info.get("name") or "").strip()
+    google_full_name = _title_case(google_name) if google_name else None
+
     if not user:
-        user = User(email=email, google_id=google_id, email_verified_at=datetime.utcnow())
+        user = User(
+            email=email,
+            google_id=google_id,
+            email_verified_at=datetime.utcnow(),
+            full_name=google_full_name,
+        )
         db.session.add(user)
     else:
         if not user.google_id:
@@ -965,6 +994,9 @@ def auth_google_callback():
         # Google garantiza que el email es válido
         if not user.email_verified_at:
             user.email_verified_at = datetime.utcnow()
+        # Actualizar nombre solo si el usuario no tenía uno guardado
+        if not user.full_name and google_full_name:
+            user.full_name = google_full_name
 
     if not user.is_active:
         return redirect("/login/?error=account_disabled")
@@ -1118,7 +1150,7 @@ def analizar():
 
         report_id = _registrar_informe(
             exchange        = exchange,
-            fiscal_year     = int(ejercicio),
+            fiscal_year     = int(ejercicio) if ejercicio else 0,
             csv_rows        = csv_rows,
             distinct_assets = distinct_assets,
             processing_ms   = processing_ms,
@@ -1209,9 +1241,13 @@ def descargar(token):
 @app.route("/api/register", methods=["POST"])
 @limiter.limit("5 per hour")
 def register():
-    data     = request.get_json(silent=True) or {}
-    email    = (data.get("email") or "").strip().lower()
-    password = data.get("password") or ""
+    data      = request.get_json(silent=True) or {}
+    email     = (data.get("email") or "").strip().lower()
+    password  = data.get("password") or ""
+    full_name = _sanitizar_texto(data.get("full_name") or "", max_len=150)
+
+    if not full_name:
+        return jsonify({"error": "El nombre y apellidos son obligatorios."}), 400
 
     ok, err = _validar_email(email)
     if not ok:
@@ -1224,7 +1260,7 @@ def register():
     if User.query.filter_by(email=email).first():
         return jsonify({"error": "Ya existe una cuenta con ese email."}), 409
 
-    user = User(email=email)
+    user = User(email=email, full_name=_title_case(full_name))
     user.set_password(password)
     db.session.add(user)
     db.session.commit()
@@ -1332,6 +1368,7 @@ def me():
         return jsonify({"user": None})
     return jsonify({"user": {
         "email":          current_user.email,
+        "full_name":      current_user.full_name or "",
         "plan":           current_user.plan,
         "email_verified": current_user.email_verified_at is not None,
         "is_google":      current_user.google_id is not None,
@@ -1356,6 +1393,19 @@ def change_password():
     current_user.set_password(new_pw)
     db.session.commit()
     return jsonify({"message": "Contraseña actualizada correctamente."})
+
+
+@app.route("/api/update-profile", methods=["POST"])
+@login_required
+def update_profile():
+    """Actualiza el nombre y apellidos del usuario autenticado."""
+    data      = request.get_json(silent=True) or {}
+    full_name = _sanitizar_texto(data.get("full_name") or "", max_len=150)
+    if not full_name:
+        return jsonify({"error": "El nombre y apellidos no pueden estar vacíos."}), 400
+    current_user.full_name = _title_case(full_name)
+    db.session.commit()
+    return jsonify({"message": "Perfil actualizado.", "full_name": current_user.full_name})
 
 
 @app.route("/api/delete-account", methods=["POST"])
@@ -1401,8 +1451,8 @@ def _api_stats_data():
 
     now = datetime.utcnow()
 
-    # Primer día del mes de hace 5 meses (= ventana de 6 meses)
-    m = now.month - 5
+    # Primer día del mes de hace 6 meses (= ventana de 7 meses: 6 completos + mes actual)
+    m = now.month - 6
     y = now.year
     if m <= 0:
         m += 12
