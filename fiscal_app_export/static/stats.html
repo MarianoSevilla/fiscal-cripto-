@@ -158,6 +158,15 @@ tbody tr:hover { background: var(--surface2); }
   text-align: center;
 }
 .state-msg.error { color: var(--red); }
+
+.pg-btn {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); font-family: var(--font-b); font-size: 13px;
+  padding: 6px 14px; border-radius: 8px; cursor: pointer;
+  transition: background .12s, border-color .12s;
+}
+.pg-btn:hover:not(:disabled) { background: var(--surface3); border-color: var(--border-hover); }
+.pg-btn:disabled { opacity: .35; cursor: default; }
 </style>
 </head>
 <body>
@@ -251,6 +260,11 @@ tbody tr:hover { background: var(--surface2); }
           <thead><tr><th>Fecha</th><th>Exchange</th><th>Usuario</th></tr></thead>
           <tbody id="tbErrorDetail"></tbody>
         </table>
+        <div id="errPagination" style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid var(--border);gap:8px;">
+          <button id="errPrevBtn" class="pg-btn">← Anterior</button>
+          <span id="errPageInfo" style="font-size:13px;color:var(--muted)"></span>
+          <button id="errNextBtn" class="pg-btn">Siguiente →</button>
+        </div>
       </div>
     </div>
 
@@ -357,11 +371,36 @@ function fillTable(tbodyId, rows, keyLabel, keyNum) {
     fillTable('tbExchange',  d.informes.por_exchange,  'exchange',  'total');
     fillTable('tbEjercicio', d.informes.por_ejercicio, 'ejercicio', 'total');
 
-    const tbErr = document.getElementById('tbErrorDetail');
-    const detalle = d.errores.detalle || [];
-    tbErr.innerHTML = detalle.length
-      ? detalle.map(r => `<tr><td style="font-variant-numeric:tabular-nums;white-space:nowrap">${r.fecha}</td><td>${r.exchange}</td><td style="color:var(--muted)">${r.usuario}</td></tr>`).join('')
-      : '<tr><td colspan="3" style="color:var(--muted);text-align:center;padding:20px;">Sin errores registrados</td></tr>';
+    // ── Tabla de errores con paginación ──────────────────────────────────────
+    const detalle    = d.errores.detalle || [];
+    const PAGE_SIZE  = 25;
+    let   errPage    = 0;
+    const tbErr      = document.getElementById('tbErrorDetail');
+    const prevBtn    = document.getElementById('errPrevBtn');
+    const nextBtn    = document.getElementById('errNextBtn');
+    const pageInfo   = document.getElementById('errPageInfo');
+    const pagination = document.getElementById('errPagination');
+
+    function renderErrPage() {
+      if (!detalle.length) {
+        tbErr.innerHTML = '<tr><td colspan="3" style="color:var(--muted);text-align:center;padding:20px;">Sin errores registrados</td></tr>';
+        pagination.hidden = true;
+        return;
+      }
+      const totalPages = Math.ceil(detalle.length / PAGE_SIZE);
+      const slice = detalle.slice(errPage * PAGE_SIZE, (errPage + 1) * PAGE_SIZE);
+      tbErr.innerHTML = slice.map(r =>
+        `<tr><td style="font-variant-numeric:tabular-nums;white-space:nowrap">${r.fecha}</td><td>${r.exchange}</td><td style="color:var(--muted)">${r.usuario}</td></tr>`
+      ).join('');
+      pageInfo.textContent = `Página ${errPage + 1} de ${totalPages} · ${detalle.length} registros`;
+      prevBtn.disabled = errPage === 0;
+      nextBtn.disabled = errPage >= totalPages - 1;
+      pagination.hidden = totalPages <= 1;
+    }
+
+    prevBtn.addEventListener('click', () => { errPage--; renderErrPage(); });
+    nextBtn.addEventListener('click', () => { errPage++; renderErrPage(); });
+    renderErrPage();
 
     msgEl.hidden                            = true;
     document.getElementById('content').hidden = false;
