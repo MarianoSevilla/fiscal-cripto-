@@ -1454,8 +1454,8 @@ def _api_stats_data():
 
     now = datetime.utcnow()
 
-    # Primer día del mes de hace 6 meses (= ventana de 7 meses: 6 completos + mes actual)
-    m = now.month - 6
+    # Primer día del mes de hace 5 meses (= ventana de 6 meses: 5 completos + mes actual)
+    m = now.month - 5
     y = now.year
     if m <= 0:
         m += 12
