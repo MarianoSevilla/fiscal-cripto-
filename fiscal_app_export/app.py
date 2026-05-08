@@ -784,6 +784,11 @@ def fiscal():
     return render_template("tool.html", **_TOOL_GENERIC)
 
 
+@app.route("/about", strict_slashes=False)
+def about():
+    return send_from_directory("static", "about.html")
+
+
 @app.route("/privacidad", strict_slashes=False)
 def privacidad():
     return send_from_directory("static", "privacidad.html")

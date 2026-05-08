@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>El Equipo | Mariano Sevilla</title>
+<meta name="description" content="Conoce al equipo detrás de marianosevilla.com: tecnología y fiscalidad al servicio de los contribuyentes con criptomonedas en España.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://marianosevilla.com/about">
+
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+<link rel="icon" href="/static/favicon.ico">
+<link rel="manifest" href="/static/site.webmanifest">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --black:       #0a0a0a;
+  --surface:     #111111;
+  --surface2:    #1a1a1a;
+  --surface3:    #222222;
+  --border:      rgba(255,255,255,0.07);
+  --border-soft: rgba(255,255,255,0.04);
+  --text:        #f0ede6;
+  --muted:       #888580;
+  --muted2:      #5a5754;
+  --accent:      #00C896;
+  --accent-dim:  rgba(0,200,150,0.08);
+  --font-d: 'Syne', sans-serif;
+  --font-b: 'DM Sans', sans-serif;
+  --max: 1080px;
+  --r: 12px;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--black); color: var(--text);
+  font-family: var(--font-b); font-size: 16px; line-height: 1.7;
+  min-height: 100vh; -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  border-bottom: 1px solid var(--border);
+  background: rgba(10,10,10,0.88); backdrop-filter: blur(14px);
+}
+.nav-inner {
+  max-width: var(--max); margin: 0 auto; padding: 0 2rem;
+  height: 64px; display: flex; align-items: center; justify-content: space-between;
+}
+.nav-logo {
+  font-family: var(--font-d); font-weight: 800; font-size: 0.95rem;
+  letter-spacing: -0.02em; color: var(--text); text-decoration: none;
+}
+.nav-logo span { color: var(--accent); }
+.nav-back {
+  font-size: 14px; color: var(--muted);
+  transition: color .15s; text-decoration: none;
+}
+.nav-back:hover { color: var(--text); text-decoration: none; }
+
+/* ── HERO ── */
+.page-hero {
+  max-width: var(--max); margin: 0 auto;
+  padding: 7rem 2rem 3.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.page-kicker {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--accent);
+  margin-bottom: 1rem; display: block;
+}
+.page-hero h1 {
+  font-family: var(--font-d); font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 800; line-height: 1.15; margin-bottom: 1rem;
+}
+.page-hero p {
+  font-size: 1.05rem; color: var(--muted); max-width: 580px; line-height: 1.75;
+}
+
+/* ── EQUIPO ── */
+.team-wrap {
+  max-width: var(--max); margin: 0 auto;
+  padding: 4rem 2rem 5rem;
+  display: flex; flex-direction: column; gap: 5rem;
+}
+
+.member-card {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 3rem;
+  align-items: start;
+}
+.member-card.reverse { direction: rtl; }
+.member-card.reverse > * { direction: ltr; }
+
+.member-photo-col { display: flex; flex-direction: column; align-items: center; gap: 1.25rem; }
+.member-photo {
+  width: 100%; aspect-ratio: 3/4; object-fit: cover; object-position: top;
+  border-radius: var(--r); border: 1px solid var(--border);
+  background: var(--surface2);
+}
+.member-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--accent-dim); border: 1px solid rgba(0,200,150,0.18);
+  border-radius: 20px; padding: 5px 14px;
+  font-size: 12px; font-weight: 600; color: var(--accent);
+  letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap;
+}
+
+.member-content {}
+.member-content h2 {
+  font-family: var(--font-d); font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800; line-height: 1.2; margin-bottom: 0.3rem;
+}
+.member-subtitle {
+  font-size: 14px; color: var(--accent); font-weight: 600;
+  letter-spacing: 0.02em; margin-bottom: 1.5rem;
+}
+.member-bio p {
+  color: var(--muted); font-size: 15px; line-height: 1.75; margin-bottom: 1rem;
+}
+.member-bio p:last-child { margin-bottom: 0; }
+
+.member-list {
+  list-style: none; padding: 0;
+  display: flex; flex-direction: column; gap: 0.35rem;
+  margin: 0.25rem 0 1rem;
+}
+.member-list li {
+  font-size: 15px; color: var(--muted);
+  padding-left: 1.4rem; position: relative; line-height: 1.6;
+}
+.member-list li::before {
+  content: "·"; position: absolute; left: 0;
+  color: var(--accent); font-weight: 700; font-size: 1.1rem; top: -1px;
+}
+
+.divider {
+  max-width: var(--max); margin: 0 auto;
+  padding: 0 2rem;
+  border-top: 1px solid var(--border);
+}
+
+/* ── FRASE CIERRE ── */
+.closing-quote {
+  max-width: var(--max); margin: 0 auto;
+  padding: 3rem 2rem 4rem;
+}
+.closing-quote blockquote {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--r);
+  padding: 1.5rem 2rem;
+  font-size: 1.05rem;
+  color: var(--text);
+  line-height: 1.7;
+  font-style: italic;
+}
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 2rem;
+  text-align: center;
+}
+.footer-legal {
+  font-size: 12px; color: var(--muted2); line-height: 1.6;
+}
+.footer-legal a { color: var(--muted); }
+.footer-legal a:hover { color: var(--text); text-decoration: underline; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 720px) {
+  .member-card,
+  .member-card.reverse {
+    grid-template-columns: 1fr;
+    direction: ltr;
+  }
+  .member-photo-col { flex-direction: row; align-items: flex-start; gap: 1.25rem; }
+  .member-photo { width: 120px; aspect-ratio: 3/4; flex-shrink: 0; }
+  .page-hero { padding: 6rem 1.25rem 2.5rem; }
+  .team-wrap { padding: 3rem 1.25rem 4rem; gap: 3.5rem; }
+  .closing-quote { padding: 2rem 1.25rem 3rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">mariano<span>sevilla</span>.com</a>
+    <a href="/" class="nav-back">← Volver al inicio</a>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<section class="page-hero">
+  <span class="page-kicker">El equipo</span>
+  <h1>Tecnología y fiscalidad,<br>trabajando juntas</h1>
+  <p>Detrás de esta herramienta hay dos personas con perfiles complementarios: uno técnico y uno fiscal. Así nació marianosevilla.com.</p>
+</section>
+
+<!-- ── EQUIPO ── -->
+<div class="team-wrap">
+
+  <!-- MARIANO -->
+  <div class="member-card">
+    <div class="member-photo-col">
+      <img src="/static/mariano-sevilla.png" alt="Mariano Sevilla" class="member-photo">
+      <span class="member-badge">Tecnología &amp; Producto</span>
+    </div>
+    <div class="member-content">
+      <h2>Mariano Sevilla</h2>
+      <p class="member-subtitle">Especialista en tecnología, automatización y sistemas de gestión empresarial</p>
+      <div class="member-bio">
+        <p>Especialista en tecnología, automatización y sistemas de gestión empresarial, con una trayectoria profesional vinculada al desarrollo e implantación de soluciones informáticas, análisis de procesos y optimización de herramientas digitales.</p>
+        <p>Diplomado en Informática de Gestión por la Universitat Politècnica de València, Mariano ha trabajado durante años en proyectos relacionados con ERP, CRM, bases de datos, automatización empresarial y desarrollo de soluciones tecnológicas adaptadas a necesidades reales de negocio.</p>
+        <p>A lo largo de su carrera ha participado en proyectos de implantación tecnológica para empresas de distintos sectores, desempeñando funciones como:</p>
+        <ul class="member-list">
+          <li>consultoría e implantación de ERP y CRM,</li>
+          <li>análisis y automatización de procesos,</li>
+          <li>programación y gestión de bases de datos,</li>
+          <li>coordinación de equipos técnicos,</li>
+          <li>desarrollo de soluciones personalizadas,</li>
+          <li>formación y soporte a usuarios.</li>
+        </ul>
+        <p>También ha trabajado en áreas de posicionamiento SEO, gestión de contenidos y desarrollo de productos digitales, combinando perfil técnico y visión estratégica orientada a producto y experiencia de usuario.</p>
+        <p>Su experiencia incluye participación en proyectos tecnológicos para grandes organizaciones y entornos empresariales complejos, así como dirección técnica de startups y soluciones software enfocadas a digitalización y automatización.</p>
+        <p>En marianosevilla.com, Mariano lidera el desarrollo tecnológico de la plataforma y el diseño del motor de cálculo FIFO, con el objetivo de ofrecer una herramienta clara, automatizada y comprensible para usuarios que necesitan gestionar correctamente su fiscalidad en criptomonedas.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- RAFA -->
+  <div class="member-card reverse">
+    <div class="member-photo-col">
+      <img src="/static/rafa-ramos.jpg" alt="Rafael Ramos Martínez" class="member-photo">
+      <span class="member-badge">Fiscalidad &amp; Economía</span>
+    </div>
+    <div class="member-content">
+      <h2>Rafael Ramos Martínez</h2>
+      <p class="member-subtitle">Economista colegiado · Gestión fiscal y financiera empresarial</p>
+      <div class="member-bio">
+        <p>Economista colegiado especializado en gestión fiscal y financiera empresarial, con más de 25 años de experiencia en dirección financiera, contabilidad, elaboración de impuestos y supervisión económico-fiscal de grupos empresariales.</p>
+        <p>Miembro del <a href="https://www.coev.com/" target="_blank" rel="noopener noreferrer">Colegio de Economistas de Valencia</a> (colegiado nº 4.579), Rafael aporta una visión práctica y rigurosa en todo lo relacionado con fiscalidad, control financiero y cumplimiento tributario.</p>
+        <p>A lo largo de su trayectoria ha dirigido la gestión económica y fiscal de múltiples empresas de distintos sectores, responsabilizándose de:</p>
+        <ul class="member-list">
+          <li>elaboración y supervisión contable,</li>
+          <li>presentación de impuestos,</li>
+          <li>coordinación financiera y administrativa,</li>
+          <li>gestión fiscal y laboral,</li>
+          <li>negociación con entidades financieras y organismos públicos,</li>
+          <li>planificación económico-tributaria.</li>
+        </ul>
+        <p>Su experiencia profesional se centra especialmente en entornos donde la precisión documental y el control financiero son críticos.</p>
+        <p>En marianosevilla.com, Rafael supervisa los criterios fiscales aplicados en los informes FIFO y lidera el servicio especializado de asistencia para contribuyentes con criptomonedas, aportando un enfoque profesional, transparente y alineado con la normativa española.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── FRASE CIERRE ── -->
+<div class="closing-quote">
+  <blockquote>
+    Nuestro objetivo no es solo automatizar cálculos, sino ofrecer herramientas y soporte con criterios fiscales sólidos y revisables.
+  </blockquote>
+</div>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <p class="footer-legal">
+    © 2025 Mariano Sevilla. Auxiliar de organización fiscal. No constituye asesoramiento fiscal ni legal.<br>
+    <a href="/privacidad">Privacidad</a> &nbsp;·&nbsp;
+    <a href="/terminos">Términos</a> &nbsp;·&nbsp;
+    <a href="/aviso-legal">Aviso legal</a>
+  </p>
+</footer>
+
+</body>
+</html>
