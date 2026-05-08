@@ -140,12 +140,15 @@ if _google_oauth_enabled:
 
 with app.app_context():
     db.create_all()
-    # Migración de emergencia: añade email_verified_at si no existe (PostgreSQL)
+    # Migración de emergencia: añade columnas si no existen (PostgreSQL)
     try:
         from sqlalchemy import text
         with db.engine.connect() as _conn:
             _conn.execute(text(
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP"
+            ))
+            _conn.execute(text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(150)"
             ))
             _conn.commit()
     except Exception:
