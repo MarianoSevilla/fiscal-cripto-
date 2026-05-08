@@ -246,6 +246,12 @@ tbody tr:hover { background: var(--surface2); }
         <div class="chart-box-title">CSVs fallidos por mes — últimos 6 meses</div>
         <div class="chart-wrap"><canvas id="chartErrors"></canvas></div>
       </div>
+      <div class="table-box" style="margin-top:1rem;" id="errorDetailWrap">
+        <table>
+          <thead><tr><th>Fecha</th><th>Exchange</th><th>Usuario</th></tr></thead>
+          <tbody id="tbErrorDetail"></tbody>
+        </table>
+      </div>
     </div>
 
   </div>
@@ -350,6 +356,12 @@ function fillTable(tbodyId, rows, keyLabel, keyNum) {
     fillMonthlyChart('chartErrors', d.errores.por_mes,  '#f87171');
     fillTable('tbExchange',  d.informes.por_exchange,  'exchange',  'total');
     fillTable('tbEjercicio', d.informes.por_ejercicio, 'ejercicio', 'total');
+
+    const tbErr = document.getElementById('tbErrorDetail');
+    const detalle = d.errores.detalle || [];
+    tbErr.innerHTML = detalle.length
+      ? detalle.map(r => `<tr><td style="font-variant-numeric:tabular-nums;white-space:nowrap">${r.fecha}</td><td>${r.exchange}</td><td style="color:var(--muted)">${r.usuario}</td></tr>`).join('')
+      : '<tr><td colspan="3" style="color:var(--muted);text-align:center;padding:20px;">Sin errores registrados</td></tr>';
 
     msgEl.hidden                            = true;
     document.getElementById('content').hidden = false;

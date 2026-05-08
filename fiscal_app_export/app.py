@@ -1501,10 +1501,22 @@ def _api_stats_data():
     ]
 
     # ── Errores por mes — últimos 6 meses ────────────────────────────────────
+    user_map = {u.id: u for u in todos_usuarios}
     errores_bucket = defaultdict(int)
+    errores_detalle = []
     for r in todos_reports:
         if r.status == "failed" and r.created_at and r.created_at >= seis_meses_atras:
             errores_bucket[r.created_at.strftime("%Y-%m")] += 1
+    for r in todos_reports:
+        if r.status == "failed" and r.created_at:
+            u = user_map.get(r.user_id)
+            errores_detalle.append({
+                "fecha":    r.created_at.strftime("%Y-%m-%d %H:%M"),
+                "exchange": r.exchange,
+                "usuario":  u.email if u else f"#{r.user_id}",
+            })
+    errores_detalle.sort(key=lambda x: x["fecha"], reverse=True)
+
     errores_por_mes_json = [
         {"mes": k, "total": v}
         for k, v in sorted(errores_bucket.items())
@@ -1524,7 +1536,8 @@ def _api_stats_data():
             "por_ejercicio":    por_ejercicio_json,
         },
         "errores": {
-            "por_mes": errores_por_mes_json,
+            "por_mes":  errores_por_mes_json,
+            "detalle":  errores_detalle,
         },
     })
 
