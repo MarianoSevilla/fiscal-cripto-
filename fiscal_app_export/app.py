@@ -33,7 +33,7 @@ from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from authlib.integrations.flask_client import OAuth
 import resend
 from sqlalchemy import func, extract
-from models import db, bcrypt, User, FifoReport
+from models import db, bcrypt, User, FifoReport, Contacto
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -1446,6 +1446,110 @@ def home2_page():
     if not _is_admin():
         return redirect("/")
     return send_from_directory("static", "home2.html")
+
+
+@app.route("/faq", strict_slashes=False)
+def faq():
+    return send_from_directory("static", "faq.html")
+
+
+@app.route("/contacto", strict_slashes=False)
+def contacto():
+    return send_from_directory("static", "contacto.html")
+
+
+# ── CONTACT FORM API ──────────────────────────
+
+_TIPOS_VALIDOS = {"soporte_tecnico", "informe_fifo", "asistencia_fiscal", "error_csv", "colaboraciones", "otro"}
+_TURNSTILE_SECRET = os.environ.get("TURNSTILE_SECRET_KEY", "")
+_CONTACT_TO_EMAIL = os.environ.get("CONTACT_TO_EMAIL", "colab.marianosevilla@gmail.com")
+
+
+def _verify_turnstile(token: str, remote_ip: str) -> bool:
+    """Verifica el token de Cloudflare Turnstile. Devuelve True si es válido."""
+    if not _TURNSTILE_SECRET:
+        return True  # sin clave configurada, omitir verificación
+    if not token:
+        return False
+    import urllib.request
+    import urllib.parse
+    import json as _json
+    data = urllib.parse.urlencode({"secret": _TURNSTILE_SECRET, "response": token, "remoteip": remote_ip}).encode()
+    try:
+        with urllib.request.urlopen("https://challenges.cloudflare.com/turnstile/v0/siteverify", data, timeout=5) as r:
+            result = _json.loads(r.read())
+            return bool(result.get("success"))
+    except Exception:
+        return False
+
+
+@app.route("/api/contacto", methods=["POST"])
+@limiter.limit("5 per 15 minutes")
+def api_contacto():
+    data = request.get_json(silent=True) or {}
+
+    # honeypot
+    if data.get("website", ""):
+        return jsonify({"ok": True})  # silently discard
+
+    nombre        = (data.get("nombre") or "").strip()
+    email_val     = (data.get("email") or "").strip()
+    tipo_consulta = (data.get("tipo_consulta") or "").strip()
+    mensaje       = (data.get("mensaje") or "").strip()
+    ts_token      = data.get("ts_token", "")
+
+    # validación backend
+    if not nombre or len(nombre) > 80:
+        return jsonify({"error": "Nombre inválido."}), 400
+    if not email_val or len(email_val) > 254 or not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email_val):
+        return jsonify({"error": "Email inválido."}), 400
+    if tipo_consulta not in _TIPOS_VALIDOS:
+        return jsonify({"error": "Tipo de consulta inválido."}), 400
+    if len(mensaje) < 20 or len(mensaje) > 3000:
+        return jsonify({"error": "El mensaje debe tener entre 20 y 3000 caracteres."}), 400
+
+    remote_ip = request.remote_addr or ""
+
+    # Turnstile
+    if not _verify_turnstile(ts_token, remote_ip):
+        return jsonify({"error": "Verificación de seguridad fallida. Recarga la página e inténtalo de nuevo."}), 400
+
+    # guardar en DB
+    try:
+        contacto_row = Contacto(
+            nombre=nombre,
+            email=email_val,
+            tipo_consulta=tipo_consulta,
+            mensaje=mensaje,
+            ip=remote_ip[:45],
+            user_agent=(request.headers.get("User-Agent") or "")[:500],
+        )
+        db.session.add(contacto_row)
+        db.session.commit()
+    except Exception:
+        traceback.print_exc()
+        return jsonify({"error": "Error interno. Inténtalo de nuevo más tarde."}), 500
+
+    # enviar email de notificación (no bloquea si falla)
+    try:
+        if resend.api_key:
+            resend.Emails.send({
+                "from": _RESEND_FROM,
+                "to": [_CONTACT_TO_EMAIL],
+                "subject": f"[Contacto] {tipo_consulta} — {nombre}",
+                "text": (
+                    f"Nuevo mensaje de contacto\n\n"
+                    f"Nombre: {nombre}\n"
+                    f"Email: {email_val}\n"
+                    f"Tipo: {tipo_consulta}\n"
+                    f"IP: {remote_ip}\n\n"
+                    f"Mensaje:\n{mensaje}"
+                ),
+            })
+    except Exception:
+        pass  # el mensaje ya está en DB; el envío de email no es crítico
+
+    return jsonify({"ok": True})
 
 
 @app.route("/api/stats")

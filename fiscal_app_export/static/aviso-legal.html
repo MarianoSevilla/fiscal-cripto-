@@ -22,23 +22,27 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --black:       #0a0a0a;
-  --surface:     #111111;
-  --surface2:    #1a1a1a;
+  --bg:          #0b1220;
+  --bg2:         #101829;
+  --surface:     #141f32;
+  --surface2:    #1a2540;
   --border:      rgba(255,255,255,0.07);
-  --text:        #f0ede6;
-  --muted:       #888580;
-  --muted2:      #5a5754;
+  --border2:     rgba(255,255,255,0.13);
+  --text:        #eef2ff;
+  --muted:       #7a8aa8;
   --accent:      #00C896;
-  --font-d: 'Syne', sans-serif;
-  --font-b: 'DM Sans', sans-serif;
-  --max: 1080px;
+  --accent-dim:  rgba(0,200,150,0.12);
+  --footer-bg:   #070e1a;
+  --max-w:       1280px;
+  --pad-x:       3rem;
+  --font-display:'Syne', sans-serif;
+  --font-body:   'DM Sans', sans-serif;
 }
 
 html { scroll-behavior: smooth; }
 body {
-  background: var(--black); color: var(--text);
-  font-family: var(--font-b); font-size: 16px; line-height: 1.7;
+  background: var(--bg); color: var(--text);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.7;
   min-height: 100vh; -webkit-font-smoothing: antialiased;
 }
 a { color: var(--accent); text-decoration: none; }
@@ -46,32 +50,32 @@ a:hover { text-decoration: underline; }
 
 nav {
   position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  height: 64px;
+  background: rgba(11,18,32,0.95);
+  backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
-  background: rgba(10,10,10,0.88); backdrop-filter: blur(14px);
 }
 .nav-inner {
-  max-width: var(--max); margin: 0 auto; padding: 0 2rem;
-  height: 64px; display: flex; align-items: center; justify-content: space-between;
+  max-width: var(--max-w); margin: 0 auto;
+  padding: 0 var(--pad-x); height: 100%;
+  display: flex; align-items: center; justify-content: space-between;
 }
 .nav-logo {
-  font-family: var(--font-d); font-weight: 800; font-size: 0.95rem;
-  letter-spacing: -0.02em; color: var(--text);
+  font-family: var(--font-display); font-weight: 800; font-size: 1rem;
+  letter-spacing: -0.02em; color: var(--text); text-decoration: none;
 }
 .nav-logo span { color: var(--accent); }
-.nav-back { font-size: 14px; color: var(--muted); transition: color .15s; }
-.nav-back:hover { color: var(--text); text-decoration: none; }
+.nav-back { font-size: 14px; color: var(--muted); text-decoration: none; transition: color .15s; }
+.nav-back:hover { color: var(--text); }
 
-.page-wrap {
-  max-width: 720px; margin: 0 auto;
-  padding: 7rem 2rem 5rem;
-}
+.page-wrap { max-width: 720px; margin: 0 auto; padding: 7rem 2rem 5rem; }
 .page-kicker {
   font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
   text-transform: uppercase; color: var(--accent);
   margin-bottom: 1rem; display: block;
 }
 .page-wrap h1 {
-  font-family: var(--font-d); font-size: clamp(1.8rem, 4vw, 2.4rem);
+  font-family: var(--font-display); font-size: clamp(1.8rem, 4vw, 2.4rem);
   font-weight: 800; line-height: 1.2; margin-bottom: 0.5rem;
 }
 .page-meta {
@@ -82,27 +86,19 @@ nav {
 
 .policy-section { margin-bottom: 2.5rem; }
 .policy-section h2 {
-  font-family: var(--font-d); font-size: 1.1rem; font-weight: 700;
+  font-family: var(--font-display); font-size: 1.1rem; font-weight: 700;
   color: var(--text); margin-bottom: 0.75rem;
   padding-bottom: 0.4rem; border-bottom: 1px solid var(--border);
 }
-.policy-section p {
-  color: var(--muted); font-size: 15px; margin-bottom: 0.75rem;
-}
+.policy-section p { color: var(--muted); font-size: 15px; margin-bottom: 0.75rem; }
 .policy-section p:last-child { margin-bottom: 0; }
 .policy-section ul {
   list-style: none; padding: 0;
-  display: flex; flex-direction: column; gap: 0.4rem;
-  margin-bottom: 0.75rem;
+  display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.75rem;
 }
-.policy-section ul li {
-  font-size: 15px; color: var(--muted);
-  padding-left: 1.2rem; position: relative;
-}
-.policy-section ul li::before {
-  content: "·"; position: absolute; left: 0;
-  color: var(--accent); font-weight: 700;
-}
+.policy-section ul li { font-size: 15px; color: var(--muted); padding-left: 1.2rem; position: relative; }
+.policy-section ul li::before { content: "·"; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+
 .notice {
   background: var(--surface2); border: 1px solid var(--border);
   border-left: 3px solid var(--accent);
@@ -111,13 +107,15 @@ nav {
 }
 .notice strong { color: var(--text); }
 
-footer { border-top: 1px solid var(--border); padding: 2rem; text-align: center; }
-.footer-legal { font-size: 12px; color: var(--muted2); line-height: 1.6; }
-.footer-legal a { color: var(--muted); }
-.footer-legal a:hover { color: var(--text); text-decoration: underline; }
+footer { background: var(--footer-bg); border-top: 1px solid var(--border); }
+.footer-inner { max-width: var(--max-w); margin: 0 auto; padding: 1.5rem var(--pad-x); text-align: center; }
+.footer-legal { font-size: 12px; color: var(--muted); line-height: 1.8; }
+.footer-legal a { color: var(--muted); text-decoration: none; }
+.footer-legal a:hover { color: var(--text); }
 
 @media (max-width: 640px) {
   .page-wrap { padding: 6rem 1.25rem 3rem; }
+  .nav-inner { padding: 0 1.25rem; }
 }
 </style>
 </head>
@@ -139,9 +137,7 @@ footer { border-top: 1px solid var(--border); padding: 2rem; text-align: center;
   <!-- 1 -->
   <div class="policy-section">
     <h2>1. Datos identificativos del titular</h2>
-    <p>
-      En cumplimiento del artículo 10 de la Ley 34/2002, de 11 de julio, de Servicios de la Sociedad de la Información y de Comercio Electrónico (LSSI-CE), se facilitan los siguientes datos identificativos del titular del sitio web:
-    </p>
+    <p>En cumplimiento del artículo 10 de la Ley 34/2002, de 11 de julio, de Servicios de la Sociedad de la Información y de Comercio Electrónico (LSSI-CE), se facilitan los siguientes datos identificativos del titular del sitio web:</p>
     <ul>
       <li><strong>Titular:</strong> Mariano Sevilla Trujillo</li>
       <li><strong>Localización:</strong> Valencia, España</li>
@@ -153,9 +149,7 @@ footer { border-top: 1px solid var(--border); padding: 2rem; text-align: center;
   <!-- 2 -->
   <div class="policy-section">
     <h2>2. Objeto del sitio web</h2>
-    <p>
-      marianosevilla.com ofrece una herramienta web de organización fiscal para criptomonedas que permite a los usuarios calcular ganancias y pérdidas patrimoniales aplicando el método FIFO, de acuerdo con la normativa del Impuesto sobre la Renta de las Personas Físicas (IRPF) vigente en España.
-    </p>
+    <p>marianosevilla.com ofrece una herramienta web de organización fiscal para criptomonedas que permite a los usuarios calcular ganancias y pérdidas patrimoniales aplicando el método FIFO, de acuerdo con la normativa del Impuesto sobre la Renta de las Personas Físicas (IRPF) vigente en España.</p>
     <div class="notice">
       <strong>Este sitio web no presta asesoramiento fiscal ni legal.</strong> La herramienta genera informes de apoyo orientativos. El usuario es el único responsable del contenido de su declaración de la renta. Consulta siempre con un asesor o gestor fiscal autorizado.
     </div>
@@ -164,76 +158,59 @@ footer { border-top: 1px solid var(--border); padding: 2rem; text-align: center;
   <!-- 3 -->
   <div class="policy-section">
     <h2>3. Propiedad intelectual e industrial</h2>
-    <p>
-      Todos los contenidos del sitio web — incluyendo, sin carácter limitativo, textos, gráficos, imágenes, logotipos, iconos, código fuente y diseño — son propiedad de Mariano Sevilla Trujillo o de sus licenciantes, y están protegidos por la legislación española e internacional en materia de propiedad intelectual e industrial.
-    </p>
-    <p>
-      Queda expresamente prohibida la reproducción total o parcial, distribución, comunicación pública, transformación o cualquier otra forma de explotación de los contenidos de este sitio web sin la autorización previa y por escrito del titular.
-    </p>
+    <p>Todos los contenidos del sitio web — incluyendo, sin carácter limitativo, textos, gráficos, imágenes, logotipos, iconos, código fuente y diseño — son propiedad de Mariano Sevilla Trujillo o de sus licenciantes, y están protegidos por la legislación española e internacional en materia de propiedad intelectual e industrial.</p>
+    <p>Queda expresamente prohibida la reproducción total o parcial, distribución, comunicación pública, transformación o cualquier otra forma de explotación de los contenidos de este sitio web sin la autorización previa y por escrito del titular.</p>
   </div>
 
   <!-- 4 -->
   <div class="policy-section">
     <h2>4. Condiciones de uso</h2>
-    <p>
-      El acceso y la navegación por este sitio web implican la aceptación plena de las condiciones recogidas en el presente Aviso Legal, en los <a href="/terminos">Términos de Servicio</a> y en la <a href="/privacidad">Política de Privacidad</a>.
-    </p>
-    <p>
-      El usuario se compromete a hacer un uso lícito del sitio web, de acuerdo con la ley, la moral y el orden público, y a no causar daños o perjuicios al titular ni a terceros.
-    </p>
+    <p>El acceso y la navegación por este sitio web implican la aceptación plena de las condiciones recogidas en el presente Aviso Legal, en los <a href="/terminos">Términos de Servicio</a> y en la <a href="/privacidad">Política de Privacidad</a>.</p>
+    <p>El usuario se compromete a hacer un uso lícito del sitio web, de acuerdo con la ley, la moral y el orden público, y a no causar daños o perjuicios al titular ni a terceros.</p>
   </div>
 
   <!-- 5 -->
   <div class="policy-section">
     <h2>5. Exclusión de responsabilidad</h2>
-    <p>
-      El titular no garantiza la exactitud, exhaustividad o actualización de la información publicada en este sitio web. Los contenidos se ofrecen a título informativo y pueden ser modificados sin previo aviso.
-    </p>
-    <p>
-      El titular no se responsabiliza de los daños o perjuicios derivados del uso o la imposibilidad de uso del sitio web, de los errores u omisiones en los contenidos, ni de la presencia de virus u otros elementos que puedan causar alteraciones en los sistemas informáticos de los usuarios.
-    </p>
-    <p>
-      Los resultados generados por la herramienta dependen de los datos introducidos por el usuario. El titular no se hace responsable de declaraciones fiscales incorrectas, sanciones o cualquier otra consecuencia económica o legal derivada del uso del informe generado.
-    </p>
+    <p>El titular no garantiza la exactitud, exhaustividad o actualización de la información publicada en este sitio web. Los contenidos se ofrecen a título informativo y pueden ser modificados sin previo aviso.</p>
+    <p>El titular no se responsabiliza de los daños o perjuicios derivados del uso o la imposibilidad de uso del sitio web, de los errores u omisiones en los contenidos, ni de la presencia de virus u otros elementos que puedan causar alteraciones en los sistemas informáticos de los usuarios.</p>
+    <p>Los resultados generados por la herramienta dependen de los datos introducidos por el usuario. El titular no se hace responsable de declaraciones fiscales incorrectas, sanciones o cualquier otra consecuencia económica o legal derivada del uso del informe generado.</p>
   </div>
 
   <!-- 6 -->
   <div class="policy-section">
     <h2>6. Enlaces a terceros</h2>
-    <p>
-      Este sitio web puede contener enlaces a páginas de terceros. Dichos enlaces se incluyen únicamente a efectos informativos. El titular no controla ni se responsabiliza del contenido, la política de privacidad ni las prácticas de los sitios web enlazados.
-    </p>
+    <p>Este sitio web puede contener enlaces a páginas de terceros. Dichos enlaces se incluyen únicamente a efectos informativos. El titular no controla ni se responsabiliza del contenido, la política de privacidad ni las prácticas de los sitios web enlazados.</p>
   </div>
 
   <!-- 7 -->
   <div class="policy-section">
     <h2>7. Protección de datos y cookies</h2>
-    <p>
-      El tratamiento de los datos personales de los usuarios se rige por la <a href="/privacidad">Política de Privacidad</a>, disponible en este sitio web, de conformidad con el Reglamento (UE) 2016/679 (RGPD) y la Ley Orgánica 3/2018 (LOPDGDD).
-    </p>
-    <p>
-      La información sobre el uso de cookies se encuentra detallada en la misma <a href="/privacidad">Política de Privacidad</a>.
-    </p>
+    <p>El tratamiento de los datos personales de los usuarios se rige por la <a href="/privacidad">Política de Privacidad</a>, disponible en este sitio web, de conformidad con el Reglamento (UE) 2016/679 (RGPD) y la Ley Orgánica 3/2018 (LOPDGDD).</p>
+    <p>La información sobre el uso de cookies se encuentra detallada en la misma <a href="/privacidad">Política de Privacidad</a>.</p>
   </div>
 
   <!-- 8 -->
   <div class="policy-section">
     <h2>8. Legislación aplicable y jurisdicción</h2>
-    <p>
-      El presente Aviso Legal se rige por la legislación española. Para la resolución de cualquier controversia derivada del acceso o uso de este sitio web, las partes se someten, con renuncia expresa a cualquier otro fuero que pudiera corresponderles, a la jurisdicción de los Juzgados y Tribunales de Valencia (España).
-    </p>
+    <p>El presente Aviso Legal se rige por la legislación española. Para la resolución de cualquier controversia derivada del acceso o uso de este sitio web, las partes se someten, con renuncia expresa a cualquier otro fuero que pudiera corresponderles, a la jurisdicción de los Juzgados y Tribunales de Valencia (España).</p>
   </div>
 
 </div>
 
 <footer>
-  <p class="footer-legal">
-    © 2026 Mariano Sevilla &nbsp;·&nbsp;
-    <a href="/aviso-legal">Aviso legal</a> &nbsp;·&nbsp;
-    <a href="/privacidad">Política de privacidad</a> &nbsp;·&nbsp;
-    <a href="/terminos">Términos de servicio</a> &nbsp;·&nbsp;
-    <a href="mailto:colab.marianosevilla@gmail.com">colab.marianosevilla@gmail.com</a>
-  </p>
+  <div class="footer-inner">
+    <p class="footer-legal">
+      © 2026 Mariano Sevilla &nbsp;·&nbsp;
+      <a href="/privacidad">Privacidad</a> &nbsp;·&nbsp;
+      <a href="/terminos">Términos</a> &nbsp;·&nbsp;
+      <a href="/cookies">Cookies</a> &nbsp;·&nbsp;
+      <a href="/aviso-legal">Aviso legal</a> &nbsp;·&nbsp;
+      <a href="/faq">FAQ</a> &nbsp;·&nbsp;
+      <a href="/contacto">Contacto</a> &nbsp;·&nbsp;
+      <a href="mailto:colab.marianosevilla@gmail.com">colab.marianosevilla@gmail.com</a>
+    </p>
+  </div>
 </footer>
 
 </body>

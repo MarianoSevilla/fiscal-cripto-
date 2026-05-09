@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contacto | Mariano Sevilla</title>
+<meta name="description" content="¿Tienes alguna pregunta sobre la herramienta fiscal para criptomonedas? Escríbenos y te respondemos lo antes posible.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://marianosevilla.com/contacto">
+
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+<link rel="icon" href="/static/favicon.ico">
+<link rel="manifest" href="/static/site.webmanifest">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:          #0b1220;
+  --bg2:         #101829;
+  --surface:     #141f32;
+  --surface2:    #1a2540;
+  --border:      rgba(255,255,255,0.07);
+  --border2:     rgba(255,255,255,0.13);
+  --text:        #eef2ff;
+  --muted:       #7a8aa8;
+  --accent:      #00C896;
+  --accent-dim:  rgba(0,200,150,0.12);
+  --accent-glow: rgba(0,200,150,0.25);
+  --error:       #e24b4a;
+  --footer-bg:   #070e1a;
+  --max-w:       1280px;
+  --pad-x:       3rem;
+  --font-display:'Syne', sans-serif;
+  --font-body:   'DM Sans', sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.7;
+  min-height: 100vh; -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  height: 64px;
+  background: rgba(11,18,32,0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-inner {
+  max-width: var(--max-w); margin: 0 auto;
+  padding: 0 var(--pad-x); height: 100%;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.nav-logo {
+  font-family: var(--font-display); font-weight: 800; font-size: 1rem;
+  letter-spacing: -0.02em; color: var(--text); text-decoration: none;
+}
+.nav-logo span { color: var(--accent); }
+.nav-back { font-size: 14px; color: var(--muted); text-decoration: none; transition: color .15s; }
+.nav-back:hover { color: var(--text); }
+
+/* ── HERO ── */
+.page-hero {
+  max-width: 720px; margin: 0 auto;
+  padding: 7rem 2rem 3rem;
+  text-align: center;
+}
+.page-kicker {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--accent-dim); border: 1px solid var(--accent-glow);
+  color: var(--accent); border-radius: 100px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+  padding: 4px 14px; margin-bottom: 1.5rem;
+  text-transform: uppercase;
+}
+.page-hero h1 {
+  font-family: var(--font-display); font-size: clamp(1.8rem, 5vw, 2.6rem);
+  font-weight: 800; line-height: 1.15; letter-spacing: -0.03em;
+  margin-bottom: 1rem;
+}
+.page-hero p { font-size: 1rem; color: var(--muted); line-height: 1.7; }
+
+/* ── FORM ── */
+.form-wrap {
+  max-width: 600px; margin: 0 auto;
+  padding: 2.5rem 2rem 5rem;
+}
+.form-card {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 16px;
+  padding: 2.5rem;
+}
+
+.field { margin-bottom: 1.5rem; }
+.field label {
+  display: block;
+  font-size: 13px; font-weight: 600; color: var(--text);
+  margin-bottom: 0.45rem; letter-spacing: 0.01em;
+}
+.field label span.req { color: var(--accent); margin-left: 2px; }
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 11px 14px;
+  font-family: var(--font-body); font-size: 15px; color: var(--text);
+  outline: none; transition: border-color 0.15s;
+  -webkit-appearance: none;
+}
+.field input::placeholder,
+.field textarea::placeholder { color: var(--muted); opacity: 0.6; }
+.field input:focus,
+.field select:focus,
+.field textarea:focus { border-color: var(--accent); }
+.field input.invalid,
+.field select.invalid,
+.field textarea.invalid { border-color: var(--error); }
+
+.field select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237a8aa8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 38px; cursor: pointer;
+}
+.field select option { background: #1a2540; color: var(--text); }
+
+.field textarea { resize: vertical; min-height: 130px; line-height: 1.6; }
+
+.char-count {
+  font-size: 11px; color: var(--muted); text-align: right;
+  margin-top: 0.3rem;
+}
+.char-count.over { color: var(--error); }
+
+/* legal checkbox */
+.field-check {
+  display: flex; align-items: flex-start; gap: 10px;
+  margin-bottom: 1.75rem;
+}
+.field-check input[type="checkbox"] {
+  width: 16px; height: 16px; flex-shrink: 0;
+  margin-top: 3px; accent-color: var(--accent); cursor: pointer;
+}
+.field-check label {
+  font-size: 13px; color: var(--muted); line-height: 1.5; cursor: pointer;
+}
+.field-check label a { color: var(--accent); }
+
+/* honeypot — invisible para humanos */
+.hp-field { position: absolute; left: -9999px; top: -9999px; opacity: 0; pointer-events: none; }
+
+/* submit */
+.btn-submit {
+  width: 100%;
+  background: var(--accent); color: #0a0a0a;
+  border: none; border-radius: 10px; padding: 14px 32px;
+  font-family: var(--font-display); font-size: 1rem; font-weight: 700;
+  cursor: pointer; transition: opacity 0.15s;
+  letter-spacing: -0.01em;
+}
+.btn-submit:hover { opacity: 0.88; }
+.btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* messages */
+.form-msg {
+  display: none;
+  border-radius: 10px; padding: 1rem 1.25rem;
+  font-size: 14px; margin-top: 1rem;
+}
+.form-msg.success {
+  background: var(--accent-dim); border: 1px solid var(--accent-glow);
+  color: var(--accent);
+}
+.form-msg.error {
+  background: rgba(226,75,74,0.08); border: 1px solid rgba(226,75,74,0.25);
+  color: #e24b4a;
+}
+
+/* ── FOOTER ── */
+footer { background: var(--footer-bg); border-top: 1px solid var(--border); }
+.footer-inner { max-width: var(--max-w); margin: 0 auto; padding: 1.5rem var(--pad-x); text-align: center; }
+.footer-legal { font-size: 12px; color: var(--muted); line-height: 1.8; }
+.footer-legal a { color: var(--muted); text-decoration: none; }
+.footer-legal a:hover { color: var(--text); }
+
+@media (max-width: 640px) {
+  .page-hero { padding: 6rem 1.25rem 2.5rem; }
+  .form-wrap { padding: 2rem 1.25rem 4rem; }
+  .form-card { padding: 1.75rem 1.25rem; }
+  .nav-inner { padding: 0 1.25rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">mariano<span>sevilla</span>.com</a>
+    <a href="/" class="nav-back">← Volver al inicio</a>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<div class="page-hero">
+  <span class="page-kicker">Contacto</span>
+  <h1>¿En qué podemos ayudarte?</h1>
+  <p>Responderemos lo antes posible. Para dudas rápidas, consulta antes las <a href="/faq">preguntas frecuentes</a>.</p>
+</div>
+
+<!-- ── FORM ── -->
+<div class="form-wrap">
+  <div class="form-card">
+    <form id="contactForm" novalidate>
+
+      <!-- honeypot -->
+      <div class="hp-field" aria-hidden="true">
+        <input type="text" name="website" tabindex="-1" autocomplete="off">
+      </div>
+
+      <div class="field">
+        <label for="nombre">Nombre<span class="req">*</span></label>
+        <input type="text" id="nombre" name="nombre" maxlength="80" placeholder="Tu nombre" autocomplete="name" required>
+      </div>
+
+      <div class="field">
+        <label for="email">Email<span class="req">*</span></label>
+        <input type="email" id="email" name="email" maxlength="254" placeholder="tu@email.com" autocomplete="email" required>
+      </div>
+
+      <div class="field">
+        <label for="tipo">Tipo de consulta<span class="req">*</span></label>
+        <select id="tipo" name="tipo_consulta" required>
+          <option value="" disabled selected>Selecciona una opción</option>
+          <option value="soporte_tecnico">Soporte técnico</option>
+          <option value="informe_fifo">Informe FIFO</option>
+          <option value="asistencia_fiscal">Asistencia fiscal</option>
+          <option value="error_csv">Error en CSV</option>
+          <option value="colaboraciones">Colaboraciones</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="mensaje">Mensaje<span class="req">*</span></label>
+        <textarea id="mensaje" name="mensaje" maxlength="3000" placeholder="Describe tu consulta con el mayor detalle posible..." required></textarea>
+        <div class="char-count"><span id="charCount">0</span> / 3000</div>
+      </div>
+
+      <!-- Cloudflare Turnstile -->
+      <div class="cf-turnstile" data-sitekey="TURNSTILE_SITE_KEY_PLACEHOLDER" data-theme="dark" data-size="flexible" style="margin-bottom:1.5rem;"></div>
+
+      <div class="field-check">
+        <input type="checkbox" id="legal" name="legal" required>
+        <label for="legal">
+          He leído y acepto la <a href="/privacidad" target="_blank">Política de Privacidad</a>.
+          Entiendo que mis datos se usarán únicamente para responder a mi consulta.
+        </label>
+      </div>
+
+      <button type="submit" class="btn-submit" id="submitBtn">Enviar mensaje</button>
+
+      <div class="form-msg success" id="msgSuccess">
+        ✓ Mensaje enviado correctamente. Te responderemos lo antes posible.
+      </div>
+      <div class="form-msg error" id="msgError">
+        No se ha podido enviar el formulario. Inténtalo de nuevo.
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-inner">
+    <p class="footer-legal">
+      © 2026 Mariano Sevilla &nbsp;·&nbsp;
+      <a href="/privacidad">Privacidad</a> &nbsp;·&nbsp;
+      <a href="/terminos">Términos</a> &nbsp;·&nbsp;
+      <a href="/cookies">Cookies</a> &nbsp;·&nbsp;
+      <a href="/aviso-legal">Aviso legal</a> &nbsp;·&nbsp;
+      <a href="/faq">FAQ</a> &nbsp;·&nbsp;
+      <a href="/contacto">Contacto</a> &nbsp;·&nbsp;
+      <a href="mailto:colab.marianosevilla@gmail.com">colab.marianosevilla@gmail.com</a>
+    </p>
+  </div>
+</footer>
+
+<script>
+// char counter
+const msg = document.getElementById('mensaje');
+const cc  = document.getElementById('charCount');
+msg.addEventListener('input', () => {
+  const n = msg.value.length;
+  cc.textContent = n;
+  cc.parentElement.classList.toggle('over', n > 3000);
+});
+
+// form submit
+document.getElementById('contactForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form     = e.target;
+  const btn      = document.getElementById('submitBtn');
+  const msgOk    = document.getElementById('msgSuccess');
+  const msgErr   = document.getElementById('msgError');
+
+  // hide previous messages
+  msgOk.style.display = 'none';
+  msgErr.style.display = 'none';
+
+  // basic client-side validation
+  let valid = true;
+  ['nombre','email','tipo','mensaje'].forEach(id => {
+    const el = document.getElementById(id) || form.querySelector(`[name="${id}"]`);
+    if (!el) return;
+    if (!el.value.trim()) { el.classList.add('invalid'); valid = false; }
+    else el.classList.remove('invalid');
+  });
+  if (!document.getElementById('legal').checked) { valid = false; }
+  if (!valid) {
+    msgErr.textContent = 'Por favor, completa todos los campos obligatorios.';
+    msgErr.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Enviando…';
+
+  // get Turnstile token
+  const tsToken = document.querySelector('[name="cf-turnstile-response"]')?.value || '';
+
+  const payload = {
+    nombre:        form.nombre.value.trim(),
+    email:         form.email.value.trim(),
+    tipo_consulta: form.tipo_consulta.value,
+    mensaje:       form.mensaje.value.trim(),
+    website:       form.website.value,     // honeypot
+    ts_token:      tsToken,
+  };
+
+  try {
+    const res = await fetch('/api/contacto', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (res.ok && data.ok) {
+      msgOk.style.display = 'block';
+      form.reset();
+      cc.textContent = '0';
+    } else {
+      msgErr.textContent = data.error || 'No se ha podido enviar el formulario. Inténtalo de nuevo.';
+      msgErr.style.display = 'block';
+    }
+  } catch {
+    msgErr.textContent = 'Error de conexión. Inténtalo de nuevo.';
+    msgErr.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Enviar mensaje';
+  }
+});
+</script>
+
+</body>
+</html>

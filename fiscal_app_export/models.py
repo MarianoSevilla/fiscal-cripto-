@@ -60,3 +60,22 @@ class FifoReport(db.Model):
 
     def __repr__(self) -> str:
         return f"<FifoReport user={self.user_id} exchange={self.exchange} year={self.fiscal_year}>"
+
+
+class Contacto(db.Model):
+    """Mensaje recibido a través del formulario de contacto."""
+
+    __tablename__ = "contactos"
+
+    id            = db.Column(db.Integer, primary_key=True)
+    created_at    = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    nombre        = db.Column(db.String(80),  nullable=False)
+    email         = db.Column(db.String(255), nullable=False)
+    tipo_consulta = db.Column(db.String(50),  nullable=False)
+    mensaje       = db.Column(db.Text,        nullable=False)
+    ip            = db.Column(db.String(45),  nullable=True)
+    user_agent    = db.Column(db.Text,        nullable=True)
+    estado        = db.Column(db.String(20),  default="nuevo", nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<Contacto {self.email} tipo={self.tipo_consulta}>"
