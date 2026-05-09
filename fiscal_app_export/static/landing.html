@@ -400,7 +400,7 @@
       <li><a href="/contacto">Contacto</a></li>
     </ul>
     <div class="nav-right">
-      <button class="btn-nav-login" id="navBtnLogin">Iniciar sesión</button>
+      <a href="/login/" class="btn-nav-login">Iniciar sesión</a>
       <a href="/signup/" class="btn-nav-cta">Crea tu cuenta gratis</a>
     </div>
   </div>
@@ -694,7 +694,6 @@
     finally { _setLoading(form, false, 'Crear cuenta'); }
   });
 
-  document.getElementById('navBtnLogin').addEventListener('click', () => abrirAuthModal('login'));
 </script>
 </body>
 </html>
