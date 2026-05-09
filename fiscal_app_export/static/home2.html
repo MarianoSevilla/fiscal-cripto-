@@ -93,7 +93,7 @@
     max-width: var(--max-w); margin: 0 auto;
     padding: 100px var(--pad-x) 1.5rem;
     display: grid;
-    grid-template-columns: 520px 1fr;
+    grid-template-columns: 55% 45%;
     gap: 4rem;
     align-items: center;
     min-height: 100vh;
@@ -153,22 +153,35 @@
     font-family: var(--font-display); font-size: 1rem; font-weight: 700;
     cursor: pointer; transition: opacity 0.15s, transform 0.1s;
     text-decoration: none; letter-spacing: -0.01em;
-    text-align: center; margin-bottom: 1rem;
+    text-align: center; margin-bottom: 0;
+  }
+  .cta-micro {
+    font-size: 13px; color: var(--muted); opacity: 0.75;
+    text-align: center; margin-top: 10px; margin-bottom: 1.5rem;
   }
   .btn-primary:hover { opacity: 0.88; }
   .btn-primary:active { transform: scale(0.98); }
+
+  /* Mini badge asistencia */
+  .asistencia-badge {
+    display: inline-flex; align-items: center;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); border: 1px solid var(--border2);
+    border-radius: 100px; padding: 3px 10px;
+    margin-bottom: 0.6rem;
+  }
 
   /* Bloque asistencia */
   .asistencia-block {
     background: var(--surface);
     border: 1px solid var(--border2);
     border-radius: 12px;
-    padding: 1rem 1.25rem;
-    margin-bottom: 1.75rem;
+    padding: 1.1rem 1.25rem;
+    margin-bottom: 2rem;
   }
   .asistencia-block p {
-    font-size: 0.88rem; color: var(--muted); line-height: 1.5;
-    margin-bottom: 0.75rem;
+    font-size: 0.88rem; color: var(--muted); line-height: 1.55;
+    margin-bottom: 0.85rem;
   }
   .asistencia-block p strong { color: var(--text); display: block; margin-bottom: 3px; font-size: 0.95rem; }
 
@@ -191,24 +204,24 @@
 
   /* Autores */
   .authors {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
-    margin-bottom: 1rem;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+    width: 100%; margin-bottom: 0;
   }
   .author-card {
-    display: flex; align-items: center; gap: 12px;
-    padding: 14px 14px;
+    display: flex; align-items: center; gap: 14px;
+    padding: 20px 24px;
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 14px;
     width: 100%;
   }
   .author-avatar {
-    width: 46px; height: 46px; border-radius: 50%;
+    width: 56px; height: 56px; border-radius: 50%;
     object-fit: cover; flex-shrink: 0;
     border: 2px solid var(--border2);
   }
-  .author-name { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
-  .author-role { font-size: 11px; color: var(--muted); line-height: 1.35; }
-  .author-colegiado { font-size: 10px; color: rgba(0,200,150,0.7); margin-top: 3px; letter-spacing: 0.02em; }
+  .author-name { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+  .author-role { font-size: 11.5px; color: var(--muted); line-height: 1.4; }
+  .author-colegiado { font-size: 10px; color: rgba(0,200,150,0.65); margin-top: 4px; letter-spacing: 0.02em; }
 
   /* ── MOCKUP ──────────────────────────────── */
   .hero-right {
@@ -333,6 +346,7 @@
     h1 { font-size: 2.6rem; white-space: normal; }
     .footer-inner { grid-template-columns: 1fr; }
     .nav-links { display: none; }
+    .authors { grid-template-columns: 1fr; }
   }
 
   /* ── AUTH MODAL ──────────────────────────── */
@@ -413,10 +427,11 @@
     </ul>
 
     <a href="/signup/" class="btn-primary">Crea tu cuenta gratis</a>
-    <p style="font-size:12px;color:var(--muted);text-align:center;margin-top:-0.5rem;margin-bottom:1rem;">Sin tarjeta · Importa tus CSVs · Generación automática FIFO</p>
+    <p class="cta-micro">Sin tarjeta · Importa tus CSVs · Generación automática FIFO</p>
 
     <!-- Bloque asistencia fiscal -->
     <div class="asistencia-block">
+      <div class="asistencia-badge">Asistencia especializada</div>
       <p>
         <strong>¿Necesitas ayuda con tu declaración?</strong>
         Asistencia fiscal especializada para usuarios con criptomonedas, supervisada por economista colegiado.
@@ -515,14 +530,13 @@
   <div style="max-width:var(--max-w);margin:0 auto;padding:1rem var(--pad-x);display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;">
     <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;white-space:nowrap;">Compatible con</span>
     <div style="width:1px;height:16px;background:var(--border2);flex-shrink:0;"></div>
-    <span style="font-size:13px;color:var(--muted);">Binance · Bitvavo · Coinbase · Kraken · Bitget · KuCoin · <span style="opacity:0.6;">y más</span></span>
+    <span style="font-size:13px;color:var(--muted);">Binance · Bitvavo · Coinbase · Kraken · Bitget · KuCoin y más</span>
   </div>
 </div>
 
 <!-- ── TEXTO LEGAL (fuera del footer) ───────── -->
 <div class="legal-bar">
-  <span>Una herramienta gratuita de <strong>Mariano Sevilla</strong> —
-  Auxiliar de organización fiscal. No constituye asesoramiento fiscal ni legal.</span>
+  <span>Herramienta de generación de informes FIFO para usuarios con criptomonedas. No constituye asesoramiento fiscal ni legal.</span>
   <div class="legal-bar-links">
     <a href="/privacidad">Privacidad</a>
     <a href="/terminos">Términos</a>
