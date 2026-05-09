@@ -1063,11 +1063,21 @@
   AuthState.onChange(user => {
     document.getElementById('navBtnLogin').hidden   = !!user;
     document.getElementById('navUserInfo').hidden   = !user;
-    document.getElementById('navAdminLink').hidden  = !(user && user.is_admin);
     if (user) document.getElementById('navUserEmail').textContent = user.email;
   });
 
   AuthState.init();
+
+  // Igual que Stats en dashboard.html: check directo sobre /api/me
+  (async () => {
+    try {
+      const r = await fetch('/api/me', { credentials: 'include' });
+      const d = await r.json();
+      if (d.user && d.user.is_admin) {
+        document.getElementById('navAdminLink').hidden = false;
+      }
+    } catch {}
+  })();
 </script>
 
 <script>
