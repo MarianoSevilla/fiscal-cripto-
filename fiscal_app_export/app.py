@@ -1442,11 +1442,8 @@ def stats_page():
     return send_from_directory("static", "stats.html")
 
 @app.route("/home2")
-@login_required
 def home2_page():
-    if not _is_admin():
-        return redirect("/")
-    return send_from_directory("static", "home2.html")
+    return redirect("/", 301)
 
 
 @app.route("/faq", strict_slashes=False)
