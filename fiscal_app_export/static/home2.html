@@ -91,7 +91,7 @@
   /* ── HERO ────────────────────────────────── */
   .hero-wrap {
     max-width: var(--max-w); margin: 0 auto;
-    padding: 100px var(--pad-x) 4rem;
+    padding: 100px var(--pad-x) 1.5rem;
     display: grid;
     grid-template-columns: 520px 1fr;
     gap: 4rem;
@@ -190,13 +190,13 @@
   }
 
   /* Autores */
-  .authors { display: flex; flex-direction: column; gap: 8px; }
+  .authors { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1rem; }
   .author-card {
-    display: inline-flex; align-items: center; gap: 10px;
+    display: flex; align-items: center; gap: 10px;
     padding: 9px 12px;
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 10px;
-    width: fit-content; max-width: 340px;
+    width: 320px;
   }
   .author-avatar {
     width: 38px; height: 38px; border-radius: 50%;
@@ -273,10 +273,15 @@
   /* ── LEGAL TEXT (fuera del footer) ───────── */
   .legal-bar {
     max-width: var(--max-w); margin: 0 auto;
-    padding: 1.5rem var(--pad-x);
+    padding: 0.75rem var(--pad-x);
     font-size: 12px; color: var(--muted);
     border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 2rem; flex-wrap: wrap;
   }
+  .legal-bar-links { display: flex; gap: 1.25rem; flex-shrink: 0; }
+  .legal-bar-links a { font-size: 12px; color: var(--muted); text-decoration: none; transition: color 0.15s; }
+  .legal-bar-links a:hover { color: var(--text); }
 
   /* ── FOOTER ──────────────────────────────── */
   footer {
@@ -397,7 +402,7 @@
     </p>
 
     <ul class="hero-checks">
-      <li>Método FIFO obligatorio según normativa española</li>
+      <li>Método FIFO</li>
       <li>Compatible con los principales exchanges</li>
       <li>Privacidad y seguridad — tu CSV no se almacena</li>
       <li>100% online, sin instalación</li>
@@ -409,10 +414,9 @@
     <div class="asistencia-block">
       <p>
         <strong>¿Necesitas ayuda con tu declaración?</strong>
-        Servicio de asistencia fiscal personalizada con un economista colegiado.
+        Asistencia fiscal especializada en criptomonedas por economista colegiado.
       </p>
       <a href="/about" class="btn-asistencia">
-        <img src="/static/rafa-ramos-logo.png" alt="Rafael Ramos">
         Solicitar asistencia fiscal
       </a>
     </div>
@@ -423,14 +427,14 @@
         <img src="/static/mariano-sevilla-logo.png" alt="Mariano Sevilla" class="author-avatar">
         <div>
           <div class="author-name">Mariano Sevilla</div>
-          <div class="author-role">Especialista en automatización y herramientas para usuarios cripto</div>
+          <div class="author-role">Tecnología y automatización aplicada a la fiscalidad cripto</div>
         </div>
       </div>
       <div class="author-card">
         <img src="/static/rafa-ramos-logo.png" alt="Rafael Ramos Martínez" class="author-avatar">
         <div>
           <div class="author-name">Rafael Ramos Martínez</div>
-          <div class="author-role">Economista colegiado · Supervisión fiscal</div>
+          <div class="author-role">Economista colegiado · Supervisión y criterio fiscal</div>
         </div>
       </div>
     </div>
@@ -502,8 +506,14 @@
 
 <!-- ── TEXTO LEGAL (fuera del footer) ───────── -->
 <div class="legal-bar">
-  Una herramienta gratuita de <strong>Mariano Sevilla</strong> —
-  Auxiliar de organización fiscal. No constituye asesoramiento fiscal ni legal.
+  <span>Una herramienta gratuita de <strong>Mariano Sevilla</strong> —
+  Auxiliar de organización fiscal. No constituye asesoramiento fiscal ni legal.</span>
+  <div class="legal-bar-links">
+    <a href="/privacidad">Privacidad</a>
+    <a href="/terminos">Términos</a>
+    <a href="/cookies">Cookies</a>
+    <a href="/aviso-legal">Aviso legal</a>
+  </div>
 </div>
 
 <!-- ── FOOTER ─────────────────────────────── -->
@@ -548,15 +558,6 @@
 
   </div>
 
-  <!-- Sub-footer con links legales -->
-  <div style="border-top:1px solid var(--border); padding: 1.25rem var(--pad-x);">
-    <div style="max-width:var(--max-w);margin:0 auto;display:flex;align-items:center;justify-content:flex-end;gap:1.5rem;flex-wrap:wrap;">
-      <a href="/privacidad" style="font-size:12px;color:var(--muted);text-decoration:none;">Privacidad</a>
-      <a href="/terminos"   style="font-size:12px;color:var(--muted);text-decoration:none;">Términos</a>
-      <a href="/cookies"    style="font-size:12px;color:var(--muted);text-decoration:none;">Cookies</a>
-      <a href="/aviso-legal" style="font-size:12px;color:var(--muted);text-decoration:none;">Aviso legal</a>
-    </div>
-  </div>
 </footer>
 
 <!-- ── AUTH MODAL ─────────────────────────── -->
