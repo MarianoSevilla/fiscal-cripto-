@@ -119,21 +119,47 @@ class ClasificadorBitvavo:
     def _clasificar_fila(self, fila):
         tipo     = str(fila.get("Type", "")).strip().lower()
         moneda   = str(fila.get("Currency", "")).strip()
-        cantidad = self._float(fila.get("Amount", 0))
         fecha    = str(fila.get("fecha", ""))
         fee_mon  = str(fila.get("Fee currency", "")).strip()
         fee_cant = self._float(fila.get("Fee amount", 0))
 
         # Received/Paid
-        rec_mon  = str(fila.get("Received / Paid Currency", "")).strip()
-        rec_cant = self._float(fila.get("Received / Paid Amount", 0))
+        rec_mon   = str(fila.get("Received / Paid Currency", "")).strip()
+        rec_cant  = self._float(fila.get("Received / Paid Amount", 0))
+
+        # Quote Price (EUR por unidad de cripto — separador decimal inglés estándar)
+        quote_price = self._float(fila.get("Quote Price", 0))
+        import math
+        if math.isnan(quote_price):
+            quote_price = 0.0
+
+        # El campo Amount usa puntos como separador de miles con escala variable
+        # por moneda → derivamos la cantidad desde |Received/Paid| / Quote Price
+        # cuando sea posible (buy/sell con precio conocido).
+        # Para rendimientos/staking usamos Amount directamente (ya tiene escala legible).
+        raw_amount = self._float(fila.get("Amount", 0))
+
+        def _cantidad_desde_precio(importe_eur: float, price: float) -> float:
+            """Calcula unidades desde EUR pagados/recibidos y precio unitario."""
+            if price and price > 0:
+                return round(importe_eur / price, 10)
+            return abs(raw_amount)  # fallback si no hay precio
+
+        # El fee en EUR es fiable solo si la cifra es razonable
+        def _fee_eur(fee_val: float, importe_ref: float) -> float:
+            if fee_mon and fee_mon not in ("nan", "EUR", ""):
+                return 0.0   # fee en cripto → ignoramos (coste ya incluido en rec_cant)
+            # Si el fee parseado supera el importe de referencia está en unidades base
+            if fee_val > importe_ref * 2:
+                return 0.0
+            return fee_val
 
         if tipo == "buy":
-            # Compra: Amount = cripto recibida (+), Received/Paid = EUR pagados (-)
+            # Compra: Received/Paid = EUR pagados (negativo)
             activo        = moneda
-            cant_comprada = abs(cantidad)
-            contraparte   = rec_mon if rec_mon and rec_mon != "nan" else "EUR"
             importe       = abs(rec_cant)
+            cant_comprada = _cantidad_desde_precio(importe, quote_price)
+            contraparte   = rec_mon if rec_mon and rec_mon != "nan" else "EUR"
 
             if activo in STABLES:
                 # Compra de stable con EUR → movimiento, no hecho imponible
@@ -143,20 +169,21 @@ class ClasificadorBitvavo:
                     observacion=f"Compra de {activo} con {contraparte}"
                 ))
             else:
+                fee_eur = _fee_eur(abs(fee_cant), importe)
                 self.compraventas.append(OperacionCompraventa(
                     fecha=fecha, tipo="COMPRA",
                     activo=activo, cantidad=cant_comprada,
                     contraparte=contraparte, importe=importe,
-                    fee_activo=fee_mon if fee_mon and fee_mon != "nan" else "EUR",
-                    fee_cantidad=abs(fee_cant)
+                    fee_activo="EUR",
+                    fee_cantidad=fee_eur,
                 ))
 
         elif tipo == "sell":
-            # Venta: Amount = cripto entregada (-), Received/Paid = EUR recibidos (+)
-            activo        = moneda
-            cant_vendida  = abs(cantidad)
-            contraparte   = rec_mon if rec_mon and rec_mon != "nan" else "EUR"
-            importe       = abs(rec_cant)
+            # Venta: Received/Paid = EUR recibidos (+)
+            activo       = moneda
+            importe      = abs(rec_cant)
+            cant_vendida = _cantidad_desde_precio(importe, quote_price)
+            contraparte  = rec_mon if rec_mon and rec_mon != "nan" else "EUR"
 
             if activo in STABLES:
                 # Venta de stable → movimiento
@@ -166,23 +193,19 @@ class ClasificadorBitvavo:
                     observacion=f"Venta de {activo} por {contraparte}"
                 ))
             else:
+                fee_eur = _fee_eur(abs(fee_cant), importe)
                 self.compraventas.append(OperacionCompraventa(
                     fecha=fecha, tipo="VENTA",
                     activo=activo, cantidad=cant_vendida,
                     contraparte=contraparte, importe=importe,
-                    fee_activo=fee_mon if fee_mon and fee_mon != "nan" else "EUR",
-                    fee_cantidad=abs(fee_cant)
+                    fee_activo="EUR",
+                    fee_cantidad=fee_eur,
                 ))
 
         elif tipo in TIPOS_RENDIMIENTO:
-            activo    = moneda
-            cantidad_abs = abs(cantidad)
-            quote_price = self._float(fila.get("Quote Price", 0))
-            # Bitvavo pone NaN cuando no hay precio — lo tratamos como 0
-            import math
-            if math.isnan(quote_price):
-                quote_price = 0.0
-            valor_eur = round(cantidad_abs * quote_price, 4) if quote_price else 0.0
+            activo       = moneda
+            cantidad_abs = abs(raw_amount)
+            valor_eur    = round(cantidad_abs * quote_price, 4) if quote_price else 0.0
             self.rendimientos.append(OperacionRendimiento(
                 fecha=fecha, subtipo=tipo,
                 activo=activo, cantidad=cantidad_abs,
@@ -192,7 +215,7 @@ class ClasificadorBitvavo:
         elif tipo in TIPOS_MOVIMIENTO:
             self.movimientos.append(OperacionMovimiento(
                 fecha=fecha, subtipo=tipo,
-                activo=moneda, cantidad=cantidad,
+                activo=moneda, cantidad=raw_amount,
                 observacion=str(fila.get("Address", ""))
             ))
 
@@ -200,14 +223,37 @@ class ClasificadorBitvavo:
             if tipo and tipo != "nan":
                 self.desconocidas.append(OperacionDesconocida(
                     fecha=fecha, subtipo=tipo,
-                    activo=moneda, cantidad=cantidad,
+                    activo=moneda, cantidad=raw_amount,
                     cuenta="Bitvavo"
                 ))
 
     @staticmethod
     def _float(val) -> float:
+        """Parsea un número en formato europeo (punto=miles, coma=decimal).
+
+        Ejemplos de Bitvavo:
+          '662.775.631'  → 662775631.0  (puntos como separador de miles)
+          '-1018,18'     → -1018.18     (coma como decimal)
+          '14.915'       → 14.915       (un solo punto → decimal estándar)
+          '2.48'         → 2.48
+        """
         try:
-            return float(val)
+            s = str(val).strip()
+            if not s or s.lower() in ("nan", "none"):
+                return 0.0
+            dot_count = s.count(".")
+            comma_count = s.count(",")
+            if dot_count > 1:
+                # Varios puntos → separadores de miles, sin decimal
+                s = s.replace(".", "")
+            elif dot_count == 1 and comma_count == 1:
+                # Punto de miles + coma decimal → '1.234,56'
+                s = s.replace(".", "").replace(",", ".")
+            elif comma_count >= 1 and dot_count == 0:
+                # Solo coma → decimal europeo → '1018,18'
+                s = s.replace(",", ".")
+            # Si solo hay un punto → decimal estándar inglés: no modificar
+            return float(s)
         except Exception:
             return 0.0
 

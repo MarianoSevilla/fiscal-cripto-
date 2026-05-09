@@ -15,7 +15,7 @@ Normativa aplicada:
 from dataclasses import dataclass, field
 from datetime import datetime
 from collections import defaultdict
-from typing import Optional
+from typing import Dict, List, Optional
 
 
 # ──────────────────────────────────────────────
@@ -67,11 +67,11 @@ class MotorFIFO:
 
     def __init__(self):
         # Cola FIFO por activo: {activo: [Lote, ...]} ordenada por fecha
-        self.inventario: dict[str, list[Lote]] = defaultdict(list)
+        self.inventario: Dict[str, List[Lote]] = defaultdict(list)
         # Resultados de ventas/swaps
-        self.resultados: list[ResultadoFIFO] = []
+        self.resultados: List[ResultadoFIFO] = []
         # Operaciones que no se pudieron procesar
-        self.advertencias: list[str] = []
+        self.advertencias: List[str] = []
 
     # ── ENTRADA: registrar una compra ─────────
 
@@ -286,7 +286,12 @@ class MotorFIFO:
 
     @staticmethod
     def _parsear_fecha(fecha: str) -> datetime:
-        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%d/%m/%Y"):
+        for fmt in (
+            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%d",
+            "%d/%m/%Y %H:%M:%S",
+            "%d/%m/%Y",
+        ):
             try:
                 return datetime.strptime(fecha.strip(), fmt)
             except ValueError:
