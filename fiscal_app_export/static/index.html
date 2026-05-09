@@ -937,8 +937,6 @@
 </dialog>
 
 <script>
-  const ADMIN_EMAILS = ['masetru@hotmail.com'];
-
   // ── AUTH STATE ────────────────────────────
   const AuthState = (() => {
     let _user = null;
@@ -1065,7 +1063,7 @@
   AuthState.onChange(user => {
     document.getElementById('navBtnLogin').hidden   = !!user;
     document.getElementById('navUserInfo').hidden   = !user;
-    document.getElementById('navAdminLink').hidden  = !(user && ADMIN_EMAILS.includes(user.email.trim().toLowerCase()));
+    document.getElementById('navAdminLink').hidden  = !(user && user.is_admin);
     if (user) document.getElementById('navUserEmail').textContent = user.email;
   });
 
