@@ -604,6 +604,7 @@ footer {
             <a href="/pricing" class="nav-dd-item">💎&nbsp; Planes</a>
             <a href="/account" class="nav-dd-item">👤&nbsp; Mi cuenta</a>
             <a href="/stats" class="nav-dd-item" id="navStatsLink" hidden>📊&nbsp; Stats</a>
+            <a href="/home2" class="nav-dd-item" id="navHome2Link" hidden>✦&nbsp; Nueva home</a>
             <div class="nav-dd-divider"></div>
             <button class="nav-dd-item danger" id="navBtnLogout">↩&nbsp; Cerrar sesión</button>
           </div>
@@ -1179,6 +1180,7 @@ AuthState.onChange(user => {
   if (user) {
     _avatar.textContent = user.email.charAt(0).toUpperCase();
     document.getElementById('navStatsLink').hidden = !user.is_admin;
+    document.getElementById('navHome2Link').hidden = !user.is_admin;
   }
 });
 AuthState.init();
