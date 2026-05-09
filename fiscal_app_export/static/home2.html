@@ -10,20 +10,20 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg:       #0b1220;
-    --bg2:      #101829;
-    --surface:  #141f32;
-    --surface2: #1a2540;
-    --border:   rgba(255,255,255,0.07);
-    --border2:  rgba(255,255,255,0.13);
-    --text:     #eef2ff;
-    --muted:    #7a8aa8;
-    --accent:   #00C896;
+    --bg:         #0b1220;
+    --bg2:        #101829;
+    --surface:    #141f32;
+    --surface2:   #1a2540;
+    --border:     rgba(255,255,255,0.07);
+    --border2:    rgba(255,255,255,0.13);
+    --text:       #eef2ff;
+    --muted:      #7a8aa8;
+    --accent:     #00C896;
     --accent-dim: rgba(0,200,150,0.12);
-    --accent-glow: rgba(0,200,150,0.25);
-    --blue:     #4a90e2;
-    --font-display: 'Syne', sans-serif;
-    --font-body:    'DM Sans', sans-serif;
+    --accent-glow:rgba(0,200,150,0.25);
+    --footer-bg:  #070e1a;
+    --font-display:'Syne', sans-serif;
+    --font-body:   'DM Sans', sans-serif;
   }
 
   html { scroll-behavior: smooth; }
@@ -37,20 +37,20 @@
     overflow-x: hidden;
   }
 
-  /* ── NAV ── */
+  /* ── NAV ─────────────────────────────────── */
   nav {
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    padding: 0 2.5rem;
+    padding: 0 3rem;
     height: 64px;
     display: flex; align-items: center; justify-content: space-between;
-    background: rgba(11,18,32,0.92);
+    background: rgba(11,18,32,0.95);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
   }
   .nav-logo {
     font-family: var(--font-display); font-weight: 800; font-size: 1rem;
     letter-spacing: -0.02em; color: var(--text); text-decoration: none;
-    white-space: nowrap;
+    white-space: nowrap; flex-shrink: 0;
   }
   .nav-logo span { color: var(--accent); }
 
@@ -64,7 +64,16 @@
   }
   .nav-links a:hover { color: var(--text); }
 
-  .nav-right { display: flex; align-items: center; gap: 1rem; }
+  .nav-right { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
+
+  .btn-nav-login {
+    background: none; border: 1px solid var(--border2); color: var(--text);
+    border-radius: 8px; padding: 7px 16px;
+    font-family: var(--font-body); font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: border-color 0.15s; white-space: nowrap;
+    text-decoration: none;
+  }
+  .btn-nav-login:hover { border-color: rgba(255,255,255,0.3); }
 
   .btn-nav-cta {
     background: var(--accent); color: #0a0a0a;
@@ -75,38 +84,19 @@
   }
   .btn-nav-cta:hover { opacity: 0.88; }
 
-  .btn-nav-login {
-    background: none; border: 1px solid var(--border2); color: var(--text);
-    border-radius: 8px; padding: 7px 16px;
-    font-family: var(--font-body); font-size: 13px; font-weight: 500;
-    cursor: pointer; transition: border-color 0.15s; white-space: nowrap;
-    text-decoration: none; display: inline-block;
-  }
-  .btn-nav-login:hover { border-color: rgba(255,255,255,0.3); }
-
-  /* Auth nav state */
-  .nav-user-info { display: flex; align-items: center; gap: 10px; }
-  .nav-user-email { font-size: 12px; color: var(--muted); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .nav-btn-logout {
-    background: none; border: 1px solid var(--border); color: var(--muted);
-    border-radius: 8px; padding: 5px 10px; font-family: var(--font-body);
-    font-size: 12px; cursor: pointer; transition: all 0.15s; white-space: nowrap;
-  }
-  .nav-btn-logout:hover { border-color: #e24b4a; color: #e24b4a; }
-
-  /* ── HERO ── */
+  /* ── HERO ────────────────────────────────── */
   .hero {
-    padding: 100px 2.5rem 0;
-    max-width: 1180px; margin: 0 auto;
+    width: 100%;
+    padding: 96px 3rem 0;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 3.5rem;
+    gap: 3rem;
     align-items: center;
-    min-height: calc(100vh - 64px);
-    padding-bottom: 4rem;
+    min-height: 100vh;
+    padding-bottom: 3rem;
   }
 
-  .hero-left { max-width: 560px; }
+  .hero-left { padding-right: 2rem; }
 
   .hero-badge {
     display: inline-flex; align-items: center; gap: 7px;
@@ -124,8 +114,8 @@
 
   h1 {
     font-family: var(--font-display);
-    font-size: clamp(2.4rem, 4.5vw, 3.4rem);
-    font-weight: 800; line-height: 1.1;
+    font-size: clamp(2.6rem, 3.8vw, 3.6rem);
+    font-weight: 800; line-height: 1.08;
     letter-spacing: -0.03em;
     margin-bottom: 1.25rem;
   }
@@ -133,12 +123,12 @@
 
   .hero-desc {
     font-size: 1.05rem; color: var(--muted);
-    line-height: 1.75; margin-bottom: 2rem;
+    line-height: 1.75; margin-bottom: 1.75rem;
   }
 
   .hero-checks {
     list-style: none; display: flex; flex-direction: column; gap: 10px;
-    margin-bottom: 2.25rem;
+    margin-bottom: 2rem;
   }
   .hero-checks li {
     display: flex; align-items: center; gap: 10px;
@@ -152,69 +142,87 @@
     display: flex; align-items: center; justify-content: center;
   }
 
-  .hero-ctas {
-    display: flex; flex-wrap: wrap; gap: 1rem;
-    margin-bottom: 2.5rem;
-  }
-
+  /* CTA principal */
   .btn-primary {
+    display: inline-block;
     background: var(--accent); color: #0a0a0a;
-    border: none; border-radius: 10px; padding: 14px 28px;
-    font-family: var(--font-display); font-size: 1rem; font-weight: 700;
+    border: none; border-radius: 10px; padding: 15px 32px;
+    font-family: var(--font-display); font-size: 1.05rem; font-weight: 700;
     cursor: pointer; transition: opacity 0.15s, transform 0.1s;
-    text-decoration: none; display: inline-block;
-    letter-spacing: -0.01em;
+    text-decoration: none; letter-spacing: -0.01em; margin-bottom: 1.25rem;
   }
   .btn-primary:hover { opacity: 0.88; }
   .btn-primary:active { transform: scale(0.98); }
 
-  .btn-secondary {
+  /* Bloque "Solicitar asistencia fiscal" */
+  .asistencia-block {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .asistencia-block p {
+    font-size: 0.9rem; color: var(--muted); line-height: 1.4;
+  }
+  .asistencia-block p strong { color: var(--text); display: block; margin-bottom: 2px; }
+  .btn-asistencia {
+    flex-shrink: 0;
     background: none; color: var(--text);
-    border: 1px solid var(--border2); border-radius: 10px; padding: 13px 24px;
-    font-family: var(--font-body); font-size: 0.95rem; font-weight: 500;
+    border: 1px solid var(--border2); border-radius: 8px; padding: 8px 16px;
+    font-family: var(--font-body); font-size: 13px; font-weight: 500;
     cursor: pointer; transition: border-color 0.15s;
-    text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+    text-decoration: none; white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 6px;
   }
-  .btn-secondary:hover { border-color: rgba(255,255,255,0.3); }
-  .btn-secondary svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .btn-asistencia:hover { border-color: rgba(255,255,255,0.35); }
 
-  .hero-author {
-    display: flex; align-items: center; gap: 12px;
-    padding: 12px 16px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; max-width: 400px;
+  /* Autores */
+  .authors {
+    display: flex; flex-direction: column; gap: 10px;
   }
-  .hero-author-avatar {
-    width: 44px; height: 44px; border-radius: 50%;
+  .author-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .author-avatar {
+    width: 42px; height: 42px; border-radius: 50%;
     object-fit: cover; flex-shrink: 0;
     border: 2px solid var(--border2);
   }
-  .hero-author-text { min-width: 0; }
-  .hero-author-name {
-    font-size: 13px; font-weight: 600; color: var(--text);
-    white-space: nowrap;
-  }
-  .hero-author-role {
-    font-size: 12px; color: var(--muted); line-height: 1.4;
-  }
+  .author-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .author-role { font-size: 12px; color: var(--muted); line-height: 1.3; }
 
-  /* ── DEVICE MOCKUP ── */
+  /* ── MOCKUP ──────────────────────────────── */
   .hero-right {
     position: relative;
     display: flex; align-items: center; justify-content: center;
+    height: 100%;
+  }
+
+  .device-glow {
+    position: absolute;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(0,200,150,0.12) 0%, transparent 65%);
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    pointer-events: none;
   }
 
   .device-frame {
-    width: 100%; max-width: 560px;
+    width: 100%;
     background: var(--surface2);
     border: 1px solid var(--border2);
-    border-radius: 16px;
+    border-radius: 14px;
     overflow: hidden;
     box-shadow:
       0 0 0 1px var(--border),
-      0 32px 80px rgba(0,0,0,0.6),
-      0 0 80px rgba(0,200,150,0.06);
-    position: relative;
+      0 40px 100px rgba(0,0,0,0.7),
+      0 0 80px rgba(0,200,150,0.07);
+    position: relative; z-index: 1;
   }
 
   .device-bar {
@@ -222,9 +230,7 @@
     display: flex; align-items: center; gap: 8px;
     border-bottom: 1px solid var(--border);
   }
-  .device-dot {
-    width: 10px; height: 10px; border-radius: 50%;
-  }
+  .device-dot { width: 10px; height: 10px; border-radius: 50%; }
   .device-dot-r { background: #ff5f57; }
   .device-dot-y { background: #febc2e; }
   .device-dot-g { background: #28c840; }
@@ -235,7 +241,6 @@
 
   .device-body { padding: 1.25rem; }
 
-  /* KPI strip inside mockup */
   .mock-kpis {
     display: grid; grid-template-columns: repeat(4, 1fr);
     gap: 8px; margin-bottom: 1rem;
@@ -245,11 +250,10 @@
     border-radius: 8px; padding: 10px 8px; text-align: center;
   }
   .mock-kpi-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
-  .mock-kpi-value { font-family: var(--font-display); font-size: 1rem; font-weight: 800; }
+  .mock-kpi-value { font-family: var(--font-display); font-size: 1.05rem; font-weight: 800; }
   .mock-kpi-value.green { color: var(--accent); }
-  .mock-kpi-value.red { color: #e24b4a; }
+  .mock-kpi-value.red   { color: #e24b4a; }
 
-  /* Table inside mockup */
   .mock-table-wrap {
     background: var(--bg2); border: 1px solid var(--border);
     border-radius: 8px; overflow: hidden;
@@ -264,8 +268,7 @@
   .mock-table-row {
     display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.2fr;
     padding: 7px 10px; font-size: 11px;
-    border-bottom: 1px solid var(--border);
-    align-items: center;
+    border-bottom: 1px solid var(--border); align-items: center;
   }
   .mock-table-row:last-child { border-bottom: none; }
   .mock-badge {
@@ -277,117 +280,66 @@
   .mock-green { color: var(--accent); font-weight: 600; }
   .mock-red   { color: #e24b4a; font-weight: 600; }
 
-  /* Glow behind mockup */
-  .device-glow {
-    position: absolute;
-    width: 300px; height: 300px;
-    background: radial-gradient(circle, rgba(0,200,150,0.15) 0%, transparent 70%);
-    bottom: -50px; right: -50px;
-    pointer-events: none;
-  }
-
-  /* ── TRUST STRIP ── */
-  .trust-strip {
-    max-width: 1180px; margin: 0 auto 0;
-    padding: 2rem 2.5rem;
-    display: flex; align-items: center; justify-content: center;
-    gap: 2.5rem; flex-wrap: wrap;
+  /* ── FOOTER ──────────────────────────────── */
+  footer {
+    background: var(--footer-bg);
     border-top: 1px solid var(--border);
+    padding: 3rem;
+    width: 100%;
   }
-  .trust-item {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 13px; color: var(--muted);
+  .footer-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2.5rem;
   }
-  .trust-icon { font-size: 16px; }
-
-  /* ── STEPS SECTION ── */
-  .steps-section {
-    max-width: 1180px; margin: 0 auto;
-    padding: 5rem 2.5rem;
-  }
-  .section-label {
-    font-size: 11px; font-weight: 600; letter-spacing: 0.12em;
-    text-transform: uppercase; color: var(--accent);
-    margin-bottom: 0.75rem; text-align: center;
-  }
-  .section-title {
-    font-family: var(--font-display);
-    font-size: clamp(1.8rem, 3.5vw, 2.4rem);
-    font-weight: 800; letter-spacing: -0.03em;
-    text-align: center; margin-bottom: 3.5rem;
-  }
-
-  .steps-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
-  }
-  .step-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 16px; padding: 2rem;
-    transition: border-color 0.2s;
-    position: relative; overflow: hidden;
-  }
-  .step-card::before {
-    content: '';
-    position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, var(--accent) 0%, transparent 100%);
-    opacity: 0; transition: opacity 0.2s;
-  }
-  .step-card:hover { border-color: var(--border2); }
-  .step-card:hover::before { opacity: 1; }
-
-  .step-number {
-    font-family: var(--font-display); font-size: 3rem; font-weight: 800;
+  .footer-step-num {
+    font-family: var(--font-display); font-size: 2rem; font-weight: 800;
     color: rgba(255,255,255,0.06); letter-spacing: -0.04em;
-    line-height: 1; margin-bottom: 1rem;
+    line-height: 1; margin-bottom: 0.6rem;
   }
-  .step-icon {
-    width: 44px; height: 44px; border-radius: 10px;
+  .footer-step-icon {
+    width: 38px; height: 38px; border-radius: 9px;
     background: var(--accent-dim); border: 1px solid var(--accent-glow);
     display: flex; align-items: center; justify-content: center;
-    font-size: 20px; margin-bottom: 1.25rem;
+    font-size: 17px; margin-bottom: 0.9rem;
   }
-  .step-card h3 {
-    font-family: var(--font-display); font-size: 1.15rem;
-    font-weight: 700; margin-bottom: 0.6rem; letter-spacing: -0.02em;
+  .footer-step-title {
+    font-family: var(--font-display); font-size: 1rem;
+    font-weight: 700; margin-bottom: 0.4rem; letter-spacing: -0.02em;
   }
-  .step-card p { font-size: 0.9rem; color: var(--muted); line-height: 1.65; }
+  .footer-step-desc { font-size: 0.85rem; color: var(--muted); line-height: 1.6; }
 
-  /* ── FOOTER ── */
-  footer {
-    border-top: 1px solid var(--border);
-    padding: 2.5rem 2.5rem;
-    max-width: 1180px; margin: 0 auto;
-    display: flex; align-items: center; justify-content: space-between;
-    flex-wrap: wrap; gap: 1rem;
-    font-size: 12px; color: var(--muted);
+  .footer-legal { display: flex; flex-direction: column; gap: 0.5rem; }
+  .footer-brand {
+    font-size: 0.85rem; color: var(--muted); line-height: 1.6;
+    margin-bottom: 0.75rem;
   }
-  footer a { color: var(--muted); text-underline-offset: 3px; }
-  .footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+  .footer-brand strong { color: var(--text); }
+  .footer-links { display: flex; flex-direction: column; gap: 6px; }
+  .footer-links a {
+    font-size: 13px; color: var(--muted); text-decoration: none;
+    transition: color 0.15s;
+  }
+  .footer-links a:hover { color: var(--text); }
 
-  /* ── RESPONSIVE ── */
-  @media (max-width: 900px) {
-    .hero {
-      grid-template-columns: 1fr;
-      padding-top: 88px; gap: 3rem;
-    }
+  /* ── RESPONSIVE ──────────────────────────── */
+  @media (max-width: 1024px) {
+    .hero { grid-template-columns: 1fr 1fr; padding: 96px 2rem 3rem; gap: 2rem; }
+    .hero-left { padding-right: 0; }
+    .footer-grid { grid-template-columns: repeat(2, 1fr); }
+    footer { padding: 2.5rem 2rem; }
+  }
+  @media (max-width: 768px) {
+    .hero { grid-template-columns: 1fr; padding: 80px 1.5rem 3rem; }
     .hero-right { order: -1; }
-    .device-frame { max-width: 480px; }
-    .steps-grid { grid-template-columns: 1fr; }
-    nav { padding: 0 1.25rem; }
+    nav { padding: 0 1.5rem; }
     .nav-links { display: none; }
-    .trust-strip { gap: 1.5rem; padding: 1.5rem 1.25rem; }
+    .footer-grid { grid-template-columns: 1fr; gap: 2rem; }
+    footer { padding: 2rem 1.5rem; }
+    .asistencia-block { flex-direction: column; align-items: flex-start; }
   }
 
-  @media (max-width: 600px) {
-    .hero { padding: 80px 1.25rem 3rem; }
-    .steps-section { padding: 3rem 1.25rem; }
-    footer { flex-direction: column; align-items: flex-start; padding: 2rem 1.25rem; }
-    .hero-ctas { flex-direction: column; }
-    .btn-primary, .btn-secondary { width: 100%; justify-content: center; text-align: center; }
-  }
-
-  /* ── AUTH MODAL ── */
+  /* ── AUTH MODAL ──────────────────────────── */
   .auth-dialog {
     background: var(--surface); border: 1px solid var(--border2);
     border-radius: 16px; padding: 0; width: min(420px, 92vw);
@@ -401,7 +353,8 @@
   .auth-close:hover { background: var(--surface2); color: var(--text); }
   .auth-form { display: flex; flex-direction: column; gap: 1rem; }
   .auth-field label { display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 5px; }
-  .auth-field input[type="email"], .auth-field input[type="password"] {
+  .auth-field input[type="email"],
+  .auth-field input[type="password"] {
     width: 100%; background: var(--surface2); border: 1px solid var(--border);
     border-radius: 8px; color: var(--text); font-family: var(--font-body);
     font-size: 14px; padding: 10px 13px; outline: none; box-sizing: border-box;
@@ -417,14 +370,12 @@
   .auth-switch { text-align: center; font-size: 13px; color: var(--muted); margin: 0.25rem 0 0; }
   .auth-switch-btn { background: none; border: none; color: var(--accent); font-size: 13px; font-family: var(--font-body); cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 2px; }
 
-  /* ── ANIM ── */
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(20px); }
     to   { opacity: 1; transform: translateY(0); }
   }
-  .hero-left { animation: fadeUp 0.5s ease both; }
+  .hero-left  { animation: fadeUp 0.5s ease both; }
   .hero-right { animation: fadeUp 0.5s ease 0.1s both; }
-  .steps-section { animation: fadeUp 0.4s ease 0.2s both; }
 </style>
 </head>
 <body>
@@ -434,24 +385,19 @@
   <a href="/" class="nav-logo">mariano<span>sevilla</span>.com</a>
 
   <ul class="nav-links">
-    <li><a href="#inicio">Inicio</a></li>
-    <li><a href="#funcionalidades">Funcionalidades</a></li>
     <li><a href="#como-funciona">Cómo funciona</a></li>
-    <li><a href="about.html">Sobre nosotros</a></li>
+    <li><a href="#faq">FAQ</a></li>
+    <li><a href="#contacto">Contacto</a></li>
   </ul>
 
   <div class="nav-right">
     <button class="btn-nav-login" id="navBtnLogin">Iniciar sesión</button>
-    <a href="/index.html" class="btn-nav-cta" id="navBtnCta">Crear tu cuenta gratis</a>
-    <div class="nav-user-info" id="navUserInfo" hidden>
-      <span class="nav-user-email" id="navUserEmail"></span>
-      <button class="nav-btn-logout" id="navBtnLogout">Salir</button>
-    </div>
+    <a href="/signup/" class="btn-nav-cta" id="navBtnCta">Crea tu cuenta gratis</a>
   </div>
 </nav>
 
 <!-- ── HERO ───────────────────────────────── -->
-<section class="hero" id="inicio">
+<section class="hero">
 
   <!-- Columna izquierda -->
   <div class="hero-left">
@@ -471,26 +417,42 @@
       <li>100% online, sin instalación</li>
     </ul>
 
-    <div class="hero-ctas">
-      <a href="/index.html" class="btn-primary">Crea tu cuenta gratis</a>
-      <a href="about.html" class="btn-secondary">
+    <a href="/signup/" class="btn-primary">Crea tu cuenta gratis</a>
+
+    <!-- Bloque asistencia fiscal -->
+    <div class="asistencia-block">
+      <p>
+        <strong>¿Necesitas ayuda con tu declaración?</strong>
+        Servicio de asistencia fiscal personalizada con un economista colegiado.
+      </p>
+      <a href="/about" class="btn-asistencia">
         Solicitar asistencia fiscal
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M3 8h10M9 4l4 4-4 4"/>
         </svg>
       </a>
     </div>
 
-    <div class="hero-author">
-      <img src="/static/mariano-sevilla.png" alt="Mariano Sevilla" class="hero-author-avatar">
-      <div class="hero-author-text">
-        <div class="hero-author-name">Desarrollado por Mariano Sevilla</div>
-        <div class="hero-author-role">Especialista en fiscalidad de criptomonedas</div>
+    <!-- Autores -->
+    <div class="authors">
+      <div class="author-card">
+        <img src="/static/mariano-sevilla-logo.png" alt="Mariano Sevilla" class="author-avatar">
+        <div>
+          <div class="author-name">Mariano Sevilla</div>
+          <div class="author-role">Especialista en automatización y herramientas para usuarios cripto</div>
+        </div>
+      </div>
+      <div class="author-card">
+        <img src="/static/rafa-ramos-logo.png" alt="Rafael Ramos Martínez" class="author-avatar">
+        <div>
+          <div class="author-name">Rafael Ramos Martínez</div>
+          <div class="author-role">Economista colegiado · Supervisión fiscal</div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Columna derecha: mockup app -->
+  <!-- Columna derecha: mockup -->
   <div class="hero-right">
     <div class="device-glow"></div>
     <div class="device-frame">
@@ -501,7 +463,6 @@
         <div class="device-url">fiscal.marianosevilla.com</div>
       </div>
       <div class="device-body">
-        <!-- KPIs -->
         <div class="mock-kpis">
           <div class="mock-kpi">
             <div class="mock-kpi-label">Operaciones</div>
@@ -520,50 +481,34 @@
             <div class="mock-kpi-value green">+2.351€</div>
           </div>
         </div>
-
-        <!-- Tabla -->
         <div class="mock-table-wrap">
           <div class="mock-table-head">
-            <span>Fecha</span>
-            <span>Activo</span>
-            <span>Tipo</span>
-            <span>Transmisión</span>
-            <span>G/P</span>
+            <span>Fecha</span><span>Activo</span><span>Tipo</span><span>Transmisión</span><span>G/P</span>
           </div>
           <div class="mock-table-row">
-            <span>15/03/2024</span>
-            <span>BTC</span>
+            <span>15/03/2024</span><span>BTC</span>
             <span><span class="mock-badge mock-badge-venta">Venta</span></span>
-            <span>2.400,00</span>
-            <span class="mock-green">+1.240,00</span>
+            <span>2.400,00</span><span class="mock-green">+1.240,00</span>
           </div>
           <div class="mock-table-row">
-            <span>02/05/2024</span>
-            <span>ETH</span>
+            <span>02/05/2024</span><span>ETH</span>
             <span><span class="mock-badge mock-badge-swap">Swap</span></span>
-            <span>860,50</span>
-            <span class="mock-green">+210,30</span>
+            <span>860,50</span><span class="mock-green">+210,30</span>
           </div>
           <div class="mock-table-row">
-            <span>18/06/2024</span>
-            <span>SOL</span>
+            <span>18/06/2024</span><span>SOL</span>
             <span><span class="mock-badge mock-badge-venta">Venta</span></span>
-            <span>320,00</span>
-            <span class="mock-red">-88,40</span>
+            <span>320,00</span><span class="mock-red">-88,40</span>
           </div>
           <div class="mock-table-row">
-            <span>29/09/2024</span>
-            <span>BNB</span>
+            <span>29/09/2024</span><span>BNB</span>
             <span><span class="mock-badge mock-badge-swap">Swap</span></span>
-            <span>540,20</span>
-            <span class="mock-green">+178,60</span>
+            <span>540,20</span><span class="mock-green">+178,60</span>
           </div>
           <div class="mock-table-row">
-            <span>11/11/2024</span>
-            <span>BTC</span>
+            <span>11/11/2024</span><span>BTC</span>
             <span><span class="mock-badge mock-badge-venta">Venta</span></span>
-            <span>1.612,00</span>
-            <span class="mock-green">+800,10</span>
+            <span>1.612,00</span><span class="mock-green">+800,10</span>
           </div>
         </div>
       </div>
@@ -571,62 +516,53 @@
   </div>
 </section>
 
-<!-- ── TRUST STRIP ─────────────────────────── -->
-<div class="trust-strip">
-  <div class="trust-item"><span class="trust-icon">🔒</span> Tu CSV no se almacena</div>
-  <div class="trust-item"><span class="trust-icon">⚡</span> Resultado en segundos</div>
-  <div class="trust-item"><span class="trust-icon">📄</span> PDF listo para tu gestor</div>
-  <div class="trust-item"><span class="trust-icon">🇪🇸</span> Normativa española IRPF</div>
-</div>
-
-<!-- ── CÓMO FUNCIONA ───────────────────────── -->
-<section class="steps-section" id="como-funciona">
-  <div class="section-label">Proceso</div>
-  <h2 class="section-title">Tres pasos, informe listo</h2>
-
-  <div class="steps-grid">
-    <div class="step-card">
-      <div class="step-number">01</div>
-      <div class="step-icon">📥</div>
-      <h3>Importa tus CSVs</h3>
-      <p>
-        Exporta el historial completo de tu exchange —Binance, Bit2Me, Bitvavo y más—
-        y súbelo directamente a la herramienta. Sin instalación, desde el navegador.
-      </p>
-    </div>
-    <div class="step-card">
-      <div class="step-number">02</div>
-      <div class="step-icon">⚙️</div>
-      <h3>Procesamiento automático</h3>
-      <p>
-        La herramienta aplica el método FIFO obligatorio según el art. 37.2 LIRPF,
-        calcula plusvalías y minusvalías, y separa rendimientos de staking o rebates.
-      </p>
-    </div>
-    <div class="step-card">
-      <div class="step-number">03</div>
-      <div class="step-icon">📊</div>
-      <h3>Descarga tu informe</h3>
-      <p>
-        Obtén un PDF detallado, listo para entregar a tu gestor fiscal o para
-        completar tú mismo la declaración de la renta. Casillas correctas incluidas.
-      </p>
-    </div>
-  </div>
-</section>
-
 <!-- ── FOOTER ─────────────────────────────── -->
 <footer>
-  <span>
-    Una herramienta gratuita de
-    <strong><a href="https://marianosevilla.com" target="_blank">Mariano Sevilla</a></strong>
-    — Auxiliar de organización fiscal. No constituye asesoramiento fiscal ni legal.
-  </span>
-  <div class="footer-links">
-    <a href="privacidad.html">Privacidad</a>
-    <a href="terminos.html">Términos</a>
-    <a href="cookies.html">Cookies</a>
-    <a href="aviso-legal.html">Aviso legal</a>
+  <div class="footer-grid">
+
+    <div>
+      <div class="footer-step-num">01</div>
+      <div class="footer-step-icon">📥</div>
+      <div class="footer-step-title">Importa tus CSVs</div>
+      <p class="footer-step-desc">
+        Exporta el historial completo de tu exchange —Binance, Bit2Me, Bitvavo y más—
+        y súbelo directamente desde el navegador.
+      </p>
+    </div>
+
+    <div>
+      <div class="footer-step-num">02</div>
+      <div class="footer-step-icon">⚙️</div>
+      <div class="footer-step-title">Procesamiento automático</div>
+      <p class="footer-step-desc">
+        Se aplica el método FIFO obligatorio según el art. 37.2 LIRPF
+        y se calculan plusvalías, minusvalías y rendimientos.
+      </p>
+    </div>
+
+    <div>
+      <div class="footer-step-num">03</div>
+      <div class="footer-step-icon">📊</div>
+      <div class="footer-step-title">Informe listo</div>
+      <p class="footer-step-desc">
+        Descarga el PDF detallado, listo para tu gestor fiscal o para
+        completar tú mismo la declaración de la renta.
+      </p>
+    </div>
+
+    <div class="footer-legal">
+      <p class="footer-brand">
+        Una herramienta gratuita de <strong>Mariano Sevilla</strong> —
+        Auxiliar de organización fiscal. No constituye asesoramiento fiscal ni legal.
+      </p>
+      <div class="footer-links">
+        <a href="/privacidad">Privacidad</a>
+        <a href="/terminos">Términos</a>
+        <a href="/cookies">Cookies</a>
+        <a href="/aviso-legal">Aviso legal</a>
+      </div>
+    </div>
+
   </div>
 </footer>
 
@@ -637,7 +573,6 @@
       <span class="auth-title" id="authModalTitle">Iniciar sesión</span>
       <button class="auth-close" id="authModalClose" aria-label="Cerrar">×</button>
     </div>
-
     <form id="authFormLogin" class="auth-form" novalidate>
       <div class="auth-field">
         <label for="authLoginEmail">Email</label>
@@ -647,14 +582,11 @@
         <label for="authLoginPass">Contraseña</label>
         <input type="password" id="authLoginPass" name="password" required autocomplete="current-password" minlength="8">
       </div>
-      <label class="auth-remember">
-        <input type="checkbox" name="remember"> Recordarme
-      </label>
+      <label class="auth-remember"><input type="checkbox" name="remember"> Recordarme</label>
       <div class="auth-error" hidden></div>
       <button type="submit" class="auth-btn-primary">Entrar</button>
       <p class="auth-switch">¿No tienes cuenta? <button type="button" class="auth-switch-btn" id="switchToRegister">Crear cuenta</button></p>
     </form>
-
     <form id="authFormReg" class="auth-form" novalidate hidden>
       <div class="auth-field">
         <label for="authRegEmail">Email</label>
@@ -672,97 +604,53 @@
 </dialog>
 
 <script>
-  // ── AUTH STATE ────────────────────────────
-  const AuthState = (() => {
-    let _user = null;
-    const _listeners = new Set();
-    function _notify() { _listeners.forEach(fn => fn(_user)); }
-
-    async function init() {
-      try {
-        const r = await fetch('/api/me', { credentials: 'include' });
-        const d = await r.json();
-        _user = d.user || null;
-      } catch { _user = null; }
-      _notify();
-    }
-    async function login(email, password, remember) {
-      const r = await fetch('/api/login', {
-        method: 'POST', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, remember }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || 'Error al iniciar sesión');
-      _user = d;
-      _notify();
-    }
-    async function register(email, password) {
-      const r = await fetch('/api/register', {
-        method: 'POST', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || 'Error al crear la cuenta');
-      _user = d;
-      _notify();
-    }
-    async function logout() {
-      await fetch('/api/logout', { method: 'POST', credentials: 'include' });
-      _user = null;
-      _notify();
-    }
-    function onChange(fn) { _listeners.add(fn); }
-    function isLoggedIn() { return !!_user; }
-    function isAdmin() { return !!(_user && _user.is_admin); }
-    return { init, login, register, logout, onChange, isLoggedIn, isAdmin };
-  })();
-
   // ── AUTH MODAL ────────────────────────────
   const _authModal = document.getElementById('authModal');
 
   function abrirAuthModal(tab) {
     const isLogin = (tab || 'login') === 'login';
     document.getElementById('authFormLogin').hidden = !isLogin;
-    document.getElementById('authFormReg').hidden   = isLogin;
+    document.getElementById('authFormReg').hidden   =  isLogin;
     document.getElementById('authModalTitle').textContent = isLogin ? 'Iniciar sesión' : 'Crear cuenta';
     _authModal.showModal();
   }
 
-  function _authSetLoading(form, loading, label) {
-    const btn = form.querySelector('.auth-btn-primary');
-    btn.disabled    = loading;
-    btn.textContent = loading ? 'Un momento…' : label;
-  }
-
-  function _authShowError(form, msg) {
-    const el = form.querySelector('.auth-error');
-    el.textContent = msg;
-    el.removeAttribute('hidden');
-  }
-
   document.getElementById('authModalClose').addEventListener('click', () => _authModal.close());
   document.getElementById('switchToRegister').addEventListener('click', () => abrirAuthModal('register'));
-  document.getElementById('switchToLogin').addEventListener('click', () => abrirAuthModal('login'));
+  document.getElementById('switchToLogin').addEventListener('click',    () => abrirAuthModal('login'));
+
+  function _setLoading(form, loading, label) {
+    const btn = form.querySelector('.auth-btn-primary');
+    btn.disabled = loading; btn.textContent = loading ? 'Un momento…' : label;
+  }
+  function _showError(form, msg) {
+    const el = form.querySelector('.auth-error');
+    el.textContent = msg; el.removeAttribute('hidden');
+  }
 
   document.getElementById('authFormLogin').addEventListener('submit', async e => {
     e.preventDefault();
     const form = e.currentTarget;
     form.querySelector('.auth-error').setAttribute('hidden', '');
-    _authSetLoading(form, true, 'Entrar');
+    _setLoading(form, true, 'Entrar');
     try {
-      await AuthState.login(
-        form.querySelector('[name=email]').value.trim().toLowerCase(),
-        form.querySelector('[name=password]').value,
-        form.querySelector('[name=remember]').checked
-      );
-      form.reset();
-      _authModal.close();
+      const r = await fetch('/api/login', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: form.querySelector('[name=email]').value.trim().toLowerCase(),
+          password: form.querySelector('[name=password]').value,
+          remember: form.querySelector('[name=remember]').checked,
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Error al iniciar sesión');
+      form.reset(); _authModal.close();
+      window.location.href = '/dashboard';
     } catch (err) {
-      _authShowError(form, err.message);
+      _showError(form, err.message);
     } finally {
-      _authSetLoading(form, false, 'Entrar');
+      _setLoading(form, false, 'Entrar');
     }
   });
 
@@ -770,33 +658,28 @@
     e.preventDefault();
     const form = e.currentTarget;
     form.querySelector('.auth-error').setAttribute('hidden', '');
-    _authSetLoading(form, true, 'Crear cuenta');
+    _setLoading(form, true, 'Crear cuenta');
     try {
-      await AuthState.register(
-        form.querySelector('[name=email]').value.trim().toLowerCase(),
-        form.querySelector('[name=password]').value
-      );
-      form.reset();
-      _authModal.close();
+      const r = await fetch('/api/register', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: form.querySelector('[name=email]').value.trim().toLowerCase(),
+          password: form.querySelector('[name=password]').value,
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Error al crear la cuenta');
+      form.reset(); _authModal.close();
+      window.location.href = '/dashboard';
     } catch (err) {
-      _authShowError(form, err.message);
+      _showError(form, err.message);
     } finally {
-      _authSetLoading(form, false, 'Crear cuenta');
+      _setLoading(form, false, 'Crear cuenta');
     }
   });
 
   document.getElementById('navBtnLogin').addEventListener('click', () => abrirAuthModal('login'));
-  document.getElementById('navBtnLogout').addEventListener('click', async () => { await AuthState.logout(); });
-
-  AuthState.onChange(user => {
-    const isLogged = !!user;
-    document.getElementById('navBtnLogin').hidden  = isLogged;
-    document.getElementById('navUserInfo').hidden  = !isLogged;
-    document.getElementById('navBtnCta').hidden    = isLogged;
-    if (user) document.getElementById('navUserEmail').textContent = user.email;
-  });
-
-  AuthState.init();
 </script>
 </body>
 </html>
