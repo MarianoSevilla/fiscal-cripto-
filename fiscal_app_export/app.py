@@ -944,7 +944,7 @@ def _send_verification_email(user: User) -> bool:
 def login_page():
     """Página dedicada de inicio de sesión."""
     if current_user.is_authenticated:
-        return redirect("/")
+        return redirect("/dashboard")
     return send_from_directory("static", "login.html")
 
 
@@ -952,7 +952,7 @@ def login_page():
 def signup_page():
     """Página dedicada de registro."""
     if current_user.is_authenticated:
-        return redirect("/")
+        return redirect("/dashboard")
     return send_from_directory("static", "signup.html")
 
 

@@ -35,7 +35,7 @@
     font-family: var(--font-body);
     font-size: 16px;
     line-height: 1.6;
-    min-height: 100vh;
+
     overflow-x: hidden;
   }
 
@@ -91,12 +91,12 @@
   /* ── HERO ────────────────────────────────── */
   .hero-wrap {
     max-width: var(--max-w); margin: 0 auto;
-    padding: 100px var(--pad-x) 1.5rem;
+    padding: 80px var(--pad-x) 2.5rem;
     display: grid;
     grid-template-columns: 55% 45%;
     gap: 4rem;
-    align-items: center;
-    min-height: 100vh;
+    align-items: start;
+
   }
 
   .hero-badge {
@@ -400,8 +400,8 @@
       <li><a href="/contacto">Contacto</a></li>
     </ul>
     <div class="nav-right">
-      <a href="/login/" class="btn-nav-login">Iniciar sesión</a>
-      <a href="/signup/" class="btn-nav-cta">Crea tu cuenta gratis</a>
+      <a href="/login/" class="btn-nav-login" id="navBtnLogin">Iniciar sesión</a>
+      <a href="/signup/" class="btn-nav-cta" id="navBtnSignup">Crea tu cuenta gratis</a>
     </div>
   </div>
 </nav>
@@ -693,6 +693,18 @@
     } catch (err) { _showError(form, err.message); }
     finally { _setLoading(form, false, 'Crear cuenta'); }
   });
+
+  // Si hay sesión activa, sustituir botones nav por "Dashboard"
+  fetch('/api/me', { credentials: 'include' })
+    .then(r => r.ok ? r.json() : null)
+    .then(d => {
+      if (!d || !d.user) return;
+      const btnLogin  = document.getElementById('navBtnLogin');
+      const btnSignup = document.getElementById('navBtnSignup');
+      if (btnLogin)  { btnLogin.textContent = 'Dashboard'; btnLogin.href = '/dashboard'; btnLogin.className = 'btn-nav-cta'; }
+      if (btnSignup) btnSignup.hidden = true;
+    })
+    .catch(() => {});
 
 </script>
 </body>
