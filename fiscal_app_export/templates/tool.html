@@ -72,7 +72,7 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; max-width: 100%; }
 
   :root {
-    --black: #0a0a0a;
+    --black: #0b1220;
     --surface: #111111;
     --surface2: #1a1a1a;
     --border: rgba(255,255,255,0.08);
@@ -107,7 +107,7 @@
     border-bottom: 1px solid var(--border);
   }
   .nav-inner {
-    max-width: 1080px; margin: 0 auto; padding: 0 2rem;
+    max-width: 1280px; margin: 0 auto; padding: 0 2rem;
     height: 64px; display: flex; align-items: center; justify-content: space-between;
   }
   .nav-logo {
@@ -120,6 +120,9 @@
     text-decoration: none; transition: color .15s;
   }
   .nav-link-dash:hover { color: var(--text); }
+  .nav-links-auth {
+    display: flex; align-items: center; gap: 1.5rem; flex: 1; padding: 0 1.5rem;
+  }
   .nav-badge {
     font-size: 11px; font-weight: 500;
     background: var(--accent-dim); color: var(--accent);
@@ -701,9 +704,12 @@
 
 <nav>
   <div class="nav-inner">
-    <div style="display:flex;align-items:center;gap:2rem;">
-      <a href="/" class="nav-logo">mariano<span>sevilla</span>.com</a>
+    <a href="/" class="nav-logo">mariano<span>sevilla</span>.com</a>
+    <div class="nav-links-auth">
       <a href="/dashboard" class="nav-link-dash">Dashboard</a>
+      <a href="/#como-funciona" class="nav-link-dash">Cómo funciona</a>
+      <a href="/faq" class="nav-link-dash">FAQ</a>
+      <a href="/contacto" class="nav-link-dash">Contacto</a>
     </div>
     <div class="nav-right">
       <div class="nav-avatar-wrap">

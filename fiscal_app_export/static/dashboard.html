@@ -18,7 +18,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --black:      #0a0a0a;
+  --black:      #0b1220;
   --surface:    #111111;
   --surface2:   #1a1a1a;
   --surface3:   #222222;
@@ -29,7 +29,7 @@
   --muted2:     #555555;
   --accent:     #00C896;
   --accent-dim: rgba(0,200,150,0.10);
-  --max:        1080px;
+  --max:        1280px;
   --r:          12px;
   --font-d:     'Syne', sans-serif;
   --font-b:     'DM Sans', sans-serif;
@@ -61,6 +61,14 @@ nav {
   letter-spacing: -0.02em; color: var(--text);
 }
 .nav-logo span { color: var(--accent); }
+.nav-links-auth {
+  display: flex; align-items: center; gap: 1.5rem; flex: 1; padding: 0 1.5rem;
+}
+.nav-link-text {
+  font-size: 14px; font-weight: 500; color: var(--muted);
+  text-decoration: none; transition: color .15s;
+}
+.nav-link-text:hover { color: var(--text); }
 .nav-right { display: flex; align-items: center; gap: 0.6rem; }
 
 /* Avatar dropdown */
@@ -223,6 +231,12 @@ footer {
 <nav>
   <div class="nav-inner">
     <a href="/" class="nav-logo">mariano<span>sevilla</span>.com</a>
+    <div class="nav-links-auth">
+      <a href="/dashboard" class="nav-link-text">Dashboard</a>
+      <a href="/#como-funciona" class="nav-link-text">Cómo funciona</a>
+      <a href="/faq" class="nav-link-text">FAQ</a>
+      <a href="/contacto" class="nav-link-text">Contacto</a>
+    </div>
     <div class="nav-right">
       <div class="nav-avatar-wrap">
         <button class="nav-avatar" id="navAvatar" aria-label="Menú de usuario">U</button>
