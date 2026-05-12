@@ -61,14 +61,14 @@ nav {
   letter-spacing: -0.02em; color: var(--text);
 }
 .nav-logo span { color: var(--accent); }
-.nav-links-auth {
-  display: flex; align-items: center; gap: 1.5rem; flex: 1; padding: 0 1.5rem;
+.nav-links {
+  display: flex; align-items: center; gap: 2rem; list-style: none;
 }
-.nav-link-text {
+.nav-links a {
   font-size: 14px; font-weight: 500; color: var(--muted);
   text-decoration: none; transition: color .15s;
 }
-.nav-link-text:hover { color: var(--text); }
+.nav-links a:hover { color: var(--text); }
 .nav-right { display: flex; align-items: center; gap: 0.6rem; }
 
 /* Avatar dropdown */
@@ -231,12 +231,11 @@ footer {
 <nav>
   <div class="nav-inner">
     <a href="/" class="nav-logo">mariano<span>sevilla</span>.com</a>
-    <div class="nav-links-auth">
-      <a href="/dashboard" class="nav-link-text">Dashboard</a>
-      <a href="/#como-funciona" class="nav-link-text">Cómo funciona</a>
-      <a href="/faq" class="nav-link-text">FAQ</a>
-      <a href="/contacto" class="nav-link-text">Contacto</a>
-    </div>
+    <ul class="nav-links">
+      <li><a href="/#como-funciona">Cómo funciona</a></li>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/contacto">Contacto</a></li>
+    </ul>
     <div class="nav-right">
       <div class="nav-avatar-wrap">
         <button class="nav-avatar" id="navAvatar" aria-label="Menú de usuario">U</button>

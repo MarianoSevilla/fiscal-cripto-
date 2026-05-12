@@ -743,8 +743,8 @@
       // Ocultar botones de sesión; mostrar "Dashboard" en nav-links y avatar
       const btnLogin  = document.getElementById('navBtnLogin');
       const btnSignup = document.getElementById('navBtnSignup');
-      if (btnLogin)  btnLogin.hidden = true;
-      if (btnSignup) btnSignup.hidden = true;
+      if (btnLogin)  btnLogin.style.display = 'none';
+      if (btnSignup) btnSignup.style.display = 'none';
 
       const dashItem   = document.getElementById('navLinkDashItem');
       const avatarWrap = document.getElementById('navAvatarWrap');
