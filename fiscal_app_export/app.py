@@ -750,20 +750,20 @@ def _motor_a_json(motor) -> tuple:
 
 
 def _rendimientos_a_json(rendimientos: list) -> list:
-    """Convierte lista de rendimientos a formato JSON para la UI."""
+    """Convierte lista de rendimientos a formato JSON para la UI.
+    Agrupa por (subtipo, activo) para que cada activo tenga su propia fila.
+    """
     from collections import defaultdict
     por_tipo = defaultdict(lambda: {"cantidad": 0.0, "operaciones": 0, "valor_eur": 0.0})
     for r in rendimientos:
-        key = r.subtipo
+        key = (r.subtipo, r.activo)          # ← agrupamos por tipo Y activo
         por_tipo[key]["cantidad"] += r.cantidad
         por_tipo[key]["operaciones"] += 1
         por_tipo[key]["valor_eur"] += getattr(r, 'valor_eur', 0.0)
-        if "activo" not in por_tipo[key]:
-            por_tipo[key]["activo"] = r.activo
     return [
         {
-            "subtipo": k,
-            "activo": v["activo"],
+            "subtipo": k[0],
+            "activo": k[1],
             "cantidad": round(v["cantidad"], 6),
             "operaciones": v["operaciones"],
             "valor_eur": round(v["valor_eur"], 4),

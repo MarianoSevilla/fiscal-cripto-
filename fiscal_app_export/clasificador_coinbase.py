@@ -37,8 +37,10 @@ TIPOS_MOVIMIENTO = {
     "Send",
     "Receive",
     "Subscription",
-    "Advanced Trade Buy",   # se trata aparte si tiene precio EUR
-    "Advanced Trade Sell",  # se trata aparte si tiene precio EUR
+    "Advanced Trade Buy",          # se trata aparte si tiene precio EUR
+    "Advanced Trade Sell",         # se trata aparte si tiene precio EUR
+    "Retail Staking Transfer",     # traspaso interno spot ↔ staking (sin evento fiscal)
+    "Retail Unstaking Transfer",   # traspaso interno staking ↔ spot (sin evento fiscal)
 }
 
 # Firma de detección en las primeras líneas del CSV
