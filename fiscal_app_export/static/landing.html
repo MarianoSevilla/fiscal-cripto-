@@ -429,8 +429,8 @@
     <a href="/signup/" class="btn-primary">Crea tu cuenta gratis</a>
     <p class="cta-micro">Sin tarjeta · Importa tus CSVs · Generación automática FIFO</p>
 
-    <!-- Bloque asistencia fiscal -->
-    <div class="asistencia-block">
+    <!-- Bloque asistencia fiscal — visible solo para el usuario autorizado -->
+    <div class="asistencia-block" id="asistenciaBlock" style="display:none;">
       <div class="asistencia-badge">Asistencia especializada</div>
       <p>
         <strong>¿Necesitas ayuda con tu declaración?</strong>
@@ -694,6 +694,7 @@
   });
 
   // Si hay sesión activa, sustituir botones nav por "Dashboard"
+  // y mostrar bloque de asistencia solo al usuario autorizado
   fetch('/api/me', { credentials: 'include' })
     .then(r => r.ok ? r.json() : null)
     .then(d => {
@@ -702,6 +703,12 @@
       const btnSignup = document.getElementById('navBtnSignup');
       if (btnLogin)  { btnLogin.textContent = 'Dashboard'; btnLogin.href = '/dashboard'; btnLogin.className = 'btn-nav-cta'; }
       if (btnSignup) btnSignup.hidden = true;
+
+      // Bloque de asistencia fiscal: solo visible para el usuario autorizado
+      if (d.user.email === 'masetru@hotmail.com') {
+        const bloque = document.getElementById('asistenciaBlock');
+        if (bloque) bloque.style.display = '';
+      }
     })
     .catch(() => {});
 
