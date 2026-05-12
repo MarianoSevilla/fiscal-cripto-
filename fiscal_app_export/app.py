@@ -35,6 +35,15 @@ import resend
 from sqlalchemy import func, extract
 from models import db, bcrypt, User, FifoReport, Contacto
 
+# Advisory / Stripe imports
+try:
+    import stripe as _stripe_module
+    _stripe_available = True
+except ImportError:
+    _stripe_available = False
+    _stripe_module = None
+from models import FiscalAdvisoryRequest, FiscalAdvisoryFile, FiscalAdvisoryStatusHistory
+
 sys.path.insert(0, os.path.dirname(__file__))
 
 from clasificador import ClasificadorBinance
@@ -109,6 +118,45 @@ resend.api_key = os.environ.get("RESEND_API_KEY", "")
 _RESEND_FROM   = os.environ.get("RESEND_FROM_EMAIL", "noreply@marianosevilla.com")
 _APP_BASE_URL  = os.environ.get("APP_BASE_URL", "https://www.marianosevilla.com")
 
+# ── ADVISORY / STRIPE ────────────────────────
+_STRIPE_SECRET_KEY      = os.environ.get("STRIPE_SECRET_KEY", "")
+_STRIPE_WEBHOOK_SECRET  = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+_ADVISORY_NOTIFY_EMAILS = [
+    e.strip() for e in os.environ.get("FISCAL_ADVISORY_NOTIFY_EMAILS", "").split(",") if e.strip()
+]
+# Precios en céntimos. Configura en Railway env vars.
+_ADVISORY_PRICES = {
+    "revision_basica":   int(os.environ.get("FISCAL_ADVISORY_BASIC_PRICE",   "7900")),
+    "revision_avanzada": int(os.environ.get("FISCAL_ADVISORY_ADVANCED_PRICE","14900")),
+    "caso_complejo":     int(os.environ.get("FISCAL_ADVISORY_COMPLEX_PRICE", "4900")),
+}
+_ADVISORY_PRICE_LABELS = {
+    "revision_basica":   "Revisión fiscal básica",
+    "revision_avanzada": "Revisión fiscal avanzada",
+    "caso_complejo":     "Valoración inicial — caso complejo",
+}
+
+FISCAL_ADVISOR_EMAILS = {
+    e.strip().lower()
+    for e in os.environ.get("FISCAL_ADVISOR_EMAILS", "").split(",")
+    if e.strip()
+}
+
+def _is_fiscal_advisor() -> bool:
+    return (
+        current_user.is_authenticated and (
+            getattr(current_user, 'role', 'user') in ('admin', 'fiscal_advisor')
+            or current_user.email.strip().lower() in FISCAL_ADVISOR_EMAILS
+            or _is_admin()
+        )
+    )
+
+_ADVISORY_UPLOAD_DIR = os.path.join(_BASE_DIR, "uploads", "advisory")
+os.makedirs(_ADVISORY_UPLOAD_DIR, exist_ok=True)
+
+_ALLOWED_ADVISORY_EXTENSIONS = {".csv", ".xlsx", ".pdf", ".jpg", ".jpeg", ".png"}
+_MAX_ADVISORY_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
 login_manager = LoginManager(app)
 
 @login_manager.user_loader
@@ -120,7 +168,7 @@ def unauthorized():
     """JSON 401 para rutas API; redirect a /login/ para rutas de navegador."""
     if request.path.startswith("/api/"):
         return jsonify({"error": "Autenticación requerida"}), 401
-    return redirect("/login/")
+    return redirect(f"/login/?next={request.path}")
 
 
 # ── GOOGLE OAUTH ──────────────────────────────
@@ -149,6 +197,10 @@ with app.app_context():
             ))
             _conn.execute(text(
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(150)"
+            ))
+            # Advisory tables
+            _conn.execute(text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'user' NOT NULL"
             ))
             _conn.commit()
     except Exception:
@@ -1661,6 +1713,444 @@ def ratelimit_error(e):
     return jsonify({
         "error": "Has alcanzado el límite de análisis. Por favor espera 10 minutos antes de intentarlo de nuevo."
     }), 429
+
+
+# ── ADVISORY ROUTES ──────────────────────────
+
+@app.route("/asesoramiento-fiscal-criptomonedas", strict_slashes=False)
+def advisory_landing():
+    return send_from_directory("static", "asesoramiento-fiscal.html")
+
+@app.route("/pedir-asesoramiento-fiscal", strict_slashes=False)
+@login_required
+def advisory_request_page():
+    return send_from_directory("static", "pedir-asesoramiento.html")
+
+@app.route("/asesoramiento-fiscal-confirmado", strict_slashes=False)
+def advisory_confirmed():
+    return send_from_directory("static", "asesoramiento-confirmado.html")
+
+@app.route("/asesoramiento-fiscal-cancelado", strict_slashes=False)
+def advisory_cancelled():
+    return send_from_directory("static", "asesoramiento-cancelado.html")
+
+@app.route("/admin/asesoramiento", strict_slashes=False)
+@login_required
+def admin_advisory_page():
+    if not _is_fiscal_advisor():
+        return redirect("/dashboard")
+    return send_from_directory("static", "admin-asesoramiento.html")
+
+
+# ── ADVISORY API ─────────────────────────────
+
+@app.route("/api/asesoramiento/precios")
+def advisory_prices():
+    """Devuelve los precios públicos del servicio."""
+    return jsonify({
+        k: {"label": _ADVISORY_PRICE_LABELS[k], "amount_cents": v, "amount_eur": v / 100}
+        for k, v in _ADVISORY_PRICES.items()
+    })
+
+
+@app.route("/api/asesoramiento/solicitar", methods=["POST"])
+@login_required
+@limiter.limit("3 per hour")
+def advisory_solicitar():
+    """Crea una solicitud pending_payment y devuelve la URL de Stripe Checkout."""
+    if not _stripe_available or not _STRIPE_SECRET_KEY:
+        return jsonify({"error": "El sistema de pagos no está configurado. Contacta con nosotros directamente."}), 503
+
+    data = request.get_json(silent=True) or {}
+
+    # Validaciones
+    service_type = (data.get("service_type") or "").strip()
+    if service_type not in _ADVISORY_PRICES:
+        return jsonify({"error": "Tipo de servicio inválido."}), 400
+
+    full_name = _sanitizar_texto(data.get("full_name") or "", max_len=150)
+    email_val = (data.get("email") or "").strip().lower()
+    if not full_name:
+        return jsonify({"error": "El nombre es obligatorio."}), 400
+    ok, err = _validar_email(email_val)
+    if not ok:
+        return jsonify({"error": err}), 400
+
+    tax_year = data.get("tax_year")
+    try:
+        tax_year = int(tax_year)
+        assert 2015 <= tax_year <= datetime.utcnow().year
+    except Exception:
+        return jsonify({"error": "Año fiscal inválido."}), 400
+
+    case_description = (data.get("case_description") or "").strip()
+    if len(case_description) < 20:
+        return jsonify({"error": "La descripción del caso debe tener al menos 20 caracteres."}), 400
+    if len(case_description) > 5000:
+        return jsonify({"error": "La descripción del caso es demasiado larga."}), 400
+
+    tax_country = _sanitizar_texto(data.get("tax_residence_country") or "España", max_len=100)
+    phone       = _sanitizar_texto(data.get("phone") or "", max_len=30) or None
+    exchanges   = _sanitizar_texto(data.get("exchanges") or "", max_len=500) or None
+    op_volume   = _sanitizar_texto(data.get("operation_volume") or "", max_len=50) or None
+
+    op_types = data.get("operation_types") or []
+    if not isinstance(op_types, list): op_types = []
+    op_types = [str(x)[:50] for x in op_types[:20]]
+
+    cur_situation = data.get("current_situation") or []
+    if not isinstance(cur_situation, list): cur_situation = []
+    cur_situation = [str(x)[:100] for x in cur_situation[:20]]
+
+    # Crear solicitud en DB
+    import json as _json
+    advisory = FiscalAdvisoryRequest(
+        user_id               = current_user.id,
+        full_name             = full_name,
+        email                 = email_val,
+        phone                 = phone,
+        tax_residence_country = tax_country,
+        tax_year              = tax_year,
+        service_type          = service_type,
+        operation_types       = _json.dumps(op_types),
+        exchanges             = exchanges,
+        operation_volume      = op_volume,
+        current_situation     = _json.dumps(cur_situation),
+        case_description      = case_description,
+        status                = "pending_payment",
+    )
+    db.session.add(advisory)
+    db.session.flush()  # get ID without committing
+
+    # Registrar historial
+    history = FiscalAdvisoryStatusHistory(
+        request_id = advisory.id,
+        status     = "pending_payment",
+        changed_by = None,
+        note       = "Solicitud creada",
+    )
+    db.session.add(history)
+    db.session.commit()
+
+    # Crear sesión Stripe Checkout
+    try:
+        _stripe_module.api_key = _STRIPE_SECRET_KEY
+        amount_cents = _ADVISORY_PRICES[service_type]
+        label        = _ADVISORY_PRICE_LABELS[service_type]
+        success_url  = f"{_APP_BASE_URL}/asesoramiento-fiscal-confirmado?session_id={{CHECKOUT_SESSION_ID}}"
+        cancel_url   = f"{_APP_BASE_URL}/asesoramiento-fiscal-cancelado?advisory_id={advisory.id}"
+
+        session_data = _stripe_module.checkout.Session.create(
+            payment_method_types=["card"],
+            line_items=[{
+                "price_data": {
+                    "currency": "eur",
+                    "product_data": {"name": label},
+                    "unit_amount": amount_cents,
+                },
+                "quantity": 1,
+            }],
+            mode="payment",
+            success_url=success_url,
+            cancel_url=cancel_url,
+            customer_email=email_val,
+            metadata={
+                "advisory_request_id": str(advisory.id),
+                "user_id":             str(current_user.id),
+                "service_type":        service_type,
+            },
+        )
+        advisory.stripe_checkout_session_id = session_data.id
+        db.session.commit()
+
+        return jsonify({"checkout_url": session_data.url, "advisory_id": advisory.id})
+
+    except Exception as exc:
+        app.logger.error("Stripe error: %s", exc)
+        db.session.rollback()
+        return jsonify({"error": "Error al crear la sesión de pago. Inténtalo de nuevo."}), 500
+
+
+@app.route("/api/webhooks/stripe", methods=["POST"])
+def stripe_webhook():
+    """Webhook de Stripe — solo este endpoint puede marcar un pago como confirmado."""
+    if not _stripe_available or not _STRIPE_SECRET_KEY:
+        return "", 200
+
+    payload    = request.get_data()
+    sig_header = request.headers.get("Stripe-Signature", "")
+
+    try:
+        _stripe_module.api_key = _STRIPE_SECRET_KEY
+        if _STRIPE_WEBHOOK_SECRET:
+            event = _stripe_module.Webhook.construct_event(payload, sig_header, _STRIPE_WEBHOOK_SECRET)
+        else:
+            import json as _json
+            event = _json.loads(payload)
+    except Exception as exc:
+        app.logger.warning("Stripe webhook error: %s", exc)
+        return jsonify({"error": str(exc)}), 400
+
+    if event["type"] == "checkout.session.completed":
+        session_obj = event["data"]["object"]
+        cs_id        = session_obj.get("id")
+        pi_id        = session_obj.get("payment_intent")
+        amount_total = session_obj.get("amount_total")
+
+        advisory = FiscalAdvisoryRequest.query.filter_by(stripe_checkout_session_id=cs_id).first()
+        if advisory and advisory.status == "pending_payment":
+            advisory.status                   = "paid_received"
+            advisory.stripe_payment_intent_id = pi_id
+            advisory.amount_paid              = amount_total
+            advisory.currency                 = session_obj.get("currency", "eur")
+
+            history = FiscalAdvisoryStatusHistory(
+                request_id = advisory.id,
+                status     = "paid_received",
+                changed_by = None,
+                note       = f"Pago confirmado por Stripe. PI: {pi_id}",
+            )
+            db.session.add(history)
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                return "", 500
+
+            # Notificaciones
+            _send_advisory_confirmation_email(advisory)
+            _send_advisory_internal_notification(advisory)
+
+    return "", 200
+
+
+def _send_advisory_confirmation_email(advisory: "FiscalAdvisoryRequest"):
+    """Email de confirmación al usuario."""
+    if not resend.api_key:
+        return
+    amount_str = f"{advisory.amount_paid / 100:.2f} EUR" if advisory.amount_paid else ""
+    html = f"""<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#080c12;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#080c12;padding:40px 0;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#10141e;border-radius:12px;border:1px solid rgba(255,255,255,0.08);">
+        <tr><td style="background:#0d1018;padding:28px 40px;border-bottom:1px solid rgba(0,200,150,0.25);">
+          <span style="font-size:18px;font-weight:700;color:#eef0f6;">Mariano</span><span style="font-size:18px;font-weight:700;color:#00C896;">Sevilla</span>
+          <span style="font-size:12px;color:#7a8099;margin-left:10px;">Asesoramiento Fiscal Cripto</span>
+        </td></tr>
+        <tr><td style="padding:36px 40px;">
+          <h1 style="margin:0 0 12px;font-size:22px;color:#eef0f6;font-weight:700;">Solicitud recibida correctamente</h1>
+          <p style="margin:0 0 16px;font-size:15px;color:#9aa0b8;line-height:1.6;">
+            Hola <strong style="color:#eef0f6;">{advisory.full_name}</strong>,<br><br>
+            Hemos recibido tu solicitud de <strong style="color:#eef0f6;">{advisory.service_label()}</strong> para el ejercicio <strong style="color:#eef0f6;">{advisory.tax_year}</strong>.
+            {f'<br>Importe abonado: <strong style="color:#00C896;">{amount_str}</strong>' if amount_str else ''}
+          </p>
+          <p style="margin:0 0 16px;font-size:15px;color:#9aa0b8;line-height:1.6;">
+            Rafael revisará tu caso y se pondrá en contacto contigo en un plazo de <strong style="color:#eef0f6;">2–3 días hábiles</strong>.
+            Es posible que necesitemos información adicional para analizar correctamente tu situación.
+          </p>
+          <p style="margin:0;font-size:13px;color:#7a8099;">
+            Número de solicitud: <strong style="color:#eef0f6;">#{advisory.id}</strong>
+          </p>
+        </td></tr>
+        <tr><td style="background:#0d1018;padding:18px 40px;border-top:1px solid rgba(255,255,255,0.06);">
+          <p style="margin:0;font-size:11px;color:#555c70;">marianosevilla.com · Asesoramiento Fiscal Cripto</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>"""
+    try:
+        resend.Emails.send({
+            "from":    _RESEND_FROM,
+            "to":      [advisory.email],
+            "subject": "Hemos recibido tu solicitud de asesoramiento fiscal",
+            "html":    html,
+        })
+    except Exception as exc:
+        app.logger.error("Error enviando email confirmación advisory: %s", exc)
+
+
+def _send_advisory_internal_notification(advisory: "FiscalAdvisoryRequest"):
+    """Email interno a Mariano y Rafa."""
+    if not resend.api_key or not _ADVISORY_NOTIFY_EMAILS:
+        return
+    amount_str = f"{advisory.amount_paid / 100:.2f} EUR" if advisory.amount_paid else "—"
+    panel_url  = f"{_APP_BASE_URL}/admin/asesoramiento"
+    text = (
+        f"Nueva solicitud de asesoramiento fiscal\n\n"
+        f"ID: #{advisory.id}\n"
+        f"Nombre: {advisory.full_name}\n"
+        f"Email: {advisory.email}\n"
+        f"Servicio: {advisory.service_label()}\n"
+        f"Año fiscal: {advisory.tax_year}\n"
+        f"Importe: {amount_str}\n\n"
+        f"Descripción:\n{advisory.case_description[:500]}\n\n"
+        f"Panel: {panel_url}"
+    )
+    try:
+        resend.Emails.send({
+            "from":    _RESEND_FROM,
+            "to":      _ADVISORY_NOTIFY_EMAILS,
+            "subject": f"[Asesoramiento] Nueva solicitud #{advisory.id} — {advisory.service_label()}",
+            "text":    text,
+        })
+    except Exception as exc:
+        app.logger.error("Error enviando notificación interna advisory: %s", exc)
+
+
+@app.route("/api/asesoramiento/files/<int:request_id>", methods=["POST"])
+@login_required
+@limiter.limit("10 per hour")
+def advisory_upload_file(request_id):
+    """Sube un fichero asociado a una solicitud (solo el propietario)."""
+    advisory = FiscalAdvisoryRequest.query.get_or_404(request_id)
+    if advisory.user_id != current_user.id:
+        return jsonify({"error": "Acceso denegado."}), 403
+
+    if "file" not in request.files:
+        return jsonify({"error": "No se recibió ningún fichero."}), 400
+
+    f = request.files["file"]
+    if not f.filename:
+        return jsonify({"error": "Fichero inválido."}), 400
+
+    ext = os.path.splitext(f.filename)[1].lower()
+    if ext not in _ALLOWED_ADVISORY_EXTENSIONS:
+        return jsonify({"error": f"Extensión no permitida. Usa: {', '.join(_ALLOWED_ADVISORY_EXTENSIONS)}"}), 400
+
+    # Leer y verificar tamaño
+    content = f.read(_MAX_ADVISORY_FILE_SIZE + 1)
+    if len(content) > _MAX_ADVISORY_FILE_SIZE:
+        return jsonify({"error": "El fichero supera el límite de 10 MB."}), 413
+
+    from werkzeug.utils import secure_filename
+    safe_name  = secure_filename(f.filename)
+    upload_dir = os.path.join(_ADVISORY_UPLOAD_DIR, str(advisory.id))
+    os.makedirs(upload_dir, exist_ok=True)
+    file_path  = os.path.join(upload_dir, safe_name)
+
+    with open(file_path, "wb") as out:
+        out.write(content)
+
+    file_record = FiscalAdvisoryFile(
+        request_id = advisory.id,
+        user_id    = current_user.id,
+        file_name  = safe_name,
+        file_path  = os.path.join(str(advisory.id), safe_name),
+        file_type  = f.content_type or "",
+        file_size  = len(content),
+    )
+    db.session.add(file_record)
+    db.session.commit()
+
+    return jsonify({"ok": True, "file_id": file_record.id, "file_name": safe_name})
+
+
+@app.route("/api/asesoramiento/files/download/<int:file_id>")
+@login_required
+def advisory_download_file(file_id):
+    """Descarga protegida: solo propietario o advisor/admin."""
+    file_record = FiscalAdvisoryFile.query.get_or_404(file_id)
+    advisory    = FiscalAdvisoryRequest.query.get_or_404(file_record.request_id)
+
+    if advisory.user_id != current_user.id and not _is_fiscal_advisor():
+        return jsonify({"error": "Acceso denegado."}), 403
+
+    full_path = os.path.join(_ADVISORY_UPLOAD_DIR, file_record.file_path)
+    if not os.path.realpath(full_path).startswith(os.path.realpath(_ADVISORY_UPLOAD_DIR)):
+        return jsonify({"error": "Ruta inválida."}), 400
+    if not os.path.exists(full_path):
+        return jsonify({"error": "Fichero no encontrado."}), 404
+
+    return send_file(full_path, as_attachment=True, download_name=file_record.file_name)
+
+
+@app.route("/api/asesoramiento/mis-solicitudes")
+@login_required
+def advisory_my_requests():
+    """Solicitudes del usuario autenticado."""
+    requests_list = FiscalAdvisoryRequest.query.filter_by(user_id=current_user.id)\
+        .order_by(FiscalAdvisoryRequest.created_at.desc()).all()
+    return jsonify([r.to_dict() for r in requests_list])
+
+
+# ── ADMIN ADVISORY API ────────────────────────
+
+@app.route("/api/admin/asesoramiento/solicitudes")
+@login_required
+def admin_advisory_list():
+    if not _is_fiscal_advisor():
+        return jsonify({"error": "Acceso denegado."}), 403
+
+    status_filter  = request.args.get("status", "")
+    service_filter = request.args.get("service_type", "")
+    q = FiscalAdvisoryRequest.query
+    if status_filter:
+        q = q.filter_by(status=status_filter)
+    if service_filter:
+        q = q.filter_by(service_type=service_filter)
+    items = q.order_by(FiscalAdvisoryRequest.created_at.desc()).limit(200).all()
+    return jsonify([r.to_dict() for r in items])
+
+
+@app.route("/api/admin/asesoramiento/solicitudes/<int:request_id>")
+@login_required
+def admin_advisory_detail(request_id):
+    if not _is_fiscal_advisor():
+        return jsonify({"error": "Acceso denegado."}), 403
+    advisory = FiscalAdvisoryRequest.query.get_or_404(request_id)
+    d = advisory.to_dict(full=True)
+    d["files"] = [
+        {"id": f.id, "file_name": f.file_name, "file_size": f.file_size,
+         "file_type": f.file_type, "uploaded_at": f.uploaded_at.isoformat()}
+        for f in advisory.files
+    ]
+    d["status_history"] = [
+        {"status": h.status, "note": h.note,
+         "created_at": h.created_at.isoformat(), "changed_by": h.changed_by}
+        for h in sorted(advisory.status_history, key=lambda x: x.created_at)
+    ]
+    return jsonify(d)
+
+
+@app.route("/api/admin/asesoramiento/solicitudes/<int:request_id>/estado", methods=["POST"])
+@login_required
+def admin_advisory_change_status(request_id):
+    if not _is_fiscal_advisor():
+        return jsonify({"error": "Acceso denegado."}), 403
+    advisory    = FiscalAdvisoryRequest.query.get_or_404(request_id)
+    data        = request.get_json(silent=True) or {}
+    new_status  = (data.get("status") or "").strip()
+    note        = (data.get("note") or "").strip()[:1000]
+    valid_statuses = list(FiscalAdvisoryRequest.STATUS_LABELS.keys())
+    if new_status not in valid_statuses:
+        return jsonify({"error": "Estado inválido."}), 400
+    advisory.status = new_status
+    history = FiscalAdvisoryStatusHistory(
+        request_id = advisory.id,
+        status     = new_status,
+        changed_by = current_user.id,
+        note       = note or None,
+    )
+    db.session.add(history)
+    db.session.commit()
+    return jsonify({"ok": True, "status": new_status, "status_label": advisory.status_label()})
+
+
+@app.route("/api/admin/asesoramiento/solicitudes/<int:request_id>/nota", methods=["POST"])
+@login_required
+def admin_advisory_add_note(request_id):
+    if not _is_fiscal_advisor():
+        return jsonify({"error": "Acceso denegado."}), 403
+    advisory = FiscalAdvisoryRequest.query.get_or_404(request_id)
+    data     = request.get_json(silent=True) or {}
+    nota     = (data.get("nota") or "").strip()[:2000]
+    if not nota:
+        return jsonify({"error": "La nota no puede estar vacía."}), 400
+    advisory.internal_notes = ((advisory.internal_notes or "") + f"\n\n[{datetime.utcnow().strftime('%d/%m/%Y %H:%M')} - {current_user.email}]\n{nota}").strip()
+    db.session.commit()
+    return jsonify({"ok": True})
 
 
 if __name__ == "__main__":

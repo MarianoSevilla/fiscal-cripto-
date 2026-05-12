@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de asesoramiento — Mariano Sevilla</title>
+<meta name="robots" content="noindex">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+<link rel="icon" href="/static/favicon.ico">
+<link rel="manifest" href="/static/site.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:      #080c12;
+  --surface: #10141e;
+  --surf2:   #151b2b;
+  --border:  rgba(255,255,255,0.08);
+  --text:    #eef0f6;
+  --muted:   #7a8099;
+  --sub:     #9aa0b8;
+  --accent:  #00C896;
+  --accent2: #00a87e;
+  --ff-h:    'Syne', sans-serif;
+  --ff-b:    'DM Sans', sans-serif;
+}
+html, body { min-height: 100%; background: var(--bg); font-family: var(--ff-b); color: var(--text); overflow-x: hidden; }
+
+nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(8,12,18,0.95); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 clamp(16px,3vw,40px);
+  height: 56px; display: flex; align-items: center; justify-content: space-between;
+}
+.nav-logo { font-family: var(--ff-h); font-size: 17px; font-weight: 700; text-decoration: none; }
+.nav-logo span:first-child { color: var(--text); }
+.nav-logo span:last-child  { color: var(--accent); }
+.nav-tag { font-size: 12px; color: var(--muted); margin-left: 12px; background: var(--surf2); padding: 3px 10px; border-radius: 20px; border: 1px solid var(--border); }
+.nav-back { font-size: 13px; color: var(--muted); text-decoration: none; }
+.nav-back:hover { color: var(--text); }
+
+/* LAYOUT */
+.layout { display: flex; height: calc(100vh - 56px); }
+
+/* SIDEBAR */
+.sidebar {
+  width: clamp(280px, 30vw, 420px); flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.sidebar-filters {
+  padding: 16px; border-bottom: 1px solid var(--border); display: flex; gap: 8px; flex-wrap: wrap;
+}
+.sidebar-filters select {
+  flex: 1; min-width: 120px; background: var(--surf2); border: 1px solid var(--border);
+  color: var(--text); font-family: var(--ff-b); font-size: 13px;
+  padding: 7px 10px; border-radius: 7px; outline: none; appearance: none;
+}
+.sidebar-filters select:focus { border-color: rgba(0,200,150,0.4); }
+.sidebar-list { flex: 1; overflow-y: auto; }
+.sidebar-list::-webkit-scrollbar { width: 4px; }
+.sidebar-list::-webkit-scrollbar-track { background: transparent; }
+.sidebar-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.request-item {
+  padding: 14px 16px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background .15s;
+}
+.request-item:hover { background: var(--surf2); }
+.request-item.active { background: rgba(0,200,150,0.07); border-left: 3px solid var(--accent); }
+.req-name { font-weight: 600; font-size: 14px; color: var(--text); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.req-meta { font-size: 12px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.req-badge {
+  font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px;
+  white-space: nowrap;
+}
+.badge-pending_payment  { background: rgba(251,191,36,0.15);  color: #fbbf24; }
+.badge-paid_received    { background: rgba(0,200,150,0.15);   color: #00C896; }
+.badge-under_review     { background: rgba(99,102,241,0.15);  color: #818cf8; }
+.badge-waiting_user_info{ background: rgba(251,146,60,0.15);  color: #fb923c; }
+.badge-in_progress      { background: rgba(56,189,248,0.15);  color: #38bdf8; }
+.badge-completed        { background: rgba(34,197,94,0.15);   color: #4ade80; }
+.badge-cancelled        { background: rgba(226,75,74,0.15);   color: #f87171; }
+.badge-refunded         { background: rgba(156,163,175,0.15); color: #9ca3af; }
+
+/* DETAIL PANEL */
+.detail-panel {
+  flex: 1; overflow-y: auto; padding: 24px clamp(16px,3vw,32px);
+}
+.detail-panel::-webkit-scrollbar { width: 4px; }
+.detail-panel::-webkit-scrollbar-track { background: transparent; }
+.detail-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.detail-empty {
+  display: flex; align-items: center; justify-content: center; height: 100%;
+  color: var(--muted); font-size: 15px; text-align: center;
+}
+
+.detail-header { margin-bottom: 24px; }
+.detail-id { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.detail-name { font-family: var(--ff-h); font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.detail-service { font-size: 14px; color: var(--accent); font-weight: 600; }
+
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+@media (max-width: 700px) { .detail-grid { grid-template-columns: 1fr; } }
+.detail-field { background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 12px 14px; }
+.detail-field-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 5px; }
+.detail-field-value { font-size: 14px; color: var(--text); word-break: break-word; }
+
+.detail-section { margin-bottom: 24px; }
+.detail-section-title {
+  font-size: 11px; font-weight: 700; color: var(--accent); text-transform: uppercase;
+  letter-spacing: .1em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+.tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { background: var(--surf2); border: 1px solid var(--border); border-radius: 20px; font-size: 12px; color: var(--sub); padding: 4px 12px; }
+
+.text-block {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 9px;
+  padding: 14px 16px; font-size: 14px; color: var(--sub); line-height: 1.7; white-space: pre-wrap;
+}
+
+/* Files */
+.file-link {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 14px; text-decoration: none; color: var(--text);
+  font-size: 13px; margin-bottom: 8px; transition: border-color .2s;
+}
+.file-link:hover { border-color: rgba(0,200,150,0.35); }
+.file-icon { font-size: 18px; flex-shrink: 0; }
+.file-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* Status history */
+.history-item {
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+  display: flex; gap: 12px; align-items: flex-start;
+}
+.history-item:last-child { border-bottom: none; }
+.history-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-top: 5px; flex-shrink: 0; }
+.history-content { flex: 1; }
+.history-status { font-size: 13px; font-weight: 600; color: var(--text); }
+.history-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.history-note { font-size: 13px; color: var(--sub); margin-top: 4px; font-style: italic; }
+
+/* Admin actions */
+.action-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 18px 20px; margin-bottom: 16px;
+}
+.action-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 12px; }
+.action-row { display: flex; gap: 10px; align-items: flex-end; }
+.action-select, .action-input, .action-textarea {
+  flex: 1; background: var(--surf2); border: 1px solid var(--border);
+  color: var(--text); font-family: var(--ff-b); font-size: 13px;
+  padding: 9px 12px; border-radius: 7px; outline: none; appearance: none;
+}
+.action-select:focus, .action-input:focus, .action-textarea:focus {
+  border-color: rgba(0,200,150,0.4);
+}
+.action-textarea { resize: vertical; min-height: 80px; }
+.action-btn {
+  background: var(--accent); color: #080c12; font-family: var(--ff-b);
+  font-weight: 600; font-size: 13px; padding: 9px 18px; border: none;
+  border-radius: 7px; cursor: pointer; white-space: nowrap; transition: background .2s;
+  flex-shrink: 0;
+}
+.action-btn:hover { background: var(--accent2); }
+.action-btn:disabled { opacity: .5; cursor: not-allowed; }
+.msg-ok  { font-size: 13px; color: var(--accent); margin-top: 8px; }
+.msg-err { font-size: 13px; color: #f87171; margin-top: 8px; }
+
+/* Loading / empty */
+.list-loading { padding: 24px 16px; text-align: center; color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div style="display:flex;align-items:center">
+    <a href="/" class="nav-logo"><span>Mariano</span><span>Sevilla</span></a>
+    <span class="nav-tag">Panel de asesoramiento</span>
+  </div>
+  <a href="/dashboard" class="nav-back">← Dashboard</a>
+</nav>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-filters">
+      <select id="filterStatus" onchange="loadList()">
+        <option value="">Todos los estados</option>
+        <option value="pending_payment">Pendiente pago</option>
+        <option value="paid_received">Solicitud recibida</option>
+        <option value="under_review">En revisión</option>
+        <option value="waiting_user_info">Falta info</option>
+        <option value="in_progress">En curso</option>
+        <option value="completed">Finalizado</option>
+        <option value="cancelled">Cancelado</option>
+        <option value="refunded">Reembolsado</option>
+      </select>
+      <select id="filterService" onchange="loadList()">
+        <option value="">Todos los servicios</option>
+        <option value="revision_basica">Básica</option>
+        <option value="revision_avanzada">Avanzada</option>
+        <option value="caso_complejo">Complejo</option>
+      </select>
+    </div>
+    <div class="sidebar-list" id="sidebarList">
+      <div class="list-loading">Cargando...</div>
+    </div>
+  </div>
+
+  <!-- DETAIL PANEL -->
+  <div class="detail-panel" id="detailPanel">
+    <div class="detail-empty">Selecciona una solicitud para ver los detalles</div>
+  </div>
+</div>
+
+<script>
+let currentId = null;
+
+async function loadList() {
+  const status  = document.getElementById('filterStatus').value;
+  const service = document.getElementById('filterService').value;
+  const list    = document.getElementById('sidebarList');
+  list.innerHTML = '<div class="list-loading">Cargando...</div>';
+
+  try {
+    let url = '/api/admin/asesoramiento/solicitudes';
+    const params = new URLSearchParams();
+    if (status)  params.set('status', status);
+    if (service) params.set('service_type', service);
+    if (params.toString()) url += '?' + params.toString();
+
+    const r = await fetch(url, { credentials: 'include' });
+    if (r.status === 403) {
+      list.innerHTML = '<div class="list-loading">Acceso denegado.</div>';
+      return;
+    }
+    const items = await r.json();
+
+    if (!items.length) {
+      list.innerHTML = '<div class="list-loading">No hay solicitudes.</div>';
+      return;
+    }
+
+    list.innerHTML = '';
+    items.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'request-item' + (item.id === currentId ? ' active' : '');
+      el.dataset.id = item.id;
+      const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('es-ES') : '';
+      const amount  = item.amount_paid ? `${(item.amount_paid/100).toFixed(0)} €` : '—';
+      el.innerHTML = `
+        <div class="req-name">${escHtml(item.full_name)}</div>
+        <div class="req-meta">
+          <span class="req-badge badge-${item.status}">${escHtml(item.status_label)}</span>
+          <span>${escHtml(item.service_label)}</span>
+          <span>${dateStr}</span>
+          <span>${amount}</span>
+        </div>
+      `;
+      el.addEventListener('click', () => openDetail(item.id, el));
+      list.appendChild(el);
+    });
+  } catch {
+    list.innerHTML = '<div class="list-loading">Error al cargar.</div>';
+  }
+}
+
+async function openDetail(id, el) {
+  currentId = id;
+  document.querySelectorAll('.request-item').forEach(x => x.classList.remove('active'));
+  if (el) el.classList.add('active');
+
+  const panel = document.getElementById('detailPanel');
+  panel.innerHTML = '<div class="detail-empty">Cargando...</div>';
+
+  try {
+    const r = await fetch(`/api/admin/asesoramiento/solicitudes/${id}`, { credentials: 'include' });
+    const d = await r.json();
+
+    const opTypes  = (d.operation_types  || []).join(', ') || '—';
+    const curSit   = (d.current_situation || []).join(', ') || '—';
+    const amount   = d.amount_paid ? `${(d.amount_paid/100).toFixed(2)} ${(d.currency||'eur').toUpperCase()}` : '—';
+    const dateStr  = d.created_at ? new Date(d.created_at).toLocaleString('es-ES') : '—';
+
+    // Files HTML
+    let filesHtml = '';
+    if (d.files && d.files.length) {
+      d.files.forEach(f => {
+        const size = f.file_size ? `${(f.file_size/1024).toFixed(0)} KB` : '';
+        filesHtml += `
+          <a href="/api/asesoramiento/files/download/${f.id}" class="file-link" target="_blank">
+            <span class="file-icon">📎</span>
+            <div>
+              <div>${escHtml(f.file_name)}</div>
+              <div class="file-meta">${size} · ${new Date(f.uploaded_at).toLocaleDateString('es-ES')}</div>
+            </div>
+          </a>`;
+      });
+    } else {
+      filesHtml = '<div style="font-size:13px;color:var(--muted)">Sin archivos adjuntos.</div>';
+    }
+
+    // History HTML
+    let historyHtml = '';
+    if (d.status_history && d.status_history.length) {
+      d.status_history.slice().reverse().forEach(h => {
+        historyHtml += `
+          <div class="history-item">
+            <div class="history-dot"></div>
+            <div class="history-content">
+              <div class="history-status">${escHtml(h.status)}</div>
+              <div class="history-meta">${new Date(h.created_at).toLocaleString('es-ES')}${h.changed_by ? ' · por #' + h.changed_by : ''}</div>
+              ${h.note ? `<div class="history-note">${escHtml(h.note)}</div>` : ''}
+            </div>
+          </div>`;
+      });
+    }
+
+    // Status options
+    const statusOptions = {
+      pending_payment: 'Pendiente de pago', paid_received: 'Solicitud recibida',
+      under_review: 'En revisión', waiting_user_info: 'Falta información',
+      in_progress: 'En curso', completed: 'Finalizado',
+      cancelled: 'Cancelado', refunded: 'Reembolsado'
+    };
+    let statusOpts = '';
+    Object.entries(statusOptions).forEach(([k,v]) => {
+      statusOpts += `<option value="${k}" ${d.status === k ? 'selected' : ''}>${escHtml(v)}</option>`;
+    });
+
+    // Operation type tags
+    let opTagsHtml = (d.operation_types||[]).map(t => `<span class="tag">${escHtml(t)}</span>`).join('') || '<span class="tag">—</span>';
+    let curSitHtml = (d.current_situation||[]).map(t => `<span class="tag">${escHtml(t)}</span>`).join('') || '<span class="tag">—</span>';
+
+    panel.innerHTML = `
+      <div class="detail-header">
+        <div class="detail-id">Solicitud #${d.id} · ${dateStr}</div>
+        <div class="detail-name">${escHtml(d.full_name)}</div>
+        <div class="detail-service">${escHtml(d.service_label)} · <span class="req-badge badge-${d.status}">${escHtml(d.status_label)}</span></div>
+      </div>
+
+      <div class="detail-grid">
+        <div class="detail-field"><div class="detail-field-label">Email</div><div class="detail-field-value">${escHtml(d.email)}</div></div>
+        <div class="detail-field"><div class="detail-field-label">Teléfono</div><div class="detail-field-value">${escHtml(d.phone||'—')}</div></div>
+        <div class="detail-field"><div class="detail-field-label">País de residencia</div><div class="detail-field-value">${escHtml(d.tax_residence_country||'—')}</div></div>
+        <div class="detail-field"><div class="detail-field-label">Ejercicio fiscal</div><div class="detail-field-value">${d.tax_year||'—'}</div></div>
+        <div class="detail-field"><div class="detail-field-label">Exchanges</div><div class="detail-field-value">${escHtml(d.exchanges||'—')}</div></div>
+        <div class="detail-field"><div class="detail-field-label">Volumen</div><div class="detail-field-value">${escHtml(d.operation_volume||'—')}</div></div>
+        <div class="detail-field"><div class="detail-field-label">Importe pagado</div><div class="detail-field-value" style="color:var(--accent);font-weight:600">${amount}</div></div>
+        <div class="detail-field"><div class="detail-field-label">Stripe CS</div><div class="detail-field-value" style="font-size:12px;word-break:break-all">${escHtml(d.stripe_checkout_session_id||'—')}</div></div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">Operativa cripto</div>
+        <div class="tag-list">${opTagsHtml}</div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">Situación actual</div>
+        <div class="tag-list">${curSitHtml}</div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">Descripción del caso</div>
+        <div class="text-block">${escHtml(d.case_description||'—')}</div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">Notas internas</div>
+        <div class="text-block" id="notesDisplay">${escHtml(d.internal_notes||'Sin notas.')}</div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">Archivos adjuntos</div>
+        ${filesHtml}
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-section-title">Historial de estados</div>
+        ${historyHtml || '<div style="font-size:13px;color:var(--muted)">Sin historial.</div>'}
+      </div>
+
+      <!-- ACTIONS -->
+      <div class="detail-section">
+        <div class="detail-section-title">Acciones</div>
+
+        <div class="action-card">
+          <div class="action-title">Cambiar estado</div>
+          <div class="action-row">
+            <select class="action-select" id="newStatus">${statusOpts}</select>
+            <input type="text" class="action-input" id="statusNote" placeholder="Nota (opcional)" style="flex:2">
+            <button class="action-btn" onclick="changeStatus(${d.id})" id="btnStatus">Guardar</button>
+          </div>
+          <div id="statusMsg"></div>
+        </div>
+
+        <div class="action-card">
+          <div class="action-title">Añadir nota interna</div>
+          <textarea class="action-textarea" id="newNote" placeholder="Escribe una nota interna..."></textarea>
+          <div style="margin-top:10px">
+            <button class="action-btn" onclick="addNote(${d.id})" id="btnNote">Añadir nota</button>
+          </div>
+          <div id="noteMsg"></div>
+        </div>
+      </div>
+    `;
+  } catch {
+    panel.innerHTML = '<div class="detail-empty">Error al cargar los detalles.</div>';
+  }
+}
+
+async function changeStatus(id) {
+  const newStatus = document.getElementById('newStatus').value;
+  const note      = document.getElementById('statusNote').value.trim();
+  const btn       = document.getElementById('btnStatus');
+  const msg       = document.getElementById('statusMsg');
+  btn.disabled = true;
+  msg.textContent = '';
+  try {
+    const r = await fetch(`/api/admin/asesoramiento/solicitudes/${id}/estado`, {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus, note }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Error');
+    msg.className = 'msg-ok';
+    msg.textContent = 'Estado actualizado correctamente.';
+    await loadList();
+  } catch (e) {
+    msg.className = 'msg-err';
+    msg.textContent = e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function addNote(id) {
+  const nota = document.getElementById('newNote').value.trim();
+  const btn  = document.getElementById('btnNote');
+  const msg  = document.getElementById('noteMsg');
+  if (!nota) { msg.className = 'msg-err'; msg.textContent = 'La nota no puede estar vacía.'; return; }
+  btn.disabled = true;
+  msg.textContent = '';
+  try {
+    const r = await fetch(`/api/admin/asesoramiento/solicitudes/${id}/nota`, {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nota }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Error');
+    msg.className = 'msg-ok';
+    msg.textContent = 'Nota añadida correctamente.';
+    document.getElementById('newNote').value = '';
+    // Refresh detail
+    openDetail(id, null);
+  } catch (e) {
+    msg.className = 'msg-err';
+    msg.textContent = e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function escHtml(str) {
+  if (!str && str !== 0) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Init
+loadList();
+</script>
+</body>
+</html>

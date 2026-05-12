@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asesoramiento fiscal especializado en criptomonedas | Mariano Sevilla</title>
+<meta name="description" content="Asesoramiento fiscal especializado en criptomonedas para inversores en España. Revisión de tu situación fiscal cripto, cálculo de ganancias y pérdidas, y orientación para la declaración de la renta. Supervisado por economista colegiado.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://www.marianosevilla.com/asesoramiento-fiscal-criptomonedas">
+<meta property="og:title" content="Asesoramiento fiscal especializado en criptomonedas — Mariano Sevilla">
+<meta property="og:description" content="Asesoramiento fiscal especializado en criptomonedas para inversores en España. Revisado por economista colegiado.">
+<meta property="og:type" content="website">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+<link rel="icon" href="/static/favicon.ico">
+<link rel="manifest" href="/static/site.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:      #0b1220;
+  --surface: #10141e;
+  --surf2:   #151b2b;
+  --border:  rgba(255,255,255,0.08);
+  --text:    #eef0f6;
+  --muted:   #7a8099;
+  --sub:     #9aa0b8;
+  --accent:  #00C896;
+  --accent2: #00a87e;
+  --ff-h:    'Syne', sans-serif;
+  --ff-b:    'DM Sans', sans-serif;
+}
+html, body { min-height: 100%; background: var(--bg); font-family: var(--ff-b); color: var(--text); overflow-x: hidden; }
+
+/* NAV */
+nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(11,18,32,0.92); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 clamp(16px, 5vw, 80px);
+  height: 60px; display: flex; align-items: center; justify-content: space-between;
+}
+.nav-logo { font-family: var(--ff-h); font-size: 18px; font-weight: 700; text-decoration: none; }
+.nav-logo span:first-child { color: var(--text); }
+.nav-logo span:last-child  { color: var(--accent); }
+.nav-links { display: flex; align-items: center; gap: 20px; }
+.nav-link  { color: var(--sub); text-decoration: none; font-size: 14px; }
+.nav-link:hover { color: var(--text); }
+.nav-btn { background: var(--accent); color: #080c12; font-weight: 600; font-size: 14px; padding: 8px 18px; border-radius: 8px; text-decoration: none; transition: background .2s; }
+.nav-btn:hover { background: var(--accent2); }
+
+/* HERO */
+.hero {
+  padding: clamp(80px,12vw,160px) clamp(16px,5vw,80px) clamp(60px,8vw,100px);
+  max-width: 800px; margin: 0 auto; text-align: center;
+}
+.hero-badge {
+  display: inline-block; background: rgba(0,200,150,0.1); color: var(--accent);
+  border: 1px solid rgba(0,200,150,0.25); border-radius: 20px;
+  font-size: 12px; font-weight: 600; letter-spacing: .05em; padding: 5px 14px;
+  margin-bottom: 24px; text-transform: uppercase;
+}
+.hero h1 {
+  font-family: var(--ff-h); font-size: clamp(32px,5vw,52px); font-weight: 800;
+  line-height: 1.1; color: var(--text); margin-bottom: 20px;
+}
+.hero h1 span { color: var(--accent); }
+.hero p {
+  font-size: clamp(16px,2vw,19px); color: var(--sub); line-height: 1.7;
+  max-width: 640px; margin: 0 auto 36px;
+}
+.btn-primary {
+  display: inline-block; background: var(--accent); color: #080c12;
+  font-weight: 700; font-size: 16px; padding: 14px 36px; border-radius: 10px;
+  text-decoration: none; transition: background .2s, transform .15s;
+}
+.btn-primary:hover { background: var(--accent2); transform: translateY(-1px); }
+
+/* SECTION */
+.section { padding: clamp(60px,8vw,100px) clamp(16px,5vw,80px); max-width: 1100px; margin: 0 auto; }
+.section-label {
+  font-size: 11px; font-weight: 700; letter-spacing: .12em; color: var(--accent);
+  text-transform: uppercase; margin-bottom: 12px;
+}
+.section h2 {
+  font-family: var(--ff-h); font-size: clamp(26px,3.5vw,40px); font-weight: 700;
+  color: var(--text); margin-bottom: 20px; line-height: 1.15;
+}
+.section p { font-size: 16px; color: var(--sub); line-height: 1.7; max-width: 680px; }
+
+/* PROBLEM SECTION */
+.problem-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap: 20px; margin-top: 40px; }
+.problem-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  padding: 28px 24px;
+}
+.problem-icon { font-size: 28px; margin-bottom: 14px; }
+.problem-card h3 { font-family: var(--ff-h); font-size: 17px; color: var(--text); margin-bottom: 10px; }
+.problem-card p  { font-size: 14px; color: var(--sub); line-height: 1.6; }
+
+/* SERVICES */
+.services-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px,1fr)); gap: 24px; margin-top: 40px; }
+.service-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  padding: 32px 28px; position: relative; transition: border-color .2s, transform .2s;
+}
+.service-card:hover { border-color: rgba(0,200,150,0.35); transform: translateY(-2px); }
+.service-card.featured { border-color: rgba(0,200,150,0.4); }
+.service-badge {
+  position: absolute; top: -12px; left: 24px;
+  background: var(--accent); color: #080c12;
+  font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 20px;
+}
+.service-card h3 { font-family: var(--ff-h); font-size: 19px; color: var(--text); margin-bottom: 10px; }
+.service-price {
+  font-family: var(--ff-h); font-size: 34px; font-weight: 800; color: var(--accent);
+  margin-bottom: 16px;
+}
+.service-price span { font-size: 16px; font-weight: 500; color: var(--muted); }
+.service-features { list-style: none; margin-bottom: 28px; }
+.service-features li {
+  font-size: 14px; color: var(--sub); padding: 6px 0;
+  border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 8px;
+}
+.service-features li:last-child { border-bottom: none; }
+.service-features li::before { content: "✓"; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+.btn-service {
+  display: block; text-align: center; background: transparent;
+  color: var(--accent); font-weight: 600; font-size: 15px;
+  padding: 11px 24px; border-radius: 8px; border: 1.5px solid var(--accent);
+  text-decoration: none; transition: background .2s, color .2s;
+}
+.btn-service:hover { background: var(--accent); color: #080c12; }
+.service-card.featured .btn-service { background: var(--accent); color: #080c12; }
+.service-card.featured .btn-service:hover { background: var(--accent2); }
+.loading-price { color: var(--muted); font-size: 14px; }
+
+/* ADVISOR */
+.advisor-section {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+  padding: clamp(40px,5vw,60px); margin-top: 60px;
+  display: flex; gap: 40px; align-items: center; flex-wrap: wrap;
+}
+.advisor-photo {
+  width: 140px; height: 140px; border-radius: 50%;
+  border: 3px solid rgba(0,200,150,0.3); object-fit: cover; flex-shrink: 0;
+  background: var(--surf2);
+}
+.advisor-photo-placeholder {
+  width: 140px; height: 140px; border-radius: 50%;
+  border: 3px solid rgba(0,200,150,0.3); background: var(--surf2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 48px; flex-shrink: 0; color: var(--accent);
+}
+.advisor-info { flex: 1; min-width: 260px; }
+.advisor-name { font-family: var(--ff-h); font-size: 24px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.advisor-title { font-size: 14px; color: var(--accent); font-weight: 600; margin-bottom: 16px; }
+.advisor-bio { font-size: 15px; color: var(--sub); line-height: 1.7; }
+
+/* INCLUDES */
+.includes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 40px; }
+@media (max-width: 640px) { .includes-grid { grid-template-columns: 1fr; } }
+.includes-col h3 { font-family: var(--ff-h); font-size: 18px; margin-bottom: 16px; color: var(--text); }
+.includes-col.yes h3 { color: var(--accent); }
+.includes-col.no  h3 { color: #e24b4a; }
+.includes-list { list-style: none; }
+.includes-list li {
+  font-size: 14px; color: var(--sub); padding: 8px 0;
+  border-bottom: 1px solid var(--border); display: flex; gap: 10px; align-items: flex-start;
+}
+.includes-list li:last-child { border-bottom: none; }
+.includes-col.yes .includes-list li::before { content: "✓"; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+.includes-col.no  .includes-list li::before { content: "✗"; color: #e24b4a; font-weight: 700; flex-shrink: 0; }
+
+/* DIVIDER */
+.divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+
+/* CTA SECTION */
+.cta-section {
+  text-align: center;
+  padding: clamp(60px,8vw,100px) clamp(16px,5vw,80px);
+  background: linear-gradient(180deg, rgba(0,200,150,0.04) 0%, transparent 100%);
+}
+.cta-section h2 {
+  font-family: var(--ff-h); font-size: clamp(26px,4vw,40px); font-weight: 800;
+  color: var(--text); margin-bottom: 16px;
+}
+.cta-section p { font-size: 17px; color: var(--sub); margin-bottom: 32px; }
+
+/* FOOTER */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 28px clamp(16px,5vw,80px);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px;
+}
+.footer-brand { font-family: var(--ff-h); font-size: 15px; font-weight: 700; }
+.footer-brand span:first-child { color: var(--text); }
+.footer-brand span:last-child  { color: var(--accent); }
+.footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
+.footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; }
+.footer-links a:hover { color: var(--text); }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo"><span>Mariano</span><span>Sevilla</span></a>
+  <div class="nav-links">
+    <a href="/" class="nav-link">Inicio</a>
+    <a href="#" class="nav-btn" id="navAuthBtn">Iniciar sesión</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">Asesoramiento fiscal cripto</div>
+  <h1>Asesoramiento fiscal especializado en <span>criptomonedas</span></h1>
+  <p>Revisión personalizada de tu situación fiscal con criptoactivos. Rafael Ramos, economista colegiado, analiza tu caso y te orienta para declarar correctamente tus operaciones.</p>
+  <a href="#servicios" class="btn-primary" id="heroCta">Solicitar revisión fiscal</a>
+</section>
+
+<hr class="divider">
+
+<!-- EL PROBLEMA -->
+<section class="section">
+  <div class="section-label">Por qué es complejo</div>
+  <h2>Declarar criptomonedas en España no es sencillo</h2>
+  <p>La fiscalidad de los criptoactivos en España involucra múltiples casuísticas que la mayoría de las herramientas y gestorías generalistas no están preparadas para gestionar correctamente.</p>
+  <div class="problem-grid">
+    <div class="problem-card">
+      <div class="problem-icon">📊</div>
+      <h3>Método FIFO obligatorio</h3>
+      <p>Hacienda exige aplicar el método FIFO para calcular el coste de adquisición. Un error en la metodología puede derivar en una declaración incorrecta.</p>
+    </div>
+    <div class="problem-card">
+      <div class="problem-icon">🔄</div>
+      <h3>Swaps y operativa compleja</h3>
+      <p>Intercambio de criptomonedas, staking, lending, DeFi, NFTs... Cada tipo de operación tiene su propio tratamiento fiscal y no todos los asesores conocen la normativa actualizada.</p>
+    </div>
+    <div class="problem-card">
+      <div class="problem-icon">🌍</div>
+      <h3>Múltiples exchanges</h3>
+      <p>Si operas en varios exchanges, hay que consolidar todo el historial de transacciones. Omitir algún exchange o período puede generar discrepancias con los datos de Hacienda.</p>
+    </div>
+    <div class="problem-card">
+      <div class="problem-icon">⚖️</div>
+      <h3>Normativa en evolución</h3>
+      <p>La legislación española sobre criptoactivos ha cambiado significativamente en los últimos años. Lo que era válido en ejercicios anteriores puede no aplicar hoy.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- SERVICIOS -->
+<section class="section" id="servicios">
+  <div class="section-label">Servicios</div>
+  <h2>Elige el nivel de asesoramiento que necesitas</h2>
+  <p>Todos los servicios son revisados por Rafael Ramos, economista colegiado especializado en fiscalidad de criptoactivos.</p>
+  <div class="services-grid" id="servicesGrid">
+    <div class="service-card">
+      <h3>Revisión fiscal básica</h3>
+      <div class="service-price loading-price" id="price-revision_basica">Cargando...</div>
+      <ul class="service-features">
+        <li>Revisión del cálculo FIFO de un exchange</li>
+        <li>Compraventas y swaps del ejercicio</li>
+        <li>Orientación sobre casillas de la declaración</li>
+        <li>Respuesta por email en 2–3 días hábiles</li>
+      </ul>
+      <a href="#" class="btn-service cta-btn">Solicitar</a>
+    </div>
+    <div class="service-card featured">
+      <div class="service-badge">Más solicitado</div>
+      <h3>Revisión fiscal avanzada</h3>
+      <div class="service-price loading-price" id="price-revision_avanzada">Cargando...</div>
+      <ul class="service-features">
+        <li>Múltiples exchanges y wallets</li>
+        <li>Staking, lending y rendimientos del capital</li>
+        <li>Revisión de toda la operativa del ejercicio</li>
+        <li>Informe detallado con cada tipo de renta</li>
+        <li>Seguimiento hasta resolver dudas</li>
+      </ul>
+      <a href="#" class="btn-service cta-btn">Solicitar</a>
+    </div>
+    <div class="service-card">
+      <h3>Valoración personalizada</h3>
+      <div class="service-price loading-price" id="price-caso_complejo">Cargando...</div>
+      <ul class="service-features">
+        <li>Casos complejos: DeFi, NFTs, mining</li>
+        <li>Situaciones con múltiples años pendientes</li>
+        <li>Revisión de declaraciones ya presentadas</li>
+        <li>Llamada de valoración inicial incluida</li>
+      </ul>
+      <a href="#" class="btn-service cta-btn">Consultar</a>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- RAFAEL RAMOS -->
+<section class="section">
+  <div class="section-label">Tu asesor</div>
+  <h2>Especialista con experiencia real en cripto</h2>
+  <div class="advisor-section">
+    <img src="/static/rafa-ramos.jpg" alt="Rafael Ramos — Economista colegiado" class="advisor-photo"
+         onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    <div class="advisor-photo-placeholder" style="display:none">👤</div>
+    <div class="advisor-info">
+      <div class="advisor-name">Rafael Ramos</div>
+      <div class="advisor-title">Economista colegiado · Especialista en fiscalidad de criptoactivos</div>
+      <p class="advisor-bio">
+        Rafael lleva años asesorando a inversores en criptomonedas con situaciones fiscales complejas.
+        Conoce en profundidad la normativa española aplicable a los criptoactivos: IRPF, staking,
+        DeFi y declaraciones de bienes en el extranjero. Su enfoque es práctico y orientado a que
+        cada cliente entienda exactamente qué tiene que declarar y por qué.
+      </p>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- QUÉ INCLUYE / QUÉ NO INCLUYE -->
+<section class="section">
+  <div class="section-label">Alcance del servicio</div>
+  <h2>Qué puedes esperar del asesoramiento</h2>
+  <div class="includes-grid">
+    <div class="includes-col yes">
+      <h3>Qué incluye</h3>
+      <ul class="includes-list">
+        <li>Análisis de tu operativa cripto del ejercicio fiscal</li>
+        <li>Revisión del método FIFO aplicado</li>
+        <li>Identificación del tipo de renta de cada operación</li>
+        <li>Orientación sobre las casillas correctas en el IRPF</li>
+        <li>Revisión de rendimientos del capital mobiliario (staking, lending)</li>
+        <li>Respuesta a tus dudas por email</li>
+        <li>Informe escrito con el resultado del análisis</li>
+      </ul>
+    </div>
+    <div class="includes-col no">
+      <h3>Qué no incluye</h3>
+      <ul class="includes-list">
+        <li>Presentación de la declaración de la renta ante la AEAT</li>
+        <li>Representación ante Hacienda en inspecciones</li>
+        <li>Asesoramiento sobre planificación fiscal futura</li>
+        <li>Declaración de patrimonio o modelos 720/721</li>
+        <li>Asesoramiento en otras figuras tributarias (IVA, IS)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- CTA FINAL -->
+<section class="cta-section">
+  <h2>Empieza con tu revisión fiscal</h2>
+  <p>Rellena el formulario con los detalles de tu situación y Rafael te dará respuesta en 2–3 días hábiles.</p>
+  <a href="#" class="btn-primary" id="finalCta">Solicitar revisión fiscal</a>
+</section>
+
+<footer>
+  <div class="footer-brand"><span>Mariano</span><span>Sevilla</span></div>
+  <div class="footer-links">
+    <a href="/">Inicio</a>
+    <a href="/privacidad">Privacidad</a>
+    <a href="/terminos">Términos</a>
+    <a href="/aviso-legal">Aviso legal</a>
+    <a href="/contacto">Contacto</a>
+  </div>
+</footer>
+
+<script>
+// Load prices and set up CTAs
+(async () => {
+  // Check auth state
+  let isLoggedIn = false;
+  try {
+    const r = await fetch('/api/me', { credentials: 'include' });
+    const d = await r.json();
+    isLoggedIn = !!d.user;
+    if (isLoggedIn) {
+      document.getElementById('navAuthBtn').textContent = 'Mi cuenta';
+      document.getElementById('navAuthBtn').href = '/dashboard';
+    } else {
+      document.getElementById('navAuthBtn').href = '/login/';
+    }
+  } catch {}
+
+  const dest = isLoggedIn ? '/pedir-asesoramiento-fiscal' : '/login/?next=/pedir-asesoramiento-fiscal';
+  document.getElementById('heroCta').href = dest;
+  document.getElementById('finalCta').href = dest;
+  document.querySelectorAll('.cta-btn').forEach(btn => btn.href = dest);
+
+  // Load prices
+  try {
+    const r = await fetch('/api/asesoramiento/precios');
+    const prices = await r.json();
+    const fmt = (eur) => eur % 1 === 0 ? `${eur} €` : `${eur.toFixed(2).replace('.',',')} €`;
+    for (const [key, val] of Object.entries(prices)) {
+      const el = document.getElementById(`price-${key}`);
+      if (el) {
+        el.textContent = fmt(val.amount_eur);
+        el.classList.remove('loading-price');
+        el.style.fontFamily = 'var(--ff-h)';
+        el.style.fontSize = '34px';
+        el.style.fontWeight = '800';
+        el.style.color = 'var(--accent)';
+      }
+    }
+  } catch {}
+})();
+</script>
+</body>
+</html>

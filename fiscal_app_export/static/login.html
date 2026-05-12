@@ -233,7 +233,7 @@ html, body {
   try {
     const r = await fetch('/api/me', { credentials: 'include' });
     const d = await r.json();
-    if (d.user) { window.location.replace('/fiscal'); return; }
+    if (d.user) { const nextUrl = new URLSearchParams(location.search).get('next'); window.location.replace((nextUrl && nextUrl.startsWith('/')) ? nextUrl : '/dashboard'); return; }
   } catch {}
 
   // Show OAuth error if redirected back with error param
@@ -270,7 +270,8 @@ form.addEventListener('submit', async e => {
     if (data.pending_verification) {
       window.location.href = '/verify-email-result?status=pending';
     } else {
-      window.location.href = '/dashboard';
+      const nextUrl = new URLSearchParams(location.search).get('next');
+      window.location.href = (nextUrl && nextUrl.startsWith('/')) ? nextUrl : '/dashboard';
     }
   } catch (err) {
     errorEl.textContent = err.message;

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solicitud recibida — Asesoramiento fiscal | Mariano Sevilla</title>
+<meta name="robots" content="noindex">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+<link rel="icon" href="/static/favicon.ico">
+<link rel="manifest" href="/static/site.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:      #0b1220;
+  --surface: #10141e;
+  --border:  rgba(255,255,255,0.08);
+  --text:    #eef0f6;
+  --muted:   #7a8099;
+  --sub:     #9aa0b8;
+  --accent:  #00C896;
+  --ff-h:    'Syne', sans-serif;
+  --ff-b:    'DM Sans', sans-serif;
+}
+html, body { min-height: 100%; background: var(--bg); font-family: var(--ff-b); color: var(--text); display: flex; flex-direction: column; }
+nav {
+  background: rgba(11,18,32,0.92); border-bottom: 1px solid var(--border);
+  padding: 0 clamp(16px,5vw,80px); height: 60px;
+  display: flex; align-items: center;
+}
+.nav-logo { font-family: var(--ff-h); font-size: 18px; font-weight: 700; text-decoration: none; }
+.nav-logo span:first-child { color: var(--text); }
+.nav-logo span:last-child  { color: var(--accent); }
+
+main {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  padding: clamp(40px,8vw,100px) clamp(16px,4vw,40px);
+}
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+  padding: clamp(40px,5vw,60px); max-width: 540px; width: 100%; text-align: center;
+}
+.check-icon {
+  width: 72px; height: 72px; border-radius: 50%;
+  background: rgba(0,200,150,0.12); border: 2px solid rgba(0,200,150,0.35);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px; margin: 0 auto 28px;
+}
+h1 { font-family: var(--ff-h); font-size: clamp(22px,4vw,32px); font-weight: 800; color: var(--text); margin-bottom: 16px; }
+.card p { font-size: 15px; color: var(--sub); line-height: 1.7; margin-bottom: 12px; }
+.card p:last-of-type { margin-bottom: 32px; }
+.info-list {
+  background: rgba(0,200,150,0.06); border: 1px solid rgba(0,200,150,0.15);
+  border-radius: 10px; padding: 16px 20px; text-align: left; margin: 20px 0 32px; list-style: none;
+}
+.info-list li {
+  font-size: 14px; color: var(--sub); padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; gap: 10px;
+}
+.info-list li:last-child { border-bottom: none; }
+.info-list li::before { content: "✓"; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+
+.btn-home {
+  display: inline-block; background: var(--accent); color: #080c12;
+  font-weight: 700; font-size: 15px; padding: 12px 32px; border-radius: 9px;
+  text-decoration: none; transition: background .2s;
+}
+.btn-home:hover { background: #00a87e; }
+</style>
+</head>
+<body>
+<nav>
+  <a href="/" class="nav-logo"><span>Mariano</span><span>Sevilla</span></a>
+</nav>
+
+<main>
+  <div class="card">
+    <div class="check-icon">✓</div>
+    <h1>Solicitud recibida correctamente</h1>
+    <p>Hemos recibido tu solicitud y tu pago. Rafael revisará tu caso en <strong style="color:var(--text)">2–3 días hábiles</strong>.</p>
+    <p>Recibirás un email de confirmación con todos los detalles en la dirección que indicaste.</p>
+
+    <ul class="info-list">
+      <li>Recibirás un email de confirmación en breve</li>
+      <li>Rafael analizará tu situación en 2–3 días hábiles</li>
+      <li>Si necesitamos documentación adicional, te escribiremos</li>
+      <li>El análisis se entregará por email</li>
+    </ul>
+
+    <a href="/" class="btn-home">Volver al inicio</a>
+  </div>
+</main>
+</body>
+</html>
