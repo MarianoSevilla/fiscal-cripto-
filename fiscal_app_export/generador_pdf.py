@@ -1,7 +1,7 @@
 """
 Generador de informe fiscal PDF
 Mariano Sevilla — marianosevilla.com
-v2.0 — estructura mejorada inspirada en informes fiscales profesionales
+v3.0 — diseño print-friendly, fondo blanco, apto para entregar a gestor fiscal
 """
 
 from reportlab.lib.pagesizes import A4
@@ -17,141 +17,194 @@ from datetime import datetime
 import io
 
 
-# ── PALETA ────────────────────────────────────
-BLACK     = colors.HexColor("#0D0D0D")
-WHITE     = colors.HexColor("#F0EDE6")
-GREEN     = colors.HexColor("#00C896")
-RED_C     = colors.HexColor("#E24B4A")
-AMBER     = colors.HexColor("#F0B90B")
-SURFACE   = colors.HexColor("#1A1A1A")
-SURFACE2  = colors.HexColor("#111111")
-MUTED     = colors.HexColor("#888580")
-BORDER    = colors.HexColor("#2A2A2A")
+# ── PALETA PRINT-FRIENDLY ─────────────────────────────────────────────────────
+BG          = colors.white
+TEXT        = colors.HexColor("#111827")   # texto principal
+TEXT_MUTED  = colors.HexColor("#4B5563")   # texto secundario
+ACCENT      = colors.HexColor("#1E3A8A")   # azul oscuro (cabeceras, títulos)
+BORDER      = colors.HexColor("#D1D5DB")   # bordes finos
+TABLE_HEAD  = colors.HexColor("#F3F4F6")   # cabecera de tabla
+TABLE_ALT   = colors.HexColor("#F9FAFB")   # fila alternada
+INFO_BG     = colors.HexColor("#F9FAFB")   # fondo caja info
+GREEN_P     = colors.HexColor("#166534")   # verde discreto (ganancias)
+RED_P       = colors.HexColor("#991B1B")   # rojo discreto (pérdidas)
+RULE_COLOR  = colors.HexColor("#E5E7EB")   # línea horizontal
 
 
 def _build_styles():
     return {
-        "title": ParagraphStyle("title", fontName="Helvetica-Bold", fontSize=24, textColor=WHITE, leading=30, spaceAfter=4),
-        "subtitle": ParagraphStyle("subtitle", fontName="Helvetica", fontSize=10, textColor=MUTED, leading=15, spaceAfter=4),
-        "section": ParagraphStyle("section", fontName="Helvetica-Bold", fontSize=12, textColor=GREEN, leading=16, spaceBefore=14, spaceAfter=6),
-        "subsection": ParagraphStyle("subsection", fontName="Helvetica-Bold", fontSize=10, textColor=WHITE, leading=14, spaceBefore=10, spaceAfter=4),
-        "body": ParagraphStyle("body", fontName="Helvetica", fontSize=9, textColor=WHITE, leading=14),
-        "body_muted": ParagraphStyle("body_muted", fontName="Helvetica", fontSize=8, textColor=MUTED, leading=12),
-        "kpi_label": ParagraphStyle("kpi_label", fontName="Helvetica", fontSize=7.5, textColor=MUTED, leading=11, alignment=TA_CENTER),
-        "kpi_value": ParagraphStyle("kpi_value", fontName="Helvetica-Bold", fontSize=14, textColor=WHITE, leading=18, alignment=TA_CENTER),
-        "kpi_value_green": ParagraphStyle("kpi_value_green", fontName="Helvetica-Bold", fontSize=14, textColor=GREEN, leading=18, alignment=TA_CENTER),
-        "kpi_value_red": ParagraphStyle("kpi_value_red", fontName="Helvetica-Bold", fontSize=14, textColor=RED_C, leading=18, alignment=TA_CENTER),
-        "resumen_label": ParagraphStyle("resumen_label", fontName="Helvetica", fontSize=9, textColor=MUTED, leading=13),
-        "resumen_value": ParagraphStyle("resumen_value", fontName="Helvetica-Bold", fontSize=9, textColor=WHITE, leading=13, alignment=TA_RIGHT),
-        "resumen_value_green": ParagraphStyle("resumen_value_green", fontName="Helvetica-Bold", fontSize=9, textColor=GREEN, leading=13, alignment=TA_RIGHT),
-        "resumen_value_red": ParagraphStyle("resumen_value_red", fontName="Helvetica-Bold", fontSize=9, textColor=RED_C, leading=13, alignment=TA_RIGHT),
-        "warning": ParagraphStyle("warning", fontName="Helvetica", fontSize=8, textColor=colors.HexColor("#C8A5A4"), leading=12),
-        "disclaimer": ParagraphStyle("disclaimer", fontName="Helvetica-Oblique", fontSize=7.5, textColor=MUTED, leading=11),
-        "th": ParagraphStyle("th", fontName="Helvetica-Bold", fontSize=7, textColor=MUTED, leading=9),
-        "th_right": ParagraphStyle("th_right", fontName="Helvetica-Bold", fontSize=7, textColor=MUTED, leading=9, alignment=TA_RIGHT),
-        "td": ParagraphStyle("td", fontName="Helvetica", fontSize=7.5, textColor=WHITE, leading=10),
-        "td_mono": ParagraphStyle("td_mono", fontName="Courier", fontSize=7, textColor=WHITE, leading=10, alignment=TA_RIGHT),
-        "td_green": ParagraphStyle("td_green", fontName="Helvetica-Bold", fontSize=7.5, textColor=GREEN, leading=10, alignment=TA_RIGHT),
-        "td_red": ParagraphStyle("td_red", fontName="Helvetica-Bold", fontSize=7.5, textColor=RED_C, leading=10, alignment=TA_RIGHT),
-        "td_muted": ParagraphStyle("td_muted", fontName="Helvetica", fontSize=7, textColor=MUTED, leading=10),
-        "td_muted_right": ParagraphStyle("td_muted_right", fontName="Helvetica", fontSize=7, textColor=MUTED, leading=10, alignment=TA_RIGHT),
-        "nota_label": ParagraphStyle("nota_label", fontName="Helvetica-Bold", fontSize=8, textColor=AMBER, leading=12),
-        "nota_body": ParagraphStyle("nota_body", fontName="Helvetica", fontSize=8, textColor=colors.HexColor("#C8B870"), leading=12),
+        # Portada
+        "title":              ParagraphStyle("title",         fontName="Helvetica-Bold",    fontSize=22, textColor=ACCENT,     leading=28, spaceAfter=4),
+        "subtitle":           ParagraphStyle("subtitle",      fontName="Helvetica",         fontSize=9.5,textColor=TEXT_MUTED, leading=14, spaceAfter=3),
+        # Secciones
+        "section":            ParagraphStyle("section",       fontName="Helvetica-Bold",    fontSize=12, textColor=ACCENT,     leading=16, spaceBefore=14, spaceAfter=5),
+        "subsection":         ParagraphStyle("subsection",    fontName="Helvetica-Bold",    fontSize=9.5,textColor=TEXT,       leading=13, spaceBefore=8,  spaceAfter=3),
+        "body":               ParagraphStyle("body",          fontName="Helvetica",         fontSize=9.5,textColor=TEXT,       leading=14),
+        "body_muted":         ParagraphStyle("body_muted",    fontName="Helvetica",         fontSize=8.5,textColor=TEXT_MUTED, leading=12),
+        # KPI tarjetas
+        "kpi_label":          ParagraphStyle("kpi_label",     fontName="Helvetica",         fontSize=7.5,textColor=TEXT_MUTED, leading=11, alignment=TA_CENTER),
+        "kpi_value":          ParagraphStyle("kpi_value",     fontName="Helvetica-Bold",    fontSize=13, textColor=TEXT,       leading=17, alignment=TA_CENTER),
+        "kpi_value_green":    ParagraphStyle("kpi_value_g",   fontName="Helvetica-Bold",    fontSize=13, textColor=GREEN_P,    leading=17, alignment=TA_CENTER),
+        "kpi_value_red":      ParagraphStyle("kpi_value_r",   fontName="Helvetica-Bold",    fontSize=13, textColor=RED_P,      leading=17, alignment=TA_CENTER),
+        # Tabla resumen
+        "resumen_label":      ParagraphStyle("res_label",     fontName="Helvetica",         fontSize=9,  textColor=TEXT,       leading=13),
+        "resumen_value":      ParagraphStyle("res_val",       fontName="Helvetica-Bold",    fontSize=9,  textColor=TEXT,       leading=13, alignment=TA_RIGHT),
+        "resumen_value_green":ParagraphStyle("res_val_g",     fontName="Helvetica-Bold",    fontSize=9,  textColor=GREEN_P,    leading=13, alignment=TA_RIGHT),
+        "resumen_value_red":  ParagraphStyle("res_val_r",     fontName="Helvetica-Bold",    fontSize=9,  textColor=RED_P,      leading=13, alignment=TA_RIGHT),
+        # Tabla heads y celdas
+        "th":                 ParagraphStyle("th",            fontName="Helvetica-Bold",    fontSize=7.5,textColor=TEXT,       leading=10),
+        "th_right":           ParagraphStyle("th_r",          fontName="Helvetica-Bold",    fontSize=7.5,textColor=TEXT,       leading=10, alignment=TA_RIGHT),
+        "td":                 ParagraphStyle("td",            fontName="Helvetica",         fontSize=8.5,textColor=TEXT,       leading=11),
+        "td_mono":            ParagraphStyle("td_mono",       fontName="Courier",           fontSize=7.5,textColor=TEXT,       leading=11, alignment=TA_RIGHT),
+        "td_green":           ParagraphStyle("td_g",          fontName="Helvetica-Bold",    fontSize=8.5,textColor=GREEN_P,    leading=11, alignment=TA_RIGHT),
+        "td_red":             ParagraphStyle("td_r",          fontName="Helvetica-Bold",    fontSize=8.5,textColor=RED_P,      leading=11, alignment=TA_RIGHT),
+        "td_muted":           ParagraphStyle("td_muted",      fontName="Helvetica",         fontSize=8,  textColor=TEXT_MUTED, leading=11),
+        "td_muted_right":     ParagraphStyle("td_muted_r",    fontName="Helvetica",         fontSize=8,  textColor=TEXT_MUTED, leading=11, alignment=TA_RIGHT),
+        # Notas
+        "nota_label":         ParagraphStyle("nota_label",    fontName="Helvetica-Bold",    fontSize=8.5,textColor=ACCENT,     leading=12),
+        "nota_body":          ParagraphStyle("nota_body",     fontName="Helvetica",         fontSize=8.5,textColor=TEXT,       leading=12),
+        "nota_sub":           ParagraphStyle("nota_sub",      fontName="Helvetica-Oblique", fontSize=7.5,textColor=TEXT_MUTED, leading=11),
+        # Advertencia y disclaimer
+        "warning":            ParagraphStyle("warning",       fontName="Helvetica",         fontSize=8.5,textColor=RED_P,      leading=12),
+        "disclaimer":         ParagraphStyle("disclaimer",    fontName="Helvetica-Oblique", fontSize=7,  textColor=TEXT_MUTED, leading=10),
+        # Aviso legal portada
+        "aviso_legal":        ParagraphStyle("aviso_legal",   fontName="Helvetica-Oblique", fontSize=7.5,textColor=TEXT_MUTED, leading=11),
     }
 
 
 def _header_footer(canvas_obj, doc):
+    """Cabecera y pie de página discretos, fondo blanco."""
     canvas_obj.saveState()
     w, h = A4
-    canvas_obj.setFillColor(BLACK)
-    canvas_obj.rect(0, 0, w, h, fill=1, stroke=0)
-    canvas_obj.setFillColor(SURFACE)
-    canvas_obj.rect(0, h - 26*mm, w, 26*mm, fill=1, stroke=0)
-    canvas_obj.setStrokeColor(GREEN)
-    canvas_obj.setLineWidth(0.8)
-    canvas_obj.line(0, h - 26*mm, w, h - 26*mm)
-    canvas_obj.setFont("Helvetica-Bold", 10)
-    canvas_obj.setFillColor(WHITE)
-    canvas_obj.drawString(18*mm, h - 14*mm, "Mariano")
-    canvas_obj.setFillColor(GREEN)
-    canvas_obj.drawString(18*mm + 39, h - 14*mm, "Sevilla")
-    canvas_obj.setFillColor(MUTED)
-    canvas_obj.setFont("Helvetica", 7.5)
-    canvas_obj.drawString(18*mm, h - 20*mm, "Informe Fiscal Cripto · IRPF Base del Ahorro · Método FIFO (art. 37.2 LIRPF)")
-    canvas_obj.setFont("Helvetica", 7.5)
-    canvas_obj.setFillColor(MUTED)
-    fecha_str = datetime.now().strftime("%d/%m/%Y")
-    canvas_obj.drawRightString(w - 18*mm, h - 14*mm, f"Generado: {fecha_str}")
-    canvas_obj.drawRightString(w - 18*mm, h - 20*mm, f"Página {doc.page}")
-    canvas_obj.setFillColor(SURFACE)
-    canvas_obj.rect(0, 0, w, 12*mm, fill=1, stroke=0)
-    canvas_obj.setStrokeColor(BORDER)
+
+    # ── Cabecera ──────────────────────────────────────────────────────────
+    # Línea inferior de cabecera
+    canvas_obj.setStrokeColor(RULE_COLOR)
     canvas_obj.setLineWidth(0.5)
-    canvas_obj.line(0, 12*mm, w, 12*mm)
+    canvas_obj.line(18*mm, h - 14*mm, w - 18*mm, h - 14*mm)
+
+    # Logo / nombre
+    canvas_obj.setFont("Helvetica-Bold", 10)
+    canvas_obj.setFillColor(ACCENT)
+    canvas_obj.drawString(18*mm, h - 10*mm, "Mariano Sevilla")
+    canvas_obj.setFont("Helvetica", 8.5)
+    canvas_obj.setFillColor(TEXT_MUTED)
+    canvas_obj.drawString(18*mm + 75, h - 10*mm, "· Informe Fiscal Cripto · Método FIFO · IRPF Base del Ahorro")
+
+    # Fecha y página (derecha)
+    fecha_str = datetime.now().strftime("%d/%m/%Y")
+    canvas_obj.setFont("Helvetica", 8)
+    canvas_obj.setFillColor(TEXT_MUTED)
+    canvas_obj.drawRightString(w - 18*mm, h - 10*mm, f"Generado: {fecha_str}  |  Página {doc.page}")
+
+    # ── Pie de página ─────────────────────────────────────────────────────
+    canvas_obj.setStrokeColor(RULE_COLOR)
+    canvas_obj.setLineWidth(0.5)
+    canvas_obj.line(18*mm, 13*mm, w - 18*mm, 13*mm)
+
     canvas_obj.setFont("Helvetica-Oblique", 6.5)
-    canvas_obj.setFillColor(MUTED)
-    canvas_obj.drawCentredString(w / 2, 4.5*mm,
+    canvas_obj.setFillColor(TEXT_MUTED)
+    canvas_obj.drawCentredString(
+        w / 2, 8*mm,
         "Documento auxiliar de organización fiscal. No constituye asesoramiento fiscal ni legal. "
-        "Consulta siempre con un gestor o asesor fiscal autorizado antes de presentar tu declaración.")
+        "Debe ser revisado por un asesor fiscal antes de su presentación."
+    )
+    canvas_obj.drawCentredString(w / 2, 4.5*mm, f"marianosevilla.com  |  Página {doc.page}")
+
     canvas_obj.restoreState()
 
 
+def _aviso_legal_caja(styles):
+    """Caja de aviso legal para la portada, discreta y compacta."""
+    texto = (
+        "Este documento es un informe auxiliar generado automáticamente a partir de los datos aportados "
+        "por el usuario. No constituye asesoramiento fiscal ni legal. Debe ser revisado por un asesor "
+        "fiscal antes de su presentación ante la Agencia Tributaria."
+    )
+    data = [[Paragraph(texto, styles["aviso_legal"])]]
+    t = Table(data, colWidths=[168*mm])
+    t.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, -1), INFO_BG),
+        ("BOX",           (0, 0), (-1, -1), 0.5, BORDER),
+        ("TOPPADDING",    (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
+    ]))
+    return t
+
+
 def _portada(story, styles, resumen, nombre_usuario, ejercicio, exchange, periodo=None):
-    story.append(Spacer(1, 6*mm))
+    story.append(Spacer(1, 4*mm))
+
     titulo = "Informe Fiscal Cripto"
     if ejercicio:
         titulo += f"  {ejercicio}"
     story.append(Paragraph(titulo, styles["title"]))
+    story.append(Paragraph("Método FIFO · Art. 37.2 LIRPF · IRPF Base del Ahorro", styles["subtitle"]))
+    story.append(Spacer(1, 4*mm))
 
-    # Cada campo en su propia línea — nombre siempre en mayúsculas
+    # Datos del informe
     if nombre_usuario:
-        story.append(Paragraph(f"Preparado para: {nombre_usuario.upper()}", styles["subtitle"]))
+        story.append(Paragraph(f"<b>Preparado para:</b>  {nombre_usuario.upper()}", styles["body"]))
     if ejercicio:
-        story.append(Paragraph(f"Ejercicio fiscal: {ejercicio}", styles["subtitle"]))
+        story.append(Paragraph(f"<b>Ejercicio fiscal:</b>  {ejercicio}", styles["body"]))
     elif periodo and periodo.get("fecha_min"):
-        story.append(Paragraph(f"Período analizado: {periodo['fecha_min']} — {periodo['fecha_max']}", styles["subtitle"]))
+        story.append(Paragraph(f"<b>Período analizado:</b>  {periodo['fecha_min']} — {periodo['fecha_max']}", styles["body"]))
     if exchange:
-        story.append(Paragraph(f"Exchange: {exchange}", styles["subtitle"]))
-    story.append(Paragraph(f"Generado el: {datetime.utcnow().strftime('%d/%m/%Y')}", styles["subtitle"]))
-    story.append(Paragraph("Método FIFO · Art. 37.2 LIRPF", styles["subtitle"]))
+        story.append(Paragraph(f"<b>Exchange:</b>  {exchange}", styles["body"]))
+    story.append(Paragraph(f"<b>Fecha de generación:</b>  {datetime.utcnow().strftime('%d/%m/%Y')}", styles["body"]))
 
+    story.append(Spacer(1, 4*mm))
+
+    # Aviso legal compacto
+    story.append(_aviso_legal_caja(styles))
     story.append(Spacer(1, 6*mm))
 
+    # ── Resumen ejecutivo — 4 tarjetas ──────────────────────────────────
     neto = resumen["resultado_neto"]
     neto_style = styles["kpi_value_green"] if neto >= 0 else styles["kpi_value_red"]
     neto_fmt   = f"+{neto:,.2f} EUR" if neto >= 0 else f"{neto:,.2f} EUR"
 
     kpi_data = [
-        [Paragraph("OPERACIONES", styles["kpi_label"]),
+        [Paragraph("OPERACIONES",      styles["kpi_label"]),
          Paragraph("GANANCIAS BRUTAS", styles["kpi_label"]),
-         Paragraph("PÉRDIDAS BRUTAS", styles["kpi_label"]),
-         Paragraph("RESULTADO NETO", styles["kpi_label"])],
-        [Paragraph(str(resumen["operaciones_con_resultado"]), styles["kpi_value"]),
+         Paragraph("PÉRDIDAS BRUTAS",  styles["kpi_label"]),
+         Paragraph("RESULTADO NETO",   styles["kpi_label"])],
+        [Paragraph(str(resumen["operaciones_con_resultado"]),  styles["kpi_value"]),
          Paragraph(f"+{resumen['ganancias_brutas']:,.2f} EUR", styles["kpi_value_green"]),
-         Paragraph(f"{resumen['perdidas_brutas']:,.2f} EUR", styles["kpi_value_red"]),
+         Paragraph(f"{resumen['perdidas_brutas']:,.2f} EUR",   styles["kpi_value_red"]),
          Paragraph(neto_fmt, neto_style)],
     ]
-    t = Table(kpi_data, colWidths=[42*mm]*4, rowHeights=[10*mm, 14*mm])
-    t.setStyle(TableStyle([
-        ("BACKGROUND",    (0, 0), (-1, -1), SURFACE),
-        ("GRID",          (0, 0), (-1, -1), 0.5, BORDER),
-        ("LINEBELOW",     (0, 0), (-1, 0),  0.5, GREEN),
+    t_kpi = Table(kpi_data, colWidths=[42*mm]*4, rowHeights=[9*mm, 13*mm])
+    t_kpi.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, -1), BG),
+        ("BACKGROUND",    (0, 0), (-1, 0),  TABLE_HEAD),
+        ("BOX",           (0, 0), (-1, -1), 0.5, BORDER),
+        ("INNERGRID",     (0, 0), (-1, -1), 0.5, BORDER),
+        ("LINEBELOW",     (0, 0), (-1, 0),  0.5, BORDER),
         ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
-        ("TOPPADDING",    (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-        ("LEFTPADDING",   (0, 0), (-1, -1), 6),
-        ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
+        ("TOPPADDING",    (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 5),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 5),
     ]))
-    story.append(t)
-    story.append(Spacer(1, 5*mm))
+    story.append(t_kpi)
+    story.append(Spacer(1, 6*mm))
 
+    # ── Determinación de bases imponibles ──────────────────────────────
+    story.append(HRFlowable(width="100%", thickness=0.5, color=RULE_COLOR))
+    story.append(Spacer(1, 3*mm))
     story.append(Paragraph("Determinación de Bases Imponibles", styles["section"]))
-    story.append(Paragraph("Desglose de las ganancias y pérdidas según su tratamiento fiscal en el IRPF español.", styles["body_muted"]))
+    story.append(Paragraph(
+        "Desglose de las ganancias y pérdidas según su tratamiento fiscal en el IRPF español.",
+        styles["body_muted"]
+    ))
     story.append(Spacer(1, 3*mm))
 
-    ganancias = resumen['ganancias_brutas']
-    perdidas  = resumen['perdidas_brutas']
-    neto2     = resumen['resultado_neto']
+    ganancias = resumen["ganancias_brutas"]
+    perdidas  = resumen["perdidas_brutas"]
+    neto2     = resumen["resultado_neto"]
 
     resumen_data = [
         [Paragraph("BASE DEL AHORRO — Transmisiones de criptoactivos (art. 33 LIRPF)", styles["th"]),
@@ -166,12 +219,14 @@ def _portada(story, styles, resumen, nombre_usuario, ejercicio, exchange, period
     ]
     t2 = Table(resumen_data, colWidths=[128*mm, 40*mm])
     t2.setStyle(TableStyle([
-        ("BACKGROUND",    (0, 0), (-1, 0),  SURFACE),
-        ("LINEBELOW",     (0, 0), (-1, 0),  1, GREEN),
-        ("BACKGROUND",    (0, 1), (-1, 2),  BLACK),
-        ("BACKGROUND",    (0, 3), (-1, 3),  SURFACE2),
+        ("BACKGROUND",    (0, 0), (-1, 0),  TABLE_HEAD),
+        ("LINEBELOW",     (0, 0), (-1, 0),  1, ACCENT),
+        ("BACKGROUND",    (0, 1), (-1, 2),  BG),
+        ("BACKGROUND",    (0, 3), (-1, 3),  TABLE_HEAD),
         ("LINEABOVE",     (0, 3), (-1, 3),  0.5, BORDER),
-        ("GRID",          (0, 0), (-1, -1), 0.3, BORDER),
+        ("LINEBELOW",     (0, 3), (-1, 3),  1.2, ACCENT),
+        ("BOX",           (0, 0), (-1, -1), 0.5, BORDER),
+        ("INNERGRID",     (0, 0), (-1, -1), 0.3, BORDER),
         ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
         ("TOPPADDING",    (0, 0), (-1, -1), 6),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
@@ -181,32 +236,30 @@ def _portada(story, styles, resumen, nombre_usuario, ejercicio, exchange, period
     story.append(t2)
     story.append(Spacer(1, 5*mm))
 
+    # Nota FIFO compacta
     nota_data = [[
         Paragraph(
-            "Método FIFO obligatorio (art. 37.2 LIRPF). Las comisiones de compra incrementan el precio de coste "
+            "<b>Método FIFO obligatorio (art. 37.2 LIRPF).</b> Las comisiones de compra incrementan el precio de coste "
             "del lote. Las comisiones de venta reducen el valor de transmisión. Los swaps entre criptoactivos "
             "se tratan como venta y compra simultánea a valor de mercado, generando hecho imponible. "
-            "Los depósitos y retiradas de exchange no generan hecho imponible.",
+            "Los depósitos y retiradas entre wallets propias no generan hecho imponible.",
             styles["nota_body"])
     ]]
     t3 = Table(nota_data, colWidths=[168*mm])
     t3.setStyle(TableStyle([
-        ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#1A1800")),
-        ("BOX",           (0, 0), (-1, -1), 0.5, colors.HexColor("#3A3500")),
+        ("BACKGROUND",    (0, 0), (-1, -1), INFO_BG),
+        ("BOX",           (0, 0), (-1, -1), 0.5, BORDER),
         ("VALIGN",        (0, 0), (-1, -1), "TOP"),
-        ("TOPPADDING",    (0, 0), (-1, -1), 8),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-        ("LEFTPADDING",   (0, 0), (-1, -1), 8),
-        ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
+        ("TOPPADDING",    (0, 0), (-1, -1), 7),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 9),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 9),
     ]))
     story.append(t3)
 
 
 def _grafico_gp_activos(resultados, width_mm=168):
-    """
-    Gráfico de barras horizontal G/P neta por activo.
-    Devuelve un flowable Image de ReportLab o None si matplotlib no está disponible.
-    """
+    """Gráfico de barras horizontal G/P neta por activo — fondo blanco para impresión."""
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -230,19 +283,20 @@ def _grafico_gp_activos(resultados, width_mm=168):
     items   = sorted(todos, key=lambda x: x[1])
     activos = [i[0] for i in items]
     valores = [i[1] for i in items]
-    colores = ["#E24B4A" if v < 0 else "#00C896" for v in valores]
+    # Verde/rojo discretos aptos para impresión B&N
+    colores = ["#991B1B" if v < 0 else "#166534" for v in valores]
 
     n        = len(activos)
     fig_w_in = 7.2
     fig_h_in = min(max(2.4, n * 0.44 + 0.7), 7.0)
 
     fig, ax = plt.subplots(figsize=(fig_w_in, fig_h_in))
-    fig.patch.set_facecolor("#1A1A1A")
-    ax.set_facecolor("#111111")
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("white")
 
-    bars = ax.barh(activos, valores, color=colores, height=0.60,
-                   edgecolor="none", zorder=3)
-    ax.axvline(0, color="#555555", linewidth=0.7, zorder=2)
+    bars = ax.barh(activos, valores, color=colores, height=0.55,
+                   edgecolor="#D1D5DB", linewidth=0.5, zorder=3)
+    ax.axvline(0, color="#9CA3AF", linewidth=0.7, zorder=2)
 
     max_abs = max(abs(v) for v in valores) if valores else 1.0
     if max_abs == 0:
@@ -251,32 +305,33 @@ def _grafico_gp_activos(resultados, width_mm=168):
     for bar, val in zip(bars, valores):
         x         = bar.get_width()
         bar_ratio = abs(x) / max_abs
-        inside    = bar_ratio > 0.30
+        inside    = bar_ratio > 0.35
         lbl       = f"+{val:,.2f} €" if val >= 0 else f"{val:,.2f} €"
         if val >= 0:
             ha   = "right" if inside else "left"
             xpos = x - pad  if inside else x + pad
-            col  = "#111111" if inside else "#00C896"
+            col  = "white"   if inside else "#166534"
         else:
             ha   = "left"  if inside else "right"
             xpos = x + pad  if inside else x - pad
-            col  = "#F0EDE6" if inside else "#E24B4A"
+            col  = "white"   if inside else "#991B1B"
         ax.text(xpos, bar.get_y() + bar.get_height() / 2, lbl,
                 va="center", ha=ha, fontsize=6.5, color=col, fontweight="bold")
 
     for spine in ax.spines.values():
-        spine.set_color("#2A2A2A")
-    ax.tick_params(colors="#888580", labelsize=7.5)
-    ax.xaxis.grid(True, color="#222222", linewidth=0.5, zorder=0)
+        spine.set_color("#E5E7EB")
+    ax.tick_params(colors="#4B5563", labelsize=7.5)
+    ax.xaxis.grid(True, color="#F3F4F6", linewidth=0.5, zorder=0)
     ax.set_axisbelow(True)
     ax.xaxis.set_major_formatter(mticker.FuncFormatter(lambda x, _: f"{x:,.0f}"))
-    ax.set_xlabel("EUR", fontsize=7, color="#888580", labelpad=4)
+    ax.set_xlabel("EUR", fontsize=7, color="#4B5563", labelpad=4)
+    ax.tick_params(axis='y', labelcolor="#111827")
 
     plt.tight_layout(pad=0.6)
 
     img_buf = io.BytesIO()
     plt.savefig(img_buf, format="png", dpi=150, bbox_inches="tight",
-                facecolor="#1A1A1A", edgecolor="none")
+                facecolor="white", edgecolor="none")
     plt.close(fig)
     img_buf.seek(0)
 
@@ -351,67 +406,67 @@ def _bloque_compensaciones(ganancias, perdidas, neto, rendimientos_list, styles)
     highlight_row = 3
     t = Table(rows, colWidths=[128*mm, 40*mm])
     t.setStyle(TableStyle([
-        ("BACKGROUND",    (0, 0), (-1, 0),                SURFACE),
-        ("LINEBELOW",     (0, 0), (-1, 0),                1, GREEN),
-        ("BACKGROUND",    (0, 1), (-1, highlight_row-1),  BLACK),
-        ("BACKGROUND",    (0, highlight_row), (-1, highlight_row), SURFACE2),
+        ("BACKGROUND",    (0, 0), (-1, 0),                        TABLE_HEAD),
+        ("LINEBELOW",     (0, 0), (-1, 0),                        1, ACCENT),
+        ("BACKGROUND",    (0, 1), (-1, highlight_row - 1),        BG),
+        ("BACKGROUND",    (0, highlight_row), (-1, highlight_row), TABLE_HEAD),
         ("LINEABOVE",     (0, highlight_row), (-1, highlight_row), 0.5, BORDER),
-        ("BACKGROUND",    (0, highlight_row+1), (-1, -1), BLACK),
-        ("GRID",          (0, 0), (-1, -1),               0.3, BORDER),
-        ("VALIGN",        (0, 0), (-1, -1),               "MIDDLE"),
-        ("TOPPADDING",    (0, 0), (-1, -1),               6),
-        ("BOTTOMPADDING", (0, 0), (-1, -1),               6),
-        ("LEFTPADDING",   (0, 0), (-1, -1),               8),
-        ("RIGHTPADDING",  (0, 0), (-1, -1),               8),
+        ("LINEBELOW",     (0, highlight_row), (-1, highlight_row), 1.2, ACCENT),
+        ("BACKGROUND",    (0, highlight_row + 1), (-1, -1),       BG),
+        ("BOX",           (0, 0), (-1, -1),                       0.5, BORDER),
+        ("INNERGRID",     (0, 0), (-1, -1),                       0.3, BORDER),
+        ("VALIGN",        (0, 0), (-1, -1),                       "MIDDLE"),
+        ("TOPPADDING",    (0, 0), (-1, -1),                       6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1),                       6),
+        ("LEFTPADDING",   (0, 0), (-1, -1),                       8),
+        ("RIGHTPADDING",  (0, 0), (-1, -1),                       8),
     ]))
     flowables.append(t)
     return flowables
 
 
 def _bloque_modelo_721(posiciones, styles):
-    """Alerta Modelo 721. Devuelve lista de flowables."""
+    """Bloque Modelo 721 — presentación prudente y print-friendly."""
     coste_total = sum(p.coste_total for p in posiciones) if posiciones else 0.0
 
     if coste_total >= 50_000:
-        bg      = colors.HexColor("#180800")
-        border  = colors.HexColor("#FF6B2B")
-        t_color = colors.HexColor("#FF8C4B")
-        b_color = colors.HexColor("#C8966A")
-        titulo  = "⚠  MODELO 721 — POSIBLEMENTE OBLIGATORIO"
-        texto   = (
+        titulo = "Modelo 721 — Revisión orientativa: posiblemente obligatorio"
+        texto  = (
             f"El coste de adquisición FIFO de los activos en cartera asciende a {coste_total:,.2f} EUR. "
-            "Si el valor de mercado a 31 de diciembre supera 50.000 EUR en exchanges extranjeros "
-            "(como Binance o Kraken), deberás presentar el Modelo 721 antes del 31 de marzo "
-            "del ejercicio siguiente. Consulta con tu asesor fiscal."
+            "Debe verificarse el valor de mercado a 31 de diciembre: si supera 50.000 EUR en exchanges "
+            "extranjeros (como Binance o Kraken), la presentación del Modelo 721 sería obligatoria "
+            "antes del 31 de marzo del ejercicio siguiente. Consulta con tu asesor fiscal para confirmar."
         )
+        borde_color = colors.HexColor("#B45309")  # ámbar oscuro
     else:
-        bg      = colors.HexColor("#091400")
-        border  = colors.HexColor("#00C896")
-        t_color = colors.HexColor("#00C896")
-        b_color = colors.HexColor("#5A9070")
-        titulo  = "✓  MODELO 721 — EN PRINCIPIO NO OBLIGATORIO"
-        texto   = (
+        titulo = "Modelo 721 — Revisión orientativa: en principio no obligatorio"
+        texto  = (
             f"El coste de adquisición FIFO de los activos en cartera es de {coste_total:,.2f} EUR, "
-            "por debajo del umbral de 50.000 EUR. Verifica igualmente el valor de mercado "
-            "a 31 de diciembre para confirmar que no supera dicho umbral antes de descartar "
-            "la presentación del Modelo 721."
+            "por debajo del umbral de 50.000 EUR. No obstante, debe verificarse el valor de mercado "
+            "a 31 de diciembre para confirmar que no supera dicho umbral antes de descartar la "
+            "presentación del Modelo 721. Esta valoración es meramente orientativa."
         )
+        borde_color = BORDER
 
     t_style = ParagraphStyle("m721t", fontName="Helvetica-Bold", fontSize=8.5,
-                              textColor=t_color, leading=13)
-    b_style = ParagraphStyle("m721b", fontName="Helvetica",      fontSize=7.5,
-                              textColor=b_color, leading=11.5)
+                              textColor=TEXT, leading=13)
+    b_style = ParagraphStyle("m721b", fontName="Helvetica", fontSize=8.5,
+                              textColor=TEXT_MUTED, leading=12)
 
-    data = [[Paragraph(titulo, t_style), Paragraph(texto, b_style)]]
-    t = Table(data, colWidths=[70*mm, 98*mm])
+    data = [[
+        Paragraph(titulo, t_style),
+        Paragraph(texto,  b_style)
+    ]]
+    t = Table(data, colWidths=[60*mm, 108*mm])
     t.setStyle(TableStyle([
-        ("BACKGROUND",    (0, 0), (-1, -1), bg),
-        ("BOX",           (0, 0), (-1, -1), 0.8, border),
+        ("BACKGROUND",    (0, 0), (-1, -1), INFO_BG),
+        ("BOX",           (0, 0), (-1, -1), 0.8, borde_color),
+        ("LINEAFTER",     (0, 0), (0, -1),  0.5, BORDER),
         ("VALIGN",        (0, 0), (-1, -1), "TOP"),
         ("TOPPADDING",    (0, 0), (-1, -1), 8),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-        ("LEFTPADDING",   (0, 0), (-1, -1), 8),
-        ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 9),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 9),
     ]))
     return [Spacer(1, 4*mm), t]
 
@@ -431,47 +486,52 @@ def _tabla_resumen_activos(resultados, styles):
         Paragraph("ACTIVO",          styles["th"]),
         Paragraph("Nº OPS",          styles["th_right"]),
         Paragraph("GANANCIAS (EUR)", styles["th_right"]),
-        Paragraph("PERDIDAS (EUR)",  styles["th_right"]),
+        Paragraph("PÉRDIDAS (EUR)",  styles["th_right"]),
         Paragraph("NETO (EUR)",      styles["th_right"]),
     ]
     rows = [cabecera]
-    for activo, datos in sorted(por_activo.items()):
+    for i, (activo, datos) in enumerate(sorted(por_activo.items())):
         neto = datos["ganancias"] + datos["perdidas"]
         neto_style = styles["td_green"] if neto >= 0 else styles["td_red"]
         rows.append([
             Paragraph(activo, styles["td"]),
             Paragraph(str(datos["ops"]), styles["td_muted_right"]),
-            Paragraph(f"+{datos['ganancias']:,.4f}" if datos["ganancias"] else "-", styles["td_green"]),
-            Paragraph(f"{datos['perdidas']:,.4f}" if datos["perdidas"] else "-", styles["td_red"]),
+            Paragraph(f"+{datos['ganancias']:,.4f}" if datos["ganancias"] else "—", styles["td_green"]),
+            Paragraph(f"{datos['perdidas']:,.4f}"   if datos["perdidas"]  else "—", styles["td_red"]),
             Paragraph(f"+{neto:,.4f}" if neto >= 0 else f"{neto:,.4f}", neto_style),
         ])
+
     col_w = [28*mm, 18*mm, 44*mm, 44*mm, 34*mm]
     t = Table(rows, colWidths=col_w, repeatRows=1)
+    n = len(rows)
+    row_bgs = []
+    for i in range(1, n):
+        row_bgs.append(("BACKGROUND", (0, i), (-1, i), BG if i % 2 == 1 else TABLE_ALT))
     t.setStyle(TableStyle([
-        ("BACKGROUND",    (0, 0), (-1, 0),  SURFACE),
-        ("LINEBELOW",     (0, 0), (-1, 0),  1, GREEN),
-        ("ROWBACKGROUNDS",(0, 1), (-1, -1), [BLACK, SURFACE2]),
-        ("GRID",          (0, 0), (-1, -1), 0.3, BORDER),
+        ("BACKGROUND",    (0, 0), (-1, 0),  TABLE_HEAD),
+        ("LINEBELOW",     (0, 0), (-1, 0),  1, ACCENT),
+        ("BOX",           (0, 0), (-1, -1), 0.5, BORDER),
+        ("INNERGRID",     (0, 0), (-1, -1), 0.3, BORDER),
         ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
         ("TOPPADDING",    (0, 0), (-1, -1), 5),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
         ("LEFTPADDING",   (0, 0), (-1, -1), 6),
         ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
         ("ALIGN",         (1, 0), (-1, -1), "RIGHT"),
-    ]))
+    ] + row_bgs))
     return t
 
 
 def _tabla_operaciones(resultados, styles):
     cabecera = [
-        Paragraph("FECHA",              styles["th"]),
-        Paragraph("TIPO",               styles["th"]),
-        Paragraph("ACTIVO",             styles["th"]),
-        Paragraph("CANTIDAD",           styles["th_right"]),
-        Paragraph("PRECIO TRANSMISION", styles["th_right"]),
-        Paragraph("COSTE FIFO",         styles["th_right"]),
-        Paragraph("G / P (EUR)",        styles["th_right"]),
-        Paragraph("DIAS",               styles["th_right"]),
+        Paragraph("FECHA",               styles["th"]),
+        Paragraph("TIPO",                styles["th"]),
+        Paragraph("ACTIVO",              styles["th"]),
+        Paragraph("CANTIDAD",            styles["th_right"]),
+        Paragraph("PRECIO TRANSMISIÓN",  styles["th_right"]),
+        Paragraph("COSTE FIFO",          styles["th_right"]),
+        Paragraph("G / P (EUR)",         styles["th_right"]),
+        Paragraph("DÍAS",                styles["th_right"]),
     ]
     rows = [cabecera]
     for r in resultados:
@@ -482,58 +542,63 @@ def _tabla_operaciones(resultados, styles):
             Paragraph(r.fecha.strftime("%d/%m/%Y"), styles["td_muted"]),
             Paragraph(r.tipo_operacion.upper(), styles["td"]),
             Paragraph(r.activo, styles["td"]),
-            Paragraph(f"{r.cantidad_vendida:,.6f}", styles["td_mono"]),
+            Paragraph(f"{r.cantidad_vendida:,.6f}",  styles["td_mono"]),
             Paragraph(f"{r.precio_transmision:,.4f}", styles["td_mono"]),
-            Paragraph(f"{r.precio_coste:,.4f}", styles["td_mono"]),
+            Paragraph(f"{r.precio_coste:,.4f}",       styles["td_mono"]),
             Paragraph(gp_str, gp_style),
             Paragraph(str(int(r.periodo_dias)), styles["td_muted_right"]),
         ])
+
     col_w = [20*mm, 13*mm, 16*mm, 26*mm, 26*mm, 26*mm, 24*mm, 13*mm]
     t = Table(rows, colWidths=col_w, repeatRows=1)
+    n = len(rows)
+    row_bgs = [("BACKGROUND", (0, i), (-1, i), BG if i % 2 == 1 else TABLE_ALT) for i in range(1, n)]
     t.setStyle(TableStyle([
-        ("BACKGROUND",    (0, 0), (-1, 0),  SURFACE),
-        ("LINEBELOW",     (0, 0), (-1, 0),  1, GREEN),
-        ("ROWBACKGROUNDS",(0, 1), (-1, -1), [BLACK, SURFACE2]),
-        ("GRID",          (0, 0), (-1, -1), 0.3, BORDER),
+        ("BACKGROUND",    (0, 0), (-1, 0),  TABLE_HEAD),
+        ("LINEBELOW",     (0, 0), (-1, 0),  1, ACCENT),
+        ("BOX",           (0, 0), (-1, -1), 0.5, BORDER),
+        ("INNERGRID",     (0, 0), (-1, -1), 0.3, BORDER),
         ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
         ("TOPPADDING",    (0, 0), (-1, -1), 4),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
         ("LEFTPADDING",   (0, 0), (-1, -1), 5),
         ("RIGHTPADDING",  (0, 0), (-1, -1), 5),
         ("ALIGN",         (3, 0), (-1, -1), "RIGHT"),
-    ]))
+    ] + row_bgs))
     return t
 
 
 def _tabla_posicion(posiciones, styles):
     cabecera = [
-        Paragraph("ACTIVO",                   styles["th"]),
-        Paragraph("CANTIDAD EN CARTERA",      styles["th_right"]),
-        Paragraph("PRECIO MEDIO ADQUISICION", styles["th_right"]),
-        Paragraph("COSTE TOTAL",              styles["th_right"]),
+        Paragraph("ACTIVO",                    styles["th"]),
+        Paragraph("CANTIDAD EN CARTERA",       styles["th_right"]),
+        Paragraph("PRECIO MEDIO ADQUISICIÓN",  styles["th_right"]),
+        Paragraph("COSTE TOTAL",               styles["th_right"]),
     ]
     rows = [cabecera]
     for pos in posiciones:
         rows.append([
             Paragraph(pos.activo, styles["td"]),
-            Paragraph(f"{pos.cantidad_total:,.6f}", styles["td_mono"]),
-            Paragraph(f"{pos.precio_medio:,.4f} EUR", styles["td_mono"]),
-            Paragraph(f"{pos.coste_total:,.4f} EUR", styles["td_mono"]),
+            Paragraph(f"{pos.cantidad_total:,.6f}",   styles["td_mono"]),
+            Paragraph(f"{pos.precio_medio:,.4f} EUR",  styles["td_mono"]),
+            Paragraph(f"{pos.coste_total:,.4f} EUR",   styles["td_mono"]),
         ])
     col_w = [28*mm, 50*mm, 54*mm, 36*mm]
     t = Table(rows, colWidths=col_w, repeatRows=1)
+    n = len(rows)
+    row_bgs = [("BACKGROUND", (0, i), (-1, i), BG if i % 2 == 1 else TABLE_ALT) for i in range(1, n)]
     t.setStyle(TableStyle([
-        ("BACKGROUND",    (0, 0), (-1, 0),  SURFACE),
-        ("LINEBELOW",     (0, 0), (-1, 0),  1, GREEN),
-        ("ROWBACKGROUNDS",(0, 1), (-1, -1), [BLACK, SURFACE2]),
-        ("GRID",          (0, 0), (-1, -1), 0.3, BORDER),
+        ("BACKGROUND",    (0, 0), (-1, 0),  TABLE_HEAD),
+        ("LINEBELOW",     (0, 0), (-1, 0),  1, ACCENT),
+        ("BOX",           (0, 0), (-1, -1), 0.5, BORDER),
+        ("INNERGRID",     (0, 0), (-1, -1), 0.3, BORDER),
         ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
         ("TOPPADDING",    (0, 0), (-1, -1), 5),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
         ("LEFTPADDING",   (0, 0), (-1, -1), 6),
         ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
         ("ALIGN",         (1, 0), (-1, -1), "RIGHT"),
-    ]))
+    ] + row_bgs))
     return t
 
 
@@ -541,13 +606,12 @@ def _tabla_rendimientos(rendimientos: list, styles) -> object:
     """Tabla de rendimientos (staking, rebates, etc.) para el PDF."""
     from collections import defaultdict
 
-    # Agrupar por activo y subtipo
     agrupado = defaultdict(lambda: {"cantidad": 0.0, "ops": 0, "subtipo": ""})
     for r in rendimientos:
         key = (r.activo, r.subtipo)
         agrupado[key]["cantidad"] += r.cantidad
-        agrupado[key]["ops"] += 1
-        agrupado[key]["subtipo"] = r.subtipo
+        agrupado[key]["ops"]      += 1
+        agrupado[key]["subtipo"]   = r.subtipo
 
     cabecera = [
         Paragraph("ACTIVO",         styles["th"]),
@@ -566,18 +630,20 @@ def _tabla_rendimientos(rendimientos: list, styles) -> object:
 
     col_w = [28*mm, 60*mm, 28*mm, 52*mm]
     t = Table(rows, colWidths=col_w, repeatRows=1)
+    n = len(rows)
+    row_bgs = [("BACKGROUND", (0, i), (-1, i), BG if i % 2 == 1 else TABLE_ALT) for i in range(1, n)]
     t.setStyle(TableStyle([
-        ("BACKGROUND",    (0, 0), (-1, 0),  SURFACE),
-        ("LINEBELOW",     (0, 0), (-1, 0),  1, GREEN),
-        ("ROWBACKGROUNDS",(0, 1), (-1, -1), [BLACK, SURFACE2]),
-        ("GRID",          (0, 0), (-1, -1), 0.3, BORDER),
+        ("BACKGROUND",    (0, 0), (-1, 0),  TABLE_HEAD),
+        ("LINEBELOW",     (0, 0), (-1, 0),  1, ACCENT),
+        ("BOX",           (0, 0), (-1, -1), 0.5, BORDER),
+        ("INNERGRID",     (0, 0), (-1, -1), 0.3, BORDER),
         ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
         ("TOPPADDING",    (0, 0), (-1, -1), 5),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
         ("LEFTPADDING",   (0, 0), (-1, -1), 6),
         ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
         ("ALIGN",         (2, 0), (-1, -1), "RIGHT"),
-    ]))
+    ] + row_bgs))
     return t
 
 
@@ -590,8 +656,8 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
 
     doc = SimpleDocTemplate(
         buf, pagesize=A4,
-        leftMargin=18*mm, rightMargin=18*mm,
-        topMargin=33*mm, bottomMargin=18*mm,
+        leftMargin=20*mm, rightMargin=20*mm,
+        topMargin=22*mm, bottomMargin=20*mm,
         title=f"Informe Fiscal Cripto {ejercicio} - Mariano Sevilla",
         author="marianosevilla.com"
     )
@@ -646,7 +712,7 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
         story.append(Spacer(1, 3*mm))
         story.append(_tabla_posicion(posiciones, styles))
 
-    # 6. RENDIMIENTOS (staking, rebates, etc.)
+    # 6. RENDIMIENTOS
     if rendimientos:
         story.append(Spacer(1, 8*mm))
         story.append(Paragraph("Rendimientos de Capital Mobiliario", styles["section"]))
@@ -667,12 +733,12 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
             Paragraph("Las siguientes situaciones requieren comprobación manual.", styles["body_muted"]),
             Spacer(1, 3*mm),
         ]))
-        warn_data = [[Paragraph(f"!  {adv}", styles["warning"])] for adv in motor.advertencias]
-        t_warn = Table(warn_data, colWidths=[168*mm])
+        warn_rows = [[Paragraph(f"⚠  {adv}", styles["warning"])] for adv in motor.advertencias]
+        t_warn = Table(warn_rows, colWidths=[168*mm])
         t_warn.setStyle(TableStyle([
-            ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#1A0A0A")),
-            ("BOX",           (0, 0), (-1, -1), 0.5, colors.HexColor("#3A1A1A")),
-            ("ROWBACKGROUNDS",(0, 0), (-1, -1), [colors.HexColor("#1A0A0A"), colors.HexColor("#1E0C0C")]),
+            ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#FEF9F0")),
+            ("BOX",           (0, 0), (-1, -1), 0.5, colors.HexColor("#FCD34D")),
+            ("INNERGRID",     (0, 0), (-1, -1), 0.3, BORDER),
             ("TOPPADDING",    (0, 0), (-1, -1), 5),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
             ("LEFTPADDING",   (0, 0), (-1, -1), 8),
@@ -683,53 +749,70 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
     # 8. NOTAS EXPLICATIVAS
     story.append(PageBreak())
     story.append(Paragraph("Notas Explicativas", styles["section"]))
+    story.append(Paragraph(
+        "Conceptos fiscales aplicados en la generación de este informe.",
+        styles["body_muted"]
+    ))
+    story.append(Spacer(1, 4*mm))
 
     notas = [
-        ("Método FIFO", "art. 37.2 LIRPF",
+        ("Método FIFO\nart. 37.2 LIRPF",
          "La normativa española establece que cuando existan valores homogéneos, se considerará que los "
          "transmitidos son los adquiridos en primer lugar (First In, First Out). Este método es obligatorio "
          "y no puede sustituirse por LIFO, HIFO ni precio medio."),
-        ("Comisiones de compra", "incrementan el coste",
+        ("Comisiones de compra\nincremento del coste",
          "Las comisiones pagadas en el momento de adquirir un criptoactivo forman parte del precio de "
          "adquisición y se suman al coste del lote correspondiente. Esto reduce la ganancia futura o "
          "aumenta la pérdida cuando se venda dicho lote."),
-        ("Comisiones de venta", "reducen el valor de transmisión",
+        ("Comisiones de venta\nreducción del valor de transmisión",
          "Las comisiones pagadas al vender un criptoactivo reducen el valor de transmisión declarado. "
          "Esto reduce la ganancia o aumenta la pérdida resultante de la operación."),
-        ("Swaps entre criptoactivos", "hecho imponible",
+        ("Swaps entre criptoactivos\nhecho imponible",
          "El intercambio directo entre dos criptoactivos distintos se considera una transmisión a efectos "
          "del IRPF. Genera una ganancia o pérdida patrimonial calculada como la diferencia entre el valor "
          "de mercado del activo recibido y el coste FIFO del activo entregado."),
-        ("Depósitos y retiradas", "no generan hecho imponible",
-         "Los movimientos de criptoactivos entre wallets propias o entre exchanges no constituyen "
-         "transmisión patrimonial. Sin embargo, es importante conservar los registros para acreditar "
+        ("Depósitos y retiradas\nno generan hecho imponible",
+         "Los movimientos de criptoactivos entre wallets propias o entre exchanges del mismo titular no "
+         "constituyen transmisión patrimonial. Es importante conservar los registros para acreditar "
          "que se trata del mismo titular."),
-        ("Staking y rendimientos", "rendimiento de capital mobiliario",
+        ("Staking y rendimientos\nrendimiento de capital mobiliario",
          "Los ingresos por staking, intereses de lending o comisiones de referido se califican "
          "generalmente como rendimientos de capital mobiliario y tributan a la tarifa del ahorro (19-28%). "
          "Esta herramienta los clasifica pero no los incluye en el cálculo de la base del ahorro por transmisiones."),
     ]
 
-    for titulo_nota, subtitulo, texto in notas:
-        nota_data = [[
-            Paragraph(f"{titulo_nota}\n{subtitulo}", styles["nota_label"]),
-            Paragraph(texto, styles["nota_body"])
-        ]]
-        t_nota = Table(nota_data, colWidths=[38*mm, 130*mm])
-        t_nota.setStyle(TableStyle([
-            ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#0E0E00")),
-            ("BOX",           (0, 0), (-1, -1), 0.5, colors.HexColor("#2A2A00")),
-            ("VALIGN",        (0, 0), (-1, -1), "TOP"),
-            ("TOPPADDING",    (0, 0), (-1, -1), 7),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
-            ("LEFTPADDING",   (0, 0), (-1, -1), 8),
-            ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
-        ]))
-        story.append(KeepTogether([t_nota, Spacer(1, 3*mm)]))
+    # Tabla de notas — dos columnas: Concepto | Explicación
+    notas_cabecera = [
+        Paragraph("CONCEPTO", styles["th"]),
+        Paragraph("EXPLICACIÓN", styles["th"]),
+    ]
+    notas_rows = [notas_cabecera]
+    for titulo_nota, texto in notas:
+        partes = titulo_nota.split("\n")
+        celda_izq = [Paragraph(partes[0], styles["nota_label"])]
+        if len(partes) > 1:
+            celda_izq.append(Paragraph(partes[1], styles["nota_sub"]))
+        notas_rows.append([celda_izq, Paragraph(texto, styles["nota_body"])])
+
+    t_notas = Table(notas_rows, colWidths=[46*mm, 122*mm])
+    n = len(notas_rows)
+    row_bgs_n = [("BACKGROUND", (0, i), (-1, i), BG if i % 2 == 1 else TABLE_ALT) for i in range(1, n)]
+    t_notas.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, 0),  TABLE_HEAD),
+        ("LINEBELOW",     (0, 0), (-1, 0),  1, ACCENT),
+        ("BOX",           (0, 0), (-1, -1), 0.5, BORDER),
+        ("INNERGRID",     (0, 0), (-1, -1), 0.3, BORDER),
+        ("VALIGN",        (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING",    (0, 0), (-1, -1), 7),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
+    ] + row_bgs_n))
+    story.append(t_notas)
 
     # DISCLAIMER
     story.append(Spacer(1, 8*mm))
-    story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=RULE_COLOR))
     story.append(Spacer(1, 4*mm))
     story.append(Paragraph(
         "Este documento ha sido generado automáticamente por la herramienta de Mariano Sevilla "
@@ -753,8 +836,8 @@ def generar_pdf_bit2me(clasificador, nombre_usuario="", ejercicio="") -> bytes:
 
     doc = SimpleDocTemplate(
         buf, pagesize=A4,
-        leftMargin=18*mm, rightMargin=18*mm,
-        topMargin=33*mm, bottomMargin=18*mm,
+        leftMargin=20*mm, rightMargin=20*mm,
+        topMargin=22*mm, bottomMargin=20*mm,
         title=f"Informe Fiscal Cripto {ejercicio} - Bit2Me - Mariano Sevilla",
         author="marianosevilla.com"
     )
@@ -787,31 +870,33 @@ def generar_pdf_bit2me(clasificador, nombre_usuario="", ejercicio="") -> bytes:
         ]
         rows = [cabecera]
         for r in clasificador.resultados:
-            gp = r.ganancia_perdida
+            gp   = r.ganancia_perdida
             gp_s = styles["td_green"] if gp >= 0 else styles["td_red"]
             rows.append([
                 Paragraph(r.fecha_venta[:10], styles["td_muted"]),
-                Paragraph(r.tipo_op.upper(), styles["td"]),
-                Paragraph(r.activo, styles["td"]),
-                Paragraph(f"{r.cantidad:,.6f}", styles["td_mono"]),
-                Paragraph(f"{r.precio_transmision:,.4f}", styles["td_mono"]),
-                Paragraph(f"{r.precio_coste:,.4f}", styles["td_mono"]),
+                Paragraph(r.tipo_op.upper(),  styles["td"]),
+                Paragraph(r.activo,           styles["td"]),
+                Paragraph(f"{r.cantidad:,.6f}",            styles["td_mono"]),
+                Paragraph(f"{r.precio_transmision:,.4f}",  styles["td_mono"]),
+                Paragraph(f"{r.precio_coste:,.4f}",        styles["td_mono"]),
                 Paragraph(f"+{gp:,.4f}" if gp >= 0 else f"{gp:,.4f}", gp_s),
             ])
         col_w = [22*mm, 14*mm, 18*mm, 28*mm, 32*mm, 32*mm, 22*mm]
         t = Table(rows, colWidths=col_w, repeatRows=1)
+        n = len(rows)
+        row_bgs = [("BACKGROUND", (0, i), (-1, i), BG if i % 2 == 1 else TABLE_ALT) for i in range(1, n)]
         t.setStyle(TableStyle([
-            ("BACKGROUND",    (0, 0), (-1, 0),  SURFACE),
-            ("LINEBELOW",     (0, 0), (-1, 0),  1, GREEN),
-            ("ROWBACKGROUNDS",(0, 1), (-1, -1), [BLACK, SURFACE2]),
-            ("GRID",          (0, 0), (-1, -1), 0.3, BORDER),
+            ("BACKGROUND",    (0, 0), (-1, 0),  TABLE_HEAD),
+            ("LINEBELOW",     (0, 0), (-1, 0),  1, ACCENT),
+            ("BOX",           (0, 0), (-1, -1), 0.5, BORDER),
+            ("INNERGRID",     (0, 0), (-1, -1), 0.3, BORDER),
             ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
             ("TOPPADDING",    (0, 0), (-1, -1), 4),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
             ("LEFTPADDING",   (0, 0), (-1, -1), 5),
             ("RIGHTPADDING",  (0, 0), (-1, -1), 5),
             ("ALIGN",         (3, 0), (-1, -1), "RIGHT"),
-        ]))
+        ] + row_bgs))
         story.append(t)
 
     # Rendimientos
@@ -829,13 +914,22 @@ def generar_pdf_bit2me(clasificador, nombre_usuario="", ejercicio="") -> bytes:
     if clasificador.advertencias:
         story.append(Spacer(1, 8*mm))
         story.append(Paragraph("Advertencias", styles["section"]))
-        for adv in clasificador.advertencias:
-            story.append(Paragraph(f"! {adv}", styles["warning"]))
-            story.append(Spacer(1, 2*mm))
+        warn_rows = [[Paragraph(f"⚠  {adv}", styles["warning"])] for adv in clasificador.advertencias]
+        t_warn = Table(warn_rows, colWidths=[168*mm])
+        t_warn.setStyle(TableStyle([
+            ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#FEF9F0")),
+            ("BOX",           (0, 0), (-1, -1), 0.5, colors.HexColor("#FCD34D")),
+            ("INNERGRID",     (0, 0), (-1, -1), 0.3, BORDER),
+            ("TOPPADDING",    (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ("LEFTPADDING",   (0, 0), (-1, -1), 8),
+            ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
+        ]))
+        story.append(t_warn)
 
     # Disclaimer
     story.append(Spacer(1, 8*mm))
-    story.append(HRFlowable(width="100%", thickness=0.5, color=BORDER))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=RULE_COLOR))
     story.append(Spacer(1, 4*mm))
     story.append(Paragraph(
         "Los resultados de este informe provienen de los datos calculados por Bit2Me en su informe fiscal oficial. "
