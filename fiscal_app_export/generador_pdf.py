@@ -172,6 +172,27 @@ def _portada(story, styles, resumen, nombre_usuario, ejercicio, exchange, period
 
     # Aviso legal compacto
     story.append(_aviso_legal_caja(styles))
+
+    # Nota FIFO (solo cuando se han seleccionado ejercicios concretos)
+    if ejercicio and ejercicio.lower() != "all":
+        fifo_data = [[Paragraph(
+            "<b>Nota sobre el cálculo FIFO:</b> El cálculo de costes se realiza utilizando el histórico "
+            "completo del CSV para respetar correctamente la cola FIFO (art. 37.2 LIRPF). "
+            "Este informe muestra únicamente las transmisiones y rendimientos correspondientes "
+            "a los ejercicios fiscales seleccionados.",
+            styles["aviso_legal"])]]
+        t_fifo = Table(fifo_data, colWidths=[168*mm])
+        t_fifo.setStyle(TableStyle([
+            ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#EFF6FF")),
+            ("BOX",           (0, 0), (-1, -1), 0.5, colors.HexColor("#BFDBFE")),
+            ("TOPPADDING",    (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("LEFTPADDING",   (0, 0), (-1, -1), 8),
+            ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
+        ]))
+        story.append(Spacer(1, 3*mm))
+        story.append(t_fifo)
+
     story.append(Spacer(1, 6*mm))
 
     # ── Resumen ejecutivo — 4 tarjetas ──────────────────────────────────
@@ -438,26 +459,80 @@ def _bloque_compensaciones(ganancias, perdidas, neto, rendimientos_list, styles)
     return flowables
 
 
-def _bloque_modelo_721(posiciones, styles):
-    """Bloque Modelo 721 — presentación prudente y print-friendly."""
+def _bloque_modelo_721(posiciones, styles, ejercicio=""):
+    """Bloque Modelo 721 — presentación prudente y print-friendly.
+
+    Si se han seleccionado varios ejercicios, muestra un aviso genérico.
+    Si es un año único, muestra el análisis con referencia explícita a ese año.
+    """
+    ejercicio = (ejercicio or "").strip()
+    es_multi  = False
+    año_label = ""
+
+    if ejercicio and ejercicio.lower() != "all":
+        partes = [p.strip() for p in ejercicio.split(",") if p.strip()]
+        if len(partes) > 1:
+            es_multi  = True
+            año_label = ", ".join(partes)
+        elif len(partes) == 1:
+            año_label = partes[0]
+
+    # ── Caso multi-año: mensaje genérico prudente ──────────────────────
+    if es_multi:
+        t_style = ParagraphStyle("m721t", fontName="Helvetica-Bold", fontSize=8.5,
+                                  textColor=TEXT, leading=13)
+        b_style = ParagraphStyle("m721b", fontName="Helvetica", fontSize=8.5,
+                                  textColor=TEXT_MUTED, leading=12)
+        titulo  = f"Modelo 721 — Revisión orientativa (ejercicios {año_label})"
+        texto   = (
+            "El informe abarca varios ejercicios fiscales. La obligación de presentar el Modelo 721 "
+            "debe evaluarse por separado para cada ejercicio a 31 de diciembre de cada año, "
+            "comprobando si el valor de mercado de los activos en exchanges extranjeros superó "
+            "los 50.000 EUR en esa fecha. Consulta con tu asesor fiscal."
+        )
+        data = [[Paragraph(titulo, t_style), Paragraph(texto, b_style)]]
+        t = Table(data, colWidths=[60*mm, 108*mm])
+        t.setStyle(TableStyle([
+            ("BACKGROUND",    (0, 0), (-1, -1), INFO_BG),
+            ("BOX",           (0, 0), (-1, -1), 0.8, BORDER),
+            ("LINEAFTER",     (0, 0), (0, -1),  0.5, BORDER),
+            ("VALIGN",        (0, 0), (-1, -1), "TOP"),
+            ("TOPPADDING",    (0, 0), (-1, -1), 8),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+            ("LEFTPADDING",   (0, 0), (-1, -1), 9),
+            ("RIGHTPADDING",  (0, 0), (-1, -1), 9),
+        ]))
+        return [Spacer(1, 4*mm), t]
+
+    # ── Caso año único o todos ─────────────────────────────────────────
     coste_total = sum(p.coste_total for p in posiciones) if posiciones else 0.0
 
+    if año_label:
+        sufijo_fecha = f"a 31 de diciembre de {año_label}"
+        sufijo_nota  = (
+            f" Tenga en cuenta que este análisis usa la posición al cierre del CSV, "
+            f"no necesariamente el saldo exacto a 31/12/{año_label}."
+        )
+    else:
+        sufijo_fecha = "a 31 de diciembre del ejercicio"
+        sufijo_nota  = ""
+
     if coste_total >= 50_000:
-        titulo = "Modelo 721 — Revisión orientativa: posiblemente obligatorio"
+        titulo = f"Modelo 721 — Revisión orientativa: posiblemente obligatorio"
         texto  = (
             f"El coste de adquisición FIFO de los activos en cartera asciende a {coste_total:,.2f} EUR. "
-            "Debe verificarse el valor de mercado a 31 de diciembre: si supera 50.000 EUR en exchanges "
+            f"Debe verificarse el valor de mercado {sufijo_fecha}: si supera 50.000 EUR en exchanges "
             "extranjeros (como Binance o Kraken), la presentación del Modelo 721 sería obligatoria "
-            "antes del 31 de marzo del ejercicio siguiente. Consulta con tu asesor fiscal para confirmar."
+            f"antes del 31 de marzo del ejercicio siguiente. Consulta con tu asesor fiscal.{sufijo_nota}"
         )
-        borde_color = colors.HexColor("#B45309")  # ámbar oscuro
+        borde_color = colors.HexColor("#B45309")
     else:
-        titulo = "Modelo 721 — Revisión orientativa: en principio no obligatorio"
+        titulo = f"Modelo 721 — Revisión orientativa: en principio no obligatorio"
         texto  = (
             f"El coste de adquisición FIFO de los activos en cartera es de {coste_total:,.2f} EUR, "
             "por debajo del umbral de 50.000 EUR. No obstante, debe verificarse el valor de mercado "
-            "a 31 de diciembre para confirmar que no supera dicho umbral antes de descartar la "
-            "presentación del Modelo 721. Esta valoración es meramente orientativa."
+            f"{sufijo_fecha} para confirmar que no supera dicho umbral antes de descartar la "
+            f"presentación del Modelo 721. Esta valoración es meramente orientativa.{sufijo_nota}"
         )
         borde_color = BORDER
 
@@ -466,10 +541,7 @@ def _bloque_modelo_721(posiciones, styles):
     b_style = ParagraphStyle("m721b", fontName="Helvetica", fontSize=8.5,
                               textColor=TEXT_MUTED, leading=12)
 
-    data = [[
-        Paragraph(titulo, t_style),
-        Paragraph(texto,  b_style)
-    ]]
+    data = [[Paragraph(titulo, t_style), Paragraph(texto, b_style)]]
     t = Table(data, colWidths=[60*mm, 108*mm])
     t.setStyle(TableStyle([
         ("BACKGROUND",    (0, 0), (-1, -1), INFO_BG),
@@ -684,7 +756,7 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
             resumen["ganancias_brutas"], resumen["perdidas_brutas"],
             resumen["resultado_neto"], rendimientos, styles):
         story.append(fl)
-    for fl in _bloque_modelo_721(posiciones, styles):
+    for fl in _bloque_modelo_721(posiciones, styles, ejercicio):
         story.append(fl)
 
     # 3. RESUMEN POR ACTIVO + GRÁFICO
@@ -722,6 +794,17 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
             "Estos lotes no han generado hecho imponible y se valorarán cuando se transmitan.",
             styles["body_muted"]
         ))
+        # Nota prudente cuando se filtra por ejercicio concreto
+        _ej = (ejercicio or "").strip()
+        if _ej and _ej.lower() != "all":
+            _partes = [p.strip() for p in _ej.split(",") if p.strip()]
+            _año_txt = _partes[-1] if _partes else _ej
+            story.append(Paragraph(
+                f"Nota: el inventario refleja la situación tras todas las operaciones contenidas "
+                f"en el CSV, no necesariamente el saldo exacto a 31 de diciembre de {_año_txt}. "
+                "Verifique y concilie con los saldos reales en su exchange o wallet.",
+                styles["body_muted"]
+            ))
         story.append(Spacer(1, 3*mm))
         story.append(_tabla_posicion(posiciones, styles))
 
@@ -792,6 +875,12 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
          "Los ingresos por staking, intereses de lending o comisiones de referido se califican "
          "generalmente como rendimientos de capital mobiliario y tributan a la tarifa del ahorro (19-28%). "
          "Esta herramienta los clasifica pero no los incluye en el cálculo de la base del ahorro por transmisiones."),
+        ("Filtrado por ejercicio\nbase FIFO = histórico completo",
+         "Cuando se seleccionan ejercicios concretos, el cálculo FIFO se realiza sobre la totalidad "
+         "del historial del CSV para respetar la normativa (art. 37.2 LIRPF). El informe muestra "
+         "únicamente las transmisiones y rendimientos cuya fecha corresponde a los ejercicios "
+         "seleccionados, pero el coste FIFO de cada venta se calcula correctamente usando las "
+         "compras previas aunque sean de ejercicios anteriores."),
     ]
 
     # Tabla de notas — dos columnas: Concepto | Explicación

@@ -601,6 +601,23 @@ def _filtrar_bit2me_por_ejercicio(clasificador, ejercicio_str: str) -> None:
     ]
 
 
+def _filtrar_rendimientos_por_ejercicio(rendimientos: list, ejercicio_str: str) -> list:
+    """Filtra rendimientos (staking, rebates…) por los años seleccionados.
+    La fecha de cada rendimiento es una cadena tipo '2024-01-15 …'; se extrae el año de los 4 primeros chars.
+    """
+    años = _años_seleccionados(ejercicio_str)
+    if not años:
+        return rendimientos
+    resultado = []
+    for r in rendimientos:
+        try:
+            if int(str(r.fecha)[:4]) in años:
+                resultado.append(r)
+        except (ValueError, TypeError, AttributeError):
+            resultado.append(r)  # si la fecha no es parseable, incluir por precaución
+    return resultado
+
+
 def _ejercicio_a_fiscal_year(ejercicio_str: str) -> int:
     """Extrae el primer año de ejercicio para logging (0 si vacío o 'all')."""
     if not ejercicio_str or ejercicio_str.strip().lower() == "all":
@@ -1160,7 +1177,7 @@ def analizar():
 
     archivo   = request.files["csv"]
     nombre    = _sanitizar_texto(request.form.get("nombre", ""))
-    ejercicio = _sanitizar_texto(request.form.get("ejercicio", ""), max_len=4)
+    ejercicio = _sanitizar_texto(request.form.get("ejercicio", ""), max_len=40)  # "all" o "2024,2025"
     exchange  = _sanitizar_texto(request.form.get("exchange", "binance"), max_len=20).lower()
 
     # Validar exchange
@@ -1194,6 +1211,8 @@ def analizar():
         if exchange == "bit2me":
             clasificador, _r, _ops = procesar_bit2me(tmp_path)
             _filtrar_bit2me_por_ejercicio(clasificador, ejercicio)
+            clasificador.rendimientos = _filtrar_rendimientos_por_ejercicio(
+                clasificador.rendimientos, ejercicio)
             resumen = clasificador.resumen_fiscal()
             operaciones = [
                 {
@@ -1216,6 +1235,7 @@ def analizar():
         elif exchange == "bitvavo":
             motor, rendimientos = procesar_bitvavo(tmp_path)
             _filtrar_motor_por_ejercicio(motor, ejercicio)
+            rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
             resumen, posicion, operaciones = _motor_a_json(motor)
             advertencias = motor.advertencias
             rendimientos_json = _rendimientos_a_json(rendimientos)
@@ -1224,6 +1244,7 @@ def analizar():
         elif exchange == "kraken":
             motor, rendimientos = procesar_kraken(tmp_path)
             _filtrar_motor_por_ejercicio(motor, ejercicio)
+            rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
             resumen, posicion, operaciones = _motor_a_json(motor)
             advertencias = motor.advertencias
             rendimientos_json = _rendimientos_a_json(rendimientos)
@@ -1232,6 +1253,7 @@ def analizar():
         elif exchange == "coinbase":
             motor, rendimientos = procesar_coinbase(tmp_path)
             _filtrar_motor_por_ejercicio(motor, ejercicio)
+            rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
             resumen, posicion, operaciones = _motor_a_json(motor)
             advertencias = motor.advertencias
             rendimientos_json = _rendimientos_a_json(rendimientos)
@@ -1240,6 +1262,7 @@ def analizar():
         elif exchange == "nexo":
             motor, rendimientos = procesar_nexo(tmp_path)
             _filtrar_motor_por_ejercicio(motor, ejercicio)
+            rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
             resumen, posicion, operaciones = _motor_a_json(motor)
             advertencias = motor.advertencias
             rendimientos_json = _rendimientos_a_json(rendimientos)
@@ -1248,6 +1271,7 @@ def analizar():
         elif exchange == "cryptocom":
             motor, rendimientos = procesar_cryptocom(tmp_path)
             _filtrar_motor_por_ejercicio(motor, ejercicio)
+            rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
             resumen, posicion, operaciones = _motor_a_json(motor)
             advertencias = motor.advertencias
             rendimientos_json = _rendimientos_a_json(rendimientos)
@@ -1259,6 +1283,7 @@ def analizar():
             else:
                 motor, rendimientos = procesar_binance(tmp_path)
             _filtrar_motor_por_ejercicio(motor, ejercicio)
+            rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
             resumen, posicion, operaciones = _motor_a_json(motor)
             advertencias = motor.advertencias
             rendimientos_json = _rendimientos_a_json(rendimientos)
