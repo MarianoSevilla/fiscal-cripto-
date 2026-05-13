@@ -137,9 +137,23 @@ def _aviso_legal_caja(styles):
 def _portada(story, styles, resumen, nombre_usuario, ejercicio, exchange, periodo=None):
     story.append(Spacer(1, 4*mm))
 
+    # ── Construir textos de ejercicio ────────────────────────────────────
+    ejercicio = (ejercicio or "").strip()
+    if ejercicio and ejercicio.lower() != "all":
+        partes = sorted([p.strip() for p in ejercicio.split(",") if p.strip()])
+        if len(partes) == 1:
+            titulo_ejercicio = partes[0]
+            texto_ejercicio  = f"<b>Ejercicio fiscal:</b>  {partes[0]}"
+        else:
+            titulo_ejercicio = ", ".join(partes)
+            texto_ejercicio  = f"<b>Ejercicios fiscales:</b>  {', '.join(partes)}"
+    else:
+        titulo_ejercicio = None
+        texto_ejercicio  = "<b>Ejercicios:</b>  Todos los incluidos en el CSV"
+
     titulo = "Informe Fiscal Cripto"
-    if ejercicio:
-        titulo += f"  {ejercicio}"
+    if titulo_ejercicio:
+        titulo += f"  {titulo_ejercicio}"
     story.append(Paragraph(titulo, styles["title"]))
     story.append(Paragraph("Método FIFO · Art. 37.2 LIRPF · IRPF Base del Ahorro", styles["subtitle"]))
     story.append(Spacer(1, 4*mm))
@@ -147,9 +161,8 @@ def _portada(story, styles, resumen, nombre_usuario, ejercicio, exchange, period
     # Datos del informe
     if nombre_usuario:
         story.append(Paragraph(f"<b>Preparado para:</b>  {nombre_usuario.upper()}", styles["body"]))
-    if ejercicio:
-        story.append(Paragraph(f"<b>Ejercicio fiscal:</b>  {ejercicio}", styles["body"]))
-    elif periodo and periodo.get("fecha_min"):
+    story.append(Paragraph(texto_ejercicio, styles["body"]))
+    if not ejercicio and periodo and periodo.get("fecha_min"):
         story.append(Paragraph(f"<b>Período analizado:</b>  {periodo['fecha_min']} — {periodo['fecha_max']}", styles["body"]))
     if exchange:
         story.append(Paragraph(f"<b>Exchange:</b>  {exchange}", styles["body"]))
@@ -658,7 +671,7 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
         buf, pagesize=A4,
         leftMargin=20*mm, rightMargin=20*mm,
         topMargin=22*mm, bottomMargin=20*mm,
-        title=f"Informe Fiscal Cripto {ejercicio} - Mariano Sevilla",
+        title=f"Informe Fiscal Cripto {ejercicio or 'Completo'} - Mariano Sevilla",
         author="marianosevilla.com"
     )
     story = []
@@ -838,7 +851,7 @@ def generar_pdf_bit2me(clasificador, nombre_usuario="", ejercicio="") -> bytes:
         buf, pagesize=A4,
         leftMargin=20*mm, rightMargin=20*mm,
         topMargin=22*mm, bottomMargin=20*mm,
-        title=f"Informe Fiscal Cripto {ejercicio} - Bit2Me - Mariano Sevilla",
+        title=f"Informe Fiscal Cripto {ejercicio or 'Completo'} - Bit2Me - Mariano Sevilla",
         author="marianosevilla.com"
     )
     story = []

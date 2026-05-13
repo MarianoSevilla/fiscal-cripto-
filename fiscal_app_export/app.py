@@ -558,17 +558,58 @@ def _title_case(texto: str) -> str:
 
 
 def _validar_ejercicio(ejercicio: str) -> tuple[bool, str]:
-    """Valida que el ejercicio sea un año entre 2009 y año_actual+1."""
-    if not ejercicio:
-        return True, ""  # Campo opcional — si está vacío, OK
-    if not re.match(r"^\d{4}$", ejercicio):
-        return False, "El ejercicio fiscal debe ser un año de 4 dígitos (ej: 2024)."
-    año = int(ejercicio)
-    if año < AÑO_MIN:
-        return False, f"El ejercicio fiscal no puede ser anterior a {AÑO_MIN}."
-    if año > AÑO_MAX:
-        return False, f"El ejercicio fiscal no puede ser posterior a {AÑO_MAX}."
+    """Valida ejercicio: vacío, 'all', un año o varios años separados por coma."""
+    if not ejercicio or ejercicio.strip().lower() == "all":
+        return True, ""
+    for part in ejercicio.split(","):
+        part = part.strip()
+        if not re.match(r"^\d{4}$", part):
+            return False, "Formato de ejercicio fiscal inválido. Usa años de 4 dígitos separados por coma."
+        año = int(part)
+        if año < AÑO_MIN:
+            return False, f"El ejercicio fiscal no puede ser anterior a {AÑO_MIN}."
+        if año > AÑO_MAX:
+            return False, f"El ejercicio fiscal no puede ser posterior a {AÑO_MAX}."
     return True, ""
+
+
+def _años_seleccionados(ejercicio_str: str) -> set:
+    """Devuelve set de años enteros, o vacío si ejercicio es 'all'/vacío (= sin filtro)."""
+    if not ejercicio_str or ejercicio_str.strip().lower() == "all":
+        return set()
+    return {int(p.strip()) for p in ejercicio_str.split(",") if p.strip().isdigit()}
+
+
+def _filtrar_motor_por_ejercicio(motor, ejercicio_str: str) -> None:
+    """Filtra motor.resultados por los años seleccionados.
+    El inventario FIFO (posicion_actual) no se modifica: el cálculo usa todo el histórico.
+    """
+    años = _años_seleccionados(ejercicio_str)
+    if not años:
+        return
+    motor.resultados = [r for r in motor.resultados if r.fecha.year in años]
+
+
+def _filtrar_bit2me_por_ejercicio(clasificador, ejercicio_str: str) -> None:
+    """Filtra clasificador.resultados de Bit2Me por los años seleccionados."""
+    años = _años_seleccionados(ejercicio_str)
+    if not años:
+        return
+    clasificador.resultados = [
+        r for r in clasificador.resultados
+        if len(r.fecha_venta) >= 4 and int(r.fecha_venta[:4]) in años
+    ]
+
+
+def _ejercicio_a_fiscal_year(ejercicio_str: str) -> int:
+    """Extrae el primer año de ejercicio para logging (0 si vacío o 'all')."""
+    if not ejercicio_str or ejercicio_str.strip().lower() == "all":
+        return 0
+    for p in ejercicio_str.split(","):
+        p = p.strip()
+        if p.isdigit() and len(p) == 4:
+            return int(p)
+    return 0
 
 
 def _validar_csv(filepath: str, exchange: str) -> tuple[bool, str]:
@@ -1151,7 +1192,22 @@ def analizar():
         rendimientos_json = []
 
         if exchange == "bit2me":
-            clasificador, resumen, operaciones = procesar_bit2me(tmp_path)
+            clasificador, _r, _ops = procesar_bit2me(tmp_path)
+            _filtrar_bit2me_por_ejercicio(clasificador, ejercicio)
+            resumen = clasificador.resumen_fiscal()
+            operaciones = [
+                {
+                    "fecha": res.fecha_venta[:10],
+                    "tipo": res.tipo_op,
+                    "activo": res.activo,
+                    "cantidad": round(res.cantidad, 6),
+                    "transmision": round(res.precio_transmision, 4),
+                    "coste_fifo": round(res.precio_coste, 4),
+                    "ganancia_perdida": round(res.ganancia_perdida, 4),
+                    "periodo_dias": 0,
+                }
+                for res in clasificador.resultados
+            ]
             advertencias = clasificador.advertencias
             posicion = []
             rendimientos_json = _rendimientos_a_json(clasificador.rendimientos)
@@ -1159,6 +1215,7 @@ def analizar():
 
         elif exchange == "bitvavo":
             motor, rendimientos = procesar_bitvavo(tmp_path)
+            _filtrar_motor_por_ejercicio(motor, ejercicio)
             resumen, posicion, operaciones = _motor_a_json(motor)
             advertencias = motor.advertencias
             rendimientos_json = _rendimientos_a_json(rendimientos)
@@ -1166,6 +1223,7 @@ def analizar():
 
         elif exchange == "kraken":
             motor, rendimientos = procesar_kraken(tmp_path)
+            _filtrar_motor_por_ejercicio(motor, ejercicio)
             resumen, posicion, operaciones = _motor_a_json(motor)
             advertencias = motor.advertencias
             rendimientos_json = _rendimientos_a_json(rendimientos)
@@ -1173,6 +1231,7 @@ def analizar():
 
         elif exchange == "coinbase":
             motor, rendimientos = procesar_coinbase(tmp_path)
+            _filtrar_motor_por_ejercicio(motor, ejercicio)
             resumen, posicion, operaciones = _motor_a_json(motor)
             advertencias = motor.advertencias
             rendimientos_json = _rendimientos_a_json(rendimientos)
@@ -1180,6 +1239,7 @@ def analizar():
 
         elif exchange == "nexo":
             motor, rendimientos = procesar_nexo(tmp_path)
+            _filtrar_motor_por_ejercicio(motor, ejercicio)
             resumen, posicion, operaciones = _motor_a_json(motor)
             advertencias = motor.advertencias
             rendimientos_json = _rendimientos_a_json(rendimientos)
@@ -1187,6 +1247,7 @@ def analizar():
 
         elif exchange == "cryptocom":
             motor, rendimientos = procesar_cryptocom(tmp_path)
+            _filtrar_motor_por_ejercicio(motor, ejercicio)
             resumen, posicion, operaciones = _motor_a_json(motor)
             advertencias = motor.advertencias
             rendimientos_json = _rendimientos_a_json(rendimientos)
@@ -1197,6 +1258,7 @@ def analizar():
                 motor, rendimientos = procesar_binance_tx(tmp_path)
             else:
                 motor, rendimientos = procesar_binance(tmp_path)
+            _filtrar_motor_por_ejercicio(motor, ejercicio)
             resumen, posicion, operaciones = _motor_a_json(motor)
             advertencias = motor.advertencias
             rendimientos_json = _rendimientos_a_json(rendimientos)
@@ -1211,7 +1273,7 @@ def analizar():
 
         report_id = _registrar_informe(
             exchange        = exchange,
-            fiscal_year     = int(ejercicio) if ejercicio else 0,
+            fiscal_year     = _ejercicio_a_fiscal_year(ejercicio),
             csv_rows        = csv_rows,
             distinct_assets = distinct_assets,
             processing_ms   = processing_ms,
@@ -1233,7 +1295,7 @@ def analizar():
         traceback.print_exc()
         _registrar_informe(
             exchange        = exchange,
-            fiscal_year     = int(ejercicio) if ejercicio.isdigit() else 0,
+            fiscal_year     = _ejercicio_a_fiscal_year(ejercicio),
             csv_rows        = csv_rows,
             distinct_assets = 0,
             processing_ms   = int((time.time() - t_start) * 1000),
