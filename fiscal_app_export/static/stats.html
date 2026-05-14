@@ -1212,8 +1212,7 @@ async function loadStats() {
     }
 
     // ── COMPLEJIDAD FISCAL (FASE 2D) ─────────────────────────────────────────
-    const cx  = d.complejidad || {};
-    const seg = d.segmentos   || {};
+    // cx y seg ya declarados arriba (líneas de desestructuración de loadStats)
 
     document.getElementById('cAvgSwaps').textContent    = cx.avg_swaps     ?? '—';
     document.getElementById('cAvgAdv').textContent      = cx.avg_advertencias ?? '—';
