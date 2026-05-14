@@ -35,16 +35,41 @@ def _wallet_id(obs: str):
 
 # Operaciones que se resuelven fila a fila (sin pareja)
 REGLAS_TX = {
+    # ── Simple Earn ──────────────────────────────────────────────────────────
     "Simple Earn Flexible Interest":     "RENDIMIENTO",
     "Simple Earn Locked Rewards":        "RENDIMIENTO",
     "Simple Earn Locked Subscription":   "MOVIMIENTO",
     "Simple Earn Locked Redemption":     "MOVIMIENTO",
     "Simple Earn Flexible Subscription": "MOVIMIENTO",
     "Simple Earn Flexible Redemption":   "MOVIMIENTO",
+    # ── Depósitos / retiros fiat ─────────────────────────────────────────────
     "Deposit":                           "MOVIMIENTO",
     "Withdraw":                          "MOVIMIENTO",
     "Fiat Withdraw":                     "MOVIMIENTO",
     "Fiat Deposit":                      "MOVIMIENTO",
+    # ── Comisiones y referidos (rendimientos del capital) ────────────────────
+    # Art. 25.2 LIRPF: comisiones cobradas son rendimiento del capital mobiliario
+    "Commission Rebate":                             "RENDIMIENTO",
+    "Referrer Commission":                           "RENDIMIENTO",
+    # ── Distribuciones de pools y staking (rendimientos del capital) ─────────
+    "Pool Distribution":                             "RENDIMIENTO",
+    "Launchpool Airdrop - System Distribution":      "RENDIMIENTO",
+    "HODLer Airdrops Distribution":                  "RENDIMIENTO",
+    "Megadrop Rewards":                              "RENDIMIENTO",
+    # ── Airdrops y regalos (rendimiento en especie) ──────────────────────────
+    "Airdrop Assets":                                "RENDIMIENTO",
+    "Crypto Box":                                    "RENDIMIENTO",
+    # ── Distribuciones de token swaps ────────────────────────────────────────
+    "Token Swap - Distribution":                     "RENDIMIENTO",
+    # ── Transferencias entre cuentas / sin impacto fiscal directo ───────────
+    "Small Assets Exchange BNB":                     "MOVIMIENTO",
+    "Send":                                          "MOVIMIENTO",
+    "Asset Recovery":                                "MOVIMIENTO",
+    "Transfer Between Main and Funding Wallet":      "MOVIMIENTO",
+    "Transfer Between Spot Account and UM Futures Account": "MOVIMIENTO",
+    "Transfer Between Spot Account and CM Futures Account": "MOVIMIENTO",
+    "Transfer Between Spot Account and PM Futures Account": "MOVIMIENTO",
+    "Transfer Between Main Account/Futures and Margin Account": "MOVIMIENTO",
 }
 
 
@@ -77,6 +102,7 @@ class ClasificadorBinanceTx:
     def clasificar(self):
         self._procesar_buy_sell_fiat()
         self._procesar_convert()
+        self._procesar_transaction_buy_spend()
         self._procesar_resto()
         if self.desconocidas:
             tipos = {d.subtipo for d in self.desconocidas}
@@ -292,6 +318,83 @@ class ClasificadorBinanceTx:
                 ))
             else:
                 # crypto → crypto: SWAP
+                self.swaps.append(OperacionSwap(
+                    fecha=fecha,
+                    activo_entregado=activo_ent, cantidad_entregada=cant_ent,
+                    activo_recibido=activo_rec,  cantidad_recibida=cant_rec,
+                ))
+
+    # ── TRANSACTION BUY / SPEND (Binance Pay) ────────────────────────────────
+
+    def _procesar_transaction_buy_spend(self):
+        """
+        Empareja filas Transaction Buy + Transaction Spend (± Transaction Fee)
+        que ocurren en el mismo segundo — son operaciones de Binance Pay:
+          Transaction Spend  → activo entregado (negativo)
+          Transaction Buy    → activo recibido  (positivo)
+          Transaction Fee    → fee en BNB       (negativo, opcional)
+
+        Si el activo entregado es EUR → COMPRA con EUR.
+        Si el activo recibido  es EUR → VENTA  con EUR.
+        En cualquier otro caso        → SWAP crypto→crypto.
+        """
+        ops_tx = {"Transaction Buy", "Transaction Spend", "Transaction Fee"}
+        mask   = self.df["Operación"].isin(ops_tx)
+        filas  = self.df[mask].copy().sort_values("Tiempo").reset_index()
+        if filas.empty:
+            return
+
+        # Agrupar por segundo exacto
+        grupos: list = []
+        grupo_actual = [filas.iloc[0]]
+        for i in range(1, len(filas)):
+            diff = (filas.iloc[i]["Tiempo"] - filas.iloc[i - 1]["Tiempo"]).total_seconds()
+            if diff == 0:
+                grupo_actual.append(filas.iloc[i])
+            else:
+                grupos.append(grupo_actual)
+                grupo_actual = [filas.iloc[i]]
+        grupos.append(grupo_actual)
+
+        for grupo_list in grupos:
+            grupo = pd.DataFrame(grupo_list)
+            self._procesadas.update(grupo["index"].tolist())
+
+            fecha     = str(grupo.iloc[0]["Tiempo"])
+            buy_rows  = grupo[grupo["Operación"] == "Transaction Buy"]
+            spend_rows = grupo[grupo["Operación"] == "Transaction Spend"]
+
+            # Sin par buy+spend → registrar como movimiento
+            if buy_rows.empty or spend_rows.empty:
+                for _, fila in grupo.iterrows():
+                    self.movimientos.append(OperacionMovimiento(
+                        fecha=fecha, subtipo=fila["Operación"],
+                        activo=fila["Moneda"], cantidad=float(fila["Cambio"]),
+                        observacion=str(fila.get("Observación", "")),
+                    ))
+                continue
+
+            activo_rec = buy_rows.iloc[0]["Moneda"]
+            cant_rec   = float(buy_rows.iloc[0]["Cambio"])
+            activo_ent = spend_rows.iloc[0]["Moneda"]
+            cant_ent   = abs(float(spend_rows.iloc[0]["Cambio"]))
+
+            if activo_ent == "EUR":
+                self.compraventas.append(OperacionCompraventa(
+                    fecha=fecha, tipo="COMPRA",
+                    activo=activo_rec, cantidad=cant_rec,
+                    contraparte="EUR", importe=cant_ent,
+                    fee_activo=activo_rec, fee_cantidad=0.0,
+                ))
+            elif activo_rec == "EUR":
+                self.compraventas.append(OperacionCompraventa(
+                    fecha=fecha, tipo="VENTA",
+                    activo=activo_ent, cantidad=cant_ent,
+                    contraparte="EUR", importe=cant_rec,
+                    fee_activo="EUR", fee_cantidad=0.0,
+                ))
+            else:
+                # crypto → crypto (p.ej. USDC → XRP via Binance Pay)
                 self.swaps.append(OperacionSwap(
                     fecha=fecha,
                     activo_entregado=activo_ent, cantidad_entregada=cant_ent,
