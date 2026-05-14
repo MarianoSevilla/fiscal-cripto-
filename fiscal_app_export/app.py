@@ -1279,15 +1279,19 @@ def analizar():
 
         else:  # binance — auto-detectar formato
             if _detectar_formato_binance(tmp_path) == "tx":
-                motor, rendimientos = procesar_binance_tx(tmp_path)
+                _clasificador_binance = ClasificadorBinanceTx(tmp_path).clasificar()
+                _clasificador_stats   = _clasificador_binance.resumen()
+                motor, rendimientos   = procesar_con_fifo(_clasificador_binance)
             else:
-                motor, rendimientos = procesar_binance(tmp_path)
+                motor, rendimientos  = procesar_binance(tmp_path)
+                _clasificador_stats  = None
             _filtrar_motor_por_ejercicio(motor, ejercicio)
             rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
             resumen, posicion, operaciones = _motor_a_json(motor)
             advertencias = motor.advertencias
             rendimientos_json = _rendimientos_a_json(rendimientos)
-            pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Binance", rendimientos)
+            pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Binance", rendimientos,
+                                    clasificador_stats=_clasificador_stats)
 
         processing_ms   = int((time.time() - t_start) * 1000)
         distinct_assets = len({op["activo"] for op in operaciones}) if operaciones else 0

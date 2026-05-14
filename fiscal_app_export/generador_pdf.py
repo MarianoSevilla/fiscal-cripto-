@@ -527,12 +527,13 @@ def _bloque_modelo_721(posiciones, styles, ejercicio=""):
         )
         borde_color = colors.HexColor("#B45309")
     else:
-        titulo = f"Modelo 721 — Revisión orientativa: en principio no obligatorio"
+        titulo = f"Modelo 721 — Revisión orientativa — verificación manual requerida"
         texto  = (
             f"El coste de adquisición FIFO de los activos en cartera es de {coste_total:,.2f} EUR, "
-            "por debajo del umbral de 50.000 EUR. No obstante, debe verificarse el valor de mercado "
-            f"{sufijo_fecha} para confirmar que no supera dicho umbral antes de descartar la "
-            f"presentación del Modelo 721. Esta valoración es meramente orientativa.{sufijo_nota}"
+            "por debajo del umbral de 50.000 EUR. No obstante, la obligación se determina por el "
+            "<b>valor de mercado</b> (no el coste FIFO), que puede diferir significativamente. "
+            f"Debe verificarse el valor de mercado {sufijo_fecha} antes de descartar la presentación "
+            f"del Modelo 721. Esta valoración es meramente orientativa — verificación manual requerida.{sufijo_nota}"
         )
         borde_color = BORDER
 
@@ -609,14 +610,14 @@ def _tabla_resumen_activos(resultados, styles):
 
 def _tabla_operaciones(resultados, styles):
     cabecera = [
-        Paragraph("FECHA",               styles["th"]),
-        Paragraph("TIPO",                styles["th"]),
-        Paragraph("ACTIVO",              styles["th"]),
-        Paragraph("CANTIDAD",            styles["th_right"]),
-        Paragraph("PRECIO TRANSMISIÓN",  styles["th_right"]),
-        Paragraph("COSTE FIFO",          styles["th_right"]),
-        Paragraph("G / P (EUR)",         styles["th_right"]),
-        Paragraph("DÍAS",                styles["th_right"]),
+        Paragraph("FECHA",                    styles["th"]),
+        Paragraph("TIPO",                     styles["th"]),
+        Paragraph("ACTIVO",                   styles["th"]),
+        Paragraph("CANTIDAD",                 styles["th_right"]),
+        Paragraph("VALOR TRANSMISIÓN (EUR)",  styles["th_right"]),
+        Paragraph("COSTE ADQUISICIÓN (EUR)",  styles["th_right"]),
+        Paragraph("GANANCIA/PÉRDIDA (EUR)",   styles["th_right"]),
+        Paragraph("DÍAS",                     styles["th_right"]),
     ]
     rows = [cabecera]
     for r in resultados:
@@ -634,7 +635,7 @@ def _tabla_operaciones(resultados, styles):
             Paragraph(str(int(r.periodo_dias)), styles["td_muted_right"]),
         ])
 
-    col_w = [20*mm, 13*mm, 16*mm, 26*mm, 26*mm, 26*mm, 24*mm, 13*mm]
+    col_w = [20*mm, 17*mm, 14*mm, 22*mm, 27*mm, 27*mm, 25*mm, 12*mm]
     t = Table(rows, colWidths=col_w, repeatRows=1)
     n = len(rows)
     row_bgs = [("BACKGROUND", (0, i), (-1, i), BG if i % 2 == 1 else TABLE_ALT) for i in range(1, n)]
@@ -732,7 +733,99 @@ def _tabla_rendimientos(rendimientos: list, styles) -> object:
     return t
 
 
-def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rendimientos=None) -> bytes:
+def _bloque_estado_analisis(clasificador_stats: dict, motor, rendimientos: list, styles) -> list:
+    """
+    Bloque 'Estado del análisis' — muestra el desglose de filas del CSV
+    clasificadas por tipo. Sólo se muestra cuando se pasa clasificador_stats
+    (actualmente sólo para Binance TX).
+    """
+    if not clasificador_stats:
+        return []
+
+    total     = clasificador_stats.get("total_filas_csv", 0)
+    n_cv      = clasificador_stats.get("compraventas", 0)
+    n_sw      = clasificador_stats.get("swaps", 0)
+    n_rend    = clasificador_stats.get("rendimientos", 0)
+    n_mov     = clasificador_stats.get("movimientos", 0)
+    n_desc    = clasificador_stats.get("desconocidas", 0)
+    n_adv     = len(motor.advertencias) if motor.advertencias else 0
+
+    th   = ParagraphStyle("ea_th",   fontName="Helvetica-Bold", fontSize=8,
+                           textColor=TEXT, leading=11)
+    td   = ParagraphStyle("ea_td",   fontName="Helvetica",      fontSize=8,
+                           textColor=TEXT, leading=11)
+    td_r = ParagraphStyle("ea_td_r", fontName="Helvetica",      fontSize=8,
+                           textColor=TEXT, leading=11, alignment=2)
+    td_warn = ParagraphStyle("ea_warn", fontName="Helvetica-Bold", fontSize=8,
+                              textColor=colors.HexColor("#92400E"), leading=11, alignment=2)
+    td_desc = ParagraphStyle("ea_desc", fontName="Helvetica-Bold", fontSize=8,
+                              textColor=colors.HexColor("#991B1B"), leading=11, alignment=2)
+
+    def _fmt(n):
+        return f"{n:,}".replace(",", ".")
+
+    filas = [
+        [Paragraph("Categoría",              th), Paragraph("Filas CSV",   th), Paragraph("", th)],
+        [Paragraph("Transmisiones (FIFO)",   td), Paragraph(_fmt(n_cv),    td_r), Paragraph("",  td)],
+        [Paragraph("Swaps cripto↔cripto",    td), Paragraph(_fmt(n_sw),    td_r), Paragraph("",  td)],
+        [Paragraph("Rendimientos de capital",td), Paragraph(_fmt(n_rend),  td_r), Paragraph("",  td)],
+        [Paragraph("Movimientos internos",   td), Paragraph(_fmt(n_mov),   td_r), Paragraph("",  td)],
+    ]
+
+    # Fila de desconocidas — resalta en rojo si hay alguna
+    desc_style = td_desc if n_desc > 0 else td_r
+    filas.append([
+        Paragraph("Filas no clasificadas",   td_desc if n_desc > 0 else td),
+        Paragraph(_fmt(n_desc),              desc_style),
+        Paragraph("⚠ Revisar" if n_desc > 0 else "", td_desc),
+    ])
+    filas.append([
+        Paragraph("Advertencias de inventario", td_warn if n_adv > 0 else td),
+        Paragraph(_fmt(n_adv),               td_warn if n_adv > 0 else td_r),
+        Paragraph("⚠ Revisar" if n_adv > 0 else "", td_warn),
+    ])
+    filas.append([
+        Paragraph(f"<b>Total filas CSV</b>", th),
+        Paragraph(f"<b>{_fmt(total)}</b>",   ParagraphStyle("ea_tot", fontName="Helvetica-Bold",
+                                                              fontSize=8, textColor=TEXT,
+                                                              leading=11, alignment=2)),
+        Paragraph("", th),
+    ])
+
+    n_rows = len(filas)
+    row_bgs = [("BACKGROUND", (0, i), (-1, i), BG if i % 2 == 1 else TABLE_ALT) for i in range(1, n_rows)]
+    t = Table(filas, colWidths=[78*mm, 28*mm, 22*mm])
+    t.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, 0),  TABLE_HEAD),
+        ("LINEBELOW",     (0, 0), (-1, 0),  1, ACCENT),
+        ("BOX",           (0, 0), (-1, -1), 0.5, BORDER),
+        ("INNERGRID",     (0, 0), (-1, -1), 0.3, BORDER),
+        ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING",    (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
+        ("ALIGN",         (1, 0), (-1, -1), "RIGHT"),
+        # Highlight last row (totals)
+        ("BACKGROUND",    (0, n_rows - 1), (-1, n_rows - 1), TABLE_HEAD),
+    ] + row_bgs))
+
+    elems = [
+        Spacer(1, 5*mm),
+        Paragraph("Estado del Análisis", styles["section"]),
+        Paragraph(
+            f"Desglose de las {_fmt(total)} filas del CSV de Binance según su clasificación fiscal. "
+            "Las filas no clasificadas requieren revisión manual.",
+            styles["body_muted"]
+        ),
+        Spacer(1, 3*mm),
+        t,
+    ]
+    return elems
+
+
+def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rendimientos=None,
+                clasificador_stats=None) -> bytes:
     styles = _build_styles()
     buf = io.BytesIO()
     resumen    = motor.resumen_fiscal()
@@ -757,6 +850,10 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
             resumen["resultado_neto"], rendimientos, styles):
         story.append(fl)
     for fl in _bloque_modelo_721(posiciones, styles, ejercicio):
+        story.append(fl)
+
+    # 2b. ESTADO DEL ANÁLISIS (solo cuando se pasa clasificador_stats, p.ej. Binance TX)
+    for fl in _bloque_estado_analisis(clasificador_stats, motor, rendimientos, styles):
         story.append(fl)
 
     # 3. RESUMEN POR ACTIVO + GRÁFICO
