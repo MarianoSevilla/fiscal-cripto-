@@ -116,34 +116,63 @@ class MotorFIFO:
         """
         Un swap es fiscalmente una venta del activo entregado
         y una compra inmediata del activo recibido.
-        El precio de transmisión es el valor del activo recibido.
+
+        El precio de transmisión del activo entregado —y el coste base del
+        activo recibido— se determina así:
+          · Stablecoin o EUR entregado → valor EUR ≈ cantidad entregada (1:1).
+          · Cripto entregada           → valor EUR = coste FIFO de los lotes
+                                         consumidos (mejor aproximación sin
+                                         precio de mercado en tiempo real).
+          · Sin inventario previo      → valor EUR = 0 + advertencia.
+
+        CORRECCIÓN (bug anterior): antes se usaba `precio_transmision =
+        cantidad_recibida`, lo que asignaba las unidades del activo recibido
+        como si fueran euros, produciendo costes base absurdos (p.ej. 1 EUR/BTC).
         """
         dt = self._parsear_fecha(fecha)
 
-        # Ignorar el swap BNB→BNB (transferencia interna, no fiscal)
+        # Ignorar swaps donde entregado == recibido (movimiento interno)
         if activo_entregado == activo_recibido:
             self.advertencias.append(
-                f"{fecha} | SWAP {activo_entregado}→{activo_recibido} ignorado (mismo activo, movimiento interno)"
+                f"{fecha} | SWAP {activo_entregado}→{activo_recibido} ignorado "
+                f"(mismo activo, movimiento interno)"
             )
             return
 
-        # 1) Procesar como venta del activo entregado
-        precio_transmision = cantidad_recibida  # valor recibido en la contraparte
+        # ── Determinar valor EUR del activo entregado ───────────────────────
+        if activo_entregado in self.STABLES or activo_entregado == "EUR":
+            # Stablecoin o fiat: 1 unidad ≈ 1 EUR (aproximación)
+            valor_eur_entregado = cantidad_entregada
+        else:
+            # Cripto: usar el coste FIFO de los lotes que se van a consumir
+            # como mejor aproximación del valor de mercado en EUR.
+            valor_eur_entregado = self._coste_fifo_peek(activo_entregado, cantidad_entregada)
+            if valor_eur_entregado is None:
+                self.advertencias.append(
+                    f"{fecha} | SWAP {activo_entregado}→{activo_recibido} — "
+                    f"sin inventario previo de {activo_entregado}: el coste base "
+                    f"asignado a {activo_recibido} es cero. Requiere valoración manual."
+                )
+                valor_eur_entregado = 0.0
 
+        # ── 1) Procesar venta del activo entregado ───────────────────────────
         resultado = self._consumir_fifo(
             dt=dt,
             activo=activo_entregado,
             cantidad=cantidad_entregada,
-            precio_transmision=precio_transmision,
+            precio_transmision=valor_eur_entregado,
             tipo="swap",
             nota=nota
         )
         if resultado:
             self.resultados.append(resultado)
 
-        # 2) Registrar el activo recibido como nueva compra al valor de mercado
+        # ── 2) Registrar activo recibido con coste base = valor EUR entregado
         if cantidad_recibida > 0:
-            precio_unitario_recibido = precio_transmision / cantidad_recibida if cantidad_recibida > 0 else 0
+            precio_unitario_recibido = (
+                valor_eur_entregado / cantidad_recibida
+                if valor_eur_entregado > 0 else 0.0
+            )
             lote = Lote(
                 fecha=dt,
                 cantidad_original=cantidad_recibida,
@@ -178,6 +207,27 @@ class MotorFIFO:
             self.resultados.append(resultado)
 
     # ── MOTOR FIFO INTERNO ────────────────────
+
+    def _coste_fifo_peek(self, activo: str, cantidad: float) -> Optional[float]:
+        """
+        Estima el coste FIFO total de `cantidad` unidades de `activo`
+        SIN modificar el inventario (lectura). Se usa para calcular el
+        valor EUR de un activo cripto que se va a entregar en un swap.
+        Devuelve None si no existe inventario previo del activo.
+        """
+        cola = self.inventario.get(activo, [])
+        lotes_vivos = [l for l in cola if l.cantidad_restante > 1e-9]
+        if not lotes_vivos:
+            return None
+        pendiente = cantidad
+        coste = 0.0
+        for lote in lotes_vivos:
+            if pendiente <= 0:
+                break
+            consumir = min(lote.cantidad_restante, pendiente)
+            coste += consumir * lote.precio_coste_unitario
+            pendiente -= consumir
+        return coste
 
     def _consumir_fifo(self, dt: datetime, activo: str, cantidad: float,
                         precio_transmision: float, tipo: str,
