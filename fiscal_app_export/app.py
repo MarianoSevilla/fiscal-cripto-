@@ -32,7 +32,7 @@ from flask_migrate import Migrate
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from authlib.integrations.flask_client import OAuth
 import resend
-from sqlalchemy import func, extract
+from sqlalchemy import func, extract, text
 from models import db, bcrypt, User, FifoReport, Contacto
 
 # Advisory / Stripe imports
@@ -2041,100 +2041,117 @@ def _api_stats_data():
                 exc_mas_prob_pct = rate
                 exc_mas_prob = r.exchange
 
-    # ── FASE 2B: COMPLEJIDAD FISCAL ───────────────────────────────────────────
-    # Solo sobre informes que ya tienen datos de telemetría (fifo_swaps IS NOT NULL)
+    # ── FASE 2B: COMPLEJIDAD Y SEGMENTOS ─────────────────────────────────────
+    # Comprobación de migración: si las columnas nuevas aún no existen en la DB
+    # (migración pendiente), se devuelven ceros en lugar de un error 500.
+    # Esto protege /stats ante cualquier deploy con migración pendiente.
     _gen_filter = FifoReport.status == "generated"
+    try:
+        db.session.execute(text("SELECT fifo_swaps FROM fifo_reports LIMIT 0"))
+        _tel_ok = True
+    except Exception:
+        db.session.rollback()
+        _tel_ok = False
 
-    avg_swaps_raw       = db.session.query(func.avg(FifoReport.fifo_swaps)).filter(
-        _gen_filter, FifoReport.fifo_swaps.isnot(None)).scalar()
-    avg_adv_raw         = db.session.query(func.avg(FifoReport.fifo_advertencias)).filter(
-        _gen_filter, FifoReport.fifo_advertencias.isnot(None)).scalar()
-    avg_rend_raw        = db.session.query(func.avg(FifoReport.fifo_rendimientos)).filter(
-        _gen_filter, FifoReport.fifo_rendimientos.isnot(None)).scalar()
+    if _tel_ok:
+        avg_swaps_raw       = db.session.query(func.avg(FifoReport.fifo_swaps)).filter(
+            _gen_filter, FifoReport.fifo_swaps.isnot(None)).scalar()
+        avg_adv_raw         = db.session.query(func.avg(FifoReport.fifo_advertencias)).filter(
+            _gen_filter, FifoReport.fifo_advertencias.isnot(None)).scalar()
+        avg_rend_raw        = db.session.query(func.avg(FifoReport.fifo_rendimientos)).filter(
+            _gen_filter, FifoReport.fifo_rendimientos.isnot(None)).scalar()
 
-    informes_multi_year = db.session.query(func.count(FifoReport.id)).filter(
-        _gen_filter,
-        FifoReport.fiscal_years_str.isnot(None),
-        (FifoReport.fiscal_years_str.contains(",") | (FifoReport.fiscal_years_str == "all"))
-    ).scalar() or 0
+        informes_multi_year = db.session.query(func.count(FifoReport.id)).filter(
+            _gen_filter,
+            FifoReport.fiscal_years_str.isnot(None),
+            (FifoReport.fiscal_years_str.contains(",") | (FifoReport.fiscal_years_str == "all"))
+        ).scalar() or 0
 
-    informes_con_adv    = db.session.query(func.count(FifoReport.id)).filter(
-        _gen_filter, FifoReport.fifo_advertencias > 0
-    ).scalar() or 0
+        informes_con_adv    = db.session.query(func.count(FifoReport.id)).filter(
+            _gen_filter, FifoReport.fifo_advertencias > 0
+        ).scalar() or 0
 
-    # "complejo" = tiene al menos 1 advertencia de inventario O ≥10 swaps
-    informes_complejos  = db.session.query(func.count(FifoReport.id)).filter(
-        _gen_filter,
-        (FifoReport.fifo_advertencias > 0) | (FifoReport.fifo_swaps >= 10)
-    ).scalar() or 0
+        # "complejo" = tiene al menos 1 advertencia de inventario O ≥10 swaps
+        informes_complejos  = db.session.query(func.count(FifoReport.id)).filter(
+            _gen_filter,
+            (FifoReport.fifo_advertencias > 0) | (FifoReport.fifo_swaps >= 10)
+        ).scalar() or 0
 
-    informes_gt_1k_ops  = db.session.query(func.count(FifoReport.id)).filter(
-        _gen_filter, FifoReport.fifo_operations >= 1000
-    ).scalar() or 0
-    informes_gt_10k_ops = db.session.query(func.count(FifoReport.id)).filter(
-        _gen_filter, FifoReport.fifo_operations >= 10000
-    ).scalar() or 0
+        informes_gt_1k_ops  = db.session.query(func.count(FifoReport.id)).filter(
+            _gen_filter, FifoReport.fifo_operations >= 1000
+        ).scalar() or 0
+        informes_gt_10k_ops = db.session.query(func.count(FifoReport.id)).filter(
+            _gen_filter, FifoReport.fifo_operations >= 10000
+        ).scalar() or 0
 
-    # Complejidad media por exchange (solo informes con datos de telemetría)
-    exc_complexity_raw = (
-        db.session.query(
-            FifoReport.exchange,
-            func.avg(FifoReport.fifo_advertencias).label("avg_adv"),
-            func.avg(FifoReport.fifo_swaps).label("avg_swaps"),
-            func.count(FifoReport.id).label("total"),
+        exc_complexity_raw = (
+            db.session.query(
+                FifoReport.exchange,
+                func.avg(FifoReport.fifo_advertencias).label("avg_adv"),
+                func.avg(FifoReport.fifo_swaps).label("avg_swaps"),
+                func.count(FifoReport.id).label("total"),
+            )
+            .filter(_gen_filter, FifoReport.fifo_advertencias.isnot(None))
+            .group_by(FifoReport.exchange)
+            .order_by(func.avg(FifoReport.fifo_advertencias).desc())
+            .all()
         )
-        .filter(_gen_filter, FifoReport.fifo_advertencias.isnot(None))
-        .group_by(FifoReport.exchange)
-        .order_by(func.avg(FifoReport.fifo_advertencias).desc())
-        .all()
-    )
-    exc_complexity = [
-        {
-            "exchange":  r.exchange,
-            "avg_adv":   round(r.avg_adv or 0, 2),
-            "avg_swaps": round(r.avg_swaps or 0, 2),
-            "total":     r.total,
-        }
-        for r in exc_complexity_raw
-    ]
+        exc_complexity = [
+            {
+                "exchange":  r.exchange,
+                "avg_adv":   round(r.avg_adv or 0, 2),
+                "avg_swaps": round(r.avg_swaps or 0, 2),
+                "total":     r.total,
+            }
+            for r in exc_complexity_raw
+        ]
 
-    # ── FASE 2B: SEGMENTOS DE USUARIOS PREMIUM ────────────────────────────────
-    # HIGH VALUE: csv_rows ≥ 5000 OR fifo_swaps ≥ 50 OR fifo_advertencias ≥ 10
-    usuarios_high_value = db.session.query(
-        func.count(func.distinct(FifoReport.user_id))
-    ).filter(
-        _gen_filter,
-        (FifoReport.csv_rows >= 5000) |
-        (FifoReport.fifo_swaps >= 50) |
-        (FifoReport.fifo_advertencias >= 10)
-    ).scalar() or 0
+        # ── SEGMENTOS DE USUARIOS PREMIUM ─────────────────────────────────────
+        # HIGH VALUE: csv_rows ≥ 5000 OR fifo_swaps ≥ 50 OR fifo_advertencias ≥ 10
+        usuarios_high_value = db.session.query(
+            func.count(func.distinct(FifoReport.user_id))
+        ).filter(
+            _gen_filter,
+            (FifoReport.csv_rows >= 5000) |
+            (FifoReport.fifo_swaps >= 50) |
+            (FifoReport.fifo_advertencias >= 10)
+        ).scalar() or 0
 
-    # MUY COMPLEJO: fifo_advertencias ≥ 100 OR fifo_swaps ≥ 250
-    usuarios_muy_complejos = db.session.query(
-        func.count(func.distinct(FifoReport.user_id))
-    ).filter(
-        _gen_filter,
-        (FifoReport.fifo_advertencias >= 100) | (FifoReport.fifo_swaps >= 250)
-    ).scalar() or 0
+        # MUY COMPLEJO: fifo_advertencias ≥ 100 OR fifo_swaps ≥ 250
+        usuarios_muy_complejos = db.session.query(
+            func.count(func.distinct(FifoReport.user_id))
+        ).filter(
+            _gen_filter,
+            (FifoReport.fifo_advertencias >= 100) | (FifoReport.fifo_swaps >= 250)
+        ).scalar() or 0
 
-    # MULTI-EXCHANGE: usuarios con ≥ 2 exchanges distintos en informes generados
-    _multi_exc_sub = (
-        db.session.query(FifoReport.user_id)
-        .filter(_gen_filter)
-        .group_by(FifoReport.user_id)
-        .having(func.count(func.distinct(FifoReport.exchange)) >= 2)
-        .subquery()
-    )
-    usuarios_multi_exchange = db.session.query(func.count()).select_from(_multi_exc_sub).scalar() or 0
+        # MULTI-EXCHANGE: usuarios con ≥ 2 exchanges distintos
+        _multi_exc_sub = (
+            db.session.query(FifoReport.user_id)
+            .filter(_gen_filter)
+            .group_by(FifoReport.user_id)
+            .having(func.count(func.distinct(FifoReport.exchange)) >= 2)
+            .subquery()
+        )
+        usuarios_multi_exchange = db.session.query(func.count()).select_from(_multi_exc_sub).scalar() or 0
 
-    # MULTI-YEAR: fiscal_years_str contiene ',' o es 'all'
-    usuarios_multi_year = db.session.query(
-        func.count(func.distinct(FifoReport.user_id))
-    ).filter(
-        _gen_filter,
-        FifoReport.fiscal_years_str.isnot(None),
-        (FifoReport.fiscal_years_str.contains(",") | (FifoReport.fiscal_years_str == "all"))
-    ).scalar() or 0
+        # MULTI-YEAR: fiscal_years_str contiene ',' o es 'all'
+        usuarios_multi_year = db.session.query(
+            func.count(func.distinct(FifoReport.user_id))
+        ).filter(
+            _gen_filter,
+            FifoReport.fiscal_years_str.isnot(None),
+            (FifoReport.fiscal_years_str.contains(",") | (FifoReport.fiscal_years_str == "all"))
+        ).scalar() or 0
+
+    else:
+        # Migración pendiente — devolver ceros, sin error 500
+        avg_swaps_raw = avg_adv_raw = avg_rend_raw = None
+        informes_multi_year = informes_con_adv = informes_complejos = 0
+        informes_gt_1k_ops  = informes_gt_10k_ops = 0
+        exc_complexity = []
+        usuarios_high_value = usuarios_muy_complejos = 0
+        usuarios_multi_exchange = usuarios_multi_year = 0
 
     # ── RESPUESTA JSON ────────────────────────────────────────────────────────
     return jsonify({
