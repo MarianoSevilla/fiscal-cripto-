@@ -736,10 +736,13 @@ def _pipeline_motor(clasificador) -> MotorFIFO:
 
 
 def procesar_con_fifo(clasificador) -> tuple:
-    """Pipeline genérico: clasificador ya instanciado → motor FIFO + rendimientos."""
+    """Pipeline genérico: clasificador ya instanciado → motor FIFO + rendimientos + clasificador.
+    Devuelve 3-tupla (motor, rendimientos, clasificador) para permitir extracción de telemetría
+    (swaps totales, movimientos, desconocidas) que solo viven en el clasificador.
+    """
     motor = _pipeline_motor(clasificador)
     rendimientos = clasificador.rendimientos if hasattr(clasificador, 'rendimientos') else []
-    return motor, rendimientos
+    return motor, rendimientos, clasificador
 
 
 def _detectar_formato_binance(filepath: str) -> str:
@@ -1228,7 +1231,8 @@ def analizar():
             return jsonify({"error": error_msg}), 400
 
         rendimientos_json = []
-        motor = None   # se asigna en todos los exchanges excepto bit2me
+        motor       = None   # MotorFIFO — asignado para todos los exchanges excepto bit2me
+        clasificador = None  # clasificador original — para telemetría (swaps, movimientos, desconocidas)
 
         if exchange == "bit2me":
             clasificador, _r, _ops = procesar_bit2me(tmp_path)
@@ -1255,7 +1259,7 @@ def analizar():
             pdf_bytes = generar_pdf_bit2me(clasificador, nombre, ejercicio)
 
         elif exchange == "bitvavo":
-            motor, rendimientos = procesar_bitvavo(tmp_path)
+            motor, rendimientos, clasificador = procesar_bitvavo(tmp_path)
             _filtrar_motor_por_ejercicio(motor, ejercicio)
             rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
             resumen, posicion, operaciones = _motor_a_json(motor)
@@ -1264,7 +1268,7 @@ def analizar():
             pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Bitvavo", rendimientos)
 
         elif exchange == "kraken":
-            motor, rendimientos = procesar_kraken(tmp_path)
+            motor, rendimientos, clasificador = procesar_kraken(tmp_path)
             _filtrar_motor_por_ejercicio(motor, ejercicio)
             rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
             resumen, posicion, operaciones = _motor_a_json(motor)
@@ -1273,7 +1277,7 @@ def analizar():
             pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Kraken", rendimientos)
 
         elif exchange == "coinbase":
-            motor, rendimientos = procesar_coinbase(tmp_path)
+            motor, rendimientos, clasificador = procesar_coinbase(tmp_path)
             _filtrar_motor_por_ejercicio(motor, ejercicio)
             rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
             resumen, posicion, operaciones = _motor_a_json(motor)
@@ -1282,7 +1286,7 @@ def analizar():
             pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Coinbase", rendimientos)
 
         elif exchange == "nexo":
-            motor, rendimientos = procesar_nexo(tmp_path)
+            motor, rendimientos, clasificador = procesar_nexo(tmp_path)
             _filtrar_motor_por_ejercicio(motor, ejercicio)
             rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
             resumen, posicion, operaciones = _motor_a_json(motor)
@@ -1291,7 +1295,7 @@ def analizar():
             pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Nexo", rendimientos)
 
         elif exchange == "cryptocom":
-            motor, rendimientos = procesar_cryptocom(tmp_path)
+            motor, rendimientos, clasificador = procesar_cryptocom(tmp_path)
             _filtrar_motor_por_ejercicio(motor, ejercicio)
             rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
             resumen, posicion, operaciones = _motor_a_json(motor)
@@ -1303,9 +1307,9 @@ def analizar():
             if _detectar_formato_binance(tmp_path) == "tx":
                 _clasificador_binance = ClasificadorBinanceTx(tmp_path).clasificar()
                 _clasificador_stats   = _clasificador_binance.resumen()
-                motor, rendimientos   = procesar_con_fifo(_clasificador_binance)
+                motor, rendimientos, clasificador = procesar_con_fifo(_clasificador_binance)
             else:
-                motor, rendimientos  = procesar_binance(tmp_path)
+                motor, rendimientos, clasificador = procesar_binance(tmp_path)
                 _clasificador_stats  = None
             _filtrar_motor_por_ejercicio(motor, ejercicio)
             rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
@@ -1319,24 +1323,42 @@ def analizar():
         distinct_assets = len({op["activo"] for op in operaciones}) if operaciones else 0
 
         # ── FASE 2A: extraer telemetría estratégica ──────────────────────────
-        _adv_list   = advertencias if isinstance(advertencias, list) else []
-        _tel_ops    = resumen.get("operaciones_con_resultado", len(operaciones))
-        _tel_swaps  = sum(1 for op in operaciones if op.get("tipo") in ("swap", "Swap"))
-        _tel_rend   = len(rendimientos_json)
-        # fifo_movimientos: compras procesadas + operaciones con resultado
-        # Para exchanges basados en MotorFIFO = total de lotes + resultados.
-        # Para bit2me (clasificador) se usa el total de operaciones con resultado.
-        _tel_mov    = (
-            sum(len(v) for v in motor.inventario.values()) + len(motor.resultados)
-            if motor is not None
-            else _tel_ops
+        # Fuente primaria: el clasificador (vive en memoria durante el procesamiento).
+        # Para bit2me: clasificador es ClasificadorBit2Me (tiene movimientos, no swaps/desconocidas).
+        # Para motor-based: clasificador es el clasificador del exchange correspondiente.
+        _adv_list = advertencias if isinstance(advertencias, list) else []
+
+        # fifo_operations: ventas+swaps que generaron resultado fiscal
+        _tel_ops  = resumen.get("operaciones_con_resultado", len(operaciones))
+
+        # fifo_swaps: todos los swaps detectados en el CSV (no solo los con resultado FIFO)
+        # bit2me no tiene lista separada → fallback a conteo en operaciones
+        _tel_swaps = (
+            len(clasificador.swaps)
+            if clasificador is not None and hasattr(clasificador, 'swaps')
+            else sum(1 for op in operaciones if op.get("tipo") == "swap")
         )
-        _tel_adv    = len(_adv_list)
-        _tel_desc   = sum(1 for a in _adv_list if "no hay lotes" in a.lower())
-        _tel_neto   = resumen.get("resultado_neto")
-        _tel_gan    = resumen.get("ganancias_brutas")
-        _tel_per    = resumen.get("perdidas_brutas")
-        _tel_years  = (ejercicio or "")[:50]
+
+        # fifo_rendimientos: staking, rewards, rebates, intereses
+        _tel_rend = len(rendimientos_json)
+
+        # fifo_movimientos: depósitos, retiros, movimientos internos sin impacto fiscal
+        _tel_mov = len(clasificador.movimientos) if clasificador is not None and hasattr(clasificador, 'movimientos') else 0
+
+        # fifo_advertencias: warnings del motor (inventario insuficiente, valoración manual)
+        _tel_adv = len(_adv_list)
+
+        # fifo_desconocidas: filas CSV no clasificadas por el clasificador
+        # bit2me no trackea desconocidas → 0
+        _tel_desc = len(clasificador.desconocidas) if clasificador is not None and hasattr(clasificador, 'desconocidas') else 0
+
+        # métricas fiscales (numéricas, en EUR)
+        _tel_neto = resumen.get("resultado_neto")
+        _tel_gan  = resumen.get("ganancias_brutas")
+        _tel_per  = resumen.get("perdidas_brutas")
+
+        # ejercicio fiscal exacto tal como lo envió el usuario
+        _tel_years = (ejercicio or "")[:50]
         # ────────────────────────────────────────────────────────────────────
 
         pdf_tmp = tmp_path.replace(".csv", ".pdf")
@@ -2019,6 +2041,101 @@ def _api_stats_data():
                 exc_mas_prob_pct = rate
                 exc_mas_prob = r.exchange
 
+    # ── FASE 2B: COMPLEJIDAD FISCAL ───────────────────────────────────────────
+    # Solo sobre informes que ya tienen datos de telemetría (fifo_swaps IS NOT NULL)
+    _gen_filter = FifoReport.status == "generated"
+
+    avg_swaps_raw       = db.session.query(func.avg(FifoReport.fifo_swaps)).filter(
+        _gen_filter, FifoReport.fifo_swaps.isnot(None)).scalar()
+    avg_adv_raw         = db.session.query(func.avg(FifoReport.fifo_advertencias)).filter(
+        _gen_filter, FifoReport.fifo_advertencias.isnot(None)).scalar()
+    avg_rend_raw        = db.session.query(func.avg(FifoReport.fifo_rendimientos)).filter(
+        _gen_filter, FifoReport.fifo_rendimientos.isnot(None)).scalar()
+
+    informes_multi_year = db.session.query(func.count(FifoReport.id)).filter(
+        _gen_filter,
+        FifoReport.fiscal_years_str.isnot(None),
+        (FifoReport.fiscal_years_str.contains(",") | (FifoReport.fiscal_years_str == "all"))
+    ).scalar() or 0
+
+    informes_con_adv    = db.session.query(func.count(FifoReport.id)).filter(
+        _gen_filter, FifoReport.fifo_advertencias > 0
+    ).scalar() or 0
+
+    # "complejo" = tiene al menos 1 advertencia de inventario O ≥10 swaps
+    informes_complejos  = db.session.query(func.count(FifoReport.id)).filter(
+        _gen_filter,
+        (FifoReport.fifo_advertencias > 0) | (FifoReport.fifo_swaps >= 10)
+    ).scalar() or 0
+
+    informes_gt_1k_ops  = db.session.query(func.count(FifoReport.id)).filter(
+        _gen_filter, FifoReport.fifo_operations >= 1000
+    ).scalar() or 0
+    informes_gt_10k_ops = db.session.query(func.count(FifoReport.id)).filter(
+        _gen_filter, FifoReport.fifo_operations >= 10000
+    ).scalar() or 0
+
+    # Complejidad media por exchange (solo informes con datos de telemetría)
+    exc_complexity_raw = (
+        db.session.query(
+            FifoReport.exchange,
+            func.avg(FifoReport.fifo_advertencias).label("avg_adv"),
+            func.avg(FifoReport.fifo_swaps).label("avg_swaps"),
+            func.count(FifoReport.id).label("total"),
+        )
+        .filter(_gen_filter, FifoReport.fifo_advertencias.isnot(None))
+        .group_by(FifoReport.exchange)
+        .order_by(func.avg(FifoReport.fifo_advertencias).desc())
+        .all()
+    )
+    exc_complexity = [
+        {
+            "exchange":  r.exchange,
+            "avg_adv":   round(r.avg_adv or 0, 2),
+            "avg_swaps": round(r.avg_swaps or 0, 2),
+            "total":     r.total,
+        }
+        for r in exc_complexity_raw
+    ]
+
+    # ── FASE 2B: SEGMENTOS DE USUARIOS PREMIUM ────────────────────────────────
+    # HIGH VALUE: csv_rows ≥ 5000 OR fifo_swaps ≥ 50 OR fifo_advertencias ≥ 10
+    usuarios_high_value = db.session.query(
+        func.count(func.distinct(FifoReport.user_id))
+    ).filter(
+        _gen_filter,
+        (FifoReport.csv_rows >= 5000) |
+        (FifoReport.fifo_swaps >= 50) |
+        (FifoReport.fifo_advertencias >= 10)
+    ).scalar() or 0
+
+    # MUY COMPLEJO: fifo_advertencias ≥ 100 OR fifo_swaps ≥ 250
+    usuarios_muy_complejos = db.session.query(
+        func.count(func.distinct(FifoReport.user_id))
+    ).filter(
+        _gen_filter,
+        (FifoReport.fifo_advertencias >= 100) | (FifoReport.fifo_swaps >= 250)
+    ).scalar() or 0
+
+    # MULTI-EXCHANGE: usuarios con ≥ 2 exchanges distintos en informes generados
+    _multi_exc_sub = (
+        db.session.query(FifoReport.user_id)
+        .filter(_gen_filter)
+        .group_by(FifoReport.user_id)
+        .having(func.count(func.distinct(FifoReport.exchange)) >= 2)
+        .subquery()
+    )
+    usuarios_multi_exchange = db.session.query(func.count()).select_from(_multi_exc_sub).scalar() or 0
+
+    # MULTI-YEAR: fiscal_years_str contiene ',' o es 'all'
+    usuarios_multi_year = db.session.query(
+        func.count(func.distinct(FifoReport.user_id))
+    ).filter(
+        _gen_filter,
+        FifoReport.fiscal_years_str.isnot(None),
+        (FifoReport.fiscal_years_str.contains(",") | (FifoReport.fiscal_years_str == "all"))
+    ).scalar() or 0
+
     # ── RESPUESTA JSON ────────────────────────────────────────────────────────
     return jsonify({
         "meta": {
@@ -2086,6 +2203,24 @@ def _api_stats_data():
         "errores": {
             "por_mes":  errores_por_mes,
             "detalle":  errores_detalle,
+        },
+        "complejidad": {
+            "avg_swaps":           round(avg_swaps_raw or 0, 2),
+            "avg_advertencias":    round(avg_adv_raw   or 0, 2),
+            "avg_rendimientos":    round(avg_rend_raw  or 0, 2),
+            "informes_multi_year": informes_multi_year,
+            "informes_con_adv":    informes_con_adv,
+            "informes_complejos":  informes_complejos,
+            "tasa_complejidad":    round(informes_complejos / gen * 100, 1) if gen else 0.0,
+            "gt_1k_ops":           informes_gt_1k_ops,
+            "gt_10k_ops":          informes_gt_10k_ops,
+            "por_exchange":        exc_complexity,
+        },
+        "segmentos": {
+            "high_value":      usuarios_high_value,
+            "muy_complejos":   usuarios_muy_complejos,
+            "multi_exchange":  usuarios_multi_exchange,
+            "multi_year":      usuarios_multi_year,
         },
     })
 

@@ -526,6 +526,73 @@ tbody tr:hover { background: var(--surface2); }
       </div>
     </div>
 
+    <!-- ── COMPLEJIDAD FISCAL (FASE 2D) ── -->
+    <div class="section">
+      <p class="section-title">Complejidad Fiscal</p>
+      <div class="grid-3" style="margin-bottom:0.75rem;">
+        <div class="card">
+          <div class="card-label">Swaps medios / informe</div>
+          <div class="card-value neu" id="cAvgSwaps">—</div>
+          <div class="card-sub">media sobre informes con datos</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Advertencias medias / informe</div>
+          <div class="card-value yellow" id="cAvgAdv">—</div>
+          <div class="card-sub">inventario + valoración manual</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Rendimientos medios / informe</div>
+          <div class="card-value neu" id="cAvgRend">—</div>
+          <div class="card-sub">staking, rewards, rebates</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Informes complejos</div>
+          <div class="card-value yellow" id="cInfComplejos">—</div>
+          <div class="card-sub" id="cInfComplejosPct">≥1 advertencia o ≥10 swaps</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Informes multi-año</div>
+          <div class="card-value neu" id="cInfMultiYear">—</div>
+          <div class="card-sub">ejercicio contiene coma o "all"</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Informes con advertencias</div>
+          <div class="card-value yellow" id="cInfConAdv">—</div>
+          <div class="card-sub">al menos 1 advertencia de motor</div>
+        </div>
+      </div>
+
+      <!-- Segmentos de usuarios premium -->
+      <div class="power-strip" style="margin-bottom:0.75rem;">
+        <div class="power-pill">
+          <span class="pill-icon">💎</span>
+          <span class="pill-val" id="segHighValue">—</span>
+          <span class="pill-lbl">usuarios high value</span>
+        </div>
+        <div class="power-pill">
+          <span class="pill-icon">🔥</span>
+          <span class="pill-val" id="segMuyComplejos">—</span>
+          <span class="pill-lbl">usuarios muy complejos</span>
+        </div>
+        <div class="power-pill">
+          <span class="pill-icon">🔁</span>
+          <span class="pill-val" id="segMultiExchange">—</span>
+          <span class="pill-lbl">multi-exchange</span>
+        </div>
+        <div class="power-pill">
+          <span class="pill-icon">📅</span>
+          <span class="pill-val" id="segMultiYear">—</span>
+          <span class="pill-lbl">multi-año</span>
+        </div>
+      </div>
+
+      <!-- Chart: exchanges por advertencias medias -->
+      <div class="chart-box">
+        <div class="chart-title">Advertencias medias por exchange (complejidad de inventario)</div>
+        <div class="chart-wrap" id="chartComplexityWrap"><canvas id="chartComplexity"></canvas></div>
+      </div>
+    </div>
+
     <!-- ── MONETIZACIÓN ── -->
     <div class="section">
       <p class="section-title">Asesoramiento fiscal</p>
@@ -881,7 +948,9 @@ function generateInsights(d) {
   const c   = d.contactos;
   const adv = d.asesoramiento;
   const err = d.errores;
-  const meta = d.meta;
+  const meta = d.meta || {};
+  const cx   = d.complejidad || {};
+  const seg  = d.segmentos   || {};
   const items = [];
 
   // Activation rate
@@ -940,6 +1009,62 @@ function generateInsights(d) {
     items.push({ icon: '💡', html: `Ningún usuario Pro todavía. Oportunidad de conversión con ${u.total} usuarios registrados.` });
   }
 
+  // ── FASE 2C: Insights de complejidad fiscal ─────────────────────────────
+  // Usuarios sin activar (generación de informe)
+  if (u.total > 5) {
+    const noActPct = Math.round((u.sin_informes / u.total) * 100);
+    if (noActPct > 50) {
+      items.push({ icon: '📉', html: `El <span class="warn">${noActPct}%</span> de usuarios registrados no ha generado ningún informe todavía (${u.sin_informes} de ${u.total}). Potencial de activación alto.` });
+    }
+  }
+
+  // Informes complejos y exchange dominante
+  if (cx.informes_complejos > 0 && fi.generados > 0) {
+    const cxPct = Math.round(cx.informes_complejos / fi.generados * 100);
+    if (cxPct > 20) {
+      // ¿Cuál es el exchange con más advertencias medias?
+      const topCxExc = (cx.por_exchange || []).filter(r => r.total >= 3).sort((a, b) => b.avg_adv - a.avg_adv)[0];
+      if (topCxExc && topCxExc.avg_adv > 0) {
+        items.push({ icon: '🧮', html: `El <span class="warn">${cxPct}%</span> de los informes son complejos (advertencias o swaps). El exchange con más advertencias medias es <strong>${topCxExc.exchange}</strong> (${topCxExc.avg_adv} advertencias/informe).` });
+      } else {
+        items.push({ icon: '🧮', html: `El <span class="warn">${cxPct}%</span> de los informes tienen advertencias de inventario o swaps complejos.` });
+      }
+    }
+  }
+
+  // High value users — oportunidad de monetización
+  if (seg.high_value > 0) {
+    items.push({ icon: '💰', html: `<strong>${seg.high_value} usuario${seg.high_value > 1 ? 's' : ''} high value</strong> detectado${seg.high_value > 1 ? 's' : ''} (&gt;5.000 filas, &gt;50 swaps o &gt;10 advertencias). Candidatos ideales para plan premium.` });
+  }
+
+  // Usuarios muy complejos — atención prioritaria
+  if (seg.muy_complejos > 0) {
+    items.push({ icon: '🔥', html: `${seg.muy_complejos} usuario${seg.muy_complejos > 1 ? 's' : ''} con portfolios muy complejos (&gt;100 advertencias o &gt;250 swaps). Pueden beneficiarse de asesoramiento fiscal personalizado.` });
+  }
+
+  // Multi-exchange
+  if (seg.multi_exchange > 0) {
+    items.push({ icon: '🔁', html: `<strong>${seg.multi_exchange} usuario${seg.multi_exchange > 1 ? 's' : ''}</strong> han generado informes de más de un exchange — perfil avanzado con portfolio diversificado.` });
+  }
+
+  // Multi-year
+  if (seg.multi_year > 0 && fi.generados > 0) {
+    const myPct = Math.round(seg.multi_year / fi.generados * 100);
+    if (myPct > 10) {
+      items.push({ icon: '📅', html: `El <strong>${myPct}%</strong> de los informes cubren múltiples ejercicios fiscales — usuarios con historial largo o correcciones de años anteriores.` });
+    }
+  }
+
+  // Swaps frecuentes
+  if (cx.avg_swaps > 5) {
+    items.push({ icon: '🔄', html: `Media de <strong>${cx.avg_swaps} swaps por informe</strong> — los usuarios tienen portfolios activos con muchos intercambios entre activos.` });
+  }
+
+  // Informes >1000 operaciones fiscales
+  if (cx.gt_1k_ops > 0) {
+    items.push({ icon: '📊', html: `${cx.gt_1k_ops} informe${cx.gt_1k_ops > 1 ? 's' : ''} con más de 1.000 operaciones con resultado fiscal. Estos usuarios generan el mayor volumen de cálculo.` });
+  }
+
   return items;
 }
 
@@ -977,8 +1102,10 @@ async function loadStats() {
     const c   = d.contactos;
     const adv = d.asesoramiento;
     const err = d.errores;
-    const meta = d.meta || {};
-    const sp   = d.sparklines || {};
+    const meta = d.meta        || {};
+    const sp   = d.sparklines  || {};
+    const cx   = d.complejidad || {};   // FASE 2B/2D
+    const seg  = d.segmentos   || {};   // FASE 2B/2D
 
     // Header timestamp
     document.getElementById('pageDate').textContent =
@@ -1082,6 +1209,44 @@ async function loadStats() {
       ).join('');
     } else {
       tb5.innerHTML = `<tr><td colspan="3" class="no-data">Sin datos</td></tr>`;
+    }
+
+    // ── COMPLEJIDAD FISCAL (FASE 2D) ─────────────────────────────────────────
+    const cx  = d.complejidad || {};
+    const seg = d.segmentos   || {};
+
+    document.getElementById('cAvgSwaps').textContent    = cx.avg_swaps     ?? '—';
+    document.getElementById('cAvgAdv').textContent      = cx.avg_advertencias ?? '—';
+    document.getElementById('cAvgRend').textContent     = cx.avg_rendimientos ?? '—';
+    document.getElementById('cInfComplejos').textContent = cx.informes_complejos ?? '—';
+    document.getElementById('cInfMultiYear').textContent = cx.informes_multi_year ?? '—';
+    document.getElementById('cInfConAdv').textContent    = cx.informes_con_adv ?? '—';
+
+    if (cx.informes_complejos != null && fi.generados) {
+      document.getElementById('cInfComplejosPct').textContent =
+        Math.round(cx.informes_complejos / fi.generados * 100) + '% del total';
+    }
+
+    document.getElementById('segHighValue').textContent    = seg.high_value     ?? '—';
+    document.getElementById('segMuyComplejos').textContent = seg.muy_complejos  ?? '—';
+    document.getElementById('segMultiExchange').textContent = seg.multi_exchange ?? '—';
+    document.getElementById('segMultiYear').textContent    = seg.multi_year      ?? '—';
+
+    // Chart exchanges por complejidad (advertencias medias)
+    if (cx.por_exchange && cx.por_exchange.length > 0) {
+      const excCxData = cx.por_exchange.filter(r => r.avg_adv > 0 || r.avg_swaps > 0);
+      if (excCxData.length) {
+        hbarChart('chartComplexity',
+          excCxData.map(r => r.exchange),
+          excCxData.map(r => r.avg_adv),
+          '#f59e0b');
+      } else {
+        document.getElementById('chartComplexityWrap').innerHTML =
+          '<p class="no-data" style="padding:1rem;">Sin datos de complejidad todavía — se registra en nuevos informes.</p>';
+      }
+    } else {
+      document.getElementById('chartComplexityWrap').innerHTML =
+        '<p class="no-data" style="padding:1rem;">Sin datos de complejidad todavía — se registra en nuevos informes.</p>';
     }
 
     // ── MONETIZACIÓN ─────────────────────────────────────────────────────────
