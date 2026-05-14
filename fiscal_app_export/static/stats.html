@@ -29,7 +29,12 @@
   --muted2:     #555555;
   --accent:     #00C896;
   --accent-dim: rgba(0,200,150,0.10);
+  --yellow:     #fbbf24;
+  --yellow-dim: rgba(251,191,36,0.12);
   --red:        #f87171;
+  --red-dim:    rgba(248,113,113,0.10);
+  --blue:       #60a5fa;
+  --blue-dim:   rgba(96,165,250,0.10);
   --max:        1080px;
   --r:          12px;
   --font-d:     'Syne', sans-serif;
@@ -45,7 +50,7 @@ html, body {
 }
 a { color: inherit; text-decoration: none; }
 
-/* ── NAV — idéntico al de tool.html ── */
+/* ── NAV ── */
 nav {
   position: fixed; top: 0; left: 0; right: 0; z-index: 200;
   border-bottom: 1px solid var(--border);
@@ -55,15 +60,9 @@ nav {
   max-width: var(--max); margin: 0 auto; padding: 0 2rem;
   height: 64px; display: flex; align-items: center; justify-content: space-between;
 }
-.nav-logo {
-  font-family: var(--font-d); font-weight: 800; font-size: 0.95rem;
-  letter-spacing: -0.02em; color: var(--text); text-decoration: none;
-}
+.nav-logo { font-family: var(--font-d); font-weight: 800; font-size: 0.95rem; letter-spacing: -0.02em; }
 .nav-logo span { color: var(--accent); }
-.nav-link-dash {
-  font-size: 14px; font-weight: 500; color: var(--muted);
-  text-decoration: none; transition: color .15s;
-}
+.nav-link-dash { font-size: 14px; font-weight: 500; color: var(--muted); transition: color .15s; }
 .nav-link-dash:hover { color: var(--text); }
 .nav-right { display: flex; align-items: center; gap: 0.6rem; }
 .nav-avatar-wrap { position: relative; }
@@ -98,49 +97,66 @@ nav {
 .nav-dd-item.danger:hover { background: rgba(220,60,60,.1); }
 
 /* ── MAIN ── */
-main {
-  max-width: var(--max); margin: 0 auto;
-  padding: 6rem 2rem 4rem;
-}
+main { max-width: var(--max); margin: 0 auto; padding: 6rem 2rem 4rem; }
 h1 {
   font-family: var(--font-d); font-size: clamp(1.4rem, 2.5vw, 1.9rem);
   font-weight: 800; letter-spacing: -.03em; margin-bottom: .25rem;
 }
 .page-sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; }
 
+/* ── SECTIONS ── */
 .section { margin-bottom: 2.5rem; }
 .section-title {
-  font-family: var(--font-d); font-size: 0.85rem; font-weight: 700;
-  color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em;
-  margin-bottom: 1rem;
+  font-family: var(--font-d); font-size: 0.8rem; font-weight: 700;
+  color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em;
+  margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;
 }
+.section-title::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+/* ── CARDS ── */
 .cards {
   display: grid; gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   margin-bottom: 1rem;
 }
+.cards-sm { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
 .card {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 1.25rem 1.4rem;
+  border-radius: var(--r); padding: 1.1rem 1.3rem;
 }
-.card-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
-.card-value { font-family: var(--font-d); font-size: 2rem; font-weight: 800; line-height: 1; }
-.card-value.accent { color: var(--accent); }
-.card-value.red    { color: var(--red); }
+.card.accent-border { border-color: rgba(0,200,150,0.25); }
+.card-label { font-size: 11px; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.06em; }
+.card-value { font-family: var(--font-d); font-size: 1.85rem; font-weight: 800; line-height: 1; }
+.card-value.accent  { color: var(--accent); }
+.card-value.red     { color: var(--red); }
+.card-value.yellow  { color: var(--yellow); }
+.card-value.blue    { color: var(--blue); }
+.card-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
 
+/* ── CHARTS ── */
 .chart-box {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 1.25rem 1.4rem;
+  border-radius: var(--r); padding: 1.25rem 1.4rem; margin-bottom: 1rem;
 }
 .chart-box-title { font-size: 13px; color: var(--muted); margin-bottom: 1rem; }
 .chart-wrap { position: relative; height: 200px; }
 
-.tables-row { display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; }
-@media (max-width: 680px) { .tables-row { grid-template-columns: 1fr; } }
+/* ── TABLES ── */
+.tables-row { display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; margin-bottom: 1rem; }
+.tables-row-3 { grid-template-columns: 1fr 1fr 1fr; }
+@media (max-width: 700px) {
+  .tables-row, .tables-row-3 { grid-template-columns: 1fr; }
+}
 
 .table-box {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r); overflow: hidden;
+  border-radius: var(--r); overflow: hidden; margin-bottom: 1rem;
+}
+.table-box-title {
+  font-size: 12px; color: var(--muted); text-transform: uppercase;
+  letter-spacing: 0.06em; padding: 10px 16px 0;
 }
 table { width: 100%; border-collapse: collapse; }
 thead th {
@@ -148,17 +164,37 @@ thead th {
   letter-spacing: 0.06em; padding: 10px 16px; text-align: left;
   background: var(--surface2); border-bottom: 1px solid var(--border);
 }
-tbody td { padding: 11px 16px; font-size: 14px; border-bottom: 1px solid var(--border); }
+tbody td { padding: 10px 16px; font-size: 13px; border-bottom: 1px solid var(--border); }
 tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover { background: var(--surface2); }
 .num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.td-muted { color: var(--muted); }
+.td-accent { color: var(--accent); font-weight: 600; }
+.td-red    { color: var(--red); }
+.td-yellow { color: var(--yellow); }
 
+/* ── BADGES ── */
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 20px;
+  font-size: 11px; font-weight: 600; white-space: nowrap;
+}
+.badge-green  { background: var(--accent-dim);  color: var(--accent); }
+.badge-yellow { background: var(--yellow-dim);  color: var(--yellow); }
+.badge-red    { background: var(--red-dim);     color: var(--red); }
+.badge-blue   { background: var(--blue-dim);    color: var(--blue); }
+.badge-muted  { background: rgba(255,255,255,0.05); color: var(--muted); }
+
+/* ── PROGRESS BAR ── */
+.pct-row { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
+.pct-bar-wrap { flex: 1; height: 4px; background: var(--surface3); border-radius: 2px; overflow: hidden; }
+.pct-bar { height: 100%; border-radius: 2px; background: var(--accent); }
+.pct-label { font-size: 12px; font-weight: 600; color: var(--accent); min-width: 36px; text-align: right; }
+
+/* ── MISC ── */
 .state-msg {
-  color: var(--muted); font-size: 14px; padding: 4rem;
-  text-align: center;
+  color: var(--muted); font-size: 14px; padding: 4rem; text-align: center;
 }
 .state-msg.error { color: var(--red); }
-
 .pg-btn {
   background: var(--surface2); border: 1px solid var(--border);
   color: var(--text); font-family: var(--font-b); font-size: 13px;
@@ -167,6 +203,8 @@ tbody tr:hover { background: var(--surface2); }
 }
 .pg-btn:hover:not(:disabled) { background: var(--surface3); border-color: var(--border-hover); }
 .pg-btn:disabled { opacity: .35; cursor: default; }
+.divider { height: 1px; background: var(--border); margin: 0.5rem 0 1.5rem; }
+.no-data { color: var(--muted); text-align: center; padding: 20px; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -181,9 +219,9 @@ tbody tr:hover { background: var(--surface2); }
       <div class="nav-avatar-wrap">
         <button class="nav-avatar" id="navAvatar" aria-label="Menú de usuario">U</button>
         <div class="nav-dropdown" id="navDropdown">
-          <a href="/pricing" class="nav-dd-item">💎&nbsp; Planes</a>
-          <a href="/account" class="nav-dd-item">👤&nbsp; Mi cuenta</a>
-          <a href="/stats" class="nav-dd-item active">📊&nbsp; Stats</a>
+          <a href="/pricing"   class="nav-dd-item">💎&nbsp; Planes</a>
+          <a href="/account"   class="nav-dd-item">👤&nbsp; Mi cuenta</a>
+          <a href="/stats"     class="nav-dd-item active">📊&nbsp; Stats</a>
           <div class="nav-dd-divider"></div>
           <button class="nav-dd-item danger" id="navBtnLogout">↩&nbsp; Cerrar sesión</button>
         </div>
@@ -199,6 +237,42 @@ tbody tr:hover { background: var(--surface2); }
   <div id="stateMsg" class="state-msg">Cargando datos…</div>
   <div id="content" hidden>
 
+    <!-- ── RESUMEN EJECUTIVO ── -->
+    <div class="section">
+      <p class="section-title">Resumen ejecutivo</p>
+      <div class="cards cards-sm">
+        <div class="card accent-border">
+          <div class="card-label">Usuarios registrados</div>
+          <div class="card-value accent" id="reTotalUsers">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Ratio activación</div>
+          <div class="card-value" id="reActivacion">—</div>
+          <div class="card-sub">con ≥1 informe</div>
+        </div>
+        <div class="card accent-border">
+          <div class="card-label">Informes generados</div>
+          <div class="card-value accent" id="reTotalInf">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Tasa de descarga</div>
+          <div class="card-value" id="reTasaDl">—</div>
+          <div class="card-sub">PDFs descargados</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Contactos nuevos</div>
+          <div class="card-value yellow" id="reContactos">—</div>
+          <div class="card-sub">sin responder</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Ingresos asesoramiento</div>
+          <div class="card-value accent" id="reIngresos">—</div>
+          <div class="card-sub">EUR total</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── USUARIOS ── -->
     <div class="section">
       <p class="section-title">Usuarios</p>
       <div class="cards">
@@ -214,6 +288,35 @@ tbody tr:hover { background: var(--surface2); }
           <div class="card-label">Sin verificar</div>
           <div class="card-value red" id="cUnverified">—</div>
         </div>
+        <div class="card">
+          <div class="card-label">Con ≥1 informe</div>
+          <div class="card-value accent" id="cConInf">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Sin informes</div>
+          <div class="card-value" id="cSinInf">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Activos (30 días)</div>
+          <div class="card-value blue" id="cActivos">—</div>
+        </div>
+      </div>
+      <div class="cards cards-sm" style="margin-bottom:1rem;">
+        <div class="card">
+          <div class="card-label">Plan Free</div>
+          <div class="card-value" id="cFree">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Plan Pro</div>
+          <div class="card-value accent" id="cPro">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Ratio activación</div>
+          <div class="card-value" id="cActivacion">—</div>
+          <div id="cActivacionBar" class="pct-row" style="margin-top:6px;">
+            <div class="pct-bar-wrap"><div class="pct-bar" id="pctBarActivacion" style="width:0%"></div></div>
+          </div>
+        </div>
       </div>
       <div class="chart-box">
         <div class="chart-box-title">Nuevos registros por mes — últimos 6 meses</div>
@@ -221,18 +324,45 @@ tbody tr:hover { background: var(--surface2); }
       </div>
     </div>
 
+    <!-- ── INFORMES FIFO ── -->
     <div class="section">
       <p class="section-title">Informes FIFO</p>
       <div class="cards">
         <div class="card">
-          <div class="card-label">Total generados</div>
-          <div class="card-value accent" id="cTotalGen">—</div>
+          <div class="card-label">Total (todos)</div>
+          <div class="card-value" id="cTotalInf">—</div>
         </div>
         <div class="card">
-          <div class="card-label">Descargados</div>
-          <div class="card-value" id="cTotalDl">—</div>
+          <div class="card-label">Generados OK</div>
+          <div class="card-value accent" id="cGenerados">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Fallidos</div>
+          <div class="card-value red" id="cFallidos">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">PDFs descargados</div>
+          <div class="card-value" id="cDescargados">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Tasa descarga</div>
+          <div class="card-value accent" id="cTasaDl">—</div>
+          <div id="cTasaBar" class="pct-row" style="margin-top:6px;">
+            <div class="pct-bar-wrap"><div class="pct-bar" id="pctBarDl" style="width:0%"></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-label">Procesamiento medio</div>
+          <div class="card-value" id="cAvgMs">—</div>
+          <div class="card-sub">milisegundos</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Filas CSV media</div>
+          <div class="card-value" id="cAvgRows">—</div>
+          <div class="card-sub">filas por CSV</div>
         </div>
       </div>
+
       <div class="tables-row">
         <div class="table-box">
           <table>
@@ -242,20 +372,131 @@ tbody tr:hover { background: var(--surface2); }
         </div>
         <div class="table-box">
           <table>
-            <thead><tr><th>Ejercicio</th><th class="num">Informes</th></tr></thead>
+            <thead><tr><th>Ejercicio fiscal</th><th class="num">Informes</th></tr></thead>
             <tbody id="tbEjercicio"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tables-row">
+        <div class="table-box">
+          <table>
+            <thead><tr><th>Volumen CSV (filas)</th><th class="num">Informes</th></tr></thead>
+            <tbody id="tbVolumen"></tbody>
+          </table>
+        </div>
+        <div class="table-box">
+          <table>
+            <thead><tr><th>#</th><th>Usuario</th><th class="num">Informes</th></tr></thead>
+            <tbody id="tbTop5"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="table-box" id="tbErrorTypeWrap">
+        <table>
+          <thead><tr><th>Tipo de error más frecuente</th><th class="num">Ocurrencias</th></tr></thead>
+          <tbody id="tbErrorType"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── CONTACTOS ── -->
+    <div class="section">
+      <p class="section-title">Contactos</p>
+      <div class="cards cards-sm" style="margin-bottom:1rem;">
+        <div class="card">
+          <div class="card-label">Total mensajes</div>
+          <div class="card-value" id="cTotalC">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Nuevos / pendientes</div>
+          <div class="card-value yellow" id="cCNuevos">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Respondidos</div>
+          <div class="card-value accent" id="cCResp">—</div>
+        </div>
+      </div>
+      <div class="table-box">
+        <table>
+          <thead><tr><th>Tipo de consulta</th><th class="num">Mensajes</th></tr></thead>
+          <tbody id="tbTipoContacto"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── ASESORAMIENTO FISCAL ── -->
+    <div class="section">
+      <p class="section-title">Asesoramiento fiscal</p>
+      <div class="cards">
+        <div class="card">
+          <div class="card-label">Solicitudes totales</div>
+          <div class="card-value" id="cAdvTotal">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Pagadas</div>
+          <div class="card-value accent" id="cAdvPagadas">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Pendientes de pago</div>
+          <div class="card-value yellow" id="cAdvPend">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Sin asignar</div>
+          <div class="card-value red" id="cAdvSinAsig">—</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Conversión</div>
+          <div class="card-value accent" id="cAdvConv">—</div>
+          <div id="cAdvConvBar" class="pct-row" style="margin-top:6px;">
+            <div class="pct-bar-wrap"><div class="pct-bar" id="pctBarConv" style="width:0%"></div></div>
+          </div>
+        </div>
+        <div class="card accent-border">
+          <div class="card-label">Ingresos totales</div>
+          <div class="card-value accent" id="cAdvIngresos">—</div>
+          <div class="card-sub">EUR acumulado</div>
+        </div>
+      </div>
+
+      <div class="tables-row">
+        <div class="table-box">
+          <table>
+            <thead><tr><th>Estado</th><th class="num">Solicitudes</th></tr></thead>
+            <tbody id="tbAdvEstado"></tbody>
+          </table>
+        </div>
+        <div class="table-box">
+          <table>
+            <thead><tr><th>Tipo de servicio</th><th class="num">Solicitudes</th></tr></thead>
+            <tbody id="tbAdvServicio"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tables-row">
+        <div class="chart-box" style="margin-bottom:0">
+          <div class="chart-box-title">Ingresos por mes — últimos 6 meses (EUR)</div>
+          <div class="chart-wrap"><canvas id="chartIngresos"></canvas></div>
+        </div>
+        <div class="table-box" style="margin-bottom:0">
+          <table>
+            <thead><tr><th>Servicio</th><th class="num">Ingresos (EUR)</th></tr></thead>
+            <tbody id="tbAdvIngSv"></tbody>
           </table>
         </div>
       </div>
     </div>
 
+    <!-- ── ERRORES ── -->
     <div class="section">
       <p class="section-title">Errores de procesamiento</p>
       <div class="chart-box">
         <div class="chart-box-title">CSVs fallidos por mes — últimos 6 meses</div>
         <div class="chart-wrap"><canvas id="chartErrors"></canvas></div>
       </div>
-      <div class="table-box" style="margin-top:1rem;" id="errorDetailWrap">
+      <div class="table-box" id="errorDetailWrap">
         <table>
           <thead><tr><th>Fecha</th><th>Exchange</th><th>Usuario</th></tr></thead>
           <tbody id="tbErrorDetail"></tbody>
@@ -268,11 +509,11 @@ tbody tr:hover { background: var(--surface2); }
       </div>
     </div>
 
-  </div>
+  </div><!-- #content -->
 </main>
 
 <script>
-// ── Sesión ───────────────────────────────────────────────────────────────────
+// ── Auth check ────────────────────────────────────────────────────────────────
 (async () => {
   try {
     const r = await fetch('/api/me', { credentials: 'include' });
@@ -293,7 +534,7 @@ document.getElementById('navBtnLogout').addEventListener('click', async () => {
   window.location.href = '/';
 });
 
-// ── Charts ───────────────────────────────────────────────────────────────────
+// ── Chart defaults ────────────────────────────────────────────────────────────
 Chart.defaults.color       = '#888';
 Chart.defaults.borderColor = 'rgba(255,255,255,0.07)';
 Chart.defaults.font.family = "'DM Sans', sans-serif";
@@ -316,15 +557,38 @@ function barChart(id, labels, values, color) {
   });
 }
 
-function fillMonthlyChart(id, data, color) {
-  const today  = new Date();
+function barChartEur(id, labels, values, color) {
+  new Chart(document.getElementById(id), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ data: values, backgroundColor: color + '33', borderColor: color, borderWidth: 2, borderRadius: 6 }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString('es', { minimumFractionDigits: 0 }) + ' €' } },
+      },
+    },
+  });
+}
+
+function _monthLabels() {
+  const today = new Date();
   const months = [];
   for (let i = 5; i >= 0; i--) {
     const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
     months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
   }
+  return months;
+}
+
+function fillMonthlyChart(id, data, color, field = 'total') {
+  const months = _monthLabels();
   const byMonth = {};
-  data.forEach(r => { byMonth[r.mes] = r.total; });
+  data.forEach(r => { byMonth[r.mes] = r[field]; });
   const labels = months.map(m => {
     const [y, mo] = m.split('-');
     return new Date(y, mo - 1).toLocaleString('es', { month: 'short', year: '2-digit' });
@@ -332,23 +596,56 @@ function fillMonthlyChart(id, data, color) {
   barChart(id, labels, months.map(m => byMonth[m] || 0), color);
 }
 
-function fillTable(tbodyId, rows, keyLabel, keyNum) {
-  const tb = document.getElementById(tbodyId);
-  tb.innerHTML = rows.length
-    ? rows.map(r => `<tr><td>${r[keyLabel]}</td><td class="num">${r[keyNum]}</td></tr>`).join('')
-    : '<tr><td colspan="2" style="color:var(--muted);text-align:center;padding:20px;">Sin datos</td></tr>';
+function fillMonthlyChartEur(id, data, color) {
+  const months = _monthLabels();
+  const byMonth = {};
+  data.forEach(r => { byMonth[r.mes] = r.ingresos; });
+  const labels = months.map(m => {
+    const [y, mo] = m.split('-');
+    return new Date(y, mo - 1).toLocaleString('es', { month: 'short', year: '2-digit' });
+  });
+  barChartEur(id, labels, months.map(m => byMonth[m] || 0), color);
 }
 
-// ── Datos ────────────────────────────────────────────────────────────────────
+function fillTable(tbodyId, rows, keyLabel, keyNum, extraFn) {
+  const tb = document.getElementById(tbodyId);
+  if (!tb) return;
+  if (!rows || !rows.length) {
+    tb.innerHTML = `<tr><td colspan="4" class="no-data">Sin datos</td></tr>`;
+    return;
+  }
+  tb.innerHTML = rows.map((r, i) => {
+    const extra = extraFn ? extraFn(r, i) : '';
+    return `<tr><td>${extra}${r[keyLabel]}</td><td class="num">${r[keyNum]}</td></tr>`;
+  }).join('');
+}
+
+function pct(n, d) { return d ? Math.min(100, Math.round(n / d * 100)) : 0; }
+
+function setBar(barId, value) {
+  const el = document.getElementById(barId);
+  if (el) el.style.width = Math.min(100, value) + '%';
+}
+
+function statusBadge(status) {
+  const paid = ['paid_received','under_review','waiting_user_info','in_progress','completed'];
+  const cls  = status === 'pending_payment' ? 'badge-yellow'
+             : status === 'cancelled' || status === 'refunded' ? 'badge-red'
+             : paid.includes(status) ? 'badge-green'
+             : 'badge-muted';
+  return `<span class="badge ${cls}" style="margin-right:6px"></span>`;
+}
+
+// ── Cargar datos ──────────────────────────────────────────────────────────────
 (async () => {
   const msgEl = document.getElementById('stateMsg');
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 10000);
+    const timer = setTimeout(() => controller.abort(), 15000);
     const res = await fetch('/api/stats', { credentials: 'include', signal: controller.signal });
     clearTimeout(timer);
     const text = await res.text();
-    console.log('[stats] status:', res.status, 'body:', text.slice(0, 500));
+    console.log('[stats] status:', res.status, 'preview:', text.slice(0, 200));
     const d = JSON.parse(text);
 
     if (!res.ok) {
@@ -360,49 +657,153 @@ function fillTable(tbodyId, rows, keyLabel, keyNum) {
     document.getElementById('pageDate').textContent =
       'Datos en tiempo real · ' + new Date().toLocaleString('es', { dateStyle: 'long', timeStyle: 'short' });
 
-    document.getElementById('cTotalUsers').textContent = d.usuarios.total;
-    document.getElementById('cVerified').textContent   = d.usuarios.verificados;
-    document.getElementById('cUnverified').textContent = d.usuarios.sin_verificar;
-    document.getElementById('cTotalGen').textContent   = d.informes.total_generados;
-    document.getElementById('cTotalDl').textContent    = d.informes.total_descargados;
+    const u  = d.usuarios;
+    const fi = d.informes;
+    const c  = d.contactos;
+    const adv = d.asesoramiento;
+    const err = d.errores;
 
-    fillMonthlyChart('chartUsers',  d.usuarios.por_mes, '#00C896');
-    fillMonthlyChart('chartErrors', d.errores.por_mes,  '#f87171');
-    fillTable('tbExchange',  d.informes.por_exchange,  'exchange',  'total');
-    fillTable('tbEjercicio', d.informes.por_ejercicio, 'ejercicio', 'total');
+    // ── Resumen ejecutivo
+    document.getElementById('reTotalUsers').textContent  = u.total;
+    document.getElementById('reActivacion').textContent  = u.ratio_activacion + '%';
+    document.getElementById('reTotalInf').textContent    = fi.generados;
+    document.getElementById('reTasaDl').textContent      = fi.tasa_descarga + '%';
+    document.getElementById('reContactos').textContent   = c.nuevos;
+    document.getElementById('reIngresos').textContent    = adv.ingresos_total_eur.toLocaleString('es', { minimumFractionDigits: 2 }) + ' €';
 
-    // ── Tabla de errores con paginación ──────────────────────────────────────
-    const detalle    = d.errores.detalle || [];
-    const PAGE_SIZE  = 15;
-    let   errPage    = 0;
-    const tbErr      = document.getElementById('tbErrorDetail');
-    const prevBtn    = document.getElementById('errPrevBtn');
-    const nextBtn    = document.getElementById('errNextBtn');
-    const pageInfo   = document.getElementById('errPageInfo');
+    // ── Usuarios
+    document.getElementById('cTotalUsers').textContent = u.total;
+    document.getElementById('cVerified').textContent   = u.verificados;
+    document.getElementById('cUnverified').textContent = u.sin_verificar;
+    document.getElementById('cConInf').textContent     = u.con_informes;
+    document.getElementById('cSinInf').textContent     = u.sin_informes;
+    document.getElementById('cActivos').textContent    = u.activos_30d;
+    document.getElementById('cFree').textContent       = u.free;
+    document.getElementById('cPro').textContent        = u.pro;
+    document.getElementById('cActivacion').textContent = u.ratio_activacion + '%';
+    setBar('pctBarActivacion', u.ratio_activacion);
+    fillMonthlyChart('chartUsers', u.por_mes, '#00C896');
+
+    // ── Informes FIFO
+    document.getElementById('cTotalInf').textContent    = fi.total;
+    document.getElementById('cGenerados').textContent   = fi.generados;
+    document.getElementById('cFallidos').textContent    = fi.fallidos;
+    document.getElementById('cDescargados').textContent = fi.descargados;
+    document.getElementById('cTasaDl').textContent      = fi.tasa_descarga + '%';
+    document.getElementById('cAvgMs').textContent       = fi.avg_processing_ms.toLocaleString('es');
+    document.getElementById('cAvgRows').textContent     = fi.avg_csv_rows.toLocaleString('es');
+    setBar('pctBarDl', fi.tasa_descarga);
+
+    fillTable('tbExchange',  fi.por_exchange,  'exchange',  'total');
+    fillTable('tbEjercicio', fi.por_ejercicio, 'ejercicio', 'total');
+    fillTable('tbVolumen',   fi.por_volumen,   'rango',     'total');
+
+    // TOP 5 usuarios
+    const tb5 = document.getElementById('tbTop5');
+    if (fi.top_usuarios && fi.top_usuarios.length) {
+      tb5.innerHTML = fi.top_usuarios.map((r, i) =>
+        `<tr>
+          <td class="td-muted" style="width:32px">${i + 1}</td>
+          <td style="font-family:monospace;font-size:12px">${r.email_mask}</td>
+          <td class="num td-accent">${r.total}</td>
+        </tr>`
+      ).join('');
+    } else {
+      tb5.innerHTML = `<tr><td colspan="3" class="no-data">Sin datos</td></tr>`;
+    }
+
+    // Tipos de error
+    const tbErrType = document.getElementById('tbErrorType');
+    if (fi.por_error_type && fi.por_error_type.length) {
+      tbErrType.innerHTML = fi.por_error_type.map(r =>
+        `<tr><td>${r.tipo}</td><td class="num td-red">${r.total}</td></tr>`
+      ).join('');
+      document.getElementById('tbErrorTypeWrap').hidden = false;
+    } else {
+      document.getElementById('tbErrorTypeWrap').hidden = true;
+    }
+
+    // ── Contactos
+    document.getElementById('cTotalC').textContent  = c.total;
+    document.getElementById('cCNuevos').textContent = c.nuevos;
+    document.getElementById('cCResp').textContent   = c.respondidos;
+    fillTable('tbTipoContacto', c.por_tipo, 'tipo', 'total');
+
+    // ── Asesoramiento fiscal
+    document.getElementById('cAdvTotal').textContent   = adv.total;
+    document.getElementById('cAdvPagadas').textContent = adv.pagadas;
+    document.getElementById('cAdvPend').textContent    = adv.pendientes_pago;
+    document.getElementById('cAdvSinAsig').textContent = adv.sin_asignar;
+    document.getElementById('cAdvConv').textContent    = adv.conversion_pct + '%';
+    document.getElementById('cAdvIngresos').textContent =
+      adv.ingresos_total_eur.toLocaleString('es', { minimumFractionDigits: 2 }) + ' €';
+    setBar('pctBarConv', adv.conversion_pct);
+
+    // Por estado (con badge de color)
+    const tbAdvEst = document.getElementById('tbAdvEstado');
+    if (adv.por_estado && adv.por_estado.length) {
+      tbAdvEst.innerHTML = adv.por_estado.map(r =>
+        `<tr><td>${statusBadge(r.estado)}${r.label}</td><td class="num">${r.total}</td></tr>`
+      ).join('');
+    } else {
+      tbAdvEst.innerHTML = `<tr><td colspan="2" class="no-data">Sin datos</td></tr>`;
+    }
+
+    fillTable('tbAdvServicio', adv.por_servicio, 'label', 'total');
+
+    // Ingresos por servicio
+    const tbIngSv = document.getElementById('tbAdvIngSv');
+    if (adv.ingresos_por_servicio && adv.ingresos_por_servicio.length) {
+      tbIngSv.innerHTML = adv.ingresos_por_servicio.map(r =>
+        `<tr>
+          <td>${r.label}</td>
+          <td class="num td-accent">${r.ingresos.toLocaleString('es', { minimumFractionDigits: 2 })} €</td>
+        </tr>`
+      ).join('');
+    } else {
+      tbIngSv.innerHTML = `<tr><td colspan="2" class="no-data">Sin datos</td></tr>`;
+    }
+
+    fillMonthlyChartEur('chartIngresos', adv.ingresos_por_mes, '#00C896');
+
+    // ── Errores
+    fillMonthlyChart('chartErrors', err.por_mes, '#f87171');
+
+    // Tabla de errores con paginación
+    const detalle   = err.detalle || [];
+    const PAGE_SIZE = 15;
+    let errPage     = 0;
+    const tbErr     = document.getElementById('tbErrorDetail');
+    const prevBtn   = document.getElementById('errPrevBtn');
+    const nextBtn   = document.getElementById('errNextBtn');
+    const pageInfo  = document.getElementById('errPageInfo');
     const pagination = document.getElementById('errPagination');
 
     function renderErrPage() {
       if (!detalle.length) {
-        tbErr.innerHTML = '<tr><td colspan="3" style="color:var(--muted);text-align:center;padding:20px;">Sin errores registrados</td></tr>';
+        tbErr.innerHTML = '<tr><td colspan="3" class="no-data">Sin errores registrados</td></tr>';
         pagination.hidden = true;
         return;
       }
       const totalPages = Math.ceil(detalle.length / PAGE_SIZE);
       const slice = detalle.slice(errPage * PAGE_SIZE, (errPage + 1) * PAGE_SIZE);
       tbErr.innerHTML = slice.map(r =>
-        `<tr><td style="font-variant-numeric:tabular-nums;white-space:nowrap">${r.fecha}</td><td>${r.exchange}</td><td style="color:var(--muted)">${r.usuario}</td></tr>`
+        `<tr>
+          <td style="font-variant-numeric:tabular-nums;white-space:nowrap">${r.fecha}</td>
+          <td>${r.exchange}</td>
+          <td class="td-muted" style="font-family:monospace;font-size:12px">${r.usuario}</td>
+        </tr>`
       ).join('');
       pageInfo.textContent = `Página ${errPage + 1} de ${totalPages} · ${detalle.length} registros`;
       prevBtn.disabled = errPage === 0;
       nextBtn.disabled = errPage >= totalPages - 1;
       pagination.hidden = totalPages <= 1;
     }
-
     prevBtn.addEventListener('click', () => { errPage--; renderErrPage(); });
     nextBtn.addEventListener('click', () => { errPage++; renderErrPage(); });
     renderErrPage();
 
-    msgEl.hidden                            = true;
+    msgEl.hidden = true;
     document.getElementById('content').hidden = false;
 
   } catch (err) {

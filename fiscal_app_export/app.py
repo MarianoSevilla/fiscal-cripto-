@@ -21,7 +21,7 @@ import time
 import tempfile
 import traceback
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, send_file, send_from_directory, redirect, url_for, render_template
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -1710,8 +1710,9 @@ def _api_stats_data():
     from collections import defaultdict
 
     now = datetime.utcnow()
+    treinta_dias_atras = now - timedelta(days=30)
 
-    # Primer día del mes de hace 5 meses (= ventana de 6 meses: 5 completos + mes actual)
+    # Ventana de 6 meses: primer día del mes de hace 5 meses
     m = now.month - 5
     y = now.year
     if m <= 0:
@@ -1719,81 +1720,231 @@ def _api_stats_data():
         y -= 1
     seis_meses_atras = datetime(y, m, 1)
 
-    # ── Usuarios ─────────────────────────────────────────────────────────────
-    todos_usuarios   = User.query.all()
-    total_users      = len(todos_usuarios)
-    verified_users   = sum(1 for u in todos_usuarios if u.email_verified_at)
-    unverified_users = total_users - verified_users
+    # Helper: enmascarar email para privacidad
+    def _mask_email(email):
+        if not email:
+            return "***"
+        p = email.split("@")
+        return (p[0][:2] + "***@" + p[1]) if len(p) == 2 else "***"
 
-    # Nuevos por mes (últimos 6 meses) — agrupado en Python
-    usuarios_bucket = defaultdict(int)
-    for u in todos_usuarios:
-        if u.created_at and u.created_at >= seis_meses_atras:
-            usuarios_bucket[u.created_at.strftime("%Y-%m")] += 1
-    usuarios_por_mes_json = [
-        {"mes": k, "total": v}
-        for k, v in sorted(usuarios_bucket.items())
-    ]
+    # ── USUARIOS — SQL aggregations ──────────────────────────────────────────
+    total_users   = db.session.query(func.count(User.id)).scalar() or 0
+    verified      = db.session.query(func.count(User.id)).filter(User.email_verified_at.isnot(None)).scalar() or 0
+    activos_30d   = db.session.query(func.count(User.id)).filter(User.last_login >= treinta_dias_atras).scalar() or 0
+    plan_free     = db.session.query(func.count(User.id)).filter(User.plan == "free").scalar() or 0
+    plan_pro      = db.session.query(func.count(User.id)).filter(User.plan == "pro").scalar() or 0
+    con_informes  = db.session.query(func.count(func.distinct(FifoReport.user_id))).scalar() or 0
 
-    # ── Informes FIFO ────────────────────────────────────────────────────────
-    todos_reports     = FifoReport.query.all()
-    generados         = [r for r in todos_reports if r.status == "generated"]
-    total_generados   = len(generados)
-    total_descargados = sum(1 for r in generados if r.downloaded_at)
+    # Registros por mes — cargamos solo created_at (evita traer objetos completos)
+    u_ts = db.session.query(User.created_at).filter(User.created_at >= seis_meses_atras).all()
+    u_bucket = defaultdict(int)
+    for (ts,) in u_ts:
+        if ts:
+            u_bucket[ts.strftime("%Y-%m")] += 1
+    usuarios_por_mes = [{"mes": k, "total": v} for k, v in sorted(u_bucket.items())]
 
-    exchange_bucket = defaultdict(int)
-    for r in generados:
-        exchange_bucket[r.exchange] += 1
-    por_exchange_json = [
-        {"exchange": k, "total": v}
-        for k, v in sorted(exchange_bucket.items(), key=lambda x: -x[1])
-    ]
+    # ── INFORMES FIFO — SQL aggregations ─────────────────────────────────────
+    total_inf   = db.session.query(func.count(FifoReport.id)).scalar() or 0
+    gen         = db.session.query(func.count(FifoReport.id)).filter(FifoReport.status == "generated").scalar() or 0
+    fallidos    = total_inf - gen
+    descargados = db.session.query(func.count(FifoReport.id)).filter(
+        FifoReport.status == "generated", FifoReport.downloaded_at.isnot(None)
+    ).scalar() or 0
 
-    ejercicio_bucket = defaultdict(int)
-    for r in generados:
-        ejercicio_bucket[r.fiscal_year] += 1
-    por_ejercicio_json = [
-        {"ejercicio": k, "total": v}
-        for k, v in sorted(ejercicio_bucket.items(), key=lambda x: -x[0])
-    ]
+    avg_ms   = db.session.query(func.avg(FifoReport.processing_ms)).filter(FifoReport.status == "generated").scalar()
+    avg_rows = db.session.query(func.avg(FifoReport.csv_rows)).filter(FifoReport.status == "generated").scalar()
 
-    # ── Errores por mes — últimos 6 meses ────────────────────────────────────
-    user_map = {u.id: u for u in todos_usuarios}
-    errores_bucket = defaultdict(int)
-    errores_detalle = []
-    for r in todos_reports:
-        if r.status == "failed" and r.created_at and r.created_at >= seis_meses_atras:
-            errores_bucket[r.created_at.strftime("%Y-%m")] += 1
-    for r in todos_reports:
-        if r.status == "failed" and r.created_at:
-            u = user_map.get(r.user_id)
-            errores_detalle.append({
-                "fecha":    r.created_at.strftime("%Y-%m-%d %H:%M"),
-                "exchange": r.exchange,
-                "usuario":  u.email if u else f"#{r.user_id}",
-            })
-    errores_detalle.sort(key=lambda x: x["fecha"], reverse=True)
+    por_exchange_raw = (
+        db.session.query(FifoReport.exchange, func.count(FifoReport.id).label("c"))
+        .filter(FifoReport.status == "generated")
+        .group_by(FifoReport.exchange)
+        .order_by(func.count(FifoReport.id).desc())
+        .all()
+    )
+    por_ejercicio_raw = (
+        db.session.query(FifoReport.fiscal_year, func.count(FifoReport.id).label("c"))
+        .filter(FifoReport.status == "generated")
+        .group_by(FifoReport.fiscal_year)
+        .order_by(FifoReport.fiscal_year.desc())
+        .all()
+    )
 
-    errores_por_mes_json = [
-        {"mes": k, "total": v}
-        for k, v in sorted(errores_bucket.items())
-    ]
+    # Distribución por volumen de csv_rows
+    rows_all = db.session.query(FifoReport.csv_rows).filter(
+        FifoReport.status == "generated", FifoReport.csv_rows.isnot(None)
+    ).all()
+    vol_bkt = defaultdict(int)
+    for (r,) in rows_all:
+        if   r < 50:    vol_bkt["< 50"] += 1
+        elif r < 250:   vol_bkt["50–250"] += 1
+        elif r < 1000:  vol_bkt["250–1.000"] += 1
+        elif r < 10000: vol_bkt["1.000–10.000"] += 1
+        else:           vol_bkt["> 10.000"] += 1
+    VOL_ORDER = ["< 50", "50–250", "250–1.000", "1.000–10.000", "> 10.000"]
+    por_volumen = [{"rango": k, "total": vol_bkt.get(k, 0)} for k in VOL_ORDER]
 
+    # TOP 5 usuarios por informes (emails enmascarados)
+    top5_raw = (
+        db.session.query(FifoReport.user_id, func.count(FifoReport.id).label("c"))
+        .filter(FifoReport.status == "generated")
+        .group_by(FifoReport.user_id)
+        .order_by(func.count(FifoReport.id).desc())
+        .limit(5)
+        .all()
+    )
+    uids = [r.user_id for r in top5_raw]
+    u_email_map = {u.id: u.email for u in User.query.filter(User.id.in_(uids)).all()} if uids else {}
+    top5 = [{"user_id": r.user_id, "email_mask": _mask_email(u_email_map.get(r.user_id)), "total": r.c} for r in top5_raw]
+
+    # Tipos de error más frecuentes
+    por_error_raw = (
+        db.session.query(FifoReport.error_type, func.count(FifoReport.id).label("c"))
+        .filter(FifoReport.status == "failed")
+        .group_by(FifoReport.error_type)
+        .order_by(func.count(FifoReport.id).desc())
+        .limit(10)
+        .all()
+    )
+    por_error = [{"tipo": r.error_type or "sin clasificar", "total": r.c} for r in por_error_raw]
+
+    # ── CONTACTOS ─────────────────────────────────────────────────────────────
+    total_c    = db.session.query(func.count(Contacto.id)).scalar() or 0
+    c_nuevos   = db.session.query(func.count(Contacto.id)).filter(Contacto.estado == "nuevo").scalar() or 0
+    c_resp     = db.session.query(func.count(Contacto.id)).filter(Contacto.estado == "respondido").scalar() or 0
+    por_tipo_c = (
+        db.session.query(Contacto.tipo_consulta, func.count(Contacto.id).label("c"))
+        .group_by(Contacto.tipo_consulta)
+        .order_by(func.count(Contacto.id).desc())
+        .all()
+    )
+
+    # ── ASESORAMIENTO FISCAL ──────────────────────────────────────────────────
+    PAID_ST  = {"paid_received", "under_review", "waiting_user_info", "in_progress", "completed"}
+    SL       = FiscalAdvisoryRequest.STATUS_LABELS
+    SVL      = FiscalAdvisoryRequest.SERVICE_LABELS
+
+    total_adv   = db.session.query(func.count(FiscalAdvisoryRequest.id)).scalar() or 0
+    adv_pagadas = db.session.query(func.count(FiscalAdvisoryRequest.id)).filter(
+        FiscalAdvisoryRequest.status.in_(list(PAID_ST))
+    ).scalar() or 0
+    adv_pend    = db.session.query(func.count(FiscalAdvisoryRequest.id)).filter(
+        FiscalAdvisoryRequest.status == "pending_payment"
+    ).scalar() or 0
+    adv_sin_asig = db.session.query(func.count(FiscalAdvisoryRequest.id)).filter(
+        FiscalAdvisoryRequest.assigned_to.is_(None),
+        FiscalAdvisoryRequest.status.in_(list(PAID_ST))
+    ).scalar() or 0
+
+    ing_cents = db.session.query(func.sum(FiscalAdvisoryRequest.amount_paid)).filter(
+        FiscalAdvisoryRequest.amount_paid.isnot(None)
+    ).scalar() or 0
+
+    por_estado_adv = (
+        db.session.query(FiscalAdvisoryRequest.status, func.count(FiscalAdvisoryRequest.id).label("c"))
+        .group_by(FiscalAdvisoryRequest.status)
+        .order_by(func.count(FiscalAdvisoryRequest.id).desc())
+        .all()
+    )
+    por_servicio_adv = (
+        db.session.query(FiscalAdvisoryRequest.service_type, func.count(FiscalAdvisoryRequest.id).label("c"))
+        .group_by(FiscalAdvisoryRequest.service_type)
+        .order_by(func.count(FiscalAdvisoryRequest.id).desc())
+        .all()
+    )
+    ing_sv_raw = (
+        db.session.query(FiscalAdvisoryRequest.service_type,
+                         func.sum(FiscalAdvisoryRequest.amount_paid).label("s"))
+        .filter(FiscalAdvisoryRequest.amount_paid.isnot(None))
+        .group_by(FiscalAdvisoryRequest.service_type)
+        .order_by(func.sum(FiscalAdvisoryRequest.amount_paid).desc())
+        .all()
+    )
+
+    # Ingresos por mes — solo las 2 columnas necesarias
+    adv_mes_raw = db.session.query(
+        FiscalAdvisoryRequest.created_at, FiscalAdvisoryRequest.amount_paid
+    ).filter(
+        FiscalAdvisoryRequest.amount_paid.isnot(None),
+        FiscalAdvisoryRequest.created_at >= seis_meses_atras
+    ).all()
+    ing_mes_bkt = defaultdict(float)
+    for ts, amount in adv_mes_raw:
+        if ts:
+            ing_mes_bkt[ts.strftime("%Y-%m")] += (amount or 0) / 100.0
+
+    # ── ERRORES ───────────────────────────────────────────────────────────────
+    err_ts = db.session.query(FifoReport.created_at).filter(
+        FifoReport.status == "failed", FifoReport.created_at >= seis_meses_atras
+    ).all()
+    err_bkt = defaultdict(int)
+    for (ts,) in err_ts:
+        if ts:
+            err_bkt[ts.strftime("%Y-%m")] += 1
+    errores_por_mes = [{"mes": k, "total": v} for k, v in sorted(err_bkt.items())]
+
+    err_detail_raw = (
+        db.session.query(FifoReport.created_at, FifoReport.exchange, FifoReport.user_id)
+        .filter(FifoReport.status == "failed")
+        .order_by(FifoReport.created_at.desc())
+        .limit(100)
+        .all()
+    )
+    err_uids  = list({r.user_id for r in err_detail_raw})
+    err_u_map = {u.id: u.email for u in User.query.filter(User.id.in_(err_uids)).all()} if err_uids else {}
+    errores_detalle = [{
+        "fecha":    r.created_at.strftime("%Y-%m-%d %H:%M"),
+        "exchange": r.exchange,
+        "usuario":  _mask_email(err_u_map.get(r.user_id)),
+    } for r in err_detail_raw]
+
+    # ── RESPUESTA JSON ────────────────────────────────────────────────────────
     return jsonify({
         "usuarios": {
-            "total":       total_users,
-            "verificados": verified_users,
-            "sin_verificar": unverified_users,
-            "por_mes":     usuarios_por_mes_json,
+            "total":            total_users,
+            "verificados":      verified,
+            "sin_verificar":    total_users - verified,
+            "con_informes":     con_informes,
+            "sin_informes":     total_users - con_informes,
+            "ratio_activacion": round(con_informes / total_users * 100, 1) if total_users else 0.0,
+            "activos_30d":      activos_30d,
+            "free":             plan_free,
+            "pro":              plan_pro,
+            "por_mes":          usuarios_por_mes,
         },
         "informes": {
-            "total_generados":  total_generados,
-            "total_descargados": total_descargados,
-            "por_exchange":     por_exchange_json,
-            "por_ejercicio":    por_ejercicio_json,
+            "total":             total_inf,
+            "generados":         gen,
+            "fallidos":          fallidos,
+            "descargados":       descargados,
+            "tasa_descarga":     round(descargados / gen * 100, 1) if gen else 0.0,
+            "avg_processing_ms": int(avg_ms or 0),
+            "avg_csv_rows":      int(avg_rows or 0),
+            "por_exchange":      [{"exchange": r.exchange, "total": r.c} for r in por_exchange_raw],
+            "por_ejercicio":     [{"ejercicio": r.fiscal_year, "total": r.c} for r in por_ejercicio_raw],
+            "por_volumen":       por_volumen,
+            "top_usuarios":      top5,
+            "por_error_type":    por_error,
+        },
+        "contactos": {
+            "total":       total_c,
+            "nuevos":      c_nuevos,
+            "respondidos": c_resp,
+            "por_tipo":    [{"tipo": r.tipo_consulta, "total": r.c} for r in por_tipo_c],
+        },
+        "asesoramiento": {
+            "total":                 total_adv,
+            "pagadas":               adv_pagadas,
+            "pendientes_pago":       adv_pend,
+            "sin_asignar":           adv_sin_asig,
+            "conversion_pct":        round(adv_pagadas / total_adv * 100, 1) if total_adv else 0.0,
+            "ingresos_total_eur":    round(ing_cents / 100.0, 2),
+            "por_estado":            [{"estado": r.status, "label": SL.get(r.status, r.status), "total": r.c} for r in por_estado_adv],
+            "por_servicio":          [{"servicio": r.service_type, "label": SVL.get(r.service_type, r.service_type), "total": r.c} for r in por_servicio_adv],
+            "ingresos_por_servicio": [{"label": SVL.get(r.service_type, r.service_type), "ingresos": round((r.s or 0) / 100.0, 2)} for r in ing_sv_raw],
+            "ingresos_por_mes":      [{"mes": k, "ingresos": round(v, 2)} for k, v in sorted(ing_mes_bkt.items())],
         },
         "errores": {
-            "por_mes":  errores_por_mes_json,
+            "por_mes":  errores_por_mes,
             "detalle":  errores_detalle,
         },
     })
