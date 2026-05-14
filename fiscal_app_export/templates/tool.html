@@ -511,7 +511,7 @@
   }
   .btn-retry:hover { background: rgba(226,75,74,0.12); }
 
-  /* YEAR SELECTOR */
+  /* YEAR SELECTOR — post-análisis (filtro de resultados) */
   .year-bar { display: flex; align-items: center; gap: 0.65rem; margin-bottom: 1rem; flex-wrap: wrap; }
   .year-bar-label { font-size: 11px; font-family: var(--font-mono); color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; flex-shrink: 0; }
   .year-pills { display: flex; gap: 0.35rem; flex-wrap: wrap; }
@@ -523,6 +523,21 @@
   }
   .year-pill:hover { border-color: var(--accent); color: var(--accent); }
   .year-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* YEAR CHIPS — pre-análisis (selector de ejercicio fiscal) */
+  .year-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+  .year-chip {
+    padding: 3px 11px; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--muted); cursor: pointer;
+    font-size: 12px; font-family: var(--font-body); font-weight: 500;
+    transition: all 0.15s; line-height: 1.5;
+  }
+  .year-chip:hover { border-color: var(--accent); color: var(--text); }
+  .year-chip.active { background: var(--accent-dim, rgba(240,185,11,0.1)); color: var(--accent); border-color: var(--accent); }
+  .year-chip.todos.active { background: var(--accent); color: #0a0a0a; border-color: var(--accent); font-weight: 700; }
+  .year-placeholder-bar { font-size: 11px; color: var(--muted); margin-top: 3px; font-style: italic; }
+  .year-none-warn-bar { font-size: 10px; color: var(--red); margin: 3px 0 0; }
+  .year-nodetect-bar { font-size: 10px; color: var(--text2); margin-top: 3px; font-style: italic; }
 
   /* RESULTS */
   .results-content { display: none; }
@@ -819,9 +834,14 @@
           <label for="nombre">Tu nombre</label>
           <input type="text" id="nombre" class="bar-input" placeholder="Para el encabezado del informe">
         </div>
-        <div class="bar-field bar-field-year">
-          <label for="ejercicio">Ejercicio fiscal</label>
-          <input type="text" id="ejercicio" class="bar-input bar-input-year" placeholder="2024" maxlength="4" pattern="\d{4}">
+        <div class="bar-field bar-field-year" id="ejercicio-section">
+          <label>Ejercicio fiscal</label>
+          <div id="year-placeholder-bar" class="year-placeholder-bar">Sube el CSV para detectar</div>
+          <div id="year-chips-wrap" style="display:none">
+            <div id="year-chips" class="year-chips"></div>
+            <p id="year-none-warn" class="year-none-warn-bar" style="display:none">Selecciona al menos un ejercicio</p>
+          </div>
+          <div id="year-nodetect" class="year-nodetect-bar" style="display:none">Sin años detectados</div>
         </div>
       </div>
     </div>
@@ -853,7 +873,7 @@
     <button class="bar-btn-nuevo" id="btnNuevo">↩ Nuevo análisis</button>
   </div>
 
-  <div class="bar-error-msg" id="ejercicio-error">Introduce un año válido (entre 2009 y el año actual)</div>
+  <!-- ejercicio-error eliminado: reemplazado por chip selector -->
 
   <!-- Instrucciones post-descarga -->
   <div id="instruccionesPost" style="display:none; margin-top:0.75rem; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:1rem;">
@@ -1191,6 +1211,13 @@
     document.getElementById('yearPills').innerHTML = '';
     allData = null;
     añoActivo = 'todos';
+    // Reiniciar selector de ejercicio
+    detectedYears = [];
+    selectedYears = [];
+    document.getElementById('year-chips').innerHTML = '';
+    yearChipsWrap.style.display      = 'none';
+    yearNodetect.style.display       = 'none';
+    yearPlaceholderBar.style.display = 'block';
     setProgress(0);
     showState('empty');
   }
@@ -1230,38 +1257,113 @@
     return div.innerHTML.substring(0, 100);
   }
 
-  // ── VALIDACIÓN EJERCICIO ─────────────────
-  const ejercicioInput = document.getElementById('ejercicio');
-  const ejercicioError = document.getElementById('ejercicio-error');
-  const AÑO_MIN = 2009;
-  const AÑO_MAX = new Date().getFullYear() + 1;
+  // ── SELECTOR DE EJERCICIO (chips) ────────
+  console.log('[FIFO] Build: e550cfb | year-chip-fix activo en tool.html');
 
-  function validarEjercicio() {
-    const val = ejercicioInput.value.trim();
-    if (!val) {
-      ejercicioInput.classList.remove('field-error', 'field-ok');
-      ejercicioError.classList.remove('visible');
-      return true;
+  let detectedYears = [];
+  let selectedYears = [];
+
+  const yearPlaceholderBar = document.getElementById('year-placeholder-bar');
+  const yearChipsWrap      = document.getElementById('year-chips-wrap');
+  const yearNoneWarn       = document.getElementById('year-none-warn');
+  const yearNodetect       = document.getElementById('year-nodetect');
+
+  // Detecta años en el CSV: 4 dígitos estándar + formato Binance TX (YY-MM-DD HH:mm:ss)
+  async function extractYearsFromCSV(file) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target.result || '';
+        const years = new Set();
+        // Formato estándar: 2024-xx-xx
+        (text.match(/\b20(0[9]|[12][0-9]|3[0-9])\b/g) || []).forEach(y => years.add(Number(y)));
+        // Formato Binance TX: YY-MM-DD HH:mm:ss (ej. 24-04-30 01:44:06 → 2024)
+        (text.match(/\b(\d{2})-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/g) || []).forEach(match => {
+          const yy = parseInt(match.substring(0, 2), 10);
+          if (yy >= 9 && yy <= 39) years.add(2000 + yy);
+        });
+        const result = [...years].sort((a, b) => a - b);
+        console.log('[FIFO] CSV:', file.name, '(' + (file.size / 1024).toFixed(1) + ' KB)');
+        console.log('[FIFO] detectedYears:', result);
+        resolve(result);
+      };
+      reader.onerror = () => resolve([]);
+      reader.readAsText(file.slice(0, 1024 * 1024), 'utf-8');
+    });
+  }
+
+  // Listener delegado en el wrapper — se añade una sola vez
+  yearChipsWrap.addEventListener('click', (e) => {
+    const chip = e.target.closest('.year-chip');
+    if (!chip) return;
+    const val = chip.dataset.year;
+    const container = document.getElementById('year-chips');
+    if (val === 'all') {
+      selectedYears = [...detectedYears];
+      container.querySelectorAll('.year-chip').forEach(c => c.classList.add('active'));
+    } else {
+      const yr  = parseInt(val, 10);
+      const idx = selectedYears.indexOf(yr);
+      if (idx === -1) { selectedYears.push(yr); chip.classList.add('active'); }
+      else            { selectedYears.splice(idx, 1); chip.classList.remove('active'); }
+      const todosChip = container.querySelector('.year-chip[data-year="all"]');
+      if (selectedYears.length === detectedYears.length) todosChip.classList.add('active');
+      else todosChip.classList.remove('active');
     }
-    const año = parseInt(val, 10);
-    if (!/^\d{4}$/.test(val) || año < AÑO_MIN || año > AÑO_MAX) {
-      ejercicioInput.classList.add('field-error');
-      ejercicioInput.classList.remove('field-ok');
-      ejercicioError.classList.add('visible');
-      return false;
+    yearNoneWarn.style.display = selectedYears.length === 0 ? 'block' : 'none';
+    actualizarBoton();
+  });
+
+  function renderYearChips(years) {
+    const container = document.getElementById('year-chips');
+    container.innerHTML = '';
+    if (!years || years.length === 0) {
+      yearChipsWrap.style.display      = 'none';
+      yearPlaceholderBar.style.display = 'none';
+      yearNodetect.style.display       = 'block';
+      selectedYears = [];
+      actualizarBoton();
+      return;
     }
-    ejercicioInput.classList.remove('field-error');
-    ejercicioInput.classList.add('field-ok');
-    ejercicioError.classList.remove('visible');
-    return true;
+    yearPlaceholderBar.style.display = 'none';
+    yearNodetect.style.display       = 'none';
+    yearChipsWrap.style.display      = 'block';
+
+    const todoChip = document.createElement('button');
+    todoChip.type = 'button';
+    todoChip.className = 'year-chip todos';
+    todoChip.dataset.year = 'all';
+    todoChip.textContent = 'Todos';
+    container.appendChild(todoChip);
+
+    years.forEach(yr => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'year-chip';
+      chip.dataset.year = String(yr);
+      chip.textContent = String(yr);
+      container.appendChild(chip);
+    });
+
+    const lastYear = years[years.length - 1];
+    selectedYears = [lastYear];
+    container.querySelector(`.year-chip[data-year="${lastYear}"]`).classList.add('active');
+    yearNoneWarn.style.display = 'none';
+    console.log('[FIFO] seleccionado por defecto:', lastYear);
+  }
+
+  function getEjercicioValue() {
+    if (!detectedYears.length) return '';
+    if (!selectedYears.length) return '';
+    if (selectedYears.length === detectedYears.length) return 'all';
+    return [...selectedYears].sort((a, b) => a - b).join(',');
   }
 
   function actualizarBoton() {
-    btnAnalizar.disabled = !(validarEjercicio() && !!selectedFile);
+    const archivoOk   = !!selectedFile;
+    const ejercicioOk = !detectedYears.length || selectedYears.length > 0;
+    btnAnalizar.disabled = !(archivoOk && ejercicioOk);
   }
-
-  ejercicioInput.addEventListener('blur', actualizarBoton);
-  ejercicioInput.addEventListener('input', actualizarBoton);
 
   // ── FILE SELECTION ───────────────────────
   function handleFile(file) {
@@ -1282,7 +1384,12 @@
     selectedFile = file;
     fileName.textContent = file.name;
     showFile();
-    actualizarBoton();
+    // Detectar años del CSV y renderizar chips
+    extractYearsFromCSV(file).then(years => {
+      detectedYears = years;
+      renderYearChips(years);
+      actualizarBoton();
+    });
   }
 
   csvInput.addEventListener('change', () => { if (csvInput.files[0]) handleFile(csvInput.files[0]); });
@@ -1640,7 +1747,15 @@
       mostrarErrorArchivo('El fichero debe ser un .csv. Selecciona el fichero correcto.');
       return;
     }
-    if (!validarEjercicio()) { ejercicioInput.focus(); return; }
+    if (!detectedYears.length || selectedYears.length > 0) {
+      // OK: o no se detectaron años (backend procesará todo) o hay selección
+    } else {
+      yearNoneWarn.style.display = 'block';
+      return;
+    }
+
+    const ejercicioVal = getEjercicioValue();
+    console.log('[FIFO] Enviando ejercicio:', ejercicioVal || '(todos)');
 
     btnAnalizar.disabled = true;
     btnText.textContent  = 'Procesando…';
@@ -1653,7 +1768,7 @@
     formData.append('csv', selectedFile);
     formData.append('exchange', selectedExchange);
     formData.append('nombre', sanitizarTexto(document.getElementById('nombre').value.trim()));
-    formData.append('ejercicio', sanitizarTexto(document.getElementById('ejercicio').value.trim()));
+    formData.append('ejercicio', sanitizarTexto(ejercicioVal));
 
     try {
       const res  = await fetch('/api/analizar', { method: 'POST', body: formData, credentials: 'include' });
@@ -1704,12 +1819,7 @@
         const nombreInput = document.getElementById('nombre');
         if (nombreInput && !nombreInput.value) nombreInput.value = u.full_name;
       }
-      // Pre-rellenar ejercicio fiscal con el año anterior al actual
-      const ejercicioInput = document.getElementById('ejercicio');
-      if (ejercicioInput && !ejercicioInput.value) {
-        ejercicioInput.value = String(new Date().getFullYear() - 1);
-        actualizarBoton();
-      }
+      // Ejercicio fiscal: ahora se detecta automáticamente del CSV (chip selector)
     } catch {
       window.location.replace('/login/');
     }
