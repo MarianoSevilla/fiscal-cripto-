@@ -1711,6 +1711,9 @@ def _api_stats_data():
 
     now = datetime.utcnow()
     treinta_dias_atras = now - timedelta(days=30)
+    siete_dias_atras   = now - timedelta(days=7)
+    veinticuatro_h     = now - timedelta(hours=24)
+    hoy_inicio         = datetime(now.year, now.month, now.day)
 
     # Ventana de 6 meses: primer día del mes de hace 5 meses
     m = now.month - 5
@@ -1727,6 +1730,18 @@ def _api_stats_data():
         p = email.split("@")
         return (p[0][:2] + "***@" + p[1]) if len(p) == 2 else "***"
 
+    def _daily_counts_from_ts(ts_list, days=7):
+        """Lista de (datetime,) → array de 'days' conteos diarios, del más antiguo al más reciente."""
+        bkt = defaultdict(int)
+        for (ts,) in ts_list:
+            if ts:
+                bkt[ts.strftime("%Y-%m-%d")] += 1
+        result = []
+        for i in range(days - 1, -1, -1):
+            day = (now - timedelta(days=i)).strftime("%Y-%m-%d")
+            result.append(bkt.get(day, 0))
+        return result
+
     # ── USUARIOS — SQL aggregations ──────────────────────────────────────────
     total_users   = db.session.query(func.count(User.id)).scalar() or 0
     verified      = db.session.query(func.count(User.id)).filter(User.email_verified_at.isnot(None)).scalar() or 0
@@ -1734,6 +1749,7 @@ def _api_stats_data():
     plan_free     = db.session.query(func.count(User.id)).filter(User.plan == "free").scalar() or 0
     plan_pro      = db.session.query(func.count(User.id)).filter(User.plan == "pro").scalar() or 0
     con_informes  = db.session.query(func.count(func.distinct(FifoReport.user_id))).scalar() or 0
+    usuarios_hoy  = db.session.query(func.count(User.id)).filter(User.created_at >= hoy_inicio).scalar() or 0
 
     # Registros por mes — cargamos solo created_at (evita traer objetos completos)
     u_ts = db.session.query(User.created_at).filter(User.created_at >= seis_meses_atras).all()
@@ -1743,6 +1759,8 @@ def _api_stats_data():
             u_bucket[ts.strftime("%Y-%m")] += 1
     usuarios_por_mes = [{"mes": k, "total": v} for k, v in sorted(u_bucket.items())]
 
+    u_7d_raw = db.session.query(User.created_at).filter(User.created_at >= siete_dias_atras).all()
+
     # ── INFORMES FIFO — SQL aggregations ─────────────────────────────────────
     total_inf   = db.session.query(func.count(FifoReport.id)).scalar() or 0
     gen         = db.session.query(func.count(FifoReport.id)).filter(FifoReport.status == "generated").scalar() or 0
@@ -1750,9 +1768,20 @@ def _api_stats_data():
     descargados = db.session.query(func.count(FifoReport.id)).filter(
         FifoReport.status == "generated", FifoReport.downloaded_at.isnot(None)
     ).scalar() or 0
+    informes_hoy = db.session.query(func.count(FifoReport.id)).filter(
+        FifoReport.status == "generated", FifoReport.created_at >= hoy_inicio
+    ).scalar() or 0
 
     avg_ms   = db.session.query(func.avg(FifoReport.processing_ms)).filter(FifoReport.status == "generated").scalar()
     avg_rows = db.session.query(func.avg(FifoReport.csv_rows)).filter(FifoReport.status == "generated").scalar()
+
+    # Power users
+    power_1k = db.session.query(func.count(func.distinct(FifoReport.user_id))).filter(
+        FifoReport.status == "generated", FifoReport.csv_rows >= 1000
+    ).scalar() or 0
+    power_10k = db.session.query(func.count(func.distinct(FifoReport.user_id))).filter(
+        FifoReport.status == "generated", FifoReport.csv_rows >= 10000
+    ).scalar() or 0
 
     por_exchange_raw = (
         db.session.query(FifoReport.exchange, func.count(FifoReport.id).label("c"))
@@ -1806,6 +1835,20 @@ def _api_stats_data():
         .all()
     )
     por_error = [{"tipo": r.error_type or "sin clasificar", "total": r.c} for r in por_error_raw]
+
+    # Informes generados por mes (últimos 6 meses)
+    inf_ts = db.session.query(FifoReport.created_at).filter(
+        FifoReport.status == "generated", FifoReport.created_at >= seis_meses_atras
+    ).all()
+    inf_mes_bkt = defaultdict(int)
+    for (ts,) in inf_ts:
+        if ts:
+            inf_mes_bkt[ts.strftime("%Y-%m")] += 1
+    informes_por_mes = [{"mes": k, "total": v} for k, v in sorted(inf_mes_bkt.items())]
+
+    inf_7d_raw = db.session.query(FifoReport.created_at).filter(
+        FifoReport.status == "generated", FifoReport.created_at >= siete_dias_atras
+    ).all()
 
     # ── CONTACTOS ─────────────────────────────────────────────────────────────
     total_c    = db.session.query(func.count(Contacto.id)).scalar() or 0
@@ -1873,6 +1916,10 @@ def _api_stats_data():
             ing_mes_bkt[ts.strftime("%Y-%m")] += (amount or 0) / 100.0
 
     # ── ERRORES ───────────────────────────────────────────────────────────────
+    errores_24h = db.session.query(func.count(FifoReport.id)).filter(
+        FifoReport.status == "failed", FifoReport.created_at >= veinticuatro_h
+    ).scalar() or 0
+
     err_ts = db.session.query(FifoReport.created_at).filter(
         FifoReport.status == "failed", FifoReport.created_at >= seis_meses_atras
     ).all()
@@ -1881,6 +1928,10 @@ def _api_stats_data():
         if ts:
             err_bkt[ts.strftime("%Y-%m")] += 1
     errores_por_mes = [{"mes": k, "total": v} for k, v in sorted(err_bkt.items())]
+
+    err_7d_raw = db.session.query(FifoReport.created_at).filter(
+        FifoReport.status == "failed", FifoReport.created_at >= siete_dias_atras
+    ).all()
 
     err_detail_raw = (
         db.session.query(FifoReport.created_at, FifoReport.exchange, FifoReport.user_id)
@@ -1897,8 +1948,40 @@ def _api_stats_data():
         "usuario":  _mask_email(err_u_map.get(r.user_id)),
     } for r in err_detail_raw]
 
+    # ── EXCHANGE MÁS PROBLEMÁTICO ─────────────────────────────────────────────
+    exc_gen_map  = {r.exchange: r.c for r in por_exchange_raw}
+    exc_fail_raw = (
+        db.session.query(FifoReport.exchange, func.count(FifoReport.id).label("c"))
+        .filter(FifoReport.status == "failed")
+        .group_by(FifoReport.exchange)
+        .all()
+    )
+    exc_mas_prob     = None
+    exc_mas_prob_pct = 0.0
+    for r in exc_fail_raw:
+        total_exc = exc_gen_map.get(r.exchange, 0) + r.c
+        if total_exc >= 3:
+            rate = round(r.c / total_exc * 100, 1)
+            if rate > exc_mas_prob_pct:
+                exc_mas_prob_pct = rate
+                exc_mas_prob = r.exchange
+
     # ── RESPUESTA JSON ────────────────────────────────────────────────────────
     return jsonify({
+        "meta": {
+            "informes_hoy":  informes_hoy,
+            "usuarios_hoy":  usuarios_hoy,
+            "errores_24h":   errores_24h,
+            "exchange_mas_problematico": {
+                "exchange":   exc_mas_prob or "N/A",
+                "tasa_error": exc_mas_prob_pct,
+            },
+        },
+        "sparklines": {
+            "informes_7d": _daily_counts_from_ts(inf_7d_raw),
+            "usuarios_7d": _daily_counts_from_ts(u_7d_raw),
+            "errores_7d":  _daily_counts_from_ts(err_7d_raw),
+        },
         "usuarios": {
             "total":            total_users,
             "verificados":      verified,
@@ -1919,9 +2002,13 @@ def _api_stats_data():
             "tasa_descarga":     round(descargados / gen * 100, 1) if gen else 0.0,
             "avg_processing_ms": int(avg_ms or 0),
             "avg_csv_rows":      int(avg_rows or 0),
+            "power_1k":          power_1k,
+            "power_10k":         power_10k,
+            "avg_per_user":      round(gen / con_informes, 1) if con_informes else 0.0,
             "por_exchange":      [{"exchange": r.exchange, "total": r.c} for r in por_exchange_raw],
             "por_ejercicio":     [{"ejercicio": r.fiscal_year, "total": r.c} for r in por_ejercicio_raw],
             "por_volumen":       por_volumen,
+            "por_mes":           informes_por_mes,
             "top_usuarios":      top5,
             "por_error_type":    por_error,
         },

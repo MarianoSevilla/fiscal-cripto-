@@ -18,33 +18,35 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --black:      #0a0a0a;
-  --surface:    #111111;
-  --surface2:   #1a1a1a;
-  --surface3:   #222222;
-  --border:     rgba(255,255,255,0.07);
-  --border-hover: rgba(255,255,255,0.15);
-  --text:       #f0f0f0;
-  --muted:      #888888;
-  --muted2:     #555555;
-  --accent:     #00C896;
-  --accent-dim: rgba(0,200,150,0.10);
-  --yellow:     #fbbf24;
-  --yellow-dim: rgba(251,191,36,0.12);
-  --red:        #f87171;
-  --red-dim:    rgba(248,113,113,0.10);
-  --blue:       #60a5fa;
-  --blue-dim:   rgba(96,165,250,0.10);
-  --max:        1080px;
-  --r:          12px;
-  --font-d:     'Syne', sans-serif;
-  --font-b:     'DM Sans', sans-serif;
+  --black:       #0a0a0a;
+  --surface:     #111111;
+  --surface2:    #1a1a1a;
+  --surface3:    #222222;
+  --border:      rgba(255,255,255,0.07);
+  --border-hi:   rgba(255,255,255,0.15);
+  --text:        #f0f0f0;
+  --muted:       #888888;
+  --muted2:      #555555;
+  --accent:      #00C896;
+  --accent-dim:  rgba(0,200,150,0.10);
+  --yellow:      #fbbf24;
+  --yellow-dim:  rgba(251,191,36,0.12);
+  --red:         #f87171;
+  --red-dim:     rgba(248,113,113,0.10);
+  --blue:        #60a5fa;
+  --blue-dim:    rgba(96,165,250,0.10);
+  --indigo:      #818cf8;
+  --indigo-dim:  rgba(129,140,248,0.10);
+  --max:         1100px;
+  --r:           12px;
+  --font-d:      'Syne', sans-serif;
+  --font-b:      'DM Sans', sans-serif;
 }
 
 html, body {
   min-height: 100%; background: var(--black);
   font-family: var(--font-b); color: var(--text);
-  font-size: 16px; line-height: 1.6;
+  font-size: 15px; line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
@@ -54,22 +56,22 @@ a { color: inherit; text-decoration: none; }
 nav {
   position: fixed; top: 0; left: 0; right: 0; z-index: 200;
   border-bottom: 1px solid var(--border);
-  background: rgba(10,10,10,0.88); backdrop-filter: blur(14px);
+  background: rgba(10,10,10,0.90); backdrop-filter: blur(14px);
 }
 .nav-inner {
-  max-width: var(--max); margin: 0 auto; padding: 0 2rem;
-  height: 64px; display: flex; align-items: center; justify-content: space-between;
+  max-width: var(--max); margin: 0 auto; padding: 0 1.5rem;
+  height: 58px; display: flex; align-items: center; justify-content: space-between;
 }
-.nav-logo { font-family: var(--font-d); font-weight: 800; font-size: 0.95rem; letter-spacing: -0.02em; }
+.nav-logo { font-family: var(--font-d); font-weight: 800; font-size: 0.9rem; letter-spacing: -0.02em; }
 .nav-logo span { color: var(--accent); }
-.nav-link-dash { font-size: 14px; font-weight: 500; color: var(--muted); transition: color .15s; }
+.nav-link-dash { font-size: 13px; font-weight: 500; color: var(--muted); transition: color .15s; }
 .nav-link-dash:hover { color: var(--text); }
 .nav-right { display: flex; align-items: center; gap: 0.6rem; }
 .nav-avatar-wrap { position: relative; }
 .nav-avatar {
-  width: 36px; height: 36px; border-radius: 50%;
+  width: 34px; height: 34px; border-radius: 50%;
   background: var(--accent); color: #0a0a0a;
-  font-family: var(--font-d); font-size: 14px; font-weight: 700;
+  font-family: var(--font-d); font-size: 13px; font-weight: 700;
   border: 2px solid transparent; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   transition: opacity .15s, border-color .15s;
@@ -86,7 +88,7 @@ nav {
 .nav-dd-item {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 13px; border-radius: 9px;
-  color: var(--text); font-family: var(--font-b); font-size: 14px; font-weight: 500;
+  color: var(--text); font-family: var(--font-b); font-size: 13px; font-weight: 500;
   cursor: pointer; text-decoration: none; transition: background .12s;
   background: none; border: none; width: 100%; text-align: left;
 }
@@ -97,121 +99,207 @@ nav {
 .nav-dd-item.danger:hover { background: rgba(220,60,60,.1); }
 
 /* ── MAIN ── */
-main { max-width: var(--max); margin: 0 auto; padding: 6rem 2rem 4rem; }
-h1 {
-  font-family: var(--font-d); font-size: clamp(1.4rem, 2.5vw, 1.9rem);
-  font-weight: 800; letter-spacing: -.03em; margin-bottom: .25rem;
-}
-.page-sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; }
+main { max-width: var(--max); margin: 0 auto; padding: 4.5rem 1.5rem 4rem; }
 
-/* ── SECTIONS ── */
-.section { margin-bottom: 2.5rem; }
+/* ── PAGE HEADER (compact) ── */
+.pg-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.7rem 1rem; margin-bottom: 1.25rem;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r);
+}
+.pg-header-left  { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.pg-header-title { font-family: var(--font-d); font-weight: 800; font-size: 0.95rem; letter-spacing: -0.02em; }
+.pg-header-ts    { font-size: 12px; color: var(--muted); }
+.pg-header-right { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+.live-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-dim); animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+.pg-refresh-btn {
+  background: none; border: 1px solid var(--border); color: var(--muted);
+  border-radius: 8px; padding: 4px 10px; cursor: pointer; font-size: 15px; line-height: 1;
+  transition: all .15s; font-family: var(--font-b);
+}
+.pg-refresh-btn:hover { color: var(--text); border-color: var(--border-hi); }
+.pg-refresh-btn.spinning { animation: spin .6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── SECTION LABEL ── */
+.section { margin-bottom: 2rem; }
 .section-title {
-  font-family: var(--font-d); font-size: 0.8rem; font-weight: 700;
-  color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em;
-  margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;
+  font-family: var(--font-d); font-size: 0.72rem; font-weight: 700;
+  color: var(--muted2); text-transform: uppercase; letter-spacing: 0.12em;
+  margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;
 }
-.section-title::after {
-  content: ''; flex: 1; height: 1px; background: var(--border);
-}
+.section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
-/* ── CARDS ── */
-.cards {
-  display: grid; gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  margin-bottom: 1rem;
+/* ── KPI STRIP ── */
+.kpi-strip {
+  display: grid; gap: 0.65rem;
+  grid-template-columns: repeat(6, 1fr);
+  margin-bottom: 1.5rem;
 }
-.cards-sm { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+@media (max-width: 950px) { .kpi-strip { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 520px)  { .kpi-strip { grid-template-columns: repeat(2, 1fr); } }
+
+.kpi-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 0.85rem 0.9rem;
+  transition: border-color .15s;
+}
+.kpi-card:hover { border-color: var(--border-hi); }
+.kpi-card.hi   { border-color: rgba(0,200,150,0.22); }
+.kpi-card.warn { border-color: rgba(251,191,36,0.22); }
+.kpi-card.crit { border-color: rgba(248,113,113,0.22); }
+
+.kpi-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2px; }
+.kpi-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; line-height: 1.2; }
+.kpi-spark { display: block; flex-shrink: 0; opacity: .85; }
+.kpi-value { font-family: var(--font-d); font-size: 1.55rem; font-weight: 800; line-height: 1; margin-bottom: 2px; }
+.kpi-value.accent  { color: var(--accent); }
+.kpi-value.red     { color: var(--red); }
+.kpi-value.yellow  { color: var(--yellow); }
+.kpi-value.blue    { color: var(--blue); }
+.kpi-value.indigo  { color: var(--indigo); }
+.kpi-sub { font-size: 10px; color: var(--muted); }
+
+/* ── GENERIC CARD ── */
 .card {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 1.1rem 1.3rem;
+  border-radius: var(--r); padding: 1rem 1.1rem;
 }
-.card.accent-border { border-color: rgba(0,200,150,0.25); }
-.card-label { font-size: 11px; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.06em; }
-.card-value { font-family: var(--font-d); font-size: 1.85rem; font-weight: 800; line-height: 1; }
-.card-value.accent  { color: var(--accent); }
-.card-value.red     { color: var(--red); }
-.card-value.yellow  { color: var(--yellow); }
-.card-value.blue    { color: var(--blue); }
-.card-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.card-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+.card-value { font-family: var(--font-d); font-size: 1.7rem; font-weight: 800; line-height: 1; }
+.card-value.accent { color: var(--accent); }
+.card-value.red    { color: var(--red); }
+.card-value.yellow { color: var(--yellow); }
+.card-value.blue   { color: var(--blue); }
+.card-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
 
-/* ── CHARTS ── */
+/* ── GRIDS ── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.65rem; margin-bottom: 0.75rem; }
+@media (max-width: 860px) { .grid-3 { grid-template-columns: 1fr 1fr; } .grid-4 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px) { .grid-2,.grid-3,.grid-4 { grid-template-columns: 1fr; } }
+
+/* ── CHART BOXES ── */
 .chart-box {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 1.25rem 1.4rem; margin-bottom: 1rem;
+  border-radius: var(--r); padding: 1rem 1.1rem;
 }
-.chart-box-title { font-size: 13px; color: var(--muted); margin-bottom: 1rem; }
-.chart-wrap { position: relative; height: 200px; }
+.chart-title { font-size: 12px; color: var(--muted); margin-bottom: 0.75rem; }
+.chart-wrap  { position: relative; height: 170px; }
+.chart-wrap.auto { height: auto; min-height: 120px; }
+.chart-wrap.md   { height: 190px; }
+.chart-wrap.donut { height: 180px; }
 
 /* ── TABLES ── */
-.tables-row { display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; margin-bottom: 1rem; }
-.tables-row-3 { grid-template-columns: 1fr 1fr 1fr; }
-@media (max-width: 700px) {
-  .tables-row, .tables-row-3 { grid-template-columns: 1fr; }
-}
-
 .table-box {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r); overflow: hidden; margin-bottom: 1rem;
-}
-.table-box-title {
-  font-size: 12px; color: var(--muted); text-transform: uppercase;
-  letter-spacing: 0.06em; padding: 10px 16px 0;
+  border-radius: var(--r); overflow: hidden;
 }
 table { width: 100%; border-collapse: collapse; }
 thead th {
-  font-size: 11px; color: var(--muted); text-transform: uppercase;
-  letter-spacing: 0.06em; padding: 10px 16px; text-align: left;
+  font-size: 10px; color: var(--muted); text-transform: uppercase;
+  letter-spacing: 0.07em; padding: 9px 14px; text-align: left;
   background: var(--surface2); border-bottom: 1px solid var(--border);
 }
-tbody td { padding: 10px 16px; font-size: 13px; border-bottom: 1px solid var(--border); }
+tbody td { padding: 9px 14px; font-size: 12px; border-bottom: 1px solid var(--border); }
 tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover { background: var(--surface2); }
 .num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
-.td-muted { color: var(--muted); }
+.td-muted  { color: var(--muted); }
 .td-accent { color: var(--accent); font-weight: 600; }
 .td-red    { color: var(--red); }
 .td-yellow { color: var(--yellow); }
+.no-data { color: var(--muted); text-align: center; padding: 18px; font-size: 12px; }
 
 /* ── BADGES ── */
 .badge {
-  display: inline-block; padding: 2px 8px; border-radius: 20px;
-  font-size: 11px; font-weight: 600; white-space: nowrap;
+  display: inline-block; padding: 2px 7px; border-radius: 20px;
+  font-size: 10px; font-weight: 600; white-space: nowrap; letter-spacing: 0.03em;
 }
 .badge-green  { background: var(--accent-dim);  color: var(--accent); }
 .badge-yellow { background: var(--yellow-dim);  color: var(--yellow); }
 .badge-red    { background: var(--red-dim);     color: var(--red); }
 .badge-blue   { background: var(--blue-dim);    color: var(--blue); }
+.badge-indigo { background: var(--indigo-dim);  color: var(--indigo); }
 .badge-muted  { background: rgba(255,255,255,0.05); color: var(--muted); }
 
 /* ── PROGRESS BAR ── */
-.pct-row { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
-.pct-bar-wrap { flex: 1; height: 4px; background: var(--surface3); border-radius: 2px; overflow: hidden; }
-.pct-bar { height: 100%; border-radius: 2px; background: var(--accent); }
-.pct-label { font-size: 12px; font-weight: 600; color: var(--accent); min-width: 36px; text-align: right; }
+.pct-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.pct-bar-wrap { flex: 1; height: 3px; background: var(--surface3); border-radius: 2px; overflow: hidden; }
+.pct-bar { height: 100%; border-radius: 2px; background: var(--accent); transition: width .4s ease; }
+.pct-label { font-size: 11px; font-weight: 600; color: var(--accent); min-width: 32px; text-align: right; }
 
-/* ── MISC ── */
-.state-msg {
-  color: var(--muted); font-size: 14px; padding: 4rem; text-align: center;
+/* ── POWER USERS ── */
+.power-strip { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+.power-pill {
+  display: flex; align-items: center; gap: 0.6rem;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 40px; padding: 0.5rem 1rem; font-size: 12px;
 }
-.state-msg.error { color: var(--red); }
+.power-pill .pill-icon { font-size: 14px; }
+.power-pill .pill-val  { font-family: var(--font-d); font-weight: 800; font-size: 1.1rem; color: var(--accent); }
+.power-pill .pill-lbl  { color: var(--muted); font-size: 11px; }
+
+/* ── HEALTH GRID ── */
+.health-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.65rem; }
+@media (max-width: 700px) { .health-grid { grid-template-columns: repeat(2, 1fr); } }
+.health-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 0.85rem 1rem;
+}
+.health-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
+.health-value { font-family: var(--font-d); font-weight: 800; font-size: 1.3rem; line-height: 1.1; }
+.health-value.ok   { color: var(--accent); }
+.health-value.warn { color: var(--yellow); }
+.health-value.crit { color: var(--red); }
+.health-value.neu  { color: var(--blue); }
+.health-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+/* ── INSIGHTS ── */
+.insight-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 0.85rem 1rem;
+}
+.insight-item {
+  display: flex; gap: 0.65rem; align-items: flex-start;
+  padding: 0.4rem 0; border-bottom: 1px solid var(--border);
+  font-size: 12px; line-height: 1.45;
+}
+.insight-item:last-child { border-bottom: none; padding-bottom: 0; }
+.insight-icon { font-size: 13px; margin-top: 1px; flex-shrink: 0; }
+.insight-text { color: var(--text); }
+.insight-text strong { color: var(--accent); font-weight: 600; }
+.insight-text .warn { color: var(--yellow); }
+.insight-text .crit { color: var(--red); }
+
+/* ── PAGINATION ── */
 .pg-btn {
   background: var(--surface2); border: 1px solid var(--border);
-  color: var(--text); font-family: var(--font-b); font-size: 13px;
-  padding: 6px 14px; border-radius: 8px; cursor: pointer;
+  color: var(--text); font-family: var(--font-b); font-size: 12px;
+  padding: 5px 12px; border-radius: 7px; cursor: pointer;
   transition: background .12s, border-color .12s;
 }
-.pg-btn:hover:not(:disabled) { background: var(--surface3); border-color: var(--border-hover); }
-.pg-btn:disabled { opacity: .35; cursor: default; }
-.divider { height: 1px; background: var(--border); margin: 0.5rem 0 1.5rem; }
-.no-data { color: var(--muted); text-align: center; padding: 20px; font-size: 13px; }
+.pg-btn:hover:not(:disabled) { background: var(--surface3); border-color: var(--border-hi); }
+.pg-btn:disabled { opacity: .3; cursor: default; }
+
+/* ── MISC ── */
+.state-msg { color: var(--muted); font-size: 14px; padding: 4rem; text-align: center; }
+.state-msg.error { color: var(--red); }
+.divider { height: 1px; background: var(--border); margin: 0.5rem 0 1rem; }
+.mb { margin-bottom: 0.75rem; }
 </style>
 </head>
 <body>
 
 <nav>
   <div class="nav-inner">
-    <div style="display:flex;align-items:center;gap:2rem;">
+    <div style="display:flex;align-items:center;gap:1.75rem;">
       <a href="/" class="nav-logo">mariano<span>sevilla</span>.com</a>
       <a href="/dashboard" class="nav-link-dash">Dashboard</a>
     </div>
@@ -231,51 +319,145 @@ tbody tr:hover { background: var(--surface2); }
 </nav>
 
 <main>
-  <h1>Estadísticas de uso</h1>
-  <p class="page-sub" id="pageDate">Cargando…</p>
+
+  <!-- COMPACT HEADER -->
+  <div class="pg-header">
+    <div class="pg-header-left">
+      <span class="pg-header-title">Admin Stats</span>
+      <span class="pg-header-ts" id="pageDate">Cargando…</span>
+    </div>
+    <div class="pg-header-right">
+      <div class="live-dot" id="liveDot" style="display:none"></div>
+      <button class="pg-refresh-btn" id="btnRefresh" title="Actualizar">↺</button>
+    </div>
+  </div>
 
   <div id="stateMsg" class="state-msg">Cargando datos…</div>
   <div id="content" hidden>
 
-    <!-- ── RESUMEN EJECUTIVO ── -->
+    <!-- ── KPI STRIP ── -->
+    <div class="kpi-strip">
+
+      <!-- 1: Usuarios hoy -->
+      <div class="kpi-card hi">
+        <div class="kpi-top">
+          <span class="kpi-label">Usuarios hoy</span>
+          <canvas class="kpi-spark" id="sparkUsers" width="72" height="32"></canvas>
+        </div>
+        <div class="kpi-value accent" id="kpiUsuariosHoy">—</div>
+        <div class="kpi-sub" id="kpiUsuariosTotal">— registrados</div>
+      </div>
+
+      <!-- 2: Informes hoy -->
+      <div class="kpi-card hi">
+        <div class="kpi-top">
+          <span class="kpi-label">Informes hoy</span>
+          <canvas class="kpi-spark" id="sparkInformes" width="72" height="32"></canvas>
+        </div>
+        <div class="kpi-value accent" id="kpiInformesHoy">—</div>
+        <div class="kpi-sub" id="kpiInformesTotal">— generados</div>
+      </div>
+
+      <!-- 3: Errores 24h -->
+      <div class="kpi-card" id="kpiErrCard">
+        <div class="kpi-top">
+          <span class="kpi-label">Errores 24h</span>
+          <canvas class="kpi-spark" id="sparkErrores" width="72" height="32"></canvas>
+        </div>
+        <div class="kpi-value" id="kpiErrores24h">—</div>
+        <div class="kpi-sub" id="kpiErroresSub">— fallidos total</div>
+      </div>
+
+      <!-- 4: Ratio activación -->
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <span class="kpi-label">Activación</span>
+        </div>
+        <div class="kpi-value indigo" id="kpiActivacion">—</div>
+        <div class="kpi-sub">con ≥1 informe</div>
+        <div class="pct-row" style="margin-top:6px;">
+          <div class="pct-bar-wrap"><div class="pct-bar" id="pctBarActivacion" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <!-- 5: Contactos pendientes -->
+      <div class="kpi-card" id="kpiContactCard">
+        <div class="kpi-top">
+          <span class="kpi-label">Pendientes</span>
+        </div>
+        <div class="kpi-value yellow" id="kpiContactos">—</div>
+        <div class="kpi-sub">contactos sin responder</div>
+      </div>
+
+      <!-- 6: Ingresos acumulados -->
+      <div class="kpi-card hi">
+        <div class="kpi-top">
+          <span class="kpi-label">Ingresos</span>
+        </div>
+        <div class="kpi-value accent" id="kpiIngresos">—</div>
+        <div class="kpi-sub">EUR asesoramiento</div>
+      </div>
+
+    </div><!-- /kpi-strip -->
+
+    <!-- ── CRECIMIENTO ── -->
     <div class="section">
-      <p class="section-title">Resumen ejecutivo</p>
-      <div class="cards cards-sm">
-        <div class="card accent-border">
-          <div class="card-label">Usuarios registrados</div>
-          <div class="card-value accent" id="reTotalUsers">—</div>
+      <p class="section-title">Crecimiento</p>
+      <div class="grid-2">
+        <div class="chart-box">
+          <div class="chart-title">Nuevos usuarios / mes — últimos 6 meses</div>
+          <div class="chart-wrap"><canvas id="chartUsers"></canvas></div>
         </div>
-        <div class="card">
-          <div class="card-label">Ratio activación</div>
-          <div class="card-value" id="reActivacion">—</div>
-          <div class="card-sub">con ≥1 informe</div>
-        </div>
-        <div class="card accent-border">
-          <div class="card-label">Informes generados</div>
-          <div class="card-value accent" id="reTotalInf">—</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Tasa de descarga</div>
-          <div class="card-value" id="reTasaDl">—</div>
-          <div class="card-sub">PDFs descargados</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Contactos nuevos</div>
-          <div class="card-value yellow" id="reContactos">—</div>
-          <div class="card-sub">sin responder</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Ingresos asesoramiento</div>
-          <div class="card-value accent" id="reIngresos">—</div>
-          <div class="card-sub">EUR total</div>
+        <div class="chart-box">
+          <div class="chart-title">Informes generados / mes — últimos 6 meses</div>
+          <div class="chart-wrap"><canvas id="chartInformesMes"></canvas></div>
         </div>
       </div>
     </div>
 
-    <!-- ── USUARIOS ── -->
+    <!-- ── DISTRIBUCIÓN DE INFORMES ── -->
+    <div class="section">
+      <p class="section-title">Distribución de informes</p>
+      <div class="grid-3">
+        <div class="chart-box">
+          <div class="chart-title">Por exchange</div>
+          <div class="chart-wrap auto" id="wrapExchange"><canvas id="chartExchange"></canvas></div>
+        </div>
+        <div class="chart-box">
+          <div class="chart-title">Ejercicio fiscal</div>
+          <div class="chart-wrap donut"><canvas id="chartEjercicio"></canvas></div>
+        </div>
+        <div class="chart-box">
+          <div class="chart-title">Volumen de CSV (filas)</div>
+          <div class="chart-wrap auto" id="wrapVolumen"><canvas id="chartVolumen"></canvas></div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-label">Informes generados OK</div>
+          <div class="card-value accent" id="cGenerados">—</div>
+          <div class="card-sub">de <span id="cTotal">—</span> procesados</div>
+          <div class="pct-row" style="margin-top:8px;">
+            <div class="pct-bar-wrap"><div class="pct-bar" id="pctBarExito" style="width:0%;background:var(--accent)"></div></div>
+            <span class="pct-label" id="pctExitoLbl" style="color:var(--accent)">—</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-label">Descargados</div>
+          <div class="card-value" id="cDescargados">—</div>
+          <div class="card-sub">tasa de descarga de PDFs</div>
+          <div class="pct-row" style="margin-top:8px;">
+            <div class="pct-bar-wrap"><div class="pct-bar" id="pctBarDl" style="width:0%;background:var(--blue)"></div></div>
+            <span class="pct-label" id="pctDlLbl" style="color:var(--blue)">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── USUARIOS DETALLE ── -->
     <div class="section">
       <p class="section-title">Usuarios</p>
-      <div class="cards">
+      <div class="grid-4">
         <div class="card">
           <div class="card-label">Total registrados</div>
           <div class="card-value accent" id="cTotalUsers">—</div>
@@ -289,6 +471,10 @@ tbody tr:hover { background: var(--surface2); }
           <div class="card-value red" id="cUnverified">—</div>
         </div>
         <div class="card">
+          <div class="card-label">Activos 30 días</div>
+          <div class="card-value blue" id="cActivos">—</div>
+        </div>
+        <div class="card">
           <div class="card-label">Con ≥1 informe</div>
           <div class="card-value accent" id="cConInf">—</div>
         </div>
@@ -297,12 +483,6 @@ tbody tr:hover { background: var(--surface2); }
           <div class="card-value" id="cSinInf">—</div>
         </div>
         <div class="card">
-          <div class="card-label">Activos (30 días)</div>
-          <div class="card-value blue" id="cActivos">—</div>
-        </div>
-      </div>
-      <div class="cards cards-sm" style="margin-bottom:1rem;">
-        <div class="card">
           <div class="card-label">Plan Free</div>
           <div class="card-value" id="cFree">—</div>
         </div>
@@ -310,115 +490,150 @@ tbody tr:hover { background: var(--surface2); }
           <div class="card-label">Plan Pro</div>
           <div class="card-value accent" id="cPro">—</div>
         </div>
-        <div class="card">
-          <div class="card-label">Ratio activación</div>
-          <div class="card-value" id="cActivacion">—</div>
-          <div id="cActivacionBar" class="pct-row" style="margin-top:6px;">
-            <div class="pct-bar-wrap"><div class="pct-bar" id="pctBarActivacion" style="width:0%"></div></div>
-          </div>
-        </div>
-      </div>
-      <div class="chart-box">
-        <div class="chart-box-title">Nuevos registros por mes — últimos 6 meses</div>
-        <div class="chart-wrap"><canvas id="chartUsers"></canvas></div>
       </div>
     </div>
 
-    <!-- ── INFORMES FIFO ── -->
+    <!-- ── POWER USERS ── -->
     <div class="section">
-      <p class="section-title">Informes FIFO</p>
-      <div class="cards">
+      <p class="section-title">Power Users</p>
+      <div class="power-strip">
+        <div class="power-pill">
+          <span class="pill-icon">⚡</span>
+          <span class="pill-val" id="power1k">—</span>
+          <span class="pill-lbl">usuarios con &gt;1.000 filas CSV</span>
+        </div>
+        <div class="power-pill">
+          <span class="pill-icon">🔥</span>
+          <span class="pill-val" id="power10k">—</span>
+          <span class="pill-lbl">usuarios con &gt;10.000 filas CSV</span>
+        </div>
+        <div class="power-pill">
+          <span class="pill-icon">📈</span>
+          <span class="pill-val" id="avgPerUser">—</span>
+          <span class="pill-lbl">informes/usuario activo (media)</span>
+        </div>
+        <div class="power-pill">
+          <span class="pill-icon">📊</span>
+          <span class="pill-val" id="avgCsvRows">—</span>
+          <span class="pill-lbl">filas CSV de media por informe</span>
+        </div>
+      </div>
+      <div class="table-box">
+        <table>
+          <thead><tr><th>#</th><th>Usuario</th><th class="num">Informes</th></tr></thead>
+          <tbody id="tbTop5"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── MONETIZACIÓN ── -->
+    <div class="section">
+      <p class="section-title">Asesoramiento fiscal</p>
+      <div class="grid-4" style="margin-bottom:0.75rem;">
         <div class="card">
-          <div class="card-label">Total (todos)</div>
-          <div class="card-value" id="cTotalInf">—</div>
+          <div class="card-label">Solicitudes totales</div>
+          <div class="card-value" id="cAdvTotal">—</div>
         </div>
         <div class="card">
-          <div class="card-label">Generados OK</div>
-          <div class="card-value accent" id="cGenerados">—</div>
+          <div class="card-label">Pagadas / activas</div>
+          <div class="card-value accent" id="cAdvPagadas">—</div>
         </div>
         <div class="card">
-          <div class="card-label">Fallidos</div>
-          <div class="card-value red" id="cFallidos">—</div>
+          <div class="card-label">Pendientes pago</div>
+          <div class="card-value yellow" id="cAdvPend">—</div>
         </div>
         <div class="card">
-          <div class="card-label">PDFs descargados</div>
-          <div class="card-value" id="cDescargados">—</div>
+          <div class="card-label">Sin asignar</div>
+          <div class="card-value red" id="cAdvSinAsig">—</div>
         </div>
-        <div class="card">
-          <div class="card-label">Tasa descarga</div>
-          <div class="card-value accent" id="cTasaDl">—</div>
-          <div id="cTasaBar" class="pct-row" style="margin-top:6px;">
-            <div class="pct-bar-wrap"><div class="pct-bar" id="pctBarDl" style="width:0%"></div></div>
+      </div>
+      <div class="grid-2">
+        <div class="chart-box">
+          <div class="chart-title">Ingresos por mes — últimos 6 meses (EUR)</div>
+          <div class="chart-wrap md"><canvas id="chartIngresos"></canvas></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:0.75rem;">
+          <div class="table-box" style="flex:1;">
+            <table>
+              <thead><tr><th>Estado</th><th class="num">Solicitudes</th></tr></thead>
+              <tbody id="tbAdvEstado"></tbody>
+            </table>
+          </div>
+          <div class="table-box" style="flex:1;">
+            <table>
+              <thead><tr><th>Servicio</th><th class="num">Ingresos (EUR)</th></tr></thead>
+              <tbody id="tbAdvIngSv"></tbody>
+            </table>
           </div>
         </div>
-        <div class="card">
-          <div class="card-label">Procesamiento medio</div>
-          <div class="card-value" id="cAvgMs">—</div>
-          <div class="card-sub">milisegundos</div>
+      </div>
+    </div>
+
+    <!-- ── SALUD DEL SISTEMA ── -->
+    <div class="section">
+      <p class="section-title">Salud del sistema</p>
+      <div class="health-grid">
+        <div class="health-card">
+          <div class="health-label">Tasa de fallo global</div>
+          <div class="health-value" id="healthFallo">—</div>
+          <div class="health-sub">del total de CSVs</div>
         </div>
-        <div class="card">
-          <div class="card-label">Filas CSV media</div>
-          <div class="card-value" id="cAvgRows">—</div>
-          <div class="card-sub">filas por CSV</div>
+        <div class="health-card">
+          <div class="health-label">Errores últimas 24h</div>
+          <div class="health-value" id="healthErr24h">—</div>
+          <div class="health-sub">fallos recientes</div>
+        </div>
+        <div class="health-card">
+          <div class="health-label">Exchange problemático</div>
+          <div class="health-value neu" id="healthExcProb" style="font-size:1rem;">—</div>
+          <div class="health-sub" id="healthExcProbPct">tasa de error</div>
+        </div>
+        <div class="health-card">
+          <div class="health-label">Procesamiento medio</div>
+          <div class="health-value neu" id="healthAvgMs">—</div>
+          <div class="health-sub">milisegundos</div>
         </div>
       </div>
-
-      <div class="tables-row">
-        <div class="table-box">
-          <table>
-            <thead><tr><th>Exchange</th><th class="num">Informes</th></tr></thead>
-            <tbody id="tbExchange"></tbody>
-          </table>
-        </div>
-        <div class="table-box">
-          <table>
-            <thead><tr><th>Ejercicio fiscal</th><th class="num">Informes</th></tr></thead>
-            <tbody id="tbEjercicio"></tbody>
-          </table>
+      <div style="margin-top:0.75rem;">
+        <div class="chart-box">
+          <div class="chart-title">Fallos por mes — últimos 6 meses</div>
+          <div class="chart-wrap"><canvas id="chartErrors"></canvas></div>
         </div>
       </div>
-
-      <div class="tables-row">
-        <div class="table-box">
-          <table>
-            <thead><tr><th>Volumen CSV (filas)</th><th class="num">Informes</th></tr></thead>
-            <tbody id="tbVolumen"></tbody>
-          </table>
-        </div>
-        <div class="table-box">
-          <table>
-            <thead><tr><th>#</th><th>Usuario</th><th class="num">Informes</th></tr></thead>
-            <tbody id="tbTop5"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="table-box" id="tbErrorTypeWrap">
+      <div class="table-box" id="tbErrorTypeWrap" style="margin-top:0.75rem;">
         <table>
-          <thead><tr><th>Tipo de error más frecuente</th><th class="num">Ocurrencias</th></tr></thead>
+          <thead><tr><th>Tipo de error frecuente</th><th class="num">Ocurrencias</th></tr></thead>
           <tbody id="tbErrorType"></tbody>
         </table>
       </div>
     </div>
 
-    <!-- ── CONTACTOS ── -->
+    <!-- ── INSIGHTS ── -->
+    <div class="section">
+      <p class="section-title">Insights</p>
+      <div class="insight-box" id="insightBox"></div>
+    </div>
+
+    <!-- ── TABLAS DETALLADAS ── -->
     <div class="section">
       <p class="section-title">Contactos</p>
-      <div class="cards cards-sm" style="margin-bottom:1rem;">
+      <div class="grid-2">
         <div class="card">
           <div class="card-label">Total mensajes</div>
           <div class="card-value" id="cTotalC">—</div>
         </div>
-        <div class="card">
-          <div class="card-label">Nuevos / pendientes</div>
-          <div class="card-value yellow" id="cCNuevos">—</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Respondidos</div>
-          <div class="card-value accent" id="cCResp">—</div>
+        <div style="display:flex;gap:0.65rem;">
+          <div class="card" style="flex:1;">
+            <div class="card-label">Pendientes</div>
+            <div class="card-value yellow" id="cCNuevos">—</div>
+          </div>
+          <div class="card" style="flex:1;">
+            <div class="card-label">Respondidos</div>
+            <div class="card-value accent" id="cCResp">—</div>
+          </div>
         </div>
       </div>
-      <div class="table-box">
+      <div class="table-box mb">
         <table>
           <thead><tr><th>Tipo de consulta</th><th class="num">Mensajes</th></tr></thead>
           <tbody id="tbTipoContacto"></tbody>
@@ -426,84 +641,16 @@ tbody tr:hover { background: var(--surface2); }
       </div>
     </div>
 
-    <!-- ── ASESORAMIENTO FISCAL ── -->
-    <div class="section">
-      <p class="section-title">Asesoramiento fiscal</p>
-      <div class="cards">
-        <div class="card">
-          <div class="card-label">Solicitudes totales</div>
-          <div class="card-value" id="cAdvTotal">—</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Pagadas</div>
-          <div class="card-value accent" id="cAdvPagadas">—</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Pendientes de pago</div>
-          <div class="card-value yellow" id="cAdvPend">—</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Sin asignar</div>
-          <div class="card-value red" id="cAdvSinAsig">—</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Conversión</div>
-          <div class="card-value accent" id="cAdvConv">—</div>
-          <div id="cAdvConvBar" class="pct-row" style="margin-top:6px;">
-            <div class="pct-bar-wrap"><div class="pct-bar" id="pctBarConv" style="width:0%"></div></div>
-          </div>
-        </div>
-        <div class="card accent-border">
-          <div class="card-label">Ingresos totales</div>
-          <div class="card-value accent" id="cAdvIngresos">—</div>
-          <div class="card-sub">EUR acumulado</div>
-        </div>
-      </div>
-
-      <div class="tables-row">
-        <div class="table-box">
-          <table>
-            <thead><tr><th>Estado</th><th class="num">Solicitudes</th></tr></thead>
-            <tbody id="tbAdvEstado"></tbody>
-          </table>
-        </div>
-        <div class="table-box">
-          <table>
-            <thead><tr><th>Tipo de servicio</th><th class="num">Solicitudes</th></tr></thead>
-            <tbody id="tbAdvServicio"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="tables-row">
-        <div class="chart-box" style="margin-bottom:0">
-          <div class="chart-box-title">Ingresos por mes — últimos 6 meses (EUR)</div>
-          <div class="chart-wrap"><canvas id="chartIngresos"></canvas></div>
-        </div>
-        <div class="table-box" style="margin-bottom:0">
-          <table>
-            <thead><tr><th>Servicio</th><th class="num">Ingresos (EUR)</th></tr></thead>
-            <tbody id="tbAdvIngSv"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── ERRORES ── -->
     <div class="section">
       <p class="section-title">Errores de procesamiento</p>
-      <div class="chart-box">
-        <div class="chart-box-title">CSVs fallidos por mes — últimos 6 meses</div>
-        <div class="chart-wrap"><canvas id="chartErrors"></canvas></div>
-      </div>
       <div class="table-box" id="errorDetailWrap">
         <table>
           <thead><tr><th>Fecha</th><th>Exchange</th><th>Usuario</th></tr></thead>
           <tbody id="tbErrorDetail"></tbody>
         </table>
-        <div id="errPagination" style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid var(--border);gap:8px;">
+        <div id="errPagination" style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-top:1px solid var(--border);gap:8px;">
           <button id="errPrevBtn" class="pg-btn">← Anterior</button>
-          <span id="errPageInfo" style="font-size:13px;color:var(--muted)"></span>
+          <span id="errPageInfo" style="font-size:12px;color:var(--muted)"></span>
           <button id="errNextBtn" class="pg-btn">Siguiente →</button>
         </div>
       </div>
@@ -534,35 +681,70 @@ document.getElementById('navBtnLogout').addEventListener('click', async () => {
   window.location.href = '/';
 });
 
-// ── Chart defaults ────────────────────────────────────────────────────────────
+// ── Chart defaults ─────────────────────────────────────────────────────────────
 Chart.defaults.color       = '#888';
 Chart.defaults.borderColor = 'rgba(255,255,255,0.07)';
 Chart.defaults.font.family = "'DM Sans', sans-serif";
 
+// Track Chart instances so we can destroy on refresh
+const _charts = {};
+
+function destroyChart(key) {
+  if (_charts[key]) { try { _charts[key].destroy(); } catch (_) {} delete _charts[key]; }
+}
+
+// ── Sparkline (tiny inline line chart) ────────────────────────────────────────
+function sparkline(id, data, color) {
+  const canvas = document.getElementById(id);
+  if (!canvas) return;
+  destroyChart(id);
+  _charts[id] = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: data.map((_, i) => i),
+      datasets: [{
+        data,
+        fill: true,
+        backgroundColor: color + '22',
+        borderColor: color,
+        borderWidth: 1.5,
+        pointRadius: 0,
+        tension: 0.4,
+      }],
+    },
+    options: {
+      responsive: false,
+      animation: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales:  { x: { display: false }, y: { display: false } },
+    },
+  });
+}
+
+// ── Bar chart (vertical) ──────────────────────────────────────────────────────
 function barChart(id, labels, values, color) {
-  new Chart(document.getElementById(id), {
+  destroyChart(id);
+  _charts[id] = new Chart(document.getElementById(id), {
     type: 'bar',
     data: {
       labels,
-      datasets: [{ data: values, backgroundColor: color + '33', borderColor: color, borderWidth: 2, borderRadius: 6 }],
+      datasets: [{ data: values, backgroundColor: color + '30', borderColor: color, borderWidth: 2, borderRadius: 5 }],
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { display: false } },
-        y: { beginAtZero: true, ticks: { precision: 0 } },
-      },
+      scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { precision: 0 } } },
     },
   });
 }
 
 function barChartEur(id, labels, values, color) {
-  new Chart(document.getElementById(id), {
+  destroyChart(id);
+  _charts[id] = new Chart(document.getElementById(id), {
     type: 'bar',
     data: {
       labels,
-      datasets: [{ data: values, backgroundColor: color + '33', borderColor: color, borderWidth: 2, borderRadius: 6 }],
+      datasets: [{ data: values, backgroundColor: color + '30', borderColor: color, borderWidth: 2, borderRadius: 5 }],
     },
     options: {
       responsive: true, maintainAspectRatio: false,
@@ -575,6 +757,59 @@ function barChartEur(id, labels, values, color) {
   });
 }
 
+// ── Horizontal bar chart ──────────────────────────────────────────────────────
+function hbarChart(id, labels, values, color) {
+  destroyChart(id);
+  const wrapEl = document.getElementById(id)?.parentElement;
+  if (wrapEl) {
+    const h = Math.max(100, labels.length * 38);
+    wrapEl.style.height = h + 'px';
+  }
+  _charts[id] = new Chart(document.getElementById(id), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ data: values, backgroundColor: color + '30', borderColor: color, borderWidth: 2, borderRadius: 4 }],
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true, ticks: { precision: 0 } }, y: { grid: { display: false } } },
+    },
+  });
+}
+
+// ── Donut chart ───────────────────────────────────────────────────────────────
+const DONUT_COLORS = ['#00C896','#60a5fa','#fbbf24','#f87171','#818cf8','#34d399','#a78bfa'];
+function donutChart(id, labels, values) {
+  destroyChart(id);
+  _charts[id] = new Chart(document.getElementById(id), {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: DONUT_COLORS.slice(0, values.length),
+        borderColor: '#111',
+        borderWidth: 2,
+        hoverOffset: 4,
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '62%',
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { padding: 10, font: { size: 11 }, usePointStyle: true, pointStyleWidth: 7 },
+        },
+      },
+    },
+  });
+}
+
+// ── Monthly chart helpers ─────────────────────────────────────────────────────
 function _monthLabels() {
   const today = new Date();
   const months = [];
@@ -607,6 +842,7 @@ function fillMonthlyChartEur(id, data, color) {
   barChartEur(id, labels, months.map(m => byMonth[m] || 0), color);
 }
 
+// ── Table helpers ─────────────────────────────────────────────────────────────
 function fillTable(tbodyId, rows, keyLabel, keyNum, extraFn) {
   const tb = document.getElementById(tbodyId);
   if (!tb) return;
@@ -622,9 +858,11 @@ function fillTable(tbodyId, rows, keyLabel, keyNum, extraFn) {
 
 function pct(n, d) { return d ? Math.min(100, Math.round(n / d * 100)) : 0; }
 
-function setBar(barId, value) {
+function setBar(barId, value, color) {
   const el = document.getElementById(barId);
-  if (el) el.style.width = Math.min(100, value) + '%';
+  if (!el) return;
+  el.style.width = Math.min(100, Math.max(0, value)) + '%';
+  if (color) el.style.background = color;
 }
 
 function statusBadge(status) {
@@ -636,12 +874,92 @@ function statusBadge(status) {
   return `<span class="badge ${cls}" style="margin-right:6px"></span>`;
 }
 
-// ── Cargar datos ──────────────────────────────────────────────────────────────
-(async () => {
-  const msgEl = document.getElementById('stateMsg');
+// ── Insights generator ────────────────────────────────────────────────────────
+function generateInsights(d) {
+  const u   = d.usuarios;
+  const fi  = d.informes;
+  const c   = d.contactos;
+  const adv = d.asesoramiento;
+  const err = d.errores;
+  const meta = d.meta;
+  const items = [];
+
+  // Activation rate
+  if (u.ratio_activacion < 30) {
+    items.push({ icon: '⚠️', html: `<span class="warn">${u.sin_informes} usuarios (${100 - u.ratio_activacion}%)</span> no han generado ningún informe todavía. Tasa de activación: <strong>${u.ratio_activacion}%</strong>.` });
+  } else {
+    items.push({ icon: '✅', html: `<strong>${u.ratio_activacion}%</strong> de usuarios han generado al menos un informe FIFO. Buena tasa de activación.` });
+  }
+
+  // Failure rate
+  const failRate = fi.total ? Math.round(fi.fallidos / fi.total * 100) : 0;
+  if (failRate > 15) {
+    items.push({ icon: '🔴', html: `Tasa de fallo elevada: <span class="crit">${failRate}%</span> de los CSVs procesados terminaron en error (${fi.fallidos} de ${fi.total}).` });
+  } else if (failRate > 5) {
+    items.push({ icon: '🟡', html: `Tasa de fallo moderada: <span class="warn">${failRate}%</span> de los CSVs procesados fallaron (${fi.fallidos} de ${fi.total}).` });
+  } else {
+    items.push({ icon: '✅', html: `Sistema estable: tasa de fallo de solo <strong>${failRate}%</strong> (${fi.fallidos} errores de ${fi.total} informes).` });
+  }
+
+  // Download rate
+  if (fi.tasa_descarga < 50 && fi.generados > 10) {
+    items.push({ icon: '📥', html: `Solo el <span class="warn">${fi.tasa_descarga}%</span> de los PDFs generados han sido descargados. Puede indicar baja retención o problemas en la descarga.` });
+  } else if (fi.tasa_descarga >= 50) {
+    items.push({ icon: '📥', html: `Tasa de descarga de PDFs: <strong>${fi.tasa_descarga}%</strong> — más de la mitad de los informes generados se descargan.` });
+  }
+
+  // Contactos pendientes
+  if (c.nuevos > 0) {
+    items.push({ icon: c.nuevos > 5 ? '🔴' : '💬', html: `<span class="${c.nuevos > 5 ? 'crit' : 'warn'}">${c.nuevos} contacto${c.nuevos > 1 ? 's' : ''} pendiente${c.nuevos > 1 ? 's' : ''}</span> sin responder.` });
+  } else {
+    items.push({ icon: '✅', html: `Todos los contactos están respondidos. Bandeja de entrada al día.` });
+  }
+
+  // Advisory conversion
+  if (adv.total > 0) {
+    if (adv.conversion_pct >= 60) {
+      items.push({ icon: '💰', html: `Excelente conversión de asesoramiento: <strong>${adv.conversion_pct}%</strong>. Ingresos acumulados: <strong>${adv.ingresos_total_eur.toLocaleString('es', { minimumFractionDigits: 2 })} €</strong>.` });
+    } else {
+      items.push({ icon: '📊', html: `Conversión en asesoramiento: <span class="warn">${adv.conversion_pct}%</span>. ${adv.pendientes_pago} solicitudes pendientes de pago.` });
+    }
+    if (adv.sin_asignar > 0) {
+      items.push({ icon: '⚠️', html: `<span class="warn">${adv.sin_asignar} solicitud${adv.sin_asignar > 1 ? 'es pagadas' : ' pagada'} sin asesor asignado</span>. Requiere atención.` });
+    }
+  }
+
+  // Exchange más problemático
+  if (meta.exchange_mas_problematico?.exchange !== 'N/A' && meta.exchange_mas_problematico?.tasa_error > 10) {
+    const ep = meta.exchange_mas_problematico;
+    items.push({ icon: '🔧', html: `Exchange más problemático: <span class="crit">${ep.exchange}</span> con <span class="crit">${ep.tasa_error}%</span> de tasa de error. Revisar clasificador.` });
+  }
+
+  // Pro users
+  if (u.pro > 0) {
+    items.push({ icon: '💎', html: `<strong>${u.pro} usuario${u.pro > 1 ? 's' : ''} Pro</strong> activo${u.pro > 1 ? 's' : ''} (${Math.round(u.pro / u.total * 100)}% del total).` });
+  } else if (u.total > 20) {
+    items.push({ icon: '💡', html: `Ningún usuario Pro todavía. Oportunidad de conversión con ${u.total} usuarios registrados.` });
+  }
+
+  return items;
+}
+
+// ── Cargar y renderizar datos ─────────────────────────────────────────────────
+async function loadStats() {
+  const msgEl    = document.getElementById('stateMsg');
+  const content  = document.getElementById('content');
+  const refreshBtn = document.getElementById('btnRefresh');
+  const liveDot  = document.getElementById('liveDot');
+
+  refreshBtn.classList.add('spinning');
+  if (content.hidden) {
+    msgEl.hidden = false;
+    msgEl.textContent = 'Cargando datos…';
+    msgEl.classList.remove('error');
+  }
+
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 15000);
+    const timer = setTimeout(() => controller.abort(), 20000);
     const res = await fetch('/api/stats', { credentials: 'include', signal: controller.signal });
     clearTimeout(timer);
     const text = await res.text();
@@ -654,57 +972,111 @@ function statusBadge(status) {
       return;
     }
 
-    document.getElementById('pageDate').textContent =
-      'Datos en tiempo real · ' + new Date().toLocaleString('es', { dateStyle: 'long', timeStyle: 'short' });
-
-    const u  = d.usuarios;
-    const fi = d.informes;
-    const c  = d.contactos;
+    const u   = d.usuarios;
+    const fi  = d.informes;
+    const c   = d.contactos;
     const adv = d.asesoramiento;
     const err = d.errores;
+    const meta = d.meta || {};
+    const sp   = d.sparklines || {};
 
-    // ── Resumen ejecutivo
-    document.getElementById('reTotalUsers').textContent  = u.total;
-    document.getElementById('reActivacion').textContent  = u.ratio_activacion + '%';
-    document.getElementById('reTotalInf').textContent    = fi.generados;
-    document.getElementById('reTasaDl').textContent      = fi.tasa_descarga + '%';
-    document.getElementById('reContactos').textContent   = c.nuevos;
-    document.getElementById('reIngresos').textContent    = adv.ingresos_total_eur.toLocaleString('es', { minimumFractionDigits: 2 }) + ' €';
+    // Header timestamp
+    document.getElementById('pageDate').textContent =
+      new Date().toLocaleString('es', { dateStyle: 'medium', timeStyle: 'short' });
+    liveDot.style.display = 'block';
 
-    // ── Usuarios
+    // ── KPI STRIP ────────────────────────────────────────────────────────────
+    document.getElementById('kpiUsuariosHoy').textContent   = meta.usuarios_hoy ?? '—';
+    document.getElementById('kpiUsuariosTotal').textContent = u.total + ' registrados';
+
+    document.getElementById('kpiInformesHoy').textContent   = meta.informes_hoy ?? '—';
+    document.getElementById('kpiInformesTotal').textContent = fi.generados + ' generados';
+
+    const err24 = meta.errores_24h ?? 0;
+    document.getElementById('kpiErrores24h').textContent = err24;
+    document.getElementById('kpiErroresSub').textContent = fi.fallidos + ' fallidos total';
+    const kpiErrEl = document.getElementById('kpiErrCard');
+    if (err24 > 5) {
+      kpiErrEl.classList.add('crit');
+      document.getElementById('kpiErrores24h').className = 'kpi-value red';
+    } else if (err24 > 0) {
+      kpiErrEl.classList.add('warn');
+      document.getElementById('kpiErrores24h').className = 'kpi-value yellow';
+    } else {
+      document.getElementById('kpiErrores24h').className = 'kpi-value accent';
+    }
+
+    document.getElementById('kpiActivacion').textContent = u.ratio_activacion + '%';
+    setBar('pctBarActivacion', u.ratio_activacion);
+
+    document.getElementById('kpiContactos').textContent = c.nuevos;
+    if (c.nuevos > 0) document.getElementById('kpiContactCard').classList.add('warn');
+
+    document.getElementById('kpiIngresos').textContent =
+      adv.ingresos_total_eur.toLocaleString('es', { minimumFractionDigits: 0 }) + ' €';
+
+    // Sparklines
+    if (sp.usuarios_7d)  sparkline('sparkUsers',   sp.usuarios_7d,  '#00C896');
+    if (sp.informes_7d)  sparkline('sparkInformes', sp.informes_7d,  '#00C896');
+    if (sp.errores_7d)   sparkline('sparkErrores',  sp.errores_7d,   err24 > 0 ? '#f87171' : '#888');
+
+    // ── CRECIMIENTO ──────────────────────────────────────────────────────────
+    fillMonthlyChart('chartUsers',       u.por_mes,  '#00C896');
+    fillMonthlyChart('chartInformesMes', fi.por_mes || [], '#60a5fa');
+
+    // ── DISTRIBUCIÓN ─────────────────────────────────────────────────────────
+    if (fi.por_exchange && fi.por_exchange.length) {
+      hbarChart('chartExchange',
+        fi.por_exchange.map(r => r.exchange),
+        fi.por_exchange.map(r => r.total),
+        '#00C896');
+    }
+    if (fi.por_ejercicio && fi.por_ejercicio.length) {
+      donutChart('chartEjercicio',
+        fi.por_ejercicio.map(r => String(r.ejercicio)),
+        fi.por_ejercicio.map(r => r.total));
+    }
+    if (fi.por_volumen && fi.por_volumen.length) {
+      const volData = fi.por_volumen.filter(r => r.total > 0);
+      if (volData.length) {
+        hbarChart('chartVolumen',
+          volData.map(r => r.rango),
+          volData.map(r => r.total),
+          '#818cf8');
+      }
+    }
+
+    const exito_pct = fi.total ? Math.round(fi.generados / fi.total * 100) : 0;
+    document.getElementById('cGenerados').textContent  = fi.generados;
+    document.getElementById('cTotal').textContent      = fi.total;
+    document.getElementById('cDescargados').textContent = fi.descargados;
+    setBar('pctBarExito', exito_pct);
+    document.getElementById('pctExitoLbl').textContent = exito_pct + '%';
+    setBar('pctBarDl', fi.tasa_descarga, '#60a5fa');
+    document.getElementById('pctDlLbl').textContent = fi.tasa_descarga + '%';
+
+    // ── USUARIOS DETALLE ─────────────────────────────────────────────────────
     document.getElementById('cTotalUsers').textContent = u.total;
     document.getElementById('cVerified').textContent   = u.verificados;
     document.getElementById('cUnverified').textContent = u.sin_verificar;
+    document.getElementById('cActivos').textContent    = u.activos_30d;
     document.getElementById('cConInf').textContent     = u.con_informes;
     document.getElementById('cSinInf').textContent     = u.sin_informes;
-    document.getElementById('cActivos').textContent    = u.activos_30d;
     document.getElementById('cFree').textContent       = u.free;
     document.getElementById('cPro').textContent        = u.pro;
-    document.getElementById('cActivacion').textContent = u.ratio_activacion + '%';
-    setBar('pctBarActivacion', u.ratio_activacion);
-    fillMonthlyChart('chartUsers', u.por_mes, '#00C896');
 
-    // ── Informes FIFO
-    document.getElementById('cTotalInf').textContent    = fi.total;
-    document.getElementById('cGenerados').textContent   = fi.generados;
-    document.getElementById('cFallidos').textContent    = fi.fallidos;
-    document.getElementById('cDescargados').textContent = fi.descargados;
-    document.getElementById('cTasaDl').textContent      = fi.tasa_descarga + '%';
-    document.getElementById('cAvgMs').textContent       = fi.avg_processing_ms.toLocaleString('es');
-    document.getElementById('cAvgRows').textContent     = fi.avg_csv_rows.toLocaleString('es');
-    setBar('pctBarDl', fi.tasa_descarga);
+    // ── POWER USERS ──────────────────────────────────────────────────────────
+    document.getElementById('power1k').textContent    = fi.power_1k ?? '—';
+    document.getElementById('power10k').textContent   = fi.power_10k ?? '—';
+    document.getElementById('avgPerUser').textContent = fi.avg_per_user ?? '—';
+    document.getElementById('avgCsvRows').textContent = fi.avg_csv_rows?.toLocaleString('es') ?? '—';
 
-    fillTable('tbExchange',  fi.por_exchange,  'exchange',  'total');
-    fillTable('tbEjercicio', fi.por_ejercicio, 'ejercicio', 'total');
-    fillTable('tbVolumen',   fi.por_volumen,   'rango',     'total');
-
-    // TOP 5 usuarios
     const tb5 = document.getElementById('tbTop5');
     if (fi.top_usuarios && fi.top_usuarios.length) {
       tb5.innerHTML = fi.top_usuarios.map((r, i) =>
         `<tr>
-          <td class="td-muted" style="width:32px">${i + 1}</td>
-          <td style="font-family:monospace;font-size:12px">${r.email_mask}</td>
+          <td class="td-muted" style="width:30px">${i + 1}</td>
+          <td style="font-family:monospace;font-size:11px">${r.email_mask}</td>
           <td class="num td-accent">${r.total}</td>
         </tr>`
       ).join('');
@@ -712,34 +1084,14 @@ function statusBadge(status) {
       tb5.innerHTML = `<tr><td colspan="3" class="no-data">Sin datos</td></tr>`;
     }
 
-    // Tipos de error
-    const tbErrType = document.getElementById('tbErrorType');
-    if (fi.por_error_type && fi.por_error_type.length) {
-      tbErrType.innerHTML = fi.por_error_type.map(r =>
-        `<tr><td>${r.tipo}</td><td class="num td-red">${r.total}</td></tr>`
-      ).join('');
-      document.getElementById('tbErrorTypeWrap').hidden = false;
-    } else {
-      document.getElementById('tbErrorTypeWrap').hidden = true;
-    }
-
-    // ── Contactos
-    document.getElementById('cTotalC').textContent  = c.total;
-    document.getElementById('cCNuevos').textContent = c.nuevos;
-    document.getElementById('cCResp').textContent   = c.respondidos;
-    fillTable('tbTipoContacto', c.por_tipo, 'tipo', 'total');
-
-    // ── Asesoramiento fiscal
+    // ── MONETIZACIÓN ─────────────────────────────────────────────────────────
     document.getElementById('cAdvTotal').textContent   = adv.total;
     document.getElementById('cAdvPagadas').textContent = adv.pagadas;
     document.getElementById('cAdvPend').textContent    = adv.pendientes_pago;
     document.getElementById('cAdvSinAsig').textContent = adv.sin_asignar;
-    document.getElementById('cAdvConv').textContent    = adv.conversion_pct + '%';
-    document.getElementById('cAdvIngresos').textContent =
-      adv.ingresos_total_eur.toLocaleString('es', { minimumFractionDigits: 2 }) + ' €';
-    setBar('pctBarConv', adv.conversion_pct);
 
-    // Por estado (con badge de color)
+    fillMonthlyChartEur('chartIngresos', adv.ingresos_por_mes, '#00C896');
+
     const tbAdvEst = document.getElementById('tbAdvEstado');
     if (adv.por_estado && adv.por_estado.length) {
       tbAdvEst.innerHTML = adv.por_estado.map(r =>
@@ -749,9 +1101,6 @@ function statusBadge(status) {
       tbAdvEst.innerHTML = `<tr><td colspan="2" class="no-data">Sin datos</td></tr>`;
     }
 
-    fillTable('tbAdvServicio', adv.por_servicio, 'label', 'total');
-
-    // Ingresos por servicio
     const tbIngSv = document.getElementById('tbAdvIngSv');
     if (adv.ingresos_por_servicio && adv.ingresos_por_servicio.length) {
       tbIngSv.innerHTML = adv.ingresos_por_servicio.map(r =>
@@ -764,12 +1113,53 @@ function statusBadge(status) {
       tbIngSv.innerHTML = `<tr><td colspan="2" class="no-data">Sin datos</td></tr>`;
     }
 
-    fillMonthlyChartEur('chartIngresos', adv.ingresos_por_mes, '#00C896');
+    // ── SALUD DEL SISTEMA ────────────────────────────────────────────────────
+    const failRate = fi.total ? Math.round(fi.fallidos / fi.total * 100) : 0;
+    const hFallo = document.getElementById('healthFallo');
+    hFallo.textContent = failRate + '%';
+    hFallo.className = 'health-value ' + (failRate > 15 ? 'crit' : failRate > 5 ? 'warn' : 'ok');
 
-    // ── Errores
+    const hErr = document.getElementById('healthErr24h');
+    hErr.textContent = err24;
+    hErr.className = 'health-value ' + (err24 > 5 ? 'crit' : err24 > 0 ? 'warn' : 'ok');
+
+    const ep = meta.exchange_mas_problematico || {};
+    document.getElementById('healthExcProb').textContent = ep.exchange || 'N/A';
+    document.getElementById('healthExcProbPct').textContent =
+      ep.exchange && ep.exchange !== 'N/A' ? ep.tasa_error + '% tasa de error' : 'sin datos suficientes';
+
+    const hMs = document.getElementById('healthAvgMs');
+    hMs.textContent = (fi.avg_processing_ms || 0).toLocaleString('es');
+    hMs.className = 'health-value ' + (fi.avg_processing_ms > 5000 ? 'warn' : 'neu');
+
     fillMonthlyChart('chartErrors', err.por_mes, '#f87171');
 
-    // Tabla de errores con paginación
+    const tbErrType = document.getElementById('tbErrorType');
+    if (fi.por_error_type && fi.por_error_type.length) {
+      tbErrType.innerHTML = fi.por_error_type.map(r =>
+        `<tr><td>${r.tipo}</td><td class="num td-red">${r.total}</td></tr>`
+      ).join('');
+      document.getElementById('tbErrorTypeWrap').hidden = false;
+    } else {
+      document.getElementById('tbErrorTypeWrap').hidden = true;
+    }
+
+    // ── INSIGHTS ─────────────────────────────────────────────────────────────
+    const insightItems = generateInsights(d);
+    document.getElementById('insightBox').innerHTML = insightItems.map(it =>
+      `<div class="insight-item">
+        <span class="insight-icon">${it.icon}</span>
+        <span class="insight-text">${it.html}</span>
+      </div>`
+    ).join('');
+
+    // ── CONTACTOS ────────────────────────────────────────────────────────────
+    document.getElementById('cTotalC').textContent  = c.total;
+    document.getElementById('cCNuevos').textContent = c.nuevos;
+    document.getElementById('cCResp').textContent   = c.respondidos;
+    fillTable('tbTipoContacto', c.por_tipo, 'tipo', 'total');
+
+    // ── ERRORES DETALLE ──────────────────────────────────────────────────────
     const detalle   = err.detalle || [];
     const PAGE_SIZE = 15;
     let errPage     = 0;
@@ -789,28 +1179,40 @@ function statusBadge(status) {
       const slice = detalle.slice(errPage * PAGE_SIZE, (errPage + 1) * PAGE_SIZE);
       tbErr.innerHTML = slice.map(r =>
         `<tr>
-          <td style="font-variant-numeric:tabular-nums;white-space:nowrap">${r.fecha}</td>
+          <td style="font-variant-numeric:tabular-nums;white-space:nowrap;font-size:11px">${r.fecha}</td>
           <td>${r.exchange}</td>
-          <td class="td-muted" style="font-family:monospace;font-size:12px">${r.usuario}</td>
+          <td class="td-muted" style="font-family:monospace;font-size:11px">${r.usuario}</td>
         </tr>`
       ).join('');
-      pageInfo.textContent = `Página ${errPage + 1} de ${totalPages} · ${detalle.length} registros`;
+      pageInfo.textContent = `Pág. ${errPage + 1}/${totalPages} · ${detalle.length} registros`;
       prevBtn.disabled = errPage === 0;
       nextBtn.disabled = errPage >= totalPages - 1;
       pagination.hidden = totalPages <= 1;
     }
-    prevBtn.addEventListener('click', () => { errPage--; renderErrPage(); });
-    nextBtn.addEventListener('click', () => { errPage++; renderErrPage(); });
+    // Remove old listeners by replacing buttons
+    const newPrev = prevBtn.cloneNode(true);
+    const newNext = nextBtn.cloneNode(true);
+    prevBtn.replaceWith(newPrev);
+    nextBtn.replaceWith(newNext);
+    newPrev.addEventListener('click', () => { errPage--; renderErrPage(); });
+    newNext.addEventListener('click', () => { errPage++; renderErrPage(); });
     renderErrPage();
 
+    // Show content
     msgEl.hidden = true;
-    document.getElementById('content').hidden = false;
+    content.hidden = false;
 
-  } catch (err) {
-    msgEl.textContent = 'Error al conectar con el servidor: ' + err.message;
+  } catch (e) {
+    msgEl.textContent = 'Error al conectar con el servidor: ' + e.message;
     msgEl.classList.add('error');
+    msgEl.hidden = false;
+  } finally {
+    refreshBtn.classList.remove('spinning');
   }
-})();
+}
+
+document.getElementById('btnRefresh').addEventListener('click', loadStats);
+loadStats();
 </script>
 </body>
 </html>
