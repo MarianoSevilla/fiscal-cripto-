@@ -821,6 +821,20 @@ def _bloque_estado_analisis(clasificador_stats: dict, motor, rendimientos: list,
         Spacer(1, 3*mm),
         t,
     ]
+    if n_adv > 0:
+        nota_adv = ParagraphStyle(
+            "ea_nota", fontName="Helvetica", fontSize=7.5,
+            textColor=TEXT_MUTED, leading=11, spaceBefore=4
+        )
+        elems.append(Paragraph(
+            f"<b>Nota sobre las {_fmt(n_adv)} advertencias de inventario:</b> "
+            "Cuando el CSV no contiene el historial completo de compras de un activo entregado en un swap, "
+            "el sistema no puede determinar su coste FIFO. En ese caso el activo recibido entra al inventario "
+            "con coste base cero y la operación queda marcada para revisión manual. "
+            "Esto <b>no es un error del sistema</b>: refleja una limitación de los datos aportados. "
+            "Consulta la sección «Advertencias» al final del informe para el detalle.",
+            nota_adv
+        ))
     return elems
 
 
@@ -937,8 +951,15 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
     if motor.advertencias:
         story.append(Spacer(1, 8*mm))
         story.append(KeepTogether([
-            Paragraph("Advertencias — Operaciones que Requieren Revisión", styles["section"]),
-            Paragraph("Las siguientes situaciones requieren comprobación manual.", styles["body_muted"]),
+            Paragraph("Advertencias — Operaciones que Requieren Revisión Manual", styles["section"]),
+            Paragraph(
+                "Las siguientes situaciones requieren comprobación manual. "
+                "<b>No son errores del sistema</b>: indican operaciones cuya valoración no puede "
+                "determinarse automáticamente porque el CSV no contiene el historial completo "
+                "(p.ej. activos adquiridos fuera del período del CSV, swaps con cripto sin compra previa registrada). "
+                "El coste base de estos lotes ha quedado en cero y debe corregirse con los datos reales.",
+                styles["body_muted"]
+            ),
             Spacer(1, 3*mm),
         ]))
         warn_rows = [[Paragraph(f"⚠  {adv}", styles["warning"])] for adv in motor.advertencias]
@@ -978,7 +999,13 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
         ("Swaps entre criptoactivos\nhecho imponible",
          "El intercambio directo entre dos criptoactivos distintos se considera una transmisión a efectos "
          "del IRPF. Genera una ganancia o pérdida patrimonial calculada como la diferencia entre el valor "
-         "de mercado del activo recibido y el coste FIFO del activo entregado."),
+         "de mercado del activo recibido y el coste FIFO del activo entregado. "
+         "El activo recibido entra en el inventario con un coste base igual al valor EUR del activo entregado: "
+         "si el entregado es una stablecoin o EUR, se toma su importe directamente (1:1); "
+         "si es un criptoactivo, se usa el coste FIFO acumulado de los lotes consumidos. "
+         "<b>Cuando el CSV no contiene el historial completo de compras de un activo entregado en un swap, "
+         "el sistema no puede determinar su coste FIFO y el activo recibido entra al inventario con coste "
+         "base cero. La operación queda marcada en la sección de advertencias para revisión manual.</b>"),
         ("Depósitos y retiradas\nno generan hecho imponible",
          "Los movimientos de criptoactivos entre wallets propias o entre exchanges del mismo titular no "
          "constituyen transmisión patrimonial. Es importante conservar los registros para acreditar "
