@@ -334,6 +334,10 @@ class ClasificadorBinanceTx:
           Transaction Buy    → activo recibido  (positivo)
           Transaction Fee    → fee en BNB       (negativo, opcional)
 
+        Un mismo segundo puede contener MÚLTIPLES filas del mismo tipo cuando
+        Binance ejecuta varias órdenes parciales en el mismo instante (p.ej.
+        5 Spend EUR + 5 Buy XRP → agregar en una sola COMPRA por par de monedas).
+
         Si el activo entregado es EUR → COMPRA con EUR.
         Si el activo recibido  es EUR → VENTA  con EUR.
         En cualquier otro caso        → SWAP crypto→crypto.
@@ -360,8 +364,8 @@ class ClasificadorBinanceTx:
             grupo = pd.DataFrame(grupo_list)
             self._procesadas.update(grupo["index"].tolist())
 
-            fecha     = str(grupo.iloc[0]["Tiempo"])
-            buy_rows  = grupo[grupo["Operación"] == "Transaction Buy"]
+            fecha      = str(grupo.iloc[0]["Tiempo"])
+            buy_rows   = grupo[grupo["Operación"] == "Transaction Buy"]
             spend_rows = grupo[grupo["Operación"] == "Transaction Spend"]
 
             # Sin par buy+spend → registrar como movimiento
@@ -374,32 +378,67 @@ class ClasificadorBinanceTx:
                     ))
                 continue
 
-            activo_rec = buy_rows.iloc[0]["Moneda"]
-            cant_rec   = float(buy_rows.iloc[0]["Cambio"])
-            activo_ent = spend_rows.iloc[0]["Moneda"]
-            cant_ent   = abs(float(spend_rows.iloc[0]["Cambio"]))
+            # ── Sumar totales por moneda (maneja múltiples rows del mismo activo)
+            # buy_rows tienen Cambio positivo; spend_rows tienen Cambio negativo
+            buys_por_moneda   = buy_rows.groupby("Moneda")["Cambio"].sum()    # positivos
+            spends_por_moneda = spend_rows.groupby("Moneda")["Cambio"].sum()  # negativos
 
-            if activo_ent == "EUR":
-                self.compraventas.append(OperacionCompraventa(
-                    fecha=fecha, tipo="COMPRA",
-                    activo=activo_rec, cantidad=cant_rec,
-                    contraparte="EUR", importe=cant_ent,
-                    fee_activo=activo_rec, fee_cantidad=0.0,
-                ))
-            elif activo_rec == "EUR":
-                self.compraventas.append(OperacionCompraventa(
-                    fecha=fecha, tipo="VENTA",
-                    activo=activo_ent, cantidad=cant_ent,
-                    contraparte="EUR", importe=cant_rec,
-                    fee_activo="EUR", fee_cantidad=0.0,
-                ))
+            # Caso simple y más común: un activo comprado + un activo pagado
+            # (incluso si hay N filas de cada uno, sumamos en una sola operación)
+            if len(buys_por_moneda) == 1 and len(spends_por_moneda) == 1:
+                activo_rec = buys_por_moneda.index[0]
+                cant_rec   = float(buys_por_moneda.iloc[0])
+                activo_ent = spends_por_moneda.index[0]
+                cant_ent   = abs(float(spends_por_moneda.iloc[0]))
+                self._registrar_op_buy_spend(fecha, activo_ent, cant_ent, activo_rec, cant_rec)
+
+            elif len(buys_por_moneda) == 1:
+                # Un activo recibido, varios pagados: crear una operación por moneda pagada
+                activo_rec = buys_por_moneda.index[0]
+                cant_rec   = float(buys_por_moneda.iloc[0])
+                for activo_ent, cant_neg in spends_por_moneda.items():
+                    self._registrar_op_buy_spend(
+                        fecha, activo_ent, abs(float(cant_neg)), activo_rec, cant_rec
+                    )
+
             else:
-                # crypto → crypto (p.ej. USDC → XRP via Binance Pay)
-                self.swaps.append(OperacionSwap(
-                    fecha=fecha,
-                    activo_entregado=activo_ent, cantidad_entregada=cant_ent,
-                    activo_recibido=activo_rec,  cantidad_recibida=cant_rec,
-                ))
+                # Caso ambiguo con múltiples activos recibidos: marcar como desconocido
+                for _, fila in grupo.iterrows():
+                    if fila["Operación"] != "Transaction Fee":
+                        self.desconocidas.append(OperacionDesconocida(
+                            fecha=fecha, subtipo=f"{fila['Operación']} (multi-par sin resolver)",
+                            activo=fila["Moneda"], cantidad=float(fila["Cambio"]),
+                            cuenta=str(fila.get("Cuenta", "")),
+                        ))
+
+    def _registrar_op_buy_spend(
+        self,
+        fecha: str,
+        activo_ent: str, cant_ent: float,
+        activo_rec: str, cant_rec: float,
+    ) -> None:
+        """Crea COMPRA (EUR→crypto), VENTA (crypto→EUR) o SWAP (crypto→crypto)."""
+        if activo_ent == "EUR":
+            self.compraventas.append(OperacionCompraventa(
+                fecha=fecha, tipo="COMPRA",
+                activo=activo_rec, cantidad=cant_rec,
+                contraparte="EUR", importe=cant_ent,
+                fee_activo=activo_rec, fee_cantidad=0.0,
+            ))
+        elif activo_rec == "EUR":
+            self.compraventas.append(OperacionCompraventa(
+                fecha=fecha, tipo="VENTA",
+                activo=activo_ent, cantidad=cant_ent,
+                contraparte="EUR", importe=cant_rec,
+                fee_activo="EUR", fee_cantidad=0.0,
+            ))
+        else:
+            # crypto → crypto (p.ej. USDC → XRP via Binance Pay)
+            self.swaps.append(OperacionSwap(
+                fecha=fecha,
+                activo_entregado=activo_ent, cantidad_entregada=cant_ent,
+                activo_recibido=activo_rec,  cantidad_recibida=cant_rec,
+            ))
 
     # ── RESTO ─────────────────────────────────────────────────────────────
 

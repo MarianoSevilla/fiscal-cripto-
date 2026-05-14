@@ -820,6 +820,21 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
         ))
         story.append(Spacer(1, 3*mm))
         story.append(_tabla_rendimientos(rendimientos, styles))
+        # Nota de valoración si hay rendimientos en cripto (sin precio EUR conocido)
+        _activos_cripto_rend = {
+            r.activo for r in rendimientos if r.activo not in ("EUR", "USDT", "USDC", "BUSD", "FDUSD", "DAI", "USD")
+        }
+        if _activos_cripto_rend:
+            story.append(Spacer(1, 3*mm))
+            story.append(Paragraph(
+                "<b>Nota sobre valoración de rendimientos en criptomoneda:</b> "
+                "Los rendimientos expresados en criptomonedas (comisiones, recompensas de pools, "
+                "airdrops, etc.) se muestran por <i>cantidad de tokens recibidos</i>, no por su "
+                "equivalente en EUR. Para calcular la base imponible correcta es necesario "
+                "aplicar el valor de mercado en EUR en la fecha de cada abono "
+                "(art. 43 LIRPF). Consulta a tu gestor para la valoración definitiva.",
+                styles["aviso_legal"]
+            ))
 
     # 7. ADVERTENCIAS
     if motor.advertencias:
