@@ -60,6 +60,20 @@ class FifoReport(db.Model):
     created_at      = db.Column(db.DateTime,    default=datetime.utcnow, nullable=False)
     downloaded_at   = db.Column(db.DateTime,    nullable=True)   # NULL hasta que el usuario descarga
 
+    # ── FASE 2A: telemetría estratégica ──────────────────────────────────────
+    fifo_operations   = db.Column(db.Integer, nullable=True)   # ventas+swaps con resultado fiscal
+    fifo_swaps        = db.Column(db.Integer, nullable=True)   # solo swaps (subset de operations)
+    fifo_rendimientos = db.Column(db.Integer, nullable=True)   # staking / intereses / rebates
+    fifo_movimientos  = db.Column(db.Integer, nullable=True)   # compras+ventas+swaps procesados
+    fifo_advertencias = db.Column(db.Integer, nullable=True)   # warnings totales del motor
+    fifo_desconocidas = db.Column(db.Integer, nullable=True)   # ops sin lotes previos (sin coste)
+
+    resultado_neto    = db.Column(db.Float,      nullable=True)   # ganancias_brutas + perdidas_brutas
+    ganancias_brutas  = db.Column(db.Float,      nullable=True)   # suma de ganancias (>=0)
+    perdidas_brutas   = db.Column(db.Float,      nullable=True)   # suma de pérdidas (<0, valor negativo)
+
+    fiscal_years_str  = db.Column(db.String(50), nullable=True)   # ejercicio raw: "2024", "2023,2024", "all"
+
     def __repr__(self) -> str:
         return f"<FifoReport user={self.user_id} exchange={self.exchange} year={self.fiscal_year}>"
 

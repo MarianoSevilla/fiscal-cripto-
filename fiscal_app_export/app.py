@@ -255,20 +255,41 @@ def _registrar_informe(
     processing_ms: int,
     status: str = "generated",
     error_type=None,
+    # ── FASE 2A: telemetría estratégica (todas opcionales) ──
+    fifo_operations: int   = None,
+    fifo_swaps: int        = None,
+    fifo_rendimientos: int = None,
+    fifo_movimientos: int  = None,
+    fifo_advertencias: int = None,
+    fifo_desconocidas: int = None,
+    resultado_neto: float  = None,
+    ganancias_brutas: float = None,
+    perdidas_brutas: float  = None,
+    fiscal_years_str: str  = None,
 ):
     """Crea un registro FifoReport y devuelve su id. No lanza excepciones."""
     if not current_user.is_authenticated:
         return None
     try:
         report = FifoReport(
-            user_id         = current_user.id,
-            exchange        = exchange,
-            fiscal_year     = fiscal_year,
-            csv_rows        = csv_rows,
-            distinct_assets = distinct_assets,
-            processing_ms   = processing_ms,
-            status          = status,
-            error_type      = error_type,
+            user_id           = current_user.id,
+            exchange          = exchange,
+            fiscal_year       = fiscal_year,
+            csv_rows          = csv_rows,
+            distinct_assets   = distinct_assets,
+            processing_ms     = processing_ms,
+            status            = status,
+            error_type        = error_type,
+            fifo_operations   = fifo_operations,
+            fifo_swaps        = fifo_swaps,
+            fifo_rendimientos = fifo_rendimientos,
+            fifo_movimientos  = fifo_movimientos,
+            fifo_advertencias = fifo_advertencias,
+            fifo_desconocidas = fifo_desconocidas,
+            resultado_neto    = resultado_neto,
+            ganancias_brutas  = ganancias_brutas,
+            perdidas_brutas   = perdidas_brutas,
+            fiscal_years_str  = fiscal_years_str,
         )
         db.session.add(report)
         db.session.commit()
@@ -1207,6 +1228,7 @@ def analizar():
             return jsonify({"error": error_msg}), 400
 
         rendimientos_json = []
+        motor = None   # se asigna en todos los exchanges excepto bit2me
 
         if exchange == "bit2me":
             clasificador, _r, _ops = procesar_bit2me(tmp_path)
@@ -1296,16 +1318,47 @@ def analizar():
         processing_ms   = int((time.time() - t_start) * 1000)
         distinct_assets = len({op["activo"] for op in operaciones}) if operaciones else 0
 
+        # ── FASE 2A: extraer telemetría estratégica ──────────────────────────
+        _adv_list   = advertencias if isinstance(advertencias, list) else []
+        _tel_ops    = resumen.get("operaciones_con_resultado", len(operaciones))
+        _tel_swaps  = sum(1 for op in operaciones if op.get("tipo") in ("swap", "Swap"))
+        _tel_rend   = len(rendimientos_json)
+        # fifo_movimientos: compras procesadas + operaciones con resultado
+        # Para exchanges basados en MotorFIFO = total de lotes + resultados.
+        # Para bit2me (clasificador) se usa el total de operaciones con resultado.
+        _tel_mov    = (
+            sum(len(v) for v in motor.inventario.values()) + len(motor.resultados)
+            if motor is not None
+            else _tel_ops
+        )
+        _tel_adv    = len(_adv_list)
+        _tel_desc   = sum(1 for a in _adv_list if "no hay lotes" in a.lower())
+        _tel_neto   = resumen.get("resultado_neto")
+        _tel_gan    = resumen.get("ganancias_brutas")
+        _tel_per    = resumen.get("perdidas_brutas")
+        _tel_years  = (ejercicio or "")[:50]
+        # ────────────────────────────────────────────────────────────────────
+
         pdf_tmp = tmp_path.replace(".csv", ".pdf")
         with open(pdf_tmp, "wb") as f:
             f.write(pdf_bytes)
 
         report_id = _registrar_informe(
-            exchange        = exchange,
-            fiscal_year     = _ejercicio_a_fiscal_year(ejercicio),
-            csv_rows        = csv_rows,
-            distinct_assets = distinct_assets,
-            processing_ms   = processing_ms,
+            exchange          = exchange,
+            fiscal_year       = _ejercicio_a_fiscal_year(ejercicio),
+            csv_rows          = csv_rows,
+            distinct_assets   = distinct_assets,
+            processing_ms     = processing_ms,
+            fifo_operations   = _tel_ops,
+            fifo_swaps        = _tel_swaps,
+            fifo_rendimientos = _tel_rend,
+            fifo_movimientos  = _tel_mov,
+            fifo_advertencias = _tel_adv,
+            fifo_desconocidas = _tel_desc,
+            resultado_neto    = _tel_neto,
+            ganancias_brutas  = _tel_gan,
+            perdidas_brutas   = _tel_per,
+            fiscal_years_str  = _tel_years,
         )
         token = os.path.basename(pdf_tmp)
         _guardar_token_pdf(token, report_id)
