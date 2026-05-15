@@ -509,6 +509,14 @@ limiter = Limiter(
     storage_uri=os.environ.get("REDIS_URL", "memory://"),
 )
 
+# ── BLOQUEO CONCURRENTE DE ANÁLISIS ───────────────────────────────────────────
+# Set de user_ids con un análisis actualmente en proceso (en este worker).
+# Evita que el mismo usuario lance varios análisis simultáneos.
+# Aplica a todos los usuarios, incluidos admins (exentos del rate limit, no de esto).
+# Sin Redis: protección por proceso; para cobertura multi-worker → FASE 2B.
+_analisis_en_curso: set = set()
+_analisis_lock = threading.Lock()
+
 
 # ── WWW REDIRECT ──────────────────────────────
 @app.before_request
@@ -572,6 +580,7 @@ def _validar_password(password: str) -> tuple[bool, str]:
 # ── VALIDACIÓN Y SANITIZACIÓN ─────────────────
 
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
+MAX_CSV_ROWS        = 100_000            # filas máximas permitidas por CSV (≈ 10 MB de datos reales)
 AÑO_MIN = 2009
 AÑO_MAX = datetime.now().year + 1
 
@@ -1217,222 +1226,252 @@ def page_cryptocom():
 @login_required
 @limiter.limit("1 per 10 minutes", exempt_when=_is_admin)
 def analizar():
-    if "csv" not in request.files:
-        return jsonify({"error": "No se recibió ningún fichero."}), 400
+    uid      = current_user.id
+    tmp_path = None
 
-    archivo   = request.files["csv"]
-    nombre    = _sanitizar_texto(request.form.get("nombre", ""))
-    ejercicio = _sanitizar_texto(request.form.get("ejercicio", ""), max_len=40)  # "all" o "2024,2025"
-    exchange  = _sanitizar_texto(request.form.get("exchange", "binance"), max_len=20).lower()
-
-    # Validar exchange
-    if exchange not in ("binance", "bit2me", "bitvavo", "kraken", "coinbase", "nexo", "cryptocom"):
-        return jsonify({"error": "Exchange no soportado."}), 400
-
-    # Validar ejercicio fiscal
-    valido_ej, error_ej = _validar_ejercicio(ejercicio)
-    if not valido_ej:
-        return jsonify({"error": error_ej}), 400
-
-    # Validar extensión
-    filename = archivo.filename or ""
-    if not filename.lower().endswith(".csv"):
-        return jsonify({"error": "El fichero debe tener extensión .csv"}), 400
-
-    with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as tmp:
-        archivo.save(tmp.name)
-        tmp_path = tmp.name
-
-    t_start   = time.time()
-    csv_rows  = _contar_csv_rows(tmp_path)
+    # ── bloqueo concurrente por usuario ──────────────────────────────────────
+    # Aplica a todos los usuarios, incluidos admins (exentos del rate limit,
+    # pero no de la protección de recursos).
+    with _analisis_lock:
+        if uid in _analisis_en_curso:
+            return jsonify({
+                "error": "Ya tienes un análisis en proceso. "
+                         "Espera a que termine antes de lanzar otro."
+            }), 409
+        _analisis_en_curso.add(uid)
+    # ─────────────────────────────────────────────────────────────────────────
 
     try:
-        valido, error_msg = _validar_csv(tmp_path, exchange)
-        if not valido:
-            return jsonify({"error": error_msg}), 400
+        if "csv" not in request.files:
+            return jsonify({"error": "No se recibió ningún fichero."}), 400
 
-        rendimientos_json = []
-        motor       = None   # MotorFIFO — asignado para todos los exchanges excepto bit2me
-        clasificador = None  # clasificador original — para telemetría (swaps, movimientos, desconocidas)
+        archivo   = request.files["csv"]
+        nombre    = _sanitizar_texto(request.form.get("nombre", ""))
+        ejercicio = _sanitizar_texto(request.form.get("ejercicio", ""), max_len=40)  # "all" o "2024,2025"
+        exchange  = _sanitizar_texto(request.form.get("exchange", "binance"), max_len=20).lower()
 
-        if exchange == "bit2me":
-            clasificador, _r, _ops = procesar_bit2me(tmp_path)
-            _filtrar_bit2me_por_ejercicio(clasificador, ejercicio)
-            clasificador.rendimientos = _filtrar_rendimientos_por_ejercicio(
-                clasificador.rendimientos, ejercicio)
-            resumen = clasificador.resumen_fiscal()
-            operaciones = [
-                {
-                    "fecha": res.fecha_venta[:10],
-                    "tipo": res.tipo_op,
-                    "activo": res.activo,
-                    "cantidad": round(res.cantidad, 6),
-                    "transmision": round(res.precio_transmision, 4),
-                    "coste_fifo": round(res.precio_coste, 4),
-                    "ganancia_perdida": round(res.ganancia_perdida, 4),
-                    "periodo_dias": 0,
-                }
-                for res in clasificador.resultados
-            ]
-            advertencias = clasificador.advertencias
-            posicion = []
-            rendimientos_json = _rendimientos_a_json(clasificador.rendimientos)
-            pdf_bytes = generar_pdf_bit2me(clasificador, nombre, ejercicio)
+        # Validar exchange
+        if exchange not in ("binance", "bit2me", "bitvavo", "kraken", "coinbase", "nexo", "cryptocom"):
+            return jsonify({"error": "Exchange no soportado."}), 400
 
-        elif exchange == "bitvavo":
-            motor, rendimientos, clasificador = procesar_bitvavo(tmp_path)
-            _filtrar_motor_por_ejercicio(motor, ejercicio)
-            rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-            resumen, posicion, operaciones = _motor_a_json(motor)
-            advertencias = motor.advertencias
-            rendimientos_json = _rendimientos_a_json(rendimientos)
-            pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Bitvavo", rendimientos)
+        # Validar ejercicio fiscal
+        valido_ej, error_ej = _validar_ejercicio(ejercicio)
+        if not valido_ej:
+            return jsonify({"error": error_ej}), 400
 
-        elif exchange == "kraken":
-            motor, rendimientos, clasificador = procesar_kraken(tmp_path)
-            _filtrar_motor_por_ejercicio(motor, ejercicio)
-            rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-            resumen, posicion, operaciones = _motor_a_json(motor)
-            advertencias = motor.advertencias
-            rendimientos_json = _rendimientos_a_json(rendimientos)
-            pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Kraken", rendimientos)
+        # Validar extensión
+        filename = archivo.filename or ""
+        if not filename.lower().endswith(".csv"):
+            return jsonify({"error": "El fichero debe tener extensión .csv"}), 400
 
-        elif exchange == "coinbase":
-            motor, rendimientos, clasificador = procesar_coinbase(tmp_path)
-            _filtrar_motor_por_ejercicio(motor, ejercicio)
-            rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-            resumen, posicion, operaciones = _motor_a_json(motor)
-            advertencias = motor.advertencias
-            rendimientos_json = _rendimientos_a_json(rendimientos)
-            pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Coinbase", rendimientos)
+        with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as tmp:
+            archivo.save(tmp.name)
+            tmp_path = tmp.name
 
-        elif exchange == "nexo":
-            motor, rendimientos, clasificador = procesar_nexo(tmp_path)
-            _filtrar_motor_por_ejercicio(motor, ejercicio)
-            rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-            resumen, posicion, operaciones = _motor_a_json(motor)
-            advertencias = motor.advertencias
-            rendimientos_json = _rendimientos_a_json(rendimientos)
-            pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Nexo", rendimientos)
+        t_start   = time.time()
+        csv_rows  = _contar_csv_rows(tmp_path)
 
-        elif exchange == "cryptocom":
-            motor, rendimientos, clasificador = procesar_cryptocom(tmp_path)
-            _filtrar_motor_por_ejercicio(motor, ejercicio)
-            rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-            resumen, posicion, operaciones = _motor_a_json(motor)
-            advertencias = motor.advertencias
-            rendimientos_json = _rendimientos_a_json(rendimientos)
-            pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Crypto.com", rendimientos)
+        # ── límite de filas ───────────────────────────────────────────────────
+        if csv_rows > MAX_CSV_ROWS:
+            return jsonify({
+                "error": f"El CSV tiene demasiadas filas ({csv_rows:,}). "
+                         f"El máximo permitido es {MAX_CSV_ROWS:,} filas."
+            }), 400
+        # ─────────────────────────────────────────────────────────────────────
 
-        else:  # binance — auto-detectar formato
-            if _detectar_formato_binance(tmp_path) == "tx":
-                _clasificador_binance = ClasificadorBinanceTx(tmp_path).clasificar()
-                _clasificador_stats   = _clasificador_binance.resumen()
-                motor, rendimientos, clasificador = procesar_con_fifo(_clasificador_binance)
-            else:
-                motor, rendimientos, clasificador = procesar_binance(tmp_path)
-                _clasificador_stats  = None
-            _filtrar_motor_por_ejercicio(motor, ejercicio)
-            rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-            resumen, posicion, operaciones = _motor_a_json(motor)
-            advertencias = motor.advertencias
-            rendimientos_json = _rendimientos_a_json(rendimientos)
-            pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Binance", rendimientos,
-                                    clasificador_stats=_clasificador_stats)
-
-        processing_ms   = int((time.time() - t_start) * 1000)
-        distinct_assets = len({op["activo"] for op in operaciones}) if operaciones else 0
-
-        # ── FASE 2A: extraer telemetría estratégica ──────────────────────────
-        # Fuente primaria: el clasificador (vive en memoria durante el procesamiento).
-        # Para bit2me: clasificador es ClasificadorBit2Me (tiene movimientos, no swaps/desconocidas).
-        # Para motor-based: clasificador es el clasificador del exchange correspondiente.
-        _adv_list = advertencias if isinstance(advertencias, list) else []
-
-        # fifo_operations: ventas+swaps que generaron resultado fiscal
-        _tel_ops  = resumen.get("operaciones_con_resultado", len(operaciones))
-
-        # fifo_swaps: todos los swaps detectados en el CSV (no solo los con resultado FIFO)
-        # bit2me no tiene lista separada → fallback a conteo en operaciones
-        _tel_swaps = (
-            len(clasificador.swaps)
-            if clasificador is not None and hasattr(clasificador, 'swaps')
-            else sum(1 for op in operaciones if op.get("tipo") == "swap")
-        )
-
-        # fifo_rendimientos: staking, rewards, rebates, intereses
-        _tel_rend = len(rendimientos_json)
-
-        # fifo_movimientos: depósitos, retiros, movimientos internos sin impacto fiscal
-        _tel_mov = len(clasificador.movimientos) if clasificador is not None and hasattr(clasificador, 'movimientos') else 0
-
-        # fifo_advertencias: warnings del motor (inventario insuficiente, valoración manual)
-        _tel_adv = len(_adv_list)
-
-        # fifo_desconocidas: filas CSV no clasificadas por el clasificador
-        # bit2me no trackea desconocidas → 0
-        _tel_desc = len(clasificador.desconocidas) if clasificador is not None and hasattr(clasificador, 'desconocidas') else 0
-
-        # métricas fiscales (numéricas, en EUR)
-        _tel_neto = resumen.get("resultado_neto")
-        _tel_gan  = resumen.get("ganancias_brutas")
-        _tel_per  = resumen.get("perdidas_brutas")
-
-        # ejercicio fiscal exacto tal como lo envió el usuario
-        _tel_years = (ejercicio or "")[:50]
-        # ────────────────────────────────────────────────────────────────────
-
-        pdf_tmp = tmp_path.replace(".csv", ".pdf")
-        with open(pdf_tmp, "wb") as f:
-            f.write(pdf_bytes)
-
-        report_id = _registrar_informe(
-            exchange          = exchange,
-            fiscal_year       = _ejercicio_a_fiscal_year(ejercicio),
-            csv_rows          = csv_rows,
-            distinct_assets   = distinct_assets,
-            processing_ms     = processing_ms,
-            fifo_operations   = _tel_ops,
-            fifo_swaps        = _tel_swaps,
-            fifo_rendimientos = _tel_rend,
-            fifo_movimientos  = _tel_mov,
-            fifo_advertencias = _tel_adv,
-            fifo_desconocidas = _tel_desc,
-            resultado_neto    = _tel_neto,
-            ganancias_brutas  = _tel_gan,
-            perdidas_brutas   = _tel_per,
-            fiscal_years_str  = _tel_years,
-        )
-        token = os.path.basename(pdf_tmp)
-        _guardar_token_pdf(token, report_id)
-
-        return jsonify({
-            "ok": True,
-            "resumen": resumen,
-            "operaciones": operaciones,
-            "posicion": posicion,
-            "rendimientos": rendimientos_json,
-            "advertencias": advertencias,
-            "token": token,
-        })
-
-    except Exception as e:
-        traceback.print_exc()
-        _registrar_informe(
-            exchange        = exchange,
-            fiscal_year     = _ejercicio_a_fiscal_year(ejercicio),
-            csv_rows        = csv_rows,
-            distinct_assets = 0,
-            processing_ms   = int((time.time() - t_start) * 1000),
-            status          = "failed",
-            error_type      = type(e).__name__,
-        )
-        return jsonify({"error": _error_amigable(e)}), 500
-    finally:
         try:
-            os.unlink(tmp_path)
-        except Exception:
-            pass
+            valido, error_msg = _validar_csv(tmp_path, exchange)
+            if not valido:
+                return jsonify({"error": error_msg}), 400
+
+            rendimientos_json = []
+            motor       = None   # MotorFIFO — asignado para todos los exchanges excepto bit2me
+            clasificador = None  # clasificador original — para telemetría (swaps, movimientos, desconocidas)
+
+            if exchange == "bit2me":
+                clasificador, _r, _ops = procesar_bit2me(tmp_path)
+                _filtrar_bit2me_por_ejercicio(clasificador, ejercicio)
+                clasificador.rendimientos = _filtrar_rendimientos_por_ejercicio(
+                    clasificador.rendimientos, ejercicio)
+                resumen = clasificador.resumen_fiscal()
+                operaciones = [
+                    {
+                        "fecha": res.fecha_venta[:10],
+                        "tipo": res.tipo_op,
+                        "activo": res.activo,
+                        "cantidad": round(res.cantidad, 6),
+                        "transmision": round(res.precio_transmision, 4),
+                        "coste_fifo": round(res.precio_coste, 4),
+                        "ganancia_perdida": round(res.ganancia_perdida, 4),
+                        "periodo_dias": 0,
+                    }
+                    for res in clasificador.resultados
+                ]
+                advertencias = clasificador.advertencias
+                posicion = []
+                rendimientos_json = _rendimientos_a_json(clasificador.rendimientos)
+                pdf_bytes = generar_pdf_bit2me(clasificador, nombre, ejercicio)
+
+            elif exchange == "bitvavo":
+                motor, rendimientos, clasificador = procesar_bitvavo(tmp_path)
+                _filtrar_motor_por_ejercicio(motor, ejercicio)
+                rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
+                resumen, posicion, operaciones = _motor_a_json(motor)
+                advertencias = motor.advertencias
+                rendimientos_json = _rendimientos_a_json(rendimientos)
+                pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Bitvavo", rendimientos)
+
+            elif exchange == "kraken":
+                motor, rendimientos, clasificador = procesar_kraken(tmp_path)
+                _filtrar_motor_por_ejercicio(motor, ejercicio)
+                rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
+                resumen, posicion, operaciones = _motor_a_json(motor)
+                advertencias = motor.advertencias
+                rendimientos_json = _rendimientos_a_json(rendimientos)
+                pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Kraken", rendimientos)
+
+            elif exchange == "coinbase":
+                motor, rendimientos, clasificador = procesar_coinbase(tmp_path)
+                _filtrar_motor_por_ejercicio(motor, ejercicio)
+                rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
+                resumen, posicion, operaciones = _motor_a_json(motor)
+                advertencias = motor.advertencias
+                rendimientos_json = _rendimientos_a_json(rendimientos)
+                pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Coinbase", rendimientos)
+
+            elif exchange == "nexo":
+                motor, rendimientos, clasificador = procesar_nexo(tmp_path)
+                _filtrar_motor_por_ejercicio(motor, ejercicio)
+                rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
+                resumen, posicion, operaciones = _motor_a_json(motor)
+                advertencias = motor.advertencias
+                rendimientos_json = _rendimientos_a_json(rendimientos)
+                pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Nexo", rendimientos)
+
+            elif exchange == "cryptocom":
+                motor, rendimientos, clasificador = procesar_cryptocom(tmp_path)
+                _filtrar_motor_por_ejercicio(motor, ejercicio)
+                rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
+                resumen, posicion, operaciones = _motor_a_json(motor)
+                advertencias = motor.advertencias
+                rendimientos_json = _rendimientos_a_json(rendimientos)
+                pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Crypto.com", rendimientos)
+
+            else:  # binance — auto-detectar formato
+                if _detectar_formato_binance(tmp_path) == "tx":
+                    _clasificador_binance = ClasificadorBinanceTx(tmp_path).clasificar()
+                    _clasificador_stats   = _clasificador_binance.resumen()
+                    motor, rendimientos, clasificador = procesar_con_fifo(_clasificador_binance)
+                else:
+                    motor, rendimientos, clasificador = procesar_binance(tmp_path)
+                    _clasificador_stats  = None
+                _filtrar_motor_por_ejercicio(motor, ejercicio)
+                rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
+                resumen, posicion, operaciones = _motor_a_json(motor)
+                advertencias = motor.advertencias
+                rendimientos_json = _rendimientos_a_json(rendimientos)
+                pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Binance", rendimientos,
+                                        clasificador_stats=_clasificador_stats)
+
+            processing_ms   = int((time.time() - t_start) * 1000)
+            distinct_assets = len({op["activo"] for op in operaciones}) if operaciones else 0
+
+            # ── FASE 2A: extraer telemetría estratégica ──────────────────────────
+            # Fuente primaria: el clasificador (vive en memoria durante el procesamiento).
+            # Para bit2me: clasificador es ClasificadorBit2Me (tiene movimientos, no swaps/desconocidas).
+            # Para motor-based: clasificador es el clasificador del exchange correspondiente.
+            _adv_list = advertencias if isinstance(advertencias, list) else []
+
+            # fifo_operations: ventas+swaps que generaron resultado fiscal
+            _tel_ops  = resumen.get("operaciones_con_resultado", len(operaciones))
+
+            # fifo_swaps: todos los swaps detectados en el CSV (no solo los con resultado FIFO)
+            # bit2me no tiene lista separada → fallback a conteo en operaciones
+            _tel_swaps = (
+                len(clasificador.swaps)
+                if clasificador is not None and hasattr(clasificador, 'swaps')
+                else sum(1 for op in operaciones if op.get("tipo") == "swap")
+            )
+
+            # fifo_rendimientos: staking, rewards, rebates, intereses
+            _tel_rend = len(rendimientos_json)
+
+            # fifo_movimientos: depósitos, retiros, movimientos internos sin impacto fiscal
+            _tel_mov = len(clasificador.movimientos) if clasificador is not None and hasattr(clasificador, 'movimientos') else 0
+
+            # fifo_advertencias: warnings del motor (inventario insuficiente, valoración manual)
+            _tel_adv = len(_adv_list)
+
+            # fifo_desconocidas: filas CSV no clasificadas por el clasificador
+            # bit2me no trackea desconocidas → 0
+            _tel_desc = len(clasificador.desconocidas) if clasificador is not None and hasattr(clasificador, 'desconocidas') else 0
+
+            # métricas fiscales (numéricas, en EUR)
+            _tel_neto = resumen.get("resultado_neto")
+            _tel_gan  = resumen.get("ganancias_brutas")
+            _tel_per  = resumen.get("perdidas_brutas")
+
+            # ejercicio fiscal exacto tal como lo envió el usuario
+            _tel_years = (ejercicio or "")[:50]
+            # ────────────────────────────────────────────────────────────────────
+
+            pdf_tmp = tmp_path.replace(".csv", ".pdf")
+            with open(pdf_tmp, "wb") as f:
+                f.write(pdf_bytes)
+
+            report_id = _registrar_informe(
+                exchange          = exchange,
+                fiscal_year       = _ejercicio_a_fiscal_year(ejercicio),
+                csv_rows          = csv_rows,
+                distinct_assets   = distinct_assets,
+                processing_ms     = processing_ms,
+                fifo_operations   = _tel_ops,
+                fifo_swaps        = _tel_swaps,
+                fifo_rendimientos = _tel_rend,
+                fifo_movimientos  = _tel_mov,
+                fifo_advertencias = _tel_adv,
+                fifo_desconocidas = _tel_desc,
+                resultado_neto    = _tel_neto,
+                ganancias_brutas  = _tel_gan,
+                perdidas_brutas   = _tel_per,
+                fiscal_years_str  = _tel_years,
+            )
+            token = os.path.basename(pdf_tmp)
+            _guardar_token_pdf(token, report_id)
+
+            return jsonify({
+                "ok": True,
+                "resumen": resumen,
+                "operaciones": operaciones,
+                "posicion": posicion,
+                "rendimientos": rendimientos_json,
+                "advertencias": advertencias,
+                "token": token,
+            })
+
+        except Exception as e:
+            traceback.print_exc()
+            _registrar_informe(
+                exchange        = exchange,
+                fiscal_year     = _ejercicio_a_fiscal_year(ejercicio),
+                csv_rows        = csv_rows,
+                distinct_assets = 0,
+                processing_ms   = int((time.time() - t_start) * 1000),
+                status          = "failed",
+                error_type      = type(e).__name__,
+            )
+            return jsonify({"error": _error_amigable(e)}), 500
+
+    finally:
+        # Siempre liberar el bloqueo y limpiar el fichero temporal,
+        # independientemente de cómo terminó la petición (éxito, error, early return).
+        with _analisis_lock:
+            _analisis_en_curso.discard(uid)
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
 
 
 @app.route("/api/descargar/<token>")

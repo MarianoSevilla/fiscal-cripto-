@@ -1790,6 +1790,15 @@
       const res  = await fetch('/api/analizar', { method: 'POST', body: formData, credentials: 'include' });
       const data = await res.json();
 
+      if (res.status === 409) {
+        // Análisis ya en proceso: mostrar aviso y conservar el fichero seleccionado
+        // para que el usuario pueda reintentar cuando termine.
+        mostrarErrorApi(data.error);
+        showState('error');
+        btnAnalizar.disabled = false;
+        return;
+      }
+
       if (!res.ok || !data.ok) {
         mostrarErrorApi(data.error);
         showState('error');
