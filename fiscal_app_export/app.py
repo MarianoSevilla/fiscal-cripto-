@@ -80,6 +80,10 @@ if not _secret:
 
 app.config["SECRET_KEY"] = _secret
 
+# Modo de ejecución: siempre desactivados en producción
+app.config["DEBUG"]   = False
+app.config["TESTING"] = False
+
 # Emails de administrador: sin rate-limit en /api/analizar
 # Configura en Railway: ADMIN_EMAILS=mario@ejemplo.com,otro@ejemplo.com
 ADMIN_EMAILS = {
@@ -103,9 +107,17 @@ app.config["SQLALCHEMY_DATABASE_URI"] = _db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # Cookies de sesión seguras
+# SESSION_COOKIE_SECURE: True en producción (FLASK_ENV=production en Railway).
+# En desarrollo local (http://127.0.0.1:5050) Flask lo ignora automáticamente
+# para localhost — si usas otro host de dev, quita la condición temporalmente.
+_prod = os.environ.get("FLASK_ENV") == "production"
+app.config["SESSION_COOKIE_SECURE"]   = _prod
 app.config["SESSION_COOKIE_HTTPONLY"] = True
-app.config["SESSION_COOKIE_SECURE"]   = os.environ.get("FLASK_ENV") == "production"
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+# Flask-Login "remember me" cookie — misma política que la cookie de sesión
+app.config["REMEMBER_COOKIE_SECURE"]   = _prod
+app.config["REMEMBER_COOKIE_HTTPONLY"] = True
+app.config["REMEMBER_COOKIE_SAMESITE"] = "Lax"
 
 
 # ── EXTENSIONES ───────────────────────────────
@@ -521,7 +533,9 @@ def set_security_headers(response):
         "frame-src https://challenges.cloudflare.com; "
         "frame-ancestors 'none'; "
         "form-action 'self'; "
-        "base-uri 'self';"
+        "base-uri 'self'; "
+        "object-src 'none'; "          # bloquea Flash / plugins embebidos
+        "upgrade-insecure-requests;"   # fuerza HTTPS en recursos embebidos
     )
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
     response.headers["Permissions-Policy"] = (
@@ -1777,8 +1791,8 @@ def api_stats():
     try:
         return _api_stats_data()
     except Exception as e:
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+        traceback.print_exc()   # solo a logs — nunca al cliente
+        return jsonify({"error": "Error interno al cargar estadísticas."}), 500
 
 
 def _api_stats_data():
@@ -2422,8 +2436,8 @@ def stripe_webhook():
             import json as _json
             event = _json.loads(payload)
     except Exception as exc:
-        app.logger.warning("Stripe webhook error: %s", exc)
-        return jsonify({"error": str(exc)}), 400
+        app.logger.warning("Stripe webhook error: %s", exc)   # solo a logs
+        return jsonify({"error": "Invalid request."}), 400
 
     if event["type"] == "checkout.session.completed":
         session_obj = event["data"]["object"]
