@@ -106,6 +106,11 @@ if _db_url.startswith("postgres://"):
 app.config["SQLALCHEMY_DATABASE_URI"] = _db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+# Tamaño máximo de payload global — corta uploads gigantes antes de llegar a disco.
+# Los CSV válidos son <10 MB; los ficheros de asesoramiento tienen su propio check a 10 MB.
+# Flask devuelve 413 automáticamente si se supera este límite.
+app.config["MAX_CONTENT_LENGTH"] = 15 * 1024 * 1024  # 15 MB
+
 # Cookies de sesión seguras
 # SESSION_COOKIE_SECURE: True en producción (FLASK_ENV=production en Railway).
 # En desarrollo local (http://127.0.0.1:5050) Flask lo ignora automáticamente
@@ -1105,6 +1110,7 @@ def signup_page():
 
 
 @app.route("/auth/google")
+@limiter.limit("20 per minute")
 def auth_google():
     """Inicia el flujo OAuth con Google."""
     if not _google_oauth_enabled:
@@ -1114,6 +1120,7 @@ def auth_google():
 
 
 @app.route("/auth/google/callback")
+@limiter.limit("20 per minute")
 def auth_google_callback():
     """Callback OAuth de Google: busca/crea usuario y hace login."""
     if not _google_oauth_enabled:
@@ -1555,6 +1562,7 @@ def logout():
 
 
 @app.route("/verify-email")
+@limiter.limit("10 per minute")
 def verify_email():
     """Procesa el token del enlace enviado por email."""
     token = request.args.get("token", "")
@@ -1620,6 +1628,7 @@ def me():
 
 @app.route("/api/change-password", methods=["POST"])
 @login_required
+@limiter.limit("5 per hour")
 def change_password():
     """Cambia la contraseña del usuario autenticado (solo cuentas email, no OAuth)."""
     if current_user.google_id:
@@ -2263,6 +2272,11 @@ def ratelimit_error(e):
     }), 429
 
 
+@app.errorhandler(413)
+def payload_too_large(e):
+    return jsonify({"error": "El fichero supera el tamaño máximo permitido (15 MB)."}), 413
+
+
 # ── ADVISORY ROUTES ──────────────────────────
 
 @app.route("/asesoramiento-fiscal-criptomonedas", strict_slashes=False)
@@ -2420,6 +2434,7 @@ def advisory_solicitar():
 
 
 @app.route("/api/webhooks/stripe", methods=["POST"])
+@limiter.limit("60 per minute")
 def stripe_webhook():
     """Webhook de Stripe — solo este endpoint puede marcar un pago como confirmado."""
     if not _stripe_available or not _STRIPE_SECRET_KEY:
