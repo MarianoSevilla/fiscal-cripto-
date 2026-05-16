@@ -579,12 +579,16 @@ def _tabla_resumen_activos(resultados, styles):
     for i, (activo, datos) in enumerate(sorted(por_activo.items())):
         neto = datos["ganancias"] + datos["perdidas"]
         neto_style = styles["td_green"] if neto >= 0 else styles["td_red"]
+        # Mostrar "0.00" cuando hay operaciones con resultado cero (no "—", que implicaría ausencia)
+        g_str = f"+{datos['ganancias']:,.2f}" if datos["ganancias"] != 0 else "0.00"
+        p_str = f"{datos['perdidas']:,.2f}"   if datos["perdidas"]  != 0 else "0.00"
+        n_str = f"+{neto:,.2f}" if neto >= 0 else f"{neto:,.2f}"
         rows.append([
             Paragraph(activo, styles["td"]),
             Paragraph(str(datos["ops"]), styles["td_muted_right"]),
-            Paragraph(f"+{datos['ganancias']:,.4f}" if datos["ganancias"] else "—", styles["td_green"]),
-            Paragraph(f"{datos['perdidas']:,.4f}"   if datos["perdidas"]  else "—", styles["td_red"]),
-            Paragraph(f"+{neto:,.4f}" if neto >= 0 else f"{neto:,.4f}", neto_style),
+            Paragraph(g_str, styles["td_green"]),
+            Paragraph(p_str, styles["td_red"]),
+            Paragraph(n_str, neto_style),
         ])
 
     col_w = [28*mm, 18*mm, 44*mm, 44*mm, 34*mm]
@@ -608,6 +612,20 @@ def _tabla_resumen_activos(resultados, styles):
     return t
 
 
+def _fmt_cantidad(q: float) -> str:
+    """Formato adaptativo de cantidad según magnitud — evita desbordamiento de columna."""
+    if q >= 1_000_000:
+        return f"{q:,.0f}"
+    elif q >= 10_000:
+        return f"{q:,.1f}"
+    elif q >= 100:
+        return f"{q:,.2f}"
+    elif q >= 1:
+        return f"{q:,.4f}"
+    else:
+        return f"{q:,.6f}"
+
+
 def _tabla_operaciones(resultados, styles):
     cabecera = [
         Paragraph("FECHA",                    styles["th"]),
@@ -623,19 +641,21 @@ def _tabla_operaciones(resultados, styles):
     for r in resultados:
         gp = r.ganancia_perdida
         gp_style = styles["td_green"] if gp >= 0 else styles["td_red"]
-        gp_str   = f"+{gp:,.4f}" if gp >= 0 else f"{gp:,.4f}"
+        gp_str   = f"+{gp:,.2f}" if gp >= 0 else f"{gp:,.2f}"
         rows.append([
             Paragraph(r.fecha.strftime("%d/%m/%Y"), styles["td_muted"]),
             Paragraph(r.tipo_operacion.upper(), styles["td"]),
-            Paragraph(r.activo, styles["td"]),
-            Paragraph(f"{r.cantidad_vendida:,.6f}",  styles["td_mono"]),
-            Paragraph(f"{r.precio_transmision:,.4f}", styles["td_mono"]),
-            Paragraph(f"{r.precio_coste:,.4f}",       styles["td_mono"]),
+            Paragraph(r.activo, styles["td"]),                           # ticker — no partir
+            Paragraph(_fmt_cantidad(r.cantidad_vendida),  styles["td_mono"]),
+            Paragraph(f"{r.precio_transmision:,.2f}", styles["td_mono"]),
+            Paragraph(f"{r.precio_coste:,.2f}",       styles["td_mono"]),
             Paragraph(gp_str, gp_style),
             Paragraph(str(int(r.periodo_dias)), styles["td_muted_right"]),
         ])
 
-    col_w = [20*mm, 17*mm, 14*mm, 22*mm, 27*mm, 27*mm, 25*mm, 12*mm]
+    # Anchos corregidos: ACTIVO pasa de 14→22mm; se redistribuyen 8mm de columnas holgadas
+    # Total: 20+14+22+20+25+25+27+15 = 168mm (= A4 − márgenes)
+    col_w = [20*mm, 14*mm, 22*mm, 20*mm, 25*mm, 25*mm, 27*mm, 15*mm]
     t = Table(rows, colWidths=col_w, repeatRows=1)
     n = len(rows)
     row_bgs = [("BACKGROUND", (0, i), (-1, i), BG if i % 2 == 1 else TABLE_ALT) for i in range(1, n)]
@@ -650,6 +670,7 @@ def _tabla_operaciones(resultados, styles):
         ("LEFTPADDING",   (0, 0), (-1, -1), 5),
         ("RIGHTPADDING",  (0, 0), (-1, -1), 5),
         ("ALIGN",         (3, 0), (-1, -1), "RIGHT"),
+        ("NOSPLIT",       (2, 1), (2, -1)),   # columna ACTIVO: no partir celdas entre páginas
     ] + row_bgs))
     return t
 
@@ -838,6 +859,38 @@ def _bloque_estado_analisis(clasificador_stats: dict, motor, rendimientos: list,
     return elems
 
 
+def _aviso_fmv_estimado(n_swaps: int, styles) -> list:
+    """
+    Caja de aviso para exchanges (como Uphold) que no aportan FMV en EUR.
+    Aparece antes de la tabla de operaciones cuando hay swaps con G/P = 0
+    porque el precio de transmisión es el coste FIFO (mejor aproximación disponible).
+    """
+    texto = (
+        f"<b>AVISO — Valoración orientativa: {n_swaps} swap{'s' if n_swaps != 1 else ''} requieren revisión manual.</b>  "
+        "Uphold no incluye el valor de mercado en EUR en su CSV. Para los swaps cripto↔cripto, el sistema "
+        "ha usado el <b>coste FIFO de adquisición como precio de transmisión</b> (mejor aproximación disponible "
+        "sin datos de mercado), lo que produce ganancia/pérdida = 0 €. "
+        "El valor real de transmisión es el precio de mercado del activo entregado en la fecha del swap. "
+        "<b>Debes consultar precios históricos y corregir estos valores con tu asesor fiscal antes "
+        "de presentar la declaración.</b>"
+    )
+    warn_style = ParagraphStyle(
+        "fmv_warn", fontName="Helvetica", fontSize=8.5,
+        textColor=colors.HexColor("#92400E"), leading=13,
+    )
+    data = [[Paragraph(texto, warn_style)]]
+    t = Table(data, colWidths=[168*mm])
+    t.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#FFFBEB")),
+        ("BOX",           (0, 0), (-1, -1), 0.8, colors.HexColor("#F59E0B")),
+        ("TOPPADDING",    (0, 0), (-1, -1), 8),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 10),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 10),
+    ]))
+    return [t, Spacer(1, 3*mm)]
+
+
 def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rendimientos=None,
                 clasificador_stats=None) -> bytes:
     styles = _build_styles()
@@ -894,6 +947,16 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
             styles["body_muted"]
         ))
         story.append(Spacer(1, 3*mm))
+        # Aviso específico cuando el exchange no aporta FMV en EUR (p.ej. Uphold):
+        # los swaps muestran G/P = 0 porque se usa coste FIFO como proxy.
+        if exchange == "Uphold":
+            _n_swaps_sin_fmv = sum(
+                1 for r in motor.resultados
+                if r.tipo_operacion == "swap" and abs(r.ganancia_perdida) < 0.001
+            )
+            if _n_swaps_sin_fmv > 0:
+                for _fl in _aviso_fmv_estimado(_n_swaps_sin_fmv, styles):
+                    story.append(_fl)
         story.append(_tabla_operaciones(motor.resultados, styles))
 
     # 5. POSICION ACTUAL

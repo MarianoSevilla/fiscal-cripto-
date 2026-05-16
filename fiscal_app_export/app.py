@@ -1393,7 +1393,10 @@ def analizar():
                 _filtrar_motor_por_ejercicio(motor, ejercicio)
                 rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
                 resumen, posicion, operaciones = _motor_a_json(motor)
-                advertencias = motor.advertencias
+                # Uphold no provee FMV en EUR: las advertencias fiscales viven en el clasificador
+                # (el motor no las genera porque siempre hay inventario previo de compras EUR).
+                # Fusionamos ambas listas para que aparezcan en la UI y en el PDF.
+                advertencias = motor.advertencias + (clasificador.advertencias if clasificador else [])
                 rendimientos_json = _rendimientos_a_json(rendimientos)
                 pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Uphold", rendimientos)
 
