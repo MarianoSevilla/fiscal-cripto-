@@ -54,6 +54,7 @@ from clasificador_kraken import ClasificadorKraken
 from clasificador_coinbase import ClasificadorCoinbase
 from clasificador_nexo import ClasificadorNexo
 from clasificador_cryptocom import ClasificadorCryptoCom
+from clasificador_uphold import ClasificadorUphold, UPHOLD_SIGNATURES
 from motor_fifo import MotorFIFO
 from generador_pdf import generar_pdf, generar_pdf_bit2me
 
@@ -474,6 +475,24 @@ EXCHANGE_PAGES = {
             _HOW_TO_STEP2, _HOW_TO_STEP3,
         ],
     },
+    "uphold": {
+        "exchange_id":      "uphold",
+        "exchange_name":    "Uphold",
+        "exchange_logo":    "U",
+        "page_title":       "Informe FIFO Uphold para Hacienda | Mariano Sevilla",
+        "page_meta_desc":   "Sube el CSV de Uphold y calcula tus ganancias y pérdidas con FIFO obligatorio. Informe PDF listo para la declaración de la renta en España.",
+        "page_canonical":   f"{_BASE_URL}/uphold",
+        "page_og_title":    "Informe fiscal Uphold para Hacienda — FIFO automático | Mariano Sevilla",
+        "page_og_desc":     "Sube el CSV de Uphold y calcula las plusvalías crypto con FIFO. Informe PDF para tu gestor.",
+        "page_schema_name": "Informe FIFO Uphold — Mariano Sevilla",
+        "page_h1":          "Genera tu informe fiscal de Uphold para Hacienda",
+        "hero_desc":        "Sube el CSV del historial de transacciones de Uphold y obtén el informe FIFO con tus ganancias y pérdidas patrimoniales. Los Brave Rewards (BAT) tributan como rendimientos del capital mobiliario (casilla 0033). Listo para la declaración de la renta.",
+        "how_to": [
+            {"title": "Exporta el CSV de transacciones desde Uphold",
+             "desc":  "En tu cuenta de Uphold ve a Actividad → selecciona el rango completo → Exportar CSV. Descarga el fichero con todas tus transacciones."},
+            _HOW_TO_STEP2, _HOW_TO_STEP3,
+        ],
+    },
 }
 
 
@@ -706,6 +725,7 @@ def _validar_csv(filepath: str, exchange: str) -> tuple[bool, str]:
         "coinbase":  COINBASE_SIGNATURES,
         "nexo":      NEXO_SIGNATURES,
         "cryptocom": CRYPTOCOM_SIGNATURES,
+        "uphold":    UPHOLD_SIGNATURES,
     }
     nombres = {
         "binance":   "Binance",
@@ -715,6 +735,7 @@ def _validar_csv(filepath: str, exchange: str) -> tuple[bool, str]:
         "coinbase":  "Coinbase",
         "nexo":      "Nexo",
         "cryptocom": "Crypto.com",
+        "uphold":    "Uphold",
     }
     if exchange in sigs:
         if not any(sig in primeras for sig in sigs[exchange]):
@@ -811,6 +832,10 @@ def procesar_nexo(filepath: str) -> tuple:
 
 def procesar_cryptocom(filepath: str) -> tuple:
     return procesar_con_fifo(ClasificadorCryptoCom(filepath).clasificar())
+
+
+def procesar_uphold(filepath: str) -> tuple:
+    return procesar_con_fifo(ClasificadorUphold(filepath).clasificar())
 
 
 def procesar_bit2me(filepath: str) -> tuple:
@@ -1222,6 +1247,12 @@ def page_cryptocom():
     return render_template("tool.html", **EXCHANGE_PAGES["cryptocom"])
 
 
+@app.route("/uphold")
+@login_required
+def page_uphold():
+    return render_template("tool.html", **EXCHANGE_PAGES["uphold"])
+
+
 @app.route("/api/analizar", methods=["POST"])
 @login_required
 @limiter.limit("1 per 10 minutes", exempt_when=_is_admin)
@@ -1251,7 +1282,7 @@ def analizar():
         exchange  = _sanitizar_texto(request.form.get("exchange", "binance"), max_len=20).lower()
 
         # Validar exchange
-        if exchange not in ("binance", "bit2me", "bitvavo", "kraken", "coinbase", "nexo", "cryptocom"):
+        if exchange not in ("binance", "bit2me", "bitvavo", "kraken", "coinbase", "nexo", "cryptocom", "uphold"):
             return jsonify({"error": "Exchange no soportado."}), 400
 
         # Validar ejercicio fiscal
@@ -1356,6 +1387,15 @@ def analizar():
                 advertencias = motor.advertencias
                 rendimientos_json = _rendimientos_a_json(rendimientos)
                 pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Crypto.com", rendimientos)
+
+            elif exchange == "uphold":
+                motor, rendimientos, clasificador = procesar_uphold(tmp_path)
+                _filtrar_motor_por_ejercicio(motor, ejercicio)
+                rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
+                resumen, posicion, operaciones = _motor_a_json(motor)
+                advertencias = motor.advertencias
+                rendimientos_json = _rendimientos_a_json(rendimientos)
+                pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Uphold", rendimientos)
 
             else:  # binance — auto-detectar formato
                 if _detectar_formato_binance(tmp_path) == "tx":
