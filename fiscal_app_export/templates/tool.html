@@ -289,6 +289,7 @@
   .logo-bitvavo  { background: #1A56F0; }
   .logo-kraken   { background: #5741D9; }
   .logo-bit2me   { background: #0066FF; }
+  .logo-uphold   { background: #00CC8F; }
   .exchange-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .soon-tag {
     font-size: 9px; font-weight: 600; text-transform: uppercase;
@@ -815,6 +816,10 @@
       <div class="exchange-logo logo-coinbase"><img src="/static/images/coinbase.png" alt="Coinbase"></div>
       <span class="exchange-name">Coinbase</span>
     </button>
+    <button class="exchange-btn" data-exchange="uphold" onclick="selectExchange(this)">
+      <div class="exchange-logo logo-uphold"><img src="/static/images/uphold.png" alt="Uphold"></div>
+      <span class="exchange-name">Uphold</span>
+    </button>
     <button class="exchange-btn coming-soon" disabled>
       <div class="exchange-logo"><img src="/static/images/bybit.jpg" alt="Bybit"></div>
       <span class="exchange-name">Bybit</span>
@@ -866,7 +871,7 @@
     <div class="bar-right">
       {% if exchange_id %}
       <div class="bar-exchange">
-        <div class="exchange-logo logo-{{ exchange_id }}" style="width:22px;height:22px;border-radius:50%;overflow:hidden;flex-shrink:0;"><img src="/static/images/{% if exchange_id == 'cryptocom' %}crypto.png{% elif exchange_id in ['kraken','bitvavo','coinbase'] %}{{ exchange_id }}.png{% else %}{{ exchange_id }}.jpg{% endif %}" alt="{{ exchange_name }}" style="width:100%;height:100%;object-fit:cover;display:block;"></div>
+        <div class="exchange-logo logo-{{ exchange_id }}" style="width:22px;height:22px;border-radius:50%;overflow:hidden;flex-shrink:0;"><img src="/static/images/{% if exchange_id == 'cryptocom' %}crypto.png{% elif exchange_id in ['kraken','bitvavo','coinbase','uphold'] %}{{ exchange_id }}.png{% else %}{{ exchange_id }}.jpg{% endif %}" alt="{{ exchange_name }}" style="width:100%;height:100%;object-fit:cover;display:block;"></div>
         <span class="bar-exchange-name">{{ exchange_name }}</span>
         <span class="bar-exchange-change"><a href="/dashboard">← Cambiar</a></span>
       </div>
