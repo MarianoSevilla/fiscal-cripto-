@@ -49,6 +49,7 @@ body {
   background: var(--bg); color: var(--text);
   font-family: var(--font-body); font-size: 16px; line-height: 1.7;
   min-height: 100vh; -webkit-font-smoothing: antialiased;
+  display: flex; flex-direction: column;
 }
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
@@ -117,7 +118,7 @@ a:hover { text-decoration: underline; }
 .form-msg.success { background: rgba(0,200,150,0.1); color: var(--accent); border: 1px solid rgba(0,200,150,0.25); }
 .form-msg.error { background: rgba(226,75,74,0.1); color: #e24b4a; border: 1px solid rgba(226,75,74,0.25); }
 
-.page-footer { background: var(--footer-bg); border-top: 1px solid var(--border); padding: 2rem 0; }
+.page-footer { background: var(--footer-bg); border-top: 1px solid var(--border); padding: 2rem 0; margin-top: auto; }
 .footer-inner { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x); display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
 .footer-copy { font-size: 13px; color: var(--muted); }
 .footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
