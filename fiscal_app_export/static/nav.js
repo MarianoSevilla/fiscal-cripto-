@@ -109,37 +109,47 @@
   async function updateAuthState() {
     try {
       const r = await fetch('/api/me', { credentials: 'include' });
-      if (!r.ok) return; // no autenticado — estado por defecto (botones login/signup)
-      const d = await r.json();
-      if (!d || !d.user) return;
 
-      const user = d.user;
+      if (r.ok) {
+        const d = await r.json();
 
-      // Ocultar botones no autenticado
-      const btnLogin  = document.getElementById('snavBtnLogin');
-      const btnSignup = document.getElementById('snavBtnSignup');
-      if (btnLogin)  btnLogin.classList.add('snav-hidden');
-      if (btnSignup) btnSignup.classList.add('snav-hidden');
+        if (d && d.user) {
+          const user = d.user;
 
-      // Mostrar avatar con la inicial correcta
-      const avatarWrap = document.getElementById('snavAvatarWrap');
-      const avatar     = document.getElementById('snavAvatar');
-      if (avatarWrap) avatarWrap.classList.remove('snav-hidden');
-      if (avatar) {
-        const name    = user.full_name || user.email || 'U';
-        avatar.textContent = name.charAt(0).toUpperCase();
+          // Ocultar botones no autenticado
+          const btnLogin  = document.getElementById('snavBtnLogin');
+          const btnSignup = document.getElementById('snavBtnSignup');
+          if (btnLogin)  btnLogin.classList.add('snav-hidden');
+          if (btnSignup) btnSignup.classList.add('snav-hidden');
+
+          // Mostrar avatar con la inicial correcta
+          const avatarWrap = document.getElementById('snavAvatarWrap');
+          const avatar     = document.getElementById('snavAvatar');
+          if (avatarWrap) avatarWrap.classList.remove('snav-hidden');
+          if (avatar) {
+            const name = user.full_name || user.email || 'U';
+            avatar.textContent = name.charAt(0).toUpperCase();
+          }
+
+          // Mostrar items de admin si corresponde
+          if (user.is_admin) {
+            const planes = document.getElementById('snavItemPlanes');
+            const stats  = document.getElementById('snavItemStats');
+            if (planes) planes.classList.remove('snav-hidden');
+            if (stats)  stats.classList.remove('snav-hidden');
+          }
+        }
+        // Si d.user es null → no autenticado, botones ya visibles por defecto
       }
-
-      // Mostrar items de admin si corresponde
-      if (user.is_admin) {
-        const planes = document.getElementById('snavItemPlanes');
-        const stats  = document.getElementById('snavItemStats');
-        if (planes) planes.classList.remove('snav-hidden');
-        if (stats)  stats.classList.remove('snav-hidden');
-      }
+      // Si !r.ok → no autenticado, botones ya visibles por defecto
 
     } catch (_) {
-      // Error de red: no hacemos nada, se muestra el estado no autenticado
+      // Error de red: mostrar botones por defecto (estado no autenticado)
+    } finally {
+      // Siempre revelar la zona derecha con el estado ya correcto.
+      // El finally garantiza que se ejecuta aunque haya error de red.
+      const right = document.querySelector('#site-nav .snav-right');
+      if (right) right.classList.add('snav-resolved');
     }
   }
 
