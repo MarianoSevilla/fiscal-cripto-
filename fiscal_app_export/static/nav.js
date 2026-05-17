@@ -12,21 +12,10 @@
 (function () {
   'use strict';
 
-  // ── HTML del nav ──────────────────────────────────────────────────────────
-  function buildHTML() {
+  // ── HTML de la zona derecha (skeleton + botones + avatar) ────────────────
+  // Se inyecta en .snav-right cuando ya existe el shell estático en el HTML.
+  function buildRightHTML() {
     return `
-      <div class="snav-inner">
-
-        <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
-
-        <ul class="snav-links">
-          <li><a href="/#como-funciona">Cómo funciona</a></li>
-          <li><a href="/faq">FAQ</a></li>
-          <li><a href="/contacto">Contacto</a></li>
-        </ul>
-
-        <div class="snav-right">
-
           <!-- Skeleton: visible mientras /api/me está en vuelo -->
           <div class="snav-skeleton" id="snavSkeleton" aria-hidden="true"></div>
 
@@ -45,8 +34,24 @@
               <div class="snav-dd-divider"></div>
               <button class="snav-dd-item danger" id="snavBtnLogout" role="menuitem">↩&nbsp; Cerrar sesión</button>
             </div>
-          </div>
+          </div>`;
+  }
 
+  // ── HTML completo del nav (fallback si el shell NO está en el HTML) ───────
+  function buildFullHTML() {
+    return `
+      <div class="snav-inner">
+
+        <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
+
+        <ul class="snav-links">
+          <li><a href="/#como-funciona">Cómo funciona</a></li>
+          <li><a href="/faq">FAQ</a></li>
+          <li><a href="/contacto">Contacto</a></li>
+        </ul>
+
+        <div class="snav-right">
+          ${buildRightHTML()}
         </div>
       </div>`;
   }
@@ -165,7 +170,17 @@
     const nav = document.getElementById('site-nav');
     if (!nav) return;
 
-    nav.innerHTML = buildHTML();
+    const existing = nav.querySelector('.snav-inner');
+    if (existing) {
+      // Shell estático ya en el HTML: solo hidratar .snav-right
+      // Esto garantiza que logo + links nunca desaparecen, ni un frame.
+      const right = existing.querySelector('.snav-right');
+      if (right) right.innerHTML = buildRightHTML();
+    } else {
+      // Fallback: generar el nav completo (no debería ocurrir con los HTML actualizados)
+      nav.innerHTML = buildFullHTML();
+    }
+
     markActive();
     initDropdown();
     initLogout();
