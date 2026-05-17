@@ -182,7 +182,17 @@
   };
 
   // ── Bootstrap ─────────────────────────────────────────────────────────────
-  if (document.readyState === 'loading') {
+  //
+  // Si el script está posicionado justo después de <nav id="site-nav">,
+  // el elemento ya existe en el DOM cuando este código ejecuta.
+  // En ese caso init() se llama de forma síncrona — el skeleton aparece
+  // al instante, sin esperar a DOMContentLoaded.
+  //
+  // Si por cualquier razón el nav aún no existe (script en <head>, etc.),
+  // se usa el fallback estándar.
+  if (document.getElementById('site-nav')) {
+    init();
+  } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
     init();

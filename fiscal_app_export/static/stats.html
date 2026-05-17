@@ -14,6 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/nav.css">
+<link rel="preload" href="/static/nav.js" as="script">
 <script src="/static/chart.umd.min.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -299,6 +300,7 @@ tbody tr:hover { background: var(--surface2); }
 <body>
 
 <nav id="site-nav"></nav>
+<script src="/static/nav.js"></script>
 
 <main>
 
@@ -1350,6 +1352,5 @@ async function loadStats() {
 document.getElementById('btnRefresh').addEventListener('click', loadStats);
 loadStats();
 </script>
-<script src="/static/nav.js"></script>
 </body>
 </html>

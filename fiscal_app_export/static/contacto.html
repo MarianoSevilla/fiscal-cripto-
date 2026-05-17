@@ -18,6 +18,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/nav.css">
+<link rel="preload" href="/static/nav.js" as="script">
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
 <style>
@@ -133,6 +134,7 @@ footer { background: var(--footer-bg); border-top: 1px solid var(--border); }
 
 <!-- ── NAV ── -->
 <nav id="site-nav"></nav>
+<script src="/static/nav.js"></script>
 
 <!-- ── HERO ── -->
 <div class="page-hero">
@@ -298,6 +300,5 @@ document.getElementById('contactForm').addEventListener('submit', async (e) => {
 });
 </script>
 
-<script src="/static/nav.js"></script>
 </body>
 </html>

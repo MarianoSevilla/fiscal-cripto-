@@ -14,6 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/nav.css">
+<link rel="preload" href="/static/nav.js" as="script">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -210,6 +211,7 @@ main {
 
 <!-- ── NAV ── -->
 <nav id="site-nav"></nav>
+<script src="/static/nav.js"></script>
 
 <!-- ── MAIN ── -->
 <main>
@@ -411,6 +413,5 @@ document.getElementById('btnDeleteAccount').addEventListener('click', async () =
   }
 });
 </script>
-<script src="/static/nav.js"></script>
 </body>
 </html>
