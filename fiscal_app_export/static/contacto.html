@@ -117,11 +117,12 @@ a:hover { text-decoration: underline; }
 .form-msg.success { background: rgba(0,200,150,0.1); color: var(--accent); border: 1px solid rgba(0,200,150,0.25); }
 .form-msg.error { background: rgba(226,75,74,0.1); color: #e24b4a; border: 1px solid rgba(226,75,74,0.25); }
 
-footer { background: var(--footer-bg); border-top: 1px solid var(--border); }
-.footer-inner { max-width: var(--max-w); margin: 0 auto; padding: 1.5rem var(--pad-x); text-align: center; }
-.footer-legal { font-size: 12px; color: var(--muted); line-height: 1.8; }
-.footer-legal a { color: var(--muted); text-decoration: none; }
-.footer-legal a:hover { color: var(--text); }
+.page-footer { background: var(--footer-bg); border-top: 1px solid var(--border); padding: 2rem 0; }
+.footer-inner { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x); display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.footer-copy { font-size: 13px; color: var(--muted); }
+.footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+.footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; }
+.footer-links a:hover { color: var(--text); }
 
 @media (max-width: 640px) {
   .page-hero { padding: 6rem 1.25rem 2rem; }
@@ -219,18 +220,16 @@ footer { background: var(--footer-bg); border-top: 1px solid var(--border); }
 </div>
 
 <!-- ── FOOTER ── -->
-<footer>
+<footer class="page-footer">
   <div class="footer-inner">
-    <p class="footer-legal">
-      © 2026 Mariano Sevilla &nbsp;·&nbsp;
-      <a href="/privacidad">Privacidad</a> &nbsp;·&nbsp;
-      <a href="/terminos">Términos</a> &nbsp;·&nbsp;
-      <a href="/cookies">Cookies</a> &nbsp;·&nbsp;
-      <a href="/aviso-legal">Aviso legal</a> &nbsp;·&nbsp;
-      <a href="/faq">FAQ</a> &nbsp;·&nbsp;
-      <a href="/contacto">Contacto</a> &nbsp;·&nbsp;
-      <a href="mailto:colab.marianosevilla@gmail.com">colab.marianosevilla@gmail.com</a>
-    </p>
+    <span class="footer-copy">© 2025 marianosevilla.com — No constituye asesoramiento fiscal ni legal.</span>
+    <div class="footer-links">
+      <a href="/privacidad">Privacidad</a>
+      <a href="/terminos">Términos</a>
+      <a href="/cookies">Cookies</a>
+      <a href="/aviso-legal">Aviso legal</a>
+      <a href="/faq">FAQ</a>
+    </div>
   </div>
 </footer>
 
