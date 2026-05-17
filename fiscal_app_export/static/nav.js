@@ -27,11 +27,14 @@
 
         <div class="snav-right">
 
-          <!-- Estado NO autenticado -->
-          <a href="/login/"   class="snav-btn-login" id="snavBtnLogin">Iniciar sesión</a>
-          <a href="/signup/"  class="snav-btn-cta"   id="snavBtnSignup">Crea tu cuenta gratis</a>
+          <!-- Skeleton: visible mientras /api/me está en vuelo -->
+          <div class="snav-skeleton" id="snavSkeleton" aria-hidden="true"></div>
 
-          <!-- Estado autenticado -->
+          <!-- Estado NO autenticado (oculto hasta que /api/me resuelve) -->
+          <a href="/login/"   class="snav-btn-login snav-hidden" id="snavBtnLogin">Iniciar sesión</a>
+          <a href="/signup/"  class="snav-btn-cta   snav-hidden" id="snavBtnSignup">Crea tu cuenta gratis</a>
+
+          <!-- Estado autenticado (oculto hasta que /api/me resuelve) -->
           <div class="snav-avatar-wrap snav-hidden" id="snavAvatarWrap">
             <button class="snav-avatar" id="snavAvatar" aria-label="Menú de usuario" aria-haspopup="true" aria-expanded="false">U</button>
             <div class="snav-dropdown" id="snavDropdown" role="menu">
@@ -107,6 +110,10 @@
 
   // ── Actualizar estado según /api/me ───────────────────────────────────────
   async function updateAuthState() {
+    // Por defecto mostramos botones (no autenticado).
+    // Se pone a false si detectamos sesión activa.
+    let authenticated = false;
+
     try {
       const r = await fetch('/api/me', { credentials: 'include' });
 
@@ -114,13 +121,8 @@
         const d = await r.json();
 
         if (d && d.user) {
+          authenticated = true;
           const user = d.user;
-
-          // Ocultar botones no autenticado
-          const btnLogin  = document.getElementById('snavBtnLogin');
-          const btnSignup = document.getElementById('snavBtnSignup');
-          if (btnLogin)  btnLogin.classList.add('snav-hidden');
-          if (btnSignup) btnSignup.classList.add('snav-hidden');
 
           // Mostrar avatar con la inicial correcta
           const avatarWrap = document.getElementById('snavAvatarWrap');
@@ -139,17 +141,22 @@
             if (stats)  stats.classList.remove('snav-hidden');
           }
         }
-        // Si d.user es null → no autenticado, botones ya visibles por defecto
       }
-      // Si !r.ok → no autenticado, botones ya visibles por defecto
 
     } catch (_) {
-      // Error de red: mostrar botones por defecto (estado no autenticado)
+      // Error de red: se muestra el estado no autenticado (comportamiento correcto)
     } finally {
-      // Siempre revelar la zona derecha con el estado ya correcto.
-      // El finally garantiza que se ejecuta aunque haya error de red.
-      const right = document.querySelector('#site-nav .snav-right');
-      if (right) right.classList.add('snav-resolved');
+      // Ocultar skeleton siempre (tanto si hay sesión como si no)
+      const skeleton = document.getElementById('snavSkeleton');
+      if (skeleton) skeleton.classList.add('snav-hidden');
+
+      // Mostrar botones solo si no hay sesión
+      if (!authenticated) {
+        const btnLogin  = document.getElementById('snavBtnLogin');
+        const btnSignup = document.getElementById('snavBtnSignup');
+        if (btnLogin)  btnLogin.classList.remove('snav-hidden');
+        if (btnSignup) btnSignup.classList.remove('snav-hidden');
+      }
     }
   }
 

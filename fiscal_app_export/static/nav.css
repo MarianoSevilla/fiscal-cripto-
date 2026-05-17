@@ -80,16 +80,15 @@
   align-items: center;
   gap: 0.75rem;
   flex-shrink: 0;
-  /*
-   * Anti-flicker: la zona derecha empieza invisible.
-   * nav.js añade .snav-resolved cuando /api/me resuelve,
-   * garantizando que solo se muestra el estado correcto.
-   */
-  opacity: 0;
 }
-.snav-right.snav-resolved {
-  opacity: 1;
-  transition: opacity 0.1s ease;
+
+/* ── Skeleton placeholder (visible mientras /api/me carga) ── */
+.snav-skeleton {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.07);
+  flex-shrink: 0;
 }
 
 /* ── Botón outline: Iniciar sesión ───────────────── */
