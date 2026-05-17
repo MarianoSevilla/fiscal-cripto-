@@ -13,6 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/nav.css">
 <script src="/static/chart.umd.min.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -297,26 +298,7 @@ tbody tr:hover { background: var(--surface2); }
 </head>
 <body>
 
-<nav>
-  <div class="nav-inner">
-    <div style="display:flex;align-items:center;gap:1.75rem;">
-      <a href="/" class="nav-logo">mariano<span>sevilla</span>.com</a>
-      <a href="/dashboard" class="nav-link-dash">Dashboard</a>
-    </div>
-    <div class="nav-right">
-      <div class="nav-avatar-wrap">
-        <button class="nav-avatar" id="navAvatar" aria-label="Menú de usuario">U</button>
-        <div class="nav-dropdown" id="navDropdown">
-          <a href="/pricing"   class="nav-dd-item">💎&nbsp; Planes</a>
-          <a href="/account"   class="nav-dd-item">👤&nbsp; Mi cuenta</a>
-          <a href="/stats"     class="nav-dd-item active">📊&nbsp; Stats</a>
-          <div class="nav-dd-divider"></div>
-          <button class="nav-dd-item danger" id="navBtnLogout">↩&nbsp; Cerrar sesión</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</nav>
+<nav id="site-nav"></nav>
 
 <main>
 
@@ -727,26 +709,16 @@ tbody tr:hover { background: var(--surface2); }
 </main>
 
 <script>
-// ── Auth check ────────────────────────────────────────────────────────────────
+// ── Auth check (solo admin) ────────────────────────────────────────────────
 (async () => {
   try {
     const r = await fetch('/api/me', { credentials: 'include' });
     const d = await r.json();
     if (!d.user || !d.user.is_admin) { window.location.replace('/dashboard'); return; }
-    document.getElementById('navAvatar').textContent = d.user.email.charAt(0).toUpperCase();
   } catch {
     window.location.replace('/login/');
   }
 })();
-
-const _avatar   = document.getElementById('navAvatar');
-const _dropdown = document.getElementById('navDropdown');
-_avatar.addEventListener('click', e => { e.stopPropagation(); _dropdown.classList.toggle('open'); });
-document.addEventListener('click', () => _dropdown.classList.remove('open'));
-document.getElementById('navBtnLogout').addEventListener('click', async () => {
-  await fetch('/api/logout', { method: 'POST', credentials: 'include' });
-  window.location.href = '/';
-});
 
 // ── Chart defaults ─────────────────────────────────────────────────────────────
 Chart.defaults.color       = '#888';
@@ -1378,5 +1350,6 @@ async function loadStats() {
 document.getElementById('btnRefresh').addEventListener('click', loadStats);
 loadStats();
 </script>
+<script src="/static/nav.js"></script>
 </body>
 </html>

@@ -1,0 +1,206 @@
+/*
+ * nav.css — Header desktop unificado
+ * Scope: #site-nav y clases .snav-*
+ * NO depende de las variables CSS de cada página.
+ */
+
+/* ── Variables propias del nav ───────────────────── */
+#site-nav {
+  --snav-bg:        rgba(11, 18, 32, 0.95);
+  --snav-border:    rgba(255, 255, 255, 0.07);
+  --snav-border2:   rgba(255, 255, 255, 0.13);
+  --snav-text:      #eef2ff;
+  --snav-muted:     #7a8aa8;
+  --snav-accent:    #00C896;
+  --snav-accent-dim:rgba(0, 200, 150, 0.12);
+  --snav-surface:   #1a2540;
+  --snav-surface2:  rgba(255, 255, 255, 0.05);
+  --snav-font-d:    'Syne', sans-serif;
+  --snav-font-b:    'DM Sans', sans-serif;
+
+  /* Posición y aspecto */
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 1000;
+  height: 64px;
+  background: var(--snav-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--snav-border);
+}
+
+/* ── Contenedor interior ─────────────────────────── */
+.snav-inner {
+  position: relative;            /* ancla el centrado absoluto de .snav-links */
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 3rem;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+/* ── Logo ────────────────────────────────────────── */
+.snav-logo {
+  font-family: var(--snav-font-d);
+  font-weight: 800;
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+  color: var(--snav-text);
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.snav-logo span { color: var(--snav-accent); }
+
+/* ── Nav links — centrados absolutamente ─────────── */
+.snav-links {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  list-style: none;
+  white-space: nowrap;
+}
+.snav-links a {
+  color: var(--snav-muted);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.15s;
+}
+.snav-links a:hover { color: var(--snav-text); }
+
+/* ── Zona derecha ────────────────────────────────── */
+.snav-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* ── Botón outline: Iniciar sesión ───────────────── */
+.snav-btn-login {
+  background: none;
+  border: 1.5px solid var(--snav-accent);
+  color: var(--snav-text);
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-family: var(--snav-font-b);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+.snav-btn-login:hover { background: var(--snav-accent-dim); }
+
+/* ── Botón primario: Crea tu cuenta gratis ───────── */
+.snav-btn-cta {
+  background: var(--snav-accent);
+  color: #0a0a0a;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-family: var(--snav-font-d);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+.snav-btn-cta:hover { opacity: 0.88; }
+
+/* ── Avatar (estado autenticado) ─────────────────── */
+.snav-avatar-wrap { position: relative; }
+
+.snav-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--snav-accent);
+  color: #080c12;
+  font-family: var(--snav-font-d);
+  font-size: 14px;
+  font-weight: 700;
+  border: 2px solid transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s, border-color 0.15s;
+}
+.snav-avatar:hover {
+  opacity: 0.85;
+  border-color: rgba(0, 200, 150, 0.4);
+}
+
+/* ── Dropdown ────────────────────────────────────── */
+.snav-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  background: var(--snav-surface);
+  border: 1px solid var(--snav-border2);
+  border-radius: 14px;
+  min-width: 190px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  padding: 6px;
+  z-index: 1100;
+  display: none;
+}
+.snav-dropdown.open {
+  display: block;
+  animation: snav-dd-in 0.12s ease;
+}
+
+@keyframes snav-dd-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Dropdown items ──────────────────────────────── */
+.snav-dd-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 13px;
+  border-radius: 9px;
+  color: var(--snav-text);
+  font-family: var(--snav-font-b);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.12s;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  box-sizing: border-box;
+}
+.snav-dd-item:hover      { background: var(--snav-surface2); }
+.snav-dd-item.active     { color: var(--snav-accent); }
+.snav-dd-divider         { height: 1px; background: var(--snav-border); margin: 4px 0; }
+.snav-dd-item.danger     { color: #e55; }
+.snav-dd-item.danger:hover { background: rgba(220, 60, 60, 0.1); }
+
+/* ── Utilidad: ocultar elementos ─────────────────── */
+.snav-hidden { display: none !important; }
+
+/* ── Responsive: ocultar nav-links en pantallas pequeñas ── */
+@media (max-width: 900px) {
+  .snav-links  { display: none; }
+  .snav-inner  { padding: 0 1.5rem; }
+}

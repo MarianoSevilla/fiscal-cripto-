@@ -6,6 +6,7 @@
 <title>Genera tu informe FIFO para Hacienda — Mariano Sevilla</title>
 <meta name="robots" content="index, follow">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/nav.css">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -421,30 +422,7 @@
 <body>
 
 <!-- ── NAV ────────────────────────────────── -->
-<nav>
-  <div class="nav-inner">
-    <a href="/" class="nav-logo">mariano<span>sevilla</span>.com</a>
-    <ul class="nav-links">
-      <li id="navLinkDashItem" hidden><a href="/dashboard">Dashboard</a></li>
-      <li><a href="#como-funciona">Cómo funciona</a></li>
-      <li><a href="/faq">FAQ</a></li>
-      <li><a href="/contacto">Contacto</a></li>
-    </ul>
-    <div class="nav-right">
-      <a href="/login/" class="btn-nav-login" id="navBtnLogin">Iniciar sesión</a>
-      <a href="/signup/" class="btn-nav-cta" id="navBtnSignup">Crea tu cuenta gratis</a>
-      <!-- Avatar (visible solo con sesión activa) -->
-      <div class="nav-avatar-wrap" id="navAvatarWrap" hidden>
-        <button class="nav-avatar" id="navAvatar" aria-label="Menú de usuario">U</button>
-        <div class="nav-dropdown" id="navDropdown">
-          <a href="/account" class="nav-dd-item">👤&nbsp; Mi cuenta</a>
-          <div class="nav-dd-divider"></div>
-          <button class="nav-dd-item danger" id="navBtnLogout">↩&nbsp; Cerrar sesión</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</nav>
+<nav id="site-nav"></nav>
 
 <!-- ── HERO ───────────────────────────────── -->
 <div class="hero-wrap">
@@ -734,26 +712,11 @@
     finally { _setLoading(form, false, 'Crear cuenta'); }
   });
 
-  // Estado logueado: mostrar nav autenticado + avatar
+  // Bloque de asistencia fiscal — visible solo para el usuario autorizado
   fetch('/api/me', { credentials: 'include' })
     .then(r => r.ok ? r.json() : null)
     .then(d => {
       if (!d || !d.user) return;
-
-      // Ocultar botones de sesión; mostrar "Dashboard" en nav-links y avatar
-      const btnLogin  = document.getElementById('navBtnLogin');
-      const btnSignup = document.getElementById('navBtnSignup');
-      if (btnLogin)  btnLogin.style.display = 'none';
-      if (btnSignup) btnSignup.style.display = 'none';
-
-      const dashItem   = document.getElementById('navLinkDashItem');
-      const avatarWrap = document.getElementById('navAvatarWrap');
-      const avatar     = document.getElementById('navAvatar');
-      if (dashItem)   dashItem.hidden = false;
-      if (avatarWrap) avatarWrap.hidden = false;
-      if (avatar)     avatar.textContent = d.user.email.charAt(0).toUpperCase();
-
-      // Bloque de asistencia fiscal: solo visible para el usuario autorizado
       if (d.user.email === 'masetru@hotmail.com') {
         const bloque = document.getElementById('asistenciaBlock');
         if (bloque) bloque.style.display = '';
@@ -761,27 +724,7 @@
     })
     .catch(() => {});
 
-  // Avatar dropdown
-  (function () {
-    const avatar   = document.getElementById('navAvatar');
-    const dropdown = document.getElementById('navDropdown');
-    if (!avatar || !dropdown) return;
-
-    avatar.addEventListener('click', e => {
-      e.stopPropagation();
-      dropdown.classList.toggle('open');
-    });
-    document.addEventListener('click', () => dropdown.classList.remove('open'));
-
-    const logoutBtn = document.getElementById('navBtnLogout');
-    if (logoutBtn) {
-      logoutBtn.addEventListener('click', async () => {
-        await fetch('/api/logout', { method: 'POST', credentials: 'include' });
-        window.location.reload();
-      });
-    }
-  })();
-
 </script>
+<script src="/static/nav.js"></script>
 </body>
 </html>

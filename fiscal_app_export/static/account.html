@@ -13,6 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/nav.css">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -208,23 +209,7 @@ main {
 <body>
 
 <!-- ── NAV ── -->
-<nav>
-  <div class="nav-inner">
-    <a href="/dashboard" class="nav-logo">mariano<span>sevilla</span>.com</a>
-    <div class="nav-right">
-      <div class="nav-avatar-wrap">
-        <button class="nav-avatar" id="navAvatar" aria-label="Menú de usuario">U</button>
-        <div class="nav-dropdown" id="navDropdown">
-          <a href="/dashboard" class="nav-dd-item">⚡&nbsp; Dashboard</a>
-          <a href="/account" class="nav-dd-item active">👤&nbsp; Mi cuenta</a>
-          <a href="/stats" class="nav-dd-item" id="navStatsLink" hidden>📊&nbsp; Stats</a>
-          <div class="nav-dd-divider"></div>
-          <button class="nav-dd-item danger" id="navBtnLogout">↩&nbsp; Cerrar sesión</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</nav>
+<nav id="site-nav"></nav>
 
 <!-- ── MAIN ── -->
 <main>
@@ -295,9 +280,7 @@ main {
     if (!d.user) { window.location.replace('/login/'); return; }
 
     const u = d.user;
-    document.getElementById('navAvatar').textContent =
-      (u.full_name ? u.full_name.charAt(0) : u.email.charAt(0)).toUpperCase();
-    if (u.is_admin) document.getElementById('navStatsLink').hidden = false;
+    // El avatar lo gestiona nav.js; solo actualizamos datos de la página
     document.getElementById('infoEmail').textContent = u.email;
 
     // Nombre
@@ -335,18 +318,6 @@ main {
   }
 })();
 
-// ── Nav dropdown ────────────────────────────────
-const _avatar   = document.getElementById('navAvatar');
-const _dropdown = document.getElementById('navDropdown');
-_avatar.addEventListener('click', e => { e.stopPropagation(); _dropdown.classList.toggle('open'); });
-document.addEventListener('click', () => _dropdown.classList.remove('open'));
-
-// ── Logout ──────────────────────────────────────
-document.getElementById('navBtnLogout').addEventListener('click', async () => {
-  await fetch('/api/logout', { method: 'POST', credentials: 'include' });
-  window.location.href = '/';
-});
-
 // ── Guardar nombre ──────────────────────────────
 document.getElementById('nameBtn').addEventListener('click', async () => {
   const btn   = document.getElementById('nameBtn');
@@ -369,7 +340,7 @@ document.getElementById('nameBtn').addEventListener('click', async () => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Error al guardar');
     document.getElementById('nameInput').value = data.full_name;
-    document.getElementById('navAvatar').textContent = data.full_name.charAt(0).toUpperCase();
+    if (window.SiteNav) window.SiteNav.updateAvatar(data.full_name.charAt(0));
     msgEl.textContent = '¡Nombre actualizado correctamente!';
     msgEl.className = 'form-msg ok'; msgEl.hidden = false;
   } catch (e) {
@@ -440,5 +411,6 @@ document.getElementById('btnDeleteAccount').addEventListener('click', async () =
   }
 });
 </script>
+<script src="/static/nav.js"></script>
 </body>
 </html>

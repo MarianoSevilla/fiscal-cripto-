@@ -13,6 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/nav.css">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -29,6 +30,7 @@
   --ff-b:    'DM Sans', sans-serif;
 }
 html, body { min-height: 100%; background: var(--bg); font-family: var(--ff-b); color: var(--text); overflow-x: hidden; }
+body { padding-top: 64px; } /* espacio para el nav fixed unificado */
 
 nav {
   position: sticky; top: 0; z-index: 100;
@@ -40,12 +42,9 @@ nav {
 .nav-logo { font-family: var(--ff-h); font-size: 17px; font-weight: 700; text-decoration: none; }
 .nav-logo span:first-child { color: var(--text); }
 .nav-logo span:last-child  { color: var(--accent); }
-.nav-tag { font-size: 12px; color: var(--muted); margin-left: 12px; background: var(--surf2); padding: 3px 10px; border-radius: 20px; border: 1px solid var(--border); }
-.nav-back { font-size: 13px; color: var(--muted); text-decoration: none; }
-.nav-back:hover { color: var(--text); }
 
 /* LAYOUT */
-.layout { display: flex; height: calc(100vh - 56px); }
+.layout { display: flex; height: calc(100vh - 64px); }
 
 /* SIDEBAR */
 .sidebar {
@@ -180,13 +179,7 @@ nav {
 </head>
 <body>
 
-<nav>
-  <div style="display:flex;align-items:center">
-    <a href="/" class="nav-logo"><span>Mariano</span><span>Sevilla</span></a>
-    <span class="nav-tag">Panel de asesoramiento</span>
-  </div>
-  <a href="/dashboard" class="nav-back">← Dashboard</a>
-</nav>
+<nav id="site-nav"></nav>
 
 <div class="layout">
   <!-- SIDEBAR -->
@@ -479,5 +472,6 @@ function escHtml(str) {
 // Init
 loadList();
 </script>
+<script src="/static/nav.js"></script>
 </body>
 </html>
