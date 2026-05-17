@@ -30,6 +30,18 @@ GREEN_P     = colors.HexColor("#166534")   # verde discreto (ganancias)
 RED_P       = colors.HexColor("#991B1B")   # rojo discreto (pérdidas)
 RULE_COLOR  = colors.HexColor("#E5E7EB")   # línea horizontal
 
+# ── PALETA PREMIUM v2 (portada + resumen ejecutivo) ───────────────────────────
+ACCENT_SOFT  = colors.HexColor("#EFF6FF")  # fondo tarjetas KPI suave
+ACCENT_MID   = colors.HexColor("#BFDBFE")  # borde tarjetas KPI
+GREEN_SOFT   = colors.HexColor("#F0FDF4")  # fondo tarjeta positiva
+GREEN_MID    = colors.HexColor("#86EFAC")  # borde tarjeta positiva
+RED_SOFT     = colors.HexColor("#FEF2F2")  # fondo tarjeta negativa
+RED_MID      = colors.HexColor("#FCA5A5")  # borde tarjeta negativa
+NEUTRAL_SOFT = colors.HexColor("#F8FAFC")  # fondo tarjetas neutras
+COVER_RULE   = colors.HexColor("#1E3A8A")  # línea divisora portada (ACCENT, explícita)
+GRID_LIGHT   = colors.HexColor("#EAECF0")  # grid v2 — más suave que BORDER (#D1D5DB)
+ZEBRA_LIGHT  = colors.HexColor("#FAFBFC")  # zebra v2 — casi imperceptible, más premium
+
 
 def _build_styles():
     return {
@@ -69,6 +81,32 @@ def _build_styles():
         "disclaimer":         ParagraphStyle("disclaimer",    fontName="Helvetica-Oblique", fontSize=7,  textColor=TEXT_MUTED, leading=10),
         # Aviso legal portada
         "aviso_legal":        ParagraphStyle("aviso_legal",   fontName="Helvetica-Oblique", fontSize=7.5,textColor=TEXT_MUTED, leading=11),
+
+        # ── Estilos v2 — portada premium + resumen ejecutivo ──────────────────
+        # Portada — branding y hero
+        "cover_brand":        ParagraphStyle("cover_brand",   fontName="Helvetica-Bold",    fontSize=9,  textColor=ACCENT,      leading=13),
+        "cover_brand_sub":    ParagraphStyle("cover_brand_s", fontName="Helvetica",         fontSize=8,  textColor=TEXT_MUTED,  leading=11),
+        "cover_title":        ParagraphStyle("cover_title",   fontName="Helvetica-Bold",    fontSize=30, textColor=ACCENT,      leading=36, spaceAfter=2),
+        "cover_title_year":   ParagraphStyle("cover_title_y", fontName="Helvetica-Bold",    fontSize=30, textColor=TEXT,        leading=36, spaceAfter=4),
+        "cover_subtitle":     ParagraphStyle("cover_subtitle",fontName="Helvetica",         fontSize=11, textColor=TEXT_MUTED,  leading=16, spaceAfter=0),
+        "cover_footer":       ParagraphStyle("cover_footer",  fontName="Helvetica",         fontSize=8,  textColor=TEXT_MUTED,  leading=11, alignment=TA_CENTER),
+        # Portada — info grid (preparado para / ejercicio / exchange / fecha)
+        "cover_info_label":   ParagraphStyle("cov_inf_l",     fontName="Helvetica",         fontSize=8,  textColor=TEXT_MUTED,  leading=12),
+        "cover_info_value":   ParagraphStyle("cov_inf_v",     fontName="Helvetica-Bold",    fontSize=8,  textColor=TEXT,        leading=12),
+        # Portada — tarjetas KPI premium
+        "kpi_v2_label":       ParagraphStyle("kpi2_lab",      fontName="Helvetica-Bold",    fontSize=6.5,textColor=TEXT_MUTED,  leading=9,  alignment=TA_CENTER, spaceAfter=3),
+        "kpi_v2_value":       ParagraphStyle("kpi2_val",      fontName="Helvetica-Bold",    fontSize=16, textColor=TEXT,        leading=20, alignment=TA_CENTER),
+        "kpi_v2_value_green": ParagraphStyle("kpi2_val_g",    fontName="Helvetica-Bold",    fontSize=16, textColor=GREEN_P,     leading=20, alignment=TA_CENTER),
+        "kpi_v2_value_red":   ParagraphStyle("kpi2_val_r",    fontName="Helvetica-Bold",    fontSize=16, textColor=RED_P,       leading=20, alignment=TA_CENTER),
+        "kpi_v2_value_sm":    ParagraphStyle("kpi2_val_sm",   fontName="Helvetica-Bold",    fontSize=13, textColor=TEXT,        leading=17, alignment=TA_CENTER),
+        # Resumen ejecutivo — metadatos y badges
+        "exec_meta_label":    ParagraphStyle("exec_ml",       fontName="Helvetica",         fontSize=8.5,textColor=TEXT_MUTED,  leading=13),
+        "exec_meta_value":    ParagraphStyle("exec_mv",       fontName="Helvetica-Bold",    fontSize=8.5,textColor=TEXT,        leading=13),
+        "exec_badge":         ParagraphStyle("exec_badge",    fontName="Helvetica-Bold",    fontSize=7,  textColor=ACCENT,      leading=10, alignment=TA_CENTER),
+        # FAQ cards — página de notas explicativas
+        "faq_title":          ParagraphStyle("faq_title",     fontName="Helvetica-Bold",    fontSize=10, textColor=ACCENT,      leading=14),
+        "faq_ref":            ParagraphStyle("faq_ref",       fontName="Helvetica-Oblique", fontSize=7.5,textColor=TEXT_MUTED,  leading=11, spaceBefore=1),
+        "faq_body":           ParagraphStyle("faq_body",      fontName="Helvetica",         fontSize=9,  textColor=TEXT,        leading=14, spaceBefore=4),
     }
 
 
@@ -102,8 +140,10 @@ def _header_footer(canvas_obj, doc):
     canvas_obj.setLineWidth(0.5)
     canvas_obj.line(18*mm, 13*mm, w - 18*mm, 13*mm)
 
-    canvas_obj.setFont("Helvetica-Oblique", 6.5)
-    canvas_obj.setFillColor(TEXT_MUTED)
+    # Footer: texto legal discreto — gris muy suave, tamaño mínimo, bajo contraste
+    _FOOTER_GRAY = colors.HexColor("#9CA3AF")
+    canvas_obj.setFont("Helvetica-Oblique", 6.0)
+    canvas_obj.setFillColor(_FOOTER_GRAY)
     canvas_obj.drawCentredString(
         w / 2, 8*mm,
         "Documento auxiliar de organización fiscal. No constituye asesoramiento fiscal ni legal. "
@@ -112,6 +152,199 @@ def _header_footer(canvas_obj, doc):
     canvas_obj.drawCentredString(w / 2, 4.5*mm, f"marianosevilla.com  |  Página {doc.page}")
 
     canvas_obj.restoreState()
+
+
+# ── HELPERS v2 ───────────────────────────────────────────────────────────────
+
+def _divisor_portada(width_mm: float = 168) -> HRFlowable:
+    """Línea divisora en ACCENT — más gruesa y de color que la gris habitual."""
+    return HRFlowable(width="100%", thickness=1.5, color=COVER_RULE, spaceAfter=0)
+
+
+def _tarjeta_kpi_v2(label: str, value: str, value_style_key: str,
+                    bg_color, border_color, styles, width_mm: float = 52) -> Table:
+    """
+    Tarjeta KPI premium — label pequeño en mayúsculas + valor grande centrado.
+    Fondo de color suave, borde tenue, mucho padding.
+    """
+    data = [
+        [Paragraph(label.upper(), styles["kpi_v2_label"])],
+        [Paragraph(value, styles[value_style_key])],
+    ]
+    t = Table(data, colWidths=[width_mm * mm], rowHeights=[10 * mm, 14 * mm])
+    t.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, -1), bg_color),
+        ("BOX",           (0, 0), (-1, -1), 0.8, border_color),
+        ("LINEBELOW",     (0, 0), (-1, 0),  0.3, border_color),
+        ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING",    (0, 0), (-1, 0),  7),
+        ("BOTTOMPADDING", (0, 0), (-1, 0),  4),
+        ("TOPPADDING",    (0, 1), (-1, 1),  4),
+        ("BOTTOMPADDING", (0, 1), (-1, 1),  8),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
+    ]))
+    return t
+
+
+def _portada_v2(story, styles, resumen, nombre_usuario, ejercicio, exchange, periodo=None):
+    """
+    Portada premium v2 — estilo fintech / dashboard cover.
+    Diseño: branding → hero title → divisor → info grid → 6 KPI cards → disclaimer.
+    NO incluye la tabla "Determinación de Bases Imponibles" (se mueve al resumen ejecutivo).
+    Compatible con generar_pdf(); NO se usa en generar_pdf_bit2me().
+    """
+    # ── Construir textos de ejercicio ─────────────────────────────────────────
+    ejercicio = (ejercicio or "").strip()
+    if ejercicio and ejercicio.lower() != "all":
+        partes = sorted([p.strip() for p in ejercicio.split(",") if p.strip()])
+        titulo_ejercicio = ", ".join(partes)
+        meta_ejercicio   = ", ".join(partes)
+    else:
+        titulo_ejercicio = None
+        meta_ejercicio   = "Todos los ejercicios"
+
+    story.append(Spacer(1, 2 * mm))
+
+    # ── 1. Hero title ─────────────────────────────────────────────────────────
+    story.append(Paragraph("INFORME FISCAL CRIPTO", styles["cover_title"]))
+    if titulo_ejercicio:
+        story.append(Paragraph(titulo_ejercicio, styles["cover_title_year"]))
+    story.append(Spacer(1, 4 * mm))
+    story.append(Paragraph("Método FIFO · Compatible con AEAT", styles["cover_subtitle"]))
+    story.append(Spacer(1, 8 * mm))
+
+    # ── 2. Divisor en ACCENT ──────────────────────────────────────────────────
+    story.append(_divisor_portada())
+    story.append(Spacer(1, 8 * mm))
+
+    # ── 4. Info card premium — Ejercicio · Titular · Fecha ───────────────────────
+    fecha_gen   = datetime.utcnow().strftime("%d/%m/%Y")
+    nombre_show = nombre_usuario.upper() if nombre_usuario else "—"
+
+    _ic_lbl = ParagraphStyle("ic_lbl", fontName="Helvetica",     fontSize=6.5,
+                              textColor=TEXT_MUTED, leading=10, alignment=TA_CENTER,
+                              spaceAfter=3)
+    _ic_val = ParagraphStyle("ic_val", fontName="Helvetica-Bold", fontSize=11,
+                              textColor=TEXT,       leading=15, alignment=TA_CENTER)
+
+    info_card_rows = [
+        [Paragraph("EJERCICIO",    _ic_lbl),
+         Paragraph("TITULAR",      _ic_lbl),
+         Paragraph("GENERADO",     _ic_lbl)],
+        [Paragraph(meta_ejercicio, _ic_val),
+         Paragraph(nombre_show,    _ic_val),
+         Paragraph(fecha_gen,      _ic_val)],
+    ]
+    t_info = Table(info_card_rows,
+                   colWidths=[56 * mm, 56 * mm, 56 * mm],
+                   rowHeights=[7 * mm, 11 * mm])
+    t_info.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, -1), NEUTRAL_SOFT),
+        ("BOX",           (0, 0), (-1, -1), 0.6, BORDER),
+        ("LINEAFTER",     (0, 0), (1, -1),  0.5, RULE_COLOR),   # separadores verticales suaves
+        ("VALIGN",        (0, 0), (-1, 0),  "BOTTOM"),           # labels pegadas al fondo de su fila
+        ("VALIGN",        (0, 1), (-1, 1),  "TOP"),              # valores pegados al techo de su fila
+        ("TOPPADDING",    (0, 0), (-1, 0),  9),
+        ("BOTTOMPADDING", (0, 0), (-1, 0),  2),
+        ("TOPPADDING",    (0, 1), (-1, 1),  2),
+        ("BOTTOMPADDING", (0, 1), (-1, 1),  10),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
+    ]))
+    story.append(t_info)
+    story.append(Spacer(1, 14 * mm))
+
+    # ── 5. KPI cards — 2 filas × 3 columnas ──────────────────────────────────
+    neto      = resumen["resultado_neto"]
+    ganancias = resumen["ganancias_brutas"]
+    perdidas  = resumen["perdidas_brutas"]
+    n_ops     = resumen["operaciones_con_resultado"]
+
+    neto_fmt = f"+{neto:,.2f} EUR" if neto >= 0 else f"{neto:,.2f} EUR"
+    neto_key = "kpi_v2_value_green" if neto >= 0 else "kpi_v2_value_red"
+    neto_bg  = GREEN_SOFT if neto >= 0 else RED_SOFT
+    neto_brd = GREEN_MID  if neto >= 0 else RED_MID
+
+    # Detectar activos (posición actual del motor — no disponible aquí, se pasa desde fuera)
+    # Usamos el campo _n_activos que se inyecta opcionalmente via kwarg
+    # (Si no se pasa, mostramos "—")
+
+    card_neto     = _tarjeta_kpi_v2("Resultado Neto",     neto_fmt,                     neto_key,           neto_bg,      neto_brd,  styles, 52)
+    card_gan      = _tarjeta_kpi_v2("Ganancias Brutas",   f"+{ganancias:,.2f} EUR",      "kpi_v2_value_green", GREEN_SOFT, GREEN_MID, styles, 52)
+    card_perd     = _tarjeta_kpi_v2("Pérdidas Brutas",    f"{perdidas:,.2f} EUR",        "kpi_v2_value_red",   RED_SOFT,   RED_MID,   styles, 52)
+
+    card_ops      = _tarjeta_kpi_v2("Operaciones",        str(n_ops),                   "kpi_v2_value_sm",    ACCENT_SOFT, ACCENT_MID, styles, 52)
+    card_exchange = _tarjeta_kpi_v2("Exchange",           exchange or "—",              "kpi_v2_value_sm",    NEUTRAL_SOFT, BORDER,    styles, 52)
+
+    # Activos: se determina desde resumen si está disponible, si no "—"
+    n_activos_str = resumen.get("_n_activos", "—")
+    if isinstance(n_activos_str, int):
+        n_activos_str = str(n_activos_str)
+    card_activos  = _tarjeta_kpi_v2("Activos Detectados", str(n_activos_str),           "kpi_v2_value_sm",    NEUTRAL_SOFT, BORDER,    styles, 52)
+
+    # Fila 1: resultado / ganancias / pérdidas
+    row1 = [[card_neto, card_gan, card_perd]]
+    t_row1 = Table(row1, colWidths=[54 * mm, 54 * mm, 54 * mm])
+    t_row1.setStyle(TableStyle([
+        ("VALIGN",        (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
+        ("TOPPADDING",    (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+        ("INNERGRID",     (0, 0), (-1, -1), 0, colors.white),
+    ]))
+    # Separación entre tarjetas: se logra con rightPadding del contenedor
+    # Solución más limpia: usar colWidths con 2mm de gutter
+    row1b = [[card_neto, Spacer(2*mm, 1), card_gan, Spacer(2*mm, 1), card_perd]]
+    t_kpi1 = Table(row1b, colWidths=[52*mm, 2*mm, 52*mm, 2*mm, 52*mm])
+    t_kpi1.setStyle(TableStyle([
+        ("VALIGN",        (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
+        ("TOPPADDING",    (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    story.append(t_kpi1)
+    story.append(Spacer(1, 4 * mm))
+
+    # Fila 2: operaciones / exchange / activos
+    row2b = [[card_ops, Spacer(2*mm, 1), card_exchange, Spacer(2*mm, 1), card_activos]]
+    t_kpi2 = Table(row2b, colWidths=[52*mm, 2*mm, 52*mm, 2*mm, 52*mm])
+    t_kpi2.setStyle(TableStyle([
+        ("VALIGN",        (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
+        ("TOPPADDING",    (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    story.append(t_kpi2)
+    story.append(Spacer(1, 8 * mm))
+
+    # ── 6. Disclaimer discreto ───────────────────────────────────────────────
+    story.append(Spacer(1, 5 * mm))
+    _disc_style = ParagraphStyle(
+        "portada_disc", fontName="Helvetica-Oblique", fontSize=7,
+        textColor=colors.HexColor("#9CA3AF"),   # más apagado que TEXT_MUTED
+        leading=10, alignment=TA_CENTER,
+    )
+    _disc_texto = (
+        "Documento auxiliar generado automáticamente. No constituye asesoramiento fiscal ni legal. "
+        "Debe ser revisado por un asesor fiscal antes de su presentación ante la Agencia Tributaria."
+    )
+    _disc_data = [[Paragraph(_disc_texto, _disc_style)]]
+    _t_disc = Table(_disc_data, colWidths=[140 * mm])   # más estrecho que los 168mm habituales
+    _t_disc.setStyle(TableStyle([
+        ("TOPPADDING",    (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
+    ]))
+    story.append(_t_disc)
+    story.append(Spacer(1, 4 * mm))
+
+    # ── 7. Footer portada ─────────────────────────────────────────────────────
+    story.append(Paragraph("generado por marianosevilla.com", styles["cover_footer"]))
 
 
 def _aviso_legal_caja(styles):
@@ -292,6 +525,181 @@ def _portada(story, styles, resumen, nombre_usuario, ejercicio, exchange, period
     story.append(t3)
 
 
+def _resumen_ejecutivo(story, styles, resumen, motor, ejercicio, exchange, rendimientos):
+    """
+    Sección 'Resumen Ejecutivo' premium — aparece justo después de la portada v2,
+    antes del gráfico y las tablas de datos.
+
+    Contiene:
+    - Grid de metadatos (2 columnas): financiero + contextual
+    - Tabla 'Determinación de Bases Imponibles' (movida desde _portada)
+    - Nota FIFO (movida desde _portada)
+    - Bloque compensaciones + Modelo 721 (continúan igual, se llaman desde generar_pdf)
+
+    NO modifica lógica fiscal. Solo presenta datos ya calculados.
+    """
+    ejercicio = (ejercicio or "").strip()
+
+    # ── Calcular métricas de contexto ─────────────────────────────────────────
+    n_activos      = len(set(r.activo for r in motor.resultados)) if motor.resultados else 0
+    n_advertencias = len(motor.advertencias) if motor.advertencias else 0
+    n_rendimientos = len(rendimientos) if rendimientos else 0
+
+    if ejercicio and ejercicio.lower() != "all":
+        partes = sorted([p.strip() for p in ejercicio.split(",") if p.strip()])
+        año_txt = ", ".join(partes)
+    else:
+        año_txt = "Todos"
+
+    ganancias = resumen["ganancias_brutas"]
+    perdidas  = resumen["perdidas_brutas"]
+    neto      = resumen["resultado_neto"]
+    n_ops     = resumen["operaciones_con_resultado"]
+
+    # ── Título de sección ─────────────────────────────────────────────────────
+    story.append(Spacer(1, 5 * mm))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=RULE_COLOR))
+    story.append(Spacer(1, 4 * mm))
+    story.append(Paragraph("Resumen Ejecutivo", styles["section"]))
+    story.append(Paragraph(
+        "Vista general del resultado fiscal y del alcance del análisis.",
+        styles["body_muted"]
+    ))
+    story.append(Spacer(1, 4 * mm))
+
+    # ── Grid de metadatos: 2 columnas ────────────────────────────────────────
+    # Columna izquierda: magnitudes financieras
+    # Columna derecha: contexto del análisis
+    def _fila(label, value, label_style="exec_meta_label", value_style="exec_meta_value"):
+        return [Paragraph(label, styles[label_style]),
+                Paragraph(str(value), styles[value_style])]
+
+    neto_str = f"+{neto:,.2f} EUR" if neto >= 0 else f"{neto:,.2f} EUR"
+    rev_str  = f"{n_advertencias} operación{'es' if n_advertencias != 1 else ''}" if n_advertencias else "Ninguna"
+
+    izq = [
+        _fila("Resultado neto",     neto_str),
+        _fila("Ganancias brutas",   f"+{ganancias:,.2f} EUR"),
+        _fila("Pérdidas brutas",    f"{perdidas:,.2f} EUR"),
+        _fila("Operaciones FIFO",   str(n_ops)),
+    ]
+    dch = [
+        _fila("Exchange analizado",       exchange or "—"),
+        _fila("Activos detectados",       str(n_activos) if n_activos else "—"),
+        _fila("Con revisión manual",      rev_str),
+        _fila("Año fiscal",               año_txt),
+    ]
+
+    # Construir tabla de 4 columnas (label izq | value izq | label dch | value dch)
+    meta_rows = []
+    for (li, vi), (ld, vd) in zip(izq, dch):
+        meta_rows.append([li, vi, ld, vd])
+
+    # Fila extra: método + rendimientos
+    meta_rows.append([
+        Paragraph("Método de cálculo",  styles["exec_meta_label"]),
+        Paragraph("FIFO — art. 37.2 LIRPF", styles["exec_meta_value"]),
+        Paragraph("Rendimientos RCM",   styles["exec_meta_label"]),
+        Paragraph(str(n_rendimientos) if n_rendimientos else "—", styles["exec_meta_value"]),
+    ])
+
+    t_meta = Table(meta_rows, colWidths=[38 * mm, 46 * mm, 38 * mm, 46 * mm])
+    n_meta = len(meta_rows)
+    meta_bgs = [("BACKGROUND", (0, i), (-1, i), BG if i % 2 == 0 else TABLE_ALT)
+                for i in range(n_meta)]
+    t_meta.setStyle(TableStyle([
+        ("BOX",           (0, 0), (-1, -1), 0.5, BORDER),
+        ("INNERGRID",     (0, 0), (-1, -1), 0.3, BORDER),
+        ("LINEAFTER",     (1, 0), (1, -1),  0.8, BORDER),   # separador entre columnas
+        ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING",    (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
+    ] + meta_bgs))
+    story.append(t_meta)
+    story.append(Spacer(1, 5 * mm))
+
+    # ── Tabla: Determinación de Bases Imponibles ──────────────────────────────
+    # (movida aquí desde _portada / _portada_v2 para limpiar la cover)
+    story.append(Paragraph("Determinación de Bases Imponibles", styles["section"]))
+    story.append(Paragraph(
+        "Desglose de las ganancias y pérdidas según su tratamiento fiscal en el IRPF español.",
+        styles["body_muted"]
+    ))
+    story.append(Spacer(1, 3 * mm))
+
+    resumen_data = [
+        [Paragraph("BASE DEL AHORRO — Transmisiones de criptoactivos (art. 33 LIRPF)", styles["th"]),
+         Paragraph("IMPORTE (EUR)", styles["th_right"])],
+        [Paragraph("Suma de ganancias patrimoniales", styles["resumen_label"]),
+         Paragraph(f"+{ganancias:,.2f}", styles["resumen_value_green"])],
+        [Paragraph("Suma de pérdidas patrimoniales", styles["resumen_label"]),
+         Paragraph(f"{perdidas:,.2f}", styles["resumen_value_red"])],
+        [Paragraph("TOTAL GANANCIAS Y PÉRDIDAS PATRIMONIALES NETAS", styles["subsection"]),
+         Paragraph(f"+{neto:,.2f}" if neto >= 0 else f"{neto:,.2f}",
+                   styles["resumen_value_green"] if neto >= 0 else styles["resumen_value_red"])],
+    ]
+    t_bases = Table(resumen_data, colWidths=[128 * mm, 40 * mm])
+    t_bases.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, 0),  TABLE_HEAD),
+        ("LINEBELOW",     (0, 0), (-1, 0),  1, ACCENT),
+        ("BACKGROUND",    (0, 1), (-1, 2),  BG),
+        ("BACKGROUND",    (0, 3), (-1, 3),  TABLE_HEAD),
+        ("LINEABOVE",     (0, 3), (-1, 3),  0.5, BORDER),
+        ("LINEBELOW",     (0, 3), (-1, 3),  1.2, ACCENT),
+        ("BOX",           (0, 0), (-1, -1), 0.5, BORDER),
+        ("INNERGRID",     (0, 0), (-1, -1), 0.3, BORDER),
+        ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING",    (0, 0), (-1, -1), 8),   # 6 → 8
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),   # 6 → 8
+        ("LEFTPADDING",   (0, 0), (-1, -1), 10),  # 8 → 10
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 10),  # 8 → 10
+    ]))
+    story.append(t_bases)
+    story.append(Spacer(1, 5 * mm))
+
+    # ── Nota FIFO compacta ────────────────────────────────────────────────────
+    # (movida desde _portada / _portada_v2)
+    if ejercicio and ejercicio.lower() != "all":
+        fifo_data = [[Paragraph(
+            "<b>Nota sobre el cálculo FIFO:</b> El cálculo de costes se realiza utilizando el histórico "
+            "completo del CSV para respetar correctamente la cola FIFO (art. 37.2 LIRPF). "
+            "Este informe muestra únicamente las transmisiones y rendimientos correspondientes "
+            "a los ejercicios fiscales seleccionados.",
+            styles["aviso_legal"])]]
+        t_fifo = Table(fifo_data, colWidths=[168 * mm])
+        t_fifo.setStyle(TableStyle([
+            ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#EFF6FF")),
+            ("BOX",           (0, 0), (-1, -1), 0.5, colors.HexColor("#BFDBFE")),
+            ("TOPPADDING",    (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("LEFTPADDING",   (0, 0), (-1, -1), 8),
+            ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
+        ]))
+        story.append(t_fifo)
+
+    # ── Nota FIFO general ─────────────────────────────────────────────────────
+    nota_data = [[Paragraph(
+        "<b>Método FIFO obligatorio (art. 37.2 LIRPF).</b> Las comisiones de compra incrementan el precio de coste "
+        "del lote. Las comisiones de venta reducen el valor de transmisión. Los swaps entre criptoactivos "
+        "se tratan como venta y compra simultánea a valor de mercado, generando hecho imponible. "
+        "Los depósitos y retiradas entre wallets propias no generan hecho imponible.",
+        styles["nota_body"])]]
+    t_nota = Table(nota_data, colWidths=[168 * mm])
+    t_nota.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, -1), INFO_BG),
+        ("BOX",           (0, 0), (-1, -1), 0.5, BORDER),
+        ("VALIGN",        (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING",    (0, 0), (-1, -1), 10),  # 7 → 10
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 10),  # 7 → 10
+        ("LEFTPADDING",   (0, 0), (-1, -1), 11),  # 9 → 11
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 11),  # 9 → 11
+    ]))
+    story.append(Spacer(1, 4 * mm))
+    story.append(t_nota)
+
+
 def _grafico_gp_activos(resultados, width_mm=168):
     """Gráfico de barras horizontal G/P neta por activo — fondo blanco para impresión."""
     try:
@@ -375,12 +783,26 @@ def _grafico_gp_activos(resultados, width_mm=168):
     return RLImage(img_buf, width=pdf_w, height=pdf_h)
 
 
+def _separador_bloque() -> list:
+    """
+    Separador visual elegante entre bloques de contenido fiscal en página 2.
+    Devuelve [Spacer, HRFlowable, Spacer] — aire + línea fina gris + aire.
+    No usa cajas ni colores: solo ritmo visual y jerarquía.
+    """
+    return [
+        Spacer(1, 9 * mm),
+        HRFlowable(width="100%", thickness=0.4, color=RULE_COLOR, spaceAfter=0),
+        Spacer(1, 7 * mm),
+    ]
+
+
 def _bloque_compensaciones(ganancias, perdidas, neto, rendimientos_list, styles):
     """Bloque de compensaciones fiscales (art. 49 LIRPF). Devuelve lista de flowables."""
     flowables = []
     rcm_total = sum(getattr(r, "valor_eur", 0.0) for r in rendimientos_list) if rendimientos_list else 0.0
 
-    flowables.append(Spacer(1, 5*mm))
+    for fl in _separador_bloque():
+        flowables.append(fl)
     flowables.append(Paragraph("Compensaciones Fiscales Aplicables", styles["section"]))
     flowables.append(Paragraph(
         "Integración y compensación de rentas del ahorro según art. 49 LIRPF.",
@@ -502,7 +924,7 @@ def _bloque_modelo_721(posiciones, styles, ejercicio=""):
             ("LEFTPADDING",   (0, 0), (-1, -1), 9),
             ("RIGHTPADDING",  (0, 0), (-1, -1), 9),
         ]))
-        return [Spacer(1, 4*mm), t]
+        return _separador_bloque() + [t]
 
     # ── Caso año único o todos ─────────────────────────────────────────
     coste_total = sum(p.coste_total for p in posiciones) if posiciones else 0.0
@@ -554,7 +976,7 @@ def _bloque_modelo_721(posiciones, styles, ejercicio=""):
         ("LEFTPADDING",   (0, 0), (-1, -1), 9),
         ("RIGHTPADDING",  (0, 0), (-1, -1), 9),
     ]))
-    return [Spacer(1, 4*mm), t]
+    return _separador_bloque() + [t]
 
 
 def _tabla_resumen_activos(resultados, styles):
@@ -596,17 +1018,19 @@ def _tabla_resumen_activos(resultados, styles):
     n = len(rows)
     row_bgs = []
     for i in range(1, n):
-        row_bgs.append(("BACKGROUND", (0, i), (-1, i), BG if i % 2 == 1 else TABLE_ALT))
+        row_bgs.append(("BACKGROUND", (0, i), (-1, i), BG if i % 2 == 1 else ZEBRA_LIGHT))
     t.setStyle(TableStyle([
-        ("BACKGROUND",    (0, 0), (-1, 0),  TABLE_HEAD),
-        ("LINEBELOW",     (0, 0), (-1, 0),  1, ACCENT),
-        ("BOX",           (0, 0), (-1, -1), 0.5, BORDER),
-        ("INNERGRID",     (0, 0), (-1, -1), 0.3, BORDER),
+        ("BACKGROUND",    (0, 0), (-1, 0),  ACCENT_SOFT),   # header azul suave
+        ("LINEBELOW",     (0, 0), (-1, 0),  1,   ACCENT),
+        ("BOX",           (0, 0), (-1, -1), 0.4, BORDER),
+        ("INNERGRID",     (0, 0), (-1, -1), 0.2, GRID_LIGHT),
         ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
-        ("TOPPADDING",    (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-        ("LEFTPADDING",   (0, 0), (-1, -1), 6),
-        ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
+        ("TOPPADDING",    (0, 0), (-1, -1), 7),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+        ("TOPPADDING",    (0, 0), (-1, 0),  9),   # header: más alto
+        ("BOTTOMPADDING", (0, 0), (-1, 0),  9),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
         ("ALIGN",         (1, 0), (-1, -1), "RIGHT"),
     ] + row_bgs))
     return t
@@ -658,19 +1082,21 @@ def _tabla_operaciones(resultados, styles):
     col_w = [20*mm, 14*mm, 22*mm, 20*mm, 25*mm, 25*mm, 27*mm, 15*mm]
     t = Table(rows, colWidths=col_w, repeatRows=1)
     n = len(rows)
-    row_bgs = [("BACKGROUND", (0, i), (-1, i), BG if i % 2 == 1 else TABLE_ALT) for i in range(1, n)]
+    row_bgs = [("BACKGROUND", (0, i), (-1, i), BG if i % 2 == 1 else ZEBRA_LIGHT) for i in range(1, n)]
     t.setStyle(TableStyle([
-        ("BACKGROUND",    (0, 0), (-1, 0),  TABLE_HEAD),
-        ("LINEBELOW",     (0, 0), (-1, 0),  1, ACCENT),
-        ("BOX",           (0, 0), (-1, -1), 0.5, BORDER),
-        ("INNERGRID",     (0, 0), (-1, -1), 0.3, BORDER),
+        ("BACKGROUND",    (0, 0), (-1, 0),  ACCENT_SOFT),   # header azul suave
+        ("LINEBELOW",     (0, 0), (-1, 0),  1,   ACCENT),
+        ("BOX",           (0, 0), (-1, -1), 0.4, BORDER),
+        ("INNERGRID",     (0, 0), (-1, -1), 0.2, GRID_LIGHT),
         ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
-        ("TOPPADDING",    (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("TOPPADDING",    (0, 0), (-1, -1), 6),              # body: +2pt (era 4)
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING",    (0, 0), (-1, 0),  8),              # header: +4pt (era 4)
+        ("BOTTOMPADDING", (0, 0), (-1, 0),  8),
         ("LEFTPADDING",   (0, 0), (-1, -1), 5),
         ("RIGHTPADDING",  (0, 0), (-1, -1), 5),
         ("ALIGN",         (3, 0), (-1, -1), "RIGHT"),
-        ("NOSPLIT",       (2, 1), (2, -1)),   # columna ACTIVO: no partir celdas entre páginas
+        ("NOSPLIT",       (2, 1), (2, -1)),                   # columna ACTIVO: no partir
     ] + row_bgs))
     return t
 
@@ -693,17 +1119,19 @@ def _tabla_posicion(posiciones, styles):
     col_w = [28*mm, 50*mm, 54*mm, 36*mm]
     t = Table(rows, colWidths=col_w, repeatRows=1)
     n = len(rows)
-    row_bgs = [("BACKGROUND", (0, i), (-1, i), BG if i % 2 == 1 else TABLE_ALT) for i in range(1, n)]
+    row_bgs = [("BACKGROUND", (0, i), (-1, i), BG if i % 2 == 1 else ZEBRA_LIGHT) for i in range(1, n)]
     t.setStyle(TableStyle([
-        ("BACKGROUND",    (0, 0), (-1, 0),  TABLE_HEAD),
-        ("LINEBELOW",     (0, 0), (-1, 0),  1, ACCENT),
-        ("BOX",           (0, 0), (-1, -1), 0.5, BORDER),
-        ("INNERGRID",     (0, 0), (-1, -1), 0.3, BORDER),
+        ("BACKGROUND",    (0, 0), (-1, 0),  ACCENT_SOFT),
+        ("LINEBELOW",     (0, 0), (-1, 0),  1,   ACCENT),
+        ("BOX",           (0, 0), (-1, -1), 0.4, BORDER),
+        ("INNERGRID",     (0, 0), (-1, -1), 0.2, GRID_LIGHT),
         ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
-        ("TOPPADDING",    (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-        ("LEFTPADDING",   (0, 0), (-1, -1), 6),
-        ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
+        ("TOPPADDING",    (0, 0), (-1, -1), 7),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+        ("TOPPADDING",    (0, 0), (-1, 0),  9),
+        ("BOTTOMPADDING", (0, 0), (-1, 0),  9),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
         ("ALIGN",         (1, 0), (-1, -1), "RIGHT"),
     ] + row_bgs))
     return t
@@ -738,17 +1166,19 @@ def _tabla_rendimientos(rendimientos: list, styles) -> object:
     col_w = [28*mm, 60*mm, 28*mm, 52*mm]
     t = Table(rows, colWidths=col_w, repeatRows=1)
     n = len(rows)
-    row_bgs = [("BACKGROUND", (0, i), (-1, i), BG if i % 2 == 1 else TABLE_ALT) for i in range(1, n)]
+    row_bgs = [("BACKGROUND", (0, i), (-1, i), BG if i % 2 == 1 else ZEBRA_LIGHT) for i in range(1, n)]
     t.setStyle(TableStyle([
-        ("BACKGROUND",    (0, 0), (-1, 0),  TABLE_HEAD),
-        ("LINEBELOW",     (0, 0), (-1, 0),  1, ACCENT),
-        ("BOX",           (0, 0), (-1, -1), 0.5, BORDER),
-        ("INNERGRID",     (0, 0), (-1, -1), 0.3, BORDER),
+        ("BACKGROUND",    (0, 0), (-1, 0),  ACCENT_SOFT),
+        ("LINEBELOW",     (0, 0), (-1, 0),  1,   ACCENT),
+        ("BOX",           (0, 0), (-1, -1), 0.4, BORDER),
+        ("INNERGRID",     (0, 0), (-1, -1), 0.2, GRID_LIGHT),
         ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
-        ("TOPPADDING",    (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-        ("LEFTPADDING",   (0, 0), (-1, -1), 6),
-        ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
+        ("TOPPADDING",    (0, 0), (-1, -1), 7),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+        ("TOPPADDING",    (0, 0), (-1, 0),  9),
+        ("BOTTOMPADDING", (0, 0), (-1, 0),  9),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
         ("ALIGN",         (2, 0), (-1, -1), "RIGHT"),
     ] + row_bgs))
     return t
@@ -891,6 +1321,44 @@ def _aviso_fmv_estimado(n_swaps: int, styles) -> list:
     return [t, Spacer(1, 3*mm)]
 
 
+def _notas_faq(notas: list, styles) -> list:
+    """
+    Renderiza las notas explicativas como FAQ cards premium — un bloque por concepto.
+    Sustituye la tabla densa de dos columnas de la página 7.
+
+    Cada card:  título (bold ACCENT) + referencia (muted italic) + cuerpo (body)
+    Entre cards: separador fino (HR 0.3pt) con aire generoso arriba y abajo.
+
+    El contenido (lista `notas`) no se toca — solo cambia la presentación visual.
+    """
+    _SEP_CARD = [
+        Spacer(1, 6 * mm),
+        HRFlowable(width="100%", thickness=0.3, color=RULE_COLOR, spaceAfter=0),
+        Spacer(1, 6 * mm),
+    ]
+
+    flowables = []
+    for i, (titulo_nota, texto) in enumerate(notas):
+        partes = titulo_nota.split("\n")
+        titulo_principal = partes[0]
+        subtitulo        = partes[1] if len(partes) > 1 else ""
+
+        card = [
+            Paragraph(titulo_principal, styles["faq_title"]),
+        ]
+        if subtitulo:
+            card.append(Paragraph(subtitulo, styles["faq_ref"]))
+        card.append(Paragraph(texto, styles["faq_body"]))
+
+        flowables.append(KeepTogether(card))
+
+        # Separador entre cards, excepto tras la última
+        if i < len(notas) - 1:
+            flowables.extend(_SEP_CARD)
+
+    return flowables
+
+
 def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rendimientos=None,
                 clasificador_stats=None) -> bytes:
     styles = _build_styles()
@@ -908,10 +1376,16 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
     )
     story = []
 
-    # 1. PORTADA
-    _portada(story, styles, resumen, nombre_usuario, ejercicio, exchange)
+    # Inyectar n_activos en el resumen para las tarjetas KPI de portada v2
+    resumen["_n_activos"] = len(set(r.activo for r in motor.resultados)) if motor.resultados else 0
 
-    # 2. COMPENSACIONES + MODELO 721
+    # 1. PORTADA v2 (premium — sin tabla de bases imponibles, esas van al resumen ejecutivo)
+    _portada_v2(story, styles, resumen, nombre_usuario, ejercicio, exchange)
+
+    # 2. RESUMEN EJECUTIVO (bases imponibles + metadatos + nota FIFO)
+    _resumen_ejecutivo(story, styles, resumen, motor, ejercicio, exchange, rendimientos)
+
+    # 3. COMPENSACIONES + MODELO 721
     for fl in _bloque_compensaciones(
             resumen["ganancias_brutas"], resumen["perdidas_brutas"],
             resumen["resultado_neto"], rendimientos, styles):
@@ -919,11 +1393,11 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
     for fl in _bloque_modelo_721(posiciones, styles, ejercicio):
         story.append(fl)
 
-    # 2b. ESTADO DEL ANÁLISIS (solo cuando se pasa clasificador_stats, p.ej. Binance TX)
+    # 3b. ESTADO DEL ANÁLISIS (solo cuando se pasa clasificador_stats, p.ej. Binance TX)
     for fl in _bloque_estado_analisis(clasificador_stats, motor, rendimientos, styles):
         story.append(fl)
 
-    # 3. RESUMEN POR ACTIVO + GRÁFICO
+    # 4. RESUMEN POR ACTIVO + GRÁFICO
     if motor.resultados:
         story.append(PageBreak())
         story.append(Paragraph("Resumen de Ganancias y Pérdidas por Activo", styles["section"]))
@@ -935,7 +1409,7 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
             story.append(Spacer(1, 4*mm))
         story.append(_tabla_resumen_activos(motor.resultados, styles))
 
-    # 4. DETALLE OPERACIONES
+    # 5. DETALLE OPERACIONES
     if motor.resultados:
         story.append(PageBreak())
         story.append(Paragraph("Extracto de Operaciones con Resultado Fiscal", styles["section"]))
@@ -984,7 +1458,8 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
 
     # 6. RENDIMIENTOS
     if rendimientos:
-        story.append(Spacer(1, 8*mm))
+        for fl in _separador_bloque():
+            story.append(fl)
         story.append(Paragraph("Rendimientos de Capital Mobiliario", styles["section"]))
         story.append(Paragraph(
             "Ingresos por staking, rebates y otros rendimientos recibidos durante el período. "
@@ -1012,7 +1487,8 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
 
     # 7. ADVERTENCIAS
     if motor.advertencias:
-        story.append(Spacer(1, 8*mm))
+        for fl in _separador_bloque():
+            story.append(fl)
         story.append(KeepTogether([
             Paragraph("Advertencias — Operaciones que Requieren Revisión Manual", styles["section"]),
             Paragraph(
@@ -1085,48 +1561,36 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
          "compras previas aunque sean de ejercicios anteriores."),
     ]
 
-    # Tabla de notas — dos columnas: Concepto | Explicación
-    notas_cabecera = [
-        Paragraph("CONCEPTO", styles["th"]),
-        Paragraph("EXPLICACIÓN", styles["th"]),
-    ]
-    notas_rows = [notas_cabecera]
-    for titulo_nota, texto in notas:
-        partes = titulo_nota.split("\n")
-        celda_izq = [Paragraph(partes[0], styles["nota_label"])]
-        if len(partes) > 1:
-            celda_izq.append(Paragraph(partes[1], styles["nota_sub"]))
-        notas_rows.append([celda_izq, Paragraph(texto, styles["nota_body"])])
+    # FAQ cards — cada concepto es un bloque independiente (ver _notas_faq)
+    for fl in _notas_faq(notas, styles):
+        story.append(fl)
 
-    t_notas = Table(notas_rows, colWidths=[46*mm, 122*mm])
-    n = len(notas_rows)
-    row_bgs_n = [("BACKGROUND", (0, i), (-1, i), BG if i % 2 == 1 else TABLE_ALT) for i in range(1, n)]
-    t_notas.setStyle(TableStyle([
-        ("BACKGROUND",    (0, 0), (-1, 0),  TABLE_HEAD),
-        ("LINEBELOW",     (0, 0), (-1, 0),  1, ACCENT),
-        ("BOX",           (0, 0), (-1, -1), 0.5, BORDER),
-        ("INNERGRID",     (0, 0), (-1, -1), 0.3, BORDER),
-        ("VALIGN",        (0, 0), (-1, -1), "TOP"),
-        ("TOPPADDING",    (0, 0), (-1, -1), 7),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
-        ("LEFTPADDING",   (0, 0), (-1, -1), 8),
-        ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
-    ] + row_bgs_n))
-    story.append(t_notas)
-
-    # DISCLAIMER
-    story.append(Spacer(1, 8*mm))
-    story.append(HRFlowable(width="100%", thickness=0.5, color=RULE_COLOR))
-    story.append(Spacer(1, 4*mm))
-    story.append(Paragraph(
+    # DISCLAIMER FINAL — nota legal secundaria, discreta
+    story.append(Spacer(1, 12 * mm))
+    story.append(HRFlowable(width="100%", thickness=0.3, color=RULE_COLOR))
+    story.append(Spacer(1, 5 * mm))
+    _disc_final_style = ParagraphStyle(
+        "disc_final", fontName="Helvetica-Oblique", fontSize=7,
+        textColor=colors.HexColor("#9CA3AF"),  # mismo gris suave que el footer
+        leading=11, alignment=TA_CENTER,
+    )
+    _disc_data = [[Paragraph(
         "Este documento ha sido generado automáticamente por la herramienta de Mariano Sevilla "
         "(marianosevilla.com) a partir del historial de operaciones exportado por el usuario. "
         "No constituye asesoramiento fiscal ni legal. Los resultados deben ser revisados y validados "
         "por un gestor o asesor fiscal autorizado antes de su presentación a la Agencia Tributaria. "
         "Mariano Sevilla no asume responsabilidad alguna por errores derivados de datos incorrectos "
         "o incompletos en el fichero CSV de origen.",
-        styles["disclaimer"]
-    ))
+        _disc_final_style
+    )]]
+    _t_disc = Table(_disc_data, colWidths=[130 * mm])  # más estrecho que los 168mm habituales
+    _t_disc.setStyle(TableStyle([
+        ("TOPPADDING",    (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
+    ]))
+    story.append(_t_disc)
 
     doc.build(story, onFirstPage=_header_footer, onLaterPages=_header_footer)
     return buf.getvalue()
