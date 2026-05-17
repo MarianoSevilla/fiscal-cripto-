@@ -87,7 +87,8 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--snav-accent);   /* mismo verde que el avatar real */
+  border: 2px solid transparent;    /* misma geometría que .snav-avatar */
   flex-shrink: 0;
 }
 
