@@ -1769,6 +1769,16 @@ def home2_page():
     return redirect("/", 301)
 
 
+@app.route("/sitemap.xml")
+def sitemap():
+    return send_from_directory("static", "sitemap.xml", mimetype="application/xml")
+
+
+@app.route("/como-funciona", strict_slashes=False)
+def como_funciona():
+    return send_from_directory("static", "como-funciona.html")
+
+
 @app.route("/faq", strict_slashes=False)
 def faq():
     return send_from_directory("static", "faq.html")

@@ -45,7 +45,7 @@
         <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
 
         <ul class="snav-links">
-          <li><a href="/#como-funciona">Cómo funciona</a></li>
+          <li><a href="/como-funciona">Cómo funciona</a></li>
           <li><a href="/faq">FAQ</a></li>
           <li><a href="/contacto">Contacto</a></li>
         </ul>
@@ -59,6 +59,8 @@
   // ── Marcar item activo según la URL actual ────────────────────────────────
   function markActive() {
     const path = window.location.pathname;
+
+    // Dropdown items (avatar menu)
     const map = {
       '/account':   'snavItemAccount',
       '/dashboard': 'snavItemDash',
@@ -72,6 +74,16 @@
         break;
       }
     }
+
+    // Links centrales del nav (Cómo funciona / FAQ / Contacto)
+    const navLinks = document.querySelectorAll('.snav-links a');
+    navLinks.forEach(function (a) {
+      const href = a.getAttribute('href');
+      if (!href || href === '/') return;
+      if (path === href || path.startsWith(href + '/')) {
+        a.classList.add('active');
+      }
+    });
   }
 
   // ── Dropdown ──────────────────────────────────────────────────────────────

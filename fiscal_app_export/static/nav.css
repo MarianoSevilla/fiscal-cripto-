@@ -71,7 +71,8 @@
   font-weight: 500;
   transition: color 0.15s;
 }
-.snav-links a:hover { color: var(--snav-text); }
+.snav-links a:hover  { color: var(--snav-text); }
+.snav-links a.active { color: var(--snav-text); font-weight: 600; }
 
 /* ── Zona derecha ────────────────────────────────── */
 .snav-right {
