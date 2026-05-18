@@ -537,11 +537,29 @@ _analisis_en_curso: set = set()
 _analisis_lock = threading.Lock()
 
 
-# ── WWW REDIRECT ──────────────────────────────
+# ── WWW → APEX REDIRECT (301 permanente) ─────
+# Solo actúa sobre www.marianosevilla.com; ignora Railway internos,
+# localhost y cualquier otro host.
+_WWW_HOST  = "www.marianosevilla.com"
+_APEX_HOST = "marianosevilla.com"
+
 @app.before_request
-def redirect_www():
-    if request.host.startswith("www."):
-        return redirect(request.url.replace("://www.", "://", 1), 301)
+def redirect_www_to_apex():
+    """Redirect canónico 301: www.marianosevilla.com → marianosevilla.com.
+
+    Conserva path, query string y protocolo HTTPS.
+    No toca ningún otro host (Railway, localhost, staging…).
+    """
+    host = request.host.lower().split(":")[0]   # quita puerto si lo hubiera
+    if host != _WWW_HOST:
+        return                                   # cualquier otro host → sin tocar
+
+    # Construimos la URL de destino de forma explícita y segura
+    qs = request.query_string.decode("utf-8")
+    target = f"https://{_APEX_HOST}{request.path}"
+    if qs:
+        target = f"{target}?{qs}"
+    return redirect(target, 301)
 
 
 # ── SECURITY HEADERS ──────────────────────────
@@ -1767,6 +1785,16 @@ def stats_page():
 @app.route("/home2")
 def home2_page():
     return redirect("/", 301)
+
+
+@app.route("/robots.txt")
+def robots():
+    return send_from_directory("static", "robots.txt", mimetype="text/plain")
+
+
+@app.route("/llms.txt")
+def llms():
+    return send_from_directory("static", "llms.txt", mimetype="text/plain")
 
 
 @app.route("/sitemap.xml")

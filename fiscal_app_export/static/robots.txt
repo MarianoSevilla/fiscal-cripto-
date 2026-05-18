@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /account
+Disallow: /stats
+Disallow: /admin/
+Disallow: /api/
+
+Sitemap: https://marianosevilla.com/sitemap.xml

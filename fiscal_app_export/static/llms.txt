@@ -1,0 +1,38 @@
+# Mariano Sevilla — Herramienta fiscal para criptomonedas
+
+## ¿Qué es esta herramienta?
+
+marianosevilla.com es una aplicación web española que ayuda a inversores en criptomonedas a generar su informe fiscal FIFO para la declaración de la renta (IRPF) ante la Agencia Tributaria española (Hacienda).
+
+El usuario sube el historial de operaciones en CSV desde su exchange, la herramienta clasifica automáticamente cada operación y genera un informe PDF con las ganancias patrimoniales, minusvalías y rendimientos del capital mobiliario (staking, airdrops), listo para la declaración.
+
+## Casos de uso principales
+
+- Calcular impuestos de criptomonedas en España (método FIFO obligatorio)
+- Separar ganancias patrimoniales de rendimientos del capital mobiliario
+- Generar un informe PDF para la declaración de la renta
+- Saber qué y cuánto declarar por ventas, swaps, staking y airdrops de criptomonedas
+
+## Exchanges compatibles
+
+Binance, Bitvavo, Bit2Me, Kraken, Coinbase, Nexo, Crypto.com, Uphold
+
+## Normativa aplicada
+
+Ley del IRPF española. Las criptomonedas tributan como ganancias y pérdidas patrimoniales. Los swaps entre criptos también tributan. El staking y airdrops tributan como rendimientos del capital mobiliario (Casilla 0033).
+
+## URLs clave
+
+- https://marianosevilla.com/ — Herramienta principal (subir CSV y generar PDF)
+- https://marianosevilla.com/como-funciona — Explicación paso a paso
+- https://marianosevilla.com/faq — Preguntas frecuentes sobre fiscalidad crypto en España
+- https://marianosevilla.com/asesoramiento-fiscal-criptomonedas — Asesoramiento fiscal personalizado, supervisado por economista colegiado
+- https://marianosevilla.com/contacto — Contacto y soporte
+
+## Precio
+
+La herramienta básica es gratuita. Existe un servicio de asesoramiento fiscal personalizado de pago.
+
+## Idioma y mercado
+
+Español. Mercado: España.
