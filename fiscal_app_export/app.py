@@ -1339,7 +1339,9 @@ def page_uphold():
 
 @app.route("/api/analizar", methods=["POST"])
 @login_required
-@limiter.limit("1 per 10 minutes", exempt_when=_is_admin)
+@limiter.limit("3 per 10 minutes", exempt_when=_is_admin)
+@limiter.limit("6 per hour",       exempt_when=_is_admin)
+@limiter.limit("15 per day",       exempt_when=_is_admin)
 def analizar():
     uid      = current_user.id
     tmp_path = None
