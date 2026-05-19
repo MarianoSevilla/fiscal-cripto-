@@ -22,7 +22,7 @@ import tempfile
 import traceback
 import threading
 from datetime import datetime, timedelta
-from flask import Flask, request, jsonify, send_file, send_from_directory, redirect, url_for, render_template
+from flask import Flask, request, jsonify, send_file, send_from_directory, redirect, url_for, render_template, session
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_cors import CORS
@@ -200,9 +200,14 @@ _SESSION_INACTIVITY_USER  = 12 * 3_600   # 12 h para usuarios normales
 
 
 def _expire_session() -> None:
-    """Cierra la sesión activa y limpia todos los datos almacenados en la cookie."""
-    logout_user()
+    """Cierra la sesión activa y limpia todos los datos almacenados en la cookie.
+
+    session.clear() debe ir ANTES de logout_user() para que Flask-Login pueda
+    escribir el flag _remember:clear en la sesión ya vacía. Si se invierte el orden,
+    session.clear() borra ese flag y la remember cookie no se elimina del navegador.
+    """
     session.clear()
+    logout_user()
 
 
 def _session_expired_response():
