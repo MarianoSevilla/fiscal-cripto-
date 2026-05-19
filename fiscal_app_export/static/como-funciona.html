@@ -88,14 +88,14 @@ a:hover { text-decoration: underline; }
 /* ── HERO ───────────────────────────── */
 .hero {
   padding: 7rem 0 5rem;
-  text-align: center;
+  text-align: left;
 }
 .hero-badge {
   display: inline-flex; align-items: center; gap: 7px;
   background: var(--accent-dim); border: 1px solid var(--accent-glow);
   color: var(--accent); border-radius: 100px;
   font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
-  padding: 5px 14px; margin-bottom: 1.75rem;
+  padding: 5px 14px; margin-bottom: 1.5rem;
   text-transform: uppercase;
 }
 .hero-badge::before {
@@ -104,15 +104,14 @@ a:hover { text-decoration: underline; }
   box-shadow: 0 0 6px var(--accent);
 }
 .hero h1 {
-  font-family: var(--font-display); font-size: clamp(2.8rem, 6vw, 4.4rem);
-  font-weight: 800; line-height: 1.06; letter-spacing: -0.035em;
-  margin-bottom: 1.5rem;
-  /* Sin max-width: ocupa todo el ancho disponible del contenedor */
+  font-family: var(--font-display); font-size: clamp(2.8rem, 4.5vw, 4rem);
+  font-weight: 800; line-height: 1.07; letter-spacing: -0.035em;
+  margin-bottom: 1.25rem;
 }
 .hero h1 em { font-style: normal; color: var(--accent); }
 .hero-desc {
-  font-size: 1.15rem; color: var(--muted); max-width: 760px;
-  margin: 0 auto 3rem; line-height: 1.75;
+  font-size: 1.15rem; color: var(--muted); max-width: 640px;
+  margin-bottom: 2rem; line-height: 1.75;
 }
 .btn-cta {
   display: inline-flex; align-items: center; gap: 10px;
@@ -419,8 +418,8 @@ details[open] .faq-q::after { transform: rotate(45deg); }
   .step-item:last-child { border-bottom: none; }
   .footer-inner { flex-direction: column; align-items: flex-start; }
 }
-@media (max-width: 600px) {
-  .hero h1 { font-size: 1.9rem; }
+@media (max-width: 640px) {
+  .hero h1 { font-size: 2.1rem; }
   .section-title { font-size: 1.6rem; }
   .fifo-row { grid-template-columns: 1fr 0.6fr 0.8fr; }
   .fifo-row > *:nth-child(4),
