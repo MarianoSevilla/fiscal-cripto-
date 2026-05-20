@@ -106,6 +106,12 @@ if _db_url.startswith("postgres://"):
     _db_url = _db_url.replace("postgres://", "postgresql://", 1)
 app.config["SQLALCHEMY_DATABASE_URI"] = _db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "connect_args":   {"connect_timeout": 5},   # TCP timeout 5s en lugar de infinito
+    "pool_pre_ping":  True,                      # descarta conexiones muertas del pool
+    "pool_timeout":   10,                        # espera máx 10s por una conexión del pool
+    "pool_recycle":   300,                       # recicla conexiones cada 5 min
+}
 
 # Tamaño máximo de payload global — corta uploads gigantes antes de llegar a disco.
 # Los CSV válidos son <10 MB; los ficheros de asesoramiento tienen su propio check a 10 MB.
@@ -232,25 +238,33 @@ if _google_oauth_enabled:
         client_kwargs={"scope": "openid email profile"},
     )
 
-with app.app_context():
-    db.create_all()
-    # Migración de emergencia: añade columnas si no existen (PostgreSQL)
-    try:
-        from sqlalchemy import text
-        with db.engine.connect() as _conn:
-            _conn.execute(text(
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP"
-            ))
-            _conn.execute(text(
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(150)"
-            ))
-            # Advisory tables
-            _conn.execute(text(
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'user' NOT NULL"
-            ))
-            _conn.commit()
-    except Exception:
-        pass
+print("[BOOT] Iniciando bootstrap de base de datos...", flush=True)
+try:
+    with app.app_context():
+        print("[BOOT] app_context OK. Llamando db.create_all()...", flush=True)
+        db.create_all()
+        print("[BOOT] db.create_all() completado. Iniciando ALTER TABLE...", flush=True)
+        try:
+            from sqlalchemy import text
+            with db.engine.connect() as _conn:
+                print("[BOOT] Conexión a DB obtenida. Ejecutando migraciones de emergencia...", flush=True)
+                _conn.execute(text(
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP"
+                ))
+                _conn.execute(text(
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(150)"
+                ))
+                _conn.execute(text(
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'user' NOT NULL"
+                ))
+                _conn.commit()
+                print("[BOOT] ALTER TABLE completado sin errores.", flush=True)
+        except Exception as _boot_err:
+            print(f"[BOOT] ALTER TABLE falló (no crítico): {_boot_err}", flush=True)
+    print("[BOOT] Bootstrap DB completado. Gunicorn listo para servir requests.", flush=True)
+except Exception as _fatal_err:
+    print(f"[BOOT] *** ERROR FATAL en bootstrap DB: {_fatal_err} ***", flush=True)
+    print("[BOOT] La app arrancará sin bootstrap. Algunas tablas pueden no existir.", flush=True)
 
 
 # ── PDF TOKEN STORE (Row-Level Security) ───────
