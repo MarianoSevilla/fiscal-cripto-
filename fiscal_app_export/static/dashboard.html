@@ -144,6 +144,31 @@ main {
   color: var(--muted); font-size: .95rem; display: none;
 }
 
+/* ── MODEL 721 CARD ── */
+.m721-card {
+  display: flex; align-items: center; gap: 1.25rem;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 1.25rem 1.5rem;
+  margin-bottom: 2rem; text-decoration: none; color: var(--text);
+  transition: border-color .15s, background .15s, transform .12s;
+}
+.m721-card:hover {
+  border-color: rgba(0,200,150,.25); background: var(--surface2);
+  transform: translateY(-1px);
+}
+.m721-icon {
+  width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0;
+  background: var(--accent-dim); display: flex; align-items: center;
+  justify-content: center; color: var(--accent);
+}
+.m721-body { flex: 1; min-width: 0; }
+.m721-title {
+  font-family: var(--font-d); font-size: 1rem; font-weight: 700;
+  letter-spacing: -.01em; margin-bottom: 2px;
+}
+.m721-desc { font-size: .85rem; color: var(--muted); }
+.m721-arrow { color: var(--muted2); flex-shrink: 0; }
+
 /* ── FOOTER ── */
 .page-footer { border-top: 1px solid var(--border); background: var(--black); padding: 2rem 0; margin-top: auto; }
 .footer-inner { max-width: var(--max); margin: 0 auto; padding: 0 2rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
@@ -185,6 +210,18 @@ main {
     <h1 class="dash-title">Selecciona tu exchange</h1>
     <p class="dash-sub">Elige el exchange desde el que vas a importar tu historial de operaciones.</p>
   </div>
+
+  <!-- Modelo 721 -->
+  <a href="/modelo721" class="m721-card">
+    <div class="m721-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    </div>
+    <div class="m721-body">
+      <div class="m721-title">Modelo 721 — Criptomonedas en el extranjero</div>
+      <div class="m721-desc">Genera el borrador XML para la AEAT a partir de tu historial de cualquier exchange</div>
+    </div>
+    <svg class="m721-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+  </a>
 
   <!-- Buscador -->
   <div class="search-wrap">

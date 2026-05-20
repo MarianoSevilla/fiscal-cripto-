@@ -1151,6 +1151,12 @@ def dashboard():
     return send_from_directory("static", "dashboard.html")
 
 
+@app.route("/modelo721", strict_slashes=False)
+def modelo721_page():
+    """Herramienta Modelo 721 — criptomonedas en el extranjero. Auth gestionada en JS."""
+    return send_from_directory("static", "modelo721.html")
+
+
 @app.route("/account", strict_slashes=False)
 def account():
     return send_from_directory("static", "account.html")

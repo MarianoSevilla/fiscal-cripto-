@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modelo 721 — Herramienta Fiscal Cripto</title>
+<meta name="robots" content="noindex">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+<link rel="icon" href="/static/favicon.ico">
+<link rel="manifest" href="/static/site.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/nav.css">
+<link rel="preload" href="/static/nav.js" as="script">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --black:      #0b1220;
+  --surface:    #141f32;
+  --surface2:   #1a2540;
+  --surface3:   #1f2d4a;
+  --border:     rgba(255,255,255,0.07);
+  --border-hover: rgba(255,255,255,0.15);
+  --text:       #f0f0f0;
+  --muted:      #888888;
+  --muted2:     #555555;
+  --accent:     #00C896;
+  --accent-dim: rgba(0,200,150,0.10);
+  --amber:      #F59E0B;
+  --amber-dim:  rgba(245,158,11,0.12);
+  --red:        #EF4444;
+  --red-dim:    rgba(239,68,68,0.12);
+  --max:        820px;
+  --r:          12px;
+  --font-d:     'Syne', sans-serif;
+  --font-b:     'DM Sans', sans-serif;
+}
+
+html, body {
+  min-height: 100%; background: var(--black);
+  font-family: var(--font-b); color: var(--text);
+  font-size: 16px; line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+a { color: inherit; text-decoration: none; }
+img { display: block; max-width: 100%; }
+
+/* ── MAIN ── */
+main {
+  max-width: var(--max); margin: 0 auto;
+  padding: 6rem 1.5rem 5rem;
+  min-height: calc(100vh - 200px);
+}
+
+/* ── PAGE HEADER ── */
+.page-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--accent-dim); border: 1px solid rgba(0,200,150,.2);
+  border-radius: 100px; padding: 4px 12px;
+  font-size: 11px; font-weight: 600; letter-spacing: .07em;
+  color: var(--accent); text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+.page-title {
+  font-family: var(--font-d); font-size: clamp(1.5rem, 3vw, 2.1rem);
+  font-weight: 800; letter-spacing: -.03em; margin-bottom: .5rem;
+}
+.page-sub {
+  font-size: .95rem; color: var(--muted); max-width: 560px;
+  margin-bottom: 2.5rem;
+}
+
+/* ── CARD ── */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 1.75rem 2rem;
+  margin-bottom: 1.25rem;
+}
+.card-title {
+  font-family: var(--font-d); font-size: .9rem; font-weight: 700;
+  letter-spacing: .04em; text-transform: uppercase; color: var(--muted);
+  margin-bottom: 1.25rem;
+}
+
+/* ── FORM ELEMENTS ── */
+.field { margin-bottom: 1.25rem; }
+.field:last-child { margin-bottom: 0; }
+.field label {
+  display: block; font-size: .875rem; font-weight: 500;
+  color: var(--muted); margin-bottom: .45rem;
+}
+.field label .optional {
+  font-size: .75rem; font-weight: 400; color: var(--muted2);
+  margin-left: 4px;
+}
+select, input[type="text"], input[type="number"] {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-family: var(--font-b);
+  font-size: .95rem; padding: .75rem 1rem; outline: none;
+  transition: border-color .2s, box-shadow .2s;
+  appearance: none; -webkit-appearance: none;
+}
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 1rem center;
+  padding-right: 2.5rem; cursor: pointer;
+}
+select:focus, input[type="text"]:focus, input[type="number"]:focus {
+  border-color: rgba(255,255,255,.2);
+  box-shadow: 0 0 0 3px rgba(255,255,255,.04);
+}
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.field-hint {
+  font-size: .78rem; color: var(--muted2); margin-top: .35rem; line-height: 1.4;
+}
+
+/* ── DROP ZONE ── */
+.drop-zone {
+  border: 2px dashed var(--border); border-radius: var(--r);
+  padding: 2rem 1.5rem; text-align: center; cursor: pointer;
+  transition: border-color .2s, background .2s;
+  position: relative;
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color: rgba(0,200,150,.4); background: rgba(0,200,150,.04);
+}
+.drop-zone.has-file {
+  border-color: rgba(0,200,150,.35); background: rgba(0,200,150,.06);
+}
+.drop-zone input[type="file"] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.drop-icon {
+  display: flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; border-radius: 10px;
+  background: var(--surface2); margin: 0 auto .75rem; color: var(--muted);
+}
+.drop-zone.has-file .drop-icon { background: var(--accent-dim); color: var(--accent); }
+.drop-label { font-size: .9rem; color: var(--muted); }
+.drop-label strong { color: var(--text); font-weight: 500; }
+.drop-filename {
+  font-size: .875rem; font-weight: 500; color: var(--accent);
+  margin-top: .35rem; word-break: break-all;
+}
+
+/* ── OPTIONAL FIELDS TOGGLE ── */
+.optional-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: .85rem; color: var(--muted); cursor: pointer;
+  background: none; border: none; font-family: var(--font-b);
+  padding: 0; margin-bottom: 1.25rem; transition: color .15s;
+}
+.optional-toggle:hover { color: var(--text); }
+.optional-toggle svg { flex-shrink: 0; transition: transform .2s; }
+.optional-toggle.open svg { transform: rotate(90deg); }
+.optional-fields { display: none; }
+.optional-fields.open { display: block; }
+
+/* ── SUBMIT BUTTON ── */
+.btn-submit {
+  display: flex; align-items: center; justify-content: center; gap: .5rem;
+  width: 100%; padding: .9rem 1.5rem;
+  background: var(--accent); color: var(--black);
+  font-family: var(--font-b); font-size: 1rem; font-weight: 600;
+  border: none; border-radius: var(--r); cursor: pointer;
+  transition: opacity .15s, transform .1s; letter-spacing: -.01em;
+}
+.btn-submit:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
+.btn-submit:disabled { opacity: .45; cursor: default; }
+
+/* ── LOADING ── */
+#panel-loading {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 320px; gap: 1.25rem; text-align: center;
+}
+.spinner {
+  width: 40px; height: 40px; border: 3px solid var(--border);
+  border-top-color: var(--accent); border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-label { font-size: .95rem; color: var(--muted); }
+
+/* ── ESTADO BADGE ── */
+.estado-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  border-radius: 100px; padding: 5px 14px;
+  font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+}
+.estado-badge.listo    { background: var(--accent-dim); color: var(--accent);  border: 1px solid rgba(0,200,150,.25); }
+.estado-badge.borrador { background: var(--amber-dim);  color: var(--amber);   border: 1px solid rgba(245,158,11,.25); }
+.estado-badge.bloqueado{ background: var(--red-dim);    color: var(--red);     border: 1px solid rgba(239,68,68,.25); }
+.estado-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+/* ── RESULT HEADER ── */
+.result-header {
+  display: flex; flex-direction: column; gap: .6rem;
+  margin-bottom: 1.5rem;
+}
+.result-title {
+  font-family: var(--font-d); font-size: 1.35rem; font-weight: 800;
+  letter-spacing: -.025em;
+}
+.result-meta { font-size: .875rem; color: var(--muted); }
+
+/* ── ACTIVOS TABLE ── */
+.activos-table-wrap { overflow-x: auto; margin: 0 -2rem; padding: 0 2rem; }
+.activos-table {
+  width: 100%; border-collapse: collapse; font-size: .875rem;
+}
+.activos-table th {
+  text-align: left; font-size: .75rem; font-weight: 600; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--muted2); padding: 0 .75rem .75rem;
+  border-bottom: 1px solid var(--border);
+}
+.activos-table th:first-child { padding-left: 0; }
+.activos-table th:last-child  { padding-right: 0; text-align: right; }
+.activos-table td {
+  padding: .75rem; vertical-align: middle;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.activos-table td:first-child { padding-left: 0; }
+.activos-table td:last-child  { padding-right: 0; text-align: right; }
+.activos-table tr:last-child td { border-bottom: none; }
+.ticker-cell { display: flex; align-items: center; gap: .6rem; }
+.ticker-icon {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--surface3); display: flex; align-items: center;
+  justify-content: center; font-size: .7rem; font-weight: 700;
+  flex-shrink: 0; color: var(--muted);
+}
+.ticker-main { font-weight: 600; }
+.ticker-name { font-size: .75rem; color: var(--muted); margin-top: 1px; }
+.total-row td {
+  font-weight: 600; border-top: 1px solid var(--border);
+  border-bottom: none; padding-top: .9rem;
+}
+.val-green { color: var(--accent); }
+.val-muted { color: var(--muted); font-size: .8rem; }
+
+/* ── PENDIENTE BLOCK ── */
+.pendiente-section { margin-top: 1.25rem; }
+.pendiente-item {
+  display: flex; gap: .75rem; align-items: flex-start;
+  padding: .9rem 1rem; border-radius: 10px; margin-bottom: .6rem;
+}
+.pendiente-item:last-child { margin-bottom: 0; }
+.pendiente-item.bloqueante  { background: var(--red-dim);   border: 1px solid rgba(239,68,68,.18); }
+.pendiente-item.advertencia { background: var(--amber-dim); border: 1px solid rgba(245,158,11,.18); }
+.pendiente-item.info        { background: var(--accent-dim);border: 1px solid rgba(0,200,150,.15); }
+.pendiente-icon { flex-shrink: 0; margin-top: 2px; }
+.pendiente-text { font-size: .875rem; line-height: 1.5; }
+.pendiente-text strong { display: block; font-weight: 600; margin-bottom: 2px; }
+
+/* ── UMBRAL NOTICE ── */
+.umbral-notice {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 1rem 1.25rem;
+  font-size: .875rem; color: var(--muted); line-height: 1.55;
+}
+.umbral-notice strong { color: var(--text); }
+
+/* ── ACTIONS ── */
+.result-actions {
+  display: flex; gap: .75rem; flex-wrap: wrap; margin-top: .5rem;
+}
+.btn-download {
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: .8rem 1.5rem; border-radius: var(--r);
+  background: var(--accent); color: var(--black);
+  font-family: var(--font-b); font-size: .925rem; font-weight: 600;
+  border: none; cursor: pointer; text-decoration: none;
+  transition: opacity .15s, transform .1s;
+}
+.btn-download:hover { opacity: .9; transform: translateY(-1px); }
+.btn-secondary {
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: .8rem 1.5rem; border-radius: var(--r);
+  background: none; color: var(--text);
+  font-family: var(--font-b); font-size: .925rem; font-weight: 500;
+  border: 1px solid var(--border); cursor: pointer; text-decoration: none;
+  transition: border-color .15s, background .15s;
+}
+.btn-secondary:hover { border-color: var(--border-hover); background: var(--surface2); }
+
+/* ── BIT2ME NOTICE ── */
+.bit2me-notice {
+  background: var(--accent-dim); border: 1px solid rgba(0,200,150,.2);
+  border-radius: var(--r); padding: 1.25rem 1.5rem;
+}
+.bit2me-notice p { font-size: .9rem; line-height: 1.6; }
+.bit2me-notice strong { color: var(--accent); }
+
+/* ── DISCLAIMER ── */
+.disclaimer {
+  font-size: .78rem; color: var(--muted2); line-height: 1.5;
+  border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 1rem;
+}
+
+/* ── FOOTER ── */
+.page-footer { border-top: 1px solid var(--border); background: var(--black); padding: 2rem 0; }
+.footer-inner { max-width: var(--max); margin: 0 auto; padding: 0 1.5rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.footer-copy { font-size: 13px; color: var(--muted); }
+.footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+.footer-links a { font-size: 13px; color: var(--muted); transition: color .15s; }
+.footer-links a:hover { color: var(--text); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 560px) {
+  .card { padding: 1.25rem 1.25rem; }
+  .field-row { grid-template-columns: 1fr; }
+  .result-actions { flex-direction: column; }
+  .btn-download, .btn-secondary { width: 100%; justify-content: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav id="site-nav">
+  <div class="snav-inner">
+    <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
+    <ul class="snav-links">
+      <li><a href="/como-funciona">Cómo funciona</a></li>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/contacto">Contacto</a></li>
+    </ul>
+    <div class="snav-right">
+      <div class="snav-skeleton" aria-hidden="true"></div>
+    </div>
+  </div>
+</nav>
+<script src="/static/nav.js"></script>
+
+<main>
+
+  <!-- ── PANEL: FORMULARIO ── -->
+  <div id="panel-form">
+
+    <div class="page-badge">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><circle cx="5" cy="5" r="5"/></svg>
+      Modelo 721
+    </div>
+    <h1 class="page-title">Criptomonedas en el extranjero</h1>
+    <p class="page-sub">Genera el borrador del Modelo 721 a partir de tu historial de operaciones. Sube el CSV de tu exchange, selecciona el ejercicio y obtén los datos estructurados.</p>
+
+    <!-- Exchange + ejercicio -->
+    <div class="card">
+      <div class="card-title">Exchange y ejercicio</div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="sel-exchange">Exchange</label>
+          <select id="sel-exchange" required>
+            <option value="">— Selecciona —</option>
+            <option value="binance">Binance</option>
+            <option value="bitvavo">Bitvavo</option>
+            <option value="bit2me">Bit2Me</option>
+            <option value="coinbase">Coinbase</option>
+            <option value="cryptocom">Crypto.com</option>
+            <option value="kraken">Kraken</option>
+            <option value="nexo">Nexo</option>
+            <option value="uphold">Uphold</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="sel-ejercicio">Ejercicio fiscal</label>
+          <select id="sel-ejercicio" required>
+            <!-- generado por JS -->
+          </select>
+        </div>
+      </div>
+
+      <!-- Info bit2me (se muestra al seleccionar bit2me) -->
+      <div id="bit2me-info" class="bit2me-notice" style="display:none;">
+        <p><strong>Bit2Me es una entidad española</strong> y no está sujeta al Modelo 721. Los activos custodiados en Bit2Me no se declaran en este modelo — se declaran en el IRPF si hay ganancias. No necesitas presentar el 721 por tus saldos en Bit2Me.</p>
+      </div>
+    </div>
+
+    <!-- CSV upload -->
+    <div class="card" id="card-csv">
+      <div class="card-title">Historial de operaciones</div>
+      <div class="field">
+        <label>Archivo CSV</label>
+        <div class="drop-zone" id="drop-zone">
+          <input type="file" id="file-input" accept=".csv,.txt" aria-label="Subir CSV">
+          <div class="drop-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </div>
+          <div class="drop-label">
+            <strong>Elige un archivo</strong> o arrástralo aquí
+          </div>
+          <div class="drop-filename" id="drop-filename" style="display:none;"></div>
+        </div>
+        <p class="field-hint">El archivo nunca se almacena — se procesa en el servidor y se descarta inmediatamente.</p>
+      </div>
+    </div>
+
+    <!-- Datos del declarante (opcional) -->
+    <div class="card">
+      <button type="button" class="optional-toggle" id="toggle-declarante">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        Datos del declarante <span style="color:var(--muted2);font-size:.8rem;margin-left:2px;">(opcional — necesarios para generar el XML)</span>
+      </button>
+      <div class="optional-fields" id="declarante-fields">
+        <div class="field-row">
+          <div class="field">
+            <label for="inp-nif">NIF del declarante</label>
+            <input type="text" id="inp-nif" placeholder="12345678Z" maxlength="20" autocomplete="off" spellcheck="false">
+            <p class="field-hint">Tu NIF / NIE como persona física declarante.</p>
+          </div>
+          <div class="field">
+            <label for="inp-nombre">Nombre y apellidos</label>
+            <input type="text" id="inp-nombre" placeholder="Apellido1 Apellido2, Nombre" maxlength="120" autocomplete="name">
+          </div>
+        </div>
+        <p class="field-hint" style="margin-top:-.5rem;">Sin estos datos puedes obtener el resumen orientativo, pero el XML para la AEAT no se generará. <strong>No se guardan</strong> en ningún momento.</p>
+      </div>
+    </div>
+
+    <!-- Submit -->
+    <button type="button" class="btn-submit" id="btn-submit" disabled>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Analizar CSV
+    </button>
+  </div>
+
+  <!-- ── PANEL: CARGANDO ── -->
+  <div id="panel-loading" style="display:none;">
+    <div class="spinner"></div>
+    <p class="loading-label">Analizando tus operaciones…</p>
+    <p style="font-size:.8rem;color:var(--muted2);">Puede tardar unos segundos según el tamaño del archivo.</p>
+  </div>
+
+  <!-- ── PANEL: RESULTADO ── -->
+  <div id="panel-result" style="display:none;">
+
+    <!-- Header resultado -->
+    <div class="result-header">
+      <div id="estado-badge" class="estado-badge listo">
+        <span class="estado-dot"></span>
+        <span id="estado-texto">Listo</span>
+      </div>
+      <h2 class="result-title" id="result-title">Modelo 721 — Ejercicio</h2>
+      <p class="result-meta" id="result-meta"></p>
+    </div>
+
+    <!-- Umbral -->
+    <div id="umbral-notice" class="umbral-notice" style="display:none;">
+      <strong>Probablemente no estás obligado a presentar el Modelo 721.</strong> El valor total de las criptomonedas a 31 de diciembre es inferior a 50.000 €. Aun así, este análisis puede ser útil como referencia. Consulta con un asesor fiscal si tienes dudas sobre tu obligación de declarar.
+    </div>
+
+    <!-- Bit2Me resultado especial -->
+    <div id="bit2me-result" style="display:none;" class="card">
+      <div class="bit2me-notice" style="background:none;border:none;padding:0;">
+        <p><strong>Bit2Me es una entidad española.</strong> Los saldos custodiados en Bit2Me no deben declararse en el Modelo 721 — ese modelo solo aplica a entidades extranjeras. Si has tenido ganancias o pérdidas en Bit2Me, se declaran en el IRPF (Modelo 100).</p>
+      </div>
+    </div>
+
+    <!-- Tabla de activos -->
+    <div class="card" id="card-activos">
+      <div class="card-title">Posición a 31 de diciembre</div>
+      <div class="activos-table-wrap">
+        <table class="activos-table">
+          <thead>
+            <tr>
+              <th>Activo</th>
+              <th>Exchange</th>
+              <th>Cantidad</th>
+              <th>Valor €</th>
+            </tr>
+          </thead>
+          <tbody id="activos-tbody"></tbody>
+          <tfoot id="activos-tfoot"></tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- Pendientes / estado XML -->
+    <div class="card" id="card-pendiente">
+      <div class="card-title">Estado del XML</div>
+      <div class="pendiente-section" id="pendiente-items"></div>
+      <p class="disclaimer" id="disclaimer-text">
+        Este informe es orientativo y no constituye asesoramiento fiscal ni legal. Verifica todos los datos con un asesor antes de presentar el Modelo 721.
+      </p>
+    </div>
+
+    <!-- Acciones -->
+    <div class="result-actions">
+      <button type="button" class="btn-download" id="btn-xml" style="display:none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Descargar XML
+      </button>
+      <button type="button" class="btn-secondary" id="btn-nuevo">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+        Nuevo análisis
+      </button>
+      <a href="/dashboard" class="btn-secondary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Ir al Dashboard
+      </a>
+    </div>
+
+  </div><!-- /panel-result -->
+
+</main>
+
+<!-- ── FOOTER ── -->
+<footer class="page-footer">
+  <div class="footer-inner">
+    <span class="footer-copy">© 2025 marianosevilla.com — No constituye asesoramiento fiscal ni legal.</span>
+    <div class="footer-links">
+      <a href="/privacidad">Privacidad</a>
+      <a href="/terminos">Términos</a>
+      <a href="/faq">FAQ</a>
+      <a href="/contacto">Contacto</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+'use strict';
+
+// ── AUTH GUARD ─────────────────────────────────────────────────────────────
+(async () => {
+  try {
+    const r = await fetch('/api/me', { credentials: 'include' });
+    const d = await r.json();
+    if (!d.user) { window.location.replace('/login/'); }
+  } catch {
+    window.location.replace('/login/');
+  }
+})();
+
+// ── EJERCICIOS ─────────────────────────────────────────────────────────────
+(function populateEjercicios() {
+  const sel   = document.getElementById('sel-ejercicio');
+  const hoy   = new Date();
+  const max   = hoy.getFullYear() + 1;
+  const desde = 2022;
+  // Año más probable: el año anterior al actual (la declaración es sobre el pasado)
+  const defaultYear = hoy.getFullYear() - 1;
+  for (let y = max; y >= desde; y--) {
+    const opt = document.createElement('option');
+    opt.value = y;
+    opt.textContent = y;
+    if (y === defaultYear) opt.selected = true;
+    sel.appendChild(opt);
+  }
+})();
+
+// ── EXCHANGE SELECTOR ──────────────────────────────────────────────────────
+const selExchange  = document.getElementById('sel-exchange');
+const bit2meInfo   = document.getElementById('bit2me-info');
+const cardCsv      = document.getElementById('card-csv');
+const btnSubmit    = document.getElementById('btn-submit');
+
+selExchange.addEventListener('change', updateFormState);
+
+// ── FILE DROP ──────────────────────────────────────────────────────────────
+const dropZone    = document.getElementById('drop-zone');
+const fileInput   = document.getElementById('file-input');
+const dropFilename= document.getElementById('drop-filename');
+let   selectedFile = null;
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length) {
+    setFile(fileInput.files[0]);
+  }
+});
+
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropZone.classList.add('drag-over');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) { setFile(f); fileInput.files = e.dataTransfer.files; }
+});
+
+function setFile(f) {
+  selectedFile = f;
+  dropZone.classList.add('has-file');
+  dropFilename.textContent = f.name;
+  dropFilename.style.display = 'block';
+  dropZone.querySelector('.drop-label').innerHTML =
+    '<strong>Archivo seleccionado</strong> — haz clic para cambiar';
+  updateFormState();
+}
+
+// ── TOGGLE DECLARANTE ─────────────────────────────────────────────────────
+const toggleBtn       = document.getElementById('toggle-declarante');
+const declaranteFields= document.getElementById('declarante-fields');
+
+toggleBtn.addEventListener('click', () => {
+  const open = declaranteFields.classList.toggle('open');
+  toggleBtn.classList.toggle('open', open);
+});
+
+// ── FORM STATE ─────────────────────────────────────────────────────────────
+function updateFormState() {
+  const exchange = selExchange.value;
+  const esBit2Me = exchange === 'bit2me';
+
+  // Mostrar/ocultar info bit2me
+  bit2meInfo.style.display  = esBit2Me ? 'block' : 'none';
+  cardCsv.style.display     = esBit2Me ? 'none'  : '';
+
+  if (esBit2Me) {
+    // Bit2Me: no se necesita CSV, el botón siempre disponible
+    btnSubmit.disabled = !exchange;
+    btnSubmit.textContent = 'Ver explicación';
+  } else {
+    btnSubmit.disabled = !(exchange && selectedFile);
+    btnSubmit.textContent = 'Analizar CSV';
+    btnSubmit.innerHTML = `
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Analizar CSV`;
+  }
+}
+
+// ── SUBMIT ─────────────────────────────────────────────────────────────────
+btnSubmit.addEventListener('click', async () => {
+  const exchange  = selExchange.value;
+  const ejercicio = document.getElementById('sel-ejercicio').value;
+  const nif       = document.getElementById('inp-nif').value.trim();
+  const nombre    = document.getElementById('inp-nombre').value.trim();
+
+  if (!exchange) return;
+
+  // Bit2Me: respuesta inmediata sin fetch
+  if (exchange === 'bit2me') {
+    showBit2meResult(ejercicio);
+    return;
+  }
+
+  if (!selectedFile) return;
+
+  // Build FormData
+  const fd = new FormData();
+  fd.append('exchange',  exchange);
+  fd.append('ejercicio', ejercicio);
+  fd.append('csv',       selectedFile, selectedFile.name);
+  if (nif)    fd.append('nif_declarante',    nif);
+  if (nombre) fd.append('nombre_declarante', nombre);
+
+  showLoading(true);
+
+  try {
+    const res  = await fetch('/api/721', {
+      method: 'POST',
+      credentials: 'include',
+      body: fd,
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      showError(data.error || `Error ${res.status}`);
+      return;
+    }
+
+    renderResult(data);
+
+  } catch (err) {
+    showError('Error de red. Comprueba tu conexión e inténtalo de nuevo.');
+  } finally {
+    showLoading(false);
+  }
+});
+
+// ── SHOW / HIDE PANELS ─────────────────────────────────────────────────────
+const panelForm    = document.getElementById('panel-form');
+const panelLoading = document.getElementById('panel-loading');
+const panelResult  = document.getElementById('panel-result');
+
+function showLoading(on) {
+  panelForm.style.display    = on ? 'none' : '';
+  panelLoading.style.display = on ? 'flex' : 'none';
+  panelResult.style.display  = 'none';
+}
+
+function showError(msg) {
+  panelLoading.style.display = 'none';
+  panelForm.style.display    = '';
+  // Mostrar error inline en el botón
+  const old = btnSubmit.innerHTML;
+  btnSubmit.style.background = 'var(--red)';
+  btnSubmit.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> ${escHtml(msg)}`;
+  setTimeout(() => {
+    btnSubmit.style.background = '';
+    btnSubmit.innerHTML = old;
+  }, 4500);
+}
+
+// ── BIT2ME RESPUESTA LOCAL ─────────────────────────────────────────────────
+function showBit2meResult(ejercicio) {
+  panelForm.style.display   = 'none';
+  panelLoading.style.display= 'none';
+  panelResult.style.display = '';
+
+  document.getElementById('estado-badge').className = 'estado-badge info';
+  document.getElementById('estado-badge').style.cssText =
+    'background:var(--accent-dim);color:var(--accent);border:1px solid rgba(0,200,150,.25);';
+  document.getElementById('estado-texto').textContent = 'No aplica';
+
+  document.getElementById('result-title').textContent = `Bit2Me — Ejercicio ${ejercicio}`;
+  document.getElementById('result-meta').textContent  =
+    'Entidad española · No sujeta al Modelo 721';
+
+  document.getElementById('umbral-notice').style.display = 'none';
+  document.getElementById('bit2me-result').style.display = '';
+  document.getElementById('card-activos').style.display  = 'none';
+  document.getElementById('card-pendiente').style.display = 'none';
+  document.getElementById('btn-xml').style.display = 'none';
+}
+
+// ── RENDER RESULT ──────────────────────────────────────────────────────────
+function renderResult(data) {
+  panelForm.style.display   = 'none';
+  panelLoading.style.display= 'none';
+  panelResult.style.display = '';
+
+  document.getElementById('bit2me-result').style.display = 'none';
+  document.getElementById('card-activos').style.display  = '';
+
+  const pendiente = data.pendiente || {};
+  const resultado = data.resultado || {};
+  const ejercicio = data.ejercicio || '';
+  const exchange  = data.exchange  || '';
+
+  // ── ESTADO BADGE ──
+  const badgeEl    = document.getElementById('estado-badge');
+  const textoEl    = document.getElementById('estado-texto');
+  if (!pendiente.xml_generable) {
+    badgeEl.className = 'estado-badge bloqueado';
+    textoEl.textContent = 'Bloqueado';
+  } else if (pendiente.xml_es_borrador) {
+    badgeEl.className = 'estado-badge borrador';
+    textoEl.textContent = 'Borrador';
+  } else {
+    badgeEl.className = 'estado-badge listo';
+    textoEl.textContent = 'Listo para presentar';
+  }
+
+  // ── TITLE + META ──
+  document.getElementById('result-title').textContent =
+    `Modelo 721 — ${exchangeLabel(exchange)} — ${ejercicio}`;
+  const exchanges = resultado.exchanges || [];
+  const totalActivos = exchanges.reduce((s, ex) => s + (ex.activos || []).length, 0);
+  document.getElementById('result-meta').textContent =
+    `${totalActivos} activo${totalActivos !== 1 ? 's' : ''} a 31/12/${ejercicio}` +
+    (resultado.potencialmente_obligado === false ? ' · No obligado (entidad española)' : '');
+
+  // ── UMBRAL ──
+  const umbralNotice = document.getElementById('umbral-notice');
+  umbralNotice.style.display = pendiente.por_debajo_umbral ? '' : 'none';
+
+  // ── TABLA ACTIVOS ──
+  const tbody = document.getElementById('activos-tbody');
+  const tfoot = document.getElementById('activos-tfoot');
+  tbody.innerHTML = '';
+  tfoot.innerHTML = '';
+  let totalEur = 0;
+  let hayPreciosPendientes = false;
+
+  exchanges.forEach(ex => {
+    const activos = ex.activos || [];
+    activos.forEach(a => {
+      const valorEur = a.valor_eur !== null && a.valor_eur !== undefined
+        ? parseFloat(a.valor_eur) : null;
+      if (valorEur !== null) totalEur += valorEur; else hayPreciosPendientes = true;
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>
+          <div class="ticker-cell">
+            <div class="ticker-icon">${escHtml(a.siglas ? a.siglas.slice(0,3) : a.activo.slice(0,3))}</div>
+            <div>
+              <div class="ticker-main">${escHtml(a.siglas || a.activo)}</div>
+              <div class="ticker-name">${escHtml(a.denominacion || a.activo)}</div>
+            </div>
+          </div>
+        </td>
+        <td style="color:var(--muted)">${escHtml(ex.exchange || ex.exchange_key || '')}</td>
+        <td>${escHtml(fmtCantidad(a.cantidad))}</td>
+        <td>${valorEur !== null
+          ? `<span class="val-green">${fmtEur(valorEur)}</span>`
+          : `<span class="val-muted">Pendiente</span>`
+        }</td>`;
+      tbody.appendChild(tr);
+    });
+  });
+
+  // Total row
+  const trTotal = document.createElement('tr');
+  trTotal.className = 'total-row';
+  trTotal.innerHTML = `
+    <td colspan="3" style="font-size:.875rem;color:var(--muted);">Total estimado</td>
+    <td>${hayPreciosPendientes
+      ? `<span class="val-muted" title="Algunos precios pendientes">${fmtEur(totalEur)} +</span>`
+      : `<span class="val-green">${fmtEur(totalEur)}</span>`
+    }</td>`;
+  tfoot.appendChild(trTotal);
+
+  // ── PENDIENTE ITEMS ──
+  const container = document.getElementById('pendiente-items');
+  container.innerHTML = '';
+
+  // Bloqueantes
+  (pendiente.xml_bloqueantes || []).forEach(msg => {
+    container.appendChild(mkPendienteItem('bloqueante',
+      iconX(), 'No se puede generar el XML', humanizeMensaje(msg)));
+  });
+
+  // Precios históricos faltantes
+  if ((pendiente.precios_historicos || []).length > 0) {
+    const tickers = pendiente.precios_historicos.join(', ');
+    container.appendChild(mkPendienteItem(
+      pendiente.xml_generable ? 'advertencia' : 'bloqueante',
+      iconClock(),
+      'Precios de mercado pendientes',
+      `No se dispone del precio de mercado a 31/12/${ejercicio} para: ${tickers}. ` +
+      `El valor en euros no puede calcularse automáticamente — deberás obtenerlo de una ` +
+      `fuente oficial (p. ej. CoinGecko, Binance) e introducirlo manualmente en el XML.`
+    ));
+  }
+
+  // Tax ID custodio
+  if ((pendiente.tax_id_custodio || []).length > 0) {
+    const exchNames = pendiente.tax_id_custodio.map(exchangeLabel).join(', ');
+    container.appendChild(mkPendienteItem('advertencia',
+      iconInfo(),
+      'Identificador fiscal del custodio no confirmado',
+      `El NIF o número fiscal de ${exchNames} no está verificado en nuestra base de datos. ` +
+      `El XML se genera con un marcador provisional (IDType 06, ID "PENDIENTE") en el campo ` +
+      `IDPersonaEntidadSalvaguarda. El archivo es un borrador — no lo presentes sin verificar ` +
+      `primero el identificador fiscal del exchange en su web oficial o en el registro mercantil ` +
+      `del país de residencia.`
+    ));
+  }
+
+  // Advertencias del XML
+  (pendiente.xml_advertencias || []).forEach(msg => {
+    container.appendChild(mkPendienteItem('advertencia',
+      iconInfo(), 'Advertencia', humanizeMensaje(msg)));
+  });
+
+  // Todo OK
+  if (pendiente.completo) {
+    container.appendChild(mkPendienteItem('info',
+      iconCheck(),
+      'XML listo',
+      'Todos los datos están completos. El XML generado puede presentarse en la sede electrónica de la AEAT. Revísalo antes de firmar.'));
+  }
+
+  if (container.children.length === 0) {
+    container.innerHTML = '<p style="font-size:.875rem;color:var(--muted);">Sin advertencias.</p>';
+  }
+
+  // ── PENDIENTE CARD: mostrar si aplica ──
+  document.getElementById('card-pendiente').style.display = '';
+
+  // ── BOTÓN DESCARGA XML ──
+  const btnXml = document.getElementById('btn-xml');
+  if (data.xml) {
+    const blob = new Blob([data.xml], { type: 'application/xml' });
+    const url  = URL.createObjectURL(blob);
+    const fname = `modelo721_${ejercicio}_${exchange}.xml`;
+    btnXml.style.display = '';
+    // Estado visual del botón según estado
+    if (pendiente.xml_es_borrador) {
+      btnXml.style.background = 'var(--amber)';
+      btnXml.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Descargar XML (borrador)`;
+    } else {
+      btnXml.style.background = 'var(--accent)';
+      btnXml.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Descargar XML`;
+    }
+    btnXml.onclick = () => {
+      const a = document.createElement('a');
+      a.href     = url;
+      a.download = fname;
+      a.click();
+    };
+  } else {
+    btnXml.style.display = 'none';
+  }
+}
+
+// ── NUEVO ANÁLISIS ─────────────────────────────────────────────────────────
+document.getElementById('btn-nuevo').addEventListener('click', () => {
+  // Reset form
+  selectedFile = null;
+  fileInput.value = '';
+  dropZone.classList.remove('has-file');
+  dropFilename.style.display = 'none';
+  dropZone.querySelector('.drop-label').innerHTML =
+    '<strong>Elige un archivo</strong> o arrástralo aquí';
+  document.getElementById('inp-nif').value    = '';
+  document.getElementById('inp-nombre').value = '';
+  updateFormState();
+
+  panelResult.style.display  = 'none';
+  panelLoading.style.display = 'none';
+  panelForm.style.display    = '';
+});
+
+// ── HELPERS ────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function fmtEur(n) {
+  if (n === null || n === undefined) return '—';
+  return new Intl.NumberFormat('es-ES', {
+    style: 'currency', currency: 'EUR',
+    minimumFractionDigits: 2, maximumFractionDigits: 2
+  }).format(n);
+}
+
+function fmtCantidad(s) {
+  const n = parseFloat(s);
+  if (isNaN(n)) return s || '—';
+  // Usar hasta 8 decimales, sin ceros trailing
+  return new Intl.NumberFormat('es-ES', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 8,
+  }).format(n);
+}
+
+const EXCHANGE_LABELS = {
+  binance: 'Binance', bitvavo: 'Bitvavo', bit2me: 'Bit2Me',
+  coinbase: 'Coinbase', cryptocom: 'Crypto.com',
+  kraken: 'Kraken', nexo: 'Nexo', uphold: 'Uphold',
+};
+function exchangeLabel(key) {
+  return EXCHANGE_LABELS[key] || key;
+}
+
+function humanizeMensaje(msg) {
+  // Pasar mensajes técnicos a lenguaje más natural cuando sea posible
+  const reemplazos = [
+    [/xml[_\s]generable/gi, 'puede generar el XML'],
+    [/umbral/gi, 'umbral de 50.000 €'],
+    [/IDPersonaEntidadSalvaguarda/g, 'identificador del custodio'],
+    [/IDRegistroDetalle/g, 'número de registro'],
+    [/TipoComunicacion/g, 'tipo de comunicación'],
+  ];
+  let r = msg;
+  reemplazos.forEach(([from, to]) => { r = r.replace(from, to); });
+  return r;
+}
+
+function mkPendienteItem(tipo, iconSvg, titulo, texto) {
+  const div = document.createElement('div');
+  div.className = `pendiente-item ${tipo}`;
+  div.innerHTML = `
+    <div class="pendiente-icon">${iconSvg}</div>
+    <div class="pendiente-text">
+      <strong>${escHtml(titulo)}</strong>
+      ${escHtml(texto)}
+    </div>`;
+  return div;
+}
+
+function iconX() {
+  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+}
+function iconClock() {
+  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+}
+function iconInfo() {
+  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+}
+function iconCheck() {
+  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`;
+}
+</script>
+</body>
+</html>
