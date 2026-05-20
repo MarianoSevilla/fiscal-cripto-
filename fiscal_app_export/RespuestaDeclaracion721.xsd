@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- editado con XMLSpy v2019 sp1 (x64) (http://www.altova.com) por AEAT (Agencia Estatal de Administracion Tributaria ((AEAT))) -->
+<!-- edited with XMLSpy v2009 sp1 (http://www.altova.com) by PC Corporativo (AGENCIA TRIBUTARIA) -->
+<schema xmlns="http://www.w3.org/2001/XMLSchema" xmlns:ddiiR="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/ddii/enol/ws/RespuestaDeclaracion.xsd" xmlns:ddii="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/ddii/enol/ws/DeclaracionInformativa.xsd" targetNamespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/ddii/enol/ws/RespuestaDeclaracion.xsd" elementFormDefault="qualified">
+	<import namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/ddii/enol/ws/DeclaracionInformativa.xsd" schemaLocation="DeclaracionInformativa721.xsd"/>
+	<element name="RespuestaDeclaracion" type="ddiiR:RespuestaDeclaracionType"/>
+	<element name="RespuestaBaja" type="ddiiR:RespuestaBajaType"/>
+	<complexType name="RespuestaComunBajaType">
+		<sequence>
+			<element name="CSV" type="string" minOccurs="0">
+				<annotation>
+					<documentation xml:lang="es"> CSV asociado al envío generado por AEAT. Solo se genera si no hay rechazo del envio</documentation>
+				</annotation>
+			</element>
+			<element name="DatosPresentacion" type="ddii:DatosPresentacionType" minOccurs="0">
+				<annotation>
+					<documentation xml:lang="es"> Se devuelven datos de la presentacion realizada. Solo se genera si no hay rechazo del envio </documentation>
+				</annotation>
+			</element>
+			<element name="Cabecera" type="ddii:Cabecera2DI">
+				<annotation>
+					<documentation xml:lang="es"> Se devuelve la cabecera que se incluyó en el envío. </documentation>
+				</annotation>
+			</element>
+			<element name="EstadoEnvio" type="ddiiR:EstadoEnvioType">
+				<annotation>
+					<documentation xml:lang="es"> 
+						Estado del envío en conjunto. 											
+					</documentation>
+				</annotation>
+			</element>
+		</sequence>
+	</complexType>
+	<complexType name="RespuestaComunAltaType">
+		<sequence>
+			<element name="CSV" type="string" minOccurs="0">
+				<annotation>
+					<documentation xml:lang="es"> CSV asociado al envío generado por AEAT. Solo se genera si no hay rechazo del envio</documentation>
+				</annotation>
+			</element>
+			<element name="DatosPresentacion" type="ddii:DatosPresentacionType" minOccurs="0">
+				<annotation>
+					<documentation xml:lang="es"> Se devuelven datos de la presentacion realizada. Solo se genera si no hay rechazo del envio </documentation>
+				</annotation>
+			</element>
+			<element name="Cabecera" type="ddii:CabeceraDI">
+				<annotation>
+					<documentation xml:lang="es"> Se devuelve la cabecera que se incluó en el envío. </documentation>
+				</annotation>
+			</element>
+			<element name="EstadoEnvio" type="ddiiR:EstadoEnvioType">
+				<annotation>
+					<documentation xml:lang="es"> 
+						Estado del envío en conjunto. 
+						Si los datos de cabecera y todos los registros son correctos,el estado es aceptado. 
+						En caso de estructura y cabecera correctos donde todos los registros son rechazados, el estado es rechazado
+						En caso de estructura y cabecera correctos con al menos un registro rechazado, el estado global es parcialmente aceptado.						
+					</documentation>
+				</annotation>
+			</element>
+		</sequence>
+	</complexType>
+	<complexType name="RespuestaDeclaracionType">
+		<annotation>
+			<documentation xml:lang="es"> Respuesta a un envío Ddii </documentation>
+		</annotation>
+		<complexContent>
+			<extension base="ddiiR:RespuestaComunAltaType">
+				<sequence>
+					<element name="RespuestaLinea" type="ddiiR:RespuestaOperacionesType" minOccurs="0" maxOccurs="10000">
+						<annotation>
+							<documentation xml:lang="es"> 
+							Estado detallado de cada línea del suministro.
+						</documentation>
+						</annotation>
+					</element>
+				</sequence>
+			</extension>
+		</complexContent>
+	</complexType>
+	<complexType name="RespuestaBajaType">
+		<annotation>
+			<documentation xml:lang="es"> Respuesta a un envío Ddii </documentation>
+		</annotation>
+		<complexContent>
+			<extension base="ddiiR:RespuestaComunBajaType">
+				<sequence>
+					<element name="RespuestaLinea" type="ddiiR:RespuestaOperacionesBajaType" minOccurs="0" maxOccurs="10000">
+						<annotation>
+							<documentation xml:lang="es"> 
+							Estado detallado de cada línea del suministro.
+						</documentation>
+						</annotation>
+					</element>
+				</sequence>
+			</extension>
+		</complexContent>
+	</complexType>
+	<complexType name="RespuestaOperacionesType">
+		<annotation>
+			<documentation xml:lang="es"> Respuesta a un envío Ddii </documentation>
+		</annotation>
+		<sequence>
+			<element name="IDRegistroDetalle" type="ddii:TextMax20Type"/>
+			<element name="EstadoRegistro" type="ddiiR:EstadoRegistroType">
+				<annotation>
+					<documentation xml:lang="es"> 
+						Estado del registro. Correcto, erróneo
+					</documentation>
+				</annotation>
+			</element>
+			<element name="CodigoErrorRegistro" type="ddiiR:ErrorDetalleType" minOccurs="0">
+				<annotation>
+					<documentation xml:lang="es"> 
+						Código del error de registro, en su caso.
+					</documentation>
+				</annotation>
+			</element>
+			<element name="DescripcionErrorRegistro" type="ddii:TextMax500Type" minOccurs="0">
+				<annotation>
+					<documentation xml:lang="es"> 
+						Descripción detallada del error de registro, en su caso.
+					</documentation>
+				</annotation>
+			</element>
+			<element name="CSV" type="string" minOccurs="0">
+				<annotation>
+					<documentation xml:lang="es"> 
+						CSV asociado a la operacion registrada previamente en el sistema. Solo se suministra si la operacion es rechazada por estar duplicada
+					</documentation>
+				</annotation>
+			</element>
+		</sequence>
+	</complexType>
+	<complexType name="RespuestaOperacionesBajaType">
+		<annotation>
+			<documentation xml:lang="es"> Respuesta a un envío Ddii </documentation>
+		</annotation>
+		<sequence>
+			<element name="IDRegistroDetalle" type="ddii:TextMax20Type"/>
+			<element name="EstadoRegistro" type="ddiiR:EstadoRegistroType">
+				<annotation>
+					<documentation xml:lang="es"> 
+						Estado del registro. Correcto, erróneo
+					</documentation>
+				</annotation>
+			</element>
+			<element name="CodigoErrorRegistro" type="ddiiR:ErrorDetalleType" minOccurs="0">
+				<annotation>
+					<documentation xml:lang="es"> 
+						Código del error de registro, en su caso.
+					</documentation>
+				</annotation>
+			</element>
+			<element name="DescripcionErrorRegistro" type="ddii:TextMax500Type" minOccurs="0">
+				<annotation>
+					<documentation xml:lang="es"> 
+						Descripción detallada del error de registro, en su caso.
+					</documentation>
+				</annotation>
+			</element>
+		</sequence>
+	</complexType>
+	<simpleType name="EstadoEnvioType">
+		<restriction base="string">
+			<enumeration value="Aceptacion Completa">
+				<annotation>
+					<documentation xml:lang="es">Aceptacion Completa</documentation>
+				</annotation>
+			</enumeration>
+			<enumeration value="Aceptacion Parcial">
+				<annotation>
+					<documentation xml:lang="es">Aceptacion Parcial</documentation>
+				</annotation>
+			</enumeration>
+			<enumeration value="Rechazo Completo">
+				<annotation>
+					<documentation xml:lang="es">Rechazo Completo</documentation>
+				</annotation>
+			</enumeration>
+		</restriction>
+	</simpleType>
+	<simpleType name="EstadoRegistroType">
+		<restriction base="string">
+			<enumeration value="Aceptado">
+				<annotation>
+					<documentation xml:lang="es">Aceptado</documentation>
+				</annotation>
+			</enumeration>
+			<enumeration value="Rechazado">
+				<annotation>
+					<documentation xml:lang="es">Rechazado</documentation>
+				</annotation>
+			</enumeration>
+			<enumeration value="Aceptado con Errores">
+				<annotation>
+					<documentation xml:lang="es">Aceptado con Errores</documentation>
+				</annotation>
+			</enumeration>
+		</restriction>
+	</simpleType>
+	<simpleType name="ErrorEnvioType">
+		<restriction base="string">
+			<enumeration value="ERR01">
+				<annotation>
+					<documentation xml:lang="es">Error de validación contra esquema</documentation>
+				</annotation>
+			</enumeration>
+			<enumeration value="ERR03">
+				<annotation>
+					<documentation xml:lang="es">Declarante desconocido</documentation>
+				</annotation>
+			</enumeration>
+			<enumeration value="ERR04">
+				<annotation>
+					<documentation xml:lang="es">El declarante debe identificarse mediante un NIF español.</documentation>
+				</annotation>
+			</enumeration>
+			<enumeration value="ERR05">
+				<annotation>
+					<documentation xml:lang="es">El NIF del representante es incorrecto.</documentation>
+				</annotation>
+			</enumeration>
+		</restriction>
+	</simpleType>
+	<simpleType name="ErrorDetalleType">
+		<restriction base="integer"/>
+	</simpleType>
+</schema>

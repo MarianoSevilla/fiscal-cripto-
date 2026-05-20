@@ -58,6 +58,10 @@ from clasificador_uphold import ClasificadorUphold, UPHOLD_SIGNATURES
 from motor_fifo import MotorFIFO
 from generador_pdf import generar_pdf, generar_pdf_bit2me
 from modelo721 import generar_datos_modelo_721
+from precios_historicos import obtener_precios_historicos, enriquecer_721_con_precios
+from generador_xml_721 import (
+    validar_para_xml, generar_xml_721, ErrXMLBloqueado, ValidacionXML,
+)
 
 app = Flask(__name__, static_folder="static")
 
@@ -919,37 +923,49 @@ def _motor_desde_csv_721(exchange: str, tmp_path: str) -> MotorFIFO:
     return motor
 
 
-def _calcular_pendiente_721(datos: dict) -> dict:
+def _calcular_pendiente_721(datos: dict, validacion: "ValidacionXML") -> dict:
     """
-    Analiza el resultado de generar_datos_modelo_721() y devuelve un bloque
-    'pendiente' estructurado con lo que falta para completar el XML AEAT.
+    Construye el bloque 'pendiente' del endpoint /api/721.
 
-    Fase 3B resolverá: precios históricos (CoinGecko), tax IDs del custodio
-    en EXCHANGES_CATALOG, y el generador XML AEAT.
+    Combina:
+      · precios_historicos: tickers sin precio EUR a 31/12 (CoinGecko/BCE)
+      · tax_id_custodio: exchanges extranjeros sin identificador fiscal confirmado
+      · Estado XML: xml_generable, es_borrador, bloqueantes y advertencias
+        derivados de ValidacionXML (generador_xml_721.validar_para_xml)
     """
     activos_sin_precio:   list = []
     exchanges_sin_tax_id: list = []
 
     for exc in datos.get("exchanges", []):
-        # Custodio extranjero sin NIF/IDOtro → IDPersonaEntidadSalvaguarda vacío
-        if exc.get("nif_custodio") is None and exc.get("extranjero") is not False:
+        if exc.get("extranjero") is False:
+            continue   # Entidades españolas fuera del ámbito del 721
+        if exc.get("nif_custodio") is None:
             exchanges_sin_tax_id.append(
                 exc.get("exchange_key") or exc.get("exchange", "")
             )
-        # Activos sin valoración EUR a 31/12 → ValorMonedas vacío
         for activo in exc.get("activos", []):
             if activo.get("valor_eur") is None:
                 activos_sin_precio.append(activo["activo"])
 
+    completo = (
+        not activos_sin_precio
+        and not exchanges_sin_tax_id
+        and validacion.xml_generable
+        and not validacion.es_borrador
+    )
+
     return {
-        # Tickers sin precio histórico a 31/12 (Fase 3B: CoinGecko/BCE)
+        # ── Datos pendientes para el XML ──────────────────────────────────
         "precios_historicos": sorted(set(activos_sin_precio)),
-        # Exchanges sin identificador fiscal del custodio (Fase 3B: catálogo)
         "tax_id_custodio":    exchanges_sin_tax_id,
-        # Generador XML AEAT no implementado aún (Fase 3B)
-        "xml_aeat":           True,
-        # True solo cuando precios, tax IDs y XML estén resueltos
-        "completo":           False,
+        # ── Estado del XML AEAT ───────────────────────────────────────────
+        "xml_generable":      validacion.xml_generable,
+        "xml_es_borrador":    validacion.es_borrador,
+        "xml_bloqueantes":    validacion.bloqueantes,
+        "xml_advertencias":   validacion.advertencias,
+        "por_debajo_umbral":  validacion.por_debajo_umbral,
+        # ── ¿Está todo resuelto? ──────────────────────────────────────────
+        "completo":           completo,
     }
 
 
@@ -1687,13 +1703,20 @@ def api_modelo_721():
         if "csv" not in request.files:
             return jsonify({"error": "No se recibió ningún fichero CSV."}), 400
 
-        archivo       = request.files["csv"]
-        exchange      = _sanitizar_texto(
+        archivo           = request.files["csv"]
+        exchange          = _sanitizar_texto(
             request.form.get("exchange", ""), max_len=20
         ).lower()
-        ejercicio_raw = _sanitizar_texto(
+        ejercicio_raw     = _sanitizar_texto(
             request.form.get("ejercicio", ""), max_len=6
         )
+        # Opcionales para generar el XML AEAT (Fase 3B.3)
+        nif_declarante    = _sanitizar_texto(
+            request.form.get("nif_declarante", ""), max_len=15
+        ).strip().upper()
+        nombre_declarante = _sanitizar_texto(
+            request.form.get("nombre_declarante", ""), max_len=120
+        ).strip()
 
         # ── 2. Validar exchange ────────────────────────────────────────────────
         if not exchange:
@@ -1732,7 +1755,13 @@ def api_modelo_721():
                 "pendiente": {
                     "precios_historicos": [],
                     "tax_id_custodio":    [],
-                    "xml_aeat":           False,
+                    "xml_generable":      False,
+                    "xml_es_borrador":    False,
+                    "xml_bloqueantes":    [
+                        "Bit2Me es una entidad española — no aplica Modelo 721."
+                    ],
+                    "xml_advertencias":   [],
+                    "por_debajo_umbral":  False,
                     "completo":           True,
                 },
             }), 200
@@ -1791,10 +1820,38 @@ def api_modelo_721():
             # ── 6. Generar datos 721 (snapshot a 31/12/ejercicio) ─────────────
             datos = generar_datos_modelo_721(motor, exchange, ejercicio)
 
-            # ── 7. Bloque pendiente (qué falta para Fase 3B) ──────────────────
-            pendiente = _calcular_pendiente_721(datos)
+            # ── 6B. Enriquecer con precios históricos (CoinGecko / BCE) ───────
+            tickers = [
+                a["activo"]
+                for exc in datos.get("exchanges", [])
+                for a in exc.get("activos", [])
+            ]
+            if tickers:
+                precios = obtener_precios_historicos(tickers, ejercicio)
+                datos   = enriquecer_721_con_precios(datos, precios)
 
-            return jsonify({
+            # ── 7. Validación XML + bloque pendiente ──────────────────────────
+            validacion = validar_para_xml(datos, nif_declarante or None)
+            pendiente  = _calcular_pendiente_721(datos, validacion)
+
+            # ── 8. Generar XML si procede ──────────────────────────────────────
+            # Condiciones: NIF y nombre proporcionados, y el XML es generable.
+            xml_content = None
+            if nif_declarante and nombre_declarante and validacion.xml_generable:
+                try:
+                    xml_content, _ = generar_xml_721(
+                        datos,
+                        nif_declarante,
+                        nombre_declarante,
+                    )
+                except ErrXMLBloqueado:
+                    pass   # No debería ocurrir (validar_para_xml ya lo indicó)
+                except Exception as xml_exc:
+                    import traceback as _tb
+                    _tb.print_exc()
+                    # No fallar el endpoint por error de XML; el JSON es suficiente
+
+            respuesta: dict = {
                 "ok":          True,
                 "modelo":      "721",
                 "ejercicio":   ejercicio,
@@ -1802,7 +1859,11 @@ def api_modelo_721():
                 "generado_en": datetime.utcnow().isoformat(),
                 "resultado":   datos,
                 "pendiente":   pendiente,
-            }), 200
+            }
+            if xml_content is not None:
+                respuesta["xml"] = xml_content
+
+            return jsonify(respuesta), 200
 
         except Exception as e:
             traceback.print_exc()

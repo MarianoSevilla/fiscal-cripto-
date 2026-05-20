@@ -20,6 +20,8 @@ from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, List, Optional, Tuple
 
+from custodios_721 import buscar_custodio, to_dict_xsd, TIPO_ID_NIF_ESP
+
 
 # ── CATÁLOGO DE EXCHANGES ─────────────────────────────────────────────────────
 #
@@ -392,6 +394,15 @@ def generar_datos_modelo_721(
     # Solo False si confirmamos que el exchange es español.
     potencialmente_obligado = exc_info.get("extranjero") is not False
 
+    # ── Datos fiscales del custodio (Fase 3B.2) ──────────────────────────────
+    custodio      = buscar_custodio(exc_key)
+    custodio_xsd  = to_dict_xsd(custodio)
+
+    # Advertencias del custodio → añadir a advertencias_globales
+    for adv in custodio.advertencias:
+        if adv not in advertencias_globales:
+            advertencias_globales.append(adv)
+
     # ── Serializar a dict JSON-safe ──────────────────────────────────────────
     activos_json = [
         {
@@ -426,15 +437,27 @@ def generar_datos_modelo_721(
         "total_valor_eur":         None,
         "exchanges": [
             {
+                # Datos de display / routing
                 "exchange":          exc_info["nombre"],
                 "exchange_key":      exc_key,
                 "pais_custodio":     exc_info.get("pais_custodio"),
-                "codigo_pais_iso":   exc_info.get("codigo_pais_iso"),
-                "extranjero":        exc_info.get("extranjero"),
-                "nif_custodio":      None,
+                "codigo_pais_iso":   custodio.codigo_pais_iso,
+                "extranjero":        custodio.extranjero,
                 "web_custodio":      exc_info.get("web"),
+                # Datos fiscales del custodio [XSD: IDPersonaEntidadSalvaguarda]
+                "nombre_legal":      custodio_xsd["nombre_legal"],
+                "nif_custodio":      custodio.id_fiscal,
+                "tipo_id_fiscal":    custodio.tipo_id,
+                "id_type_xsd":       custodio.id_type_xsd,
+                "nif_esp":           custodio_xsd["nif_esp"],
+                "id_otro":           custodio_xsd["id_otro"],
+                "direccion":         custodio_xsd["direccion"],
+                "confianza_id":      custodio.confianza,
+                "fuente_id":         custodio.fuente,
+                # Control de calidad
                 "requiere_revision": (
-                    exc_info.get("requiere_revision_pais", True)
+                    custodio.requiere_verificacion
+                    or exc_info.get("requiere_revision_pais", True)
                     or any(e.requiere_revision for e in entries)
                 ),
                 "activos":           activos_json,

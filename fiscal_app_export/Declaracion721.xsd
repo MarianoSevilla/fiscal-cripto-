@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- editado con XMLSpy v2019 sp1 (x64) (http://www.altova.com) por AEAT (Agencia Estatal de Administracion Tributaria ((AEAT))) -->
+<!-- edited with XMLSpy v2009 sp1 (http://www.altova.com) by PC Corporativo (AGENCIA TRIBUTARIA) -->
+<schema xmlns="http://www.w3.org/2001/XMLSchema" xmlns:ddiiD="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/ddii/enol/ws/Declaracion.xsd" xmlns:ddii="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/ddii/enol/ws/DeclaracionInformativa.xsd" targetNamespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/ddii/enol/ws/Declaracion.xsd" elementFormDefault="qualified">
+	<import namespace="https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/ddii/enol/ws/DeclaracionInformativa.xsd" schemaLocation="DeclaracionInformativa721.xsd"/>
+	<!-- edited with XMLSpy v2009 sp1 (http://www.altova.com) by PC Corporativo (AGENCIA TRIBUTARIA) -->
+	<complexType name="DeclaracionType">
+		<complexContent>
+			<extension base="ddii:DeclaracionInformativa"/>
+		</complexContent>
+	</complexType>
+	<element name="Declaracion" type="ddiiD:DeclaracionType">
+		<annotation>
+			<documentation>Servicio de declaracion</documentation>
+		</annotation>
+	</element>
+	<complexType name="BajaType">
+		<complexContent>
+			<extension base="ddii:BajaDI"/>
+		</complexContent>
+	</complexType>
+	<element name="Baja" type="ddiiD:BajaType">
+		<annotation>
+			<documentation>Servicio de Baja</documentation>
+		</annotation>
+	</element>
+</schema>

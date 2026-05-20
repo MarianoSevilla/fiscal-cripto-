@@ -112,18 +112,20 @@ def test_bitvavo_extranjero_nl():
 
 
 def test_kraken_extranjero_us():
-    """Kraken → codigo_pais_iso='US'."""
+    """Kraken → entidad EU (Payward Europe Ltd., IE) → extranjero=True."""
     m = _motor_con_compra("SOL", 50.0, 8_000.0)
     r = generar_datos_modelo_721(m, "kraken", 2025)
-    assert r["exchanges"][0]["codigo_pais_iso"] == "US"
+    # custodios_721 refleja Payward Europe Ltd. (IE) para usuarios UE
+    assert r["exchanges"][0]["codigo_pais_iso"] == "IE"
     assert r["potencialmente_obligado"] is True
 
 
 def test_coinbase_extranjero_us():
-    """Coinbase → codigo_pais_iso='US'."""
+    """Coinbase → entidad EU (Coinbase Europe Limited, IE) → extranjero=True."""
     m = _motor_con_compra("BTC", 0.1, 5_000.0)
     r = generar_datos_modelo_721(m, "coinbase", 2025)
-    assert r["exchanges"][0]["codigo_pais_iso"] == "US"
+    # custodios_721 refleja Coinbase Europe Limited (IE) para usuarios UE
+    assert r["exchanges"][0]["codigo_pais_iso"] == "IE"
 
 
 # ── Test 4: Exchange español → NO extranjero ─────────────────────────────────
