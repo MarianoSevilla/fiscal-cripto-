@@ -1042,6 +1042,13 @@ def _rendimientos_a_json(rendimientos: list) -> list:
 
 # ── RUTAS ─────────────────────────────────────
 
+@app.route("/healthz")
+@limiter.exempt
+def healthz():
+    """Healthcheck mínimo: sin DB, sin sesión, sin Redis. Diagnóstico de arranque."""
+    return {"ok": True, "service": "fiscal-cripto"}, 200
+
+
 @app.route("/")
 def landing():
     return send_from_directory("static", "landing.html")
