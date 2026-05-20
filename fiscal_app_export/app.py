@@ -136,9 +136,10 @@ app.config["REMEMBER_COOKIE_SECURE"]   = _prod
 app.config["REMEMBER_COOKIE_HTTPONLY"] = True
 app.config["REMEMBER_COOKIE_SAMESITE"] = "Lax"
 
-# Duración máxima de la cookie de sesión permanente (red de seguridad por encima del check de 7d).
-# session.permanent = True se establece al hacer login.
-app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=8)
+# Sesión NO persistente: session.permanent no se activa en ningún login.
+# La cookie de sesión es ephemeral (sin Max-Age) → el navegador la destruye al cerrar.
+# La cookie de remember-me (checkbox "Recordarme") sí persiste, con este límite:
+app.config["REMEMBER_COOKIE_DURATION"] = timedelta(days=30)
 
 
 # ── EXTENSIONES ───────────────────────────────
@@ -202,30 +203,6 @@ def unauthorized():
     if request.path.startswith("/api/"):
         return jsonify({"error": "Autenticación requerida"}), 401
     return redirect(f"/login/?next={request.path}")
-
-
-# ── POLÍTICA DE EXPIRACIÓN DE SESIÓN ──────────────────────────────────────────
-_SESSION_MAX_SECS         = 7 * 86_400   # 7 días absolutos desde el login
-_SESSION_INACTIVITY_ADMIN = 4 * 3_600    # 4 h para administradores
-_SESSION_INACTIVITY_USER  = 12 * 3_600   # 12 h para usuarios normales
-
-
-def _expire_session() -> None:
-    """Cierra la sesión activa y limpia todos los datos almacenados en la cookie.
-
-    session.clear() debe ir ANTES de logout_user() para que Flask-Login pueda
-    escribir el flag _remember:clear en la sesión ya vacía. Si se invierte el orden,
-    session.clear() borra ese flag y la remember cookie no se elimina del navegador.
-    """
-    session.clear()
-    logout_user()
-
-
-def _session_expired_response():
-    """401 JSON para rutas /api/*; redirect a /login/ para el resto."""
-    if request.path.startswith("/api/"):
-        return jsonify({"error": "Sesión expirada.", "expired": True}), 401
-    return redirect("/login/?expired=1")
 
 
 # ── GOOGLE OAUTH ──────────────────────────────
@@ -604,41 +581,6 @@ def redirect_www_to_apex():
     if qs:
         target = f"{target}?{qs}"
     return redirect(target, 301)
-
-
-@app.before_request
-def enforce_session_expiry():
-    """Expiración de sesión por inactividad y por máximo absoluto.
-
-    Normal: 12 h de inactividad · 7 días máximo desde el login.
-    Admin:   4 h de inactividad · 7 días máximo desde el login.
-    """
-    if not current_user.is_authenticated:
-        return
-
-    now      = time.time()
-    login_at = session.get("login_at")
-    last_act = session.get("last_activity")
-
-    # Sesiones creadas antes del deploy (sin timestamps): inicializar y dejar pasar.
-    if login_at is None:
-        session["login_at"]      = now
-        session["last_activity"] = now
-        return
-
-    # Expiración absoluta: 7 días desde el login inicial.
-    if now - login_at > _SESSION_MAX_SECS:
-        _expire_session()
-        return _session_expired_response()
-
-    # Expiración por inactividad.
-    limit = _SESSION_INACTIVITY_ADMIN if _is_admin() else _SESSION_INACTIVITY_USER
-    if last_act is not None and now - last_act >= limit:
-        _expire_session()
-        return _session_expired_response()
-
-    # Sesión válida: actualizar marca de actividad.
-    session["last_activity"] = now
 
 
 # ── SECURITY HEADERS ──────────────────────────
@@ -1306,9 +1248,6 @@ def auth_google_callback():
     user.last_login = datetime.utcnow()
     db.session.commit()
     login_user(user, remember=False)
-    session.permanent       = True
-    session["login_at"]      = time.time()
-    session["last_activity"] = time.time()
     return redirect("/dashboard")
 
 
@@ -1732,9 +1671,6 @@ def login():
     db.session.commit()
 
     login_user(user, remember=remember)
-    session.permanent       = True
-    session["login_at"]      = time.time()
-    session["last_activity"] = time.time()
 
     if not user.email_verified_at:
         _send_verification_email(user)
