@@ -57,6 +57,7 @@ from clasificador_cryptocom import ClasificadorCryptoCom
 from clasificador_uphold import ClasificadorUphold, UPHOLD_SIGNATURES
 from motor_fifo import MotorFIFO
 from generador_pdf import generar_pdf, generar_pdf_bit2me
+from modelo721 import generar_datos_modelo_721
 
 app = Flask(__name__, static_folder="static")
 
@@ -642,6 +643,16 @@ MAX_CSV_ROWS        = 100_000            # filas máximas permitidas por CSV (�
 AÑO_MIN = 2009
 AÑO_MAX = datetime.now().year + 1
 
+# ── MODELO 721: exchanges ──────────────────────────────────────────────────────
+# Primer ejercicio obligatorio del Modelo 721 (Ley 10/2021, DA decimocuarta LIRPF).
+_721_PRIMER_EJERCICIO = 2022
+# Exchanges con MotorFIFO → pueden generar snapshot 31/12 via posicion_a_fecha().
+_721_EXCHANGES_CON_MOTOR = frozenset({
+    "binance", "bitvavo", "kraken", "coinbase", "nexo", "cryptocom", "uphold"
+})
+# Exchanges españoles: no sujetos al 721 (entidad custodio en España).
+_721_EXCHANGES_ES = frozenset({"bit2me"})
+
 BINANCE_SIGNATURES   = ["Tiempo", "Operación", "Moneda", "Cambio", "Cuenta"]
 BIT2ME_SIGNATURES    = ["Bit", "2Me", "Informe Fiscal", "Estimado"]
 BITVAVO_SIGNATURES   = ["Timezone", "Date", "Time", "Type", "Currency", "Amount"]
@@ -875,6 +886,71 @@ def procesar_cryptocom(filepath: str) -> tuple:
 
 def procesar_uphold(filepath: str) -> tuple:
     return procesar_con_fifo(ClasificadorUphold(filepath).clasificar())
+
+
+def _motor_desde_csv_721(exchange: str, tmp_path: str) -> MotorFIFO:
+    """
+    Construye el MotorFIFO completo desde un CSV para uso exclusivo de /api/721.
+
+    Diferencia crítica respecto a /api/analizar: NO llama a
+    _filtrar_motor_por_ejercicio(). El inventario completo desde el primer lote
+    histórico es necesario para que posicion_a_fecha() reconstruya el snapshot
+    correcto a 31/12 del ejercicio declarado. Filtrar aquí rompería el FIFO.
+    """
+    if exchange == "binance":
+        if _detectar_formato_binance(tmp_path) == "tx":
+            motor, _, _ = procesar_binance_tx(tmp_path)
+        else:
+            motor, _, _ = procesar_binance(tmp_path)
+    elif exchange == "bitvavo":
+        motor, _, _ = procesar_bitvavo(tmp_path)
+    elif exchange == "kraken":
+        motor, _, _ = procesar_kraken(tmp_path)
+    elif exchange == "coinbase":
+        motor, _, _ = procesar_coinbase(tmp_path)
+    elif exchange == "nexo":
+        motor, _, _ = procesar_nexo(tmp_path)
+    elif exchange == "cryptocom":
+        motor, _, _ = procesar_cryptocom(tmp_path)
+    elif exchange == "uphold":
+        motor, _, _ = procesar_uphold(tmp_path)
+    else:
+        raise ValueError(f"Exchange '{exchange}' no soportado para Modelo 721.")
+    return motor
+
+
+def _calcular_pendiente_721(datos: dict) -> dict:
+    """
+    Analiza el resultado de generar_datos_modelo_721() y devuelve un bloque
+    'pendiente' estructurado con lo que falta para completar el XML AEAT.
+
+    Fase 3B resolverá: precios históricos (CoinGecko), tax IDs del custodio
+    en EXCHANGES_CATALOG, y el generador XML AEAT.
+    """
+    activos_sin_precio:   list = []
+    exchanges_sin_tax_id: list = []
+
+    for exc in datos.get("exchanges", []):
+        # Custodio extranjero sin NIF/IDOtro → IDPersonaEntidadSalvaguarda vacío
+        if exc.get("nif_custodio") is None and exc.get("extranjero") is not False:
+            exchanges_sin_tax_id.append(
+                exc.get("exchange_key") or exc.get("exchange", "")
+            )
+        # Activos sin valoración EUR a 31/12 → ValorMonedas vacío
+        for activo in exc.get("activos", []):
+            if activo.get("valor_eur") is None:
+                activos_sin_precio.append(activo["activo"])
+
+    return {
+        # Tickers sin precio histórico a 31/12 (Fase 3B: CoinGecko/BCE)
+        "precios_historicos": sorted(set(activos_sin_precio)),
+        # Exchanges sin identificador fiscal del custodio (Fase 3B: catálogo)
+        "tax_id_custodio":    exchanges_sin_tax_id,
+        # Generador XML AEAT no implementado aún (Fase 3B)
+        "xml_aeat":           True,
+        # True solo cuando precios, tax IDs y XML estén resueltos
+        "completo":           False,
+    }
 
 
 def procesar_bit2me(filepath: str) -> tuple:
@@ -1556,6 +1632,183 @@ def analizar():
     finally:
         # Siempre liberar el bloqueo y limpiar el fichero temporal,
         # independientemente de cómo terminó la petición (éxito, error, early return).
+        with _analisis_lock:
+            _analisis_en_curso.discard(uid)
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
+
+
+@app.route("/api/721", methods=["POST"])
+@login_required
+@limiter.limit("3 per 10 minutes", exempt_when=_is_admin)
+@limiter.limit("6 per hour",       exempt_when=_is_admin)
+@limiter.limit("15 per day",       exempt_when=_is_admin)
+def api_modelo_721():
+    """
+    Genera los datos estructurados del Modelo 721 (declaración informativa
+    de monedas virtuales en el extranjero) a partir de un CSV de exchange.
+
+    Fase 3A: devuelve JSON con la posición exacta a 31/12 del ejercicio
+    y un bloque 'pendiente' con lo que falta para el XML AEAT (Fase 3B).
+
+    Diferencias clave respecto a /api/analizar:
+      · Ejercicio: entero único ≥ 2022 (no acepta 'all' ni multi-año).
+      · No llama a _filtrar_motor_por_ejercicio (lógica IRPF).
+        La fecha de corte la gestiona motor.posicion_a_fecha(31/12/ejercicio).
+      · No genera PDF ni calcula ganancias/pérdidas patrimoniales.
+      · Exchanges españoles (bit2me) devuelven respuesta informativa sin error.
+
+    Body: multipart/form-data
+      csv:      CSV del exchange (mismo fichero que /api/analizar)
+      exchange: binance | bitvavo | kraken | coinbase | nexo | cryptocom | uphold
+      ejercicio: año fiscal único ≥ 2022  (ej. "2024")
+
+    TODO Fase 3B: aceptar report_id de FifoReport cuando se implemente
+    serialización del motor, para evitar re-procesar el CSV.
+    """
+    uid      = current_user.id
+    tmp_path = None
+
+    # Bloqueo concurrente: comparte el mismo set que /api/analizar.
+    # Un usuario no puede tener dos análisis de CSV simultáneos.
+    with _analisis_lock:
+        if uid in _analisis_en_curso:
+            return jsonify({
+                "error": "Ya tienes un análisis en proceso. "
+                         "Espera a que termine antes de lanzar otro."
+            }), 409
+        _analisis_en_curso.add(uid)
+
+    try:
+        # ── 1. Inputs ──────────────────────────────────────────────────────────
+        if "csv" not in request.files:
+            return jsonify({"error": "No se recibió ningún fichero CSV."}), 400
+
+        archivo       = request.files["csv"]
+        exchange      = _sanitizar_texto(
+            request.form.get("exchange", ""), max_len=20
+        ).lower()
+        ejercicio_raw = _sanitizar_texto(
+            request.form.get("ejercicio", ""), max_len=6
+        )
+
+        # ── 2. Validar exchange ────────────────────────────────────────────────
+        if not exchange:
+            return jsonify({"error": "Falta el parámetro 'exchange'."}), 400
+
+        _721_todos = _721_EXCHANGES_CON_MOTOR | _721_EXCHANGES_ES
+        if exchange not in _721_todos:
+            return jsonify({
+                "error": (
+                    f"Exchange '{exchange}' no reconocido. "
+                    f"Exchanges soportados: {', '.join(sorted(_721_todos))}."
+                )
+            }), 400
+
+        # Bit2Me y otras entidades españolas: no sujetas al 721 — respuesta
+        # informativa, no un error. El usuario debe saberlo explícitamente.
+        if exchange in _721_EXCHANGES_ES:
+            return jsonify({
+                "ok":        True,
+                "modelo":    "721",
+                "ejercicio": None,
+                "exchange":  exchange,
+                "resultado": {
+                    "modelo":                  "721",
+                    "potencialmente_obligado": False,
+                    "informe_orientativo":     True,
+                    "exchanges":               [],
+                    "advertencias": [
+                        "Bit2Me (Bitnovo Solutions S.L.) es una entidad española (ES). "
+                        "Los activos custodiados en Bit2Me no están sujetos al Modelo 721, "
+                        "que solo aplica a monedas virtuales custodiadas fuera de España. "
+                        "Si usas Bit2Me Pro u otra entidad EU distinta, consulta con tu "
+                        "asesor fiscal antes de declarar."
+                    ],
+                },
+                "pendiente": {
+                    "precios_historicos": [],
+                    "tax_id_custodio":    [],
+                    "xml_aeat":           False,
+                    "completo":           True,
+                },
+            }), 200
+
+        # ── 3. Validar ejercicio: único, ≥ 2022, ≤ AÑO_MAX ───────────────────
+        if not ejercicio_raw or not ejercicio_raw.strip().isdigit():
+            return jsonify({
+                "error": (
+                    "El ejercicio debe ser un año en formato numérico (ej. 2024). "
+                    "El Modelo 721 no acepta 'all' ni rangos multi-año: "
+                    "cada ejercicio se declara por separado."
+                )
+            }), 400
+
+        ejercicio = int(ejercicio_raw.strip())
+        if ejercicio < _721_PRIMER_EJERCICIO:
+            return jsonify({
+                "error": (
+                    f"El Modelo 721 aplica desde el ejercicio {_721_PRIMER_EJERCICIO} "
+                    f"(Ley 10/2021). No se puede generar para {ejercicio}."
+                )
+            }), 400
+        if ejercicio > AÑO_MAX:
+            return jsonify({
+                "error": f"El ejercicio no puede ser posterior a {AÑO_MAX}."
+            }), 400
+
+        # ── 4. Validar fichero CSV ─────────────────────────────────────────────
+        filename = archivo.filename or ""
+        if not filename.lower().endswith(".csv"):
+            return jsonify({"error": "El fichero debe tener extensión .csv."}), 400
+
+        with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as tmp:
+            archivo.save(tmp.name)
+            tmp_path = tmp.name
+
+        csv_rows = _contar_csv_rows(tmp_path)
+        if csv_rows > MAX_CSV_ROWS:
+            return jsonify({
+                "error": (
+                    f"El CSV tiene demasiadas filas ({csv_rows:,}). "
+                    f"El máximo permitido es {MAX_CSV_ROWS:,} filas."
+                )
+            }), 400
+
+        try:
+            valido, error_msg = _validar_csv(tmp_path, exchange)
+            if not valido:
+                return jsonify({"error": error_msg}), 400
+
+            # ── 5. Construir motor sin filtrar por ejercicio ───────────────────
+            # posicion_a_fecha(31/12/ejercicio) dentro de generar_datos_modelo_721
+            # aplica la fecha de corte correctamente. Filtrar aquí rompería el FIFO.
+            motor = _motor_desde_csv_721(exchange, tmp_path)
+
+            # ── 6. Generar datos 721 (snapshot a 31/12/ejercicio) ─────────────
+            datos = generar_datos_modelo_721(motor, exchange, ejercicio)
+
+            # ── 7. Bloque pendiente (qué falta para Fase 3B) ──────────────────
+            pendiente = _calcular_pendiente_721(datos)
+
+            return jsonify({
+                "ok":          True,
+                "modelo":      "721",
+                "ejercicio":   ejercicio,
+                "exchange":    exchange,
+                "generado_en": datetime.utcnow().isoformat(),
+                "resultado":   datos,
+                "pendiente":   pendiente,
+            }), 200
+
+        except Exception as e:
+            traceback.print_exc()
+            return jsonify({"error": _error_amigable(e)}), 500
+
+    finally:
         with _analisis_lock:
             _analisis_en_curso.discard(uid)
         if tmp_path:
