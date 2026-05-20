@@ -12,6 +12,7 @@ Casos cubiertos:
   8. Múltiples activos → todos aparecen en la entrada.
   9. Resultado siempre JSON-serializable (sin Decimal ni datetime).
  10. informe_orientativo siempre True.
+ 11-22. Snapshot 31/12: posicion_a_fecha() correcta para el Modelo 721.
 """
 
 import json
@@ -295,3 +296,319 @@ def test_activo_desconocido_usa_ticker_y_advierte():
     assert activo["denominacion"] == "ZZZNEWCOIN"
     assert any("denominación" in adv.lower() or "no reconocida" in adv.lower()
                for adv in activo["advertencias"])
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Tests 13-24: Snapshot 31/12 (posicion_a_fecha)
+#
+# Criterio de aceptación: un CSV con operaciones de 2024 y 2025 debe generar
+# para ejercicio 2024 exactamente el saldo a 31/12/2024, no el saldo actual.
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ── Helpers específicos de snapshot ──────────────────────────────────────────
+
+def _motor_compra_venta(activo, fecha_c, qty_c, importe_c, fecha_v=None, qty_v=None, importe_v=None):
+    """Motor con una compra y opcionalmente una venta del mismo activo."""
+    m = MotorFIFO()
+    m.registrar_compra(
+        fecha=fecha_c, activo=activo, cantidad=qty_c,
+        importe=importe_c, contraparte="EUR", fee_activo="", fee_cantidad=0.0,
+    )
+    if fecha_v is not None:
+        m.registrar_venta(
+            fecha=fecha_v, activo=activo, cantidad=qty_v,
+            importe=importe_v, contraparte="EUR", fee_activo="", fee_cantidad=0.0,
+        )
+    return m
+
+
+# ── Test 13: Compra en 2024, venta en 2025 → aparece íntegro en snapshot 2024 ─
+
+def test_snapshot_compra_2024_venta_2025_aparece_integro():
+    """Compra 1 BTC en 2024, venta en 2025 → snapshot 2024 muestra 1.0 BTC."""
+    m = _motor_compra_venta(
+        "BTC",
+        fecha_c="2024-03-15 00:00:00", qty_c=1.0, importe_c=50_000.0,
+        fecha_v="2025-02-10 00:00:00", qty_v=1.0, importe_v=60_000.0,
+    )
+    r = generar_datos_modelo_721(m, "kraken", 2024)
+
+    activos = r["exchanges"][0]["activos"]
+    assert len(activos) == 1
+    btc = activos[0]
+    assert btc["activo"] == "BTC"
+    assert float(btc["cantidad"]) == pytest.approx(1.0, abs=1e-6)
+
+
+# ── Test 14: Compra en 2025 → no aparece en snapshot 2024 ────────────────────
+
+def test_snapshot_compra_2025_ausente_en_ejercicio_2024():
+    """Compra ETH en enero 2025 → no declarable en ejercicio 2024."""
+    m = MotorFIFO()
+    m.registrar_compra(
+        fecha="2025-01-15 00:00:00", activo="ETH", cantidad=3.0,
+        importe=9_000.0, contraparte="EUR", fee_activo="", fee_cantidad=0.0,
+    )
+    r = generar_datos_modelo_721(m, "kraken", 2024)
+
+    assert r["exchanges"] == []
+    assert r["potencialmente_obligado"] is False
+
+
+# ── Test 15: Venta en 2024 reduce posición en snapshot 2024 ──────────────────
+
+def test_snapshot_venta_2024_reduce_posicion():
+    """Compra 1 BTC 2024-01, vende 0.3 en 2024-06 → snapshot 2024 = 0.7 BTC."""
+    m = _motor_compra_venta(
+        "BTC",
+        fecha_c="2024-01-01 00:00:00", qty_c=1.0, importe_c=40_000.0,
+        fecha_v="2024-06-15 00:00:00", qty_v=0.3, importe_v=15_000.0,
+    )
+    r = generar_datos_modelo_721(m, "kraken", 2024)
+
+    btc = r["exchanges"][0]["activos"][0]
+    assert float(btc["cantidad"]) == pytest.approx(0.7, abs=1e-6)
+
+
+# ── Test 16: Venta en 2025 NO reduce posición en snapshot 2024 ───────────────
+
+def test_snapshot_venta_2025_no_reduce_posicion_2024():
+    """Compra 1 BTC 2024-01, venta 0.5 en 2025-03 → snapshot 2024 = 1.0 BTC."""
+    m = _motor_compra_venta(
+        "BTC",
+        fecha_c="2024-01-01 00:00:00", qty_c=1.0, importe_c=40_000.0,
+        fecha_v="2025-03-01 00:00:00", qty_v=0.5, importe_v=30_000.0,
+    )
+    r = generar_datos_modelo_721(m, "kraken", 2024)
+
+    btc = r["exchanges"][0]["activos"][0]
+    assert float(btc["cantidad"]) == pytest.approx(1.0, abs=1e-6)
+
+
+# ── Test 17: Múltiples lotes del mismo activo, ventas mixtas ─────────────────
+
+def test_snapshot_multiples_lotes_ventas_mixtas():
+    """
+    2 lotes de ETH en 2024, una venta parcial en 2024, otra en 2025.
+    snapshot 2024 = lote1 + lote2 - venta_2024.
+    """
+    m = MotorFIFO()
+    m.registrar_compra(
+        fecha="2024-01-01 00:00:00", activo="ETH", cantidad=1.0,
+        importe=2_000.0, contraparte="EUR", fee_activo="", fee_cantidad=0.0,
+    )
+    m.registrar_compra(
+        fecha="2024-06-01 00:00:00", activo="ETH", cantidad=2.0,
+        importe=5_000.0, contraparte="EUR", fee_activo="", fee_cantidad=0.0,
+    )
+    m.registrar_venta(
+        fecha="2024-09-01 00:00:00", activo="ETH", cantidad=0.5,
+        importe=1_500.0, contraparte="EUR", fee_activo="", fee_cantidad=0.0,
+    )
+    m.registrar_venta(
+        fecha="2025-01-15 00:00:00", activo="ETH", cantidad=1.0,
+        importe=3_500.0, contraparte="EUR", fee_activo="", fee_cantidad=0.0,
+    )
+
+    r = generar_datos_modelo_721(m, "kraken", 2024)
+
+    eth = r["exchanges"][0]["activos"][0]
+    # 1.0 + 2.0 − 0.5 (sell 2024) = 2.5; la venta de 2025 no cuenta
+    assert float(eth["cantidad"]) == pytest.approx(2.5, abs=1e-6)
+
+
+# ── Test 18: Posición cero a 31/12 → no declarable ───────────────────────────
+
+def test_snapshot_posicion_cero_31_diciembre():
+    """Compra + venta total en 2024 → posición 0 a 31/12/2024, sin activo declarable."""
+    m = _motor_compra_venta(
+        "SOL",
+        fecha_c="2024-01-10 00:00:00", qty_c=100.0, importe_c=15_000.0,
+        fecha_v="2024-11-30 00:00:00", qty_v=100.0, importe_v=18_000.0,
+    )
+    r = generar_datos_modelo_721(m, "kraken", 2024)
+
+    assert r["exchanges"] == []
+    assert r["potencialmente_obligado"] is False
+
+
+# ── Test 19: Stablecoin — snapshot correcto ───────────────────────────────────
+
+def test_snapshot_stablecoin_cantidad_correcta():
+    """5.000 USDC comprados en 2024, 1.000 vendidos en 2025 → snapshot 2024 = 5.000."""
+    m = MotorFIFO()
+    m.registrar_compra(
+        fecha="2024-05-01 00:00:00", activo="USDC", cantidad=5_000.0,
+        importe=4_700.0, contraparte="EUR", fee_activo="", fee_cantidad=0.0,
+    )
+    m.registrar_venta(
+        fecha="2025-02-01 00:00:00", activo="USDC", cantidad=1_000.0,
+        importe=940.0, contraparte="EUR", fee_activo="", fee_cantidad=0.0,
+    )
+
+    r = generar_datos_modelo_721(m, "binance", 2024)
+
+    usdc = r["exchanges"][0]["activos"][0]
+    assert usdc["activo"] == "USDC"
+    assert float(usdc["cantidad"]) == pytest.approx(5_000.0, abs=1e-3)
+
+
+# ── Test 20: Swap en 2024, venta del activo recibido en 2025 ─────────────────
+
+def test_snapshot_swap_2024_venta_2025():
+    """
+    Compra BTC 2024-01, swap BTC→ETH en 2024-06.
+    Venta de parte del ETH en 2025.
+    Snapshot 2024: BTC=0, ETH=2 (íntegro, venta es de 2025).
+    """
+    m = MotorFIFO()
+    m.registrar_compra(
+        fecha="2024-01-01 00:00:00", activo="BTC", cantidad=0.1,
+        importe=4_000.0, contraparte="EUR", fee_activo="", fee_cantidad=0.0,
+    )
+    m.registrar_swap(
+        fecha="2024-06-01 00:00:00",
+        activo_entregado="BTC", cantidad_entregada=0.1,
+        activo_recibido="ETH",  cantidad_recibida=2.0,
+    )
+    m.registrar_venta(
+        fecha="2025-01-10 00:00:00", activo="ETH", cantidad=1.0,
+        importe=3_000.0, contraparte="EUR", fee_activo="", fee_cantidad=0.0,
+    )
+
+    r = generar_datos_modelo_721(m, "kraken", 2024)
+    activos_dict = {a["activo"]: a for a in r["exchanges"][0]["activos"]}
+
+    # BTC fue swapeado dentro de 2024: ya no existe en el inventario a 31/12/2024
+    assert "BTC" not in activos_dict
+    # ETH recibido en 2024: 2.0 unidades; la venta es de 2025
+    assert "ETH" in activos_dict
+    assert float(activos_dict["ETH"]["cantidad"]) == pytest.approx(2.0, abs=1e-6)
+
+
+# ── Test 21: Operaciones en 2023, 2024 y 2025 — snapshot exacto a 31/12/2024 ─
+
+def test_snapshot_operaciones_mixtas_tres_ejercicios():
+    """
+    Lote histórico 2023, compras y ventas en 2024, operaciones en 2025.
+    Snapshot 2024 = 0.5 (2023) + 0.3 (2024) − 0.2 (venta 2024) = 0.6 BTC.
+    El lote de 2025 y la venta de 2025 no afectan.
+    """
+    m = MotorFIFO()
+    m.registrar_compra(
+        fecha="2023-05-01 00:00:00", activo="BTC", cantidad=0.5,
+        importe=15_000.0, contraparte="EUR", fee_activo="", fee_cantidad=0.0,
+    )
+    m.registrar_compra(
+        fecha="2024-03-01 00:00:00", activo="BTC", cantidad=0.3,
+        importe=12_000.0, contraparte="EUR", fee_activo="", fee_cantidad=0.0,
+    )
+    m.registrar_venta(
+        fecha="2024-09-01 00:00:00", activo="BTC", cantidad=0.2,
+        importe=12_000.0, contraparte="EUR", fee_activo="", fee_cantidad=0.0,
+    )
+    m.registrar_compra(
+        fecha="2025-01-15 00:00:00", activo="BTC", cantidad=0.5,
+        importe=25_000.0, contraparte="EUR", fee_activo="", fee_cantidad=0.0,
+    )
+    m.registrar_venta(
+        fecha="2025-06-01 00:00:00", activo="BTC", cantidad=0.4,
+        importe=24_000.0, contraparte="EUR", fee_activo="", fee_cantidad=0.0,
+    )
+
+    r = generar_datos_modelo_721(m, "kraken", 2024)
+
+    btc = r["exchanges"][0]["activos"][0]
+    assert float(btc["cantidad"]) == pytest.approx(0.6, abs=1e-6)
+
+
+# ── Test 22: Mismo motor → ejercicios distintos dan snapshots distintos ───────
+
+def test_snapshot_mismo_motor_ejercicios_diferentes():
+    """
+    Motor con compra en 2023 y venta parcial en 2024.
+    Ejercicio 2023 → 1.0 BTC.
+    Ejercicio 2024 → 0.5 BTC.
+    """
+    m = MotorFIFO()
+    m.registrar_compra(
+        fecha="2023-01-01 00:00:00", activo="BTC", cantidad=1.0,
+        importe=30_000.0, contraparte="EUR", fee_activo="", fee_cantidad=0.0,
+    )
+    m.registrar_venta(
+        fecha="2024-06-01 00:00:00", activo="BTC", cantidad=0.5,
+        importe=25_000.0, contraparte="EUR", fee_activo="", fee_cantidad=0.0,
+    )
+
+    r_2023 = generar_datos_modelo_721(m, "kraken", 2023)
+    r_2024 = generar_datos_modelo_721(m, "kraken", 2024)
+
+    btc_2023 = r_2023["exchanges"][0]["activos"][0]
+    btc_2024 = r_2024["exchanges"][0]["activos"][0]
+
+    assert float(btc_2023["cantidad"]) == pytest.approx(1.0, abs=1e-6)
+    assert float(btc_2024["cantidad"]) == pytest.approx(0.5, abs=1e-6)
+
+
+# ── Test 23: coste_base_fifo correcto en snapshot ─────────────────────────────
+
+def test_snapshot_coste_base_fifo_correcto():
+    """
+    2 lotes de ETH, venta parcial en 2025 (no afecta snapshot 2024).
+    coste_base_fifo a 31/12/2024 = 1.0*2000 + 2.0*2500 = 7000 EUR.
+    """
+    m = MotorFIFO()
+    m.registrar_compra(
+        fecha="2024-01-01 00:00:00", activo="ETH", cantidad=1.0,
+        importe=2_000.0, contraparte="EUR", fee_activo="", fee_cantidad=0.0,
+    )
+    m.registrar_compra(
+        fecha="2024-06-01 00:00:00", activo="ETH", cantidad=2.0,
+        importe=5_000.0, contraparte="EUR", fee_activo="", fee_cantidad=0.0,
+    )
+    m.registrar_venta(
+        fecha="2025-03-01 00:00:00", activo="ETH", cantidad=1.5,
+        importe=5_000.0, contraparte="EUR", fee_activo="", fee_cantidad=0.0,
+    )
+
+    r = generar_datos_modelo_721(m, "bitvavo", 2024)
+
+    eth = r["exchanges"][0]["activos"][0]
+    assert float(eth["cantidad"]) == pytest.approx(3.0, abs=1e-6)
+    assert float(eth["coste_base_fifo"]) == pytest.approx(7_000.0, abs=0.01)
+
+
+# ── Test 24: posicion_a_fecha no muta el motor ────────────────────────────────
+
+def test_snapshot_no_muta_motor():
+    """
+    Llamar a generar_datos_modelo_721 (que usa posicion_a_fecha) no debe
+    alterar el inventario ni los resultados del motor original.
+    """
+    m = MotorFIFO()
+    m.registrar_compra(
+        fecha="2024-01-01 00:00:00", activo="BTC", cantidad=1.0,
+        importe=40_000.0, contraparte="EUR", fee_activo="", fee_cantidad=0.0,
+    )
+    m.registrar_venta(
+        fecha="2024-06-01 00:00:00", activo="BTC", cantidad=0.5,
+        importe=30_000.0, contraparte="EUR", fee_activo="", fee_cantidad=0.0,
+    )
+    m.registrar_venta(
+        fecha="2025-02-01 00:00:00", activo="BTC", cantidad=0.3,
+        importe=20_000.0, contraparte="EUR", fee_activo="", fee_cantidad=0.0,
+    )
+
+    # Capturar estado antes
+    qty_restante_antes   = m.inventario["BTC"][0].cantidad_restante
+    n_resultados_antes   = len(m.resultados)
+    n_advertencias_antes = len(m.advertencias)
+
+    # Llamar al generador 721 (internamente usa posicion_a_fecha)
+    _ = generar_datos_modelo_721(m, "binance", 2024)
+    _ = generar_datos_modelo_721(m, "binance", 2023)
+
+    # El motor no debe haber cambiado
+    assert m.inventario["BTC"][0].cantidad_restante == qty_restante_antes
+    assert len(m.resultados)   == n_resultados_antes
+    assert len(m.advertencias) == n_advertencias_antes

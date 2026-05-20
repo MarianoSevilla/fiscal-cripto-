@@ -315,6 +315,96 @@ class MotorFIFO:
             ))
         return resultado
 
+    def posicion_a_fecha(self, fecha_corte: datetime) -> list[ResumenActivo]:
+        """
+        Reconstruye la posición de cada activo exactamente a fecha_corte
+        mediante un snapshot replay no destructivo del inventario.
+
+        A diferencia de posicion_actual(), que refleja el estado actual
+        (tras TODAS las operaciones), este método devuelve la posición a
+        fecha_corte exacta:
+          · Solo incluye lotes de compra/swap creados en fecha ≤ fecha_corte.
+          · Solo aplica ventas/swaps ocurridos en fecha ≤ fecha_corte.
+          · No muta ni el inventario ni los resultados del motor original.
+
+        Uso principal: snapshot a 31/12 del ejercicio para el Modelo 721.
+
+        Algoritmo:
+          1. Snapshot — copia virtual del inventario: solo lotes ≤ fecha_corte,
+             cada uno empezando en su cantidad_original (ignorando las mutaciones
+             posteriores sobre cantidad_restante causadas por ventas futuras).
+          2. Replay — aplica en orden cronológico todas las ventas/swaps
+             ≤ fecha_corte sobre el snapshot (mismo orden FIFO que el motor real).
+          3. Output — construye ResumenActivo con nuevos objetos Lote que reflejan
+             la cantidad_restante correcta a fecha_corte.
+        """
+        # ── 1. Snapshot: lotes con fecha ≤ fecha_corte, cantidad = original ──
+        snapshot: Dict[str, list] = {}
+        for activo, lotes in self.inventario.items():
+            for lote in lotes:
+                if lote.fecha > fecha_corte:
+                    continue
+                if activo not in snapshot:
+                    snapshot[activo] = []
+                snapshot[activo].append({
+                    "lote":              lote,
+                    "cantidad_restante": lote.cantidad_original,
+                })
+
+        # ── 2. Replay de ventas/swaps ≤ fecha_corte en orden cronológico ─────
+        # sorted() es estable: si dos resultados tienen la misma fecha exacta,
+        # se preserva el orden de inserción original (cronológico por el CSV).
+        for resultado in sorted(
+            (r for r in self.resultados if r.fecha <= fecha_corte),
+            key=lambda r: r.fecha,
+        ):
+            activo = resultado.activo
+            if activo not in snapshot:
+                continue
+            pendiente = resultado.cantidad_vendida
+            for entry in snapshot[activo]:
+                if pendiente <= 1e-9:
+                    break
+                consumir = min(entry["cantidad_restante"], pendiente)
+                entry["cantidad_restante"] -= consumir
+                pendiente -= consumir
+
+        # ── 3. Construir ResumenActivo con nuevos Lote a fecha_corte ─────────
+        # Umbral 1e-9: más preciso que posicion_actual (0.0001) para no perder
+        # posiciones pequeñas pero reales (dust a efectos fiscales).
+        _UMBRAL = 1e-9
+        resultado_final = []
+        for activo, entries in snapshot.items():
+            vivos = [e for e in entries if e["cantidad_restante"] > _UMBRAL]
+            if not vivos:
+                continue
+            cantidad = sum(e["cantidad_restante"] for e in vivos)
+            coste    = sum(
+                e["cantidad_restante"] * e["lote"].precio_coste_unitario
+                for e in vivos
+            )
+            # Nuevos objetos Lote con la cantidad_restante correcta a fecha_corte.
+            # El motor original no se toca: lote.cantidad_restante permanece intacto.
+            lotes_corte = [
+                Lote(
+                    fecha=e["lote"].fecha,
+                    cantidad_original=e["lote"].cantidad_original,
+                    cantidad_restante=e["cantidad_restante"],
+                    precio_coste_unitario=e["lote"].precio_coste_unitario,
+                    contraparte=e["lote"].contraparte,
+                    origen=e["lote"].origen,
+                )
+                for e in vivos
+            ]
+            resultado_final.append(ResumenActivo(
+                activo=activo,
+                cantidad_total=cantidad,
+                coste_total=coste,
+                precio_medio=coste / cantidad if cantidad > 0 else 0,
+                lotes=lotes_corte,
+            ))
+        return resultado_final
+
     # ── RESUMEN FISCAL ────────────────────────
 
     def resumen_fiscal(self) -> dict:

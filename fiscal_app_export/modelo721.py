@@ -3,6 +3,7 @@ Modelo 721 — Declaración informativa de monedas virtuales en el extranjero.
 Genera la estructura de datos interna (JSON) para el Modelo 721.
 
 FASE 2 — Lógica interna. Sin PDF, sin XML AEAT.
+FASE 3A — Snapshot 31/12 correcto via posicion_a_fecha().
 
 Referencia normativa:
   - Modelo 721 (procedimiento GI55), ejercicios desde 2022
@@ -15,6 +16,7 @@ Uso:
 """
 
 from dataclasses import dataclass, field
+from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, List, Optional, Tuple
 
@@ -285,8 +287,9 @@ def generar_datos_modelo_721(
         Dict JSON-serializable con estructura del Modelo 721.
         Todos los Decimal se serializan como strings.
     """
-    fecha_ref  = f"31-12-{ejercicio}"
-    posiciones = motor.posicion_actual()
+    fecha_ref   = f"31-12-{ejercicio}"
+    fecha_corte = datetime(ejercicio, 12, 31, 23, 59, 59)
+    posiciones  = motor.posicion_a_fecha(fecha_corte)
 
     exc_info = _get_exchange_info(exchange)
     exc_key  = _normalizar_exchange_key(exchange)
