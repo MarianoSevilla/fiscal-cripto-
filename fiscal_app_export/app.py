@@ -18,6 +18,7 @@ import os
 import re
 import sys
 import time
+import json
 import tempfile
 import traceback
 import threading
@@ -1868,6 +1869,50 @@ def api_modelo_721():
             }
             if xml_content is not None:
                 respuesta["xml"] = xml_content
+
+            # ── Métricas de uso (sin PII) ───────────────────────────────────
+            try:
+                _n_activos = sum(
+                    len(ex.get("activos", []))
+                    for ex in datos.get("exchanges", [])
+                )
+                _total_eur = None
+                try:
+                    from decimal import Decimal as _D
+                    _vals = [
+                        _D(str(a.get("valor_eur") or 0))
+                        for ex in datos.get("exchanges", [])
+                        for a in ex.get("activos", [])
+                        if a.get("valor_eur") is not None
+                    ]
+                    if _vals:
+                        _total_eur = float(sum(_vals))
+                except Exception:
+                    pass
+
+                _estado = (
+                    "bloqueado" if not pendiente.get("xml_generable")
+                    else ("borrador" if pendiente.get("xml_es_borrador") else "listo")
+                )
+                _metrica = {
+                    "event":              "721_generado",
+                    "exchange":           exchange,
+                    "ejercicio":          ejercicio,
+                    "estado":             _estado,
+                    "n_activos":          _n_activos,
+                    "xml_generable":      pendiente.get("xml_generable"),
+                    "xml_es_borrador":    pendiente.get("xml_es_borrador"),
+                    "por_debajo_umbral":  pendiente.get("por_debajo_umbral"),
+                    "tickers_sin_precio": sorted(pendiente.get("precios_historicos") or []),
+                    "n_custodios_sin_id": len(pendiente.get("tax_id_custodio") or []),
+                    "n_bloqueantes":      len(pendiente.get("xml_bloqueantes") or []),
+                    "n_advertencias":     len(pendiente.get("xml_advertencias") or []),
+                    "xml_generado":       xml_content is not None,
+                    "total_eur_aprox":    round(_total_eur, 2) if _total_eur is not None else None,
+                }
+                app.logger.info("M721 %s", json.dumps(_metrica, ensure_ascii=False))
+            except Exception:
+                pass  # El logging nunca debe romper la respuesta
 
             return jsonify(respuesta), 200
 
