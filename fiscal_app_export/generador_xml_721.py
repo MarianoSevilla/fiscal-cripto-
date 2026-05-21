@@ -9,13 +9,46 @@ Conforme a los esquemas XSD oficiales publicados por la AEAT:
 
 Descarga: https://sede.agenciatributaria.gob.es → Procedimiento GI55 → Esquemas721.zip
 
+──────────────────────────────────────────────────────────────────────────────
+PRINCIPIO DE VALIDACIÓN DEL MODELO 721
+──────────────────────────────────────────────────────────────────────────────
+
+El sistema separa explícitamente tres capas independientes de validación:
+
+  1. TÉCNICA
+     El XML está bien formado y valida contra el XSD oficial de la AEAT.
+     Verificable con validar_xml_contra_xsd().
+
+  2. ESTRUCTURAL
+     Todos los campos requeridos existen y contienen datos válidos según el
+     esquema del modelo. Los placeholders, datos incompletos o identificadores
+     no verificados impiden considerar el XML como definitivo.
+     Ejemplo: IDOtro con ID="PENDIENTE"/IDType="06" es XSD-válido pero
+     estructuralmente incompleto.
+
+  3. FISCAL
+     La información tiene suficiente fiabilidad material para ser presentada
+     ante Hacienda. Esto incluye coherencia FIFO, precios históricos razonables,
+     custodios identificados y ausencia de advertencias críticas.
+
+El sistema NUNCA colapsa estas tres capas en una única validación.
+
+Un XML puede ser técnicamente válido (capa 1) y estructuralmente correcto
+(capa 2), y seguir marcado como BORRADOR si la validación fiscal (capa 3)
+no está resuelta.
+
+REGLA DE ORO: "el XML pasa XSD" no equivale a "listo para presentar".
+
+──────────────────────────────────────────────────────────────────────────────
+
 IMPORTANTE:
   Antes de presentar a la AEAT, el declarante o su asesor debe:
     1. Validar el fichero contra los XSD oficiales con validar_xml_contra_xsd().
     2. Verificar los datos del custodio (IDPersonaEntidadSalvaguarda).
     3. Firmar el fichero si el canal de presentación lo requiere.
 
-Estados del XML:
+Estados del XML (resultado de aplicar las tres capas):
+
   BLOQUEADO — xml_generable=False. No se puede generar:
     · Activos sin precio a 31/12 (ValorMonedas vacío → XSD inválido).
     · NIF del declarante no proporcionado o con formato inválido.
