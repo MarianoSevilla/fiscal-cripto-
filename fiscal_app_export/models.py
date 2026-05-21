@@ -78,6 +78,35 @@ class FifoReport(db.Model):
         return f"<FifoReport user={self.user_id} exchange={self.exchange} year={self.fiscal_year}>"
 
 
+class ProcessingError(db.Model):
+    """Registro enriquecido de errores de procesamiento de CSV."""
+
+    __tablename__ = "processing_errors"
+
+    id                 = db.Column(db.Integer,    primary_key=True)
+    created_at         = db.Column(db.DateTime,   default=datetime.utcnow, nullable=False, index=True)
+    user_id            = db.Column(db.Integer,    db.ForeignKey("users.id"), nullable=True)
+    email              = db.Column(db.String(254), nullable=True)
+    exchange           = db.Column(db.String(50),  nullable=True, index=True)
+    parser             = db.Column(db.String(100), nullable=True)
+    stage              = db.Column(db.String(50),  nullable=True)
+    error_type         = db.Column(db.String(100), nullable=True)
+    message_short      = db.Column(db.String(500), nullable=True)
+    traceback_short    = db.Column(db.Text,        nullable=True)
+    fingerprint        = db.Column(db.String(64),  nullable=True, index=True)
+    csv_filename       = db.Column(db.String(255), nullable=True)
+    csv_size           = db.Column(db.Integer,     nullable=True)
+    auto_email_sent    = db.Column(db.Boolean,     default=False, nullable=False)
+    auto_email_sent_at = db.Column(db.DateTime,    nullable=True)
+    email_send_error   = db.Column(db.String(500), nullable=True)
+    user_replied       = db.Column(db.Boolean,     default=False, nullable=False)
+    resolved           = db.Column(db.Boolean,     default=False, nullable=False, index=True)
+    resolved_at        = db.Column(db.DateTime,    nullable=True)
+
+    def __repr__(self) -> str:
+        return f"<ProcessingError id={self.id} exchange={self.exchange} type={self.error_type}>"
+
+
 class Contacto(db.Model):
     """Mensaje recibido a través del formulario de contacto."""
 

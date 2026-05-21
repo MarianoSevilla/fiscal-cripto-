@@ -662,7 +662,17 @@ tbody tr:hover { background: var(--surface2); }
       <p class="section-title">Errores de procesamiento</p>
       <div class="table-box" id="errorDetailWrap">
         <table>
-          <thead><tr><th>Fecha</th><th>Exchange</th><th>Usuario</th></tr></thead>
+          <thead><tr>
+            <th>Fecha</th>
+            <th>Exchange</th>
+            <th>Usuario</th>
+            <th>Tipo error</th>
+            <th>Etapa</th>
+            <th>Resumen</th>
+            <th>FP</th>
+            <th>Email</th>
+            <th>Resuelto</th>
+          </tr></thead>
           <tbody id="tbErrorDetail"></tbody>
         </table>
         <div id="errPagination" style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-top:1px solid var(--border);gap:8px;">
@@ -1263,8 +1273,8 @@ async function loadStats() {
     document.getElementById('cCResp').textContent   = c.respondidos;
     fillTable('tbTipoContacto', c.por_tipo, 'tipo', 'total');
 
-    // ── ERRORES DETALLE ──────────────────────────────────────────────────────
-    const detalle   = err.detalle || [];
+    // ── ERRORES DETALLE (tabla enriquecida desde processing_errors) ────────────
+    const detalle   = err.processing_errors || [];
     const PAGE_SIZE = 15;
     let errPage     = 0;
     const tbErr     = document.getElementById('tbErrorDetail');
@@ -1273,9 +1283,15 @@ async function loadStats() {
     const pageInfo  = document.getElementById('errPageInfo');
     const pagination = document.getElementById('errPagination');
 
+    function badge(ok, yesLabel, noLabel) {
+      return ok
+        ? `<span style="background:#16a34a22;color:#4ade80;padding:1px 6px;border-radius:4px;font-size:10px">${yesLabel}</span>`
+        : `<span style="background:#ffffff11;color:#888;padding:1px 6px;border-radius:4px;font-size:10px">${noLabel}</span>`;
+    }
+
     function renderErrPage() {
       if (!detalle.length) {
-        tbErr.innerHTML = '<tr><td colspan="3" class="no-data">Sin errores registrados</td></tr>';
+        tbErr.innerHTML = '<tr><td colspan="9" class="no-data">Sin errores registrados</td></tr>';
         pagination.hidden = true;
         return;
       }
@@ -1283,9 +1299,15 @@ async function loadStats() {
       const slice = detalle.slice(errPage * PAGE_SIZE, (errPage + 1) * PAGE_SIZE);
       tbErr.innerHTML = slice.map(r =>
         `<tr>
-          <td style="font-variant-numeric:tabular-nums;white-space:nowrap;font-size:11px">${r.fecha}</td>
-          <td>${r.exchange}</td>
-          <td class="td-muted" style="font-family:monospace;font-size:11px">${r.usuario}</td>
+          <td style="font-variant-numeric:tabular-nums;white-space:nowrap;font-size:11px">${r.fecha || '—'}</td>
+          <td>${r.exchange || '—'}</td>
+          <td class="td-muted" style="font-family:monospace;font-size:11px">${r.usuario || '—'}</td>
+          <td style="font-size:11px;color:#f87171">${r.error_type || '—'}</td>
+          <td style="font-size:11px;color:var(--muted)">${r.stage || '—'}</td>
+          <td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(r.resumen||'').replace(/"/g,'&quot;')}">${r.resumen || '—'}</td>
+          <td style="font-family:monospace;font-size:10px;color:var(--muted)">${r.fingerprint || '—'}</td>
+          <td>${badge(r.email_enviado, 'Sí', 'No')}</td>
+          <td>${badge(r.resuelto, 'Resuelto', 'Abierto')}</td>
         </tr>`
       ).join('');
       pageInfo.textContent = `Pág. ${errPage + 1}/${totalPages} · ${detalle.length} registros`;

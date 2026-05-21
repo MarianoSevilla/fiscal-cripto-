@@ -34,7 +34,7 @@ from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from authlib.integrations.flask_client import OAuth
 import resend
 from sqlalchemy import func, extract, text
-from models import db, bcrypt, User, FifoReport, Contacto
+from models import db, bcrypt, User, FifoReport, Contacto, ProcessingError
 
 # Advisory / Stripe imports
 try:
@@ -44,6 +44,7 @@ except ImportError:
     _stripe_available = False
     _stripe_module = None
 from models import FiscalAdvisoryRequest, FiscalAdvisoryFile, FiscalAdvisoryStatusHistory
+from error_tracking import record_processing_error_safe
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -1650,6 +1651,23 @@ def analizar():
                 status          = "failed",
                 error_type      = type(e).__name__,
             )
+            try:
+                _csv_size = os.path.getsize(tmp_path) if tmp_path else None
+            except Exception:
+                _csv_size = None
+            try:
+                record_processing_error_safe(
+                    user_id      = current_user.id if current_user.is_authenticated else None,
+                    email        = current_user.email if current_user.is_authenticated else None,
+                    exchange     = exchange,
+                    stage        = "processing",
+                    exc          = e,
+                    csv_filename = filename,
+                    csv_size     = _csv_size,
+                    parser       = exchange,
+                )
+            except Exception:
+                app.logger.exception("[ERROR_TRACKING] unexpected error calling record_processing_error_safe")
             return jsonify({"error": _error_amigable(e)}), 500
 
     finally:
@@ -2566,6 +2584,45 @@ def _api_stats_data():
         "usuario":  _mask_email(err_u_map.get(r.user_id)),
     } for r in err_detail_raw]
 
+    # ── PROCESSING ERRORS (nueva tabla enriquecida) ───────────────────────────
+    # Guard: si la migración aún no se ha aplicado, devolver lista vacía
+    _proc_err_ok = False
+    try:
+        db.session.execute(text("SELECT id FROM processing_errors LIMIT 0"))
+        _proc_err_ok = True
+    except Exception:
+        db.session.rollback()
+
+    proc_err_detail = []
+    if _proc_err_ok:
+        proc_err_raw = (
+            db.session.query(
+                ProcessingError.created_at,
+                ProcessingError.exchange,
+                ProcessingError.email,
+                ProcessingError.error_type,
+                ProcessingError.stage,
+                ProcessingError.message_short,
+                ProcessingError.fingerprint,
+                ProcessingError.auto_email_sent,
+                ProcessingError.resolved,
+            )
+            .order_by(ProcessingError.created_at.desc())
+            .limit(100)
+            .all()
+        )
+        proc_err_detail = [{
+            "fecha":         r.created_at.strftime("%Y-%m-%d %H:%M") if r.created_at else "",
+            "exchange":      r.exchange or "—",
+            "usuario":       _mask_email(r.email) if r.email else "—",
+            "error_type":    r.error_type or "—",
+            "stage":         r.stage or "—",
+            "resumen":       (r.message_short or "")[:120],
+            "fingerprint":   (r.fingerprint or "")[:8],
+            "email_enviado": bool(r.auto_email_sent),
+            "resuelto":      bool(r.resolved),
+        } for r in proc_err_raw]
+
     # ── EXCHANGE MÁS PROBLEMÁTICO ─────────────────────────────────────────────
     exc_gen_map  = {r.exchange: r.c for r in por_exchange_raw}
     exc_fail_raw = (
@@ -2761,8 +2818,9 @@ def _api_stats_data():
             "ingresos_por_mes":      [{"mes": k, "ingresos": round(v, 2)} for k, v in sorted(ing_mes_bkt.items())],
         },
         "errores": {
-            "por_mes":  errores_por_mes,
-            "detalle":  errores_detalle,
+            "por_mes":            errores_por_mes,
+            "detalle":            errores_detalle,
+            "processing_errors":  proc_err_detail,
         },
         "complejidad": {
             "avg_swaps":           round(avg_swaps_raw or 0, 2),
