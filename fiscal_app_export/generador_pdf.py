@@ -17,6 +17,21 @@ from datetime import datetime
 import io
 
 
+def _td_safe(text: str, max_chars: int = 300) -> str:
+    """
+    Trunca strings de datos de usuario antes de meterlos en celdas de tabla PDF.
+
+    ReportLab lanza LayoutError cuando el contenido de una celda es tan alto
+    que no cabe en una página (p.ej. un ticker de 500 chars sin espacios en
+    una columna de 28mm). Truncar a max_chars evita ese caso extremo sin
+    alterar datos calculados — solo afecta a la presentación visual.
+    """
+    s = str(text) if text is not None else ""
+    if len(s) > max_chars:
+        return s[:max_chars - 1] + "…"
+    return s
+
+
 # ── PALETA PRINT-FRIENDLY ─────────────────────────────────────────────────────
 BG          = colors.white
 TEXT        = colors.HexColor("#111827")   # texto principal
@@ -1006,7 +1021,7 @@ def _tabla_resumen_activos(resultados, styles):
         p_str = f"{datos['perdidas']:,.2f}"   if datos["perdidas"]  != 0 else "0.00"
         n_str = f"+{neto:,.2f}" if neto >= 0 else f"{neto:,.2f}"
         rows.append([
-            Paragraph(activo, styles["td"]),
+            Paragraph(_td_safe(activo, 40), styles["td"]),
             Paragraph(str(datos["ops"]), styles["td_muted_right"]),
             Paragraph(g_str, styles["td_green"]),
             Paragraph(p_str, styles["td_red"]),
@@ -1069,7 +1084,7 @@ def _tabla_operaciones(resultados, styles):
         rows.append([
             Paragraph(r.fecha.strftime("%d/%m/%Y"), styles["td_muted"]),
             Paragraph(r.tipo_operacion.upper(), styles["td"]),
-            Paragraph(r.activo, styles["td"]),                           # ticker — no partir
+            Paragraph(_td_safe(r.activo, 40), styles["td"]),
             Paragraph(_fmt_cantidad(r.cantidad_vendida),  styles["td_mono"]),
             Paragraph(f"{r.precio_transmision:,.2f}", styles["td_mono"]),
             Paragraph(f"{r.precio_coste:,.2f}",       styles["td_mono"]),
@@ -1111,7 +1126,7 @@ def _tabla_posicion(posiciones, styles):
     rows = [cabecera]
     for pos in posiciones:
         rows.append([
-            Paragraph(pos.activo, styles["td"]),
+            Paragraph(_td_safe(pos.activo, 40), styles["td"]),
             Paragraph(f"{pos.cantidad_total:,.6f}",   styles["td_mono"]),
             Paragraph(f"{pos.precio_medio:,.4f} EUR",  styles["td_mono"]),
             Paragraph(f"{pos.coste_total:,.4f} EUR",   styles["td_mono"]),
@@ -1157,8 +1172,8 @@ def _tabla_rendimientos(rendimientos: list, styles) -> object:
     rows = [cabecera]
     for (activo, subtipo), datos in sorted(agrupado.items()):
         rows.append([
-            Paragraph(activo, styles["td"]),
-            Paragraph(subtipo.replace("_", " ").capitalize(), styles["td_muted"]),
+            Paragraph(_td_safe(activo, 40), styles["td"]),
+            Paragraph(_td_safe(subtipo.replace("_", " ").capitalize(), 80), styles["td_muted"]),
             Paragraph(str(datos["ops"]), styles["td_muted_right"]),
             Paragraph(f"{datos['cantidad']:,.6f}", styles["td_mono"]),
         ])
@@ -1501,7 +1516,7 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
             ),
             Spacer(1, 3*mm),
         ]))
-        warn_rows = [[Paragraph(f"⚠  {adv}", styles["warning"])] for adv in motor.advertencias]
+        warn_rows = [[Paragraph(f"⚠  {_td_safe(adv, 300)}", styles["warning"])] for adv in motor.advertencias]
         t_warn = Table(warn_rows, colWidths=[168*mm])
         t_warn.setStyle(TableStyle([
             ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#FEF9F0")),
@@ -1682,7 +1697,7 @@ def generar_pdf_bit2me(clasificador, nombre_usuario="", ejercicio="") -> bytes:
     if clasificador.advertencias:
         story.append(Spacer(1, 8*mm))
         story.append(Paragraph("Advertencias", styles["section"]))
-        warn_rows = [[Paragraph(f"⚠  {adv}", styles["warning"])] for adv in clasificador.advertencias]
+        warn_rows = [[Paragraph(f"⚠  {_td_safe(adv, 300)}", styles["warning"])] for adv in clasificador.advertencias]
         t_warn = Table(warn_rows, colWidths=[168*mm])
         t_warn.setStyle(TableStyle([
             ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#FEF9F0")),
