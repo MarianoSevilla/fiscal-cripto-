@@ -17,12 +17,62 @@ Operaciones reconocidas:
 """
 
 import re
+import logging
 import pandas as pd
 from clasificador import (
     OperacionCompraventa, OperacionSwap,
     OperacionRendimiento, OperacionMovimiento,
     OperacionDesconocida, STABLES,
 )
+
+logger = logging.getLogger(__name__)
+
+# Formatos de fecha conocidos en exports de Binance, en orden de preferencia.
+# El primero es el formato histórico (año 2 dígitos). Los siguientes cubren
+# cambios introducidos ~2025 (año 4 dígitos, con o sin hora).
+_TIEMPO_FORMATOS = [
+    "%y-%m-%d %H:%M:%S",   # histórico Binance: 24-06-15 10:00:00
+    "%Y-%m-%d %H:%M:%S",   # nuevo Binance: 2025-12-31 14:30:00
+    "%Y-%m-%d",            # nuevo Binance sin hora: 2025-12-31
+    "%y-%m-%d",            # 2-digit year sin hora (raro pero defensivo)
+]
+
+
+def _parse_tiempo(series: pd.Series) -> pd.Series:
+    """
+    Parsea la columna Tiempo de Binance TX probando formatos conocidos en orden.
+
+    Si ningún formato estricto coincide con toda la serie (p.ej. filas con
+    formatos mezclados), cae a pandas mixed-ISO y registra un warning para
+    detectar futuros cambios de exportación del exchange.
+
+    Lanza ValueError explícito si todo falla, con ejemplo del valor problemático.
+    """
+    for fmt in _TIEMPO_FORMATOS:
+        try:
+            return pd.to_datetime(series, format=fmt)
+        except Exception:
+            continue
+
+    # Columna con formatos mixtos o formato desconocido.
+    # Intentar parseo flexible como último recurso y loguear para alertar.
+    logger.warning(
+        "Binance TX: columna 'Tiempo' no coincide con ningún formato conocido "
+        "(%s). Se intenta parseo flexible. Ejemplo de valor: %r. "
+        "Si este formato es nuevo, actualizar _TIEMPO_FORMATOS en clasificador_binance_tx.py.",
+        _TIEMPO_FORMATOS,
+        series.dropna().iloc[0] if len(series.dropna()) > 0 else "?",
+    )
+    try:
+        return pd.to_datetime(series, format="mixed", dayfirst=False)
+    except Exception as exc:
+        ejemplo = series.dropna().iloc[0] if len(series.dropna()) > 0 else "?"
+        raise ValueError(
+            f"Columna 'Tiempo' del CSV Binance no reconocida. "
+            f"Valor ejemplo: {ejemplo!r}. "
+            f"Formatos soportados: {_TIEMPO_FORMATOS}"
+        ) from exc
+
 
 _WALLET_RE = re.compile(r"Wallet/(\w+)")
 
@@ -83,7 +133,7 @@ class ClasificadorBinanceTx:
     def __init__(self, filepath: str):
         self.df = pd.read_csv(filepath)
         self.df.columns = [c.strip() for c in self.df.columns]
-        self.df["Tiempo"] = pd.to_datetime(self.df["Tiempo"], format="%y-%m-%d %H:%M:%S")
+        self.df["Tiempo"] = _parse_tiempo(self.df["Tiempo"])
         self.df = self.df.sort_values("Tiempo").reset_index(drop=True)
         self.df["Cambio"] = pd.to_numeric(self.df["Cambio"], errors="coerce").fillna(0.0)
         if "Observación" not in self.df.columns:

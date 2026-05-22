@@ -18,7 +18,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from clasificador_binance_tx import ClasificadorBinanceTx
+from clasificador_binance_tx import ClasificadorBinanceTx, _parse_tiempo
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -227,3 +227,96 @@ def test_sin_duplicados_transaction_buy_spend(tmp_path):
     assert c.compraventas[0].activo      == "XRP"
     assert c.compraventas[0].contraparte == "EUR"
     assert len(c.desconocidas) == 0
+
+
+# ── Tests de parsing de fechas (_parse_tiempo) ────────────────────────────────
+# Verifican que ningún cambio de formato Binance rompa la importación y que
+# el FIFO no se vea afectado (solo cambia la representación de la fecha).
+
+def test_fecha_formato_antiguo_2digit_year_con_hora(tmp_path):
+    """Formato histórico Binance: año 2 dígitos + hora — debe seguir funcionando."""
+    csv = HEADER + "123,24-06-15 10:00:00,Spot,Commission Rebate,EUR,0.50,\n"
+    c = ClasificadorBinanceTx(_csv_to_tmpfile(csv, tmp_path)).clasificar()
+    assert len(c.rendimientos) == 1
+    r = c.rendimientos[0]
+    # Fecha parseada correctamente: 2024-06-15
+    assert "2024" in r.fecha, f"Año esperado 2024 en fecha: {r.fecha}"
+    assert "06" in r.fecha
+    assert "15" in r.fecha
+
+
+def test_fecha_formato_nuevo_4digit_year_con_hora(tmp_path):
+    """Formato nuevo Binance: año 4 dígitos + hora — el bug real de producción."""
+    csv = HEADER + "123,2025-12-31 14:30:00,Spot,Commission Rebate,EUR,1.00,\n"
+    c = ClasificadorBinanceTx(_csv_to_tmpfile(csv, tmp_path)).clasificar()
+    assert len(c.rendimientos) == 1
+    r = c.rendimientos[0]
+    assert "2025" in r.fecha
+    assert "12" in r.fecha
+    assert "31" in r.fecha
+
+
+def test_fecha_formato_nuevo_4digit_year_sin_hora(tmp_path):
+    """Formato sin hora: 2025-12-31 — variante del bug de producción."""
+    csv = HEADER + "123,2025-12-31,Spot,Commission Rebate,EUR,2.00,\n"
+    c = ClasificadorBinanceTx(_csv_to_tmpfile(csv, tmp_path)).clasificar()
+    assert len(c.rendimientos) == 1
+    r = c.rendimientos[0]
+    assert "2025" in r.fecha
+    assert "12" in r.fecha
+    assert "31" in r.fecha
+
+
+def test_fecha_formato_mixto_en_misma_columna(tmp_path):
+    """CSV con filas en formato antiguo y nuevo mezcladas — debe cargarse sin error."""
+    csv = (
+        HEADER
+        + "123,24-06-15 10:00:00,Spot,Commission Rebate,EUR,0.50,\n"
+        + "123,2025-12-31 14:30:00,Spot,Commission Rebate,EUR,1.00,\n"
+    )
+    # No debe lanzar excepción — ambas filas se procesan
+    c = ClasificadorBinanceTx(_csv_to_tmpfile(csv, tmp_path)).clasificar()
+    assert len(c.rendimientos) == 2
+
+
+def test_fecha_formato_desconocido_loguea_warning(tmp_path, caplog):
+    """
+    Formato no listado en _TIEMPO_FORMATOS: el parser flexible lo acepta
+    (no debe explotar con datos razonables) pero DEBE registrar un WARNING
+    explícito para detectar cambios futuros de exportación del exchange.
+    """
+    import logging
+    csv = HEADER + "123,31/12/2025-10:00,Spot,Commission Rebate,EUR,1.00,\n"
+    with caplog.at_level(logging.WARNING, logger="clasificador_binance_tx"):
+        c = ClasificadorBinanceTx(_csv_to_tmpfile(csv, tmp_path)).clasificar()
+    # El WARNING debe aparecer con texto orientativo
+    assert any("Binance TX" in m for m in caplog.messages), (
+        "Se esperaba un WARNING sobre formato de fecha desconocido"
+    )
+    assert any("_TIEMPO_FORMATOS" in m for m in caplog.messages)
+    # A pesar del formato inusual, la fila se clasifica (no se pierde)
+    assert len(c.rendimientos) == 1
+
+
+def test_fecha_completamente_rota_lanza_error(tmp_path):
+    """Cadena que no es una fecha válida bajo ningún criterio debe lanzar excepción."""
+    csv = HEADER + "123,no-es-una-fecha,Spot,Commission Rebate,EUR,1.00,\n"
+    with pytest.raises(Exception):
+        ClasificadorBinanceTx(_csv_to_tmpfile(csv, tmp_path)).clasificar()
+
+
+def test_fecha_parse_tiempo_directo_formatos():
+    """Prueba unitaria directa de _parse_tiempo para los 4 formatos soportados."""
+    casos = [
+        ("24-06-15 10:00:00", 2024, 6, 15),   # %y-%m-%d %H:%M:%S — histórico
+        ("2025-12-31 14:30:00", 2025, 12, 31), # %Y-%m-%d %H:%M:%S — nuevo con hora
+        ("2025-12-31", 2025, 12, 31),           # %Y-%m-%d — nuevo sin hora
+        ("24-06-15", 2024, 6, 15),              # %y-%m-%d — sin hora, año corto
+    ]
+    for valor, año_esp, mes_esp, dia_esp in casos:
+        serie = pd.Series([valor])
+        resultado = _parse_tiempo(serie)
+        ts = resultado.iloc[0]
+        assert ts.year  == año_esp,  f"Año incorrecto para {valor!r}: {ts.year} != {año_esp}"
+        assert ts.month == mes_esp,  f"Mes incorrecto para {valor!r}: {ts.month} != {mes_esp}"
+        assert ts.day   == dia_esp,  f"Día incorrecto para {valor!r}: {ts.day} != {dia_esp}"
