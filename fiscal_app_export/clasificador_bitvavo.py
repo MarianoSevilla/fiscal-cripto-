@@ -84,6 +84,52 @@ def _validar_columnas(df: pd.DataFrame) -> None:
         )
 
 
+# Separadores y encodings a probar, en orden de probabilidad.
+_SEPARADORES = [",", ";", "\t"]
+_ENCODINGS   = ["utf-8-sig", "utf-8", "latin1"]
+
+
+def _leer_csv_bitvavo(filepath: str) -> pd.DataFrame:
+    """
+    Lee el CSV de Bitvavo intentando combinaciones de separador × encoding.
+
+    Tras cada parse exitoso valida que las columnas obligatorias estén presentes
+    (tras normalización) para evitar mezclas silenciosas de campos. La primera
+    combinación que produce un DataFrame válido se devuelve.
+
+    Lanza ValueError con diagnóstico detallado si ninguna combinación funciona.
+    """
+    intentos_fallidos: List[str] = []
+
+    for enc in _ENCODINGS:
+        for sep in _SEPARADORES:
+            try:
+                df = pd.read_csv(filepath, sep=sep, encoding=enc, dtype=str)
+                df.columns = [c.strip() for c in df.columns]
+                df_norm = _normalizar_columnas(df)
+                missing = [c for c in _COLS_OBLIGATORIAS if c not in df_norm.columns]
+                if not missing:
+                    if enc != "utf-8" or sep != ",":
+                        logger.info(
+                            "Bitvavo: CSV leído con encoding=%r, sep=%r",
+                            enc, sep,
+                        )
+                    return df_norm  # ya normalizado, devolver directo
+                intentos_fallidos.append(
+                    f"sep={sep!r} enc={enc!r} → columnas faltantes: {missing}"
+                )
+            except Exception as exc:
+                intentos_fallidos.append(f"sep={sep!r} enc={enc!r} → {exc}")
+
+    detalle = "\n  ".join(intentos_fallidos)
+    raise ValueError(
+        f"No se pudo leer el CSV de Bitvavo con ningún separador/encoding conocido.\n"
+        f"Intentos realizados:\n  {detalle}\n"
+        f"Separadores probados: {_SEPARADORES} · Encodings probados: {_ENCODINGS}\n"
+        f"Verifica que el fichero sea el export de 'Transaction History' de Bitvavo."
+    )
+
+
 # ── CONSTANTES ────────────────────────────────
 
 STABLES = {"EUR", "USDT", "USDC", "BUSD", "DAI", "FDUSD"}
@@ -149,7 +195,8 @@ class OperacionDesconocida:
 class ClasificadorBitvavo:
 
     def __init__(self, filepath: str):
-        self.df = pd.read_csv(filepath)
+        # _leer_csv_bitvavo ya normaliza columnas y valida que estén presentes.
+        self.df = _leer_csv_bitvavo(filepath)
         self.compraventas:  list[OperacionCompraventa] = []
         self.swaps:         list[OperacionSwap]        = []
         self.rendimientos:  list[OperacionRendimiento] = []
@@ -157,10 +204,9 @@ class ClasificadorBitvavo:
         self.desconocidas:  list[OperacionDesconocida] = []
 
     def clasificar(self):
-        # Normalizar espacios y aplicar aliases de nombre de columna
+        # Columnas ya normalizadas y validadas en __init__ por _leer_csv_bitvavo.
+        # Re-aplicar strip defensivo por si alguna celda tiene espacios residuales.
         self.df.columns = [c.strip() for c in self.df.columns]
-        self.df = _normalizar_columnas(self.df)
-        _validar_columnas(self.df)
 
         # Construir timestamp
         self.df["fecha"] = (

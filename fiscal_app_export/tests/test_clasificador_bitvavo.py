@@ -2,12 +2,17 @@
 Tests unitarios para ClasificadorBitvavo.
 
 FASE 2: KeyError 'Date' — normalización y validación de columnas.
+FASE 3: ParserError — separador ; / encoding / BOM.
 Cubre:
   - CSV con columnas canónicas (formato estándar Bitvavo)
   - CSV con columnas en minúsculas
   - CSV con alias de columna (e.g. "Transaction Date" en lugar de "Date")
   - CSV sin columnas obligatorias → ValueError claro
   - Clasificación basic buy/sell/staking con columnas canónicas
+  - CSV separado por punto y coma (export europeo)
+  - CSV separado por coma estándar
+  - CSV con UTF-8 BOM (utf-8-sig)
+  - Archivo roto → ValueError claro
 """
 
 import textwrap
@@ -22,6 +27,7 @@ from clasificador_bitvavo import (
     ClasificadorBitvavo,
     _normalizar_columnas,
     _validar_columnas,
+    _leer_csv_bitvavo,
     _COLS_OBLIGATORIAS,
 )
 
@@ -209,3 +215,97 @@ def test_validar_columnas_faltantes():
     msg = str(exc_info.value)
     assert "Date"   in msg
     assert "Amount" in msg
+
+
+# ── Tests FASE 3: separador CSV y encoding ────────────────────────────────────
+
+# Contenido CSV idéntico expresado con separadores distintos
+_COLS_SEMICOLON = (
+    "Timezone;Date;Time;Type;Currency;Amount;Quote Currency;"
+    "Quote Price;Received / Paid Currency;Received / Paid Amount;"
+    "Fee currency;Fee amount;Status;Transaction ID;Address"
+)
+_ROW_BUY_SEMICOLON = (
+    "UTC;2024-06-15;10:00:00;buy;BTC;0.01;EUR;"
+    "30000;EUR;-300;EUR;-0.30;Completed;txn001;"
+)
+_COLS_COMMA = _COLS_SEMICOLON.replace(";", ",")
+_ROW_BUY_COMMA = _ROW_BUY_SEMICOLON.replace(";", ",")
+
+
+def test_separador_punto_y_coma(tmp_path):
+    """
+    Export europeo con ';' como separador — el bug real de producción
+    ('Expected 3 fields in line 4, saw 13').
+    """
+    csv_text = _COLS_SEMICOLON + "\n" + _ROW_BUY_SEMICOLON + "\n"
+    p = tmp_path / "bitvavo_semicolon.csv"
+    p.write_text(csv_text, encoding="utf-8")
+
+    c = ClasificadorBitvavo(str(p)).clasificar()
+    assert len(c.compraventas) == 1
+    assert c.compraventas[0].tipo   == "COMPRA"
+    assert c.compraventas[0].activo == "BTC"
+
+
+def test_separador_coma_estandar(tmp_path):
+    """CSV con coma estándar: debe seguir funcionando como antes."""
+    csv_text = _COLS_COMMA + "\n" + _ROW_BUY_COMMA + "\n"
+    p = tmp_path / "bitvavo_comma.csv"
+    p.write_text(csv_text, encoding="utf-8")
+
+    c = ClasificadorBitvavo(str(p)).clasificar()
+    assert len(c.compraventas) == 1
+    assert c.compraventas[0].tipo == "COMPRA"
+
+
+def test_encoding_utf8_bom(tmp_path):
+    """
+    CSV con BOM (utf-8-sig) — común en exports de Excel europeo.
+    El BOM no debe contaminar el nombre de la primera columna.
+    """
+    csv_text = _COLS_COMMA + "\n" + _ROW_BUY_COMMA + "\n"
+    p = tmp_path / "bitvavo_bom.csv"
+    p.write_bytes(csv_text.encode("utf-8-sig"))
+
+    c = ClasificadorBitvavo(str(p)).clasificar()
+    assert len(c.compraventas) == 1
+
+
+def test_separador_y_encoding_semicolon_latin1(tmp_path):
+    """Combinación: separador ';' + encoding latin1 (Windows regional)."""
+    csv_text = _COLS_SEMICOLON + "\n" + _ROW_BUY_SEMICOLON + "\n"
+    p = tmp_path / "bitvavo_latin1.csv"
+    p.write_bytes(csv_text.encode("latin1"))
+
+    c = ClasificadorBitvavo(str(p)).clasificar()
+    assert len(c.compraventas) == 1
+
+
+def test_archivo_roto_lanza_error_claro(tmp_path):
+    """
+    Archivo con contenido que no puede ser un CSV de Bitvavo.
+    Debe lanzar ValueError con mensaje útil, no un traceback crudo.
+    """
+    p = tmp_path / "bitvavo_roto.csv"
+    p.write_text("columna_a,columna_b\nvalor1,valor2\n", encoding="utf-8")
+
+    with pytest.raises(ValueError) as exc_info:
+        ClasificadorBitvavo(str(p)).clasificar()
+
+    msg = str(exc_info.value)
+    assert "Bitvavo" in msg
+
+
+def test_leer_csv_bitvavo_directo_semicolon(tmp_path):
+    """Test unitario directo de _leer_csv_bitvavo con separador ;."""
+    csv_text = _COLS_SEMICOLON + "\n" + _ROW_BUY_SEMICOLON + "\n"
+    p = tmp_path / "direct.csv"
+    p.write_text(csv_text, encoding="utf-8")
+
+    df = _leer_csv_bitvavo(str(p))
+    # Debe devolver DataFrame con columnas canónicas
+    assert "Date"     in df.columns
+    assert "Time"     in df.columns
+    assert "Currency" in df.columns
+    assert len(df) == 1
