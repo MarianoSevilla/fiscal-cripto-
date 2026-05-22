@@ -19,8 +19,69 @@ Tipos de operación:
 - campaign_new_user_incentive → RENDIMIENTO (bonus)
 """
 
+import logging
 import pandas as pd
 from dataclasses import dataclass
+from typing import Dict, List
+
+logger = logging.getLogger(__name__)
+
+# Columnas obligatorias para construir un timestamp y clasificar operaciones.
+_COLS_OBLIGATORIAS = ["Date", "Time", "Type", "Currency", "Amount"]
+
+# Aliases de nombres de columna: clave = nombre canónico, valor = variantes aceptadas.
+# El orden dentro de cada lista refleja la preferencia (más específico primero).
+_COL_ALIASES: Dict[str, List[str]] = {
+    "Date":                     ["Date", "date", "DATE", "Trade Date", "Transaction Date"],
+    "Time":                     ["Time", "time", "TIME"],
+    "Type":                     ["Type", "type", "TYPE", "Transaction Type"],
+    "Currency":                 ["Currency", "currency", "Asset", "Base Currency"],
+    "Amount":                   ["Amount", "amount", "Quantity"],
+    "Quote Currency":           ["Quote Currency", "Quote currency", "quote_currency"],
+    "Quote Price":              ["Quote Price", "Quote price", "Unit Price", "Price"],
+    "Received / Paid Currency": ["Received / Paid Currency", "Received/Paid Currency",
+                                  "received_paid_currency", "Counter Currency"],
+    "Received / Paid Amount":   ["Received / Paid Amount", "Received/Paid Amount",
+                                  "received_paid_amount", "Counter Amount"],
+    "Fee currency":             ["Fee currency", "Fee Currency", "fee_currency"],
+    "Fee amount":               ["Fee amount", "Fee Amount", "fee_amount"],
+    "Status":                   ["Status", "status", "STATUS"],
+    "Address":                  ["Address", "address", "Wallet Address"],
+}
+
+
+def _normalizar_columnas(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Renombra columnas del CSV Bitvavo a los nombres canónicos usando _COL_ALIASES.
+    Solo renombra lo que existe — columnas sin alias reconocido se dejan tal cual.
+    """
+    col_map: Dict[str, str] = {}
+    df_cols = set(df.columns)
+    for canonical, aliases in _COL_ALIASES.items():
+        if canonical in df_cols:
+            continue  # ya está en forma canónica
+        for alias in aliases:
+            if alias in df_cols:
+                col_map[alias] = canonical
+                break
+    if col_map:
+        logger.debug("Bitvavo: renombrando columnas: %s", col_map)
+    return df.rename(columns=col_map)
+
+
+def _validar_columnas(df: pd.DataFrame) -> None:
+    """
+    Verifica que las columnas obligatorias estén presentes después de normalizar.
+    Lanza ValueError con mensaje orientativo si falta alguna.
+    """
+    missing = [c for c in _COLS_OBLIGATORIAS if c not in df.columns]
+    if missing:
+        raise ValueError(
+            f"CSV Bitvavo: columnas obligatorias no encontradas tras normalización: {missing}. "
+            f"Columnas detectadas en el fichero: {list(df.columns)}. "
+            f"Verifica que el fichero sea el export de 'Transaction History' de Bitvavo "
+            f"y no otro tipo de descarga (p.ej. estados de cuenta o facturas)."
+        )
 
 
 # ── CONSTANTES ────────────────────────────────
@@ -96,8 +157,10 @@ class ClasificadorBitvavo:
         self.desconocidas:  list[OperacionDesconocida] = []
 
     def clasificar(self):
-        # Normalizar columnas (quitar espacios)
+        # Normalizar espacios y aplicar aliases de nombre de columna
         self.df.columns = [c.strip() for c in self.df.columns]
+        self.df = _normalizar_columnas(self.df)
+        _validar_columnas(self.df)
 
         # Construir timestamp
         self.df["fecha"] = (
