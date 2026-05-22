@@ -672,6 +672,7 @@ tbody tr:hover { background: var(--surface2); }
             <th>FP</th>
             <th>Email</th>
             <th>Resuelto</th>
+            <th>Accionable</th>
           </tr></thead>
           <tbody id="tbErrorDetail"></tbody>
         </table>
@@ -1291,7 +1292,7 @@ async function loadStats() {
 
     function renderErrPage() {
       if (!detalle.length) {
-        tbErr.innerHTML = '<tr><td colspan="9" class="no-data">Sin errores registrados</td></tr>';
+        tbErr.innerHTML = '<tr><td colspan="10" class="no-data">Sin errores registrados</td></tr>';
         pagination.hidden = true;
         return;
       }
@@ -1308,6 +1309,7 @@ async function loadStats() {
           <td style="font-family:monospace;font-size:10px;color:var(--muted)">${r.fingerprint || '—'}</td>
           <td>${badge(r.email_enviado, 'Sí', 'No')}</td>
           <td>${badge(r.resuelto, 'Resuelto', 'Abierto')}</td>
+          <td>${badge(r.accionable, 'Sí', 'No')}</td>
         </tr>`
       ).join('');
       pageInfo.textContent = `Pág. ${errPage + 1}/${totalPages} · ${detalle.length} registros`;

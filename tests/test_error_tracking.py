@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "fiscal_app_exp
 from error_tracking import (
     build_processing_error_fingerprint,
     is_actionable_processing_error,
+    make_user_friendly_message,
     _sanitize,
     _extract_traceback_short,
     record_processing_error_safe,
@@ -111,6 +112,27 @@ class TestActionable:
     def test_unknown_type_defaults_actionable(self):
         # Unknown error type with no non-actionable signals → actionable
         assert is_actionable_processing_error("SomeRandomError", "parsing", "unexpected") is True
+
+    # ── PDF / reportlab errors — not user-fixable ──────────────────────────────
+
+    def test_layout_error_not_actionable(self):
+        assert is_actionable_processing_error("LayoutError", "processing", "frame too small") is False
+
+    def test_flowable_message_not_actionable(self):
+        assert is_actionable_processing_error(
+            "LayoutError", "processing",
+            "Flowable with cell None in position 0 does not fit in frame",
+        ) is False
+
+    def test_flowable_fragment_in_message_not_actionable(self):
+        # Even with generic exception type, "flowable" in message → not actionable
+        assert is_actionable_processing_error("Exception", "processing", "flowable too large") is False
+
+    def test_reportlab_reference_not_actionable(self):
+        assert is_actionable_processing_error("Exception", "processing", "reportlab error in render") is False
+
+    def test_platypus_reference_not_actionable(self):
+        assert is_actionable_processing_error("Exception", "processing", "platypus frame overflow") is False
 
 
 # ── SANITIZATION ──────────────────────────────────────────────────────────────
@@ -387,3 +409,84 @@ class TestShouldSendEmail:
         session = self._make_empty_session()
         result = _should_send_email(session, user_id=1, exchange="binance", fingerprint="abc123")
         assert result is True
+
+
+# ── USER-FRIENDLY MESSAGES ────────────────────────────────────────────────────
+
+class TestUserFriendlyMessage:
+    def test_date_format_error(self):
+        msg = make_user_friendly_message(
+            "ValueError", "processing",
+            "time data '2025-12-31' does not match format '%y-%m-%d %H:%M:%S'",
+        )
+        assert "fecha" in msg.lower()
+        assert "ValueError" not in msg
+        assert "%y" not in msg
+
+    def test_unicode_error(self):
+        msg = make_user_friendly_message("UnicodeDecodeError", "processing", "codec can't decode")
+        assert "codificación" in msg.lower() or "encoding" in msg.lower()
+        assert "UnicodeDecodeError" not in msg
+
+    def test_parser_error_fields(self):
+        msg = make_user_friendly_message(
+            "ParserError", "processing",
+            "Expected 3 fields in line 4, saw 13",
+        )
+        assert "columnas" in msg.lower() or "separación" in msg.lower()
+        assert "ParserError" not in msg
+        assert "13" not in msg  # no raw numbers from the error
+
+    def test_keyerror_column(self):
+        msg = make_user_friendly_message("KeyError", "processing", "'Date'")
+        assert "columnas" in msg.lower() or "formato" in msg.lower()
+        assert "KeyError" not in msg
+
+    def test_empty_data(self):
+        msg = make_user_friendly_message("EmptyDataError", "processing", "No columns to parse from file")
+        assert "vacío" in msg.lower() or "datos" in msg.lower()
+
+    def test_generic_fallback_is_friendly(self):
+        msg = make_user_friendly_message("RuntimeError", "processing", "some obscure error")
+        assert "CSV" in msg
+        assert "RuntimeError" not in msg
+        assert len(msg) < 200  # stays concise
+
+    def test_no_technical_terms_in_any_variant(self):
+        """None of the messages should expose Python internals."""
+        cases = [
+            ("ValueError",       "processing", "time data '2025-12-31' does not match format '%y-%m-%d'"),
+            ("UnicodeDecodeError","processing", "codec can't decode bytes"),
+            ("ParserError",      "parsing",    "Expected 3 fields"),
+            ("KeyError",         "processing", "'Date'"),
+            ("EmptyDataError",   "parsing",    "No columns"),
+            ("LayoutError",      "processing", "Flowable with cell"),  # won't be sent (not actionable)
+        ]
+        forbidden = ["Traceback", "Exception", "Error:", "line ", "File \""]
+        for et, stage, msg in cases:
+            result = make_user_friendly_message(et, stage, msg)
+            for term in forbidden:
+                assert term not in result, f"Found '{term}' in: {result}"
+
+    def test_send_email_uses_friendly_message(self):
+        """Verify send_processing_error_email embeds the friendly message in the body."""
+        captured = {}
+
+        def fake_send(payload):
+            captured["text"] = payload["text"]
+
+        with patch.dict(os.environ, {"RESEND_API_KEY": "test_key"}):
+            with patch("error_tracking.concurrent.futures.ThreadPoolExecutor") as mock_exec:
+                future_mock = MagicMock()
+                future_mock.result.return_value = None
+                mock_exec.return_value.__enter__.return_value.submit.side_effect = (
+                    lambda fn, p: (fake_send(p), future_mock)[1]
+                )
+                send_processing_error_email(
+                    "u@example.com", "binance", 99,
+                    "Hemos detectado un formato de fecha que no reconocemos.",
+                )
+
+        assert "formato de fecha" in captured.get("text", "")
+        assert "ValueError" not in captured.get("text", "")
+        assert "traceback" not in captured.get("text", "").lower()

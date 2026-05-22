@@ -98,6 +98,8 @@ _NON_ACTIONABLE_TYPES = frozenset({
     "MemoryError",
     # Auth / permissions
     "PermissionError",
+    # PDF / report generation — internal rendering problem, not user CSV
+    "LayoutError",
     # Python internals — never user-triggered
     "SystemExit", "KeyboardInterrupt", "GeneratorExit",
 })
@@ -110,6 +112,11 @@ _NON_ACTIONABLE_MSG_FRAGMENTS = (
     "401", "403", "unauthorized", "forbidden",
     "login required", "session expired",
     "demasiadas filas", "too many rows",
+    # PDF / reportlab internal errors — not caused by user CSV
+    "flowable",     # reportlab LayoutError body ("Flowable with cell...")
+    "reportlab",    # any direct reportlab reference
+    "platypus",     # reportlab.platypus subpackage
+    "frame too small",
 )
 
 _ACTIONABLE_TYPES = frozenset({
@@ -147,6 +154,57 @@ def is_actionable_processing_error(
 
     # Unknown type with no non-actionable signals → assume actionable
     return True
+
+
+# ── USER-FRIENDLY MESSAGES ────────────────────────────────────────────────────
+
+def make_user_friendly_message(
+    error_type: str,
+    stage: str,
+    message_short: str,
+) -> str:
+    """
+    Return a plain-language description of the error for the support email.
+    No Python exception names, no tracebacks, no internal details.
+    Checked in order — first match wins.
+    """
+    et  = (error_type    or "").strip()
+    msg = (message_short or "").lower()
+
+    # Date / time format problems (Binance "%y-%m-%d %H:%M:%S" etc.)
+    if "time data" in msg or "does not match format" in msg or "strptime" in msg:
+        return (
+            "Hemos detectado un formato de fecha en el CSV que no hemos podido "
+            "interpretar correctamente."
+        )
+
+    # Encoding / character set issues
+    if et in ("UnicodeDecodeError", "UnicodeError") or "codec" in msg or "encoding" in msg:
+        return (
+            "El archivo CSV tiene una codificación que no hemos podido leer. "
+            "Intenta descargarlo de nuevo desde tu exchange sin abrirlo con Excel."
+        )
+
+    # Empty or trivially broken file
+    if et == "EmptyDataError" or "no columns" in msg or ("empty" in msg and "data" in msg):
+        return "El archivo CSV parece estar vacío o no contiene datos válidos."
+
+    # CSV structure / separator problems (ParserError, "Expected N fields")
+    if et == "ParserError" or ("expected" in msg and "field" in msg) or "tokenize" in msg:
+        return (
+            "El CSV tiene un formato de separación de columnas que no hemos podido "
+            "interpretar. Intenta descargarlo directamente desde tu exchange."
+        )
+
+    # Missing or renamed columns (KeyError on column name)
+    if et == "KeyError" or ("column" in msg and ("not found" in msg or "missing" in msg)):
+        return (
+            "El CSV no contiene las columnas que esperábamos. "
+            "Es posible que el formato de exportación de tu exchange haya cambiado."
+        )
+
+    # Generic fallback — keeps the email non-alarming
+    return "Hemos detectado un formato de CSV que no hemos podido interpretar correctamente."
 
 
 # ── DEDUPLICATION & RATE LIMITING ─────────────────────────────────────────────
@@ -205,10 +263,11 @@ def send_processing_error_email(
     user_email: str,
     exchange: str,
     error_id: int,
-    error_summary: str,
+    user_friendly_msg: str,
 ) -> bool:
     """
     Send auto-support email via Resend with a hard 5s timeout.
+    user_friendly_msg must be a plain-language sentence (no tech details).
     Returns True if sent successfully. Raises on failure (caller handles).
     """
     import resend as _resend
@@ -221,6 +280,9 @@ def send_processing_error_email(
         return False
 
     exchange_display = (exchange or "tu exchange").capitalize()
+    context_line = user_friendly_msg or (
+        "Hemos detectado un formato de CSV que no hemos podido interpretar correctamente."
+    )
     payload = {
         "from":    from_email,
         "to":      [user_email],
@@ -228,6 +290,7 @@ def send_processing_error_email(
         "text": (
             f"Hola,\n\n"
             f"Hemos detectado un problema al procesar tu archivo CSV de {exchange_display}.\n\n"
+            f"{context_line}\n\n"
             "El error ya ha quedado registrado automáticamente y lo revisaremos para mejorar "
             "la compatibilidad de la herramienta.\n\n"
             "Si quieres ayudarnos a resolverlo más rápido, puedes responder a este correo "
@@ -323,10 +386,10 @@ def _do_record(
         )
         return
 
-    error_summary = f"{error_type}: {message_short[:200]}" if message_short else error_type
+    user_friendly_msg = make_user_friendly_message(error_type, stage, message_short)
 
     try:
-        sent = send_processing_error_email(email, exchange, record.id, error_summary)
+        sent = send_processing_error_email(email, exchange, record.id, user_friendly_msg)
         if sent:
             record.auto_email_sent    = True
             record.auto_email_sent_at = datetime.utcnow()

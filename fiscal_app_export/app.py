@@ -44,7 +44,7 @@ except ImportError:
     _stripe_available = False
     _stripe_module = None
 from models import FiscalAdvisoryRequest, FiscalAdvisoryFile, FiscalAdvisoryStatusHistory
-from error_tracking import record_processing_error_safe
+from error_tracking import record_processing_error_safe, is_actionable_processing_error
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -2621,6 +2621,9 @@ def _api_stats_data():
             "fingerprint":   (r.fingerprint or "")[:8],
             "email_enviado": bool(r.auto_email_sent),
             "resuelto":      bool(r.resolved),
+            "accionable":    is_actionable_processing_error(
+                                 r.error_type, r.stage, r.message_short
+                             ),
         } for r in proc_err_raw]
 
     # ── EXCHANGE MÁS PROBLEMÁTICO ─────────────────────────────────────────────
