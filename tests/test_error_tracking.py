@@ -490,3 +490,57 @@ class TestUserFriendlyMessage:
         assert "formato de fecha" in captured.get("text", "")
         assert "ValueError" not in captured.get("text", "")
         assert "traceback" not in captured.get("text", "").lower()
+
+    def test_processing_error_email_has_support_footer(self):
+        """Support footer must appear at the end of the processing error email."""
+        captured = {}
+
+        def fake_send(payload):
+            captured["text"] = payload["text"]
+
+        with patch.dict(os.environ, {"RESEND_API_KEY": "test_key"}):
+            with patch("error_tracking.concurrent.futures.ThreadPoolExecutor") as mock_exec:
+                future_mock = MagicMock()
+                future_mock.result.return_value = None
+                mock_exec.return_value.__enter__.return_value.submit.side_effect = (
+                    lambda fn, p: (fake_send(p), future_mock)[1]
+                )
+                send_processing_error_email("u@example.com", "binance", 1, "msg")
+
+        text = captured.get("text", "")
+        assert "responder directamente a este correo" in text
+        # Footer appears exactly once — no duplication
+        assert text.count("responder directamente a este correo") == 1
+        # Footer comes after the signature
+        assert text.index("Mariano Sevilla") < text.index("responder directamente a este correo")
+
+
+# ── EMAIL HELPERS ──────────────────────────────────────────────────────────────
+
+class TestEmailHelpers:
+    def test_footer_text_has_separator(self):
+        from email_helpers import SUPPORT_FOOTER_TEXT
+        assert "—" in SUPPORT_FOOTER_TEXT
+
+    def test_footer_text_has_support_message(self):
+        from email_helpers import SUPPORT_FOOTER_TEXT
+        assert "responder directamente a este correo" in SUPPORT_FOOTER_TEXT
+
+    def test_footer_text_starts_with_newlines(self):
+        from email_helpers import SUPPORT_FOOTER_TEXT
+        assert SUPPORT_FOOTER_TEXT.startswith("\n\n")
+
+    def test_footer_html_has_support_message(self):
+        from email_helpers import SUPPORT_FOOTER_HTML
+        assert "responder directamente a este correo" in SUPPORT_FOOTER_HTML
+
+    def test_footer_html_has_style(self):
+        from email_helpers import SUPPORT_FOOTER_HTML
+        assert "font-size" in SUPPORT_FOOTER_HTML
+        assert "<p" in SUPPORT_FOOTER_HTML
+
+    def test_footer_html_no_subject_no_headers(self):
+        from email_helpers import SUPPORT_FOOTER_HTML
+        assert "Subject" not in SUPPORT_FOOTER_HTML
+        assert "From:" not in SUPPORT_FOOTER_HTML
+        assert "To:" not in SUPPORT_FOOTER_HTML

@@ -45,6 +45,7 @@ except ImportError:
     _stripe_module = None
 from models import FiscalAdvisoryRequest, FiscalAdvisoryFile, FiscalAdvisoryStatusHistory
 from error_tracking import record_processing_error_safe, is_actionable_processing_error
+from email_helpers import SUPPORT_FOOTER_HTML, SUPPORT_FOOTER_TEXT
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -1239,9 +1240,10 @@ def _send_verification_email(user: User) -> bool:
         </tr>
         <tr>
           <td style="background:#0d1018;padding:18px 40px;border-top:1px solid rgba(255,255,255,0.06);">
-            <p style="margin:0;font-size:11px;color:#555c70;">
+            <p style="margin:0 0 6px;font-size:11px;color:#555c70;">
               marianosevilla.com · Herramienta Fiscal Cripto para el IRPF español
             </p>
+            {SUPPORT_FOOTER_HTML}
           </td>
         </tr>
       </table>
@@ -1256,7 +1258,7 @@ def _send_verification_email(user: User) -> bool:
         f"Este enlace caduca en 24 horas.\n"
         f"Si no ves este email en tu bandeja de entrada, revisa la carpeta de spam.\n\n"
         f"Si no creaste esta cuenta, ignora este mensaje.\n\n"
-        f"marianosevilla.com — Herramienta Fiscal Cripto"
+        f"marianosevilla.com — Herramienta Fiscal Cripto{SUPPORT_FOOTER_TEXT}"
     )
 
     try:
@@ -1704,7 +1706,7 @@ def api_modelo_721():
 
     Body: multipart/form-data
       csv:      CSV del exchange (mismo fichero que /api/analizar)
-      exchange: binance | bitvavo | kraken | coinbase | nexo | cryptocom | uphold
+      exchange: binance, bitvavo, kraken, coinbase, nexo, cryptocom, uphold
       ejercicio: año fiscal único ≥ 2022  (ej. "2024")
 
     TODO Fase 3B: aceptar report_id de FifoReport cuando se implemente
@@ -3098,7 +3100,8 @@ def _send_advisory_confirmation_email(advisory: "FiscalAdvisoryRequest"):
           </p>
         </td></tr>
         <tr><td style="background:#0d1018;padding:18px 40px;border-top:1px solid rgba(255,255,255,0.06);">
-          <p style="margin:0;font-size:11px;color:#555c70;">marianosevilla.com · Asesoramiento Fiscal Cripto</p>
+          <p style="margin:0 0 6px;font-size:11px;color:#555c70;">marianosevilla.com · Asesoramiento Fiscal Cripto</p>
+          {SUPPORT_FOOTER_HTML}
         </td></tr>
       </table>
     </td></tr>

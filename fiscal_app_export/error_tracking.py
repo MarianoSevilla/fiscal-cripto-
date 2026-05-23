@@ -14,6 +14,7 @@ import logging
 import traceback as tb
 import concurrent.futures
 from datetime import datetime, timedelta
+from email_helpers import SUPPORT_FOOTER_TEXT
 
 logger = logging.getLogger(__name__)
 
@@ -300,7 +301,7 @@ def send_processing_error_email(
             "- si has visto algún mensaje concreto en pantalla.\n\n"
             "No incluyas claves API ni información sensible.\n\n"
             "Gracias por ayudarnos a mejorar la herramienta.\n\n"
-            "Mariano Sevilla"
+            f"Mariano Sevilla{SUPPORT_FOOTER_TEXT}"
         ),
     }
 
