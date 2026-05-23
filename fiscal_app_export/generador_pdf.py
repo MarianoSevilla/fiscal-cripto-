@@ -1111,7 +1111,6 @@ def _tabla_operaciones(resultados, styles):
         ("LEFTPADDING",   (0, 0), (-1, -1), 5),
         ("RIGHTPADDING",  (0, 0), (-1, -1), 5),
         ("ALIGN",         (3, 0), (-1, -1), "RIGHT"),
-        ("NOSPLIT",       (2, 1), (2, -1)),                   # columna ACTIVO: no partir
     ] + row_bgs))
     return t
 

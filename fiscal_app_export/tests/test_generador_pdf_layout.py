@@ -196,3 +196,22 @@ def test_pdf_activo_largo_en_tabla_operaciones():
     pdf = generar_pdf(motor, nombre_usuario="Test", ejercicio="2024",
                       exchange="Nexo", rendimientos=[])
     assert len(pdf) > 0
+
+
+def test_pdf_tabla_operaciones_mas_de_30_filas_no_lanza_layout_error():
+    """
+    Regresión: con 83+ operaciones la tabla de operaciones supera la altura
+    de una página A4 y ReportLab necesita partirla. El NOSPLIT incorrecto
+    en la columna ACTIVO bloqueaba esa partición → LayoutError en producción
+    con el CSV de Nexo (2025: 83 operaciones).
+
+    El test usa 84 resultados mock (igual que el CSV real) para garantizar
+    que la tabla se genera correctamente al abarcar múltiples páginas.
+    """
+    resultados = [_MockResultado(activo="BTC", fecha="2025-06-15") for _ in range(84)]
+    motor = _MockMotor(resultados=resultados)
+
+    pdf = generar_pdf(motor, nombre_usuario="Test", ejercicio="2025",
+                      exchange="Nexo", rendimientos=[])
+    assert isinstance(pdf, bytes)
+    assert len(pdf) > 1000
