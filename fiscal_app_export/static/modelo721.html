@@ -664,6 +664,7 @@ btnSubmit.addEventListener('click', async () => {
     const data = await res.json();
 
     if (!res.ok) {
+      showLoading(false);
       showError(data.error || `Error ${res.status}`);
       return;
     }
@@ -671,9 +672,8 @@ btnSubmit.addEventListener('click', async () => {
     renderResult(data);
 
   } catch (err) {
-    showError('Error de red. Comprueba tu conexión e inténtalo de nuevo.');
-  } finally {
     showLoading(false);
+    showError('Error de red. Comprueba tu conexión e inténtalo de nuevo.');
   }
 });
 
