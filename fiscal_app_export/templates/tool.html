@@ -1217,19 +1217,26 @@
   const yearNoneWarn       = document.getElementById('year-none-warn');
   const yearNodetect       = document.getElementById('year-nodetect');
 
-  // Detecta años en el CSV: 4 dígitos estándar + formato Binance TX (YY-MM-DD HH:mm:ss)
+  // Detecta años en el CSV exclusivamente desde patrones de fecha (YYYY-MM-DD o YY-MM-DD HH:mm:ss).
+  // No escanea todo el texto: los importes como $2039.59 o -2028.29 NO se confunden con años.
   async function extractYearsFromCSV(file) {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const text = e.target.result || '';
         const years = new Set();
-        // Formato estándar: 2024-xx-xx
-        (text.match(/\b20(0[9]|[12][0-9]|3[0-9])\b/g) || []).forEach(y => years.add(Number(y)));
+        const currentYear = new Date().getFullYear();
+        // Formato ISO YYYY-MM-DD: captura el año sólo cuando va seguido de -MM-DD.
+        // Descarta cualquier match cuyo año esté fuera del rango [2009, año actual].
+        (text.match(/\b(20(?:0[9]|[12][0-9]|3[0-9]))-\d{2}-\d{2}\b/g) || []).forEach(m => {
+          const yr = Number(m.substring(0, 4));
+          if (yr >= 2009 && yr <= currentYear) years.add(yr);
+        });
         // Formato Binance TX: YY-MM-DD HH:mm:ss (ej. 24-04-30 01:44:06 → 2024)
         (text.match(/\b(\d{2})-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/g) || []).forEach(match => {
           const yy = parseInt(match.substring(0, 2), 10);
-          if (yy >= 9 && yy <= 39) years.add(2000 + yy);
+          const yr = 2000 + yy;
+          if (yr >= 2009 && yr <= currentYear) years.add(yr);
         });
         const result = [...years].sort((a, b) => a - b);
         console.log('[FIFO] CSV:', file.name, '(' + (file.size / 1024).toFixed(1) + ' KB)');
