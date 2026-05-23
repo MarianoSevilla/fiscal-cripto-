@@ -216,6 +216,22 @@ main {
     </div>
   </div>
 
+  <!-- NIF / NIE / CIF -->
+  <div class="section">
+    <p class="section-title">NIF / NIE / CIF</p>
+    <div class="name-form">
+      <input type="text" id="nifInput" placeholder="12345678Z" autocomplete="off"
+             maxlength="20" spellcheck="false" style="text-transform:uppercase;">
+      <p style="font-size:12px;color:var(--muted);margin-top:-2px;">
+        Necesario para preparar borradores del Modelo 721 y futuros documentos fiscales.
+      </p>
+      <div>
+        <button class="btn btn-accent" id="nifBtn">Guardar</button>
+        <p class="form-msg" id="nifMsg" hidden></p>
+      </div>
+    </div>
+  </div>
+
   <!-- Cambiar contraseña (solo cuentas email, no OAuth) -->
   <div class="section" id="sectionPassword" hidden>
     <p class="section-title">Contraseña</p>
@@ -252,6 +268,9 @@ main {
 
     // Nombre
     if (u.full_name) document.getElementById('nameInput').value = u.full_name;
+
+    // NIF
+    if (u.nif) document.getElementById('nifInput').value = u.nif;
 
     // Estado email
     const verifiedEl = document.getElementById('infoVerified');
@@ -309,6 +328,36 @@ document.getElementById('nameBtn').addEventListener('click', async () => {
     document.getElementById('nameInput').value = data.full_name;
     if (window.SiteNav) window.SiteNav.updateAvatar(data.full_name.charAt(0));
     msgEl.textContent = '¡Nombre actualizado correctamente!';
+    msgEl.className = 'form-msg ok'; msgEl.hidden = false;
+  } catch (e) {
+    msgEl.textContent = e.message;
+    msgEl.className = 'form-msg err'; msgEl.hidden = false;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar';
+  }
+});
+
+// ── Guardar NIF ─────────────────────────────────
+document.getElementById('nifBtn').addEventListener('click', async () => {
+  const btn   = document.getElementById('nifBtn');
+  const msgEl = document.getElementById('nifMsg');
+  const value = document.getElementById('nifInput').value.trim().toUpperCase();
+
+  msgEl.hidden = true;
+
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try {
+    const res = await fetch('/api/update-nif', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nif: value }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al guardar');
+    document.getElementById('nifInput').value = value;
+    msgEl.textContent = value
+      ? '¡NIF guardado correctamente!'
+      : 'NIF eliminado correctamente.';
     msgEl.className = 'form-msg ok'; msgEl.hidden = false;
   } catch (e) {
     msgEl.textContent = e.message;

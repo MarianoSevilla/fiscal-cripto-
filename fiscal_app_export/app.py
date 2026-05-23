@@ -114,10 +114,7 @@ if _db_url.startswith("postgres://"):
     _db_url = _db_url.replace("postgres://", "postgresql://", 1)
 app.config["SQLALCHEMY_DATABASE_URI"] = _db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    # connect_timeout: evita que el worker quede bloqueado indefinidamente si
-    # postgres.railway.internal no responde (p.ej. DB en otro environment).
-    "connect_args":  {"connect_timeout": 5},
+_engine_opts: dict = {
     # pool_pre_ping: descarta conexiones muertas antes de usarlas (evita 502 post-restart).
     "pool_pre_ping": True,
     # pool_timeout: máx 10s esperando una conexión libre del pool.
@@ -125,6 +122,10 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     # pool_recycle: recicla conexiones > 5 min para evitar "server closed the connection".
     "pool_recycle":  300,
 }
+if not _db_url.startswith("sqlite"):
+    # connect_timeout solo aplica a PostgreSQL/MySQL; sqlite3 no lo acepta.
+    _engine_opts["connect_args"] = {"connect_timeout": 5}
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = _engine_opts
 
 # Tamaño máximo de payload global — corta uploads gigantes antes de llegar a disco.
 # Los CSV válidos son <10 MB; los ficheros de asesoramiento tienen su propio check a 10 MB.
@@ -246,6 +247,9 @@ try:
                 ))
                 _conn.execute(text(
                     "ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'user' NOT NULL"
+                ))
+                _conn.execute(text(
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS nif VARCHAR(20)"
                 ))
                 _conn.commit()
         except Exception:
@@ -680,6 +684,28 @@ def _sanitizar_texto(texto: str, max_len: int = 100) -> str:
 def _title_case(texto: str) -> str:
     """Convierte 'mariano sevilla trujillo' → 'Mariano Sevilla Trujillo'."""
     return " ".join(w.capitalize() for w in texto.strip().split())
+
+
+_NIF_RE = re.compile(r"^[A-Z0-9][0-9]{7}[A-Z0-9]$")
+
+def _normalizar_nif(nif: str) -> str:
+    """Quita espacios y convierte a mayúsculas."""
+    return nif.strip().upper()
+
+def _validar_nif_usuario(nif: str) -> tuple[bool, str]:
+    """
+    Valida NIF/NIE/CIF español básico.
+    Devuelve (True, "") si es válido o vacío; (False, mensaje) si inválido.
+    El campo es opcional: vacío se acepta (significa "no guardado todavía").
+    """
+    nif = _normalizar_nif(nif)
+    if not nif:
+        return True, ""
+    if len(nif) > 20:
+        return False, "El NIF no puede tener más de 20 caracteres."
+    if not _NIF_RE.match(nif):
+        return False, "Formato no válido. Ejemplos válidos: 12345678Z, X1234567L, B12345678."
+    return True, ""
 
 
 def _validar_ejercicio(ejercicio: str) -> tuple[bool, str]:
@@ -1738,12 +1764,18 @@ def api_modelo_721():
             request.form.get("ejercicio", ""), max_len=6
         )
         # Opcionales para generar el XML AEAT (Fase 3B.3)
+        # Prioridad: campo del formulario > NIF guardado en el perfil del usuario
         nif_declarante    = _sanitizar_texto(
             request.form.get("nif_declarante", ""), max_len=15
         ).strip().upper()
         nombre_declarante = _sanitizar_texto(
             request.form.get("nombre_declarante", ""), max_len=120
         ).strip()
+
+        if not nif_declarante and current_user.nif:
+            nif_declarante = current_user.nif
+        if not nombre_declarante and current_user.full_name:
+            nombre_declarante = current_user.full_name
 
         # ── 2. Validar exchange ────────────────────────────────────────────────
         if not exchange:
@@ -1879,13 +1911,14 @@ def api_modelo_721():
                     # No fallar el endpoint por error de XML; el JSON es suficiente
 
             respuesta: dict = {
-                "ok":          True,
-                "modelo":      "721",
-                "ejercicio":   ejercicio,
-                "exchange":    exchange,
-                "generado_en": datetime.utcnow().isoformat(),
-                "resultado":   datos,
-                "pendiente":   pendiente,
+                "ok":           True,
+                "modelo":       "721",
+                "ejercicio":    ejercicio,
+                "exchange":     exchange,
+                "generado_en":  datetime.utcnow().isoformat(),
+                "resultado":    datos,
+                "pendiente":    pendiente,
+                "nif_faltante": not bool(nif_declarante),
             }
             if xml_content is not None:
                 respuesta["xml"] = xml_content
@@ -2133,6 +2166,7 @@ def me():
     return jsonify({"user": {
         "email":          current_user.email,
         "full_name":      current_user.full_name or "",
+        "nif":            current_user.nif or "",
         "plan":           current_user.plan,
         "email_verified": current_user.email_verified_at is not None,
         "is_google":      current_user.google_id is not None,
@@ -2173,6 +2207,24 @@ def update_profile():
     return jsonify({"message": "Perfil actualizado.", "full_name": current_user.full_name})
 
 
+@app.route("/api/update-nif", methods=["POST"])
+@login_required
+def update_nif():
+    """Guarda o borra el NIF/NIE/CIF del usuario autenticado."""
+    data    = request.get_json(silent=True) or {}
+    nif_raw = _sanitizar_texto(data.get("nif") or "", max_len=20)
+    nif     = _normalizar_nif(nif_raw)
+
+    if nif:
+        valido, error = _validar_nif_usuario(nif)
+        if not valido:
+            return jsonify({"error": error}), 400
+
+    current_user.nif = nif or None
+    db.session.commit()
+    return jsonify({"message": "NIF actualizado.", "nif_saved": bool(nif)})
+
+
 @app.route("/api/delete-account", methods=["POST"])
 @login_required
 def delete_account():
@@ -2181,6 +2233,8 @@ def delete_account():
     current_user.email             = f"deleted_{uid}@deleted"
     current_user.password_hash     = None
     current_user.google_id         = None
+    current_user.full_name         = None
+    current_user.nif               = None
     current_user.is_active         = False
     current_user.email_verified_at = None
     db.session.commit()

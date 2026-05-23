@@ -28,6 +28,7 @@ class User(UserMixin, db.Model):
     email_verified_at = db.Column(db.DateTime, nullable=True)      # None = pendiente de verificar
     created_at        = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     last_login        = db.Column(db.DateTime, nullable=True)
+    nif               = db.Column(db.String(20), nullable=True)    # NIF/NIE/CIF — dato fiscal sensible
 
     def set_password(self, plaintext: str) -> None:
         """Hashea la contraseña con bcrypt (cost factor 12)."""

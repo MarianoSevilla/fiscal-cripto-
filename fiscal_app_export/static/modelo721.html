@@ -451,6 +451,25 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
       <p class="result-meta" id="result-meta"></p>
     </div>
 
+    <!-- Aviso NIF faltante -->
+    <div id="nif-faltante-notice" style="display:none;margin-bottom:1.25rem;">
+      <div class="pendiente-item advertencia" style="background:var(--amber-dim);border:1px solid rgba(245,158,11,.25);border-radius:var(--r);padding:1.1rem 1.25rem;gap:.75rem;align-items:flex-start;">
+        <div class="pendiente-icon" style="margin-top:2px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <div class="pendiente-text">
+          <strong>Falta el NIF del declarante</strong>
+          Para generar un XML válido del Modelo 721 necesitamos que guardes tu NIF, NIE o CIF en tu cuenta de usuario. El borrador está listo, pero el XML no puede generarse sin este dato.
+          <div style="margin-top:.65rem;">
+            <a href="/account" class="btn-secondary" style="display:inline-flex;align-items:center;gap:.4rem;padding:.55rem 1rem;font-size:.85rem;border-radius:8px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Añadir NIF en Mi cuenta
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Umbral -->
     <div id="umbral-notice" class="umbral-notice" style="display:none;">
       <strong>Probablemente no estás obligado a presentar el Modelo 721.</strong> El valor total de las criptomonedas a 31 de diciembre es inferior a 50.000 €. Aun así, este análisis puede ser útil como referencia. Consulta con un asesor fiscal si tienes dudas sobre tu obligación de declarar.
@@ -527,12 +546,15 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
 <script>
 'use strict';
 
-// ── AUTH GUARD ─────────────────────────────────────────────────────────────
+// ── AUTH GUARD + prefill desde perfil ──────────────────────────────────────
 (async () => {
   try {
     const r = await fetch('/api/me', { credentials: 'include' });
     const d = await r.json();
-    if (!d.user) { window.location.replace('/login/'); }
+    if (!d.user) { window.location.replace('/login/'); return; }
+    // Pre-rellenar NIF y nombre si el usuario los tiene guardados
+    if (d.user.nif)       document.getElementById('inp-nif').value    = d.user.nif;
+    if (d.user.full_name) document.getElementById('inp-nombre').value = d.user.full_name;
   } catch {
     window.location.replace('/login/');
   }
@@ -732,8 +754,12 @@ function renderResult(data) {
   document.getElementById('bit2me-result').style.display = 'none';
   document.getElementById('card-activos').style.display  = '';
 
-  const pendiente = data.pendiente || {};
-  const resultado = data.resultado || {};
+  const pendiente   = data.pendiente || {};
+  const resultado   = data.resultado || {};
+  const nifFaltante = !!data.nif_faltante;
+
+  // Aviso NIF faltante — solo si el análisis fue exitoso (no bit2me)
+  document.getElementById('nif-faltante-notice').style.display = nifFaltante ? '' : 'none';
   const ejercicio = data.ejercicio || '';
   const exchange  = data.exchange  || '';
 
@@ -815,10 +841,11 @@ function renderResult(data) {
   const container = document.getElementById('pendiente-items');
   container.innerHTML = '';
 
-  // Bloqueantes
+  // Bloqueantes — omitir el de NIF si ya se muestra el bloque dedicado de arriba
   (pendiente.xml_bloqueantes || []).forEach(msg => {
+    if (nifFaltante && /nif.*(declarante|proporcionado)/i.test(msg)) return;
     container.appendChild(mkPendienteItem('bloqueante',
-      iconX(), 'No se puede generar el XML', humanizeMensaje(msg)));
+      iconX(), 'XML pendiente: falta información obligatoria', humanizeMensaje(msg)));
   });
 
   // Precios históricos faltantes
