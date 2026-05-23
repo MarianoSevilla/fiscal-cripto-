@@ -198,6 +198,85 @@ def test_pdf_activo_largo_en_tabla_operaciones():
     assert len(pdf) > 0
 
 
+def test_grafico_gp_activos_requiere_matplotlib_instalado():
+    """
+    Regresión: matplotlib no estaba en requirements.txt.
+    En producción (Railway) _grafico_gp_activos() lanzaba ImportError silencioso
+    y devolvía None → el PDF se generaba sin gráfica (12 págs en vez de 13).
+
+    Este test garantiza que matplotlib está disponible en el entorno de ejecución.
+    Si falla, añadir 'matplotlib' a requirements.txt.
+    """
+    try:
+        import matplotlib  # noqa: F401
+    except ImportError:
+        raise AssertionError(
+            "matplotlib no está instalado. Añádelo a requirements.txt para que "
+            "el gráfico de G/P por activo aparezca en los PDFs de producción."
+        )
+
+
+def test_grafico_gp_activos_devuelve_imagen_no_none():
+    """
+    Regresión: _grafico_gp_activos devolvía None en producción porque
+    matplotlib no estaba en requirements.txt (ImportError silencioso).
+    El PDF resultante tenía 12 páginas en vez de 13 y ninguna imagen.
+    """
+    from generador_pdf import _grafico_gp_activos
+
+    resultados = [
+        _MockResultado(activo="BTC",  fecha="2025-06-15"),
+        _MockResultado(activo="ETH",  fecha="2025-06-20"),
+        _MockResultado(activo="SOL",  fecha="2025-07-01"),
+    ]
+    # Dar valores G/P distintos para que el gráfico tenga barras reales
+    resultados[0].ganancia_perdida = 500.0
+    resultados[1].ganancia_perdida = -200.0
+    resultados[2].ganancia_perdida = 150.0
+
+    grafico = _grafico_gp_activos(resultados)
+    assert grafico is not None, (
+        "_grafico_gp_activos devolvió None — matplotlib probablemente no está instalado"
+    )
+    # El objeto debe tener dimensiones reales
+    assert grafico.drawWidth > 0
+    assert grafico.drawHeight > 0
+
+
+def test_pdf_con_resultados_contiene_imagen():
+    """
+    Test de integración: el PDF generado desde generar_pdf() con resultados
+    debe contener al menos 1 imagen (la gráfica de G/P por activo).
+
+    En producción sin matplotlib el PDF tenía imgs=0 en todas las páginas.
+    """
+    import io
+    try:
+        import pdfplumber
+    except ImportError:
+        import pytest
+        pytest.skip("pdfplumber no disponible para verificar imágenes en PDF")
+
+    resultados = [_MockResultado(activo=activo, fecha="2025-06-15")
+                  for activo in ["BTC", "ETH", "SOL", "LINK", "BNB"]]
+    for i, r in enumerate(resultados):
+        r.ganancia_perdida = (i + 1) * 100.0 * (-1 if i % 2 else 1)
+
+    motor = _MockMotor(resultados=resultados)
+    pdf_bytes = generar_pdf(motor, nombre_usuario="Test", ejercicio="2025",
+                            exchange="Nexo", rendimientos=[])
+
+    total_imgs = 0
+    with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+        for page in pdf.pages:
+            total_imgs += len(page.images)
+
+    assert total_imgs >= 1, (
+        f"El PDF tiene {total_imgs} imágenes — se esperaba al menos 1 (la gráfica de G/P). "
+        "Verifica que matplotlib esté en requirements.txt."
+    )
+
+
 def test_pdf_tabla_operaciones_mas_de_30_filas_no_lanza_layout_error():
     """
     Regresión: con 83+ operaciones la tabla de operaciones supera la altura

@@ -11,6 +11,7 @@ requests
 resend
 psycopg2-binary
 reportlab
+matplotlib
 pandas
 gunicorn
 stripe
