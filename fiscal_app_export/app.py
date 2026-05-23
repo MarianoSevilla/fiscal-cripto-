@@ -2197,14 +2197,28 @@ def change_password():
 @app.route("/api/update-profile", methods=["POST"])
 @login_required
 def update_profile():
-    """Actualiza el nombre y apellidos del usuario autenticado."""
+    """Actualiza nombre y, opcionalmente, NIF del usuario autenticado."""
     data      = request.get_json(silent=True) or {}
     full_name = _sanitizar_texto(data.get("full_name") or "", max_len=150)
     if not full_name:
         return jsonify({"error": "El nombre y apellidos no pueden estar vacíos."}), 400
     current_user.full_name = _title_case(full_name)
+
+    # NIF: opcional — solo se toca si el campo está presente en el payload
+    if "nif" in data:
+        nif = _normalizar_nif(_sanitizar_texto(data["nif"] or "", max_len=20))
+        if nif:
+            valido, error = _validar_nif_usuario(nif)
+            if not valido:
+                return jsonify({"error": error}), 400
+        current_user.nif = nif or None
+
     db.session.commit()
-    return jsonify({"message": "Perfil actualizado.", "full_name": current_user.full_name})
+    return jsonify({
+        "message":   "Perfil actualizado.",
+        "full_name": current_user.full_name,
+        "nif":       current_user.nif or "",
+    })
 
 
 @app.route("/api/update-nif", methods=["POST"])
