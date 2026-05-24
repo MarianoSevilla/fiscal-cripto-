@@ -30,7 +30,9 @@
               <a href="/pricing"   class="snav-dd-item snav-hidden" id="snavItemPlanes"  role="menuitem">💎&nbsp; Planes</a>
               <a href="/account"   class="snav-dd-item"             id="snavItemAccount" role="menuitem">👤&nbsp; Mi cuenta</a>
               <a href="/dashboard" class="snav-dd-item"             id="snavItemDash"    role="menuitem">⚡&nbsp; Dashboard</a>
-              <a href="/stats"     class="snav-dd-item snav-hidden" id="snavItemStats"   role="menuitem">📊&nbsp; Stats</a>
+              <a href="/stats"     class="snav-dd-item snav-hidden" id="snavItemStats"          role="menuitem">📊&nbsp; Stats</a>
+              <a href="/admin/asesoramiento"      class="snav-dd-item snav-hidden" id="snavItemAdminAsesoria"   role="menuitem">🛠&nbsp; Panel asesoramiento</a>
+              <a href="/mis-solicitudes-fiscales" class="snav-dd-item snav-hidden" id="snavItemMisSolicitudes"  role="menuitem">📋&nbsp; Mis solicitudes fiscales</a>
               <div class="snav-dd-divider"></div>
               <button class="snav-dd-item danger" id="snavBtnLogout" role="menuitem">↩&nbsp; Cerrar sesión</button>
             </div>
@@ -62,10 +64,12 @@
 
     // Dropdown items (avatar menu)
     const map = {
-      '/account':   'snavItemAccount',
-      '/dashboard': 'snavItemDash',
-      '/stats':     'snavItemStats',
-      '/pricing':   'snavItemPlanes',
+      '/account':                   'snavItemAccount',
+      '/dashboard':                 'snavItemDash',
+      '/stats':                     'snavItemStats',
+      '/pricing':                   'snavItemPlanes',
+      '/admin/asesoramiento':       'snavItemAdminAsesoria',
+      '/mis-solicitudes-fiscales':  'snavItemMisSolicitudes',
     };
     for (const [prefix, id] of Object.entries(map)) {
       if (path.startsWith(prefix)) {
@@ -152,10 +156,14 @@
 
           // Mostrar items de admin si corresponde
           if (user.is_admin) {
-            const planes = document.getElementById('snavItemPlanes');
-            const stats  = document.getElementById('snavItemStats');
-            if (planes) planes.classList.remove('snav-hidden');
-            if (stats)  stats.classList.remove('snav-hidden');
+            const planes          = document.getElementById('snavItemPlanes');
+            const stats           = document.getElementById('snavItemStats');
+            const adminAsesoria   = document.getElementById('snavItemAdminAsesoria');
+            const misSolicitudes  = document.getElementById('snavItemMisSolicitudes');
+            if (planes)         planes.classList.remove('snav-hidden');
+            if (stats)          stats.classList.remove('snav-hidden');
+            if (adminAsesoria)  adminAsesoria.classList.remove('snav-hidden');
+            if (misSolicitudes) misSolicitudes.classList.remove('snav-hidden');
           }
         }
       }
