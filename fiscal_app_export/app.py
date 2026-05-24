@@ -3016,10 +3016,7 @@ def advisory_prices():
 @login_required
 @limiter.limit("3 per hour")
 def advisory_solicitar():
-    """Crea una solicitud pending_payment y devuelve la URL de Stripe Checkout."""
-    if not _stripe_available or not _STRIPE_SECRET_KEY:
-        return jsonify({"error": "El sistema de pagos no está configurado. Contacta con nosotros directamente."}), 503
-
+    """Crea una solicitud gratuita. No requiere pago. El presupuesto se envía por email tras revisar el caso."""
     data = request.get_json(silent=True) or {}
 
     # Validaciones
@@ -3061,7 +3058,8 @@ def advisory_solicitar():
     if not isinstance(cur_situation, list): cur_situation = []
     cur_situation = [str(x)[:100] for x in cur_situation[:20]]
 
-    # Crear solicitud en DB
+    # Crear solicitud en DB — estado inicial "paid_received" = "Solicitud recibida"
+    # No se procesa pago. El presupuesto se define manualmente tras revisar el caso.
     import json as _json
     advisory = FiscalAdvisoryRequest(
         user_id               = current_user.id,
@@ -3076,58 +3074,25 @@ def advisory_solicitar():
         operation_volume      = op_volume,
         current_situation     = _json.dumps(cur_situation),
         case_description      = case_description,
-        status                = "pending_payment",
+        status                = "paid_received",   # muestra "Solicitud recibida" en UI
     )
     db.session.add(advisory)
-    db.session.flush()  # get ID without committing
+    db.session.flush()  # obtener ID antes del commit
 
-    # Registrar historial
     history = FiscalAdvisoryStatusHistory(
         request_id = advisory.id,
-        status     = "pending_payment",
+        status     = "paid_received",
         changed_by = None,
-        note       = "Solicitud creada",
+        note       = "Solicitud recibida",
     )
     db.session.add(history)
     db.session.commit()
 
-    # Crear sesión Stripe Checkout
-    try:
-        _stripe_module.api_key = _STRIPE_SECRET_KEY
-        amount_cents = _ADVISORY_PRICES[service_type]
-        label        = _ADVISORY_PRICE_LABELS[service_type]
-        success_url  = f"{_APP_BASE_URL}/asesoramiento-fiscal-confirmado?session_id={{CHECKOUT_SESSION_ID}}"
-        cancel_url   = f"{_APP_BASE_URL}/asesoramiento-fiscal-cancelado?advisory_id={advisory.id}"
+    # Notificaciones — se envían siempre que haya clave Resend (no dependen del feature flag)
+    _send_advisory_confirmation_email(advisory)
+    _send_advisory_internal_notification(advisory)
 
-        session_data = _stripe_module.checkout.Session.create(
-            payment_method_types=["card"],
-            line_items=[{
-                "price_data": {
-                    "currency": "eur",
-                    "product_data": {"name": label},
-                    "unit_amount": amount_cents,
-                },
-                "quantity": 1,
-            }],
-            mode="payment",
-            success_url=success_url,
-            cancel_url=cancel_url,
-            customer_email=email_val,
-            metadata={
-                "advisory_request_id": str(advisory.id),
-                "user_id":             str(current_user.id),
-                "service_type":        service_type,
-            },
-        )
-        advisory.stripe_checkout_session_id = session_data.id
-        db.session.commit()
-
-        return jsonify({"checkout_url": session_data.url, "advisory_id": advisory.id})
-
-    except Exception as exc:
-        app.logger.error("Stripe error: %s", exc)
-        db.session.rollback()
-        return jsonify({"error": "Error al crear la sesión de pago. Inténtalo de nuevo."}), 500
+    return jsonify({"ok": True, "advisory_id": advisory.id})
 
 
 @app.route("/api/webhooks/stripe", methods=["POST"])
@@ -3185,10 +3150,11 @@ def stripe_webhook():
 
 
 def _send_advisory_confirmation_email(advisory: "FiscalAdvisoryRequest"):
-    """Email de confirmación al usuario."""
+    """Email de confirmación al usuario — se envía al crear la solicitud.
+    Independiente del flag ENABLE_ADVISORY_STATUS_EMAILS (no es cambio de estado).
+    """
     if not resend.api_key:
         return
-    amount_str = f"{advisory.amount_paid / 100:.2f} EUR" if advisory.amount_paid else ""
     html = f"""<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:0;background:#080c12;font-family:'Helvetica Neue',Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#080c12;padding:40px 0;">
@@ -3199,15 +3165,14 @@ def _send_advisory_confirmation_email(advisory: "FiscalAdvisoryRequest"):
           <span style="font-size:12px;color:#7a8099;margin-left:10px;">Asesoramiento Fiscal Cripto</span>
         </td></tr>
         <tr><td style="padding:36px 40px;">
-          <h1 style="margin:0 0 12px;font-size:22px;color:#eef0f6;font-weight:700;">Solicitud recibida correctamente</h1>
+          <h1 style="margin:0 0 12px;font-size:22px;color:#eef0f6;font-weight:700;">Solicitud recibida</h1>
           <p style="margin:0 0 16px;font-size:15px;color:#9aa0b8;line-height:1.6;">
             Hola <strong style="color:#eef0f6;">{advisory.full_name}</strong>,<br><br>
             Hemos recibido tu solicitud de <strong style="color:#eef0f6;">{advisory.service_label()}</strong> para el ejercicio <strong style="color:#eef0f6;">{advisory.tax_year}</strong>.
-            {f'<br>Importe abonado: <strong style="color:#00C896;">{amount_str}</strong>' if amount_str else ''}
           </p>
           <p style="margin:0 0 16px;font-size:15px;color:#9aa0b8;line-height:1.6;">
-            Rafael revisará tu caso y se pondrá en contacto contigo en un plazo de <strong style="color:#eef0f6;">2–3 días hábiles</strong>.
-            Es posible que necesitemos información adicional para analizar correctamente tu situación.
+            Revisaremos el tipo de ayuda que necesitas y te responderemos por email con los siguientes pasos.
+            Si es necesario, Rafa, economista colegiado, valorará tu caso antes de confirmar el servicio y el precio final.
           </p>
           <p style="margin:0 0 16px;background:rgba(255,255,255,0.04);border-left:3px solid rgba(255,255,255,0.12);padding:12px 16px;border-radius:0 8px 8px 0;font-size:13px;color:#7a8099;line-height:1.6;">
             Si necesitamos revisar documentación adicional, te indicaremos por email cómo enviarla. Por seguridad, no almacenamos documentos fiscales sensibles en el servidor.
