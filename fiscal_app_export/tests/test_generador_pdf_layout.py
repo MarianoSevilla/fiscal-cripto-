@@ -294,3 +294,109 @@ def test_pdf_tabla_operaciones_mas_de_30_filas_no_lanza_layout_error():
                       exchange="Nexo", rendimientos=[])
     assert isinstance(pdf, bytes)
     assert len(pdf) > 1000
+
+
+# ── Tests inventario_incompleto — Motor FIFO real ─────────────────────────────
+
+def test_inventario_incompleto_flag_se_activa_cuando_faltan_lotes():
+    """
+    ResultadoFIFO.inventario_incompleto debe ser True cuando la venta supera
+    el inventario disponible (caso real: XRP comprado en 2024, CSV solo tiene 2025).
+
+    Simulamos: 10 XRP en inventario, venta de 100 XRP → faltan 90 unidades.
+    """
+    from motor_fifo import MotorFIFO
+
+    motor = MotorFIFO()
+    motor.registrar_compra("2024-01-01", "XRP", 10.0, 5.0, "EUR", "EUR", 0.0)
+    motor.registrar_venta("2025-03-02", "XRP", 100.0, 200.0, "EUR", "EUR", 0.0)
+
+    assert len(motor.resultados) == 1, "Debe generarse un ResultadoFIFO parcial"
+    resultado = motor.resultados[0]
+    assert resultado.inventario_incompleto is True, (
+        "inventario_incompleto debe ser True cuando faltan unidades"
+    )
+    # El coste solo refleja los 10 XRP disponibles (10 * 0.5 EUR/u = 5.0 EUR), no los 90 sin lote
+    assert resultado.precio_coste == pytest.approx(5.0, abs=0.01)  # 10 XRP × 0.5 EUR/XRP
+    assert len(motor.advertencias) == 1
+    assert "inventario insuficiente" in motor.advertencias[0]
+
+
+def test_inventario_incompleto_flag_no_se_activa_cuando_cubre():
+    """
+    ResultadoFIFO.inventario_incompleto debe ser False cuando el inventario
+    cubre exactamente la venta (caso normal, sin inventario insuficiente).
+    """
+    from motor_fifo import MotorFIFO
+
+    motor = MotorFIFO()
+    motor.registrar_compra("2024-01-01", "BTC", 1.0, 30000.0, "EUR", "EUR", 0.0)
+    motor.registrar_venta("2025-01-15", "BTC", 1.0, 40000.0, "EUR", "EUR", 0.0)
+
+    assert len(motor.resultados) == 1
+    resultado = motor.resultados[0]
+    assert resultado.inventario_incompleto is False, (
+        "inventario_incompleto debe ser False cuando el inventario cubre la venta"
+    )
+    assert motor.advertencias == [], "No debe haber advertencias de inventario insuficiente"
+
+
+def test_inventario_incompleto_venta_sin_ningun_lote_devuelve_none():
+    """
+    Cuando no hay ningún lote registrado para el activo, _consumir_fifo devuelve
+    None (no crea ResultadoFIFO). El aviso va solo a motor.advertencias.
+    Este test verifica que ese comportamiento no ha cambiado tras el refactor.
+    """
+    from motor_fifo import MotorFIFO
+
+    motor = MotorFIFO()
+    # Sin compra previa, venta directa → should return None, not create resultado
+    motor.registrar_venta("2025-03-02", "XRP", 737.0, 1917.53, "EUR", "EUR", 0.0)
+
+    assert len(motor.resultados) == 0, (
+        "Sin lotes previos, registrar_venta no debe crear ResultadoFIFO"
+    )
+    assert len(motor.advertencias) == 1
+    assert "no hay lotes" in motor.advertencias[0]
+
+
+def test_pdf_con_inventario_incompleto_genera_aviso_y_no_lanza_error():
+    """
+    Regresión Bug 4 (XRP José Luis): un resultado con inventario_incompleto=True
+    debe generar el PDF correctamente (sin LayoutError) y el aviso de
+    'inventario insuficiente' debe aparecer en el story.
+
+    Simulamos el caso real: 10 XRP comprado, 737 vendido → inventario insuficiente.
+    """
+    from motor_fifo import MotorFIFO
+
+    motor = MotorFIFO()
+    motor.registrar_compra("2024-01-01", "XRP", 10.793212, 28.93, "EUR", "EUR", 0.0)
+    motor.registrar_venta("2025-03-02", "XRP", 737.0, 1917.53, "EUR", "EUR", 0.0)
+
+    assert motor.resultados[0].inventario_incompleto is True
+
+    pdf = generar_pdf(motor, nombre_usuario="José Luis", ejercicio="2025",
+                      exchange="Nexo", rendimientos=[])
+    assert isinstance(pdf, bytes)
+    assert len(pdf) > 1000
+
+
+def test_pdf_sin_inventario_incompleto_no_muestra_aviso_rojo():
+    """
+    Cuando todos los resultados tienen inventario_incompleto=False (caso normal),
+    el PDF debe generarse sin el aviso de inventario insuficiente.
+    El PDF resultante debe ser válido.
+    """
+    from motor_fifo import MotorFIFO
+
+    motor = MotorFIFO()
+    motor.registrar_compra("2024-01-01", "BTC", 0.5, 15000.0, "EUR", "EUR", 0.0)
+    motor.registrar_venta("2025-06-01", "BTC", 0.5, 25000.0, "EUR", "EUR", 0.0)
+
+    assert motor.resultados[0].inventario_incompleto is False
+
+    pdf = generar_pdf(motor, nombre_usuario="Test", ejercicio="2025",
+                      exchange="Nexo", rendimientos=[])
+    assert isinstance(pdf, bytes)
+    assert len(pdf) > 1000

@@ -45,6 +45,7 @@ class ResultadoFIFO:
     lotes_consumidos: list         # detalle de qué lotes se usaron
     tipo_operacion: str            # "venta" o "swap"
     nota: str = ""
+    inventario_incompleto: bool = False  # True si faltan lotes previos → coste parcial o nulo
 
 @dataclass
 class ResumenActivo:
@@ -273,7 +274,9 @@ class MotorFIFO:
             cantidad_pendiente -= consumir
             coste_total += coste_lote
 
-        if cantidad_pendiente > 0.0001:  # tolerancia por redondeo
+        _incompleto = cantidad_pendiente > 0.0001  # True si faltan unidades por inventario insuficiente
+
+        if _incompleto:
             self.advertencias.append(
                 f"{dt.date()} | {tipo.upper()} {activo} — "
                 f"inventario insuficiente: faltan {cantidad_pendiente:.6f} unidades"
@@ -292,7 +295,8 @@ class MotorFIFO:
             periodo_dias=periodo,
             lotes_consumidos=lotes_consumidos,
             tipo_operacion=tipo,
-            nota=nota
+            nota=nota,
+            inventario_incompleto=_incompleto,
         )
 
     # ── INVENTARIO ACTUAL ─────────────────────

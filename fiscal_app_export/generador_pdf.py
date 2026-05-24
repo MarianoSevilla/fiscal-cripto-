@@ -1077,17 +1077,27 @@ def _tabla_operaciones(resultados, styles):
         Paragraph("DÍAS",                     styles["th_right"]),
     ]
     rows = [cabecera]
-    for r in resultados:
+    _filas_incompletas = []  # índices de filas con inventario_incompleto (base-1, incluyendo header)
+
+    for i, r in enumerate(resultados):
         gp = r.ganancia_perdida
         gp_style = styles["td_green"] if gp >= 0 else styles["td_red"]
         gp_str   = f"+{gp:,.2f}" if gp >= 0 else f"{gp:,.2f}"
+        _inc = getattr(r, "inventario_incompleto", False)
+
+        if _inc:
+            _filas_incompletas.append(i + 1)  # +1: la fila 0 es la cabecera
+            coste_cell = Paragraph(f"⚠ {r.precio_coste:,.2f}", styles["td_red"])
+        else:
+            coste_cell = Paragraph(f"{r.precio_coste:,.2f}", styles["td_mono"])
+
         rows.append([
             Paragraph(r.fecha.strftime("%d/%m/%Y"), styles["td_muted"]),
             Paragraph(r.tipo_operacion.upper(), styles["td"]),
             Paragraph(_td_safe(r.activo, 40), styles["td"]),
             Paragraph(_fmt_cantidad(r.cantidad_vendida),  styles["td_mono"]),
             Paragraph(f"{r.precio_transmision:,.2f}", styles["td_mono"]),
-            Paragraph(f"{r.precio_coste:,.2f}",       styles["td_mono"]),
+            coste_cell,
             Paragraph(gp_str, gp_style),
             Paragraph(str(int(r.periodo_dias)), styles["td_muted_right"]),
         ])
@@ -1098,6 +1108,9 @@ def _tabla_operaciones(resultados, styles):
     t = Table(rows, colWidths=col_w, repeatRows=1)
     n = len(rows)
     row_bgs = [("BACKGROUND", (0, i), (-1, i), BG if i % 2 == 1 else ZEBRA_LIGHT) for i in range(1, n)]
+    # Las filas con inventario insuficiente van en rojo suave (sobreescribe zebra)
+    inc_bgs = [("BACKGROUND", (0, fi), (-1, fi), colors.HexColor("#FEF2F2"))
+               for fi in _filas_incompletas]
     t.setStyle(TableStyle([
         ("BACKGROUND",    (0, 0), (-1, 0),  ACCENT_SOFT),   # header azul suave
         ("LINEBELOW",     (0, 0), (-1, 0),  1,   ACCENT),
@@ -1111,7 +1124,7 @@ def _tabla_operaciones(resultados, styles):
         ("LEFTPADDING",   (0, 0), (-1, -1), 5),
         ("RIGHTPADDING",  (0, 0), (-1, -1), 5),
         ("ALIGN",         (3, 0), (-1, -1), "RIGHT"),
-    ] + row_bgs))
+    ] + row_bgs + inc_bgs))
     return t
 
 
@@ -1335,6 +1348,45 @@ def _aviso_fmv_estimado(n_swaps: int, styles) -> list:
     return [t, Spacer(1, 3*mm)]
 
 
+def _aviso_inventario_incompleto(n_ops: int, activos: list, styles) -> list:
+    """
+    Aviso rojo prominente cuando hay resultados con inventario_incompleto=True.
+
+    Estas operaciones tienen coste de adquisición parcial o nulo porque el CSV
+    no contiene el historial completo de compras previas (p.ej. activos adquiridos
+    en un ejercicio anterior no incluido en el fichero exportado). Las ganancias
+    mostradas son ARTIFICIALES y no deben declararse sin corrección manual.
+    """
+    activos_str = ", ".join(sorted(set(activos)))
+    texto = (
+        f"<b>⚠  INVENTARIO INSUFICIENTE — {n_ops} operación{'es' if n_ops != 1 else ''} "
+        f"con coste de adquisición no verificable.</b>  "
+        f"Activos afectados: {activos_str}.  "
+        "El CSV aportado no contiene el historial completo de compras previas para estos activos "
+        "(posiblemente adquiridos en un período anterior al rango del fichero exportado). "
+        "El coste de adquisición de las unidades que no tienen lote de compra previo se ha registrado "
+        "como <b>0,00 EUR</b>, produciendo ganancias artificialmente infladas. "
+        "Las filas marcadas con <b>⚠</b> en la columna «Coste Adquisición» son las afectadas. "
+        "<b>Estos valores NO reflejan el resultado fiscal real y no deben declararse sin antes "
+        "aportar el historial completo de adquisición y corregir el coste con tu asesor fiscal.</b>"
+    )
+    warn_style = ParagraphStyle(
+        "inv_inc_warn", fontName="Helvetica", fontSize=8.5,
+        textColor=colors.HexColor("#7F1D1D"), leading=13,
+    )
+    data = [[Paragraph(texto, warn_style)]]
+    t = Table(data, colWidths=[168 * mm])
+    t.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#FEF2F2")),
+        ("BOX",           (0, 0), (-1, -1), 1.5, colors.HexColor("#DC2626")),
+        ("TOPPADDING",    (0, 0), (-1, -1), 10),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 12),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 12),
+    ]))
+    return [t, Spacer(1, 4 * mm)]
+
+
 def _notas_faq(notas: list, styles) -> list:
     """
     Renderiza las notas explicativas como FAQ cards premium — un bloque por concepto.
@@ -1435,6 +1487,13 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
             styles["body_muted"]
         ))
         story.append(Spacer(1, 3*mm))
+        # Aviso inventario insuficiente — coste no verificable (p.ej. activos comprados
+        # fuera del rango del CSV; las ganancias mostradas pueden ser artificiales).
+        _res_inc = [r for r in motor.resultados if getattr(r, "inventario_incompleto", False)]
+        if _res_inc:
+            _activos_inc = [r.activo for r in _res_inc]
+            for _fl in _aviso_inventario_incompleto(len(_res_inc), _activos_inc, styles):
+                story.append(_fl)
         # Aviso específico cuando el exchange no aporta FMV en EUR (p.ej. Uphold):
         # los swaps muestran G/P = 0 porque se usa coste FIFO como proxy.
         if exchange == "Uphold":
