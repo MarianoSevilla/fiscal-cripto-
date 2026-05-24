@@ -1359,7 +1359,7 @@ def _aviso_inventario_incompleto(n_ops: int, activos: list, styles) -> list:
     """
     activos_str = ", ".join(sorted(set(activos)))
     texto = (
-        f"<b>⚠  INVENTARIO INSUFICIENTE — {n_ops} operación{'es' if n_ops != 1 else ''} "
+        f"<b>⚠  INVENTARIO INSUFICIENTE — {n_ops} {'operación' if n_ops == 1 else 'operaciones'} "
         f"con coste de adquisición no verificable.</b>  "
         f"Activos afectados: {activos_str}.  "
         "El CSV aportado no contiene el historial completo de compras previas para estos activos "
