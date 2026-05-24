@@ -2421,6 +2421,20 @@ def _api_stats_data():
     veinticuatro_h     = now - timedelta(hours=24)
     hoy_inicio         = datetime(now.year, now.month, now.day)
 
+    # ── EXCLUSIÓN DE ADMINS DE MÉTRICAS OPERATIVAS ───────────────────────────
+    _admin_uids = []
+    if ADMIN_EMAILS:
+        _admin_uids = [
+            uid for (uid,) in
+            db.session.query(User.id)
+            .filter(func.lower(User.email).in_(ADMIN_EMAILS))
+            .all()
+        ]
+    _no_adm_rep  = [FifoReport.user_id.notin_(_admin_uids)] if _admin_uids else []
+    _no_adm_usr  = [User.id.notin_(_admin_uids)]            if _admin_uids else []
+    _no_adm_adv  = [FiscalAdvisoryRequest.user_id.notin_(_admin_uids)] if _admin_uids else []
+    _no_adm_proc = [ProcessingError.email.notin_(list(ADMIN_EMAILS))] if ADMIN_EMAILS else []
+
     # Ventana de 6 meses: primer día del mes de hace 5 meses
     m = now.month - 5
     y = now.year
@@ -2449,56 +2463,56 @@ def _api_stats_data():
         return result
 
     # ── USUARIOS — SQL aggregations ──────────────────────────────────────────
-    total_users   = db.session.query(func.count(User.id)).scalar() or 0
-    verified      = db.session.query(func.count(User.id)).filter(User.email_verified_at.isnot(None)).scalar() or 0
-    activos_30d   = db.session.query(func.count(User.id)).filter(User.last_login >= treinta_dias_atras).scalar() or 0
-    plan_free     = db.session.query(func.count(User.id)).filter(User.plan == "free").scalar() or 0
-    plan_pro      = db.session.query(func.count(User.id)).filter(User.plan == "pro").scalar() or 0
-    con_informes  = db.session.query(func.count(func.distinct(FifoReport.user_id))).scalar() or 0
-    usuarios_hoy  = db.session.query(func.count(User.id)).filter(User.created_at >= hoy_inicio).scalar() or 0
+    total_users   = db.session.query(func.count(User.id)).filter(*_no_adm_usr).scalar() or 0
+    verified      = db.session.query(func.count(User.id)).filter(*_no_adm_usr, User.email_verified_at.isnot(None)).scalar() or 0
+    activos_30d   = db.session.query(func.count(User.id)).filter(*_no_adm_usr, User.last_login >= treinta_dias_atras).scalar() or 0
+    plan_free     = db.session.query(func.count(User.id)).filter(*_no_adm_usr, User.plan == "free").scalar() or 0
+    plan_pro      = db.session.query(func.count(User.id)).filter(*_no_adm_usr, User.plan == "pro").scalar() or 0
+    con_informes  = db.session.query(func.count(func.distinct(FifoReport.user_id))).filter(*_no_adm_rep).scalar() or 0
+    usuarios_hoy  = db.session.query(func.count(User.id)).filter(*_no_adm_usr, User.created_at >= hoy_inicio).scalar() or 0
 
     # Registros por mes — cargamos solo created_at (evita traer objetos completos)
-    u_ts = db.session.query(User.created_at).filter(User.created_at >= seis_meses_atras).all()
+    u_ts = db.session.query(User.created_at).filter(*_no_adm_usr, User.created_at >= seis_meses_atras).all()
     u_bucket = defaultdict(int)
     for (ts,) in u_ts:
         if ts:
             u_bucket[ts.strftime("%Y-%m")] += 1
     usuarios_por_mes = [{"mes": k, "total": v} for k, v in sorted(u_bucket.items())]
 
-    u_7d_raw = db.session.query(User.created_at).filter(User.created_at >= siete_dias_atras).all()
+    u_7d_raw = db.session.query(User.created_at).filter(*_no_adm_usr, User.created_at >= siete_dias_atras).all()
 
     # ── INFORMES FIFO — SQL aggregations ─────────────────────────────────────
-    total_inf   = db.session.query(func.count(FifoReport.id)).scalar() or 0
-    gen         = db.session.query(func.count(FifoReport.id)).filter(FifoReport.status == "generated").scalar() or 0
+    total_inf   = db.session.query(func.count(FifoReport.id)).filter(*_no_adm_rep).scalar() or 0
+    gen         = db.session.query(func.count(FifoReport.id)).filter(*_no_adm_rep, FifoReport.status == "generated").scalar() or 0
     fallidos    = total_inf - gen
     descargados = db.session.query(func.count(FifoReport.id)).filter(
-        FifoReport.status == "generated", FifoReport.downloaded_at.isnot(None)
+        *_no_adm_rep, FifoReport.status == "generated", FifoReport.downloaded_at.isnot(None)
     ).scalar() or 0
     informes_hoy = db.session.query(func.count(FifoReport.id)).filter(
-        FifoReport.status == "generated", FifoReport.created_at >= hoy_inicio
+        *_no_adm_rep, FifoReport.status == "generated", FifoReport.created_at >= hoy_inicio
     ).scalar() or 0
 
-    avg_ms   = db.session.query(func.avg(FifoReport.processing_ms)).filter(FifoReport.status == "generated").scalar()
-    avg_rows = db.session.query(func.avg(FifoReport.csv_rows)).filter(FifoReport.status == "generated").scalar()
+    avg_ms   = db.session.query(func.avg(FifoReport.processing_ms)).filter(*_no_adm_rep, FifoReport.status == "generated").scalar()
+    avg_rows = db.session.query(func.avg(FifoReport.csv_rows)).filter(*_no_adm_rep, FifoReport.status == "generated").scalar()
 
     # Power users
     power_1k = db.session.query(func.count(func.distinct(FifoReport.user_id))).filter(
-        FifoReport.status == "generated", FifoReport.csv_rows >= 1000
+        *_no_adm_rep, FifoReport.status == "generated", FifoReport.csv_rows >= 1000
     ).scalar() or 0
     power_10k = db.session.query(func.count(func.distinct(FifoReport.user_id))).filter(
-        FifoReport.status == "generated", FifoReport.csv_rows >= 10000
+        *_no_adm_rep, FifoReport.status == "generated", FifoReport.csv_rows >= 10000
     ).scalar() or 0
 
     por_exchange_raw = (
         db.session.query(FifoReport.exchange, func.count(FifoReport.id).label("c"))
-        .filter(FifoReport.status == "generated")
+        .filter(*_no_adm_rep, FifoReport.status == "generated")
         .group_by(FifoReport.exchange)
         .order_by(func.count(FifoReport.id).desc())
         .all()
     )
     por_ejercicio_raw = (
         db.session.query(FifoReport.fiscal_year, func.count(FifoReport.id).label("c"))
-        .filter(FifoReport.status == "generated")
+        .filter(*_no_adm_rep, FifoReport.status == "generated")
         .group_by(FifoReport.fiscal_year)
         .order_by(FifoReport.fiscal_year.desc())
         .all()
@@ -2506,7 +2520,7 @@ def _api_stats_data():
 
     # Distribución por volumen de csv_rows
     rows_all = db.session.query(FifoReport.csv_rows).filter(
-        FifoReport.status == "generated", FifoReport.csv_rows.isnot(None)
+        *_no_adm_rep, FifoReport.status == "generated", FifoReport.csv_rows.isnot(None)
     ).all()
     vol_bkt = defaultdict(int)
     for (r,) in rows_all:
@@ -2521,7 +2535,7 @@ def _api_stats_data():
     # TOP 5 usuarios por informes (emails enmascarados)
     top5_raw = (
         db.session.query(FifoReport.user_id, func.count(FifoReport.id).label("c"))
-        .filter(FifoReport.status == "generated")
+        .filter(*_no_adm_rep, FifoReport.status == "generated")
         .group_by(FifoReport.user_id)
         .order_by(func.count(FifoReport.id).desc())
         .limit(5)
@@ -2534,7 +2548,7 @@ def _api_stats_data():
     # Tipos de error más frecuentes
     por_error_raw = (
         db.session.query(FifoReport.error_type, func.count(FifoReport.id).label("c"))
-        .filter(FifoReport.status == "failed")
+        .filter(*_no_adm_rep, FifoReport.status == "failed")
         .group_by(FifoReport.error_type)
         .order_by(func.count(FifoReport.id).desc())
         .limit(10)
@@ -2544,7 +2558,7 @@ def _api_stats_data():
 
     # Informes generados por mes (últimos 6 meses)
     inf_ts = db.session.query(FifoReport.created_at).filter(
-        FifoReport.status == "generated", FifoReport.created_at >= seis_meses_atras
+        *_no_adm_rep, FifoReport.status == "generated", FifoReport.created_at >= seis_meses_atras
     ).all()
     inf_mes_bkt = defaultdict(int)
     for (ts,) in inf_ts:
@@ -2553,7 +2567,7 @@ def _api_stats_data():
     informes_por_mes = [{"mes": k, "total": v} for k, v in sorted(inf_mes_bkt.items())]
 
     inf_7d_raw = db.session.query(FifoReport.created_at).filter(
-        FifoReport.status == "generated", FifoReport.created_at >= siete_dias_atras
+        *_no_adm_rep, FifoReport.status == "generated", FifoReport.created_at >= siete_dias_atras
     ).all()
 
     # ── CONTACTOS ─────────────────────────────────────────────────────────────
@@ -2572,30 +2586,33 @@ def _api_stats_data():
     SL       = FiscalAdvisoryRequest.STATUS_LABELS
     SVL      = FiscalAdvisoryRequest.SERVICE_LABELS
 
-    total_adv   = db.session.query(func.count(FiscalAdvisoryRequest.id)).scalar() or 0
+    total_adv   = db.session.query(func.count(FiscalAdvisoryRequest.id)).filter(*_no_adm_adv).scalar() or 0
     adv_pagadas = db.session.query(func.count(FiscalAdvisoryRequest.id)).filter(
-        FiscalAdvisoryRequest.status.in_(list(PAID_ST))
+        *_no_adm_adv, FiscalAdvisoryRequest.status.in_(list(PAID_ST))
     ).scalar() or 0
     adv_pend    = db.session.query(func.count(FiscalAdvisoryRequest.id)).filter(
-        FiscalAdvisoryRequest.status == "pending_payment"
+        *_no_adm_adv, FiscalAdvisoryRequest.status == "pending_payment"
     ).scalar() or 0
     adv_sin_asig = db.session.query(func.count(FiscalAdvisoryRequest.id)).filter(
+        *_no_adm_adv,
         FiscalAdvisoryRequest.assigned_to.is_(None),
         FiscalAdvisoryRequest.status.in_(list(PAID_ST))
     ).scalar() or 0
 
     ing_cents = db.session.query(func.sum(FiscalAdvisoryRequest.amount_paid)).filter(
-        FiscalAdvisoryRequest.amount_paid.isnot(None)
+        *_no_adm_adv, FiscalAdvisoryRequest.amount_paid.isnot(None)
     ).scalar() or 0
 
     por_estado_adv = (
         db.session.query(FiscalAdvisoryRequest.status, func.count(FiscalAdvisoryRequest.id).label("c"))
+        .filter(*_no_adm_adv)
         .group_by(FiscalAdvisoryRequest.status)
         .order_by(func.count(FiscalAdvisoryRequest.id).desc())
         .all()
     )
     por_servicio_adv = (
         db.session.query(FiscalAdvisoryRequest.service_type, func.count(FiscalAdvisoryRequest.id).label("c"))
+        .filter(*_no_adm_adv)
         .group_by(FiscalAdvisoryRequest.service_type)
         .order_by(func.count(FiscalAdvisoryRequest.id).desc())
         .all()
@@ -2603,7 +2620,7 @@ def _api_stats_data():
     ing_sv_raw = (
         db.session.query(FiscalAdvisoryRequest.service_type,
                          func.sum(FiscalAdvisoryRequest.amount_paid).label("s"))
-        .filter(FiscalAdvisoryRequest.amount_paid.isnot(None))
+        .filter(*_no_adm_adv, FiscalAdvisoryRequest.amount_paid.isnot(None))
         .group_by(FiscalAdvisoryRequest.service_type)
         .order_by(func.sum(FiscalAdvisoryRequest.amount_paid).desc())
         .all()
@@ -2613,6 +2630,7 @@ def _api_stats_data():
     adv_mes_raw = db.session.query(
         FiscalAdvisoryRequest.created_at, FiscalAdvisoryRequest.amount_paid
     ).filter(
+        *_no_adm_adv,
         FiscalAdvisoryRequest.amount_paid.isnot(None),
         FiscalAdvisoryRequest.created_at >= seis_meses_atras
     ).all()
@@ -2623,11 +2641,11 @@ def _api_stats_data():
 
     # ── ERRORES ───────────────────────────────────────────────────────────────
     errores_24h = db.session.query(func.count(FifoReport.id)).filter(
-        FifoReport.status == "failed", FifoReport.created_at >= veinticuatro_h
+        *_no_adm_rep, FifoReport.status == "failed", FifoReport.created_at >= veinticuatro_h
     ).scalar() or 0
 
     err_ts = db.session.query(FifoReport.created_at).filter(
-        FifoReport.status == "failed", FifoReport.created_at >= seis_meses_atras
+        *_no_adm_rep, FifoReport.status == "failed", FifoReport.created_at >= seis_meses_atras
     ).all()
     err_bkt = defaultdict(int)
     for (ts,) in err_ts:
@@ -2636,12 +2654,12 @@ def _api_stats_data():
     errores_por_mes = [{"mes": k, "total": v} for k, v in sorted(err_bkt.items())]
 
     err_7d_raw = db.session.query(FifoReport.created_at).filter(
-        FifoReport.status == "failed", FifoReport.created_at >= siete_dias_atras
+        *_no_adm_rep, FifoReport.status == "failed", FifoReport.created_at >= siete_dias_atras
     ).all()
 
     err_detail_raw = (
         db.session.query(FifoReport.created_at, FifoReport.exchange, FifoReport.user_id)
-        .filter(FifoReport.status == "failed")
+        .filter(*_no_adm_rep, FifoReport.status == "failed")
         .order_by(FifoReport.created_at.desc())
         .limit(100)
         .all()
@@ -2677,6 +2695,7 @@ def _api_stats_data():
                 ProcessingError.auto_email_sent,
                 ProcessingError.resolved,
             )
+            .filter(*_no_adm_proc)
             .order_by(ProcessingError.created_at.desc())
             .limit(100)
             .all()
@@ -2700,7 +2719,7 @@ def _api_stats_data():
     exc_gen_map  = {r.exchange: r.c for r in por_exchange_raw}
     exc_fail_raw = (
         db.session.query(FifoReport.exchange, func.count(FifoReport.id).label("c"))
-        .filter(FifoReport.status == "failed")
+        .filter(*_no_adm_rep, FifoReport.status == "failed")
         .group_by(FifoReport.exchange)
         .all()
     )
@@ -2728,33 +2747,35 @@ def _api_stats_data():
 
     if _tel_ok:
         avg_swaps_raw       = db.session.query(func.avg(FifoReport.fifo_swaps)).filter(
-            _gen_filter, FifoReport.fifo_swaps.isnot(None)).scalar()
+            *_no_adm_rep, _gen_filter, FifoReport.fifo_swaps.isnot(None)).scalar()
         avg_adv_raw         = db.session.query(func.avg(FifoReport.fifo_advertencias)).filter(
-            _gen_filter, FifoReport.fifo_advertencias.isnot(None)).scalar()
+            *_no_adm_rep, _gen_filter, FifoReport.fifo_advertencias.isnot(None)).scalar()
         avg_rend_raw        = db.session.query(func.avg(FifoReport.fifo_rendimientos)).filter(
-            _gen_filter, FifoReport.fifo_rendimientos.isnot(None)).scalar()
+            *_no_adm_rep, _gen_filter, FifoReport.fifo_rendimientos.isnot(None)).scalar()
 
         informes_multi_year = db.session.query(func.count(FifoReport.id)).filter(
+            *_no_adm_rep,
             _gen_filter,
             FifoReport.fiscal_years_str.isnot(None),
             (FifoReport.fiscal_years_str.contains(",") | (FifoReport.fiscal_years_str == "all"))
         ).scalar() or 0
 
         informes_con_adv    = db.session.query(func.count(FifoReport.id)).filter(
-            _gen_filter, FifoReport.fifo_advertencias > 0
+            *_no_adm_rep, _gen_filter, FifoReport.fifo_advertencias > 0
         ).scalar() or 0
 
         # "complejo" = tiene al menos 1 advertencia de inventario O ≥10 swaps
         informes_complejos  = db.session.query(func.count(FifoReport.id)).filter(
+            *_no_adm_rep,
             _gen_filter,
             (FifoReport.fifo_advertencias > 0) | (FifoReport.fifo_swaps >= 10)
         ).scalar() or 0
 
         informes_gt_1k_ops  = db.session.query(func.count(FifoReport.id)).filter(
-            _gen_filter, FifoReport.fifo_operations >= 1000
+            *_no_adm_rep, _gen_filter, FifoReport.fifo_operations >= 1000
         ).scalar() or 0
         informes_gt_10k_ops = db.session.query(func.count(FifoReport.id)).filter(
-            _gen_filter, FifoReport.fifo_operations >= 10000
+            *_no_adm_rep, _gen_filter, FifoReport.fifo_operations >= 10000
         ).scalar() or 0
 
         exc_complexity_raw = (
@@ -2764,7 +2785,7 @@ def _api_stats_data():
                 func.avg(FifoReport.fifo_swaps).label("avg_swaps"),
                 func.count(FifoReport.id).label("total"),
             )
-            .filter(_gen_filter, FifoReport.fifo_advertencias.isnot(None))
+            .filter(*_no_adm_rep, _gen_filter, FifoReport.fifo_advertencias.isnot(None))
             .group_by(FifoReport.exchange)
             .order_by(func.avg(FifoReport.fifo_advertencias).desc())
             .all()
@@ -2784,6 +2805,7 @@ def _api_stats_data():
         usuarios_high_value = db.session.query(
             func.count(func.distinct(FifoReport.user_id))
         ).filter(
+            *_no_adm_rep,
             _gen_filter,
             (FifoReport.csv_rows >= 5000) |
             (FifoReport.fifo_swaps >= 50) |
@@ -2794,6 +2816,7 @@ def _api_stats_data():
         usuarios_muy_complejos = db.session.query(
             func.count(func.distinct(FifoReport.user_id))
         ).filter(
+            *_no_adm_rep,
             _gen_filter,
             (FifoReport.fifo_advertencias >= 100) | (FifoReport.fifo_swaps >= 250)
         ).scalar() or 0
@@ -2801,7 +2824,7 @@ def _api_stats_data():
         # MULTI-EXCHANGE: usuarios con ≥ 2 exchanges distintos
         _multi_exc_sub = (
             db.session.query(FifoReport.user_id)
-            .filter(_gen_filter)
+            .filter(*_no_adm_rep, _gen_filter)
             .group_by(FifoReport.user_id)
             .having(func.count(func.distinct(FifoReport.exchange)) >= 2)
             .subquery()
@@ -2812,6 +2835,7 @@ def _api_stats_data():
         usuarios_multi_year = db.session.query(
             func.count(func.distinct(FifoReport.user_id))
         ).filter(
+            *_no_adm_rep,
             _gen_filter,
             FifoReport.fiscal_years_str.isnot(None),
             (FifoReport.fiscal_years_str.contains(",") | (FifoReport.fiscal_years_str == "all"))
