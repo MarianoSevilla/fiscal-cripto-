@@ -43,7 +43,7 @@ try:
 except ImportError:
     _stripe_available = False
     _stripe_module = None
-from models import FiscalAdvisoryRequest, FiscalAdvisoryFile, FiscalAdvisoryStatusHistory
+from models import FiscalAdvisoryRequest, FiscalAdvisoryFile, FiscalAdvisoryStatusHistory, AdvisoryInternalNote
 from error_tracking import record_processing_error_safe, is_actionable_processing_error
 from email_helpers import SUPPORT_FOOTER_HTML, SUPPORT_FOOTER_TEXT
 
@@ -3540,6 +3540,11 @@ def admin_advisory_detail(request_id):
          "created_at": h.created_at.isoformat(), "changed_by": h.changed_by}
         for h in sorted(advisory.status_history, key=lambda x: x.created_at)
     ]
+    # Notas internas estructuradas — más recientes primero
+    d["notes"] = [
+        n.to_dict()
+        for n in sorted(advisory.notes, key=lambda x: x.created_at, reverse=True)
+    ]
     return jsonify(d)
 
 
@@ -3575,12 +3580,22 @@ def admin_advisory_add_note(request_id):
         return jsonify({"error": "Acceso denegado."}), 403
     advisory = FiscalAdvisoryRequest.query.get_or_404(request_id)
     data     = request.get_json(silent=True) or {}
-    nota     = (data.get("nota") or "").strip()[:2000]
-    if not nota:
+    text     = (data.get("nota") or "").strip()[:2000]
+    if not text:
         return jsonify({"error": "La nota no puede estar vacía."}), 400
-    advisory.internal_notes = ((advisory.internal_notes or "") + f"\n\n[{datetime.utcnow().strftime('%d/%m/%Y %H:%M')} - {current_user.email}]\n{nota}").strip()
+
+    author_name = (current_user.full_name or current_user.email or "Admin").strip()
+    note = AdvisoryInternalNote(
+        request_id  = advisory.id,
+        author_id   = current_user.id,
+        author_name = author_name,
+        text        = text,
+    )
+    db.session.add(note)
+    # Tocar updated_at explícitamente (onupdate solo actúa en columnas del modelo)
+    advisory.updated_at = datetime.utcnow()
     db.session.commit()
-    return jsonify({"ok": True})
+    return jsonify({"ok": True, "note": note.to_dict()})
 
 
 if __name__ == "__main__":

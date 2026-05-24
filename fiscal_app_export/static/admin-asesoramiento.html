@@ -173,6 +173,44 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
 
 /* Loading / empty */
 .list-loading { padding: 24px 16px; text-align: center; color: var(--muted); font-size: 14px; }
+
+/* Priority indicator dot in sidebar */
+.req-item-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; margin-bottom: 3px; }
+.priority-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 5px;
+  transition: background .2s;
+}
+.priority-dot.p-high    { background: #fb923c; }   /* paid_received, under_review */
+.priority-dot.p-active  { background: #38bdf8; }   /* in_progress */
+.priority-dot.p-payment { background: #fbbf24; }   /* pending_payment */
+.priority-dot.p-waiting { background: #6b7280; }   /* waiting_user_info */
+.priority-dot.p-done    { background: transparent; border: 1px solid var(--border); } /* completed, cancelled, refunded */
+
+/* Last activity line */
+.req-activity { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+/* Notes feed */
+.note-add-wrap {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; margin-bottom: 16px;
+}
+.note-input {
+  flex: 1; min-width: 180px; background: var(--surf2); border: 1px solid var(--border);
+  color: var(--text); font-family: var(--ff-b); font-size: 13px;
+  padding: 9px 12px; border-radius: 7px; outline: none; resize: vertical; min-height: 72px;
+}
+.note-input:focus { border-color: rgba(0,200,150,0.4); }
+.note-input::placeholder { color: var(--muted); }
+.note-item {
+  padding: 12px 14px; border-radius: 9px; margin-bottom: 10px;
+  background: var(--surf2); border: 1px solid var(--border);
+}
+.note-item.note-new { border-color: rgba(0,200,150,0.25); animation: noteIn .25s ease; }
+@keyframes noteIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.note-header { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
+.note-author { font-size: 12px; font-weight: 600; color: var(--accent); }
+.note-time   { font-size: 11px; color: var(--muted); }
+.note-text   { font-size: 13px; color: var(--sub); line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+.notes-empty { font-size: 13px; color: var(--muted); padding: 8px 0; }
 </style>
 </head>
 <body>
@@ -232,6 +270,43 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
 let currentId  = null;
 let _allItems  = [];   // caché de la última carga para búsqueda client-side
 
+// ── Tiempo relativo ────────────────────────────────────────────────────────
+function relativeTime(iso) {
+  if (!iso) return '—';
+  const diff  = Date.now() - new Date(iso).getTime();
+  const mins  = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days  = Math.floor(diff / 86400000);
+  if (mins  <  2) return 'Ahora mismo';
+  if (mins  < 60) return `Hace ${mins} min`;
+  if (hours < 24) return `Hace ${hours} h`;
+  if (days  ===1) return 'Ayer';
+  if (days  <  7) return `Hace ${days} días`;
+  return new Date(iso).toLocaleDateString('es-ES', { day:'numeric', month:'short' });
+}
+
+// ── Prioridad visual por estado ────────────────────────────────────────────
+function getPriority(status) {
+  if (['paid_received', 'under_review'].includes(status)) return 'high';
+  if (status === 'in_progress')                           return 'active';
+  if (status === 'pending_payment')                       return 'payment';
+  if (status === 'waiting_user_info')                     return 'waiting';
+  return 'done';
+}
+function getPriorityTitle(status) {
+  const map = {
+    paid_received:     'Requiere revisión',
+    under_review:      'Requiere revisión',
+    in_progress:       'En curso',
+    pending_payment:   'Pendiente de pago',
+    waiting_user_info: 'Esperando cliente',
+    completed:         'Finalizado',
+    cancelled:         'Cancelado',
+    refunded:          'Reembolsado',
+  };
+  return map[status] || '';
+}
+
 const STATUS_LABELS = {
   pending_payment:   'Pendiente de pago',
   paid_received:     'Solicitud recibida',
@@ -256,16 +331,20 @@ function renderList(items) {
     el.dataset.id      = item.id;
     el.dataset.name    = (item.full_name  || '').toLowerCase();
     el.dataset.email   = (item.email      || '').toLowerCase();
-    const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('es-ES') : '';
-    const amount  = item.amount_paid ? `${(item.amount_paid/100).toFixed(0)} €` : '—';
+    const amount   = item.amount_paid ? `${(item.amount_paid/100).toFixed(0)} €` : '—';
+    const priority = getPriority(item.status);
+    const pTitle   = getPriorityTitle(item.status);
     el.innerHTML = `
-      <div class="req-name">${escHtml(item.full_name)}</div>
+      <div class="req-item-header">
+        <div class="req-name">${escHtml(item.full_name)}</div>
+        <span class="priority-dot p-${priority}" title="${escHtml(pTitle)}"></span>
+      </div>
       <div class="req-meta">
         <span class="req-badge badge-${item.status}">${escHtml(item.status_label)}</span>
         <span>${escHtml(item.service_label)}</span>
-        <span>${dateStr}</span>
         <span>${amount}</span>
       </div>
+      <div class="req-activity">${relativeTime(item.updated_at)}</div>
     `;
     el.addEventListener('click', () => openDetail(item.id, el));
     list.appendChild(el);
@@ -326,6 +405,24 @@ async function openDetail(id, el) {
 
     // Files HTML — subida desactivada; la documentación se gestiona por email
     const filesHtml = '<div style="font-size:13px;color:var(--muted)">La documentación se gestiona por email. No se almacenan archivos en el servidor.</div>';
+
+    // Notes HTML — feed estructurado (más recientes primero)
+    let notesFeedHtml = '';
+    const notes = d.notes || [];
+    if (notes.length) {
+      notes.forEach(n => {
+        notesFeedHtml += `
+          <div class="note-item">
+            <div class="note-header">
+              <span class="note-author">${escHtml(n.author_name || 'Admin')}</span>
+              <span class="note-time" title="${new Date(n.created_at).toLocaleString('es-ES')}">${relativeTime(n.created_at)}</span>
+            </div>
+            <div class="note-text">${escHtml(n.text)}</div>
+          </div>`;
+      });
+    } else {
+      notesFeedHtml = '<div class="notes-empty">Sin notas todavía.</div>';
+    }
 
     // History HTML
     let historyHtml = '';
@@ -418,7 +515,12 @@ async function openDetail(id, el) {
 
       <div class="detail-section">
         <div class="detail-section-title">Notas internas</div>
-        <div class="text-block" id="notesDisplay">${escHtml(d.internal_notes||'Sin notas.')}</div>
+        <div class="note-add-wrap">
+          <textarea class="note-input" id="noteInput" placeholder="Contexto, observaciones, recordatorios, próximos pasos..."></textarea>
+          <button class="action-btn" id="btnNote" onclick="addNote(${d.id})" style="align-self:flex-start;margin-top:0;">Añadir nota</button>
+          <div id="noteMsg" style="width:100%;font-size:13px;margin-top:2px;"></div>
+        </div>
+        <div id="notesFeed">${notesFeedHtml}</div>
       </div>
 
       <div class="detail-section">
@@ -443,15 +545,6 @@ async function openDetail(id, el) {
             <button class="action-btn" onclick="changeStatus(${d.id})" id="btnStatus">Guardar</button>
           </div>
           <div id="statusMsg"></div>
-        </div>
-
-        <div class="action-card">
-          <div class="action-title">Añadir nota interna</div>
-          <textarea class="action-textarea" id="newNote" placeholder="Escribe una nota interna..."></textarea>
-          <div style="margin-top:10px">
-            <button class="action-btn" onclick="addNote(${d.id})" id="btnNote">Añadir nota</button>
-          </div>
-          <div id="noteMsg"></div>
         </div>
 
         <div class="action-card" style="opacity:.5;pointer-events:none;">
@@ -500,11 +593,13 @@ async function changeStatus(id) {
 }
 
 async function addNote(id) {
-  const nota = document.getElementById('newNote').value.trim();
-  const btn  = document.getElementById('btnNote');
-  const msg  = document.getElementById('noteMsg');
+  const textarea = document.getElementById('noteInput');
+  const btn      = document.getElementById('btnNote');
+  const msg      = document.getElementById('noteMsg');
+  const nota     = (textarea?.value || '').trim();
   if (!nota) { msg.className = 'msg-err'; msg.textContent = 'La nota no puede estar vacía.'; return; }
   btn.disabled = true;
+  msg.className = '';
   msg.textContent = '';
   try {
     const r = await fetch(`/api/admin/asesoramiento/solicitudes/${id}/nota`, {
@@ -512,13 +607,27 @@ async function addNote(id) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nota }),
     });
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error || 'Error');
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Error');
     msg.className = 'msg-ok';
-    msg.textContent = 'Nota añadida correctamente.';
-    document.getElementById('newNote').value = '';
-    // Refresh detail
-    openDetail(id, null);
+    msg.textContent = '✓ Nota guardada';
+    textarea.value = '';
+    // Prepend nota al feed sin recargar toda la vista
+    const feed    = document.getElementById('notesFeed');
+    const emptyEl = feed?.querySelector('.notes-empty');
+    if (emptyEl) emptyEl.remove();
+    const noteEl = document.createElement('div');
+    noteEl.className = 'note-item note-new';
+    noteEl.innerHTML = `
+      <div class="note-header">
+        <span class="note-author">${escHtml(data.note.author_name || 'Admin')}</span>
+        <span class="note-time">Ahora mismo</span>
+      </div>
+      <div class="note-text">${escHtml(data.note.text)}</div>`;
+    feed?.insertBefore(noteEl, feed.firstChild);
+    // Refrescar sidebar para actualizar "última actividad"
+    loadList();
+    setTimeout(() => { msg.textContent = ''; }, 3000);
   } catch (e) {
     msg.className = 'msg-err';
     msg.textContent = e.message;

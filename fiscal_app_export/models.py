@@ -169,8 +169,9 @@ class FiscalAdvisoryRequest(db.Model):
     created_at                 = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at                 = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
-    files          = db.relationship("FiscalAdvisoryFile",          backref="request", lazy=True, cascade="all, delete-orphan")
-    status_history = db.relationship("FiscalAdvisoryStatusHistory", backref="request", lazy=True, cascade="all, delete-orphan")
+    files          = db.relationship("FiscalAdvisoryFile",          backref="request",  lazy=True, cascade="all, delete-orphan")
+    status_history = db.relationship("FiscalAdvisoryStatusHistory", backref="request",  lazy=True, cascade="all, delete-orphan")
+    notes          = db.relationship("AdvisoryInternalNote",         backref="advisory", lazy=True, cascade="all, delete-orphan")
 
     def get_operation_types(self):
         try: return json.loads(self.operation_types) if self.operation_types else []
@@ -235,3 +236,27 @@ class FiscalAdvisoryStatusHistory(db.Model):
     changed_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     note       = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
+class AdvisoryInternalNote(db.Model):
+    """Nota interna por solicitud — solo visible para admin/asesor fiscal."""
+
+    __tablename__ = "advisory_internal_notes"
+
+    id          = db.Column(db.Integer, primary_key=True)
+    request_id  = db.Column(db.Integer, db.ForeignKey("fiscal_advisory_requests.id"), nullable=False, index=True)
+    author_id   = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    author_name = db.Column(db.String(150), nullable=True)   # denormalizado para lectura rápida
+    text        = db.Column(db.Text, nullable=False)
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    def to_dict(self) -> dict:
+        return {
+            "id":          self.id,
+            "author_name": self.author_name or "Admin",
+            "text":        self.text,
+            "created_at":  self.created_at.isoformat(),
+        }
+
+    def __repr__(self) -> str:
+        return f"<AdvisoryInternalNote request={self.request_id} author={self.author_name}>"
