@@ -203,7 +203,7 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
           <option value="pending_payment">Pendiente pago</option>
           <option value="paid_received">Solicitud recibida</option>
           <option value="under_review">En revisión</option>
-          <option value="waiting_user_info">Falta info</option>
+          <option value="waiting_user_info">Esperando info</option>
           <option value="in_progress">En curso</option>
           <option value="completed">Finalizado</option>
           <option value="cancelled">Cancelado</option>
@@ -236,7 +236,7 @@ const STATUS_LABELS = {
   pending_payment:   'Pendiente de pago',
   paid_received:     'Solicitud recibida',
   under_review:      'En revisión',
-  waiting_user_info: 'Falta información',
+  waiting_user_info: 'Esperando información',
   in_progress:       'En curso',
   completed:         'Finalizado',
   cancelled:         'Cancelado',
@@ -344,17 +344,36 @@ async function openDetail(id, el) {
       });
     }
 
-    // Status options
+    // Status options (dropdown cambio de estado)
     const statusOptions = {
-      pending_payment: 'Pendiente de pago', paid_received: 'Solicitud recibida',
-      under_review: 'En revisión', waiting_user_info: 'Falta información',
-      in_progress: 'En curso', completed: 'Finalizado',
-      cancelled: 'Cancelado', refunded: 'Reembolsado'
+      pending_payment:   'Pendiente de pago',
+      paid_received:     'Solicitud recibida',
+      under_review:      'En revisión',
+      waiting_user_info: 'Esperando información',
+      in_progress:       'En curso',
+      completed:         'Finalizado',
+      cancelled:         'Cancelado',
+      refunded:          'Reembolsado',
     };
     let statusOpts = '';
     Object.entries(statusOptions).forEach(([k,v]) => {
       statusOpts += `<option value="${k}" ${d.status === k ? 'selected' : ''}>${escHtml(v)}</option>`;
     });
+
+    // Próximo paso recomendado
+    const NEXT_STEPS = {
+      pending_payment:   'Esperar confirmación de pago.',
+      paid_received:     'Revisar el caso y decidir si se puede aceptar.',
+      under_review:      'Valorar complejidad y preparar propuesta o confirmación.',
+      waiting_user_info: 'Esperar respuesta del cliente al email enviado.',
+      in_progress:       'Continuar el trabajo con el cliente.',
+      completed:         'Sin acción requerida.',
+      cancelled:         'Sin acción requerida.',
+      refunded:          'Sin acción requerida.',
+    };
+    const nextStep  = NEXT_STEPS[d.status] || '—';
+    const updatedAt = d.updated_at ? new Date(d.updated_at).toLocaleDateString('es-ES', { day:'numeric', month:'short', year:'numeric' }) : null;
+    const showUpd   = updatedAt && updatedAt !== new Date(d.created_at).toLocaleDateString('es-ES', { day:'numeric', month:'short', year:'numeric' });
 
     // Operation type tags
     let opTagsHtml = (d.operation_types||[]).map(t => `<span class="tag">${escHtml(t)}</span>`).join('') || '<span class="tag">—</span>';
@@ -362,9 +381,13 @@ async function openDetail(id, el) {
 
     panel.innerHTML = `
       <div class="detail-header">
-        <div class="detail-id">Solicitud #${d.id} · ${dateStr}</div>
+        <div class="detail-id">Solicitud #${d.id} · ${dateStr}${showUpd ? ' · Actualizado ' + updatedAt : ''}</div>
         <div class="detail-name">${escHtml(d.full_name)}</div>
         <div class="detail-service">${escHtml(d.service_label)} · <span class="req-badge badge-${d.status}">${escHtml(d.status_label)}</span></div>
+        <div style="margin-top:10px;display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border-radius:8px;background:rgba(0,200,150,0.07);border:1px solid rgba(0,200,150,0.15);font-size:13px;color:var(--sub);">
+          <span style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.07em;flex-shrink:0;">Próximo paso</span>
+          ${escHtml(nextStep)}
+        </div>
       </div>
 
       <div class="detail-grid">

@@ -3300,57 +3300,57 @@ def _send_advisory_status_update_email(advisory: "FiscalAdvisoryRequest", note: 
 
     configs: dict = {
         "under_review": {
-            "subject":  "Estamos revisando tu caso fiscal",
+            "subject":  "Tu caso está siendo revisado",
             "headline": "Tu caso está siendo revisado",
             "body": (
-                f"Hemos comenzado a analizar tu solicitud de {service} para el ejercicio {year}.<br><br>"
-                f"Nuestro equipo está revisando tu caso con detalle. "
-                f"Si necesitamos información adicional, te lo comunicaremos."
+                f"Hemos recibido tu solicitud de {service} para el ejercicio {year} y ya la estamos analizando.<br><br>"
+                f"Nuestro equipo revisará tu situación para valorar la mejor forma de ayudarte. "
+                f"Si necesitamos algo por tu parte, te lo haremos saber."
                 + _note_block("99,102,241")
             ),
-            "next": "No necesitas hacer nada en este momento. Te avisaremos si surge alguna duda.",
+            "next": "No necesitas hacer nada por ahora. Te avisaremos cuando haya novedades.",
         },
         "waiting_user_info": {
-            "subject":  "Necesitamos más información para tu caso",
+            "subject":  "Necesitamos información adicional",
             "headline": "Necesitamos información adicional",
             "body": (
-                f"Para avanzar con tu solicitud de {service} ({year}), "
-                f"necesitamos que nos aportes algo más de información."
+                f"Para continuar con tu solicitud de {service} ({year}), "
+                f"necesitamos que nos facilites algo más de información."
                 + _note_block("251,191,36")
             ),
-            "next": "Te contactaremos por email para solicitar la documentación necesaria. Puedes responder directamente al correo recibido.",
+            "next": "Te contactaremos por email para indicarte exactamente qué necesitamos. Puedes responder directamente al correo recibido.",
         },
         "in_progress": {
-            "subject":  "Tu asesoramiento fiscal está en curso",
-            "headline": "Estamos trabajando en tu caso",
+            "subject":  "Tu caso está en curso",
+            "headline": "Tu caso está en curso",
             "body": (
-                f"Tu solicitud de {service} para el ejercicio {year} está ahora en curso.<br><br>"
-                f"Nuestro equipo trabaja activamente en el análisis de tu situación fiscal."
+                f"Tu solicitud de {service} para el ejercicio {year} ya está en manos del especialista.<br><br>"
+                f"Trabajamos en tu caso con la atención que merece."
                 + _note_block("56,189,248")
             ),
-            "next": "Recibirás noticias nuestras pronto con el resultado del análisis.",
+            "next": "Te informaremos cuando tengamos novedades.",
         },
         "completed": {
-            "subject":  "Tu asesoramiento fiscal ha concluido",
-            "headline": "Caso finalizado",
+            "subject":  "Tu caso ha sido completado",
+            "headline": "Caso completado",
             "body": (
-                f"Hemos completado el análisis de tu solicitud de {service} para el ejercicio {year}."
+                f"Hemos completado el servicio de {service} para el ejercicio {year}."
                 + (
                     _note_block("0,200,150")
                     if note_clean
-                    else "<br><br>El equipo se habrá puesto ya en contacto contigo con los resultados."
+                    else "<br><br>Conserva la documentación que te hemos enviado y escríbenos si necesitas cualquier aclaración."
                 )
             ),
-            "next": "Si tienes alguna duda sobre el resultado, no dudes en contactarnos.",
+            "next": "Si tienes alguna duda, no dudes en escribirnos.",
         },
         "cancelled": {
-            "subject":  "Tu solicitud de asesoramiento ha sido cancelada",
-            "headline": "Solicitud cancelada",
+            "subject":  "Solicitud cerrada",
+            "headline": "Solicitud cerrada",
             "body": (
-                f"Tu solicitud de {service} para el ejercicio {year} ha sido cancelada."
+                f"Tu solicitud de {service} para el ejercicio {year} ha sido cerrada."
                 + _note_block("248,113,113")
             ),
-            "next": "Si crees que esto es un error o tienes alguna pregunta, escríbenos sin problema.",
+            "next": "Si crees que hay un error o tienes alguna pregunta, no dudes en escribirnos.",
         },
     }
 

@@ -134,7 +134,7 @@ class FiscalAdvisoryRequest(db.Model):
         "pending_payment":   "Pendiente de pago",
         "paid_received":     "Solicitud recibida",
         "under_review":      "En revisión",
-        "waiting_user_info": "Falta información",
+        "waiting_user_info": "Esperando información",
         "in_progress":       "En curso",
         "completed":         "Finalizado",
         "cancelled":         "Cancelado",

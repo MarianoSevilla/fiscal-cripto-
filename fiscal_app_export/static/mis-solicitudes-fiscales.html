@@ -101,7 +101,7 @@ body { padding-top: 64px; }
 .badge-in_progress      { background: rgba(56,189,248,0.15);  color: #38bdf8; }
 .badge-completed        { background: rgba(34,197,94,0.15);   color: #4ade80; }
 .badge-cancelled        { background: rgba(248,113,113,0.15); color: #f87171; }
-.badge-refunded         { background: rgba(156,163,175,0.15); color: #9ca3af; }
+.badge-refunded         { background: rgba(248,113,113,0.15); color: #f87171; }
 
 /* ── TIMELINE ── */
 .timeline { margin-bottom: 24px; }
@@ -142,27 +142,13 @@ body { padding-top: 64px; }
 .tl-step.active .tl-label { color: var(--text); font-weight: 600; }
 .tl-step.warn   .tl-label { color: #fb923c; font-weight: 600; }
 
-/* Cancelled/refunded state */
+/* Estado cerrado (cancelled + refunded) */
 .tl-cancelled {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 14px; border-radius: 8px;
   background: rgba(248,113,113,0.07); border: 1px solid rgba(248,113,113,0.2);
   font-size: 13px; color: #f87171;
 }
-.tl-refunded {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 14px; border-radius: 8px;
-  background: rgba(156,163,175,0.07); border: 1px solid rgba(156,163,175,0.2);
-  font-size: 13px; color: #9ca3af;
-}
-
-/* Info alert for waiting_user_info */
-.info-alert {
-  margin-top: 14px; padding: 11px 16px; border-radius: 9px;
-  background: rgba(251,146,60,0.08); border: 1px solid rgba(251,146,60,0.25);
-  font-size: 13px; color: #fb923c; line-height: 1.5; display: flex; gap: 10px; align-items: flex-start;
-}
-.info-alert-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
 
 /* Card meta */
 .card-meta {
@@ -182,6 +168,37 @@ body { padding-top: 64px; }
 }
 .card-cta:hover { border-color: rgba(0,200,150,0.4); color: var(--accent); }
 @media (max-width: 500px) { .card-cta { margin-left: 0; } }
+
+/* ── STATUS MESSAGE BLOCK ── */
+.status-block {
+  display: flex; gap: 10px; align-items: flex-start;
+  margin: 0 0 18px; padding: 13px 16px; border-radius: 9px;
+  font-size: 14px; line-height: 1.6; border-left: 3px solid;
+}
+.status-icon { font-size: 15px; flex-shrink: 0; margin-top: 2px; }
+.status-block.payment  { background: rgba(251,191,36,0.07);  border-color: #fbbf24; color: var(--sub); }
+.status-block.received { background: rgba(0,200,150,0.07);   border-color: var(--accent); color: var(--sub); }
+.status-block.reviewing{ background: rgba(99,102,241,0.07);  border-color: #818cf8; color: var(--sub); }
+.status-block.waiting  { background: rgba(251,146,60,0.08);  border-color: #fb923c; color: #c87844; }
+.status-block.progress { background: rgba(56,189,248,0.07);  border-color: #38bdf8; color: var(--sub); }
+.status-block.done     { background: rgba(34,197,94,0.07);   border-color: #4ade80; color: var(--sub); }
+.status-block.closed   { background: rgba(248,113,113,0.07); border-color: #f87171; color: var(--muted); }
+
+/* Pending payment indicator (no timeline steps) */
+.tl-pending-payment {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-radius: 8px;
+  background: rgba(251,191,36,0.07); border: 1px solid rgba(251,191,36,0.2);
+  font-size: 13px; color: #fbbf24;
+}
+
+/* Page footer documentation note */
+.page-footer-note {
+  margin-top: 32px; padding: 16px 20px; border-radius: 10px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-left: 3px solid rgba(255,255,255,0.12);
+  font-size: 13px; color: var(--muted); line-height: 1.7;
+}
 </style>
 </head>
 <body>
@@ -221,6 +238,30 @@ body { padding-top: 64px; }
 </div>
 
 <script>
+// ── Estado → etiqueta cliente (override sobre lo que devuelve la API) ───────
+const STATUS_LABELS = {
+  pending_payment:   'Pendiente de pago',
+  paid_received:     'Solicitud recibida',
+  under_review:      'En revisión',
+  waiting_user_info: 'Esperando información',
+  in_progress:       'En curso',
+  completed:         'Finalizado',
+  cancelled:         'Cancelado',
+  refunded:          'Cancelado',   // admin ve "Reembolsado"; el cliente ve "Cancelado"
+};
+
+// ── Mensaje contextual por estado ─────────────────────────────────────────
+const STATUS_MESSAGES = {
+  pending_payment:   { cls: 'payment',   icon: '💳', text: 'Hemos preparado una propuesta adaptada a tu caso. El servicio comenzará cuando confirmemos el pago.' },
+  paid_received:     { cls: 'received',  icon: '✓',  text: 'Hemos recibido tu solicitud correctamente y queda registrada para revisión.' },
+  under_review:      { cls: 'reviewing', icon: '◎',  text: 'Estamos analizando tu caso para valorar la mejor forma de ayudarte.' },
+  waiting_user_info: { cls: 'waiting',   icon: '⚠',  text: 'Necesitamos información adicional para poder continuar. Puedes responder directamente al último correo recibido.' },
+  in_progress:       { cls: 'progress',  icon: '▶',  text: 'Tu caso está siendo trabajado por el especialista asignado.' },
+  completed:         { cls: 'done',      icon: '✓',  text: 'El servicio ha sido completado. Conserva la documentación recibida y contacta con nosotros si necesitas alguna aclaración.' },
+  cancelled:         { cls: 'closed',    icon: '✕',  text: 'La solicitud ha sido cancelada o cerrada sin continuar el servicio.' },
+  refunded:          { cls: 'closed',    icon: '✕',  text: 'La solicitud ha sido cancelada o cerrada sin continuar el servicio.' },
+};
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 function esc(str) {
   if (!str && str !== 0) return '';
@@ -240,32 +281,32 @@ function fmtAmount(cents, currency) {
 }
 
 // ── Timeline ───────────────────────────────────────────────────────────────
-// Progresión: paid_received → under_review [↔ waiting_user_info] → in_progress → completed
+// Progresión principal: paid_received → under_review [↔ waiting_user_info] → in_progress → completed
 const TL_STEPS = [
-  { key: 'paid_received',    label: 'Solicitud\nrecibida', icon: '✓' },
-  { key: 'under_review',     label: 'En\nrevisión',        icon: '◎', includes: ['waiting_user_info'] },
-  { key: 'in_progress',      label: 'En\ncurso',           icon: '▶' },
-  { key: 'completed',        label: 'Finalizado',          icon: '✓' },
+  { key: 'paid_received',    label: 'Recibida',    icon: '✓' },
+  { key: 'under_review',     label: 'En revisión', icon: '◎' },
+  { key: 'in_progress',      label: 'En curso',    icon: '▶' },
+  { key: 'completed',        label: 'Finalizado',  icon: '✓' },
 ];
 
 const STATUS_ORDER = {
-  pending_payment:   -1,
   paid_received:      0,
   under_review:       1,
-  waiting_user_info:  1,
+  waiting_user_info:  1,   // misma posición que under_review, con variante visual
   in_progress:        2,
   completed:          3,
 };
 
 function buildTimeline(status) {
+  // Estados cerrados o especiales → indicador simple (el STATUS_MESSAGES añade el texto)
   if (status === 'cancelled' || status === 'refunded') {
-    const cls  = status === 'cancelled' ? 'tl-cancelled' : 'tl-refunded';
-    const icon = status === 'cancelled' ? '✕' : '↩';
-    const label = status === 'cancelled' ? 'Esta solicitud fue cancelada.' : 'Esta solicitud fue reembolsada.';
-    return `<div class="${cls}"><span>${icon}</span><span>${label}</span></div>`;
+    return '<div class="tl-cancelled"><span>✕</span><span>Solicitud cerrada.</span></div>';
+  }
+  if (status === 'pending_payment') {
+    return '<div class="tl-pending-payment"><span>💳</span><span>Pendiente de confirmación de pago.</span></div>';
   }
 
-  const currentStep = STATUS_ORDER[status] ?? -1;
+  const currentStep = STATUS_ORDER[status] ?? 0;
 
   let html = '<div class="timeline-steps">';
   TL_STEPS.forEach((step, i) => {
@@ -278,31 +319,28 @@ function buildTimeline(status) {
     else if (stepWarn)   cls = 'active warn';
     else if (stepActive) cls = 'active';
 
-    const labelLines = step.label.split('\n').join('<br>');
     html += `
       <div class="tl-step ${cls}">
         <div class="tl-dot">${stepDone ? '✓' : esc(step.icon)}</div>
-        <div class="tl-label">${labelLines}</div>
+        <div class="tl-label">${esc(step.label)}</div>
       </div>`;
   });
   html += '</div>';
-
-  if (status === 'waiting_user_info') {
-    html += `
-      <div class="info-alert">
-        <span class="info-alert-icon">⚠</span>
-        <span>Necesitamos información adicional para continuar con tu caso. El equipo se pondrá en contacto contigo.</span>
-      </div>`;
-  }
-
   return html;
 }
 
 // ── Card ───────────────────────────────────────────────────────────────────
 function buildCard(r) {
-  const amount   = fmtAmount(r.amount_paid, r.currency);
-  const dateStr  = fmtDate(r.created_at);
-  const timeline = buildTimeline(r.status);
+  const amount      = fmtAmount(r.amount_paid, r.currency);
+  const dateStr     = fmtDate(r.created_at);
+  const updStr      = r.updated_at ? fmtDate(r.updated_at) : null;
+  const showUpd     = updStr && updStr !== dateStr;
+  const timeline    = buildTimeline(r.status);
+  const statusLabel = STATUS_LABELS[r.status] || r.status_label;
+  const msgCfg      = STATUS_MESSAGES[r.status];
+  const msgHtml     = msgCfg
+    ? `<div class="status-block ${msgCfg.cls}"><span class="status-icon">${msgCfg.icon}</span><span>${esc(msgCfg.text)}</span></div>`
+    : '';
 
   return `
     <div class="request-card">
@@ -311,16 +349,16 @@ function buildCard(r) {
           <div class="card-service">${esc(r.service_label)}</div>
           <div class="card-year">Ejercicio ${esc(r.tax_year)}</div>
         </div>
-        <span class="status-badge badge-${esc(r.status)}">${esc(r.status_label)}</span>
+        <span class="status-badge badge-${esc(r.status)}">${esc(statusLabel)}</span>
       </div>
 
       <div class="timeline">${timeline}</div>
+      ${msgHtml}
 
       <div class="card-meta">
-        <span>📅 ${dateStr}</span>
+        <span>📅 Solicitado ${dateStr}</span>
+        ${showUpd ? `<span>Actualizado ${updStr}</span>` : ''}
         ${amount ? `<span class="meta-amount">💳 ${esc(amount)}</span>` : ''}
-        <span style="color:var(--border);font-size:10px;">·</span>
-        <span style="color:var(--muted);font-size:12px;">Solicitud #${r.id}</span>
         <a href="/contacto" class="card-cta">Contactar</a>
       </div>
     </div>`;
@@ -355,7 +393,12 @@ async function loadRequests() {
       return;
     }
 
-    container.innerHTML = data.map(buildCard).join('');
+    const footerNote = `
+      <div class="page-footer-note">
+        🔒 Si necesitas aportar información adicional, responde directamente al último correo recibido.<br>
+        Por seguridad, la documentación fiscal se gestionará por email.
+      </div>`;
+    container.innerHTML = data.map(buildCard).join('') + footerNote;
   } catch {
     container.innerHTML = `
       <div class="state-msg">
