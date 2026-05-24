@@ -324,23 +324,8 @@ async function openDetail(id, el) {
     const amount   = d.amount_paid ? `${(d.amount_paid/100).toFixed(2)} ${(d.currency||'eur').toUpperCase()}` : '—';
     const dateStr  = d.created_at ? new Date(d.created_at).toLocaleString('es-ES') : '—';
 
-    // Files HTML
-    let filesHtml = '';
-    if (d.files && d.files.length) {
-      d.files.forEach(f => {
-        const size = f.file_size ? `${(f.file_size/1024).toFixed(0)} KB` : '';
-        filesHtml += `
-          <a href="/api/asesoramiento/files/download/${f.id}" class="file-link" target="_blank">
-            <span class="file-icon">📎</span>
-            <div>
-              <div>${escHtml(f.file_name)}</div>
-              <div class="file-meta">${size} · ${new Date(f.uploaded_at).toLocaleDateString('es-ES')}</div>
-            </div>
-          </a>`;
-      });
-    } else {
-      filesHtml = '<div style="font-size:13px;color:var(--muted)">Sin archivos adjuntos.</div>';
-    }
+    // Files HTML — subida desactivada; la documentación se gestiona por email
+    const filesHtml = '<div style="font-size:13px;color:var(--muted)">La documentación se gestiona por email. No se almacenan archivos en el servidor.</div>';
 
     // History HTML
     let historyHtml = '';
@@ -414,7 +399,7 @@ async function openDetail(id, el) {
       </div>
 
       <div class="detail-section">
-        <div class="detail-section-title">Archivos adjuntos</div>
+        <div class="detail-section-title">Documentación</div>
         ${filesHtml}
       </div>
 

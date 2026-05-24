@@ -80,19 +80,14 @@ h1 { font-family: var(--ff-h); font-size: clamp(26px,4vw,36px); font-weight: 800
 .check-item input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
 .check-item span { font-size: 14px; color: var(--sub); }
 
-/* File upload */
-.file-drop {
-  border: 2px dashed var(--border); border-radius: 10px; padding: 24px;
-  text-align: center; cursor: pointer; transition: border-color .2s;
-  background: var(--surface);
+/* Aviso documentación */
+.doc-notice {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: var(--surface); border: 1px solid var(--border);
+  border-left: 3px solid rgba(255,255,255,0.18);
+  border-radius: 8px; padding: 16px 18px;
+  font-size: 14px; color: var(--muted); line-height: 1.6;
 }
-.file-drop:hover { border-color: rgba(0,200,150,0.35); }
-.file-drop input[type="file"] { display: none; }
-.file-drop p { font-size: 14px; color: var(--muted); margin-bottom: 6px; }
-.file-drop small { font-size: 12px; color: var(--muted); }
-.file-list { margin-top: 12px; }
-.file-item { font-size: 13px; color: var(--sub); padding: 4px 0; display: flex; align-items: center; gap: 8px; }
-.file-item::before { content: "📎"; }
 
 /* Service selector */
 .service-options { display: grid; gap: 12px; }
@@ -251,16 +246,13 @@ h1 { font-family: var(--ff-h); font-size: clamp(26px,4vw,36px); font-weight: 800
 
     <!-- DOCUMENTACIÓN -->
     <div class="form-section">
-      <div class="form-section-title">Documentación adjunta (opcional)</div>
-      <div class="field">
-        <label>Archivos relevantes</label>
-        <div class="file-drop" id="fileDrop" onclick="document.getElementById('fileInput').click()">
-          <input type="file" id="fileInput" multiple accept=".csv,.xlsx,.pdf,.jpg,.jpeg,.png">
-          <p>Haz clic para adjuntar archivos</p>
-          <small>CSV, XLSX, PDF, JPG, PNG · Máx. 10 MB por archivo</small>
-          <div class="file-list" id="fileList"></div>
+      <div class="form-section-title">Documentación</div>
+      <div class="doc-notice">
+        <span style="font-size:18px;flex-shrink:0;">🔒</span>
+        <div>
+          <strong style="color:var(--text);">Por seguridad, no almacenamos documentación fiscal sensible en nuestros servidores.</strong><br>
+          Si necesitamos revisar CSVs, informes o documentos adicionales, te indicaremos por email cómo enviarlos de forma segura.
         </div>
-        <div class="field-hint">Puedes adjuntar CSVs de tus exchanges, capturas de pantalla u otros documentos relevantes.</div>
       </div>
     </div>
 
@@ -335,19 +327,6 @@ h1 { font-family: var(--ff-h); font-size: clamp(26px,4vw,36px); font-weight: 800
   }
 })();
 
-// File input
-const fileInput = document.getElementById('fileInput');
-const fileList  = document.getElementById('fileList');
-fileInput.addEventListener('change', () => {
-  fileList.innerHTML = '';
-  Array.from(fileInput.files).forEach(f => {
-    const item = document.createElement('div');
-    item.className = 'file-item';
-    item.textContent = `${f.name} (${(f.size/1024/1024).toFixed(1)} MB)`;
-    fileList.appendChild(item);
-  });
-});
-
 // Form submit
 const form    = document.getElementById('advisoryForm');
 const errorEl = document.getElementById('errorMsg');
@@ -403,23 +382,6 @@ form.addEventListener('submit', async (e) => {
     if (!res.ok) throw new Error(data.error || 'Error al procesar la solicitud.');
 
     const advisoryId = data.advisory_id;
-
-    // Upload files if any
-    const files = fileInput.files;
-    if (files.length > 0) {
-      submitBtn.textContent = 'Subiendo archivos...';
-      for (const file of files) {
-        const fd = new FormData();
-        fd.append('file', file);
-        try {
-          await fetch(`/api/asesoramiento/files/${advisoryId}`, {
-            method: 'POST',
-            credentials: 'include',
-            body: fd,
-          });
-        } catch {}
-      }
-    }
 
     // Redirect to Stripe
     window.location.href = data.checkout_url;

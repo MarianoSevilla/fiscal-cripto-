@@ -186,6 +186,12 @@ _ADVISORY_STATUS_EMAILS_ENABLED = (
     os.environ.get("ENABLE_ADVISORY_STATUS_EMAILS", "false").lower() == "true"
 )
 
+# Subida de archivos al servidor desactivada — la documentación fiscal se envía por email.
+# Activar con ENABLE_ADVISORY_UPLOADS=true solo si se migra a almacenamiento persistente.
+_ADVISORY_UPLOADS_ENABLED = (
+    os.environ.get("ENABLE_ADVISORY_UPLOADS", "false").lower() == "true"
+)
+
 FISCAL_ADVISOR_EMAILS = {
     e.strip().lower()
     for e in os.environ.get("FISCAL_ADVISOR_EMAILS", "").split(",")
@@ -3203,6 +3209,9 @@ def _send_advisory_confirmation_email(advisory: "FiscalAdvisoryRequest"):
             Rafael revisará tu caso y se pondrá en contacto contigo en un plazo de <strong style="color:#eef0f6;">2–3 días hábiles</strong>.
             Es posible que necesitemos información adicional para analizar correctamente tu situación.
           </p>
+          <p style="margin:0 0 16px;background:rgba(255,255,255,0.04);border-left:3px solid rgba(255,255,255,0.12);padding:12px 16px;border-radius:0 8px 8px 0;font-size:13px;color:#7a8099;line-height:1.6;">
+            Si necesitamos revisar documentación adicional, te indicaremos por email cómo enviarla. Por seguridad, no almacenamos documentos fiscales sensibles en el servidor.
+          </p>
           <p style="margin:0;font-size:13px;color:#7a8099;">
             Número de solicitud: <strong style="color:#eef0f6;">#{advisory.id}</strong>
           </p>
@@ -3309,7 +3318,7 @@ def _send_advisory_status_update_email(advisory: "FiscalAdvisoryRequest", note: 
                 f"necesitamos que nos aportes algo más de información."
                 + _note_block("251,191,36")
             ),
-            "next": "Por favor, responde a este correo o escríbenos directamente para facilitarnos lo que necesitamos.",
+            "next": "Te contactaremos por email para solicitar la documentación necesaria. Puedes responder directamente al correo recibido.",
         },
         "in_progress": {
             "subject":  "Tu asesoramiento fiscal está en curso",
@@ -3383,6 +3392,9 @@ def _send_advisory_status_update_email(advisory: "FiscalAdvisoryRequest", note: 
           <div style="margin-top:28px;">
             <a href="{contact}" style="display:inline-block;background:#00C896;color:#080c12;font-weight:700;font-size:14px;padding:12px 28px;border-radius:8px;text-decoration:none;">Contactar con el equipo</a>
           </div>
+          <p style="margin:20px 0 0;background:rgba(255,255,255,0.04);border-left:3px solid rgba(255,255,255,0.12);padding:12px 16px;border-radius:0 8px 8px 0;font-size:13px;color:#7a8099;line-height:1.6;">
+            Si necesitamos revisar documentación adicional, te indicaremos por email cómo enviarla. Por seguridad, no almacenamos documentos fiscales sensibles en el servidor.
+          </p>
           <p style="margin:24px 0 0;font-size:13px;color:#7a8099;">
             Solicitud: <strong style="color:#eef0f6;">#{advisory.id}</strong>
           </p>
@@ -3419,6 +3431,8 @@ def _send_advisory_status_update_email(advisory: "FiscalAdvisoryRequest", note: 
 @limiter.limit("10 per hour")
 def advisory_upload_file(request_id):
     """Sube un fichero asociado a una solicitud (solo el propietario)."""
+    if not _ADVISORY_UPLOADS_ENABLED:
+        return jsonify({"error": "La subida de archivos está desactivada. La documentación se gestiona por email."}), 410
     advisory = FiscalAdvisoryRequest.query.get_or_404(request_id)
     if advisory.user_id != current_user.id:
         return jsonify({"error": "Acceso denegado."}), 403
