@@ -23,7 +23,7 @@ import tempfile
 import traceback
 import threading
 from datetime import datetime, timedelta
-from flask import Flask, request, jsonify, send_file, send_from_directory, redirect, url_for, render_template, session
+from flask import Flask, request, jsonify, send_file, send_from_directory, redirect, url_for, render_template, session, abort
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_cors import CORS
@@ -178,6 +178,13 @@ _ADVISORY_PRICE_LABELS = {
     "revision_avanzada": "Revisión fiscal avanzada",
     "caso_complejo":     "Valoración inicial — caso complejo",
 }
+
+# Feature flag: emails automáticos al usuario al cambiar estado de solicitud.
+# Activar en Railway: ENABLE_ADVISORY_STATUS_EMAILS=true
+# Por defecto false — validar diseño/copy antes de exponer a usuarios reales.
+_ADVISORY_STATUS_EMAILS_ENABLED = (
+    os.environ.get("ENABLE_ADVISORY_STATUS_EMAILS", "false").lower() == "true"
+)
 
 FISCAL_ADVISOR_EMAILS = {
     e.strip().lower()
@@ -2971,6 +2978,15 @@ def advisory_confirmed():
 def advisory_cancelled():
     return send_from_directory("static", "asesoramiento-cancelado.html")
 
+@app.route("/mis-solicitudes-fiscales", strict_slashes=False)
+@login_required
+def advisory_my_requests_page():
+    # Vista de usuario "Mis solicitudes" — restringida a admins hasta validación.
+    # Para usuarios normales devuelve 404 (no revela que existe la página).
+    if not _is_admin():
+        abort(404)
+    return send_from_directory("static", "mis-solicitudes-fiscales.html")
+
 @app.route("/admin/asesoramiento", strict_slashes=False)
 @login_required
 def admin_advisory_page():
@@ -3238,6 +3254,166 @@ def _send_advisory_internal_notification(advisory: "FiscalAdvisoryRequest"):
         app.logger.error("Error enviando notificación interna advisory: %s", exc)
 
 
+def _send_advisory_status_update_email(advisory: "FiscalAdvisoryRequest", note: str = "") -> None:
+    """Email al usuario cuando el admin cambia el estado de su solicitud.
+
+    Requiere ENABLE_ADVISORY_STATUS_EMAILS=true para enviar.
+    Si está deshabilitado, solo registra un log informativo (útil para verificar
+    que se llamaría correctamente antes de activar el envío real).
+
+    Estados que generan email: under_review, waiting_user_info, in_progress,
+    completed, cancelled.
+    Omitidos: pending_payment (sin pago), paid_received (cubierto por el webhook
+    de Stripe vía _send_advisory_confirmation_email), refunded (gestión manual).
+    """
+    status = advisory.status
+
+    SKIPPED = ("pending_payment", "paid_received", "refunded")
+    if status in SKIPPED:
+        return
+
+    note_clean = (note or "").strip()
+
+    def _note_block(color: str) -> str:
+        if not note_clean:
+            return ""
+        return (
+            f'<p style="margin:16px 0 0;background:rgba({color},0.08);'
+            f'border-left:3px solid rgb({color});padding:12px 16px;'
+            f'border-radius:0 8px 8px 0;font-size:14px;color:#9aa0b8;'
+            f'line-height:1.6;">{note_clean}</p>'
+        )
+
+    service = f'<strong style="color:#eef0f6;">{advisory.service_label()}</strong>'
+    year    = f'<strong style="color:#eef0f6;">{advisory.tax_year}</strong>'
+    name    = f'<strong style="color:#eef0f6;">{advisory.full_name}</strong>'
+    contact = f"{_APP_BASE_URL}/contacto"
+
+    configs: dict = {
+        "under_review": {
+            "subject":  "Estamos revisando tu caso fiscal",
+            "headline": "Tu caso está siendo revisado",
+            "body": (
+                f"Hemos comenzado a analizar tu solicitud de {service} para el ejercicio {year}.<br><br>"
+                f"Nuestro equipo está revisando tu caso con detalle. "
+                f"Si necesitamos información adicional, te lo comunicaremos."
+                + _note_block("99,102,241")
+            ),
+            "next": "No necesitas hacer nada en este momento. Te avisaremos si surge alguna duda.",
+        },
+        "waiting_user_info": {
+            "subject":  "Necesitamos más información para tu caso",
+            "headline": "Necesitamos información adicional",
+            "body": (
+                f"Para avanzar con tu solicitud de {service} ({year}), "
+                f"necesitamos que nos aportes algo más de información."
+                + _note_block("251,191,36")
+            ),
+            "next": "Por favor, responde a este correo o escríbenos directamente para facilitarnos lo que necesitamos.",
+        },
+        "in_progress": {
+            "subject":  "Tu asesoramiento fiscal está en curso",
+            "headline": "Estamos trabajando en tu caso",
+            "body": (
+                f"Tu solicitud de {service} para el ejercicio {year} está ahora en curso.<br><br>"
+                f"Nuestro equipo trabaja activamente en el análisis de tu situación fiscal."
+                + _note_block("56,189,248")
+            ),
+            "next": "Recibirás noticias nuestras pronto con el resultado del análisis.",
+        },
+        "completed": {
+            "subject":  "Tu asesoramiento fiscal ha concluido",
+            "headline": "Caso finalizado",
+            "body": (
+                f"Hemos completado el análisis de tu solicitud de {service} para el ejercicio {year}."
+                + (
+                    _note_block("0,200,150")
+                    if note_clean
+                    else "<br><br>El equipo se habrá puesto ya en contacto contigo con los resultados."
+                )
+            ),
+            "next": "Si tienes alguna duda sobre el resultado, no dudes en contactarnos.",
+        },
+        "cancelled": {
+            "subject":  "Tu solicitud de asesoramiento ha sido cancelada",
+            "headline": "Solicitud cancelada",
+            "body": (
+                f"Tu solicitud de {service} para el ejercicio {year} ha sido cancelada."
+                + _note_block("248,113,113")
+            ),
+            "next": "Si crees que esto es un error o tienes alguna pregunta, escríbenos sin problema.",
+        },
+    }
+
+    cfg = configs.get(status)
+    if not cfg:
+        return
+
+    if not _ADVISORY_STATUS_EMAILS_ENABLED:
+        app.logger.info(
+            "[advisory email] DESHABILITADO (ENABLE_ADVISORY_STATUS_EMAILS=false). "
+            "Se habría enviado '%s' a %s (solicitud #%s).",
+            cfg["subject"], advisory.email, advisory.id,
+        )
+        return
+
+    if not resend.api_key:
+        return
+
+    html = f"""<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#080c12;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#080c12;padding:40px 0;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#10141e;border-radius:12px;border:1px solid rgba(255,255,255,0.08);">
+        <tr><td style="background:#0d1018;padding:28px 40px;border-bottom:1px solid rgba(0,200,150,0.25);">
+          <span style="font-size:18px;font-weight:700;color:#eef0f6;">Mariano</span><span style="font-size:18px;font-weight:700;color:#00C896;">Sevilla</span>
+          <span style="font-size:12px;color:#7a8099;margin-left:10px;">Asesoramiento Fiscal Cripto</span>
+        </td></tr>
+        <tr><td style="padding:36px 40px;">
+          <h1 style="margin:0 0 12px;font-size:22px;color:#eef0f6;font-weight:700;">{cfg['headline']}</h1>
+          <p style="margin:0 0 8px;font-size:15px;color:#9aa0b8;line-height:1.6;">
+            Hola {name},
+          </p>
+          <p style="margin:0;font-size:15px;color:#9aa0b8;line-height:1.6;">
+            {cfg['body']}
+          </p>
+          <p style="margin:20px 0 0;font-size:14px;color:#9aa0b8;line-height:1.6;">
+            {cfg['next']}
+          </p>
+          <div style="margin-top:28px;">
+            <a href="{contact}" style="display:inline-block;background:#00C896;color:#080c12;font-weight:700;font-size:14px;padding:12px 28px;border-radius:8px;text-decoration:none;">Contactar con el equipo</a>
+          </div>
+          <p style="margin:24px 0 0;font-size:13px;color:#7a8099;">
+            Solicitud: <strong style="color:#eef0f6;">#{advisory.id}</strong>
+          </p>
+        </td></tr>
+        <tr><td style="background:#0d1018;padding:18px 40px;border-top:1px solid rgba(255,255,255,0.06);">
+          <p style="margin:0 0 6px;font-size:11px;color:#555c70;">marianosevilla.com · Asesoramiento Fiscal Cripto</p>
+          {SUPPORT_FOOTER_HTML}
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>"""
+
+    try:
+        resend.Emails.send({
+            "from":    _RESEND_FROM,
+            "to":      [advisory.email],
+            "subject": cfg["subject"],
+            "html":    html,
+        })
+        app.logger.info(
+            "[advisory email] Enviado '%s' a %s (solicitud #%s).",
+            cfg["subject"], advisory.email, advisory.id,
+        )
+    except Exception as exc:
+        app.logger.error(
+            "[advisory email] Error enviando estado=%s solicitud #%s: %s",
+            status, advisory.id, exc,
+        )
+
+
 @app.route("/api/asesoramiento/files/<int:request_id>", methods=["POST"])
 @login_required
 @limiter.limit("10 per hour")
@@ -3374,6 +3550,7 @@ def admin_advisory_change_status(request_id):
     )
     db.session.add(history)
     db.session.commit()
+    _send_advisory_status_update_email(advisory, note)
     return jsonify({"ok": True, "status": new_status, "status_label": advisory.status_label()})
 
 

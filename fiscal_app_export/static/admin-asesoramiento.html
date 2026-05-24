@@ -43,10 +43,18 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
   display: flex; flex-direction: column; overflow: hidden;
 }
 .sidebar-filters {
-  padding: 16px; border-bottom: 1px solid var(--border); display: flex; gap: 8px; flex-wrap: wrap;
+  padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; gap: 8px; flex-direction: column;
 }
+.sidebar-search {
+  width: 100%; background: var(--surf2); border: 1px solid var(--border);
+  color: var(--text); font-family: var(--ff-b); font-size: 13px;
+  padding: 7px 10px; border-radius: 7px; outline: none;
+}
+.sidebar-search::placeholder { color: var(--muted); }
+.sidebar-search:focus { border-color: rgba(0,200,150,0.4); }
+.sidebar-filter-row { display: flex; gap: 8px; }
 .sidebar-filters select {
-  flex: 1; min-width: 120px; background: var(--surf2); border: 1px solid var(--border);
+  flex: 1; min-width: 100px; background: var(--surf2); border: 1px solid var(--border);
   color: var(--text); font-family: var(--ff-b); font-size: 13px;
   padding: 7px 10px; border-radius: 7px; outline: none; appearance: none;
 }
@@ -188,23 +196,26 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
   <!-- SIDEBAR -->
   <div class="sidebar">
     <div class="sidebar-filters">
-      <select id="filterStatus" onchange="loadList()">
-        <option value="">Todos los estados</option>
-        <option value="pending_payment">Pendiente pago</option>
-        <option value="paid_received">Solicitud recibida</option>
-        <option value="under_review">En revisión</option>
-        <option value="waiting_user_info">Falta info</option>
-        <option value="in_progress">En curso</option>
-        <option value="completed">Finalizado</option>
-        <option value="cancelled">Cancelado</option>
-        <option value="refunded">Reembolsado</option>
-      </select>
-      <select id="filterService" onchange="loadList()">
-        <option value="">Todos los servicios</option>
-        <option value="revision_basica">Básica</option>
-        <option value="revision_avanzada">Avanzada</option>
-        <option value="caso_complejo">Complejo</option>
-      </select>
+      <input type="search" id="searchInput" class="sidebar-search" placeholder="Buscar por nombre o email…" oninput="filterList()">
+      <div class="sidebar-filter-row">
+        <select id="filterStatus" onchange="loadList()">
+          <option value="">Todos los estados</option>
+          <option value="pending_payment">Pendiente pago</option>
+          <option value="paid_received">Solicitud recibida</option>
+          <option value="under_review">En revisión</option>
+          <option value="waiting_user_info">Falta info</option>
+          <option value="in_progress">En curso</option>
+          <option value="completed">Finalizado</option>
+          <option value="cancelled">Cancelado</option>
+          <option value="refunded">Reembolsado</option>
+        </select>
+        <select id="filterService" onchange="loadList()">
+          <option value="">Todos los servicios</option>
+          <option value="revision_basica">Básica</option>
+          <option value="revision_avanzada">Avanzada</option>
+          <option value="caso_complejo">Complejo</option>
+        </select>
+      </div>
     </div>
     <div class="sidebar-list" id="sidebarList">
       <div class="list-loading">Cargando...</div>
@@ -218,7 +229,58 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
 </div>
 
 <script>
-let currentId = null;
+let currentId  = null;
+let _allItems  = [];   // caché de la última carga para búsqueda client-side
+
+const STATUS_LABELS = {
+  pending_payment:   'Pendiente de pago',
+  paid_received:     'Solicitud recibida',
+  under_review:      'En revisión',
+  waiting_user_info: 'Falta información',
+  in_progress:       'En curso',
+  completed:         'Finalizado',
+  cancelled:         'Cancelado',
+  refunded:          'Reembolsado',
+};
+
+function renderList(items) {
+  const list = document.getElementById('sidebarList');
+  if (!items.length) {
+    list.innerHTML = '<div class="list-loading">No hay solicitudes.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  items.forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'request-item' + (item.id === currentId ? ' active' : '');
+    el.dataset.id      = item.id;
+    el.dataset.name    = (item.full_name  || '').toLowerCase();
+    el.dataset.email   = (item.email      || '').toLowerCase();
+    const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('es-ES') : '';
+    const amount  = item.amount_paid ? `${(item.amount_paid/100).toFixed(0)} €` : '—';
+    el.innerHTML = `
+      <div class="req-name">${escHtml(item.full_name)}</div>
+      <div class="req-meta">
+        <span class="req-badge badge-${item.status}">${escHtml(item.status_label)}</span>
+        <span>${escHtml(item.service_label)}</span>
+        <span>${dateStr}</span>
+        <span>${amount}</span>
+      </div>
+    `;
+    el.addEventListener('click', () => openDetail(item.id, el));
+    list.appendChild(el);
+  });
+}
+
+function filterList() {
+  const q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+  if (!q) { renderList(_allItems); return; }
+  const filtered = _allItems.filter(it =>
+    (it.full_name || '').toLowerCase().includes(q) ||
+    (it.email     || '').toLowerCase().includes(q)
+  );
+  renderList(filtered);
+}
 
 async function loadList() {
   const status  = document.getElementById('filterStatus').value;
@@ -238,32 +300,8 @@ async function loadList() {
       list.innerHTML = '<div class="list-loading">Acceso denegado.</div>';
       return;
     }
-    const items = await r.json();
-
-    if (!items.length) {
-      list.innerHTML = '<div class="list-loading">No hay solicitudes.</div>';
-      return;
-    }
-
-    list.innerHTML = '';
-    items.forEach(item => {
-      const el = document.createElement('div');
-      el.className = 'request-item' + (item.id === currentId ? ' active' : '');
-      el.dataset.id = item.id;
-      const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('es-ES') : '';
-      const amount  = item.amount_paid ? `${(item.amount_paid/100).toFixed(0)} €` : '—';
-      el.innerHTML = `
-        <div class="req-name">${escHtml(item.full_name)}</div>
-        <div class="req-meta">
-          <span class="req-badge badge-${item.status}">${escHtml(item.status_label)}</span>
-          <span>${escHtml(item.service_label)}</span>
-          <span>${dateStr}</span>
-          <span>${amount}</span>
-        </div>
-      `;
-      el.addEventListener('click', () => openDetail(item.id, el));
-      list.appendChild(el);
-    });
+    _allItems = await r.json();
+    filterList();
   } catch {
     list.innerHTML = '<div class="list-loading">Error al cargar.</div>';
   }
@@ -308,12 +346,13 @@ async function openDetail(id, el) {
     let historyHtml = '';
     if (d.status_history && d.status_history.length) {
       d.status_history.slice().reverse().forEach(h => {
+        const label = STATUS_LABELS[h.status] || h.status;
         historyHtml += `
           <div class="history-item">
             <div class="history-dot"></div>
             <div class="history-content">
-              <div class="history-status">${escHtml(h.status)}</div>
-              <div class="history-meta">${new Date(h.created_at).toLocaleString('es-ES')}${h.changed_by ? ' · por #' + h.changed_by : ''}</div>
+              <div class="history-status">${escHtml(label)}</div>
+              <div class="history-meta">${new Date(h.created_at).toLocaleString('es-ES')}${h.changed_by ? ' · admin #' + h.changed_by : ''}</div>
               ${h.note ? `<div class="history-note">${escHtml(h.note)}</div>` : ''}
             </div>
           </div>`;
@@ -405,6 +444,19 @@ async function openDetail(id, el) {
             <button class="action-btn" onclick="addNote(${d.id})" id="btnNote">Añadir nota</button>
           </div>
           <div id="noteMsg"></div>
+        </div>
+
+        <div class="action-card" style="opacity:.5;pointer-events:none;">
+          <div class="action-title" style="display:flex;align-items:center;gap:8px;">
+            Asignar asesor
+            <span style="font-size:11px;font-weight:400;background:rgba(99,102,241,0.15);color:#818cf8;padding:2px 8px;border-radius:20px;">Próximamente</span>
+          </div>
+          <div class="action-row">
+            <select class="action-select" disabled>
+              <option>${d.assigned_to ? 'Asesor #' + d.assigned_to : 'Sin asignar'}</option>
+            </select>
+            <button class="action-btn" disabled>Asignar</button>
+          </div>
         </div>
       </div>
     `;
