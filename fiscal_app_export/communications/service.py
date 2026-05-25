@@ -21,6 +21,13 @@ logger = logging.getLogger(__name__)
 _RESEND_FROM  = os.environ.get("RESEND_FROM_EMAIL", "noreply@marianosevilla.com")
 _APP_BASE_URL = os.environ.get("APP_BASE_URL", "https://www.marianosevilla.com")
 
+# Ensure the From field includes a human display name.
+# Resend (and SMTP) accept "Display Name <email@domain.com>" format.
+_RESEND_FROM_DISPLAY = (
+    _RESEND_FROM if "<" in _RESEND_FROM
+    else f"Mariano Sevilla <{_RESEND_FROM}>"
+)
+
 # Mirrors ADMIN_EMAILS from app.py — evaluated once at import time.
 # If the env var changes at runtime (rare), restart the process.
 _ADMIN_EMAILS = frozenset(
@@ -116,7 +123,7 @@ def send_test_email(campaign: CommunicationCampaign, to_email: str) -> dict:
 
     try:
         result = resend.Emails.send({
-            "from":    _RESEND_FROM,
+            "from":    _RESEND_FROM_DISPLAY,
             "to":      [to_email],
             "subject": f"[TEST] {campaign.subject}",
             "html":    html,
@@ -191,11 +198,16 @@ def _execute_campaign(campaign_id: int) -> None:
 
             try:
                 result = resend.Emails.send({
-                    "from":    _RESEND_FROM,
+                    "from":    _RESEND_FROM_DISPLAY,
                     "to":      [user.email],
                     "subject": campaign.subject,
                     "html":    html,
                     "text":    text,
+                    "headers": {
+                        # RFC 8058 one-click unsubscribe — Gmail shows native unsubscribe button
+                        "List-Unsubscribe":      f"<{unsub_url}>",
+                        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+                    },
                 })
                 delivery.status      = "sent"
                 delivery.provider_id = (result.get("id", "") if isinstance(result, dict) else "")

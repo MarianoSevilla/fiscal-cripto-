@@ -450,8 +450,8 @@ body { padding-top: 64px; }
       <div class="preview-header">
         <span class="preview-label">Vista previa</span>
         <div class="mode-toggle">
-          <button class="mode-btn active" id="btn-dark" onclick="setMode('dark')">Dark</button>
-          <button class="mode-btn"        id="btn-light" onclick="setMode('light')">Light</button>
+          <button class="mode-btn"        id="btn-dark"  onclick="setMode('dark')">Dark</button>
+          <button class="mode-btn active" id="btn-light" onclick="setMode('light')">Light</button>
         </div>
       </div>
       <div class="preview-body" id="preview-body">
@@ -530,7 +530,7 @@ let activeCampaign   = null;   // currently selected campaign object
 let draftCampaignId  = null;   // ID of the unsaved/saved draft in composer
 let allCampaigns     = [];
 let currentTab       = 'all';
-let previewMode      = 'dark';
+let previewMode      = 'light';
 let previewTimer     = null;
 let pollTimer        = null;
 let recipientCount   = 0;
@@ -829,30 +829,37 @@ function setMode(m) {
 }
 
 function buildEmailPreview(subject, body) {
-  const isDark = previewMode === 'dark';
-  const bg     = isDark ? '#10141e' : '#ffffff';
-  const hbg    = isDark ? '#0d1018' : '#f9fafb';
-  const hbord  = isDark ? 'rgba(255,255,255,0.07)' : '#e5e7eb';
-  const border = isDark ? 'rgba(255,255,255,0.07)' : '#e5e7eb';
-  const subC   = isDark ? '#f9fafb' : '#111827';
-  const bodyC  = isDark ? '#9ca3af' : '#374151';
-  const footC  = isDark ? '#4b5563' : '#9ca3af';
-  const logoC  = isDark ? '#eef0f6' : '#111827';
-  const bodyHtml = esc(body).replace(/\n/g, '<br>');
+  const isDark   = previewMode === 'dark';
+  const outerBg  = isDark ? '#1a1f2e' : '#f9fafb';
 
-  return `<div style="font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;border-radius:12px;overflow:hidden;box-shadow:0 4px 36px rgba(0,0,0,.35);border:1px solid ${border};width:100%">
-    <div style="background:${hbg};padding:24px 36px 20px;border-bottom:1px solid ${hbord}">
-      <span style="font-size:17px;font-weight:800;color:${logoC};letter-spacing:-0.02em">Mariano</span><span style="font-size:17px;font-weight:800;color:#00C896">.</span>
+  // Convert double-newline to paragraphs, single to <br> — mirrors Python template
+  const pStyle   = "margin:0 0 16px;font-size:15px;color:#374151;line-height:1.75;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;";
+  const pLast    = "margin:0;font-size:15px;color:#374151;line-height:1.75;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;";
+  let bodyHtml;
+  if (body.trim()) {
+    const paras = esc(body).split(/\n{2,}/);
+    bodyHtml = paras.map((p, i) =>
+      `<p style="${i < paras.length - 1 ? pStyle : pLast}">${p.trim().replace(/\n/g,'<br>')}</p>`
+    ).join('');
+  } else {
+    bodyHtml = `<p style="${pLast}"><span style="opacity:.35">Contenido del email…</span></p>`;
+  }
+  const subjectHtml = esc(subject) || '<span style="opacity:.35">Asunto…</span>';
+
+  return `<div style="background:${outerBg};padding:32px 20px;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;">
+    <div style="max-width:560px;margin:0 auto 16px;">
+      <span style="font-size:14px;font-weight:700;color:#111827;letter-spacing:-.01em;">Mariano</span><span style="font-size:14px;font-weight:700;color:#059669;">.</span>
     </div>
-    <div style="background:${bg};padding:32px 36px 28px">
-      <h1 style="margin:0 0 18px;font-size:20px;font-weight:700;color:${subC};line-height:1.35">${esc(subject) || '<span style="opacity:.3">Asunto…</span>'}</h1>
-      <p style="margin:0;font-size:14px;color:${bodyC};line-height:1.8">${bodyHtml || '<span style="opacity:.3">Contenido…</span>'}</p>
-      <div style="border-top:1px solid ${border};margin:24px 0 14px"></div>
-      <p style="margin:0;font-size:12.5px;color:${footC}">Accede en <a href="https://www.marianosevilla.com" style="color:#00C896;text-decoration:none">marianosevilla.com</a></p>
+    <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:6px;padding:32px 36px;">
+      <h1 style="margin:0 0 20px;font-size:20px;font-weight:600;color:#111827;line-height:1.4;">${subjectHtml}</h1>
+      ${bodyHtml}
+      <div style="border-top:1px solid #f3f4f6;margin-top:24px;padding-top:14px;">
+        <span style="font-size:13px;color:#6b7280;">Accede a tu cuenta en <a href="https://www.marianosevilla.com" style="color:#059669;text-decoration:none;">marianosevilla.com</a></span>
+      </div>
     </div>
-    <div style="background:${hbg};padding:16px 36px 20px;border-top:1px solid ${hbord}">
-      <p style="margin:0 0 5px;font-size:11px;color:${footC};line-height:1.7">Mariano Sevilla · Gestión fiscal de criptomonedas<br>Estás recibiendo este email porque tienes una cuenta activa.</p>
-      <p style="margin:7px 0 0;font-size:11px;color:${footC}">Si no deseas recibir futuras actualizaciones, puedes <a href="#" style="color:${footC}">desuscribirte aquí</a>.</p>
+    <div style="max-width:560px;margin:0 auto;padding:18px 4px 0;">
+      <p style="margin:0 0 5px;font-size:11px;color:#9ca3af;line-height:1.7;">Mariano Sevilla · Gestión fiscal de criptomonedas · <a href="https://www.marianosevilla.com" style="color:#9ca3af;text-decoration:none;">marianosevilla.com</a></p>
+      <p style="margin:0;font-size:11px;color:#9ca3af;line-height:1.7;">Recibes este email porque tienes una cuenta activa. · <a href="#" style="color:#9ca3af;text-decoration:underline;">Desuscribirse</a> · <a href="#" style="color:#9ca3af;text-decoration:none;">Privacidad</a> · <a href="#" style="color:#9ca3af;text-decoration:none;">Términos</a> · <a href="#" style="color:#9ca3af;text-decoration:none;">Mi cuenta</a></p>
     </div>
   </div>`;
 }
