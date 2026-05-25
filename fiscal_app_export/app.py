@@ -45,7 +45,6 @@ except ImportError:
     _stripe_module = None
 from models import FiscalAdvisoryRequest, FiscalAdvisoryFile, FiscalAdvisoryStatusHistory, AdvisoryInternalNote
 from error_tracking import record_processing_error_safe, is_actionable_processing_error
-from email_helpers import SUPPORT_FOOTER_HTML, SUPPORT_FOOTER_TEXT
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -165,7 +164,16 @@ app.register_blueprint(comms_bp)
 # ── RESEND (email) ────────────────────────────
 resend.api_key = os.environ.get("RESEND_API_KEY", "")
 _RESEND_FROM   = os.environ.get("RESEND_FROM_EMAIL", "noreply@marianosevilla.com")
+_RESEND_FROM_DISPLAY = (
+    _RESEND_FROM if "<" in _RESEND_FROM else f"Mariano Sevilla <{_RESEND_FROM}>"
+)
 _APP_BASE_URL  = os.environ.get("APP_BASE_URL", "https://www.marianosevilla.com")
+
+from email_templates import (  # noqa: E402
+    verification_email,
+    advisory_confirmation_email,
+    advisory_status_email,
+)
 
 # ── ADVISORY / STRIPE ────────────────────────
 _STRIPE_SECRET_KEY      = os.environ.get("STRIPE_SECRET_KEY", "")
@@ -1270,78 +1278,15 @@ def _send_verification_email(user: User) -> bool:
         app.logger.warning("RESEND_API_KEY no configurada — email de verificación no enviado.")
         return False
 
-    token = _generate_verification_token(user.email)
+    token      = _generate_verification_token(user.email)
     verify_url = f"{_APP_BASE_URL}/verify-email?token={token}"
-
-    html = f"""
-<!DOCTYPE html>
-<html lang="es">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#080c12;font-family:'Helvetica Neue',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#080c12;padding:40px 0;">
-    <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" style="background:#10141e;border-radius:12px;border:1px solid rgba(255,255,255,0.08);overflow:hidden;">
-        <tr>
-          <td style="background:#0d1018;padding:28px 40px;border-bottom:1px solid rgba(0,200,150,0.25);">
-            <span style="font-size:18px;font-weight:700;color:#eef0f6;">Mariano</span><span style="font-size:18px;font-weight:700;color:#00C896;">Sevilla</span>
-            <span style="font-size:12px;color:#7a8099;margin-left:10px;">Herramienta Fiscal Cripto</span>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:36px 40px;">
-            <h1 style="margin:0 0 12px;font-size:22px;color:#eef0f6;font-weight:700;">Verifica tu dirección de email</h1>
-            <p style="margin:0 0 24px;font-size:15px;color:#9aa0b8;line-height:1.6;">
-              Haz clic en el botón para confirmar tu cuenta y empezar a generar informes FIFO.
-            </p>
-            <table cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
-              <tr>
-                <td style="background:#00C896;border-radius:8px;padding:14px 32px;">
-                  <a href="{verify_url}" style="color:#080c12;font-size:15px;font-weight:700;text-decoration:none;display:block;">
-                    Verificar email
-                  </a>
-                </td>
-              </tr>
-            </table>
-            <p style="margin:0 0 8px;font-size:13px;color:#7a8099;line-height:1.5;">
-              Si el botón no funciona, copia y pega este enlace en tu navegador:
-            </p>
-            <p style="margin:0 0 28px;font-size:12px;color:#00C896;word-break:break-all;">{verify_url}</p>
-            <p style="margin:0 0 12px;font-size:12px;color:#555c70;">
-              Este enlace caduca en 24 horas. Si no creaste esta cuenta, ignora este mensaje.
-            </p>
-            <p style="margin:0;font-size:12px;color:#7a8099;background:rgba(255,255,255,0.04);border-radius:6px;padding:10px 14px;">
-              📬 ¿No ves este email? Revisa tu carpeta de <strong style="color:#eef0f6;">spam o correo no deseado</strong> y márcalo como «No es spam» para recibirlos en el futuro.
-            </p>
-          </td>
-        </tr>
-        <tr>
-          <td style="background:#0d1018;padding:18px 40px;border-top:1px solid rgba(255,255,255,0.06);">
-            <p style="margin:0 0 6px;font-size:11px;color:#555c70;">
-              marianosevilla.com · Herramienta Fiscal Cripto para el IRPF español
-            </p>
-            {SUPPORT_FOOTER_HTML}
-          </td>
-        </tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>
-"""
-    text = (
-        f"Verifica tu dirección de email\n\n"
-        f"Haz clic en el siguiente enlace para confirmar tu cuenta:\n{verify_url}\n\n"
-        f"Este enlace caduca en 24 horas.\n"
-        f"Si no ves este email en tu bandeja de entrada, revisa la carpeta de spam.\n\n"
-        f"Si no creaste esta cuenta, ignora este mensaje.\n\n"
-        f"marianosevilla.com — Herramienta Fiscal Cripto{SUPPORT_FOOTER_TEXT}"
-    )
+    html, text = verification_email(verify_url)
 
     try:
         resend.Emails.send({
-            "from":    _RESEND_FROM,
+            "from":    _RESEND_FROM_DISPLAY,
             "to":      [user.email],
-            "subject": "Verifica tu email — Herramienta Fiscal Cripto",
+            "subject": "Verifica tu email — marianosevilla.com",
             "html":    html,
             "text":    text,
         })
@@ -2504,7 +2449,7 @@ def api_contacto():
     try:
         if resend.api_key:
             resend.Emails.send({
-                "from": _RESEND_FROM,
+                "from": _RESEND_FROM_DISPLAY,
                 "to": [_CONTACT_TO_EMAIL],
                 "subject": f"[Contacto] {tipo_consulta} — {nombre}",
                 "text": (
@@ -3265,46 +3210,14 @@ def _send_advisory_confirmation_email(advisory: "FiscalAdvisoryRequest"):
     """
     if not resend.api_key:
         return
-    html = f"""<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;background:#080c12;font-family:'Helvetica Neue',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#080c12;padding:40px 0;">
-    <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" style="background:#10141e;border-radius:12px;border:1px solid rgba(255,255,255,0.08);">
-        <tr><td style="background:#0d1018;padding:28px 40px;border-bottom:1px solid rgba(0,200,150,0.25);">
-          <span style="font-size:18px;font-weight:700;color:#eef0f6;">Mariano</span><span style="font-size:18px;font-weight:700;color:#00C896;">Sevilla</span>
-          <span style="font-size:12px;color:#7a8099;margin-left:10px;">Asesoramiento Fiscal Cripto</span>
-        </td></tr>
-        <tr><td style="padding:36px 40px;">
-          <h1 style="margin:0 0 12px;font-size:22px;color:#eef0f6;font-weight:700;">Solicitud recibida</h1>
-          <p style="margin:0 0 16px;font-size:15px;color:#9aa0b8;line-height:1.6;">
-            Hola <strong style="color:#eef0f6;">{advisory.full_name}</strong>,<br><br>
-            Hemos recibido tu solicitud de <strong style="color:#eef0f6;">{advisory.service_label()}</strong> para el ejercicio <strong style="color:#eef0f6;">{advisory.tax_year}</strong>.
-          </p>
-          <p style="margin:0 0 16px;font-size:15px;color:#9aa0b8;line-height:1.6;">
-            Revisaremos el tipo de ayuda que necesitas y te responderemos por email con los siguientes pasos.
-            Si es necesario, Rafa, economista colegiado, valorará tu caso antes de confirmar el servicio y el precio final.
-          </p>
-          <p style="margin:0 0 16px;background:rgba(255,255,255,0.04);border-left:3px solid rgba(255,255,255,0.12);padding:12px 16px;border-radius:0 8px 8px 0;font-size:13px;color:#7a8099;line-height:1.6;">
-            Si necesitamos revisar documentación adicional, te indicaremos por email cómo enviarla. Por seguridad, no almacenamos documentos fiscales sensibles en el servidor.
-          </p>
-          <p style="margin:0;font-size:13px;color:#7a8099;">
-            Número de solicitud: <strong style="color:#eef0f6;">#{advisory.id}</strong>
-          </p>
-        </td></tr>
-        <tr><td style="background:#0d1018;padding:18px 40px;border-top:1px solid rgba(255,255,255,0.06);">
-          <p style="margin:0 0 6px;font-size:11px;color:#555c70;">marianosevilla.com · Asesoramiento Fiscal Cripto</p>
-          {SUPPORT_FOOTER_HTML}
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>"""
+    html, text = advisory_confirmation_email(advisory)
     try:
         resend.Emails.send({
-            "from":    _RESEND_FROM,
+            "from":    _RESEND_FROM_DISPLAY,
             "to":      [advisory.email],
             "subject": "Hemos recibido tu solicitud de asesoramiento fiscal",
             "html":    html,
+            "text":    text,
         })
     except Exception as exc:
         app.logger.error("Error enviando email confirmación advisory: %s", exc)
@@ -3329,7 +3242,7 @@ def _send_advisory_internal_notification(advisory: "FiscalAdvisoryRequest"):
     )
     try:
         resend.Emails.send({
-            "from":    _RESEND_FROM,
+            "from":    _RESEND_FROM_DISPLAY,
             "to":      _ADVISORY_NOTIFY_EMAILS,
             "subject": f"[Asesoramiento] Nueva solicitud #{advisory.id} — {advisory.service_label()}",
             "text":    text,
@@ -3342,162 +3255,54 @@ def _send_advisory_status_update_email(advisory: "FiscalAdvisoryRequest", note: 
     """Email al usuario cuando el admin cambia el estado de su solicitud.
 
     Requiere ENABLE_ADVISORY_STATUS_EMAILS=true para enviar.
-    Si está deshabilitado, solo registra un log informativo (útil para verificar
-    que se llamaría correctamente antes de activar el envío real).
+    Si está deshabilitado, solo registra un log informativo.
 
     Estados que generan email: under_review, waiting_user_info, in_progress,
     completed, cancelled.
-    Omitidos: pending_payment (sin pago), paid_received (cubierto por el webhook
-    de Stripe vía _send_advisory_confirmation_email), refunded (gestión manual).
+    Omitidos: pending_payment, paid_received, refunded.
     """
-    status = advisory.status
-
-    SKIPPED = ("pending_payment", "paid_received", "refunded")
-    if status in SKIPPED:
+    html, text = advisory_status_email(advisory, note=note, app_base_url=_APP_BASE_URL)
+    if html is None:
         return
 
-    note_clean = (note or "").strip()
-
-    def _note_block(color: str) -> str:
-        if not note_clean:
-            return ""
-        return (
-            f'<p style="margin:16px 0 0;background:rgba({color},0.08);'
-            f'border-left:3px solid rgb({color});padding:12px 16px;'
-            f'border-radius:0 8px 8px 0;font-size:14px;color:#9aa0b8;'
-            f'line-height:1.6;">{note_clean}</p>'
-        )
-
-    service = f'<strong style="color:#eef0f6;">{advisory.service_label()}</strong>'
-    year    = f'<strong style="color:#eef0f6;">{advisory.tax_year}</strong>'
-    name    = f'<strong style="color:#eef0f6;">{advisory.full_name}</strong>'
-    contact = f"{_APP_BASE_URL}/contacto"
-
-    configs: dict = {
-        "under_review": {
-            "subject":  "Tu caso está siendo revisado",
-            "headline": "Tu caso está siendo revisado",
-            "body": (
-                f"Hemos recibido tu solicitud de {service} para el ejercicio {year} y ya la estamos analizando.<br><br>"
-                f"Nuestro equipo revisará tu situación para valorar la mejor forma de ayudarte. "
-                f"Si necesitamos algo por tu parte, te lo haremos saber."
-                + _note_block("99,102,241")
-            ),
-            "next": "No necesitas hacer nada por ahora. Te avisaremos cuando haya novedades.",
-        },
-        "waiting_user_info": {
-            "subject":  "Necesitamos información adicional",
-            "headline": "Necesitamos información adicional",
-            "body": (
-                f"Para continuar con tu solicitud de {service} ({year}), "
-                f"necesitamos que nos facilites algo más de información."
-                + _note_block("251,191,36")
-            ),
-            "next": "Te contactaremos por email para indicarte exactamente qué necesitamos. Puedes responder directamente al correo recibido.",
-        },
-        "in_progress": {
-            "subject":  "Tu caso está en curso",
-            "headline": "Tu caso está en curso",
-            "body": (
-                f"Tu solicitud de {service} para el ejercicio {year} ya está en manos del especialista.<br><br>"
-                f"Trabajamos en tu caso con la atención que merece."
-                + _note_block("56,189,248")
-            ),
-            "next": "Te informaremos cuando tengamos novedades.",
-        },
-        "completed": {
-            "subject":  "Tu caso ha sido completado",
-            "headline": "Caso completado",
-            "body": (
-                f"Hemos completado el servicio de {service} para el ejercicio {year}."
-                + (
-                    _note_block("0,200,150")
-                    if note_clean
-                    else "<br><br>Conserva la documentación que te hemos enviado y escríbenos si necesitas cualquier aclaración."
-                )
-            ),
-            "next": "Si tienes alguna duda, no dudes en escribirnos.",
-        },
-        "cancelled": {
-            "subject":  "Solicitud cerrada",
-            "headline": "Solicitud cerrada",
-            "body": (
-                f"Tu solicitud de {service} para el ejercicio {year} ha sido cerrada."
-                + _note_block("248,113,113")
-            ),
-            "next": "Si crees que hay un error o tienes alguna pregunta, no dudes en escribirnos.",
-        },
+    _STATUS_SUBJECTS = {
+        "under_review":      "Tu caso está siendo revisado",
+        "waiting_user_info": "Necesitamos información adicional",
+        "in_progress":       "Tu caso está en curso",
+        "completed":         "Tu caso ha sido completado",
+        "cancelled":         "Solicitud cerrada",
     }
-
-    cfg = configs.get(status)
-    if not cfg:
+    subject = _STATUS_SUBJECTS.get(advisory.status)
+    if not subject:
         return
 
     if not _ADVISORY_STATUS_EMAILS_ENABLED:
         app.logger.info(
             "[advisory email] DESHABILITADO (ENABLE_ADVISORY_STATUS_EMAILS=false). "
             "Se habría enviado '%s' a %s (solicitud #%s).",
-            cfg["subject"], advisory.email, advisory.id,
+            subject, advisory.email, advisory.id,
         )
         return
 
     if not resend.api_key:
         return
 
-    html = f"""<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;background:#080c12;font-family:'Helvetica Neue',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#080c12;padding:40px 0;">
-    <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" style="background:#10141e;border-radius:12px;border:1px solid rgba(255,255,255,0.08);">
-        <tr><td style="background:#0d1018;padding:28px 40px;border-bottom:1px solid rgba(0,200,150,0.25);">
-          <span style="font-size:18px;font-weight:700;color:#eef0f6;">Mariano</span><span style="font-size:18px;font-weight:700;color:#00C896;">Sevilla</span>
-          <span style="font-size:12px;color:#7a8099;margin-left:10px;">Asesoramiento Fiscal Cripto</span>
-        </td></tr>
-        <tr><td style="padding:36px 40px;">
-          <h1 style="margin:0 0 12px;font-size:22px;color:#eef0f6;font-weight:700;">{cfg['headline']}</h1>
-          <p style="margin:0 0 8px;font-size:15px;color:#9aa0b8;line-height:1.6;">
-            Hola {name},
-          </p>
-          <p style="margin:0;font-size:15px;color:#9aa0b8;line-height:1.6;">
-            {cfg['body']}
-          </p>
-          <p style="margin:20px 0 0;font-size:14px;color:#9aa0b8;line-height:1.6;">
-            {cfg['next']}
-          </p>
-          <div style="margin-top:28px;">
-            <a href="{contact}" style="display:inline-block;background:#00C896;color:#080c12;font-weight:700;font-size:14px;padding:12px 28px;border-radius:8px;text-decoration:none;">Contactar con el equipo</a>
-          </div>
-          <p style="margin:20px 0 0;background:rgba(255,255,255,0.04);border-left:3px solid rgba(255,255,255,0.12);padding:12px 16px;border-radius:0 8px 8px 0;font-size:13px;color:#7a8099;line-height:1.6;">
-            Si necesitamos revisar documentación adicional, te indicaremos por email cómo enviarla. Por seguridad, no almacenamos documentos fiscales sensibles en el servidor.
-          </p>
-          <p style="margin:24px 0 0;font-size:13px;color:#7a8099;">
-            Solicitud: <strong style="color:#eef0f6;">#{advisory.id}</strong>
-          </p>
-        </td></tr>
-        <tr><td style="background:#0d1018;padding:18px 40px;border-top:1px solid rgba(255,255,255,0.06);">
-          <p style="margin:0 0 6px;font-size:11px;color:#555c70;">marianosevilla.com · Asesoramiento Fiscal Cripto</p>
-          {SUPPORT_FOOTER_HTML}
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>"""
-
     try:
         resend.Emails.send({
-            "from":    _RESEND_FROM,
+            "from":    _RESEND_FROM_DISPLAY,
             "to":      [advisory.email],
-            "subject": cfg["subject"],
+            "subject": subject,
             "html":    html,
+            "text":    text,
         })
         app.logger.info(
             "[advisory email] Enviado '%s' a %s (solicitud #%s).",
-            cfg["subject"], advisory.email, advisory.id,
+            subject, advisory.email, advisory.id,
         )
     except Exception as exc:
         app.logger.error(
             "[advisory email] Error enviando estado=%s solicitud #%s: %s",
-            status, advisory.id, exc,
+            advisory.status, advisory.id, exc,
         )
 
 

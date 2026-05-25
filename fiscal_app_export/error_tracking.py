@@ -272,37 +272,28 @@ def send_processing_error_email(
     Returns True if sent successfully. Raises on failure (caller handles).
     """
     import resend as _resend
+    from email_templates import processing_error_email
 
     api_key    = os.environ.get("RESEND_API_KEY", "")
     from_email = os.environ.get("RESEND_FROM_EMAIL", "noreply@marianosevilla.com")
+    from_display = (
+        from_email if "<" in from_email else f"Mariano Sevilla <{from_email}>"
+    )
 
     if not api_key:
         logger.warning("[ERROR_TRACKING] RESEND_API_KEY not configured, skipping auto-email")
         return False
 
     exchange_display = (exchange or "tu exchange").capitalize()
-    context_line = user_friendly_msg or (
-        "Hemos detectado un formato de CSV que no hemos podido interpretar correctamente."
-    )
+    context_line     = user_friendly_msg or ""
+    html, text       = processing_error_email(exchange_display, context_line)
+
     payload = {
-        "from":    from_email,
+        "from":    from_display,
         "to":      [user_email],
-        "subject": "Hemos detectado un problema procesando tu CSV",
-        "text": (
-            f"Hola,\n\n"
-            f"Hemos detectado un problema al procesar tu archivo CSV de {exchange_display}.\n\n"
-            f"{context_line}\n\n"
-            "El error ya ha quedado registrado automáticamente y lo revisaremos para mejorar "
-            "la compatibilidad de la herramienta.\n\n"
-            "Si quieres ayudarnos a resolverlo más rápido, puedes responder a este correo "
-            "explicando:\n"
-            "- qué intentabas hacer,\n"
-            "- qué tipo de operaciones contiene el CSV,\n"
-            "- si has visto algún mensaje concreto en pantalla.\n\n"
-            "No incluyas claves API ni información sensible.\n\n"
-            "Gracias por ayudarnos a mejorar la herramienta.\n\n"
-            f"Mariano Sevilla{SUPPORT_FOOTER_TEXT}"
-        ),
+        "subject": f"Problema al procesar tu archivo de {exchange_display}",
+        "html":    html,
+        "text":    text,
     }
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
