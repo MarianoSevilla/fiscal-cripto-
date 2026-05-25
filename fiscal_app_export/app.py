@@ -3563,6 +3563,22 @@ def admin_advisory_add_note(request_id):
     return jsonify({"ok": True, "note": note.to_dict()})
 
 
+@app.route("/api/admin/asesoramiento/solicitudes/<int:request_id>", methods=["DELETE"])
+@login_required
+def admin_advisory_delete(request_id):
+    if not _is_fiscal_advisor():
+        return jsonify({"error": "Acceso denegado."}), 403
+    advisory = FiscalAdvisoryRequest.query.get_or_404(request_id)
+    if advisory.amount_paid and advisory.amount_paid > 0:
+        return jsonify({
+            "error": "No se puede eliminar una solicitud con pago registrado. "
+                     "Cancélala o márcala como finalizada."
+        }), 400
+    db.session.delete(advisory)
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
 if __name__ == "__main__":
     os.makedirs("static", exist_ok=True)
     app.run(debug=False, port=5050)
