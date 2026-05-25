@@ -13,6 +13,7 @@ psycopg2-binary
 reportlab
 matplotlib
 pandas
+openpyxl
 gunicorn
 stripe
 xmlschema

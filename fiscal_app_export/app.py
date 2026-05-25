@@ -58,8 +58,10 @@ from clasificador_coinbase import ClasificadorCoinbase
 from clasificador_nexo import ClasificadorNexo
 from clasificador_cryptocom import ClasificadorCryptoCom
 from clasificador_uphold import ClasificadorUphold, UPHOLD_SIGNATURES
+from clasificador_mexc import ClasificadorMEXC, _detectar_tipo_mexc, _contar_filas_xlsx
 from motor_fifo import MotorFIFO
 from generador_pdf import generar_pdf, generar_pdf_bit2me
+from generador_pdf_mexc import generar_pdf_mexc
 from modelo721 import generar_datos_modelo_721
 from precios_historicos import obtener_precios_historicos, enriquecer_721_con_precios
 from generador_xml_721 import (
@@ -539,6 +541,26 @@ EXCHANGE_PAGES = {
             _HOW_TO_STEP2, _HOW_TO_STEP3,
         ],
     },
+    "mexc": {
+        "exchange_id":      "mexc",
+        "exchange_name":    "MEXC",
+        "exchange_logo":    "MX",
+        "page_title":       "Informe FIFO MEXC para Hacienda | Mariano Sevilla",
+        "page_meta_desc":   "Sube el Excel de MEXC y calcula tus ganancias y pérdidas patrimoniales con FIFO obligatorio. Informe PDF listo para la declaración de la renta en España.",
+        "page_canonical":   f"{_BASE_URL}/mexc",
+        "page_og_title":    "Informe fiscal MEXC para Hacienda — FIFO automático | Mariano Sevilla",
+        "page_og_desc":     "Sube el Excel de MEXC y calcula las plusvalías crypto con FIFO. Informe PDF para tu gestor.",
+        "page_schema_name": "Informe FIFO MEXC — Mariano Sevilla",
+        "page_h1":          "Genera tu informe fiscal de MEXC para Hacienda",
+        "hero_desc":        "Sube el archivo XLS/XLSX del historial de operaciones de MEXC y obtén el informe FIFO con tus ganancias y pérdidas patrimoniales. Listo para la declaración de la renta.",
+        "how_to": [
+            {"title": "Exporta el Excel de Trade Records desde MEXC",
+             "desc":  "En tu cuenta de MEXC ve a Órdenes → Historial de operaciones → Exportar. Selecciona el período completo desde tu primera operación hasta hoy y descarga el fichero XLS o XLSX."},
+            {"title": "Sube el archivo XLS/XLSX",
+             "desc":  "Arrastra el archivo directamente, sin convertirlo a CSV. La herramienta lee el formato Excel de MEXC de forma nativa."},
+            _HOW_TO_STEP3,
+        ],
+    },
 }
 
 
@@ -672,7 +694,7 @@ AÑO_MAX = datetime.now().year + 1
 _721_PRIMER_EJERCICIO = 2022
 # Exchanges con MotorFIFO → pueden generar snapshot 31/12 via posicion_a_fecha().
 _721_EXCHANGES_CON_MOTOR = frozenset({
-    "binance", "bitvavo", "kraken", "coinbase", "nexo", "cryptocom", "uphold"
+    "binance", "bitvavo", "kraken", "coinbase", "nexo", "cryptocom", "uphold", "mexc"
 })
 # Exchanges españoles: no sujetos al 721 (entidad custodio en España).
 _721_EXCHANGES_ES = frozenset({"bit2me"})
@@ -934,6 +956,10 @@ def procesar_uphold(filepath: str) -> tuple:
     return procesar_con_fifo(ClasificadorUphold(filepath).clasificar())
 
 
+def procesar_mexc(filepath: str) -> tuple:
+    return procesar_con_fifo(ClasificadorMEXC(filepath).clasificar())
+
+
 def _motor_desde_csv_721(exchange: str, tmp_path: str) -> MotorFIFO:
     """
     Construye el MotorFIFO completo desde un CSV para uso exclusivo de /api/721.
@@ -960,6 +986,8 @@ def _motor_desde_csv_721(exchange: str, tmp_path: str) -> MotorFIFO:
         motor, _, _ = procesar_cryptocom(tmp_path)
     elif exchange == "uphold":
         motor, _, _ = procesar_uphold(tmp_path)
+    elif exchange == "mexc":
+        motor, _, _ = procesar_mexc(tmp_path)
     else:
         raise ValueError(f"Exchange '{exchange}' no soportado para Modelo 721.")
     return motor
@@ -1066,19 +1094,24 @@ def _error_amigable(e: Exception) -> str:
     """Convierte excepciones técnicas en mensajes amigables para el usuario."""
     etype = type(e).__name__
     msg = str(e)
+    # ValueError descriptivos propagados intencionalmente (ej. futuros MEXC, formato no reconocido)
+    if etype == "ValueError" and len(msg) > 20:
+        return msg
     if isinstance(e, KeyError) or etype == "KeyError" or "column" in msg.lower():
-        return "El fichero CSV no tiene las columnas esperadas. Exporta el historial completo desde tu exchange."
+        return "El fichero no tiene las columnas esperadas. Exporta el historial completo desde tu exchange."
     if "NoneType" in msg or etype == "AttributeError":
-        return "El fichero CSV no tiene el formato esperado. Asegúrate de exportarlo directamente desde tu exchange."
+        return "El fichero no tiene el formato esperado. Asegúrate de exportarlo directamente desde tu exchange."
     if etype in ("UnicodeDecodeError", "UnicodeError") or "codec" in msg:
         return "El fichero no puede leerse. Descárgalo de nuevo desde tu exchange sin abrirlo con Excel."
     if etype == "MemoryError":
         return "El fichero es demasiado grande para procesarse. Intenta con un rango de fechas más reducido."
     if "JSON" in msg or "float" in msg.lower() or "range" in msg.lower() or "serializ" in msg.lower():
-        return "Error al generar el informe. Comprueba que el CSV no ha sido modificado y vuelve a intentarlo."
+        return "Error al generar el informe. Comprueba que el fichero no ha sido modificado y vuelve a intentarlo."
     if etype == "ParserError" or "tokeniz" in msg.lower():
-        return "El fichero CSV está mal formado. Descárgalo de nuevo desde tu exchange sin abrirlo con Excel."
-    return "No se ha podido procesar el fichero. Comprueba que es el CSV exportado desde tu exchange y vuelve a intentarlo."
+        return "El fichero está mal formado. Descárgalo de nuevo desde tu exchange sin abrirlo con Excel."
+    if "zipfile" in msg.lower() or "openpyxl" in msg.lower() or "xlsx" in msg.lower():
+        return "El fichero Excel no se puede leer. Descárgalo de nuevo desde MEXC sin abrirlo antes."
+    return "No se ha podido procesar el fichero. Comprueba que es el archivo exportado desde tu exchange y vuelve a intentarlo."
 
 
 def _motor_a_json(motor) -> tuple:
@@ -1440,6 +1473,12 @@ def page_uphold():
     return render_template("tool.html", **EXCHANGE_PAGES["uphold"])
 
 
+@app.route("/mexc")
+@login_required
+def page_mexc():
+    return render_template("tool.html", **EXCHANGE_PAGES["mexc"])
+
+
 @app.route("/api/analizar", methods=["POST"])
 @login_required
 @limiter.limit("3 per 10 minutes", exempt_when=_is_admin)
@@ -1471,7 +1510,7 @@ def analizar():
         exchange  = _sanitizar_texto(request.form.get("exchange", "binance"), max_len=20).lower()
 
         # Validar exchange
-        if exchange not in ("binance", "bit2me", "bitvavo", "kraken", "coinbase", "nexo", "cryptocom", "uphold"):
+        if exchange not in ("binance", "bit2me", "bitvavo", "kraken", "coinbase", "nexo", "cryptocom", "uphold", "mexc"):
             return jsonify({"error": "Exchange no soportado."}), 400
 
         # Validar ejercicio fiscal
@@ -1479,17 +1518,23 @@ def analizar():
         if not valido_ej:
             return jsonify({"error": error_ej}), 400
 
-        # Validar extensión
+        # Validar extensión — MEXC usa XLS/XLSX; el resto CSV
         filename = archivo.filename or ""
-        if not filename.lower().endswith(".csv"):
-            return jsonify({"error": "El fichero debe tener extensión .csv"}), 400
+        if exchange == "mexc":
+            if not (filename.lower().endswith(".xlsx") or filename.lower().endswith(".xls")):
+                return jsonify({"error": "MEXC requiere el archivo XLS o XLSX exportado desde la plataforma."}), 400
+            _suffix = ".xlsx"
+        else:
+            if not filename.lower().endswith(".csv"):
+                return jsonify({"error": "El fichero debe tener extensión .csv"}), 400
+            _suffix = ".csv"
 
-        with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(suffix=_suffix, delete=False) as tmp:
             archivo.save(tmp.name)
             tmp_path = tmp.name
 
         t_start   = time.time()
-        csv_rows  = _contar_csv_rows(tmp_path)
+        csv_rows  = _contar_filas_xlsx(tmp_path) if exchange == "mexc" else _contar_csv_rows(tmp_path)
 
         # ── límite de filas ───────────────────────────────────────────────────
         if csv_rows > MAX_CSV_ROWS:
@@ -1500,9 +1545,11 @@ def analizar():
         # ─────────────────────────────────────────────────────────────────────
 
         try:
-            valido, error_msg = _validar_csv(tmp_path, exchange)
-            if not valido:
-                return jsonify({"error": error_msg}), 400
+            # MEXC usa validación propia por cabeceras (formato XLSX, no CSV de texto)
+            if exchange != "mexc":
+                valido, error_msg = _validar_csv(tmp_path, exchange)
+                if not valido:
+                    return jsonify({"error": error_msg}), 400
 
             rendimientos_json = []
             motor       = None   # MotorFIFO — asignado para todos los exchanges excepto bit2me
@@ -1588,6 +1635,17 @@ def analizar():
                 advertencias = motor.advertencias + (clasificador.advertencias if clasificador else [])
                 rendimientos_json = _rendimientos_a_json(rendimientos)
                 pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Uphold", rendimientos)
+
+            elif exchange == "mexc":
+                motor, rendimientos, clasificador = procesar_mexc(tmp_path)
+                _filtrar_motor_por_ejercicio(motor, ejercicio)
+                rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
+                resumen, posicion, operaciones = _motor_a_json(motor)
+                # MEXC puede tener advertencias sobre pares USDT en el clasificador.
+                # Las fusionamos igual que Uphold para que aparezcan en UI y PDF.
+                advertencias = motor.advertencias + (clasificador.advertencias if clasificador else [])
+                rendimientos_json = _rendimientos_a_json(rendimientos)
+                pdf_bytes = generar_pdf_mexc(motor, nombre, ejercicio, rendimientos)
 
             else:  # binance — auto-detectar formato
                 if _detectar_formato_binance(tmp_path) == "tx":
