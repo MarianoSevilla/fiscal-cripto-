@@ -354,19 +354,20 @@ body { padding-top: 64px; }
 </head>
 <body>
 
-<div id="site-nav">
+<nav id="site-nav">
   <div class="snav-inner">
-    <a href="/" class="snav-logo">Mariano<span>.</span></a>
+    <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
     <ul class="snav-links">
-      <li><a href="/dashboard">Dashboard</a></li>
-      <li><a href="/admin/asesoramiento">Asesoramiento</a></li>
-      <li><a href="/admin/comunicaciones" class="active">Comunicaciones</a></li>
+      <li><a href="/como-funciona">Cómo funciona</a></li>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/contacto">Contacto</a></li>
     </ul>
     <div class="snav-right">
-      <span id="nav-user" style="font-size:12px;color:var(--snav-muted)">Admin</span>
+      <div class="snav-skeleton" aria-hidden="true"></div>
     </div>
   </div>
-</div>
+</nav>
+<script src="/static/nav.js"></script>
 
 <div class="app-shell">
 
@@ -521,7 +522,6 @@ body { padding-top: 64px; }
 <!-- ── TOAST ── -->
 <div class="toast" id="toast"><span class="toast-dot"></span><span id="toast-msg"></span></div>
 
-<script src="/static/nav.js" defer></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════════════════
    STATE
