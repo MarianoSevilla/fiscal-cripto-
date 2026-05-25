@@ -552,6 +552,235 @@ class TestConteoFilas:
 
 # ── TESTS: ARCHIVOS REALES MEXC ──────────────────────────────────────────────
 
+# ── CONSTANTES FORMATO ESPAÑOL ────────────────────────────────────────────────
+
+SPOT_ES_HEADERS = [
+    "Pares", "Tiempo", "Tipo", "Dirección",
+    "Precio Promedio Completo", "Precio de Orden",
+    "Cantidad Completa", "Cantidad de Orden", "Monto de Orden", "Estado",
+]
+
+
+# ── FIXTURES FORMATO ESPAÑOL ──────────────────────────────────────────────────
+
+@pytest.fixture
+def spot_es_compras():
+    """3 compras USDT en formato español: Completado × 2 + Cancelación parcial × 1."""
+    rows = [
+        ["BNB_USDT",  "2025-07-03 17:01:30", "Mercado", "Compra",
+         "662.6",  "Mercado", "0.0215",   "0", "14.2459",   "Completado"],
+        ["ETH_USDT",  "2025-07-03 16:58:17", "Mercado", "Compra",
+         "2594.77", "Mercado", "0.00578", "0", "14.9977706", "Completado"],
+        ["XRP_USDT",  "2025-06-20 10:00:00", "Límite",  "Compra",
+         "2.05",   "2.10",    "100.0",   "120.0", "205.0",  "Cancelación parcial"],
+    ]
+    path = _xlsx_tmpfile("Sheet1", SPOT_ES_HEADERS, rows)
+    yield path
+    os.unlink(path)
+
+
+@pytest.fixture
+def spot_es_venta():
+    """1 venta USDT en formato español."""
+    rows = [
+        ["BTC_USDT", "2025-06-15 08:30:00", "Mercado", "Venta",
+         "58000.0", "Mercado", "0.001", "0", "58.0", "Completado"],
+    ]
+    path = _xlsx_tmpfile("Sheet1", SPOT_ES_HEADERS, rows)
+    yield path
+    os.unlink(path)
+
+
+@pytest.fixture
+def spot_es_cancelado():
+    """1 fila Cancelado (sin fills reales) — debe ignorarse."""
+    rows = [
+        ["BNB_USDT", "2025-07-01 12:00:00", "Límite", "Compra",
+         "0", "600.0", "0", "0.1", "0", "Cancelado"],
+    ]
+    path = _xlsx_tmpfile("Sheet1", SPOT_ES_HEADERS, rows)
+    yield path
+    os.unlink(path)
+
+
+@pytest.fixture
+def spot_es_mixto():
+    """Completado + Cancelado + Cancelación parcial: solo 2 deben procesarse."""
+    rows = [
+        ["SOL_USDT", "2025-06-01 09:00:00", "Mercado", "Compra",
+         "140.0", "Mercado", "5.0", "0", "700.0", "Completado"],
+        ["SOL_USDT", "2025-06-01 09:01:00", "Límite",  "Compra",
+         "0",     "139.0",   "0",  "3.0", "0",     "Cancelado"],
+        ["SOL_USDT", "2025-06-01 09:02:00", "Límite",  "Compra",
+         "141.5", "142.0",   "2.0", "5.0", "283.0", "Cancelación parcial"],
+    ]
+    path = _xlsx_tmpfile("Sheet1", SPOT_ES_HEADERS, rows)
+    yield path
+    os.unlink(path)
+
+
+# ── TESTS FORMATO ESPAÑOL ─────────────────────────────────────────────────────
+
+class TestDeteccionSpotES:
+    """La firma española se detecta correctamente."""
+
+    def test_spot_es_detectado(self, spot_es_compras):
+        from fiscal_app_export.clasificador_mexc import _detectar_tipo_mexc
+        assert _detectar_tipo_mexc(spot_es_compras) == "spot_es"
+
+    def test_tipo_export_spot_es(self, spot_es_compras):
+        c = ClasificadorMEXC(spot_es_compras).clasificar()
+        assert c.tipo_export == "spot_es"
+
+    def test_spot_en_no_detecta_como_spot_es(self):
+        """El formato inglés sigue detectándose como 'spot', no 'spot_es'."""
+        from fiscal_app_export.clasificador_mexc import _detectar_tipo_mexc
+        rows = [[
+            "15682261", "ORD001", "ETH-EUR", "2025-07-07 10:45:58", "BUY", "APP",
+            "ETH", "0.04470000", "2195.68", "115.21", "EUR", "0.0", "0.0", "MAKER", "SPOT",
+        ]]
+        path = _xlsx_tmpfile("Sheet1", SPOT_HEADERS, rows)
+        try:
+            assert _detectar_tipo_mexc(path) == "spot"
+        finally:
+            os.unlink(path)
+
+
+class TestSpotESCompras:
+    """Compras en formato español."""
+
+    def test_tres_compraventas(self, spot_es_compras):
+        c = ClasificadorMEXC(spot_es_compras).clasificar()
+        assert len(c.compraventas) == 3
+
+    def test_tipo_compra(self, spot_es_compras):
+        c = ClasificadorMEXC(spot_es_compras).clasificar()
+        assert all(op.tipo == "COMPRA" for op in c.compraventas)
+
+    def test_activos_correctos(self, spot_es_compras):
+        c = ClasificadorMEXC(spot_es_compras).clasificar()
+        activos = {op.activo for op in c.compraventas}
+        assert activos == {"BNB", "ETH", "XRP"}
+
+    def test_contraparte_usdt(self, spot_es_compras):
+        c = ClasificadorMEXC(spot_es_compras).clasificar()
+        assert all(op.contraparte == "USDT" for op in c.compraventas)
+
+    def test_importe_precio_por_cantidad(self, spot_es_compras):
+        """importe = Precio Promedio Completo × Cantidad Completa (no Monto de Orden bruto)."""
+        c = ClasificadorMEXC(spot_es_compras).clasificar()
+        bnb = next(op for op in c.compraventas if op.activo == "BNB")
+        expected = 662.6 * 0.0215
+        assert abs(bnb.importe - expected) < 0.0001
+
+    def test_fecha_parseada(self, spot_es_compras):
+        c = ClasificadorMEXC(spot_es_compras).clasificar()
+        bnb = next(op for op in c.compraventas if op.activo == "BNB")
+        assert bnb.fecha == "2025-07-03 17:01:30"
+
+    def test_cancelacion_parcial_incluida(self, spot_es_compras):
+        """Cancelación parcial tiene fills reales → debe procesarse."""
+        c = ClasificadorMEXC(spot_es_compras).clasificar()
+        xrp = [op for op in c.compraventas if op.activo == "XRP"]
+        assert len(xrp) == 1
+
+    def test_advertencia_usdt(self, spot_es_compras):
+        c = ClasificadorMEXC(spot_es_compras).clasificar()
+        assert any("USDT" in w for w in c.advertencias)
+
+    def test_sin_desconocidas(self, spot_es_compras):
+        c = ClasificadorMEXC(spot_es_compras).clasificar()
+        assert len(c.desconocidas) == 0
+
+    def test_fee_cero_sin_columna(self, spot_es_compras):
+        """El formato español no tiene columna fee → fee_cantidad debe ser 0."""
+        c = ClasificadorMEXC(spot_es_compras).clasificar()
+        assert all(op.fee_cantidad == 0.0 for op in c.compraventas)
+
+
+class TestSpotESVenta:
+    """Ventas en formato español."""
+
+    def test_venta_generada(self, spot_es_venta):
+        c = ClasificadorMEXC(spot_es_venta).clasificar()
+        assert len(c.compraventas) == 1
+        assert c.compraventas[0].tipo == "VENTA"
+
+    def test_activo_btc(self, spot_es_venta):
+        c = ClasificadorMEXC(spot_es_venta).clasificar()
+        assert c.compraventas[0].activo == "BTC"
+
+    def test_importe_venta(self, spot_es_venta):
+        c = ClasificadorMEXC(spot_es_venta).clasificar()
+        assert abs(c.compraventas[0].importe - 58000.0 * 0.001) < 0.0001
+
+
+class TestSpotESFiltroEstado:
+    """Solo se procesan estados con fills reales."""
+
+    def test_cancelado_ignorado(self, spot_es_cancelado):
+        c = ClasificadorMEXC(spot_es_cancelado).clasificar()
+        assert len(c.compraventas) == 0
+
+    def test_mixto_dos_procesados(self, spot_es_mixto):
+        """Completado + Cancelación parcial = 2 procesados; Cancelado = ignorado."""
+        c = ClasificadorMEXC(spot_es_mixto).clasificar()
+        assert len(c.compraventas) == 2
+
+
+class TestArchivosRealesSpotES:
+    """Prueba sobre el archivo real del usuario si existe."""
+
+    MEXCM_PATH = os.path.expanduser(
+        "~/Downloads/MEXCM Historial de Ordenes-DESDE 1 JUNIO a  6 julio 25.xlsx"
+    )
+
+    @pytest.mark.skipif(
+        not os.path.exists(os.path.expanduser(
+            "~/Downloads/MEXCM Historial de Ordenes-DESDE 1 JUNIO a  6 julio 25.xlsx"
+        )),
+        reason="Archivo real MEXCM no disponible",
+    )
+    def test_real_no_crash(self):
+        c = ClasificadorMEXC(self.MEXCM_PATH).clasificar()
+        assert c.tipo_export == "spot_es"
+        assert len(c.compraventas) > 0
+        assert len(c.desconocidas) == 0
+
+    @pytest.mark.skipif(
+        not os.path.exists(os.path.expanduser(
+            "~/Downloads/MEXCM Historial de Ordenes-DESDE 1 JUNIO a  6 julio 25.xlsx"
+        )),
+        reason="Archivo real MEXCM no disponible",
+    )
+    def test_real_24_filas(self):
+        """El archivo tiene 24 filas de datos (22 Completado + 2 Cancelación parcial)."""
+        c = ClasificadorMEXC(self.MEXCM_PATH).clasificar()
+        assert len(c.compraventas) == 24
+
+    @pytest.mark.skipif(
+        not os.path.exists(os.path.expanduser(
+            "~/Downloads/MEXCM Historial de Ordenes-DESDE 1 JUNIO a  6 julio 25.xlsx"
+        )),
+        reason="Archivo real MEXCM no disponible",
+    )
+    def test_real_advertencia_usdt(self):
+        c = ClasificadorMEXC(self.MEXCM_PATH).clasificar()
+        assert any("USDT" in w for w in c.advertencias)
+
+    @pytest.mark.skipif(
+        not os.path.exists(os.path.expanduser(
+            "~/Downloads/MEXCM Historial de Ordenes-DESDE 1 JUNIO a  6 julio 25.xlsx"
+        )),
+        reason="Archivo real MEXCM no disponible",
+    )
+    def test_real_importe_precio_por_cantidad(self):
+        """Primer BNB_USDT: importe ≈ 662.6 × 0.0215 ≈ 14.25 (no Monto de Orden directo)."""
+        c = ClasificadorMEXC(self.MEXCM_PATH).clasificar()
+        bnb = next(op for op in c.compraventas if op.activo == "BNB")
+        assert 14.0 < bnb.importe < 15.0
+
+
 class TestArchivosReales:
     """Ejecuta el clasificador sobre los XLS/XLSX reales de usuario si existen."""
 

@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 # ── FIRMAS DE DETECCIÓN ────────────────────────────────────────────────────────
 
 MEXC_SPOT_SIGNATURE       = {"order_id", "symbol", "currency", "quantity", "price"}
+MEXC_SPOT_ES_SIGNATURE    = {"pares", "dirección", "precio promedio completo", "cantidad completa"}
 MEXC_WITHDRAWAL_SIGNATURE = {"coin", "network", "amount", "transactionfee", "status"}
 MEXC_FUTURES_SIGNATURE    = {"futures", "vol(cont)", "deal_avg_price", "close_avg_price"}
 
@@ -150,6 +151,8 @@ def _detectar_tipo_mexc(filepath: str) -> str:
         return "futures"
     if MEXC_SPOT_SIGNATURE.issubset(headers_lower):
         return "spot"
+    if MEXC_SPOT_ES_SIGNATURE.issubset(headers_lower):
+        return "spot_es"
     if MEXC_WITHDRAWAL_SIGNATURE.issubset(headers_lower):
         return "withdrawal"
 
@@ -264,13 +267,15 @@ class ClasificadorMEXC:
             )
         if tipo == "spot":
             self._clasificar_spot()
+        elif tipo == "spot_es":
+            self._clasificar_spot_es()
         elif tipo == "withdrawal":
             self._clasificar_withdrawal()
         else:
             raise ValueError(
                 "El archivo no se reconoce como un export de MEXC. "
-                "Asegúrate de exportar el historial de operaciones (Trade Records) "
-                "o el historial de retiros desde tu cuenta MEXC."
+                "Asegúrate de exportar el historial de Trade Records (operaciones spot), "
+                "el Historial de Órdenes o el historial de retiros desde tu cuenta MEXC."
             )
 
         if self._tiene_pares_usdt:
@@ -367,6 +372,92 @@ class ClasificadorMEXC:
             importe    = float(importe),
             fee_activo = fee_cur.upper() if fee_cur else quote,
             fee_cantidad = float(fee),
+        ))
+
+    # ── SPOT ORDERS — formato español (Historial de Órdenes) ─────────────────
+    #
+    # Columnas: Pares · Tiempo · Tipo · Dirección · Precio Promedio Completo ·
+    #           Precio de Orden · Cantidad Completa · Cantidad de Orden ·
+    #           Monto de Orden · Estado
+    #
+    # "Cancelación parcial" = orden parcialmente ejecutada; los campos
+    # Precio Promedio Completo y Cantidad Completa reflejan lo realmente
+    # comprado/vendido → se procesa igual que Completado.
+
+    _ESTADOS_SPOT_ES_VALIDOS = {"completado", "cancelación parcial", "cancelacion parcial"}
+
+    def _clasificar_spot_es(self) -> None:
+        _, data = _leer_primera_hoja(self.filepath)
+        if not data:
+            return
+        for fila in data:
+            self._procesar_fila_spot_es(fila)
+
+    def _procesar_fila_spot_es(self, fila: dict) -> None:
+        fecha_raw  = _resolver_columna(fila, ["Tiempo", "tiempo"])
+        fecha      = _parse_fecha(fecha_raw, _FECHA_FORMATOS_SPOT)
+
+        pares       = _resolver_columna(fila, ["Pares", "pares"]).strip()
+        direccion   = _resolver_columna(fila, ["Dirección", "dirección",
+                                                "Direccion", "direccion"]).strip()
+        precio_raw  = _resolver_columna(fila, ["Precio Promedio Completo",
+                                                "precio promedio completo"])
+        cant_raw    = _resolver_columna(fila, ["Cantidad Completa", "cantidad completa"])
+        estado      = _resolver_columna(fila, ["Estado", "estado"]).strip()
+
+        # Solo órdenes con fills reales
+        if estado.lower() not in self._ESTADOS_SPOT_ES_VALIDOS:
+            return
+
+        # Parsear par BASE_QUOTE (separador "_", ej. "BNB_USDT")
+        if "_" in pares:
+            base, _, quote = pares.partition("_")
+        else:
+            base  = pares
+            quote = "USDT"
+
+        base  = base.strip().upper()
+        quote = quote.strip().upper()
+
+        qty   = _parse_decimal(cant_raw)
+        price = _parse_decimal(precio_raw)
+
+        if qty <= 0 or price <= 0:
+            self.desconocidas.append(OperacionDesconocida(
+                fecha=fecha, subtipo=f"qty/price inválidos ({direccion})",
+                activo=base, cantidad=float(qty), cuenta="MEXC",
+            ))
+            return
+
+        # Importe = price × quantity en moneda quote (misma regla que spot inglés)
+        importe = qty * price
+
+        # Registrar par USDT para advertencia suave
+        if quote in STABLES_USD:
+            self._tiene_pares_usdt = True
+
+        dir_lower = direccion.lower()
+        if dir_lower == "compra":
+            tipo = "COMPRA"
+        elif dir_lower == "venta":
+            tipo = "VENTA"
+        else:
+            self.desconocidas.append(OperacionDesconocida(
+                fecha=fecha, subtipo=f"dirección desconocida: {direccion!r}",
+                activo=base, cantidad=float(qty), cuenta="MEXC",
+            ))
+            return
+
+        # El formato español no tiene columna de fee → fee=0
+        self.compraventas.append(OperacionCompraventa(
+            fecha        = fecha,
+            tipo         = tipo,
+            activo       = base,
+            cantidad     = float(qty),
+            contraparte  = quote,
+            importe      = float(importe),
+            fee_activo   = quote,
+            fee_cantidad = 0.0,
         ))
 
     # ── WITHDRAWAL HISTORY ────────────────────────────────────────────────────

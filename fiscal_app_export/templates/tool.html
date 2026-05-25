@@ -1743,6 +1743,16 @@
     if (e.includes('ejercicio') || e.includes('dígitos') || e.includes('anterior a') || e.includes('posterior a')) {
       return { icono: '📅', titulo: 'Año fiscal inválido', desc: esc(e), pasos: [] };
     }
+    if (e.includes('no se reconoce como un export')) {
+      return { icono: '📂', titulo: 'Formato no reconocido', desc: esc(e), pasos: [] };
+    }
+    if (EXCHANGE_PAGE === 'mexc') {
+      return {
+        icono: '✕', titulo: 'Error al procesar el fichero',
+        desc: 'No se ha podido procesar el archivo XLS/XLSX. Comprueba que es una exportación original de MEXC sin modificaciones.',
+        pasos: [],
+      };
+    }
     return { ...ERRORES.generico };
   }
 
