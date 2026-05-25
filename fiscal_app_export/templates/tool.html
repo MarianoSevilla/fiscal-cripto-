@@ -228,6 +228,7 @@
   .logo-kraken   { background: #5741D9; }
   .logo-bit2me   { background: #0066FF; }
   .logo-uphold   { background: #00CC8F; }
+  .logo-mexc     { background: #00C8B0; }
   .exchange-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .soon-tag {
     font-size: 9px; font-weight: 600; text-transform: uppercase;
@@ -762,7 +763,7 @@
 
   <div class="bar-privacy">
     <span>⚠️</span>
-    <span><strong>Tu CSV no se almacena:</strong> El fichero se procesa en memoria y se elimina automáticamente. Cumplimiento RGPD.</span>
+    <span><strong>{% if exchange_id == 'mexc' %}Tu archivo Excel no se almacena:{% else %}Tu CSV no se almacena:{% endif %}</strong> El fichero se procesa en memoria y se elimina automáticamente. Cumplimiento RGPD.</span>
   </div>
 
   <div class="upload-bar">
@@ -770,9 +771,11 @@
     <!-- Columna izquierda: drop zone + nombre/año -->
     <div class="bar-left">
       <div class="bar-dropzone" id="dropZone">
-        <input type="file" id="csvInput" accept=".csv">
+        <input type="file" id="csvInput" accept="{% if exchange_id == 'mexc' %}.xlsx,.xls{% else %}.csv{% endif %}">
         <span style="font-size:22px;flex-shrink:0;">📂</span>
-        {% if exchange_id %}
+        {% if exchange_id == 'mexc' %}
+        <span class="bar-drop-text" id="dropHint">Arrastra aquí el XLS/XLSX de {{ exchange_name }} o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Solo ficheros .xls / .xlsx</span></span>
+        {% elif exchange_id %}
         <span class="bar-drop-text" id="dropHint">Arrastra aquí el CSV de {{ exchange_name }} o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Solo ficheros .csv</span></span>
         {% else %}
         <span class="bar-drop-text" id="dropHint">Arrastra aquí tu CSV o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Solo ficheros .csv</span></span>
@@ -785,7 +788,7 @@
         </div>
         <div class="bar-field bar-field-year" id="ejercicio-section">
           <label>Ejercicio fiscal</label>
-          <div id="year-placeholder-bar" class="year-placeholder-bar">Sube el CSV para detectar</div>
+          <div id="year-placeholder-bar" class="year-placeholder-bar">Sube el {% if exchange_id == 'mexc' %}archivo Excel{% else %}CSV{% endif %} para detectar</div>
           <div id="year-chips-wrap" style="display:none">
             <div id="year-chips" class="year-chips"></div>
             <p id="year-none-warn" class="year-none-warn-bar" style="display:none">Selecciona al menos un ejercicio</p>
@@ -799,7 +802,7 @@
     <div class="bar-right">
       {% if exchange_id %}
       <div class="bar-exchange">
-        <div class="exchange-logo logo-{{ exchange_id }}" style="width:22px;height:22px;border-radius:50%;overflow:hidden;flex-shrink:0;"><img src="/static/images/{% if exchange_id == 'cryptocom' %}crypto.png{% elif exchange_id in ['kraken','bitvavo','coinbase','uphold'] %}{{ exchange_id }}.png{% else %}{{ exchange_id }}.jpg{% endif %}" alt="{{ exchange_name }}" style="width:100%;height:100%;object-fit:cover;display:block;"></div>
+        <div class="exchange-logo logo-{{ exchange_id }}" style="width:22px;height:22px;border-radius:50%;overflow:hidden;flex-shrink:0;"><img src="/static/images/{% if exchange_id == 'cryptocom' %}crypto.png{% elif exchange_id in ['kraken','bitvavo','coinbase','uphold','mexc'] %}{{ exchange_id }}.png{% else %}{{ exchange_id }}.jpg{% endif %}" alt="{{ exchange_name }}" style="width:100%;height:100%;object-fit:cover;display:block;"></div>
         <span class="bar-exchange-name">{{ exchange_name }}</span>
         <span class="bar-exchange-change"><a href="/dashboard">← Cambiar</a></span>
       </div>
@@ -814,7 +817,7 @@
   <!-- Meta: warning + estado fichero + botones post-análisis -->
   <div class="bar-meta">
     <div class="bar-warning">
-      <strong>⚠ Importante:</strong> El CSV debe incluir todo el historial desde tu primera operación, no solo el año que quieres declarar.
+      <strong>⚠ Importante:</strong> {% if exchange_id == 'mexc' %}El archivo Excel debe incluir todo el historial desde tu primera operación, no solo el año que quieres declarar.{% else %}El CSV debe incluir todo el historial desde tu primera operación, no solo el año que quieres declarar.{% endif %}
     </div>
     <div class="bar-file-selected" id="fileSelected">
       <span>📄</span><span id="fileName">—</span>
@@ -852,7 +855,7 @@
   <div class="empty-state" id="emptyState">
     <div class="empty-icon">📊</div>
     <h3>Aún no hay resultados</h3>
-    <p>Sube tu CSV en el formulario de arriba y en unos segundos verás aquí el resumen fiscal completo.</p>
+    <p>Sube tu {% if exchange_id == 'mexc' %}archivo Excel{% else %}CSV{% endif %} en el formulario de arriba y en unos segundos verás aquí el resumen fiscal completo.</p>
   </div>
 
   <!-- LOADING -->
@@ -981,7 +984,7 @@
             <tbody id="tbodyRend"></tbody>
           </table>
           <div id="noRendimientos" style="display:none; padding:2rem; text-align:center; color:var(--muted); font-size:0.9rem;">
-            No se han detectado rendimientos (staking, rebates, etc.) en este CSV.
+            No se han detectado rendimientos (staking, rebates, etc.) en este archivo.
           </div>
         </div>
       </div>
@@ -1002,8 +1005,12 @@
   <h2 class="faq-h2">Dudas habituales sobre declarar {{ exchange_name }} en Hacienda</h2>
   <div class="faq-list">
     <div class="faq-item">
-      <h3>¿Qué CSV debo exportar desde {{ exchange_name }}?</h3>
+      <h3>¿Qué {% if exchange_id == 'mexc' %}archivo Excel{% else %}CSV{% endif %} debo exportar desde {{ exchange_name }}?</h3>
+      {% if exchange_id == 'mexc' %}
+      <p>El historial de Trade Records en formato XLS o XLSX desde tu primera operación hasta hoy. La sección «Cómo funciona» de esta página explica los pasos exactos en tu cuenta de MEXC.</p>
+      {% else %}
       <p>El historial completo de transacciones en formato CSV desde tu primera operación hasta hoy. La sección «Cómo funciona» de esta página explica los pasos exactos en tu cuenta de {{ exchange_name }}.</p>
+      {% endif %}
     </div>
     <div class="faq-item">
       <h3>¿Por qué es obligatorio el método FIFO?</h3>
@@ -1076,6 +1083,9 @@
     cryptocom: {
       hint: 'Arrastra aquí el CSV de Crypto.com o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">crypto_transactions_record_*.csv · solo ficheros .csv</span>',
     },
+    mexc: {
+      hint: 'Arrastra aquí el XLS/XLSX de MEXC o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Trade Records · solo ficheros .xls / .xlsx</span>',
+    },
   };
 
   function selectExchange(btn) {
@@ -1113,7 +1123,7 @@
 
   // ── PROGRESO ─────────────────────────────
   const mensajesProgreso = [
-    'Leyendo CSV…',
+    EXCHANGE_PAGE === 'mexc' ? 'Leyendo Excel…' : 'Leyendo CSV…',
     'Clasificando operaciones…',
     'Aplicando método FIFO…',
     'Calculando plusvalías…',
@@ -1325,9 +1335,17 @@
   function handleFile(file) {
     if (!file) return;
     const nombre = file.name.toLowerCase();
-    if (!nombre.endsWith('.csv')) {
-      mostrarErrorArchivo('Solo se aceptan ficheros .csv — selecciona el fichero correcto');
-      selectedFile = null; actualizarBoton(); return;
+    const isMexc = EXCHANGE_PAGE === 'mexc';
+    if (isMexc) {
+      if (!nombre.endsWith('.xlsx') && !nombre.endsWith('.xls')) {
+        mostrarErrorArchivo('MEXC requiere fichero XLS o XLSX — descárgalo directamente desde la plataforma');
+        selectedFile = null; actualizarBoton(); return;
+      }
+    } else {
+      if (!nombre.endsWith('.csv')) {
+        mostrarErrorArchivo('Solo se aceptan ficheros .csv — selecciona el fichero correcto');
+        selectedFile = null; actualizarBoton(); return;
+      }
     }
     if (file.size > 10 * 1024 * 1024) {
       mostrarErrorArchivo('El fichero es demasiado grande. Máximo 10 MB.');
@@ -1340,12 +1358,18 @@
     selectedFile = file;
     fileName.textContent = file.name;
     showFile();
-    // Detectar años del CSV y renderizar chips
-    extractYearsFromCSV(file).then(years => {
-      detectedYears = years;
-      renderYearChips(years);
+    if (isMexc) {
+      // XLSX es binario; la detección de años por texto no es fiable
+      detectedYears = [];
+      renderYearChips([]);
       actualizarBoton();
-    });
+    } else {
+      extractYearsFromCSV(file).then(years => {
+        detectedYears = years;
+        renderYearChips(years);
+        actualizarBoton();
+      });
+    }
   }
 
   csvInput.addEventListener('change', () => { if (csvInput.files[0]) handleFile(csvInput.files[0]); });
@@ -1699,7 +1723,14 @@
   // ── SUBMIT ───────────────────────────────
   btnAnalizar.addEventListener('click', async () => {
     if (!selectedFile) return;
-    if (!selectedFile.name.toLowerCase().endsWith('.csv')) {
+    const _isMexc = EXCHANGE_PAGE === 'mexc';
+    const _ext = selectedFile.name.toLowerCase();
+    if (_isMexc) {
+      if (!_ext.endsWith('.xlsx') && !_ext.endsWith('.xls')) {
+        mostrarErrorArchivo('MEXC requiere fichero XLS o XLSX.');
+        return;
+      }
+    } else if (!_ext.endsWith('.csv')) {
       mostrarErrorArchivo('El fichero debe ser un .csv. Selecciona el fichero correcto.');
       return;
     }
