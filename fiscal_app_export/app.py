@@ -1479,6 +1479,54 @@ def page_mexc():
     return render_template("tool.html", **EXCHANGE_PAGES["mexc"])
 
 
+@app.route("/api/mexc/anos", methods=["POST"])
+@login_required
+@limiter.limit("30 per minute")
+def api_mexc_anos():
+    """Detecta ejercicios fiscales en un XLSX de MEXC sin ejecutar el análisis FIFO completo."""
+    archivo = request.files.get("file")
+    if not archivo:
+        return jsonify({"ok": False, "error": "No se recibió ningún fichero."})
+
+    filename = archivo.filename or ""
+    if not (filename.lower().endswith(".xlsx") or filename.lower().endswith(".xls")):
+        return jsonify({"ok": False, "error": "Se requiere fichero .xls o .xlsx"})
+
+    suffix = ".xlsx" if filename.lower().endswith(".xlsx") else ".xls"
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+            archivo.save(tmp.name)
+            tmp_path = tmp.name
+
+        clasificador = ClasificadorMEXC(tmp_path).clasificar()
+
+        años: set = set()
+        for op in clasificador.compraventas:
+            try:
+                años.add(int(op.fecha[:4]))
+            except (ValueError, TypeError):
+                pass
+        for op in clasificador.movimientos:
+            try:
+                años.add(int(op.fecha[:4]))
+            except (ValueError, TypeError):
+                pass
+
+        return jsonify({"ok": True, "anos": sorted(años)})
+
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": _error_amigable(exc)})
+    finally:
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+
+
 @app.route("/api/analizar", methods=["POST"])
 @login_required
 @limiter.limit("3 per 10 minutes", exempt_when=_is_admin)

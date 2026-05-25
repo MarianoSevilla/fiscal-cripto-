@@ -1171,11 +1171,13 @@
     allData = null;
     añoActivo = 'todos';
     // Reiniciar selector de ejercicio
+    _fetchingAños = false;
     detectedYears = [];
     selectedYears = [];
     document.getElementById('year-chips').innerHTML = '';
     yearChipsWrap.style.display      = 'none';
     yearNodetect.style.display       = 'none';
+    yearNodetect.textContent         = 'Sin años detectados';
     yearPlaceholderBar.style.display = 'block';
     setProgress(0);
     showState('empty');
@@ -1190,10 +1192,11 @@
 
   document.getElementById('btnRetry').addEventListener('click', resetearFormulario);
 
-  let selectedFile = null;
-  let currentToken = null;
-  let allData      = null;
-  let añoActivo    = 'todos';
+  let selectedFile  = null;
+  let currentToken  = null;
+  let allData       = null;
+  let añoActivo     = 'todos';
+  let _fetchingAños = false;
 
   // ── VALIDACIÓN FRONTEND ──────────────────
   function mostrarErrorArchivo(msg) {
@@ -1327,7 +1330,7 @@
 
   function actualizarBoton() {
     const archivoOk   = !!selectedFile;
-    const ejercicioOk = !detectedYears.length || selectedYears.length > 0;
+    const ejercicioOk = !_fetchingAños && (!detectedYears.length || selectedYears.length > 0);
     btnAnalizar.disabled = !(archivoOk && ejercicioOk);
   }
 
@@ -1359,10 +1362,44 @@
     fileName.textContent = file.name;
     showFile();
     if (isMexc) {
-      // XLSX es binario; la detección de años por texto no es fiable
-      detectedYears = [];
-      renderYearChips([]);
+      // XLSX es binario — detección de ejercicios vía endpoint backend
+      _fetchingAños = true;
+      yearPlaceholderBar.style.display = 'none';
+      yearChipsWrap.style.display      = 'none';
+      yearNodetect.textContent         = 'Analizando archivo…';
+      yearNodetect.style.display       = 'block';
       actualizarBoton();
+
+      const _fd = new FormData();
+      _fd.append('file', file);
+      fetch('/api/mexc/anos', { method: 'POST', body: _fd, credentials: 'include' })
+        .then(r => r.json())
+        .then(data => {
+          _fetchingAños = false;
+          yearNodetect.textContent = 'Sin años detectados';
+          if (!data.ok) {
+            mostrarErrorApi(data.error || 'No se pudo leer el archivo');
+            showState('error');
+            selectedFile = null;
+            csvInput.value = '';
+            hideFile();
+            fileName.textContent = '—';
+            detectedYears = [];
+            renderYearChips([]);
+            actualizarBoton();
+            return;
+          }
+          detectedYears = data.anos || [];
+          renderYearChips(detectedYears);
+          actualizarBoton();
+        })
+        .catch(() => {
+          _fetchingAños = false;
+          yearNodetect.textContent = 'Sin años detectados';
+          detectedYears = [];
+          renderYearChips([]);
+          actualizarBoton();
+        });
     } else {
       extractYearsFromCSV(file).then(years => {
         detectedYears = years;
@@ -1692,6 +1729,12 @@
     if (e.includes('límite de análisis') || e.includes('429') || e.includes('espera')) return { ...ERRORES.rateLimitado };
     if (e.includes('CSV incorrecto') || e.includes('Historial de Transacciones') || e.includes('Buy Crypto With Fiat') || e.includes('Historial de Operaciones Spot')) return { ...ERRORES.csvIncorrectoBinance };
     if (e.includes('no parece ser un CSV de')) return { ...ERRORES.exchangeEquivocado, desc: esc(e) };
+    if (e.includes('futuros') || e.includes('copy trading') || e.includes('futures')) {
+      return { icono: '⚠', titulo: 'Formato no soportado', desc: esc(e), pasos: [] };
+    }
+    if (e.includes('Excel no se puede leer') || e.includes('zipfile') || e.includes('openpyxl')) {
+      return { icono: '📂', titulo: 'No se puede leer el Excel', desc: esc(e), pasos: [] };
+    }
     if (e.includes('grande') || e.includes('10 MB')) return { ...ERRORES.ficheroGrande };
     if (e.includes('vacío')) return { ...ERRORES.ficheroVacio };
     if (e.includes('extensión')) return { ...ERRORES.formatoIncorrecto };
