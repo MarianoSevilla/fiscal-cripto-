@@ -34,7 +34,7 @@ from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from authlib.integrations.flask_client import OAuth
 import resend
 from sqlalchemy import func, extract, text
-from models import db, bcrypt, User, FifoReport, Contacto, ProcessingError
+from models import db, bcrypt, User, FifoReport, Contacto, ProcessingError, CommunicationCampaign, CommunicationDelivery
 
 # Advisory / Stripe imports
 try:
@@ -157,6 +157,10 @@ app.config["REMEMBER_COOKIE_DURATION"] = timedelta(days=30)
 db.init_app(app)
 bcrypt.init_app(app)
 migrate = Migrate(app, db)
+
+# ── BLUEPRINTS ────────────────────────────────
+from communications import comms_bp          # noqa: E402
+app.register_blueprint(comms_bp)
 
 # ── RESEND (email) ────────────────────────────
 resend.api_key = os.environ.get("RESEND_API_KEY", "")

@@ -27,8 +27,10 @@ class User(UserMixin, db.Model):
     is_active         = db.Column(db.Boolean, default=True, nullable=False)
     email_verified_at = db.Column(db.DateTime, nullable=True)      # None = pendiente de verificar
     created_at        = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    last_login        = db.Column(db.DateTime, nullable=True)
-    nif               = db.Column(db.String(20), nullable=True)    # NIF/NIE/CIF — dato fiscal sensible
+    last_login                = db.Column(db.DateTime, nullable=True)
+    nif                       = db.Column(db.String(20), nullable=True)   # NIF/NIE/CIF — dato fiscal sensible
+    comms_opted_out           = db.Column(db.Boolean, default=False, nullable=False)
+    comms_unsubscribe_token   = db.Column(db.String(64), nullable=True, unique=True, index=True)
 
     def set_password(self, plaintext: str) -> None:
         """Hashea la contraseña con bcrypt (cost factor 12)."""
@@ -260,3 +262,81 @@ class AdvisoryInternalNote(db.Model):
 
     def __repr__(self) -> str:
         return f"<AdvisoryInternalNote request={self.request_id} author={self.author_name}>"
+
+
+class CommunicationCampaign(db.Model):
+    """Campaña de email marketing — una por envío masivo."""
+
+    __tablename__ = "communication_campaigns"
+
+    id               = db.Column(db.Integer, primary_key=True)
+    subject          = db.Column(db.String(500), nullable=False)
+    body             = db.Column(db.Text, nullable=False)
+    preview_text     = db.Column(db.String(200), nullable=True)
+    status           = db.Column(db.String(20), default="draft", nullable=False, index=True)
+    # draft | queued | sending | sent | failed | cancelled
+    created_by_id    = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    created_at       = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    sent_at          = db.Column(db.DateTime, nullable=True)
+    recipients_count = db.Column(db.Integer, default=0, nullable=False)
+    error_message    = db.Column(db.Text, nullable=True)
+    idempotency_key  = db.Column(db.String(64), unique=True, nullable=True)
+
+    deliveries = db.relationship("CommunicationDelivery", backref="campaign", lazy="dynamic")
+
+    def sent_count(self) -> int:
+        return self.deliveries.filter_by(status="sent").count()
+
+    def failed_count(self) -> int:
+        return self.deliveries.filter_by(status="failed").count()
+
+    def pending_count(self) -> int:
+        return self.deliveries.filter_by(status="pending").count()
+
+    def to_dict(self, with_stats: bool = False) -> dict:
+        d = {
+            "id":               self.id,
+            "subject":          self.subject,
+            "body":             self.body,
+            "preview_text":     self.preview_text or "",
+            "status":           self.status,
+            "created_by_id":    self.created_by_id,
+            "created_at":       self.created_at.isoformat() if self.created_at else None,
+            "sent_at":          self.sent_at.isoformat() if self.sent_at else None,
+            "recipients_count": self.recipients_count,
+            "idempotency_key":  self.idempotency_key,
+            "error_message":    self.error_message,
+        }
+        if with_stats:
+            d["stats"] = {
+                "sent":    self.sent_count(),
+                "failed":  self.failed_count(),
+                "pending": self.pending_count(),
+            }
+        return d
+
+    def __repr__(self) -> str:
+        return f"<CommunicationCampaign id={self.id} status={self.status}>"
+
+
+class CommunicationDelivery(db.Model):
+    """Registro de entrega individual por usuario dentro de una campaña."""
+
+    __tablename__ = "communication_deliveries"
+
+    id          = db.Column(db.Integer, primary_key=True)
+    campaign_id = db.Column(db.Integer, db.ForeignKey("communication_campaigns.id"), nullable=False, index=True)
+    user_id     = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    email       = db.Column(db.String(254), nullable=False)
+    status      = db.Column(db.String(20), default="pending", nullable=False)
+    # pending | sent | failed | skipped
+    provider_id = db.Column(db.String(200), nullable=True)
+    sent_at     = db.Column(db.DateTime, nullable=True)
+    error       = db.Column(db.Text, nullable=True)
+
+    __table_args__ = (
+        db.Index("ix_comms_delivery_campaign_status", "campaign_id", "status"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<CommunicationDelivery campaign={self.campaign_id} email={self.email} status={self.status}>"

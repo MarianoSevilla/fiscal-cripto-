@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestionar comunicaciones — Mariano Sevilla</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+<link rel="icon" href="/static/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:      #0b1220;
+  --surface: #141f32;
+  --surf2:   #1a2540;
+  --border:  rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.14);
+  --text:    #eef0f6;
+  --muted:   #7a8099;
+  --sub:     #9aa0b8;
+  --accent:  #00C896;
+  --danger:  #f87171;
+  --ff-h:    'Syne', sans-serif;
+  --ff-b:    'DM Sans', sans-serif;
+}
+html, body {
+  min-height: 100%; background: var(--bg);
+  font-family: var(--ff-b); color: var(--text);
+}
+body {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 100vh; padding: 40px 20px;
+}
+
+.logo-wrap {
+  margin-bottom: 32px; text-align: center;
+}
+.logo {
+  font-family: var(--ff-h); font-weight: 800; font-size: 20px;
+  color: var(--text); letter-spacing: -.02em; text-decoration: none;
+}
+.logo span { color: var(--accent); }
+
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 40px 36px;
+  width: 100%; max-width: 420px; text-align: center;
+}
+
+.card-icon   { font-size: 40px; margin-bottom: 18px; line-height: 1; }
+.card-title  { font-family: var(--ff-h); font-weight: 700; font-size: 20px; color: var(--text); margin-bottom: 10px; }
+.card-desc   { font-size: 14px; color: var(--muted); line-height: 1.7; margin-bottom: 22px; }
+
+.email-pill {
+  background: var(--surf2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 14px;
+  font-size: 14px; color: var(--sub); font-weight: 600;
+  margin-bottom: 20px; word-break: break-all;
+}
+
+.btn-danger {
+  width: 100%; background: var(--danger); color: #fff;
+  font-family: var(--ff-b); font-weight: 700; font-size: 14px;
+  padding: 12px; border: none; border-radius: 8px; cursor: pointer;
+  transition: background .15s; margin-bottom: 10px;
+}
+.btn-danger:hover    { background: #ef4444; }
+.btn-danger:disabled { opacity: .5; cursor: not-allowed; }
+
+.btn-ghost {
+  width: 100%; background: none; border: 1px solid var(--border);
+  color: var(--sub); font-family: var(--ff-b); font-weight: 600; font-size: 14px;
+  padding: 12px; border-radius: 8px; cursor: pointer;
+  transition: all .15s; display: block; text-decoration: none; text-align: center;
+}
+.btn-ghost:hover { border-color: var(--border2); color: var(--text); }
+
+.reassure {
+  font-size: 11px; color: var(--muted); margin-top: 18px; line-height: 1.65;
+}
+
+.error-msg {
+  background: rgba(248,113,113,.1); border: 1px solid rgba(248,113,113,.25);
+  color: var(--danger); border-radius: 8px; padding: 11px 14px;
+  font-size: 13px; margin-top: 12px; display: none;
+}
+
+/* Success state */
+#state-success { display: none; }
+#state-confirm { display: block; }
+
+.success-icon  { font-size: 40px; margin-bottom: 16px; }
+.success-title { font-family: var(--ff-h); font-weight: 700; font-size: 20px; color: var(--text); margin-bottom: 10px; }
+.success-desc  { font-size: 14px; color: var(--muted); line-height: 1.7; margin-bottom: 24px; }
+
+.link-account {
+  color: var(--accent); font-size: 13px; text-decoration: none; font-weight: 500;
+}
+.link-account:hover { text-decoration: underline; }
+
+/* Invalid token state */
+#state-invalid { display: none; }
+
+@media (max-width: 480px) {
+  .card { padding: 28px 20px; }
+}
+</style>
+</head>
+<body>
+
+<a href="/" class="logo-wrap" style="text-decoration:none">
+  <div class="logo">Mariano<span>.</span></div>
+</a>
+
+<!-- STATE: CONFIRM UNSUBSCRIBE -->
+<div class="card" id="state-confirm">
+  <div class="card-icon">📭</div>
+  <div class="card-title">¿Deseas desuscribirte?</div>
+  <div class="card-desc">
+    Dejarás de recibir actualizaciones, novedades y comunicaciones de producto.<br>
+    Tu cuenta seguirá activa y podrás usar la plataforma con total normalidad.
+  </div>
+  <div class="email-pill" id="unsub-email">cargando…</div>
+  <button class="btn-danger" id="btn-confirm" onclick="confirmUnsub()">
+    Confirmar desuscripción
+  </button>
+  <a href="/" class="btn-ghost">Mantener suscripción</a>
+  <div class="error-msg" id="error-msg">Error al procesar la solicitud. Intenta de nuevo.</div>
+  <div class="reassure">
+    No compartimos tu dirección de email con terceros.<br>
+    Puedes volver a activar las comunicaciones desde tu cuenta.
+  </div>
+</div>
+
+<!-- STATE: SUCCESS -->
+<div class="card" id="state-success">
+  <div class="success-icon">✅</div>
+  <div class="success-title">Desuscripción confirmada</div>
+  <div class="success-desc">
+    Has sido eliminado de nuestra lista de comunicaciones de producto.<br><br>
+    No recibirás más actualizaciones. Si en algún momento quieres volver a recibirlas,
+    puedes reactivarlas desde tu cuenta.
+  </div>
+  <a href="/account" class="link-account">← Ir a mi cuenta</a>
+</div>
+
+<!-- STATE: INVALID TOKEN -->
+<div class="card" id="state-invalid">
+  <div class="card-icon" style="opacity:.4">🔗</div>
+  <div class="card-title" style="color:var(--muted)">Enlace no válido</div>
+  <div class="card-desc">
+    El enlace de desuscripción no es válido o ya ha sido usado.<br>
+    Si quieres gestionar tus comunicaciones, accede a tu cuenta.
+  </div>
+  <a href="/account" class="btn-ghost" style="margin-top:8px">Ir a mi cuenta</a>
+</div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const token  = (params.get('token') || '').trim();
+
+if (!token) {
+  show('invalid');
+} else {
+  // Show email from token (we resolve it on confirm; show placeholder for now)
+  document.getElementById('unsub-email').textContent = 'Tu dirección de email';
+}
+
+function show(state) {
+  document.getElementById('state-confirm').style.display  = state === 'confirm'  ? 'block' : 'none';
+  document.getElementById('state-success').style.display  = state === 'success'  ? 'block' : 'none';
+  document.getElementById('state-invalid').style.display  = state === 'invalid'  ? 'block' : 'none';
+}
+
+async function confirmUnsub() {
+  const btn = document.getElementById('btn-confirm');
+  btn.disabled    = true;
+  btn.textContent = 'Procesando…';
+  document.getElementById('error-msg').style.display = 'none';
+
+  try {
+    const res = await fetch('/api/unsubscribe', {
+      method:  'POST',
+      headers: {'Content-Type': 'application/json'},
+      body:    JSON.stringify({token}),
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      show('success');
+    } else {
+      throw new Error(data.error || 'Error desconocido.');
+    }
+  } catch(e) {
+    document.getElementById('error-msg').textContent =
+      'Error al procesar la solicitud. Intenta de nuevo.';
+    document.getElementById('error-msg').style.display = 'block';
+    btn.disabled    = false;
+    btn.textContent = 'Confirmar desuscripción';
+  }
+}
+</script>
+</body>
+</html>
