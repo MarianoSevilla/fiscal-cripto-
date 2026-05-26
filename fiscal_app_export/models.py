@@ -274,7 +274,7 @@ class CommunicationCampaign(db.Model):
     body             = db.Column(db.Text, nullable=False)
     preview_text     = db.Column(db.String(200), nullable=True)
     status           = db.Column(db.String(20), default="draft", nullable=False, index=True)
-    # draft | queued | sending | sent | failed | cancelled
+    # draft | queued | sending | sent | partial_success | failed | cancelled
     created_by_id    = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     created_at       = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     sent_at          = db.Column(db.DateTime, nullable=True)

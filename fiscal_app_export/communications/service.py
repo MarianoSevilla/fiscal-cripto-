@@ -42,6 +42,16 @@ _EXCLUDED_ROLES = {"admin", "fiscal_advisor"}
 # Valid recipient segments
 VALID_SEGMENTS = frozenset({"all", "verified", "unverified"})
 
+# ── SEND RATE LIMITING ────────────────────────────────────────────────────────
+# Resend free/paid limit: 5 req/sec.  We target ≤4 to stay comfortably under.
+# Override with CAMPAIGN_SEND_DELAY_MS env var (e.g. "250" for 4/sec).
+# sleep(_SEND_DELAY_S) is called AFTER every individual send, so the effective
+# rate is 1 / (_SEND_DELAY_S + api_call_latency) — always ≤ 1/_SEND_DELAY_S.
+_SEND_DELAY_S: float = float(os.environ.get("CAMPAIGN_SEND_DELAY_MS", "250")) / 1000.0
+
+# Keywords that identify a Resend 429 / rate-limit error in the exception string
+_RATE_LIMIT_SIGNALS = ("429", "too many requests", "rate limit", "rate_limit")
+
 
 # ── HELPERS ──────────────────────────────────────────────────────────────────
 
@@ -235,23 +245,38 @@ def dispatch_campaign(campaign_id: int, app_context) -> None:
     logger.info("Campaign %s dispatch thread started", campaign_id)
 
 
+def _is_rate_limit_error(exc: Exception) -> bool:
+    """Returns True if the exception looks like a Resend 429 rate-limit error."""
+    msg = str(exc).lower()
+    return any(sig in msg for sig in _RATE_LIMIT_SIGNALS)
+
+
 def _execute_campaign(campaign_id: int) -> None:
     """
     Core send loop. Runs in a background thread with app context.
-    - Processes recipients one by one with a small delay (~20 emails/sec)
-    - Writes a CommunicationDelivery row per recipient
-    - Updates campaign status from queued → sending → sent / failed
+
+    Rate limiting:  sleeps _SEND_DELAY_S after every individual send so the
+                    effective rate is ≤ 1/_SEND_DELAY_S req/sec (default 4/sec),
+                    safely under Resend's 5 req/sec limit.
+
+    Final statuses:
+      sent             — all recipients received the email.
+      partial_success  — some sent, some failed.
+      failed           — all failed (or loop-level exception).
     """
     campaign = CommunicationCampaign.query.get(campaign_id)
     if not campaign:
         logger.error("Campaign %s not found in _execute_campaign", campaign_id)
         return
     if campaign.status != "queued":
-        logger.warning("Campaign %s expected 'queued', got '%s' — aborting", campaign_id, campaign.status)
+        logger.warning(
+            "Campaign %s expected 'queued', got '%s' — aborting",
+            campaign_id, campaign.status,
+        )
         return
 
     try:
-        campaign.status = "sending"
+        campaign.status  = "sending"
         campaign.sent_at = datetime.utcnow()
         db.session.commit()
 
@@ -260,13 +285,17 @@ def _execute_campaign(campaign_id: int) -> None:
         total      = len(recipients)
         sent_ok    = 0
 
-        logger.info("Campaign %s: starting send to %d recipients", campaign_id, total)
+        logger.info(
+            "Campaign %s: starting send to %d recipients "
+            "(rate limit: %.0fms delay / send)",
+            campaign_id, total, _SEND_DELAY_S * 1000,
+        )
 
         for user in recipients:
-            token      = _ensure_unsub_token(user)
-            unsub_url  = f"{_APP_BASE_URL}/unsubscribe?token={token}"
-            html       = render_campaign_html(campaign, unsubscribe_url=unsub_url)
-            text       = render_campaign_text(campaign, unsubscribe_url=unsub_url)
+            token     = _ensure_unsub_token(user)
+            unsub_url = f"{_APP_BASE_URL}/unsubscribe?token={token}"
+            html      = render_campaign_html(campaign, unsubscribe_url=unsub_url)
+            text      = render_campaign_text(campaign, unsubscribe_url=unsub_url)
 
             delivery = CommunicationDelivery(
                 campaign_id=campaign_id,
@@ -285,7 +314,7 @@ def _execute_campaign(campaign_id: int) -> None:
                     "html":    html,
                     "text":    text,
                     "headers": {
-                        # RFC 8058 one-click unsubscribe — Gmail shows native unsubscribe button
+                        # RFC 8058 one-click unsubscribe
                         "List-Unsubscribe":      f"<{unsub_url}>",
                         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
                     },
@@ -294,18 +323,47 @@ def _execute_campaign(campaign_id: int) -> None:
                 delivery.provider_id = (result.get("id", "") if isinstance(result, dict) else "")
                 delivery.sent_at     = datetime.utcnow()
                 sent_ok += 1
+
             except Exception as exc:
+                err_str = str(exc)[:500]
                 delivery.status = "failed"
-                delivery.error  = str(exc)[:500]
-                logger.warning("Delivery failed for %s (campaign %s): %s", user.email, campaign_id, exc)
+                delivery.error  = err_str
+
+                if _is_rate_limit_error(exc):
+                    logger.error(
+                        "[CAMPAIGN %s] RATE LIMIT (429) sending to %s — "
+                        "increase CAMPAIGN_SEND_DELAY_MS (current: %.0fms)",
+                        campaign_id, user.email, _SEND_DELAY_S * 1000,
+                    )
+                else:
+                    logger.warning(
+                        "[CAMPAIGN %s] Delivery failed for %s: %s",
+                        campaign_id, user.email, err_str,
+                    )
 
             db.session.commit()
-            time.sleep(0.05)  # ~20 req/sec — comfortably under Resend limits
 
-        campaign.status          = "sent"
+            # ── Rate limit: sleep after every send ───────────────────────────
+            # Ensures effective rate ≤ 1/_SEND_DELAY_S req/sec.
+            # Default 250ms → ≤4 req/sec (Resend limit: 5/sec).
+            time.sleep(_SEND_DELAY_S)
+
+        # ── Final campaign status ─────────────────────────────────────────────
+        failed_count = total - sent_ok
+        if sent_ok == 0:
+            final_status = "failed"
+        elif failed_count > 0:
+            final_status = "partial_success"
+        else:
+            final_status = "sent"
+
+        campaign.status           = final_status
         campaign.recipients_count = sent_ok
         db.session.commit()
-        logger.info("Campaign %s done: %d/%d sent", campaign_id, sent_ok, total)
+        logger.info(
+            "Campaign %s done: %d/%d sent, %d failed → status=%s",
+            campaign_id, sent_ok, total, failed_count, final_status,
+        )
 
     except Exception as exc:
         logger.error("Campaign %s dispatch error: %s", campaign_id, exc, exc_info=True)
