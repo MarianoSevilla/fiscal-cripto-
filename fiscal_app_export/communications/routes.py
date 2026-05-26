@@ -114,6 +114,26 @@ def api_campaign_status(campaign_id):
     })
 
 
+# ── DELIVERIES (error log) ────────────────────────────────────────────────────
+
+@comms_bp.route("/api/admin/comunicaciones/campaigns/<int:campaign_id>/deliveries")
+@login_required
+def api_campaign_deliveries(campaign_id):
+    """
+    Returns deliveries for a campaign, optionally filtered by ?status=failed|sent|…
+    Capped at 500 rows — sufficient for any realistic campaign.
+    """
+    if not _is_admin():
+        abort(404)
+    CommunicationCampaign.query.get_or_404(campaign_id)
+    status_filter = request.args.get("status")
+    q = CommunicationDelivery.query.filter_by(campaign_id=campaign_id)
+    if status_filter:
+        q = q.filter_by(status=status_filter)
+    deliveries = q.order_by(CommunicationDelivery.id.asc()).limit(500).all()
+    return jsonify([d.to_dict() for d in deliveries])
+
+
 # ── DELETE CAMPAIGN ───────────────────────────────────────────────────────────
 
 @comms_bp.route("/api/admin/comunicaciones/campaigns/<int:campaign_id>", methods=["DELETE"])

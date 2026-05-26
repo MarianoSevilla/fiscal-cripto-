@@ -341,5 +341,17 @@ class CommunicationDelivery(db.Model):
         db.Index("ix_comms_delivery_campaign_status", "campaign_id", "status"),
     )
 
+    def to_dict(self) -> dict:
+        return {
+            "id":          self.id,
+            "campaign_id": self.campaign_id,
+            "user_id":     self.user_id,
+            "email":       self.email,
+            "status":      self.status,
+            "provider_id": self.provider_id or "",
+            "sent_at":     self.sent_at.isoformat() if self.sent_at else None,
+            "error":       self.error or "",
+        }
+
     def __repr__(self) -> str:
         return f"<CommunicationDelivery campaign={self.campaign_id} email={self.email} status={self.status}>"

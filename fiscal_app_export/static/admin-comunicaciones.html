@@ -338,6 +338,34 @@ body { padding-top: 64px; }
 .loading-dots span:nth-child(3) { animation-delay: .4s; }
 @keyframes blink { 0%,80%,100%{opacity:.2} 40%{opacity:1} }
 
+/* ── DELIVERY ERRORS ── */
+.errors-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
+}
+.errors-count { font-size: 12px; font-weight: 600; color: var(--danger); }
+.btn-copy-errors {
+  background: none; border: 1px solid var(--border); color: var(--sub);
+  font-family: var(--ff-b); font-weight: 500; font-size: 11px;
+  padding: 5px 10px; border-radius: 6px; cursor: pointer; transition: all .12s;
+}
+.btn-copy-errors:hover { border-color: var(--border2); color: var(--text); }
+
+.error-row {
+  border: 1px solid var(--border); border-radius: 7px;
+  padding: 10px 12px; margin-bottom: 7px; background: var(--surf2);
+}
+.error-row:last-child { margin-bottom: 0; }
+.er-email { font-size: 12.5px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.er-error {
+  font-size: 11.5px; color: var(--danger); line-height: 1.5;
+  word-break: break-word; margin-bottom: 4px;
+}
+.er-meta  { font-size: 11px; color: var(--muted); line-height: 1.6; }
+.er-pid   { font-family: monospace; font-size: 10px; color: var(--muted); }
+
+.errors-empty { font-size: 12.5px; color: var(--muted); padding: 4px 0; line-height: 1.6; }
+.errors-loading { display: flex; gap: 4px; align-items: center; padding: 4px 0; }
+
 /* ── DELETE BUTTON ── */
 .btn-danger-soft {
   background: none; border: 1px solid rgba(248,113,113,.25);
@@ -617,6 +645,7 @@ let pollTimer        = null;
 let recipientCount   = 0;      // kept for backward compat; use recipientCounts[currentSegment]
 let currentSegment   = 'all';  // active segment selector value
 let recipientCounts  = {all: 0, verified: 0, unverified: 0};
+let _errorsLoadedFor = null;   // campaign ID whose error rows are already loaded
 
 /* ═══════════════════════════════════════════════════════════════════════════
    INIT
@@ -815,6 +844,7 @@ async function selectCampaign(id) {
     showComposer();
   } else {
     // Show detail view
+    _errorsLoadedFor = null;   // reset so loadFailedDeliveries fires for new campaign
     showDetail();
     renderDetailView(c);
     if (c.status === 'sending' || c.status === 'queued') {
@@ -883,10 +913,21 @@ function renderDetailView(c) {
       <div class="detail-section-title" style="color:var(--danger)">Error</div>
       <div class="detail-body-preview" style="color:var(--danger)">${esc(c.error_message)}</div>
     </div>` : ''}
+    <div class="detail-section">
+      <div class="detail-section-title">Errores de envío</div>
+      <div id="errors-section">${_errorsPlaceholder(c, stats)}</div>
+    </div>
     ${c.status !== 'sending' && c.status !== 'queued' ? `
     <div style="margin-top:26px;padding-top:14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;">
       <button class="btn-danger-soft" onclick="openDeleteModal()">🗑 Eliminar campaña</button>
     </div>` : ''}`;
+
+  // Fetch real error rows only for terminal campaigns with failures
+  const isTerminal = !['sending', 'queued'].includes(c.status);
+  if (isTerminal && stats.failed > 0 && _errorsLoadedFor !== c.id) {
+    _errorsLoadedFor = c.id;
+    loadFailedDeliveries(c.id);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1178,6 +1219,85 @@ async function confirmSend() {
     btn.disabled = false;
     btn.textContent = `Enviar a ${(recipientCounts[currentSegment] ?? 0).toLocaleString('es')} usuarios`;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DELIVERY ERRORS
+═══════════════════════════════════════════════════════════════════════════ */
+
+/** Returns the inline HTML shown while waiting / when no fetch is needed. */
+function _errorsPlaceholder(c, stats) {
+  const inFlight = c.status === 'sending' || c.status === 'queued';
+  if (inFlight) {
+    return '<div class="errors-empty">Los errores se mostrarán cuando el envío termine.</div>';
+  }
+  if (stats.failed === 0) {
+    return '<div class="errors-empty">No se han registrado errores de envío.</div>';
+  }
+  // Terminal + failures → loading spinner until loadFailedDeliveries resolves
+  return '<div class="errors-loading"><div class="loading-dots"><span></span><span></span><span></span></div></div>';
+}
+
+/** Fetches failed deliveries and renders them inside #errors-section. */
+async function loadFailedDeliveries(campaignId) {
+  const section = document.getElementById('errors-section');
+  if (!section) return;
+
+  try {
+    const res = await fetch(
+      `/api/admin/comunicaciones/campaigns/${campaignId}/deliveries?status=failed`
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const deliveries = await res.json();
+
+    // Store for copyErrors()
+    window._failedDeliveries = deliveries;
+
+    if (deliveries.length === 0) {
+      section.innerHTML = '<div class="errors-empty">No se han registrado errores de envío.</div>';
+      return;
+    }
+
+    const rows = deliveries.map(d => {
+      const dateStr = d.sent_at
+        ? new Date(d.sent_at).toLocaleString('es', {
+            day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'
+          })
+        : '—';
+      const pidLine = d.provider_id
+        ? `<span class="er-pid">${esc(d.provider_id)}</span> · ` : '';
+      const uidLine = d.user_id ? `uid:${d.user_id} · ` : '';
+      return `
+        <div class="error-row">
+          <div class="er-email">${esc(d.email)}</div>
+          <div class="er-error">${esc(d.error || 'Sin motivo registrado')}</div>
+          <div class="er-meta">${esc(d.status)} · ${dateStr} · ${pidLine}${uidLine}</div>
+        </div>`;
+    }).join('');
+
+    section.innerHTML = `
+      <div class="errors-header">
+        <span class="errors-count">${deliveries.length} error${deliveries.length !== 1 ? 'es' : ''}</span>
+        <button class="btn-copy-errors" onclick="copyErrors()">📋 Copiar errores</button>
+      </div>
+      <div id="errors-list">${rows}</div>`;
+
+  } catch (err) {
+    if (document.getElementById('errors-section') === section) {
+      section.innerHTML = '<div class="errors-empty">Error al cargar el detalle de errores.</div>';
+    }
+  }
+}
+
+/** Copies failed deliveries as plain text to clipboard. */
+function copyErrors() {
+  const lines = (window._failedDeliveries || []).map(d =>
+    `${d.email} — ${d.status} — ${d.error || 'sin motivo'}`
+  );
+  if (!lines.length) return;
+  navigator.clipboard.writeText(lines.join('\n'))
+    .then(() => showToast('success', `${lines.length} error${lines.length !== 1 ? 'es' : ''} copiados al portapapeles.`))
+    .catch(() => showToast('error', 'No se pudo acceder al portapapeles.'));
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
