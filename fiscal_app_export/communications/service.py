@@ -106,6 +106,50 @@ def count_eligible_recipients_all_segments() -> dict:
 
 # ── CAMPAIGN CRUD ─────────────────────────────────────────────────────────────
 
+def delete_campaign(campaign_id: int) -> tuple[bool, str]:
+    """
+    Hard-delete a campaign and its deliveries.
+
+    Returns (True, "") on success, (False, error_message) on refusal.
+
+    Blocked:
+    - status 'sending' or 'queued'  → in-flight, cannot interrupt.
+    - status 'sent' with ≥1 delivery.status='sent' → real emails sent,
+      keep for traceability.
+    Allowed:
+    - draft, failed, cancelled        → always.
+    - sent with zero real deliveries  → test/empty run, safe to drop.
+    """
+    campaign = CommunicationCampaign.query.get(campaign_id)
+    if not campaign:
+        return False, "Campaña no encontrada."
+
+    if campaign.status in ("sending", "queued"):
+        return False, (
+            f"No se puede eliminar una campaña en estado '{campaign.status}'. "
+            "Espera a que el envío termine."
+        )
+
+    if campaign.status == "sent":
+        real_sent = (
+            CommunicationDelivery.query
+            .filter_by(campaign_id=campaign_id, status="sent")
+            .count()
+        )
+        if real_sent > 0:
+            return False, (
+                "No se puede eliminar una campaña enviada con entregas registradas. "
+                "Se conserva por trazabilidad."
+            )
+
+    # Safe to delete — remove child rows first (FK constraint), then parent
+    CommunicationDelivery.query.filter_by(campaign_id=campaign_id).delete()
+    db.session.delete(campaign)
+    db.session.commit()
+    logger.info("Campaign %s deleted (was status=%s)", campaign_id, campaign.status)
+    return True, ""
+
+
 def create_campaign_draft(
     subject: str,
     body: str,

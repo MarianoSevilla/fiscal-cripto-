@@ -338,6 +338,23 @@ body { padding-top: 64px; }
 .loading-dots span:nth-child(3) { animation-delay: .4s; }
 @keyframes blink { 0%,80%,100%{opacity:.2} 40%{opacity:1} }
 
+/* ── DELETE BUTTON ── */
+.btn-danger-soft {
+  background: none; border: 1px solid rgba(248,113,113,.25);
+  color: var(--danger); font-family: var(--ff-b); font-weight: 500; font-size: 12px;
+  padding: 7px 12px; border-radius: 7px; cursor: pointer; transition: all .15s;
+}
+.btn-danger-soft:hover { background: rgba(248,113,113,.08); border-color: rgba(248,113,113,.55); }
+
+.btn-delete-confirm {
+  flex: 2; background: #ef4444; color: #fff;
+  font-family: var(--ff-b); font-weight: 700; font-size: 13.5px;
+  padding: 10px; border: none; border-radius: 8px; cursor: pointer; transition: background .15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.btn-delete-confirm:not(:disabled):hover { background: #dc2626; }
+.btn-delete-confirm:disabled { opacity: .35; cursor: not-allowed; }
+
 /* ── SEGMENT SELECTOR ── */
 .seg-selector {
   display: flex; gap: 4px; background: var(--surf2);
@@ -475,6 +492,9 @@ body { padding-top: 64px; }
           Enviar campaña
         </button>
         <div class="send-note" id="send-note">Rellena asunto y contenido para activar el envío.</div>
+        <div id="delete-draft-row" style="display:none;text-align:center;">
+          <button class="btn-danger-soft" onclick="openDeleteModal()">🗑 Eliminar borrador</button>
+        </div>
       </div>
     </div>
 
@@ -552,6 +572,30 @@ body { padding-top: 64px; }
       <button class="btn-modal-confirm" id="btn-modal-confirm" onclick="confirmSend()">
         Enviar campaña
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL ELIMINAR CAMPAÑA ── -->
+<div class="modal-overlay" id="modal-delete">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--danger)">Eliminar campaña</div>
+      <div class="modal-sub">Esta acción es irreversible. Los datos eliminados no se pueden recuperar.</div>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--sub);margin-bottom:14px;line-height:1.65;">
+        Escribe <strong style="color:var(--text);font-family:monospace;">ELIMINAR</strong> para confirmar:
+      </p>
+      <input id="delete-confirm-input" class="field-input" type="text"
+             placeholder="ELIMINAR" oninput="updateDeleteConfirm()" autocomplete="off">
+      <div id="delete-error"
+           style="color:var(--danger);font-size:12px;margin-top:10px;display:none;line-height:1.55;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal-cancel" onclick="closeDeleteModal()">Cancelar</button>
+      <button class="btn-delete-confirm" id="btn-delete-confirm"
+              onclick="confirmDelete()" disabled>Eliminar</button>
     </div>
   </div>
 </div>
@@ -719,6 +763,8 @@ function newCampaign() {
   });
   document.getElementById('seg-hint').textContent = _SEG_HINTS['all'];
   updateRecipientDisplay();
+  // Hide delete button — no draft selected yet
+  document.getElementById('delete-draft-row').style.display = 'none';
   updateSendButtons();
   clearPreview();
   showComposer();
@@ -762,6 +808,8 @@ async function selectCampaign(id) {
     });
     document.getElementById('seg-hint').textContent = _SEG_HINTS[seg] || '';
     updateRecipientDisplay();
+    // Show delete button — a real saved draft is loaded
+    document.getElementById('delete-draft-row').style.display = 'block';
     updateSendButtons();
     schedulePreview();
     showComposer();
@@ -834,6 +882,10 @@ function renderDetailView(c) {
     ${c.error_message ? `<div class="detail-section">
       <div class="detail-section-title" style="color:var(--danger)">Error</div>
       <div class="detail-body-preview" style="color:var(--danger)">${esc(c.error_message)}</div>
+    </div>` : ''}
+    ${c.status !== 'sending' && c.status !== 'queued' ? `
+    <div style="margin-top:26px;padding-top:14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;">
+      <button class="btn-danger-soft" onclick="openDeleteModal()">🗑 Eliminar campaña</button>
     </div>` : ''}`;
 }
 
@@ -1017,6 +1069,8 @@ async function ensureDraftSaved() {
       allCampaigns.unshift(data);
       activeCampaign = data;
       document.getElementById('composer-title').textContent = `Campaña #${data.id}`;
+      // Draft now exists — show its delete button
+      document.getElementById('delete-draft-row').style.display = 'block';
       renderCampaignList();
       return draftCampaignId;
     }
@@ -1154,6 +1208,77 @@ function esc(str) {
 /* Close modal on overlay click */
 document.getElementById('modal-confirm').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DELETE MODAL
+═══════════════════════════════════════════════════════════════════════════ */
+function openDeleteModal() {
+  if (!activeCampaign) return;
+  document.getElementById('delete-confirm-input').value  = '';
+  document.getElementById('delete-error').style.display  = 'none';
+  document.getElementById('delete-error').textContent    = '';
+  const btn = document.getElementById('btn-delete-confirm');
+  btn.disabled    = true;
+  btn.textContent = 'Eliminar';
+  document.getElementById('modal-delete').classList.add('open');
+}
+
+function closeDeleteModal() {
+  document.getElementById('modal-delete').classList.remove('open');
+}
+
+function updateDeleteConfirm() {
+  const val = document.getElementById('delete-confirm-input').value.trim();
+  document.getElementById('btn-delete-confirm').disabled = (val !== 'ELIMINAR');
+}
+
+async function confirmDelete() {
+  if (!activeCampaign) return;
+  const btn    = document.getElementById('btn-delete-confirm');
+  const errEl  = document.getElementById('delete-error');
+  btn.disabled    = true;
+  btn.textContent = 'Eliminando…';
+  errEl.style.display = 'none';
+
+  try {
+    const res  = await fetch(`/api/admin/comunicaciones/campaigns/${activeCampaign.id}`, {
+      method: 'DELETE',
+    });
+    const data = await res.json();
+
+    if (res.ok && data.ok) {
+      const removedId = activeCampaign.id;
+
+      // Remove from in-memory list
+      const idx = allCampaigns.findIndex(c => c.id === removedId);
+      if (idx !== -1) allCampaigns.splice(idx, 1);
+
+      // Reset state
+      activeCampaign = null;
+      if (draftCampaignId === removedId) draftCampaignId = null;
+
+      closeDeleteModal();
+      renderCampaignList();
+      newCampaign();
+      showToast('success', 'Campaña eliminada correctamente.');
+    } else {
+      errEl.textContent   = data.error || 'No se ha podido eliminar la campaña.';
+      errEl.style.display = 'block';
+      btn.disabled        = false;
+      btn.textContent     = 'Eliminar';
+    }
+  } catch {
+    errEl.textContent   = 'Error de red al intentar eliminar.';
+    errEl.style.display = 'block';
+    btn.disabled        = false;
+    btn.textContent     = 'Eliminar';
+  }
+}
+
+/* Close delete modal on overlay click */
+document.getElementById('modal-delete').addEventListener('click', function(e) {
+  if (e.target === this) closeDeleteModal();
 });
 </script>
 </body>

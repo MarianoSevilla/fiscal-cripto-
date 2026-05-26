@@ -10,6 +10,7 @@ Email types
   advisory_status_email(advisory, note)         → advisory status change
   processing_error_email(exchange, context)     → CSV/XLSX processing failure
 """
+from __future__ import annotations  # str | None union syntax on Python 3.9
 import html as _html
 
 _FF   = "-apple-system,'Segoe UI',Helvetica,Arial,sans-serif"

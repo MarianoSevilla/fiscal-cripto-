@@ -14,6 +14,7 @@ from .service import (
     count_eligible_recipients_all_segments,
     create_campaign_draft,
     update_campaign_draft,
+    delete_campaign,
     send_test_email,
     dispatch_campaign,
 )
@@ -111,6 +112,24 @@ def api_campaign_status(campaign_id):
         "failed":         campaign.failed_count(),
         "pending":        campaign.pending_count(),
     })
+
+
+# ── DELETE CAMPAIGN ───────────────────────────────────────────────────────────
+
+@comms_bp.route("/api/admin/comunicaciones/campaigns/<int:campaign_id>", methods=["DELETE"])
+@login_required
+def api_delete_campaign(campaign_id):
+    """
+    Hard-delete a campaign and its deliveries.
+    Blocked if in-flight (sending/queued) or if sent with real deliveries.
+    """
+    if not _is_admin():
+        abort(404)
+    CommunicationCampaign.query.get_or_404(campaign_id)  # 404 before service call
+    ok, error = delete_campaign(campaign_id)
+    if ok:
+        return jsonify({"ok": True})
+    return jsonify({"ok": False, "error": error}), 409
 
 
 # ── DRAFT CRUD ────────────────────────────────────────────────────────────────
