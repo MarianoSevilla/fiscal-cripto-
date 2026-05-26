@@ -311,6 +311,53 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
 .footer-links a { font-size: 13px; color: var(--muted); transition: color .15s; }
 .footer-links a:hover { color: var(--text); }
 
+/* ── COMPLETAR FORM ── */
+.completar-section-title {
+  font-size: .75rem; font-weight: 700; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--muted2);
+  margin-bottom: .75rem; margin-top: 1.5rem;
+  padding-bottom: .5rem; border-bottom: 1px solid var(--border);
+}
+.completar-section-title:first-child { margin-top: 0; }
+
+.table-input {
+  width: 100%; background: var(--surface3); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text); font-family: var(--font-b);
+  font-size: .875rem; padding: .5rem .75rem; outline: none;
+  transition: border-color .2s;
+  -moz-appearance: textfield;
+}
+.table-input::-webkit-outer-spin-button,
+.table-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.table-input:focus { border-color: rgba(255,255,255,.2); }
+.table-input.is-valid { border-color: rgba(0,200,150,.4); }
+
+.table-select {
+  width: 100%; background: var(--surface3); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text); font-family: var(--font-b);
+  font-size: .875rem; padding: .5rem .75rem; outline: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right .75rem center;
+  padding-right: 2rem; cursor: pointer;
+  -webkit-appearance: none; appearance: none;
+  transition: border-color .2s;
+}
+.table-select:focus { border-color: rgba(255,255,255,.2); }
+
+.custodio-block {
+  padding: 1rem 0; border-bottom: 1px solid var(--border);
+}
+.custodio-block:last-child { border-bottom: none; padding-bottom: 0; }
+
+.btn-download:disabled { opacity: .38; cursor: not-allowed; pointer-events: none; }
+
+.xml-msg {
+  font-size: .85rem; line-height: 1.45; padding: .65rem .9rem;
+  border-radius: 8px; margin-top: .6rem;
+}
+.xml-msg.err { background: var(--red-dim);   border: 1px solid rgba(239,68,68,.25); color: var(--red); }
+.xml-msg.ok  { background: var(--accent-dim); border: 1px solid rgba(0,200,150,.25); color: var(--accent); }
+
 /* ── RESPONSIVE ── */
 @media (max-width: 560px) {
   .card { padding: 1.25rem 1.25rem; }
@@ -451,25 +498,6 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
       <p class="result-meta" id="result-meta"></p>
     </div>
 
-    <!-- Aviso NIF faltante -->
-    <div id="nif-faltante-notice" style="display:none;margin-bottom:1.25rem;">
-      <div class="pendiente-item advertencia" style="background:var(--amber-dim);border:1px solid rgba(245,158,11,.25);border-radius:var(--r);padding:1.1rem 1.25rem;gap:.75rem;align-items:flex-start;">
-        <div class="pendiente-icon" style="margin-top:2px;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        </div>
-        <div class="pendiente-text">
-          <strong>Falta el NIF del declarante</strong>
-          Para generar un XML válido del Modelo 721 necesitamos que guardes tu NIF, NIE o CIF en tu cuenta de usuario. El borrador está listo, pero el XML no puede generarse sin este dato.
-          <div style="margin-top:.65rem;">
-            <a href="/account" class="btn-secondary" style="display:inline-flex;align-items:center;gap:.4rem;padding:.55rem 1rem;font-size:.85rem;border-radius:8px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              Añadir NIF en Mi cuenta
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Umbral -->
     <div id="umbral-notice" class="umbral-notice" style="display:none;">
       <strong>Probablemente no estás obligado a presentar el Modelo 721.</strong> El valor total de las criptomonedas a 31 de diciembre es inferior a 50.000 €. Aun así, este análisis puede ser útil como referencia. Consulta con un asesor fiscal si tienes dudas sobre tu obligación de declarar.
@@ -501,6 +529,71 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
       </div>
     </div>
 
+    <!-- ── Completar datos pendientes ── -->
+    <div class="card" id="card-completar" style="display:none;">
+      <div class="card-title">Completar datos pendientes</div>
+      <p id="completar-intro" style="font-size:.875rem;color:var(--muted);margin-bottom:1.5rem;line-height:1.55;">
+        No podemos generar el XML oficial todavía porque Hacienda exige información que no aparece en el archivo del exchange. Completa los datos pendientes para preparar el XML.
+      </p>
+
+      <!-- NIF del declarante -->
+      <div id="completar-nif-section" style="display:none;">
+        <div class="completar-section-title" style="margin-top:0;">NIF del declarante</div>
+        <div class="field-row">
+          <div class="field">
+            <label for="completar-nif">NIF / NIE / CIF</label>
+            <input type="text" id="completar-nif" placeholder="12345678Z" maxlength="20"
+                   autocomplete="off" spellcheck="false" style="text-transform:uppercase;">
+          </div>
+          <div class="field">
+            <label for="completar-nombre">Nombre y apellidos</label>
+            <input type="text" id="completar-nombre"
+                   placeholder="Apellido1 Apellido2, Nombre" maxlength="120">
+          </div>
+        </div>
+        <p class="field-hint" style="margin-bottom:0;">
+          ¿Quieres que se rellene automáticamente?
+          <a href="/account" style="color:var(--accent);">Guárdalo en tu cuenta</a>.
+        </p>
+      </div>
+
+      <!-- Valoración a 31/12 -->
+      <div id="completar-valoracion-section" style="display:none;">
+        <div class="completar-section-title">Valor a 31 de diciembre</div>
+        <p class="field-hint" style="margin-bottom:.9rem;">
+          Introduce el valor total en euros de cada activo a 31/12 del ejercicio.
+          Usa el precio de cierre del <strong>último día</strong> según fuentes públicas.
+        </p>
+        <div class="activos-table-wrap">
+          <table class="activos-table" id="valoracion-table">
+            <thead>
+              <tr>
+                <th>Activo</th>
+                <th>Cantidad detectada</th>
+                <th style="min-width:155px;">Valor total EUR a 31/12 <span style="color:var(--red);font-size:.8rem;">*</span></th>
+                <th style="min-width:155px;">Fuente del precio <span style="color:var(--red);font-size:.8rem;">*</span></th>
+              </tr>
+            </thead>
+            <tbody id="valoracion-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Identificador fiscal del custodio (opcional) -->
+      <div id="completar-custodio-section" style="display:none;">
+        <div class="completar-section-title">
+          Identificador fiscal del custodio
+          <span style="font-size:.7rem;font-weight:400;text-transform:none;
+                        letter-spacing:0;color:var(--muted2);">— opcional, mejora el borrador</span>
+        </div>
+        <p class="field-hint" style="margin-bottom:.9rem;">
+          El XML puede generarse como borrador sin este dato. Si lo conoces, complétalo
+          para obtener un XML presentable directamente a la AEAT.
+        </p>
+        <div id="custodio-forms"></div>
+      </div>
+    </div>
+
     <!-- Pendientes / estado XML -->
     <div class="card" id="card-pendiente">
       <div class="card-title">Estado del XML</div>
@@ -512,9 +605,9 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
 
     <!-- Acciones -->
     <div class="result-actions">
-      <button type="button" class="btn-download" id="btn-xml" style="display:none;">
+      <button type="button" class="btn-download" id="btn-xml" disabled>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Descargar XML
+        Preparar XML
       </button>
       <button type="button" class="btn-secondary" id="btn-nuevo">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
@@ -525,6 +618,7 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
         Ir al Dashboard
       </a>
     </div>
+    <p class="xml-msg err" id="xml-error-msg" style="display:none;"></p>
 
   </div><!-- /panel-result -->
 
@@ -546,6 +640,11 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
 <script>
 'use strict';
 
+// ── ESTADO GLOBAL ──────────────────────────────────────────────────────────
+let lastAnalysisData     = null;   // respuesta completa de /api/721
+let lastAnalysisExchange = '';
+let lastAnalysisEjercicio= '';
+
 // ── AUTH GUARD + prefill desde perfil ──────────────────────────────────────
 (async () => {
   try {
@@ -566,12 +665,10 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
   const hoy   = new Date();
   const max   = hoy.getFullYear() + 1;
   const desde = 2022;
-  // Año más probable: el año anterior al actual (la declaración es sobre el pasado)
   const defaultYear = hoy.getFullYear() - 1;
   for (let y = max; y >= desde; y--) {
     const opt = document.createElement('option');
-    opt.value = y;
-    opt.textContent = y;
+    opt.value = y; opt.textContent = y;
     if (y === defaultYear) opt.selected = true;
     sel.appendChild(opt);
   }
@@ -586,21 +683,15 @@ const btnSubmit    = document.getElementById('btn-submit');
 selExchange.addEventListener('change', updateFormState);
 
 // ── FILE DROP ──────────────────────────────────────────────────────────────
-const dropZone    = document.getElementById('drop-zone');
-const fileInput   = document.getElementById('file-input');
-const dropFilename= document.getElementById('drop-filename');
+const dropZone     = document.getElementById('drop-zone');
+const fileInput    = document.getElementById('file-input');
+const dropFilename = document.getElementById('drop-filename');
 let   selectedFile = null;
 
 fileInput.addEventListener('change', () => {
-  if (fileInput.files.length) {
-    setFile(fileInput.files[0]);
-  }
+  if (fileInput.files.length) setFile(fileInput.files[0]);
 });
-
-dropZone.addEventListener('dragover', e => {
-  e.preventDefault();
-  dropZone.classList.add('drag-over');
-});
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
 dropZone.addEventListener('drop', e => {
   e.preventDefault();
@@ -620,9 +711,8 @@ function setFile(f) {
 }
 
 // ── TOGGLE DECLARANTE ─────────────────────────────────────────────────────
-const toggleBtn       = document.getElementById('toggle-declarante');
-const declaranteFields= document.getElementById('declarante-fields');
-
+const toggleBtn        = document.getElementById('toggle-declarante');
+const declaranteFields = document.getElementById('declarante-fields');
 toggleBtn.addEventListener('click', () => {
   const open = declaranteFields.classList.toggle('open');
   toggleBtn.classList.toggle('open', open);
@@ -632,20 +722,18 @@ toggleBtn.addEventListener('click', () => {
 function updateFormState() {
   const exchange = selExchange.value;
   const esBit2Me = exchange === 'bit2me';
-
-  // Mostrar/ocultar info bit2me
-  bit2meInfo.style.display  = esBit2Me ? 'block' : 'none';
-  cardCsv.style.display     = esBit2Me ? 'none'  : '';
-
+  bit2meInfo.style.display = esBit2Me ? 'block' : 'none';
+  cardCsv.style.display    = esBit2Me ? 'none'  : '';
   if (esBit2Me) {
-    // Bit2Me: no se necesita CSV, el botón siempre disponible
     btnSubmit.disabled = !exchange;
     btnSubmit.textContent = 'Ver explicación';
   } else {
     btnSubmit.disabled = !(exchange && selectedFile);
-    btnSubmit.textContent = 'Analizar CSV';
     btnSubmit.innerHTML = `
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
       Analizar CSV`;
   }
 }
@@ -658,16 +746,9 @@ btnSubmit.addEventListener('click', async () => {
   const nombre    = document.getElementById('inp-nombre').value.trim();
 
   if (!exchange) return;
-
-  // Bit2Me: respuesta inmediata sin fetch
-  if (exchange === 'bit2me') {
-    showBit2meResult(ejercicio);
-    return;
-  }
-
+  if (exchange === 'bit2me') { showBit2meResult(ejercicio); return; }
   if (!selectedFile) return;
 
-  // Build FormData
   const fd = new FormData();
   fd.append('exchange',  exchange);
   fd.append('ejercicio', ejercicio);
@@ -676,23 +757,11 @@ btnSubmit.addEventListener('click', async () => {
   if (nombre) fd.append('nombre_declarante', nombre);
 
   showLoading(true);
-
   try {
-    const res  = await fetch('/api/721', {
-      method: 'POST',
-      credentials: 'include',
-      body: fd,
-    });
+    const res  = await fetch('/api/721', { method: 'POST', credentials: 'include', body: fd });
     const data = await res.json();
-
-    if (!res.ok) {
-      showLoading(false);
-      showError(data.error || `Error ${res.status}`);
-      return;
-    }
-
+    if (!res.ok) { showLoading(false); showError(data.error || `Error ${res.status}`); return; }
     renderResult(data);
-
   } catch (err) {
     showLoading(false);
     showError('Error de red. Comprueba tu conexión e inténtalo de nuevo.');
@@ -713,62 +782,58 @@ function showLoading(on) {
 function showError(msg) {
   panelLoading.style.display = 'none';
   panelForm.style.display    = '';
-  // Mostrar error inline en el botón
   const old = btnSubmit.innerHTML;
   btnSubmit.style.background = 'var(--red)';
-  btnSubmit.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> ${escHtml(msg)}`;
-  setTimeout(() => {
-    btnSubmit.style.background = '';
-    btnSubmit.innerHTML = old;
-  }, 4500);
+  btnSubmit.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> ${escHtml(msg)}`;
+  setTimeout(() => { btnSubmit.style.background = ''; btnSubmit.innerHTML = old; }, 4500);
 }
 
 // ── BIT2ME RESPUESTA LOCAL ─────────────────────────────────────────────────
 function showBit2meResult(ejercicio) {
-  panelForm.style.display   = 'none';
-  panelLoading.style.display= 'none';
-  panelResult.style.display = '';
+  panelForm.style.display    = 'none';
+  panelLoading.style.display = 'none';
+  panelResult.style.display  = '';
 
-  document.getElementById('estado-badge').className = 'estado-badge info';
+  document.getElementById('estado-badge').className = 'estado-badge';
   document.getElementById('estado-badge').style.cssText =
     'background:var(--accent-dim);color:var(--accent);border:1px solid rgba(0,200,150,.25);';
   document.getElementById('estado-texto').textContent = 'No aplica';
-
   document.getElementById('result-title').textContent = `Bit2Me — Ejercicio ${ejercicio}`;
-  document.getElementById('result-meta').textContent  =
-    'Entidad española · No sujeta al Modelo 721';
+  document.getElementById('result-meta').textContent  = 'Entidad española · No sujeta al Modelo 721';
 
-  document.getElementById('umbral-notice').style.display = 'none';
-  document.getElementById('bit2me-result').style.display = '';
-  document.getElementById('card-activos').style.display  = 'none';
-  document.getElementById('card-pendiente').style.display = 'none';
-  document.getElementById('btn-xml').style.display = 'none';
+  document.getElementById('umbral-notice').style.display   = 'none';
+  document.getElementById('bit2me-result').style.display   = '';
+  document.getElementById('card-activos').style.display    = 'none';
+  document.getElementById('card-completar').style.display  = 'none';
+  document.getElementById('card-pendiente').style.display  = 'none';
+  document.getElementById('btn-xml').style.display         = 'none';
 }
 
 // ── RENDER RESULT ──────────────────────────────────────────────────────────
 function renderResult(data) {
-  panelForm.style.display   = 'none';
-  panelLoading.style.display= 'none';
-  panelResult.style.display = '';
+  // Guardar estado para flujo de completar datos
+  lastAnalysisData      = data;
+  lastAnalysisExchange  = data.exchange  || '';
+  lastAnalysisEjercicio = data.ejercicio || '';
+
+  panelForm.style.display    = 'none';
+  panelLoading.style.display = 'none';
+  panelResult.style.display  = '';
 
   document.getElementById('bit2me-result').style.display = 'none';
   document.getElementById('card-activos').style.display  = '';
 
-  const pendiente   = data.pendiente || {};
-  const resultado   = data.resultado || {};
-  const nifFaltante = !!data.nif_faltante;
-
-  // Aviso NIF faltante — solo si el análisis fue exitoso (no bit2me)
-  document.getElementById('nif-faltante-notice').style.display = nifFaltante ? '' : 'none';
+  const pendiente = data.pendiente || {};
+  const resultado = data.resultado || {};
   const ejercicio = data.ejercicio || '';
   const exchange  = data.exchange  || '';
 
-  // ── ESTADO BADGE ──
-  const badgeEl    = document.getElementById('estado-badge');
-  const textoEl    = document.getElementById('estado-texto');
+  // ── ESTADO BADGE ──────────────────────────────────────────────────────
+  const badgeEl = document.getElementById('estado-badge');
+  const textoEl = document.getElementById('estado-texto');
   if (!pendiente.xml_generable) {
     badgeEl.className = 'estado-badge bloqueado';
-    textoEl.textContent = 'Bloqueado';
+    textoEl.textContent = 'Datos pendientes';
   } else if (pendiente.xml_es_borrador) {
     badgeEl.className = 'estado-badge borrador';
     textoEl.textContent = 'Borrador';
@@ -777,20 +842,20 @@ function renderResult(data) {
     textoEl.textContent = 'Listo para presentar';
   }
 
-  // ── TITLE + META ──
+  // ── TITLE + META ──────────────────────────────────────────────────────
   document.getElementById('result-title').textContent =
     `Modelo 721 — ${exchangeLabel(exchange)} — ${ejercicio}`;
-  const exchanges = resultado.exchanges || [];
+  const exchanges    = resultado.exchanges || [];
   const totalActivos = exchanges.reduce((s, ex) => s + (ex.activos || []).length, 0);
   document.getElementById('result-meta').textContent =
     `${totalActivos} activo${totalActivos !== 1 ? 's' : ''} a 31/12/${ejercicio}` +
     (resultado.potencialmente_obligado === false ? ' · No obligado (entidad española)' : '');
 
-  // ── UMBRAL ──
-  const umbralNotice = document.getElementById('umbral-notice');
-  umbralNotice.style.display = pendiente.por_debajo_umbral ? '' : 'none';
+  // ── UMBRAL ────────────────────────────────────────────────────────────
+  document.getElementById('umbral-notice').style.display =
+    pendiente.por_debajo_umbral ? '' : 'none';
 
-  // ── TABLA ACTIVOS ──
+  // ── TABLA ACTIVOS ─────────────────────────────────────────────────────
   const tbody = document.getElementById('activos-tbody');
   const tfoot = document.getElementById('activos-tfoot');
   tbody.innerHTML = '';
@@ -799,9 +864,8 @@ function renderResult(data) {
   let hayPreciosPendientes = false;
 
   exchanges.forEach(ex => {
-    const activos = ex.activos || [];
-    activos.forEach(a => {
-      const valorEur = a.valor_eur !== null && a.valor_eur !== undefined
+    (ex.activos || []).forEach(a => {
+      const valorEur = (a.valor_eur !== null && a.valor_eur !== undefined)
         ? parseFloat(a.valor_eur) : null;
       if (valorEur !== null) totalEur += valorEur; else hayPreciosPendientes = true;
 
@@ -809,7 +873,7 @@ function renderResult(data) {
       tr.innerHTML = `
         <td>
           <div class="ticker-cell">
-            <div class="ticker-icon">${escHtml(a.siglas ? a.siglas.slice(0,3) : a.activo.slice(0,3))}</div>
+            <div class="ticker-icon">${escHtml((a.siglas || a.activo).slice(0,3))}</div>
             <div>
               <div class="ticker-main">${escHtml(a.siglas || a.activo)}</div>
               <div class="ticker-name">${escHtml(a.denominacion || a.activo)}</div>
@@ -826,7 +890,6 @@ function renderResult(data) {
     });
   });
 
-  // Total row
   const trTotal = document.createElement('tr');
   trTotal.className = 'total-row';
   trTotal.innerHTML = `
@@ -837,114 +900,449 @@ function renderResult(data) {
     }</td>`;
   tfoot.appendChild(trTotal);
 
-  // ── PENDIENTE ITEMS ──
+  // ── PENDIENTE ITEMS ───────────────────────────────────────────────────
   const container = document.getElementById('pendiente-items');
   container.innerHTML = '';
+  const sinPrecioList = pendiente.precios_historicos || [];
 
-  // Bloqueantes — omitir el de NIF si ya se muestra el bloque dedicado de arriba
+  // Bloqueantes: omitir NIF (lo manejamos en card-completar) y precios (ídem)
   (pendiente.xml_bloqueantes || []).forEach(msg => {
-    if (nifFaltante && /nif.*(declarante|proporcionado)/i.test(msg)) return;
-    container.appendChild(mkPendienteItem('bloqueante',
-      iconX(), 'XML pendiente: falta información obligatoria', humanizeMensaje(msg)));
+    const esNif    = /nif.*(declarante|proporcionado)/i.test(msg);
+    const esPrecio = /ValorMonedas|precio.*mercado/i.test(msg);
+    if (esNif || esPrecio) return;
+    container.appendChild(mkPendienteItem('bloqueante', iconX(),
+      'XML pendiente: falta información obligatoria', humanizeMensaje(msg)));
   });
 
-  // Precios históricos faltantes
-  if ((pendiente.precios_historicos || []).length > 0) {
-    const tickers = pendiente.precios_historicos.join(', ');
+  if (sinPrecioList.length > 0) {
     container.appendChild(mkPendienteItem(
-      pendiente.xml_generable ? 'advertencia' : 'bloqueante',
-      iconClock(),
-      'Precios de mercado pendientes',
-      `No se dispone del precio de mercado a 31/12/${ejercicio} para: ${tickers}. ` +
-      `El valor en euros no puede calcularse automáticamente — deberás obtenerlo de una ` +
-      `fuente oficial (p. ej. CoinGecko, Binance) e introducirlo manualmente en el XML.`
+      'bloqueante', iconClock(),
+      'Precios a 31/12 pendientes',
+      `Introduce el valor en euros de: ${sinPrecioList.join(', ')}. ` +
+      `Completa los datos en la sección de abajo.`
     ));
   }
-
-  // Tax ID custodio
-  if ((pendiente.tax_id_custodio || []).length > 0) {
-    const exchNames = pendiente.tax_id_custodio.map(exchangeLabel).join(', ');
-    container.appendChild(mkPendienteItem('advertencia',
-      iconInfo(),
-      'Identificador fiscal del custodio no confirmado',
-      `El NIF o número fiscal de ${exchNames} no está verificado en nuestra base de datos. ` +
-      `El XML se genera con un marcador provisional (IDType 06, ID "PENDIENTE") en el campo ` +
-      `IDPersonaEntidadSalvaguarda. El archivo es un borrador — no lo presentes sin verificar ` +
-      `primero el identificador fiscal del exchange en su web oficial o en el registro mercantil ` +
-      `del país de residencia.`
-    ));
+  if (!!data.nif_faltante) {
+    container.appendChild(mkPendienteItem('bloqueante', iconX(),
+      'NIF del declarante pendiente',
+      'Introduce tu NIF, NIE o CIF en la sección de abajo para generar el XML.'));
   }
 
-  // Advertencias del XML
-  (pendiente.xml_advertencias || []).forEach(msg => {
-    container.appendChild(mkPendienteItem('advertencia',
-      iconInfo(), 'Advertencia', humanizeMensaje(msg)));
+  (pendiente.tax_id_custodio || []).forEach(exchKey => {
+    container.appendChild(mkPendienteItem('advertencia', iconInfo(),
+      `Identificador fiscal de ${exchangeLabel(exchKey)} no confirmado`,
+      `El XML se generará con un marcador provisional (IDType 06, ID "PENDIENTE"). ` +
+      `Puedes completarlo en la sección de abajo o verificarlo en la web del exchange.`
+    ));
   });
 
-  // Todo OK
+  (pendiente.xml_advertencias || []).forEach(msg => {
+    container.appendChild(mkPendienteItem('advertencia', iconInfo(),
+      'Advertencia', humanizeMensaje(msg)));
+  });
+
   if (pendiente.completo) {
-    container.appendChild(mkPendienteItem('info',
-      iconCheck(),
+    container.appendChild(mkPendienteItem('info', iconCheck(),
       'XML listo',
-      'Todos los datos están completos. El XML generado puede presentarse en la sede electrónica de la AEAT. Revísalo antes de firmar.'));
+      'Todos los datos están completos. El XML puede presentarse en la sede electrónica de la AEAT. Revísalo antes de firmar.'));
   }
 
   if (container.children.length === 0) {
     container.innerHTML = '<p style="font-size:.875rem;color:var(--muted);">Sin advertencias.</p>';
   }
-
-  // ── PENDIENTE CARD: mostrar si aplica ──
   document.getElementById('card-pendiente').style.display = '';
 
-  // ── BOTÓN DESCARGA XML ──
-  const btnXml = document.getElementById('btn-xml');
-  if (data.xml) {
-    const blob = new Blob([data.xml], { type: 'application/xml' });
-    const url  = URL.createObjectURL(blob);
-    const fname = `modelo721_${ejercicio}_${exchange}.xml`;
-    btnXml.style.display = '';
-    // Estado visual del botón según estado
-    if (pendiente.xml_es_borrador) {
-      btnXml.style.background = 'var(--amber)';
-      btnXml.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Descargar XML (borrador)`;
-    } else {
-      btnXml.style.background = 'var(--accent)';
-      btnXml.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Descargar XML`;
-    }
-    btnXml.onclick = () => {
-      const a = document.createElement('a');
-      a.href     = url;
-      a.download = fname;
-      a.click();
-    };
+  // ── FORMULARIO COMPLETAR + BOTÓN XML ──────────────────────────────────
+  buildCompletarForm(data);
+}
+
+// ── COMPLETAR FORM ─────────────────────────────────────────────────────────
+function buildCompletarForm(data) {
+  const pendiente    = data.pendiente    || {};
+  const nifFaltante  = !!data.nif_faltante;
+  const sinPrecio    = pendiente.precios_historicos || [];
+  const sinCustodio  = pendiente.tax_id_custodio    || [];
+  const cardCompletar = document.getElementById('card-completar');
+
+  const hayCompletarObligatorio = nifFaltante || sinPrecio.length > 0;
+  const hayCompletarOpcional    = sinCustodio.length > 0;
+  const hayCompletar = hayCompletarObligatorio || hayCompletarOpcional;
+
+  cardCompletar.style.display = hayCompletar ? '' : 'none';
+
+  // ── Sección NIF ────────────────────────────────────────────────────────
+  const secNif = document.getElementById('completar-nif-section');
+  secNif.style.display = nifFaltante ? '' : 'none';
+  if (nifFaltante) {
+    // Pre-rellenar si el usuario los había escrito en el formulario inicial
+    const nifPrevio    = document.getElementById('inp-nif').value.trim().toUpperCase();
+    const nombrePrevio = document.getElementById('inp-nombre').value.trim();
+    if (nifPrevio)    document.getElementById('completar-nif').value    = nifPrevio;
+    if (nombrePrevio) document.getElementById('completar-nombre').value = nombrePrevio;
+    // Live validation
+    ['completar-nif', 'completar-nombre'].forEach(id => {
+      document.getElementById(id).addEventListener('input', validateXMLReadiness);
+    });
+  }
+
+  // ── Sección valoración ─────────────────────────────────────────────────
+  const secVal = document.getElementById('completar-valoracion-section');
+  if (sinPrecio.length > 0) {
+    secVal.style.display = '';
+    buildValoracionTable(data, sinPrecio);
   } else {
-    btnXml.style.display = 'none';
+    secVal.style.display = 'none';
+  }
+
+  // ── Sección custodio ───────────────────────────────────────────────────
+  const secCust = document.getElementById('completar-custodio-section');
+  if (sinCustodio.length > 0) {
+    secCust.style.display = '';
+    buildCustodioForms(sinCustodio);
+  } else {
+    secCust.style.display = 'none';
+  }
+
+  // Estado inicial del botón XML
+  updateXMLButton(data);
+  validateXMLReadiness();
+}
+
+// Construye la tabla de valoración con inputs editables por ticker pendiente
+function buildValoracionTable(data, sinPrecio) {
+  const tbody    = document.getElementById('valoracion-tbody');
+  const ejercicio = data.ejercicio || '';
+  tbody.innerHTML = '';
+
+  // Mapa ticker → activo para obtener cantidad y denominación
+  const activoMap = {};
+  (data.resultado?.exchanges || []).forEach(ex => {
+    (ex.activos || []).forEach(a => { activoMap[a.activo] = a; });
+  });
+
+  sinPrecio.forEach(ticker => {
+    const a = activoMap[ticker];
+    if (!a) return;
+
+    const tr = document.createElement('tr');
+    const tickerId = `val-${ticker.replace(/[^A-Za-z0-9]/g, '_')}`;
+    tr.innerHTML = `
+      <td>
+        <div class="ticker-cell">
+          <div class="ticker-icon">${escHtml((a.siglas || a.activo).slice(0,3))}</div>
+          <div>
+            <div class="ticker-main">${escHtml(a.siglas || a.activo)}</div>
+            <div class="ticker-name">${escHtml(a.denominacion || a.activo)}</div>
+          </div>
+        </div>
+      </td>
+      <td style="color:var(--muted);white-space:nowrap;">${escHtml(fmtCantidad(a.cantidad))}</td>
+      <td>
+        <input type="number" id="${tickerId}-valor" class="valor-input table-input"
+               data-ticker="${escHtml(a.activo)}"
+               placeholder="0.00" min="0" step="0.01"
+               aria-label="Valor EUR total de ${escHtml(a.activo)} a 31/12/${ejercicio}">
+      </td>
+      <td>
+        <select id="${tickerId}-origen" class="origen-select table-select"
+                data-ticker="${escHtml(a.activo)}"
+                aria-label="Fuente del precio de ${escHtml(a.activo)}">
+          <option value="">— Fuente —</option>
+          <option value="CoinGecko">CoinGecko</option>
+          <option value="Binance">Binance</option>
+          <option value="CoinMarketCap">CoinMarketCap</option>
+          <option value="Exchange oficial">Exchange oficial</option>
+          <option value="O">Otra fuente</option>
+        </select>
+      </td>`;
+    tbody.appendChild(tr);
+
+    // Live validation en cada input
+    tr.querySelectorAll('input, select').forEach(el => {
+      el.addEventListener('input',  validateXMLReadiness);
+      el.addEventListener('change', validateXMLReadiness);
+    });
+  });
+}
+
+// Construye los formularios de custodio por exchange pendiente
+function buildCustodioForms(sinCustodio) {
+  const container = document.getElementById('custodio-forms');
+  container.innerHTML = '';
+
+  sinCustodio.forEach(exchKey => {
+    const label = exchangeLabel(exchKey);
+    const safeKey = escHtml(exchKey);
+    const div = document.createElement('div');
+    div.className = 'custodio-block';
+    div.setAttribute('data-exchange', exchKey);
+    div.innerHTML = `
+      <div style="font-size:.875rem;font-weight:600;color:var(--text);margin-bottom:.75rem;">
+        ${escHtml(label)}
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>País del custodio
+            <span class="optional">(ISO 2 letras, p.ej. BG para Bulgaria)</span>
+          </label>
+          <input type="text" class="custodio-pais" data-exchange="${safeKey}"
+                 maxlength="2" placeholder="BG" autocomplete="off"
+                 style="text-transform:uppercase;">
+        </div>
+        <div class="field">
+          <label>Tipo de identificador</label>
+          <select class="custodio-idtype" data-exchange="${safeKey}">
+            <option value="">— Selecciona —</option>
+            <option value="04">04 — Documento oficial de residencia</option>
+            <option value="02">02 — NIF-IVA europeo (VAT)</option>
+            <option value="06">06 — Otro documento probatorio</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Número de identificación fiscal</label>
+        <input type="text" class="custodio-id" data-exchange="${safeKey}"
+               maxlength="20" placeholder="p.ej. BG123456789">
+        <p class="field-hint">Si no lo conoces, el XML se generará como borrador con un identificador provisional.</p>
+      </div>`;
+    container.appendChild(div);
+
+    // Los campos de custodio no bloquean el XML (solo afectan borrador/listo)
+    // pero disparamos validateXMLReadiness para que el botón actualice su estado
+    div.querySelectorAll('input, select').forEach(el => {
+      el.addEventListener('input',  validateXMLReadiness);
+      el.addEventListener('change', validateXMLReadiness);
+    });
+  });
+}
+
+// ── VALIDACIÓN EN TIEMPO REAL ───────────────────────────────────────────────
+function validateXMLReadiness() {
+  if (!lastAnalysisData) return false;
+
+  const pendiente   = lastAnalysisData.pendiente || {};
+  const nifFaltante = !!lastAnalysisData.nif_faltante;
+  const sinPrecio   = pendiente.precios_historicos || [];
+  let ready = true;
+
+  // NIF obligatorio si faltaba en el análisis original
+  if (nifFaltante) {
+    const nif    = (document.getElementById('completar-nif')?.value   || '').trim();
+    const nombre = (document.getElementById('completar-nombre')?.value || '').trim();
+    if (!nif || !nombre) ready = false;
+  }
+
+  // Todos los activos sin precio deben tener valor > 0 y fuente seleccionada
+  for (const ticker of sinPrecio) {
+    const valEl  = document.querySelector(`.valor-input[data-ticker="${ticker}"]`);
+    const origEl = document.querySelector(`.origen-select[data-ticker="${ticker}"]`);
+    if (!valEl || !origEl) { ready = false; break; }
+    const val = parseFloat(valEl.value);
+    if (isNaN(val) || val < 0 || !origEl.value) { ready = false; break; }
+  }
+
+  const btnXml = document.getElementById('btn-xml');
+  if (btnXml && (nifFaltante || sinPrecio.length > 0)) {
+    // Solo gestionar disabled cuando el formulario completar está activo
+    btnXml.disabled = !ready;
+  }
+
+  return ready;
+}
+
+// ── ESTADO DEL BOTÓN XML ───────────────────────────────────────────────────
+function updateXMLButton(data) {
+  const pendiente    = data.pendiente || {};
+  const nifFaltante  = !!data.nif_faltante;
+  const sinPrecio    = pendiente.precios_historicos || [];
+  const btnXml       = document.getElementById('btn-xml');
+
+  btnXml.style.display = '';
+
+  if (nifFaltante || sinPrecio.length > 0) {
+    // Completar form activo — deshabilitado hasta rellenar
+    btnXml.disabled         = true;
+    btnXml.style.background = '';
+    btnXml.innerHTML        = `${_svgDownload()} Preparar y descargar XML`;
+  } else if (data.xml && pendiente.xml_es_borrador) {
+    // XML ya generado, borrador
+    btnXml.disabled         = false;
+    btnXml.style.background = 'var(--amber)';
+    btnXml.innerHTML        = `${_svgDownload()} Descargar XML (borrador)`;
+  } else if (data.xml) {
+    // XML ya generado, listo
+    btnXml.disabled         = false;
+    btnXml.style.background = 'var(--accent)';
+    btnXml.innerHTML        = `${_svgDownload()} Descargar XML`;
+  } else {
+    // Sin XML todavía pero sin completar obligatorio (ej. solo custodio pendiente)
+    btnXml.disabled         = false;
+    btnXml.style.background = pendiente.xml_es_borrador ? 'var(--amber)' : 'var(--accent)';
+    btnXml.innerHTML        = `${_svgDownload()} ${pendiente.xml_es_borrador ? 'Preparar XML (borrador)' : 'Preparar XML'}`;
   }
 }
 
+// ── HANDLER BOTÓN XML ──────────────────────────────────────────────────────
+document.getElementById('btn-xml').addEventListener('click', async function handleXMLDownload() {
+  if (!lastAnalysisData) return;
+
+  const data       = lastAnalysisData;
+  const pendiente  = data.pendiente || {};
+  const nifFaltante  = !!data.nif_faltante;
+  const sinPrecio    = pendiente.precios_historicos || [];
+  const sinCustodio  = pendiente.tax_id_custodio    || [];
+
+  // ── Recoger datos de custodio (opcionales) ────────────────────────────
+  const custodios = {};
+  sinCustodio.forEach(exchKey => {
+    const idType = (document.querySelector(`.custodio-idtype[data-exchange="${exchKey}"]`)?.value || '').trim();
+    const idVal  = (document.querySelector(`.custodio-id[data-exchange="${exchKey}"]`)?.value    || '').trim();
+    const pais   = (document.querySelector(`.custodio-pais[data-exchange="${exchKey}"]`)?.value   || '').trim().toUpperCase();
+    if (idType && idVal) custodios[exchKey] = { codigo_pais: pais, id_type: idType, id: idVal };
+  });
+  const hayCustodioOverrides = Object.keys(custodios).length > 0;
+
+  // ── Descarga directa si XML ya existe y no hay overrides ─────────────
+  if (data.xml && !nifFaltante && sinPrecio.length === 0 && !hayCustodioOverrides) {
+    downloadXML(data.xml, lastAnalysisEjercicio, lastAnalysisExchange, pendiente.xml_es_borrador);
+    return;
+  }
+
+  // ── Recoger NIF manual ─────────────────────────────────────────────────
+  const nifVal    = nifFaltante
+    ? (document.getElementById('completar-nif')?.value    || '').trim().toUpperCase()
+    : null;
+  const nombreVal = nifFaltante
+    ? (document.getElementById('completar-nombre')?.value || '').trim()
+    : null;
+
+  // ── Recoger valores de precio ──────────────────────────────────────────
+  const valores = {};
+  sinPrecio.forEach(ticker => {
+    const valEl  = document.querySelector(`.valor-input[data-ticker="${ticker}"]`);
+    const origEl = document.querySelector(`.origen-select[data-ticker="${ticker}"]`);
+    if (valEl && origEl) {
+      valores[ticker] = { valor_eur: parseFloat(valEl.value), origen: origEl.value };
+    }
+  });
+
+  // ── POST a /api/721/xml ────────────────────────────────────────────────
+  const btnXml  = document.getElementById('btn-xml');
+  const origHtml = btnXml.innerHTML;
+  btnXml.disabled = true;
+  btnXml.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+    style="animation:spin .7s linear infinite">
+    <circle cx="12" cy="12" r="10" opacity=".3"/>
+    <path d="M12 2a10 10 0 0 1 10 10"/>
+  </svg> Generando XML…`;
+
+  // Ocultar error anterior
+  const errEl = document.getElementById('xml-error-msg');
+  if (errEl) errEl.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/721/xml', {
+      method:  'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        datos:             data.resultado,
+        ejercicio:         lastAnalysisEjercicio,
+        exchange:          lastAnalysisExchange,
+        nif_declarante:    nifVal,
+        nombre_declarante: nombreVal,
+        valores,
+        custodios,
+      }),
+    });
+
+    const result = await res.json();
+
+    if (!res.ok) {
+      showXMLError(result.error || `Error ${res.status}`);
+      btnXml.disabled = false;
+      btnXml.innerHTML = origHtml;
+      return;
+    }
+
+    // ── Descarga ────────────────────────────────────────────────────────
+    const exchResult = result.exchange || lastAnalysisExchange;
+    const ejResult   = result.ejercicio || lastAnalysisEjercicio;
+    downloadXML(result.xml, ejResult, exchResult, result.es_borrador);
+
+    // ── Actualizar badge de estado ───────────────────────────────────────
+    if (!result.es_borrador) {
+      const badgeEl = document.getElementById('estado-badge');
+      const textoEl = document.getElementById('estado-texto');
+      if (badgeEl) badgeEl.className = 'estado-badge listo';
+      if (textoEl) textoEl.textContent = 'Listo para presentar';
+    }
+
+    // ── Actualizar botón para futuras descargas del mismo XML ────────────
+    lastAnalysisData = { ...data, xml: result.xml };
+    btnXml.disabled  = false;
+    btnXml.style.background = result.es_borrador ? 'var(--amber)' : 'var(--accent)';
+    btnXml.innerHTML = _svgDownload() +
+      (result.es_borrador ? ' Descargar XML (borrador)' : ' Descargar XML');
+
+  } catch (err) {
+    showXMLError('Error de red. Comprueba tu conexión e inténtalo de nuevo.');
+    btnXml.disabled  = false;
+    btnXml.innerHTML = origHtml;
+  }
+});
+
 // ── NUEVO ANÁLISIS ─────────────────────────────────────────────────────────
 document.getElementById('btn-nuevo').addEventListener('click', () => {
-  // Reset form
+  // Reset estado global
+  lastAnalysisData      = null;
+  lastAnalysisExchange  = '';
+  lastAnalysisEjercicio = '';
+
+  // Reset formulario
   selectedFile = null;
   fileInput.value = '';
   dropZone.classList.remove('has-file');
   dropFilename.style.display = 'none';
   dropZone.querySelector('.drop-label').innerHTML =
     '<strong>Elige un archivo</strong> o arrástralo aquí';
-  document.getElementById('inp-nif').value    = '';
-  document.getElementById('inp-nombre').value = '';
-  updateFormState();
 
+  // Re-poner NIF/nombre del perfil (los inputs de /panel-form)
+  // No se borran: el usuario puede querer reutilizarlos en el siguiente análisis.
+
+  updateFormState();
   panelResult.style.display  = 'none';
   panelLoading.style.display = 'none';
   panelForm.style.display    = '';
 });
 
+// ── DESCARGAR XML ──────────────────────────────────────────────────────────
+function downloadXML(xmlStr, ejercicio, exchange, esBorrador) {
+  const blob   = new Blob([xmlStr], { type: 'application/xml' });
+  const url    = URL.createObjectURL(blob);
+  const suffix = esBorrador ? '_borrador' : '';
+  const fname  = `modelo721_${ejercicio}_${exchange}${suffix}.xml`;
+  const a = document.createElement('a');
+  a.href = url; a.download = fname; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 8000);
+}
+
+// ── MOSTRAR ERROR XML ──────────────────────────────────────────────────────
+function showXMLError(msg) {
+  const el = document.getElementById('xml-error-msg');
+  if (!el) return;
+  el.textContent    = msg;
+  el.style.display  = '';
+  el.className      = 'xml-msg err';
+  setTimeout(() => { el.style.display = 'none'; }, 7000);
+}
+
 // ── HELPERS ────────────────────────────────────────────────────────────────
+function _svgDownload() {
+  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+}
+
 function escHtml(s) {
   return String(s ?? '')
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -955,17 +1353,15 @@ function fmtEur(n) {
   if (n === null || n === undefined) return '—';
   return new Intl.NumberFormat('es-ES', {
     style: 'currency', currency: 'EUR',
-    minimumFractionDigits: 2, maximumFractionDigits: 2
+    minimumFractionDigits: 2, maximumFractionDigits: 2,
   }).format(n);
 }
 
 function fmtCantidad(s) {
   const n = parseFloat(s);
   if (isNaN(n)) return s || '—';
-  // Usar hasta 8 decimales, sin ceros trailing
   return new Intl.NumberFormat('es-ES', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 8,
+    minimumFractionDigits: 0, maximumFractionDigits: 8,
   }).format(n);
 }
 
@@ -974,18 +1370,15 @@ const EXCHANGE_LABELS = {
   coinbase: 'Coinbase', cryptocom: 'Crypto.com',
   kraken: 'Kraken', nexo: 'Nexo', uphold: 'Uphold',
 };
-function exchangeLabel(key) {
-  return EXCHANGE_LABELS[key] || key;
-}
+function exchangeLabel(key) { return EXCHANGE_LABELS[key] || key; }
 
 function humanizeMensaje(msg) {
-  // Pasar mensajes técnicos a lenguaje más natural cuando sea posible
   const reemplazos = [
-    [/xml[_\s]generable/gi, 'puede generar el XML'],
-    [/umbral/gi, 'umbral de 50.000 €'],
-    [/IDPersonaEntidadSalvaguarda/g, 'identificador del custodio'],
-    [/IDRegistroDetalle/g, 'número de registro'],
-    [/TipoComunicacion/g, 'tipo de comunicación'],
+    [/xml[_\s]generable/gi,          'puede generar el XML'],
+    [/umbral/gi,                      'umbral de 50.000 €'],
+    [/IDPersonaEntidadSalvaguarda/g,  'identificador del custodio'],
+    [/IDRegistroDetalle/g,            'número de registro'],
+    [/TipoComunicacion/g,             'tipo de comunicación'],
   ];
   let r = msg;
   reemplazos.forEach(([from, to]) => { r = r.replace(from, to); });

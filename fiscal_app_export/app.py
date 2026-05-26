@@ -2051,6 +2051,194 @@ def api_modelo_721():
                 pass
 
 
+@app.route("/api/721/xml", methods=["POST"])
+@login_required
+@limiter.limit("10 per 10 minutes", exempt_when=_is_admin)
+@limiter.limit("20 per hour",       exempt_when=_is_admin)
+def api_721_xml():
+    """
+    Genera el XML del Modelo 721 con datos complementados manualmente.
+
+    Acepta el resultado del análisis previo (campo 'datos', que corresponde
+    al campo 'resultado' de la respuesta de /api/721) más los valores
+    introducidos por el usuario para completar los datos pendientes:
+    precios a 31/12, NIF del declarante e identificadores fiscales del custodio.
+
+    Body JSON:
+      datos:             dict  — campo 'resultado' de la respuesta de /api/721
+      nif_declarante:    str   — NIF/NIE/CIF (opcional si está en el perfil)
+      nombre_declarante: str   — nombre completo (opcional si está en el perfil)
+      valores:           dict  — {"TICKER": {"valor_eur": 5999.99, "origen": "CoinGecko"}}
+      custodios:         dict  — {"exchange_key": {"codigo_pais": "BG",
+                                                    "id_type": "04", "id": "BG123"}}
+
+    El endpoint no re-procesa el CSV: opera exclusivamente sobre los datos
+    ya analizados por /api/721, aplicando los overrides manuales del usuario.
+    """
+    import copy
+
+    body = request.get_json(silent=True) or {}
+
+    # ── 1. Validar presencia del bloque de datos ──────────────────────────────
+    datos = body.get("datos")
+    if not isinstance(datos, dict) or "exchanges" not in datos:
+        return jsonify({
+            "error": "Falta el campo 'datos' con el resultado del análisis."
+        }), 400
+
+    # Sanidad básica: máx. 50 exchanges y 200 activos total para evitar payloads
+    # gigantes o intentos de manipulación.
+    if len(datos.get("exchanges", [])) > 50:
+        return jsonify({"error": "Demasiados exchanges en el payload."}), 400
+    if sum(len(e.get("activos", [])) for e in datos.get("exchanges", [])) > 200:
+        return jsonify({"error": "Demasiados activos en el payload."}), 400
+
+    # ── 2. NIF y nombre del declarante ────────────────────────────────────────
+    nif_declarante = _sanitizar_texto(
+        body.get("nif_declarante") or "", max_len=15
+    ).strip().upper()
+    nombre_declarante = _sanitizar_texto(
+        body.get("nombre_declarante") or "", max_len=120
+    ).strip()
+
+    # Fallback al perfil del usuario autenticado
+    if not nif_declarante and current_user.nif:
+        nif_declarante = current_user.nif
+    if not nombre_declarante and current_user.full_name:
+        nombre_declarante = current_user.full_name
+
+    if not nif_declarante:
+        return jsonify({
+            "error": (
+                "Falta el NIF del declarante. "
+                "Introdúcelo en el formulario o guárdalo en tu cuenta."
+            )
+        }), 400
+    if not nombre_declarante:
+        return jsonify({"error": "Falta el nombre del declarante."}), 400
+
+    valido_nif, error_nif = _validar_nif_usuario(nif_declarante)
+    if not valido_nif:
+        return jsonify({"error": error_nif}), 400
+
+    # ── 3. Overrides de precio y custodio ─────────────────────────────────────
+    valores_manuales   = body.get("valores") or {}
+    custodios_manuales = body.get("custodios") or {}
+
+    if not isinstance(valores_manuales, dict):
+        return jsonify({"error": "El campo 'valores' debe ser un objeto."}), 400
+    if not isinstance(custodios_manuales, dict):
+        return jsonify({"error": "El campo 'custodios' debe ser un objeto."}), 400
+
+    _IDTypes_validos = {"02", "03", "04", "05", "06"}
+
+    # ── 4. Deep copy + aplicar overrides ─────────────────────────────────────
+    datos_enriquecidos = copy.deepcopy(datos)
+
+    for exc in datos_enriquecidos.get("exchanges", []):
+        exc_key = exc.get("exchange_key") or exc.get("exchange", "").lower()
+
+        # ── Custodio manual ────────────────────────────────────────────────
+        if exc_key in custodios_manuales:
+            cust    = custodios_manuales[exc_key]
+            nombre_c = _sanitizar_texto(
+                cust.get("nombre") or "", max_len=120
+            ).strip()
+            pais_c  = _sanitizar_texto(
+                cust.get("codigo_pais") or "", max_len=2
+            ).strip().upper()
+            id_type = _sanitizar_texto(
+                cust.get("id_type") or "", max_len=2
+            ).strip()
+            id_val  = _sanitizar_texto(
+                cust.get("id") or "", max_len=20
+            ).strip()
+
+            if id_type and id_type not in _IDTypes_validos:
+                return jsonify({
+                    "error": (
+                        f"IDType '{id_type}' no válido para '{exc_key}'. "
+                        f"Valores válidos: {', '.join(sorted(_IDTypes_validos))}."
+                    )
+                }), 400
+
+            if id_type and id_val:
+                exc["id_otro"] = {
+                    "codigo_pais": pais_c or None,
+                    "id_type":     id_type,
+                    "id":          id_val,
+                }
+                if pais_c:
+                    exc["codigo_pais_iso"] = pais_c
+                if nombre_c:
+                    exc["nombre_legal"] = nombre_c
+                # Marca el custodio como identificado para _calcular_pendiente_721
+                exc["nif_custodio"] = id_val
+
+        # ── Precios manuales ───────────────────────────────────────────────
+        for activo in exc.get("activos", []):
+            ticker = activo.get("activo", "").upper()
+            if ticker not in valores_manuales:
+                continue
+
+            val_data  = valores_manuales[ticker]
+            valor_raw = val_data.get("valor_eur")
+            origen    = _sanitizar_texto(
+                str(val_data.get("origen") or "O"), max_len=50
+            ).strip()
+
+            try:
+                valor_eur = float(str(valor_raw).replace(",", "."))
+            except (TypeError, ValueError):
+                return jsonify({
+                    "error": f"Valor EUR inválido para {ticker}: '{valor_raw}'."
+                }), 400
+
+            if valor_eur < 0:
+                return jsonify({
+                    "error": (
+                        f"El valor EUR de {ticker} no puede ser negativo."
+                    )
+                }), 400
+
+            from decimal import Decimal as _D, ROUND_HALF_UP as _RHU
+            activo["valor_eur"]    = str(
+                _D(str(valor_eur)).quantize(_D("0.01"), rounding=_RHU)
+            )
+            activo["origen_valor"] = origen or "O"
+
+    # ── 5. Generar XML ────────────────────────────────────────────────────────
+    try:
+        xml_content, validacion = generar_xml_721(
+            datos_enriquecidos,
+            nif_declarante,
+            nombre_declarante,
+        )
+    except ErrXMLBloqueado as e:
+        return jsonify({
+            "error": (
+                "No podemos generar el XML todavía porque faltan datos obligatorios."
+            ),
+            "bloqueantes": e.bloqueantes,
+        }), 422
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
+    except Exception as xe:
+        app.logger.error("api_721_xml error: %s", xe)
+        return jsonify({
+            "error": "Error interno al generar el XML. Inténtalo de nuevo."
+        }), 500
+
+    return jsonify({
+        "ok":          True,
+        "xml":         xml_content,
+        "es_borrador": validacion.es_borrador,
+        "advertencias": validacion.advertencias,
+        "ejercicio":   datos_enriquecidos.get("ejercicio"),
+        "exchange":    _sanitizar_texto(body.get("exchange") or "", max_len=20).lower(),
+    }), 200
+
+
 @app.route("/api/descargar/<token>")
 @login_required
 @limiter.limit("5 per minute")
