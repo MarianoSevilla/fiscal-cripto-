@@ -338,6 +338,25 @@ body { padding-top: 64px; }
 .loading-dots span:nth-child(3) { animation-delay: .4s; }
 @keyframes blink { 0%,80%,100%{opacity:.2} 40%{opacity:1} }
 
+/* ── SEGMENT SELECTOR ── */
+.seg-selector {
+  display: flex; gap: 4px; background: var(--surf2);
+  border: 1px solid var(--border); border-radius: 8px; padding: 4px;
+}
+.seg-btn {
+  flex: 1; background: none; border: none; color: var(--muted);
+  font-family: var(--ff-b); font-size: 12px; font-weight: 500;
+  padding: 6px 8px; border-radius: 5px; cursor: pointer; transition: all .12s; text-align: center;
+}
+.seg-btn:hover  { background: var(--surf3); color: var(--sub); }
+.seg-btn.active { background: var(--accent); color: #0b1220; font-weight: 700; }
+.seg-hint { font-size: 11px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+
+/* ── SEGMENT BADGES (list + detail) ── */
+.badge-seg-all        { background: rgba(122,128,153,.12); color: var(--sub); }
+.badge-seg-verified   { background: rgba(0,200,150,.12);   color: var(--accent); }
+.badge-seg-unverified { background: rgba(251,191,36,.12);  color: var(--warning); }
+
 /* ── RESPONSIVE ── */
 @media (max-width: 900px) {
   .preview-panel { display: none; }
@@ -421,9 +440,23 @@ body { padding-top: 64px; }
                     oninput="schedulePreview()"></textarea>
           <span class="field-hint">Texto plano. El template añade el diseño automáticamente.</span>
         </div>
+        <div class="field-grp">
+          <label class="field-label">Segmento de destinatarios</label>
+          <div class="seg-selector" id="seg-selector">
+            <button class="seg-btn active" data-seg="all"
+                    onclick="setSegment(this,'all')">Todos</button>
+            <button class="seg-btn" data-seg="verified"
+                    onclick="setSegment(this,'verified')">Verificados</button>
+            <button class="seg-btn" data-seg="unverified"
+                    onclick="setSegment(this,'unverified')">No verificados</button>
+          </div>
+          <div class="seg-hint" id="seg-hint">
+            Usuarios activos no desuscritos — verificados y no verificados.
+          </div>
+        </div>
         <div class="recipients-bar" id="recipients-bar">
           <div class="rec-left">
-            <div class="rec-label">Destinatarios</div>
+            <div class="rec-label">Destinatarios en este segmento</div>
             <div class="rec-count" id="rec-count">—</div>
           </div>
           <div class="rec-right" id="rec-right">Cargando…</div>
@@ -490,12 +523,16 @@ body { padding-top: 64px; }
           <span class="cs-value" id="modal-subject">—</span>
         </div>
         <div class="cs-row">
+          <span class="cs-label">Segmento</span>
+          <span class="cs-value" id="modal-segment">—</span>
+        </div>
+        <div class="cs-row">
           <span class="cs-label">Destinatarios</span>
-          <span class="cs-value" id="modal-recipients">— usuarios verificados</span>
+          <span class="cs-value" id="modal-recipients">—</span>
         </div>
         <div class="cs-row">
           <span class="cs-label">Excluidos</span>
-          <span class="cs-value" style="color:var(--muted)">Admins · asesores · desuscritos · no verificados</span>
+          <span class="cs-value" id="modal-excluded" style="color:var(--muted)">—</span>
         </div>
         <div class="cs-row">
           <span class="cs-label">Proveedor</span>
@@ -533,14 +570,16 @@ let currentTab       = 'all';
 let previewMode      = 'light';
 let previewTimer     = null;
 let pollTimer        = null;
-let recipientCount   = 0;
+let recipientCount   = 0;      // kept for backward compat; use recipientCounts[currentSegment]
+let currentSegment   = 'all';  // active segment selector value
+let recipientCounts  = {all: 0, verified: 0, unverified: 0};
 
 /* ═══════════════════════════════════════════════════════════════════════════
    INIT
 ═══════════════════════════════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
   loadCampaigns();
-  loadRecipientCount();
+  loadRecipientCounts();
   showComposer();
 });
 
@@ -559,20 +598,52 @@ async function loadCampaigns() {
   }
 }
 
-async function loadRecipientCount() {
+async function loadRecipientCounts() {
   try {
-    const res = await fetch('/api/admin/comunicaciones/recipients/count');
+    const res = await fetch('/api/admin/comunicaciones/recipients/counts');
     if (!res.ok) throw new Error();
-    const data = await res.json();
-    recipientCount = data.count;
-    document.getElementById('rec-count').textContent = recipientCount.toLocaleString('es');
-    document.getElementById('rec-right').innerHTML =
-      'Verificados · activos<br>No desuscritos · no admins';
+    recipientCounts = await res.json();
+    recipientCount  = recipientCounts[currentSegment] ?? 0;  // backward compat
+    updateRecipientDisplay();
     updateSendButtons();
   } catch {
     document.getElementById('rec-count').textContent = '?';
     document.getElementById('rec-right').textContent = 'Error al cargar';
   }
+}
+
+const _SEG_HINTS = {
+  all:        'Usuarios activos no desuscritos — verificados y no verificados.',
+  verified:   'Solo usuarios que han confirmado su dirección de email.',
+  unverified: 'Usuarios registrados que todavía no han confirmado su email. Útil para campañas de activación.',
+};
+
+const _SEG_LABELS = {
+  all:        'Todos (verificados + no verificados)',
+  verified:   'Solo verificados',
+  unverified: 'Solo no verificados',
+};
+
+const _REC_SUBTEXTS = {
+  all:        'Verificados + no verificados<br>Activos · no desuscritos · no admins',
+  verified:   'Solo email confirmado<br>Activos · no desuscritos · no admins',
+  unverified: 'Registro sin confirmar<br>Activos · no desuscritos · no admins',
+};
+
+function updateRecipientDisplay() {
+  const count = recipientCounts[currentSegment] ?? 0;
+  recipientCount = count;
+  document.getElementById('rec-count').textContent = count.toLocaleString('es');
+  document.getElementById('rec-right').innerHTML   = _REC_SUBTEXTS[currentSegment] || '';
+}
+
+function setSegment(btn, seg) {
+  currentSegment = seg;
+  document.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('seg-hint').textContent = _SEG_HINTS[seg] || '';
+  updateRecipientDisplay();
+  updateSendButtons();
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -600,6 +671,10 @@ function renderCampaignList() {
     const date = c.sent_at
       ? new Date(c.sent_at).toLocaleDateString('es', {day:'numeric',month:'short'})
       : new Date(c.created_at).toLocaleDateString('es', {day:'numeric',month:'short'});
+    const seg = c.recipient_segment || 'all';
+    const segMeta = seg === 'unverified' ? ' · No verif.'
+                  : seg === 'verified'   ? ' · Verif.'
+                  : '';
     return `
       <div class="campaign-item${isActive?' active':''}" onclick="selectCampaign(${c.id})">
         <div class="ci-header">
@@ -608,7 +683,7 @@ function renderCampaignList() {
         </div>
         <div class="ci-meta">
           <span class="badge badge-${c.status}">${statusLabel(c.status)}</span>
-          <span>· ${c.recipients_count > 0 ? c.recipients_count.toLocaleString('es') + ' dest.' : ''} · ${date}</span>
+          <span>· ${c.recipients_count > 0 ? c.recipients_count.toLocaleString('es') + ' dest.' : ''}${segMeta} · ${date}</span>
         </div>
       </div>`;
   }).join('');
@@ -637,6 +712,13 @@ function newCampaign() {
   document.getElementById('composer-title').textContent = 'Nueva campaña';
   document.getElementById('composer-badge').className   = 'badge badge-draft';
   document.getElementById('composer-badge').textContent = 'Borrador';
+  // Reset segment to 'all'
+  currentSegment = 'all';
+  document.querySelectorAll('.seg-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.seg === 'all');
+  });
+  document.getElementById('seg-hint').textContent = _SEG_HINTS['all'];
+  updateRecipientDisplay();
   updateSendButtons();
   clearPreview();
   showComposer();
@@ -672,6 +754,14 @@ async function selectCampaign(id) {
     document.getElementById('f-preview-text').value = c.preview_text || '';
     document.getElementById('f-body').value          = c.body;
     document.getElementById('composer-title').textContent = `Campaña #${c.id}`;
+    // Restore segment
+    const seg = c.recipient_segment || 'all';
+    currentSegment = seg;
+    document.querySelectorAll('.seg-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.seg === seg);
+    });
+    document.getElementById('seg-hint').textContent = _SEG_HINTS[seg] || '';
+    updateRecipientDisplay();
     updateSendButtons();
     schedulePreview();
     showComposer();
@@ -710,11 +800,16 @@ function renderDetailView(c) {
       </div>`;
   }
 
+  const segLabelsD = {all:'Todos', verified:'Verificados', unverified:'No verificados'};
+  const segKey     = c.recipient_segment || 'all';
+  const segBadge   = `<span class="badge badge-seg-${segKey}">${segLabelsD[segKey] || segKey}</span>`;
+
   document.getElementById('detail-content').innerHTML = `
     <div class="detail-hero">
       <div class="detail-subject">${esc(c.subject)}</div>
       <div class="detail-meta-row">
         <span class="badge badge-${c.status}">${statusLabel(c.status)}</span>
+        ${segBadge}
         <span class="detail-meta">📅 ${sentDate}</span>
       </div>
     </div>
@@ -873,9 +968,10 @@ function updateSendButtons() {
   const ok      = !!(subject && body);
   document.getElementById('btn-send').disabled = !ok;
   document.getElementById('btn-test').disabled = !ok;
-  const note = document.getElementById('send-note');
+  const note  = document.getElementById('send-note');
+  const count = recipientCounts[currentSegment] ?? 0;
   if (ok) {
-    note.textContent = `Se enviará a ${recipientCount.toLocaleString('es')} usuarios. La acción requiere confirmación.`;
+    note.textContent = `Se enviará a ${count.toLocaleString('es')} usuarios (${_SEG_LABELS[currentSegment] || currentSegment}). La acción requiere confirmación.`;
   } else {
     note.textContent = 'Rellena asunto y contenido para activar el envío.';
   }
@@ -897,7 +993,7 @@ async function ensureDraftSaved() {
       const res = await fetch(`/api/admin/comunicaciones/drafts/${draftCampaignId}`, {
         method: 'PATCH',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({subject, body, preview_text: previewText}),
+        body: JSON.stringify({subject, body, preview_text: previewText, recipient_segment: currentSegment}),
       });
       if (!res.ok) throw new Error('patch failed');
       return draftCampaignId;
@@ -906,7 +1002,7 @@ async function ensureDraftSaved() {
       const res = await fetch('/api/admin/comunicaciones/drafts', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({subject, body, preview_text: previewText}),
+        body: JSON.stringify({subject, body, preview_text: previewText, recipient_segment: currentSegment}),
       });
       if (!res.ok) throw new Error('create failed');
       const data = await res.json();
@@ -956,10 +1052,23 @@ async function openSendModal() {
   if (!id) return;
   await loadCampaigns();  // refresh list
 
-  const subject = document.getElementById('f-subject').value.trim();
-  document.getElementById('modal-subject').textContent    = subject || '—';
-  document.getElementById('modal-recipients').textContent = `${recipientCount.toLocaleString('es')} usuarios verificados`;
-  document.getElementById('btn-modal-confirm').textContent = `Enviar a ${recipientCount.toLocaleString('es')} usuarios`;
+  const subject   = document.getElementById('f-subject').value.trim();
+  const segCount  = recipientCounts[currentSegment] ?? 0;
+  const _EXCLUDED_BY_SEG = {
+    all:        'Admins · asesores · desuscritos',
+    verified:   'Admins · asesores · desuscritos · no verificados',
+    unverified: 'Admins · asesores · desuscritos · verificados',
+  };
+  const _SEG_DESC = {
+    all:        'usuarios (verif. + no verif.)',
+    verified:   'usuarios verificados',
+    unverified: 'usuarios no verificados',
+  };
+  document.getElementById('modal-subject').textContent     = subject || '—';
+  document.getElementById('modal-segment').textContent     = _SEG_LABELS[currentSegment] || currentSegment;
+  document.getElementById('modal-recipients').textContent  = `${segCount.toLocaleString('es')} ${_SEG_DESC[currentSegment] || 'usuarios'}`;
+  document.getElementById('modal-excluded').textContent    = _EXCLUDED_BY_SEG[currentSegment] || 'Admins · asesores · desuscritos';
+  document.getElementById('btn-modal-confirm').textContent = `Enviar a ${segCount.toLocaleString('es')} usuarios`;
   document.getElementById('btn-modal-confirm').disabled    = false;
   document.getElementById('modal-confirm').classList.add('open');
 }
@@ -997,12 +1106,12 @@ async function confirmSend() {
     } else {
       showToast('error', data.error || 'Error iniciando el envío.');
       btn.disabled = false;
-      btn.textContent = `Enviar a ${recipientCount.toLocaleString('es')} usuarios`;
+      btn.textContent = `Enviar a ${(recipientCounts[currentSegment] ?? 0).toLocaleString('es')} usuarios`;
     }
   } catch {
     showToast('error', 'Error de red.');
     btn.disabled = false;
-    btn.textContent = `Enviar a ${recipientCount.toLocaleString('es')} usuarios`;
+    btn.textContent = `Enviar a ${(recipientCounts[currentSegment] ?? 0).toLocaleString('es')} usuarios`;
   }
 }
 

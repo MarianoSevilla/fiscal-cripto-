@@ -9,7 +9,9 @@ from flask_login import login_required, current_user
 
 from models import db, User, CommunicationCampaign, CommunicationDelivery
 from .service import (
+    VALID_SEGMENTS,
     count_eligible_recipients,
+    count_eligible_recipients_all_segments,
     create_campaign_draft,
     update_campaign_draft,
     send_test_email,
@@ -54,7 +56,19 @@ def unsubscribe_page():
 def api_recipients_count():
     if not _is_admin():
         abort(404)
-    return jsonify({"count": count_eligible_recipients()})
+    segment = request.args.get("segment", "all")
+    if segment not in VALID_SEGMENTS:
+        segment = "all"
+    return jsonify({"count": count_eligible_recipients(segment), "segment": segment})
+
+
+@comms_bp.route("/api/admin/comunicaciones/recipients/counts")
+@login_required
+def api_recipients_counts():
+    """Returns counts for all three segments at once — reduces round-trips."""
+    if not _is_admin():
+        abort(404)
+    return jsonify(count_eligible_recipients_all_segments())
 
 
 # ── CAMPAIGNS LIST & DETAIL ───────────────────────────────────────────────────
@@ -106,10 +120,13 @@ def api_campaign_status(campaign_id):
 def api_create_draft():
     if not _is_admin():
         abort(404)
-    data         = request.get_json(silent=True) or {}
-    subject      = (data.get("subject") or "").strip()
-    body         = (data.get("body") or "").strip()
-    preview_text = (data.get("preview_text") or "").strip()
+    data              = request.get_json(silent=True) or {}
+    subject           = (data.get("subject") or "").strip()
+    body              = (data.get("body") or "").strip()
+    preview_text      = (data.get("preview_text") or "").strip()
+    recipient_segment = (data.get("recipient_segment") or "all").strip()
+    if recipient_segment not in VALID_SEGMENTS:
+        recipient_segment = "all"
 
     if not subject:
         return jsonify({"error": "El asunto es obligatorio."}), 400
@@ -118,7 +135,7 @@ def api_create_draft():
     if len(subject) > 500:
         return jsonify({"error": "El asunto no puede superar 500 caracteres."}), 400
 
-    campaign = create_campaign_draft(subject, body, preview_text, current_user.id)
+    campaign = create_campaign_draft(subject, body, preview_text, current_user.id, recipient_segment)
     return jsonify(campaign.to_dict()), 201
 
 
@@ -136,6 +153,7 @@ def api_update_draft(campaign_id):
         subject=data.get("subject"),
         body=data.get("body"),
         preview_text=data.get("preview_text"),
+        recipient_segment=data.get("recipient_segment"),
     )
     return jsonify(campaign.to_dict())
 
@@ -173,9 +191,9 @@ def api_send_campaign(campaign_id):
     if not data.get("confirm"):
         return jsonify({"error": "Se requiere confirmación explícita (confirm: true)."}), 400
 
-    recipient_count = count_eligible_recipients()
+    recipient_count = count_eligible_recipients(campaign.recipient_segment or "all")
     if recipient_count == 0:
-        return jsonify({"error": "No hay destinatarios elegibles."}), 400
+        return jsonify({"error": "No hay destinatarios elegibles para el segmento seleccionado."}), 400
 
     # Transition to queued before launching thread — prevents double dispatch
     campaign.status           = "queued"

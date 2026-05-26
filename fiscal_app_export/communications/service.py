@@ -39,6 +39,9 @@ _ADMIN_EMAILS = frozenset(
 # Excluded roles — never receive campaigns
 _EXCLUDED_ROLES = {"admin", "fiscal_advisor"}
 
+# Valid recipient segments
+VALID_SEGMENTS = frozenset({"all", "verified", "unverified"})
+
 
 # ── HELPERS ──────────────────────────────────────────────────────────────────
 
@@ -53,14 +56,13 @@ def _ensure_unsub_token(user: User) -> str:
 
 # ── QUERIES ──────────────────────────────────────────────────────────────────
 
-def get_eligible_recipients_query():
+def _base_recipients_query():
     """
-    Base query for campaign-eligible users.
-    Excludes: unverified, inactive, opted-out, admins, fiscal advisors,
-              and any email in ADMIN_EMAILS env var.
+    Base query: active users, not opted-out, not admin/advisor roles,
+    not in ADMIN_EMAILS env var.
+    Does NOT filter by email_verified_at — callers apply that via segment.
     """
     q = User.query.filter(
-        User.email_verified_at.isnot(None),
         User.is_active.is_(True),
         User.comms_opted_out.is_(False),
         User.role.notin_(list(_EXCLUDED_ROLES)),
@@ -70,8 +72,36 @@ def get_eligible_recipients_query():
     return q
 
 
-def count_eligible_recipients() -> int:
-    return get_eligible_recipients_query().count()
+def get_eligible_recipients_query(segment: str = "all"):
+    """
+    Returns a query for campaign-eligible users filtered by segment.
+
+    Segments:
+      "all"        — active + not opted-out (verified and unverified)
+      "verified"   — only email-confirmed users (email_verified_at IS NOT NULL)
+      "unverified" — only users who haven't confirmed their email yet
+    All segments exclude: inactive, opted-out, admin/advisor roles, ADMIN_EMAILS.
+    """
+    q = _base_recipients_query()
+    if segment == "verified":
+        q = q.filter(User.email_verified_at.isnot(None))
+    elif segment == "unverified":
+        q = q.filter(User.email_verified_at.is_(None))
+    # "all" — no additional verification filter
+    return q
+
+
+def count_eligible_recipients(segment: str = "all") -> int:
+    return get_eligible_recipients_query(segment).count()
+
+
+def count_eligible_recipients_all_segments() -> dict:
+    """Returns recipient counts for all three segments in a single call."""
+    return {
+        "all":        count_eligible_recipients("all"),
+        "verified":   count_eligible_recipients("verified"),
+        "unverified": count_eligible_recipients("unverified"),
+    }
 
 
 # ── CAMPAIGN CRUD ─────────────────────────────────────────────────────────────
@@ -81,7 +111,9 @@ def create_campaign_draft(
     body: str,
     preview_text: str,
     admin_user_id: int,
+    recipient_segment: str = "all",
 ) -> CommunicationCampaign:
+    seg = recipient_segment if recipient_segment in VALID_SEGMENTS else "all"
     campaign = CommunicationCampaign(
         subject=subject.strip(),
         body=body.strip(),
@@ -89,6 +121,7 @@ def create_campaign_draft(
         status="draft",
         created_by_id=admin_user_id,
         idempotency_key=uuid.uuid4().hex,
+        recipient_segment=seg,
     )
     db.session.add(campaign)
     db.session.commit()
@@ -100,6 +133,7 @@ def update_campaign_draft(
     subject: Optional[str] = None,
     body: Optional[str] = None,
     preview_text: Optional[str] = None,
+    recipient_segment: Optional[str] = None,
 ) -> CommunicationCampaign:
     if subject is not None:
         campaign.subject = subject.strip()[:500]
@@ -107,6 +141,8 @@ def update_campaign_draft(
         campaign.body = body.strip()
     if preview_text is not None:
         campaign.preview_text = preview_text.strip()[:200]
+    if recipient_segment is not None and recipient_segment in VALID_SEGMENTS:
+        campaign.recipient_segment = recipient_segment
     db.session.commit()
     return campaign
 
@@ -175,7 +211,8 @@ def _execute_campaign(campaign_id: int) -> None:
         campaign.sent_at = datetime.utcnow()
         db.session.commit()
 
-        recipients = get_eligible_recipients_query().all()
+        seg        = campaign.recipient_segment or "all"
+        recipients = get_eligible_recipients_query(seg).all()
         total      = len(recipients)
         sent_ok    = 0
 

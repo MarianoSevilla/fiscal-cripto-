@@ -278,9 +278,11 @@ class CommunicationCampaign(db.Model):
     created_by_id    = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     created_at       = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     sent_at          = db.Column(db.DateTime, nullable=True)
-    recipients_count = db.Column(db.Integer, default=0, nullable=False)
-    error_message    = db.Column(db.Text, nullable=True)
-    idempotency_key  = db.Column(db.String(64), unique=True, nullable=True)
+    recipients_count  = db.Column(db.Integer, default=0, nullable=False)
+    error_message     = db.Column(db.Text, nullable=True)
+    idempotency_key   = db.Column(db.String(64), unique=True, nullable=True)
+    # Recipient segment: "all" | "verified" | "unverified"
+    recipient_segment = db.Column(db.String(20), default="all", nullable=False)
 
     deliveries = db.relationship("CommunicationDelivery", backref="campaign", lazy="dynamic")
 
@@ -303,9 +305,10 @@ class CommunicationCampaign(db.Model):
             "created_by_id":    self.created_by_id,
             "created_at":       self.created_at.isoformat() if self.created_at else None,
             "sent_at":          self.sent_at.isoformat() if self.sent_at else None,
-            "recipients_count": self.recipients_count,
-            "idempotency_key":  self.idempotency_key,
-            "error_message":    self.error_message,
+            "recipients_count":  self.recipients_count,
+            "idempotency_key":   self.idempotency_key,
+            "error_message":     self.error_message,
+            "recipient_segment": self.recipient_segment or "all",
         }
         if with_stats:
             d["stats"] = {
