@@ -19,6 +19,8 @@ import re
 import sys
 import time
 import json
+import secrets
+import hashlib
 import tempfile
 import traceback
 import threading
@@ -173,6 +175,7 @@ from email_templates import (  # noqa: E402
     verification_email,
     advisory_confirmation_email,
     advisory_status_email,
+    password_reset_email,
 )
 
 # ── ADVISORY / STRIPE ────────────────────────
@@ -277,6 +280,12 @@ try:
                 ))
                 _conn.execute(text(
                     "ALTER TABLE users ADD COLUMN IF NOT EXISTS nif VARCHAR(20)"
+                ))
+                _conn.execute(text(
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token_hash VARCHAR(64)"
+                ))
+                _conn.execute(text(
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires_at TIMESTAMP"
                 ))
                 _conn.commit()
         except Exception:
@@ -1253,6 +1262,7 @@ def account():
 
 _VERIFY_TOKEN_SALT = "email-verification-v1"
 _VERIFY_TOKEN_TTL  = 86_400  # 24 horas
+_RESET_TOKEN_TTL   = 3_600   # 1 hora
 
 
 def _generate_verification_token(email: str) -> str:
@@ -1293,6 +1303,41 @@ def _send_verification_email(user: User) -> bool:
         return True
     except Exception as exc:
         app.logger.error("Error enviando email de verificación: %s", exc)
+        return False
+
+
+def _generate_reset_token() -> tuple[str, str]:
+    """Genera (token_raw, token_hash). El raw va al email; el hash se guarda en DB."""
+    token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    return token, token_hash
+
+
+def _send_password_reset_email(user: User) -> bool:
+    """Genera token, lo persiste en DB y envía el email. Devuelve True si el email se envió."""
+    token_raw, token_hash = _generate_reset_token()
+    user.password_reset_token_hash = token_hash
+    user.password_reset_expires_at = datetime.utcnow() + timedelta(seconds=_RESET_TOKEN_TTL)
+    db.session.commit()
+
+    if not resend.api_key:
+        app.logger.warning("RESEND_API_KEY no configurada — email de reset no enviado.")
+        return False
+
+    reset_url = f"{_APP_BASE_URL}/reset-password/{token_raw}"
+    html, text = password_reset_email(reset_url)
+
+    try:
+        resend.Emails.send({
+            "from":    _RESEND_FROM_DISPLAY,
+            "to":      [user.email],
+            "subject": "Restablece tu contraseña — marianosevilla.com",
+            "html":    html,
+            "text":    text,
+        })
+        return True
+    except Exception as exc:
+        app.logger.error("Error enviando email de reset: %s", exc)
         return False
 
 
@@ -2448,6 +2493,71 @@ def change_password():
     current_user.set_password(new_pw)
     db.session.commit()
     return jsonify({"message": "Contraseña actualizada correctamente."})
+
+
+@app.route("/api/forgot-password", methods=["POST"])
+@limiter.limit("5 per hour")
+def forgot_password():
+    """Solicita un email de recuperación de contraseña. No revela si el email existe."""
+    data  = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip().lower()
+
+    _GENERIC_MSG = "Si existe una cuenta con ese email, te enviaremos un enlace para restablecer la contraseña."
+
+    ok, _ = _validar_email(email)
+    if not ok:
+        return jsonify({"message": _GENERIC_MSG}), 200
+
+    user = User.query.filter_by(email=email).first()
+    if user and user.is_active and user.password_hash:
+        _send_password_reset_email(user)
+
+    return jsonify({"message": _GENERIC_MSG}), 200
+
+
+@app.route("/api/reset-password", methods=["POST"])
+@limiter.limit("10 per hour")
+def reset_password_api():
+    """Valida token y actualiza contraseña."""
+    data     = request.get_json(silent=True) or {}
+    token    = (data.get("token") or "").strip()
+    new_pw   = data.get("password") or ""
+    confirm  = data.get("confirm_password") or ""
+
+    if not token:
+        return jsonify({"error": "Token inválido o expirado."}), 400
+
+    ok, err = _validar_password(new_pw)
+    if not ok:
+        return jsonify({"error": err}), 400
+
+    if new_pw != confirm:
+        return jsonify({"error": "Las contraseñas no coinciden."}), 400
+
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    user = User.query.filter_by(password_reset_token_hash=token_hash).first()
+
+    if not user or not user.password_reset_expires_at:
+        return jsonify({"error": "El enlace de recuperación no es válido."}), 400
+
+    if datetime.utcnow() > user.password_reset_expires_at:
+        return jsonify({"error": "El enlace de recuperación ha expirado. Solicita uno nuevo."}), 400
+
+    if not user.is_active:
+        return jsonify({"error": "Cuenta desactivada. Contacta con soporte."}), 403
+
+    user.set_password(new_pw)
+    user.password_reset_token_hash  = None
+    user.password_reset_expires_at  = None
+    db.session.commit()
+
+    return jsonify({"message": "Contraseña actualizada correctamente. Ya puedes iniciar sesión."}), 200
+
+
+@app.route("/reset-password/<token>")
+def reset_password_page(token):
+    """Sirve la página de nueva contraseña. El token va embebido en la URL para que el JS lo lea."""
+    return send_from_directory("static", "reset-password.html")
 
 
 @app.route("/api/update-profile", methods=["POST"])

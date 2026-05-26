@@ -368,6 +368,37 @@ def advisory_status_email(
     return html, "\n".join(text_parts)
 
 
+def password_reset_email(reset_url: str) -> tuple[str, str]:
+    """Returns (html, text) for password reset request."""
+    body_html = (
+        _p("Hemos recibido una solicitud para restablecer la contraseña de tu cuenta.") +
+        _cta("Restablecer contraseña", reset_url) +
+        _url_fallback(reset_url) +
+        _note(
+            "Este enlace caduca en 1 hora y solo puede usarse una vez. "
+            "Si no has solicitado restablecer tu contraseña, puedes ignorar este mensaje "
+            "— tu cuenta está segura.",
+            "warning",
+        ) +
+        _p("Por seguridad, nunca compartimos tu contraseña por email.", last=True)
+    )
+    html = _wrap("Restablece tu contraseña", body_html)
+    text = "\n".join([
+        "Restablece tu contraseña",
+        "",
+        "Hemos recibido una solicitud para restablecer la contraseña de tu cuenta.",
+        "",
+        "Accede a este enlace para restablecer tu contraseña (caduca en 1 hora):",
+        reset_url,
+        "",
+        "Este enlace es de un solo uso.",
+        "Si no has solicitado restablecer tu contraseña, puedes ignorar este mensaje.",
+        "",
+        _footer_text(),
+    ])
+    return html, text
+
+
 def processing_error_email(exchange: str, context_line: str) -> tuple[str, str]:
     """Returns (html, text) for a CSV/XLSX processing error notification."""
     exchange_display = (exchange or "tu exchange").capitalize()

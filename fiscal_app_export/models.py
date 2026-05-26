@@ -29,8 +29,10 @@ class User(UserMixin, db.Model):
     created_at        = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     last_login                = db.Column(db.DateTime, nullable=True)
     nif                       = db.Column(db.String(20), nullable=True)   # NIF/NIE/CIF — dato fiscal sensible
-    comms_opted_out           = db.Column(db.Boolean, default=False, nullable=False)
-    comms_unsubscribe_token   = db.Column(db.String(64), nullable=True, unique=True, index=True)
+    comms_opted_out              = db.Column(db.Boolean, default=False, nullable=False)
+    comms_unsubscribe_token      = db.Column(db.String(64), nullable=True, unique=True, index=True)
+    password_reset_token_hash    = db.Column(db.String(64), nullable=True)
+    password_reset_expires_at    = db.Column(db.DateTime, nullable=True)
 
     def set_password(self, plaintext: str) -> None:
         """Hashea la contraseña con bcrypt (cost factor 12)."""
