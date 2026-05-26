@@ -996,6 +996,12 @@ async function ensureDraftSaved() {
         body: JSON.stringify({subject, body, preview_text: previewText, recipient_segment: currentSegment}),
       });
       if (!res.ok) throw new Error('patch failed');
+      const data = await res.json();
+      // Sync updated campaign into in-memory list so sidebar stays current
+      const idx = allCampaigns.findIndex(c => c.id === draftCampaignId);
+      if (idx !== -1) allCampaigns[idx] = data;
+      if (activeCampaign && activeCampaign.id === draftCampaignId) activeCampaign = data;
+      renderCampaignList();
       return draftCampaignId;
     } else {
       // Create new draft
@@ -1007,6 +1013,11 @@ async function ensureDraftSaved() {
       if (!res.ok) throw new Error('create failed');
       const data = await res.json();
       draftCampaignId = data.id;
+      // Prepend to in-memory list (API returns newest-first) and mark as active
+      allCampaigns.unshift(data);
+      activeCampaign = data;
+      document.getElementById('composer-title').textContent = `Campaña #${data.id}`;
+      renderCampaignList();
       return draftCampaignId;
     }
   } catch(e) {
