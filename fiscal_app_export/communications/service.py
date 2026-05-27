@@ -357,8 +357,9 @@ def _execute_campaign(campaign_id: int) -> None:
         else:
             final_status = "sent"
 
-        campaign.status           = final_status
-        campaign.recipients_count = sent_ok
+        campaign.status = final_status
+        # recipients_count stays as the original eligible-total set before dispatch.
+        # Actual sent/failed counts come from delivery records (sent_count/failed_count).
         db.session.commit()
         logger.info(
             "Campaign %s done: %d/%d sent, %d failed → status=%s",

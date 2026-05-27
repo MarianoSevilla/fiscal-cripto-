@@ -319,6 +319,7 @@ body { padding-top: 64px; }
 .toast.show     { transform: translateY(0); opacity: 1; }
 .toast-dot      { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 .toast.success .toast-dot { background: var(--accent); }
+.toast.warning .toast-dot { background: var(--warning); }
 .toast.error   .toast-dot { background: var(--danger); }
 
 /* ── EMPTY STATE ── */
@@ -897,7 +898,7 @@ function renderDetailView(c) {
     <div class="stats-grid">
       <div class="stat-card"><div class="stat-label">Destinatarios</div><div class="stat-value sv-default" id="stat-total">${c.recipients_count}</div></div>
       <div class="stat-card"><div class="stat-label">Enviados</div><div class="stat-value sv-green" id="stat-sent">${stats.sent}</div></div>
-      <div class="stat-card"><div class="stat-label">${c.status==='sent'?'Errores':'Pendientes'}</div><div class="stat-value ${c.status==='sent'?'sv-red':'sv-blue'}" id="stat-other">${c.status==='sent'?stats.failed:stats.pending}</div></div>
+      <div class="stat-card"><div class="stat-label">${['sent','partial_success'].includes(c.status)?'Errores':'Pendientes'}</div><div class="stat-value ${['sent','partial_success'].includes(c.status)?'sv-red':'sv-blue'}" id="stat-other">${['sent','partial_success'].includes(c.status)?stats.failed:stats.pending}</div></div>
     </div>
     <div class="detail-section">
       <div class="detail-section-title">Asunto</div>
@@ -965,16 +966,21 @@ function startPolling(campaignId) {
       }
       renderCampaignList();
 
-      if (data.status === 'sent' || data.status === 'failed') {
+      if (data.status === 'sent' || data.status === 'failed' || data.status === 'partial_success') {
         stopPolling();
         if (activeCampaign && activeCampaign.id === campaignId) {
           const updated = allCampaigns.find(c => c.id === campaignId);
           if (updated) renderDetailView(updated);
         }
-        showToast(data.status === 'sent' ? 'success' : 'error',
-          data.status === 'sent'
-            ? `Campaña enviada · ${data.sent} emails entregados`
-            : 'El envío terminó con errores — revisa el historial');
+        const toastType = data.status === 'sent' ? 'success'
+                        : data.status === 'partial_success' ? 'warning'
+                        : 'error';
+        const toastMsg  = data.status === 'sent'
+          ? `Campaña enviada · ${data.sent} emails entregados`
+          : data.status === 'partial_success'
+            ? `Envío parcial · ${data.sent} enviados, ${data.failed} fallidos`
+            : 'El envío terminó con errores — revisa el historial';
+        showToast(toastType, toastMsg);
       }
     } catch { /* silent */ }
   }, 2500);
