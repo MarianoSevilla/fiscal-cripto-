@@ -60,9 +60,11 @@ from clasificador_nexo import ClasificadorNexo
 from clasificador_cryptocom import ClasificadorCryptoCom
 from clasificador_uphold import ClasificadorUphold, UPHOLD_SIGNATURES
 from clasificador_mexc import ClasificadorMEXC, _detectar_tipo_mexc, _contar_filas_xlsx
+from clasificador_bitget import ClasificadorBitget, detect_bitget_file_type, BITGET_SIGNATURES
 from motor_fifo import MotorFIFO
 from generador_pdf import generar_pdf, generar_pdf_bit2me
 from generador_pdf_mexc import generar_pdf_mexc
+from generador_pdf_bitget import generar_pdf_bitget
 from modelo721 import generar_datos_modelo_721
 from precios_historicos import obtener_precios_historicos, enriquecer_721_con_precios
 from generador_xml_721 import (
@@ -582,6 +584,24 @@ EXCHANGE_PAGES = {
             _HOW_TO_STEP3,
         ],
     },
+    "bitget": {
+        "exchange_id":      "bitget",
+        "exchange_name":    "Bitget",
+        "exchange_logo":    "BG",
+        "page_title":       "Informe FIFO Bitget para Hacienda | Mariano Sevilla",
+        "page_meta_desc":   "Sube el CSV de Bitget y calcula tus ganancias y pérdidas patrimoniales con FIFO obligatorio. Informe PDF listo para la declaración de la renta en España.",
+        "page_canonical":   f"{_BASE_URL}/bitget",
+        "page_og_title":    "Informe fiscal Bitget para Hacienda — FIFO automático | Mariano Sevilla",
+        "page_og_desc":     "Sube el CSV de Bitget y calcula las plusvalías crypto con FIFO. Informe PDF para tu gestor.",
+        "page_schema_name": "Informe FIFO Bitget — Mariano Sevilla",
+        "page_h1":          "Genera tu informe fiscal de Bitget para Hacienda",
+        "hero_desc":        "Sube el CSV de detalles de órdenes en spot de Bitget y obtén el informe FIFO con tus ganancias y pérdidas patrimoniales. Listo para la declaración de la renta.",
+        "how_to": [
+            {"title": "Exporta el CSV de detalles de órdenes en spot desde Bitget",
+             "desc":  "En tu cuenta de Bitget ve a Órdenes → Órdenes en spot → Historial → Exportar. Selecciona 'Detalles de órdenes en spot', elige el período completo desde tu primera operación hasta hoy y descarga el fichero CSV."},
+            _HOW_TO_STEP2, _HOW_TO_STEP3,
+        ],
+    },
 }
 
 
@@ -715,7 +735,7 @@ AÑO_MAX = datetime.now().year + 1
 _721_PRIMER_EJERCICIO = 2022
 # Exchanges con MotorFIFO → pueden generar snapshot 31/12 via posicion_a_fecha().
 _721_EXCHANGES_CON_MOTOR = frozenset({
-    "binance", "bitvavo", "kraken", "coinbase", "nexo", "cryptocom", "uphold", "mexc"
+    "binance", "bitvavo", "kraken", "coinbase", "nexo", "cryptocom", "uphold", "mexc", "bitget"
 })
 # Exchanges españoles: no sujetos al 721 (entidad custodio en España).
 _721_EXCHANGES_ES = frozenset({"bit2me"})
@@ -865,6 +885,7 @@ def _validar_csv(filepath: str, exchange: str) -> tuple[bool, str]:
         "nexo":      NEXO_SIGNATURES,
         "cryptocom": CRYPTOCOM_SIGNATURES,
         "uphold":    UPHOLD_SIGNATURES,
+        "bitget":    BITGET_SIGNATURES,
     }
     nombres = {
         "binance":   "Binance",
@@ -875,6 +896,7 @@ def _validar_csv(filepath: str, exchange: str) -> tuple[bool, str]:
         "nexo":      "Nexo",
         "cryptocom": "Crypto.com",
         "uphold":    "Uphold",
+        "bitget":    "Bitget",
     }
     if exchange in sigs:
         if not any(sig in primeras for sig in sigs[exchange]):
@@ -981,6 +1003,10 @@ def procesar_mexc(filepath: str) -> tuple:
     return procesar_con_fifo(ClasificadorMEXC(filepath).clasificar())
 
 
+def procesar_bitget(filepath: str) -> tuple:
+    return procesar_con_fifo(ClasificadorBitget(filepath).clasificar())
+
+
 def _motor_desde_csv_721(exchange: str, tmp_path: str) -> MotorFIFO:
     """
     Construye el MotorFIFO completo desde un CSV para uso exclusivo de /api/721.
@@ -1009,6 +1035,8 @@ def _motor_desde_csv_721(exchange: str, tmp_path: str) -> MotorFIFO:
         motor, _, _ = procesar_uphold(tmp_path)
     elif exchange == "mexc":
         motor, _, _ = procesar_mexc(tmp_path)
+    elif exchange == "bitget":
+        motor, _, _ = procesar_bitget(tmp_path)
     else:
         raise ValueError(f"Exchange '{exchange}' no soportado para Modelo 721.")
     return motor
@@ -1473,6 +1501,12 @@ def page_mexc():
     return render_template("tool.html", **EXCHANGE_PAGES["mexc"])
 
 
+@app.route("/bitget")
+@login_required
+def page_bitget():
+    return render_template("tool.html", **EXCHANGE_PAGES["bitget"])
+
+
 @app.route("/api/mexc/anos", methods=["POST"])
 @login_required
 @limiter.limit("30 per minute")
@@ -1552,7 +1586,7 @@ def analizar():
         exchange  = _sanitizar_texto(request.form.get("exchange", "binance"), max_len=20).lower()
 
         # Validar exchange
-        if exchange not in ("binance", "bit2me", "bitvavo", "kraken", "coinbase", "nexo", "cryptocom", "uphold", "mexc"):
+        if exchange not in ("binance", "bit2me", "bitvavo", "kraken", "coinbase", "nexo", "cryptocom", "uphold", "mexc", "bitget"):
             return jsonify({"error": "Exchange no soportado."}), 400
 
         # Validar ejercicio fiscal
@@ -1688,6 +1722,16 @@ def analizar():
                 advertencias = motor.advertencias + (clasificador.advertencias if clasificador else [])
                 rendimientos_json = _rendimientos_a_json(rendimientos)
                 pdf_bytes = generar_pdf_mexc(motor, nombre, ejercicio, rendimientos)
+
+            elif exchange == "bitget":
+                motor, rendimientos, clasificador = procesar_bitget(tmp_path)
+                _filtrar_motor_por_ejercicio(motor, ejercicio)
+                rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
+                resumen, posicion, operaciones = _motor_a_json(motor)
+                # Bitget puede tener advertencias sobre pares USDT en el clasificador.
+                advertencias = motor.advertencias + (clasificador.advertencias if clasificador else [])
+                rendimientos_json = _rendimientos_a_json(rendimientos)
+                pdf_bytes = generar_pdf_bitget(motor, nombre, ejercicio, rendimientos)
 
             else:  # binance — auto-detectar formato
                 if _detectar_formato_binance(tmp_path) == "tx":
