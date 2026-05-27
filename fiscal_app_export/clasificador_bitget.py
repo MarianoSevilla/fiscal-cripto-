@@ -230,6 +230,19 @@ class ClasificadorBitget:
             self._clasificar_detalles()
         elif tipo == "transacciones":
             self._clasificar_transacciones()
+            depositos = sum(1 for m in self.movimientos if m.subtipo == "Deposit")
+            retiros   = sum(1 for m in self.movimientos if m.subtipo == "Withdrawal")
+            transfers = sum(1 for m in self.movimientos if m.subtipo == "Transfer")
+            partes = []
+            if depositos: partes.append(f"{depositos} depósito{'s' if depositos != 1 else ''}")
+            if retiros:   partes.append(f"{retiros} retiro{'s' if retiros != 1 else ''}")
+            if transfers: partes.append(f"{transfers} transferencia{'s' if transfers != 1 else ''}")
+            movs_str = ", ".join(partes) if partes else "movimientos"
+            self.advertencias.insert(0,
+                f"Este archivo contiene movimientos de cuenta de Bitget ({movs_str}), "
+                "pero no operaciones de compraventa. "
+                "Para calcular el FIFO necesitas subir el CSV de detalles de órdenes en spot."
+            )
         else:
             raise ValueError(
                 "El archivo no se reconoce como un export de Bitget. "

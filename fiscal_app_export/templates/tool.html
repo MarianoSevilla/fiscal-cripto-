@@ -1662,6 +1662,15 @@
 
     actualizarAvisoCosteCero(data.operaciones);
     showState('results');
+
+    // Si no hay operaciones FIFO pero sí advertencias, ir directamente al tab de advertencias
+    // para que el usuario vea el motivo (p.ej. CSV de transacciones de Bitget).
+    if ((data.operaciones || []).length === 0 && warns.length > 0) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      document.querySelector('[data-tab="advertencias"]').classList.add('active');
+      document.getElementById('tab-advertencias').classList.add('active');
+    }
   }
 
   // ── MENSAJES DE ERROR AMIGABLES ──────────
