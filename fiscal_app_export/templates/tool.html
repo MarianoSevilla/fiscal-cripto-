@@ -1749,6 +1749,9 @@
     if (e.includes('no se reconoce como un export')) {
       return { icono: '📂', titulo: 'Formato no reconocido', desc: esc(e), pasos: [] };
     }
+    if (e.includes('historial de órdenes') || e.includes('detalles de órdenes en spot')) {
+      return { icono: '⚠', titulo: 'Archivo incorrecto', desc: esc(e), pasos: [] };
+    }
     if (EXCHANGE_PAGE === 'mexc') {
       return {
         icono: '✕', titulo: 'Error al procesar el fichero',
