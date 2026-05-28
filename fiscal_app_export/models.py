@@ -61,7 +61,8 @@ class FifoReport(db.Model):
     distinct_assets = db.Column(db.Integer,     nullable=True)   # activos distintos en el informe
     processing_ms   = db.Column(db.Integer,     nullable=True)   # tiempo de procesamiento
     status          = db.Column(db.String(20),  nullable=False, default="generated")  # generated | failed
-    error_type      = db.Column(db.String(100), nullable=True)   # tipo de error si status=failed
+    error_type      = db.Column(db.String(100), nullable=True)   # clase de excepción Python
+    error_category  = db.Column(db.String(50),  nullable=True)   # "parser_error" | "unsupported_format" | "user_error"
     created_at      = db.Column(db.DateTime,    default=datetime.utcnow, nullable=False)
     downloaded_at   = db.Column(db.DateTime,    nullable=True)   # NULL hasta que el usuario descarga
 
@@ -96,6 +97,8 @@ class ProcessingError(db.Model):
     parser             = db.Column(db.String(100), nullable=True)
     stage              = db.Column(db.String(50),  nullable=True)
     error_type         = db.Column(db.String(100), nullable=True)
+    error_category     = db.Column(db.String(50),  nullable=True)   # "parser_error" | "unsupported_format" | "user_error"
+    error_code         = db.Column(db.String(50),  nullable=True)   # "futures" | "staking" | "wrong_file" | …
     message_short      = db.Column(db.String(500), nullable=True)
     traceback_short    = db.Column(db.Text,        nullable=True)
     fingerprint        = db.Column(db.String(64),  nullable=True, index=True)

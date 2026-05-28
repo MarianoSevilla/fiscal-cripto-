@@ -26,6 +26,8 @@ import openpyxl
 
 from fiscal_app_export.clasificador_mexc import (
     ClasificadorMEXC,
+    MexcUnsupportedFormatError,
+    MexcUserError,
     _detectar_tipo_mexc,
     _contar_filas_xlsx,
 )
@@ -443,20 +445,81 @@ class TestWithdrawals:
         assert any("BTC" in op.observacion or "RON" in op.observacion for op in c.movimientos)
 
 
+# ── TESTS: EXCEPCIONES TIPIFICADAS ───────────────────────────────────────────
+
+class TestExcepcionesTypadas:
+    """Verifica que MexcUnsupportedFormatError y MexcUserError tienen
+    las propiedades correctas y son subclases de ValueError (compat)."""
+
+    def test_unsupported_es_valueerror(self):
+        exc = MexcUnsupportedFormatError("futures", "Mensaje de futuros")
+        assert isinstance(exc, ValueError)
+
+    def test_unsupported_code_y_category(self):
+        exc = MexcUnsupportedFormatError("staking", "Mensaje")
+        assert exc.code     == "staking"
+        assert exc.category == "unsupported_format"
+
+    def test_user_error_es_valueerror(self):
+        exc = MexcUserError("wrong_file", "Archivo incorrecto")
+        assert isinstance(exc, ValueError)
+
+    def test_user_error_code_y_category(self):
+        exc = MexcUserError("xlsx_corrupt", "Mensaje")
+        assert exc.code     == "xlsx_corrupt"
+        assert exc.category == "user_error"
+
+    def test_str_es_el_mensaje_usuario(self):
+        msg = "Este es el mensaje al usuario"
+        exc = MexcUnsupportedFormatError("futures", msg)
+        assert str(exc) == msg
+
+
 # ── TESTS: FUTUROS ────────────────────────────────────────────────────────────
 
 class TestFuturos:
 
     def test_futures_lanza_valueerror(self, futures_file):
+        """Compatibilidad: sigue siendo ValueError (subclase)."""
         with pytest.raises(ValueError) as exc_info:
             ClasificadorMEXC(futures_file).clasificar()
         assert "futuros" in str(exc_info.value).lower()
+
+    def test_futures_lanza_mexc_unsupported(self, futures_file):
+        """Lanza la excepción tipificada correcta."""
+        with pytest.raises(MexcUnsupportedFormatError) as exc_info:
+            ClasificadorMEXC(futures_file).clasificar()
+        assert exc_info.value.code     == "futures"
+        assert exc_info.value.category == "unsupported_format"
 
     def test_mensaje_descriptivo(self, futures_file):
         with pytest.raises(ValueError) as exc_info:
             ClasificadorMEXC(futures_file).clasificar()
         msg = str(exc_info.value)
         assert len(msg) > 30, "El mensaje debe ser descriptivo para el usuario"
+
+
+# ── TESTS: ARCHIVO INCORRECTO (wrong_file) ────────────────────────────────────
+
+class TestArchivoIncorrecto:
+    """Un XLSX con headers no reconocidos debe lanzar MexcUserError(wrong_file)."""
+
+    @pytest.fixture
+    def xlsx_headers_desconocidos(self):
+        headers = ["foo", "bar", "baz", "qux"]
+        rows    = [["a", "b", "c", "d"]]
+        return _xlsx_tmpfile("Sheet1", headers, rows)
+
+    def test_lanza_user_error(self, xlsx_headers_desconocidos):
+        with pytest.raises(MexcUserError) as exc_info:
+            ClasificadorMEXC(xlsx_headers_desconocidos).clasificar()
+        assert exc_info.value.code     == "wrong_file"
+        assert exc_info.value.category == "user_error"
+
+    def test_sigue_siendo_valueerror(self, xlsx_headers_desconocidos):
+        """Compat: código existente que captura ValueError sigue funcionando."""
+        with pytest.raises(ValueError):
+            ClasificadorMEXC(xlsx_headers_desconocidos).clasificar()
 
 
 # ── TESTS: ARCHIVO VACÍO ─────────────────────────────────────────────────────

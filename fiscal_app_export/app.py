@@ -59,7 +59,10 @@ from clasificador_coinbase import ClasificadorCoinbase
 from clasificador_nexo import ClasificadorNexo
 from clasificador_cryptocom import ClasificadorCryptoCom
 from clasificador_uphold import ClasificadorUphold, UPHOLD_SIGNATURES
-from clasificador_mexc import ClasificadorMEXC, _detectar_tipo_mexc, _contar_filas_xlsx
+from clasificador_mexc import (
+    ClasificadorMEXC, _detectar_tipo_mexc, _contar_filas_xlsx,
+    MexcUnsupportedFormatError, MexcUserError,
+)
 from clasificador_bitget import ClasificadorBitget, detect_bitget_file_type, BITGET_SIGNATURES
 from motor_fifo import MotorFIFO
 from generador_pdf import generar_pdf, generar_pdf_bit2me
@@ -289,6 +292,16 @@ try:
                 _conn.execute(text(
                     "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires_at TIMESTAMP"
                 ))
+                # Error taxonomy columns (migration k4l5m6n7o8p9)
+                _conn.execute(text(
+                    "ALTER TABLE fifo_reports ADD COLUMN IF NOT EXISTS error_category VARCHAR(50)"
+                ))
+                _conn.execute(text(
+                    "ALTER TABLE processing_errors ADD COLUMN IF NOT EXISTS error_category VARCHAR(50)"
+                ))
+                _conn.execute(text(
+                    "ALTER TABLE processing_errors ADD COLUMN IF NOT EXISTS error_code VARCHAR(50)"
+                ))
                 _conn.commit()
         except Exception:
             pass  # columnas ya existen o DB no disponible — no es crítico en arranque
@@ -344,6 +357,7 @@ def _registrar_informe(
     processing_ms: int,
     status: str = "generated",
     error_type=None,
+    error_category=None,   # "parser_error" | "unsupported_format" | "user_error"
     # ── FASE 2A: telemetría estratégica (todas opcionales) ──
     fifo_operations: int   = None,
     fifo_swaps: int        = None,
@@ -369,6 +383,7 @@ def _registrar_informe(
             processing_ms     = processing_ms,
             status            = status,
             error_type        = error_type,
+            error_category    = error_category,
             fifo_operations   = fifo_operations,
             fifo_swaps        = fifo_swaps,
             fifo_rendimientos = fifo_rendimientos,
@@ -1826,7 +1841,27 @@ def analizar():
             })
 
         except Exception as e:
-            traceback.print_exc()
+            # ── Clasificar el error semánticamente ────────────────────────────
+            # Por defecto: bug inesperado del parser.
+            _err_category = "parser_error"
+            _err_code     = None
+
+            if hasattr(e, "category") and hasattr(e, "code"):
+                # Excepción tipificada: MexcUnsupportedFormatError / MexcUserError
+                _err_category = e.category
+                _err_code     = e.code
+            elif isinstance(e, ValueError) and exchange == "mexc":
+                # Heurística de fallback para ValueError sin tipar (datos históricos)
+                _msg_lower = str(e).lower()
+                if any(kw in _msg_lower for kw in ("futuros", "futures", "copy trading")):
+                    _err_category, _err_code = "unsupported_format", "futures"
+                elif "no se reconoce" in _msg_lower:
+                    _err_category, _err_code = "user_error", "wrong_file"
+
+            # Solo imprimir traceback para bugs reales del parser
+            if _err_category == "parser_error":
+                traceback.print_exc()
+
             _registrar_informe(
                 exchange        = exchange,
                 fiscal_year     = _ejercicio_a_fiscal_year(ejercicio),
@@ -1835,6 +1870,7 @@ def analizar():
                 processing_ms   = int((time.time() - t_start) * 1000),
                 status          = "failed",
                 error_type      = type(e).__name__,
+                error_category  = _err_category,
             )
             try:
                 _csv_size = os.path.getsize(tmp_path) if tmp_path else None
@@ -1842,14 +1878,16 @@ def analizar():
                 _csv_size = None
             try:
                 record_processing_error_safe(
-                    user_id      = current_user.id if current_user.is_authenticated else None,
-                    email        = current_user.email if current_user.is_authenticated else None,
-                    exchange     = exchange,
-                    stage        = "processing",
-                    exc          = e,
-                    csv_filename = filename,
-                    csv_size     = _csv_size,
-                    parser       = exchange,
+                    user_id        = current_user.id if current_user.is_authenticated else None,
+                    email          = current_user.email if current_user.is_authenticated else None,
+                    exchange       = exchange,
+                    stage          = "processing",
+                    exc            = e,
+                    csv_filename   = filename,
+                    csv_size       = _csv_size,
+                    parser         = exchange,
+                    error_category = _err_category,
+                    error_code     = _err_code,
                 )
             except Exception:
                 app.logger.exception("[ERROR_TRACKING] unexpected error calling record_processing_error_safe")
@@ -3093,46 +3131,116 @@ def _api_stats_data():
 
     proc_err_detail = []
     if _proc_err_ok:
+        # Check whether error_category columns exist in processing_errors
+        _proc_cat_ok = False
+        try:
+            db.session.execute(text("SELECT error_category FROM processing_errors LIMIT 0"))
+            _proc_cat_ok = True
+        except Exception:
+            db.session.rollback()
+
+        _proc_query_cols = [
+            ProcessingError.created_at,
+            ProcessingError.exchange,
+            ProcessingError.email,
+            ProcessingError.error_type,
+            ProcessingError.stage,
+            ProcessingError.message_short,
+            ProcessingError.fingerprint,
+            ProcessingError.auto_email_sent,
+            ProcessingError.resolved,
+        ]
+        if _proc_cat_ok:
+            _proc_query_cols += [
+                ProcessingError.error_category,
+                ProcessingError.error_code,
+            ]
+
         proc_err_raw = (
-            db.session.query(
-                ProcessingError.created_at,
-                ProcessingError.exchange,
-                ProcessingError.email,
-                ProcessingError.error_type,
-                ProcessingError.stage,
-                ProcessingError.message_short,
-                ProcessingError.fingerprint,
-                ProcessingError.auto_email_sent,
-                ProcessingError.resolved,
-            )
+            db.session.query(*_proc_query_cols)
             .filter(*_no_adm_proc)
             .order_by(ProcessingError.created_at.desc())
             .limit(100)
             .all()
         )
         proc_err_detail = [{
-            "fecha":         r.created_at.strftime("%Y-%m-%d %H:%M") if r.created_at else "",
-            "exchange":      r.exchange or "—",
-            "usuario":       _mask_email(r.email) if r.email else "—",
-            "error_type":    r.error_type or "—",
-            "stage":         r.stage or "—",
-            "resumen":       (r.message_short or "")[:120],
-            "fingerprint":   (r.fingerprint or "")[:8],
-            "email_enviado": bool(r.auto_email_sent),
-            "resuelto":      bool(r.resolved),
-            "accionable":    is_actionable_processing_error(
-                                 r.error_type, r.stage, r.message_short
-                             ),
+            "fecha":          r.created_at.strftime("%Y-%m-%d %H:%M") if r.created_at else "",
+            "exchange":       r.exchange or "—",
+            "usuario":        _mask_email(r.email) if r.email else "—",
+            "error_type":     r.error_type or "—",
+            "stage":          r.stage or "—",
+            "resumen":        (r.message_short or "")[:120],
+            "fingerprint":    (r.fingerprint or "")[:8],
+            "email_enviado":  bool(r.auto_email_sent),
+            "resuelto":       bool(r.resolved),
+            "error_category": getattr(r, "error_category", None) or "legacy",
+            "error_code":     getattr(r, "error_code", None),
+            "accionable":     is_actionable_processing_error(
+                                  r.error_type,
+                                  r.stage,
+                                  r.message_short,
+                                  error_category=getattr(r, "error_category", None),
+                              ),
         } for r in proc_err_raw]
 
     # ── EXCHANGE MÁS PROBLEMÁTICO ─────────────────────────────────────────────
-    exc_gen_map  = {r.exchange: r.c for r in por_exchange_raw}
-    exc_fail_raw = (
-        db.session.query(FifoReport.exchange, func.count(FifoReport.id).label("c"))
-        .filter(*_no_adm_rep, FifoReport.status == "failed")
-        .group_by(FifoReport.exchange)
-        .all()
-    )
+    # Guard: error_category column may not exist on first deploy before migration
+    exc_gen_map = {r.exchange: r.c for r in por_exchange_raw}
+    _err_cat_col_ok = False
+    try:
+        db.session.execute(text("SELECT error_category FROM fifo_reports LIMIT 0"))
+        _err_cat_col_ok = True
+    except Exception:
+        db.session.rollback()
+
+    if _err_cat_col_ok:
+        # Only count REAL parser bugs — exclude unsupported formats and user mistakes.
+        # NULL legacy rows (pre-taxonomy) are treated as parser_error by default.
+        exc_fail_raw = (
+            db.session.query(FifoReport.exchange, func.count(FifoReport.id).label("c"))
+            .filter(
+                *_no_adm_rep,
+                FifoReport.status == "failed",
+                (FifoReport.error_category == "parser_error")
+                | FifoReport.error_category.is_(None),
+            )
+            .group_by(FifoReport.exchange)
+            .all()
+        )
+        # Per-exchange breakdown: how many are unsupported vs user vs parser?
+        _fail_cat_raw = (
+            db.session.query(
+                FifoReport.exchange,
+                FifoReport.error_category,
+                func.count(FifoReport.id).label("c"),
+            )
+            .filter(*_no_adm_rep, FifoReport.status == "failed")
+            .group_by(FifoReport.exchange, FifoReport.error_category)
+            .all()
+        )
+        exc_error_breakdown: dict = {}
+        for r in _fail_cat_raw:
+            exc_key = r.exchange or "unknown"
+            cat     = r.error_category
+            bucket  = cat if cat in ("unsupported_format", "user_error", "parser_error") else "legacy"
+            if exc_key not in exc_error_breakdown:
+                exc_error_breakdown[exc_key] = {
+                    "unsupported_format": 0,
+                    "user_error":         0,
+                    "parser_error":       0,
+                    "legacy":             0,
+                }
+            exc_error_breakdown[exc_key][bucket] += r.c
+    else:
+        # Migration not yet applied — fall back to unfiltered count (old behavior)
+        exc_fail_raw = (
+            db.session.query(FifoReport.exchange, func.count(FifoReport.id).label("c"))
+            .filter(*_no_adm_rep, FifoReport.status == "failed")
+            .group_by(FifoReport.exchange)
+            .all()
+        )
+        exc_error_breakdown = {}
+
     exc_mas_prob     = None
     exc_mas_prob_pct = 0.0
     for r in exc_fail_raw:
@@ -3304,7 +3412,8 @@ def _api_stats_data():
             "por_volumen":       por_volumen,
             "por_mes":           informes_por_mes,
             "top_usuarios":      top5,
-            "por_error_type":    por_error,
+            "por_error_type":           por_error,
+            "exchange_error_breakdown": exc_error_breakdown,
         },
         "contactos": {
             "total":       total_c,

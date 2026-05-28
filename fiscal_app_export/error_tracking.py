@@ -135,13 +135,20 @@ def is_actionable_processing_error(
     error_type: str,
     stage: str,
     message_short: str,
+    error_category: str = None,
 ) -> bool:
     """
     Returns True if this error is worth sending an automated support email.
 
     Actionable  = CSV format problem, unsupported column layout, encoding issue, edge case.
-    Not actionable = transient infra errors, auth errors, resource limits.
+    Not actionable = transient infra errors, auth errors, resource limits,
+                     consciously unsupported formats, user mistakes.
     """
+    # Semantic categories override everything: unsupported formats and user
+    # mistakes are not actionable — the user already received a clear message.
+    if (error_category or "") in ("unsupported_format", "user_error"):
+        return False
+
     if (error_type or "") in _NON_ACTIONABLE_TYPES:
         return False
 
@@ -321,12 +328,19 @@ def _do_record(
     csv_filename,
     csv_size,
     parser,
+    error_category: str = None,
+    error_code: str = None,
 ) -> None:
     from models import db, ProcessingError
 
     error_type      = type(exc).__name__
     message_short   = _sanitize(str(exc), _MAX_MESSAGE_LEN)
-    traceback_short = _extract_traceback_short(exc)
+    # Only capture traceback for real parser bugs — not for expected unsupported formats
+    traceback_short = (
+        _extract_traceback_short(exc)
+        if (error_category or "parser_error") == "parser_error"
+        else ""
+    )
     fingerprint     = build_processing_error_fingerprint(exchange, stage, error_type, message_short)
     safe_filename   = (os.path.basename(csv_filename)[:255] if csv_filename else None)
 
@@ -337,6 +351,8 @@ def _do_record(
         parser          = parser,
         stage           = stage,
         error_type      = error_type,
+        error_category  = error_category,
+        error_code      = error_code,
         message_short   = message_short,
         traceback_short = traceback_short,
         fingerprint     = fingerprint,
@@ -364,10 +380,10 @@ def _do_record(
     if not email:
         return
 
-    if not is_actionable_processing_error(error_type, stage, message_short):
+    if not is_actionable_processing_error(error_type, stage, message_short, error_category):
         logger.info(
-            "[ERROR_TRACKING] auto-email skipped (non-actionable) error_type=%s stage=%s",
-            error_type, stage,
+            "[ERROR_TRACKING] auto-email skipped (non-actionable) error_type=%s stage=%s category=%s",
+            error_type, stage, error_category or "—",
         )
         return
 
@@ -422,12 +438,17 @@ def record_processing_error_safe(
     csv_filename=None,
     csv_size=None,
     parser=None,
+    error_category: str = None,
+    error_code: str = None,
 ) -> None:
     """
     Record a CSV processing error in the DB and optionally send an auto-email.
 
     NEVER raises. All DB and email failures are logged and discarded.
     Safe to call from /api/analizar's except block without any risk.
+
+    error_category: "parser_error" | "unsupported_format" | "user_error" | None
+    error_code:     exchange-specific code, e.g. "futures", "staking", "wrong_file"
     """
     try:
         _do_record(
@@ -439,6 +460,8 @@ def record_processing_error_safe(
             csv_filename=csv_filename,
             csv_size=csv_size,
             parser=parser,
+            error_category=error_category,
+            error_code=error_code,
         )
     except Exception:
         logger.exception("[ERROR_TRACKING] unexpected failure in record_processing_error_safe — ignoring")

@@ -31,6 +31,43 @@ import openpyxl
 
 logger = logging.getLogger(__name__)
 
+
+# ── EXCEPCIONES TIPIFICADAS ───────────────────────────────────────────────────
+
+class MexcUnsupportedFormatError(ValueError):
+    """
+    El archivo MEXC es válido pero corresponde a un formato conscientemente
+    no soportado (futuros, copy trading, staking, earn, etc.).
+
+    No es un bug del parser. No debe computar como tasa de error en métricas.
+
+    Atributos:
+        code      — identificador del formato: "futures" | "staking" | "earn" |
+                    "copy_trading" | "aggregated_history"
+        category  — siempre "unsupported_format"
+    """
+    def __init__(self, code: str, mensaje_usuario: str):
+        super().__init__(mensaje_usuario)
+        self.code     = code
+        self.category = "unsupported_format"
+
+
+class MexcUserError(ValueError):
+    """
+    Error imputable al usuario: archivo incorrecto, XLSX corrupto, export vacío.
+
+    No es un bug del parser. No debe provocar emails de soporte automáticos.
+
+    Atributos:
+        code      — identificador: "wrong_file" | "xlsx_corrupt" | "empty_file"
+        category  — siempre "user_error"
+    """
+    def __init__(self, code: str, mensaje_usuario: str):
+        super().__init__(mensaje_usuario)
+        self.code     = code
+        self.category = "user_error"
+
+
 # ── FIRMAS DE DETECCIÓN ────────────────────────────────────────────────────────
 
 MEXC_SPOT_SIGNATURE       = {"order_id", "symbol", "currency", "quantity", "price"}
@@ -137,13 +174,17 @@ def _leer_primera_hoja(filepath: str) -> tuple[list[str], list[dict]]:
 def _detectar_tipo_mexc(filepath: str) -> str:
     """
     Inspecciona los headers de la primera hoja y devuelve el tipo de export.
-    Retorna: "spot" | "withdrawal" | "futures" | "unknown"
+    Retorna: "spot" | "spot_es" | "withdrawal" | "futures" |
+             "unknown" | "xlsx_corrupt" | "empty_file"
     """
     try:
-        headers, _ = _leer_primera_hoja(filepath)
+        headers, data = _leer_primera_hoja(filepath)
     except Exception as e:
         logger.warning("MEXC: no se pudo leer el archivo: %s", e)
-        return "unknown"
+        return "xlsx_corrupt"
+
+    if not headers:
+        return "empty_file"
 
     headers_lower = {h.lower() for h in headers}
 
@@ -259,11 +300,30 @@ class ClasificadorMEXC:
         tipo = _detectar_tipo_mexc(self.filepath)
         self.tipo_export = tipo
 
+        if tipo == "xlsx_corrupt":
+            raise MexcUserError(
+                code="xlsx_corrupt",
+                mensaje_usuario=(
+                    "No hemos podido leer el archivo XLSX. "
+                    "Intenta volver a descargarlo desde MEXC sin abrirlo con Excel."
+                ),
+            )
+        if tipo == "empty_file":
+            raise MexcUserError(
+                code="empty_file",
+                mensaje_usuario=(
+                    "El archivo XLSX no contiene operaciones. "
+                    "Exporta el rango de fechas con tus transacciones."
+                ),
+            )
         if tipo == "futures":
-            raise ValueError(
-                "Este export de MEXC corresponde a operaciones de futuros/copy trading. "
-                "El soporte de futuros todavía no está disponible. "
-                "Por favor sube el archivo de 'Trade Records' (operaciones spot)."
+            raise MexcUnsupportedFormatError(
+                code="futures",
+                mensaje_usuario=(
+                    "Este archivo corresponde a operaciones de futuros o copy trading de MEXC. "
+                    "La app actualmente solo soporta spot. "
+                    "Sube el archivo 'Trade Records' o 'Historial de Órdenes' (operaciones spot)."
+                ),
             )
         if tipo == "spot":
             self._clasificar_spot()
@@ -272,10 +332,13 @@ class ClasificadorMEXC:
         elif tipo == "withdrawal":
             self._clasificar_withdrawal()
         else:
-            raise ValueError(
-                "El archivo no se reconoce como un export de MEXC. "
-                "Asegúrate de exportar el historial de Trade Records (operaciones spot), "
-                "el Historial de Órdenes o el historial de retiros desde tu cuenta MEXC."
+            raise MexcUserError(
+                code="wrong_file",
+                mensaje_usuario=(
+                    "El archivo no se reconoce como un export de MEXC. "
+                    "Asegúrate de exportar el historial de Trade Records (operaciones spot), "
+                    "el Historial de Órdenes o el historial de retiros desde tu cuenta MEXC."
+                ),
             )
 
         if self._tiene_pares_usdt:
