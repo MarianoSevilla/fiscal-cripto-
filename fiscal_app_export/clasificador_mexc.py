@@ -369,6 +369,17 @@ class ClasificadorMEXC:
 
     def _procesar_fila_spot(self, fila: dict) -> None:
         fecha_raw = _resolver_columna(fila, self._FECHA_CANDIDATOS_SPOT)
+
+        # Guardar filas con fecha vacía — pasarlas al motor causaría ValueError
+        if not fecha_raw.strip():
+            logger.warning("MEXC spot: fila con fecha vacía ignorada: %s", fila)
+            self.desconocidas.append(OperacionDesconocida(
+                fecha="", subtipo="fecha_vacia",
+                activo=_resolver_columna(fila, ["symbol", "currency"]) or "?",
+                cantidad=0.0, cuenta="MEXC",
+            ))
+            return
+
         fecha     = _parse_fecha(fecha_raw, _FECHA_FORMATOS_SPOT)
 
         symbol       = _resolver_columna(fila, ["symbol"])
@@ -458,6 +469,17 @@ class ClasificadorMEXC:
 
     def _procesar_fila_spot_es(self, fila: dict) -> None:
         fecha_raw  = _resolver_columna(fila, ["Tiempo", "tiempo"])
+
+        # Guardar filas con fecha vacía — pasarlas al motor causaría ValueError
+        if not fecha_raw.strip():
+            logger.warning("MEXC spot_es: fila con fecha vacía ignorada: %s", fila)
+            self.desconocidas.append(OperacionDesconocida(
+                fecha="", subtipo="fecha_vacia",
+                activo=_resolver_columna(fila, ["Pares", "pares"]) or "?",
+                cantidad=0.0, cuenta="MEXC",
+            ))
+            return
+
         fecha      = _parse_fecha(fecha_raw, _FECHA_FORMATOS_SPOT)
 
         pares       = _resolver_columna(fila, ["Pares", "pares"]).strip()

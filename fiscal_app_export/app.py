@@ -3241,15 +3241,19 @@ def _api_stats_data():
         )
         exc_error_breakdown = {}
 
-    exc_mas_prob     = None
-    exc_mas_prob_pct = 0.0
+    exc_mas_prob        = None
+    exc_mas_prob_pct    = 0.0
+    exc_mas_prob_total  = 0
+    # Minimum 5 uploads to avoid statistically meaningless rates (e.g. 2/3 = 66%)
+    _MIN_UPLOADS_THRESHOLD = 5
     for r in exc_fail_raw:
         total_exc = exc_gen_map.get(r.exchange, 0) + r.c
-        if total_exc >= 3:
+        if total_exc >= _MIN_UPLOADS_THRESHOLD:
             rate = round(r.c / total_exc * 100, 1)
             if rate > exc_mas_prob_pct:
-                exc_mas_prob_pct = rate
-                exc_mas_prob = r.exchange
+                exc_mas_prob_pct   = rate
+                exc_mas_prob       = r.exchange
+                exc_mas_prob_total = total_exc
 
     # ── FASE 2B: COMPLEJIDAD Y SEGMENTOS ─────────────────────────────────────
     # Comprobación de migración: si las columnas nuevas aún no existen en la DB
@@ -3375,8 +3379,10 @@ def _api_stats_data():
             "usuarios_hoy":  usuarios_hoy,
             "errores_24h":   errores_24h,
             "exchange_mas_problematico": {
-                "exchange":   exc_mas_prob or "N/A",
-                "tasa_error": exc_mas_prob_pct,
+                "exchange":      exc_mas_prob or "N/A",
+                "tasa_error":    exc_mas_prob_pct,
+                "total_uploads": exc_mas_prob_total,
+                "min_threshold": _MIN_UPLOADS_THRESHOLD,
             },
         },
         "sparklines": {
