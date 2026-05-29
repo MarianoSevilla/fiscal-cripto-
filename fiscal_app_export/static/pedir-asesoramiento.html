@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Solicitar revisión fiscal — Asesoramiento cripto | Mariano Sevilla</title>
+<title>Solicitar asistencia fiscal — Mariano Sevilla</title>
 <meta name="robots" content="noindex">
 <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
@@ -13,6 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/nav.css">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -32,81 +33,30 @@
 }
 html, body { min-height: 100%; background: var(--bg); font-family: var(--ff-b); color: var(--text); overflow-x: hidden; }
 
-nav {
-  position: sticky; top: 0; z-index: 100;
-  background: rgba(11,18,32,0.92); backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
-  padding: 0 clamp(16px,5vw,80px);
-  height: 60px; display: flex; align-items: center; justify-content: space-between;
+.page {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: calc(64px + clamp(40px,6vw,80px)) clamp(16px,4vw,40px) clamp(40px,6vw,80px);
 }
-.nav-logo { font-family: var(--ff-h); font-size: 18px; font-weight: 700; text-decoration: none; }
-.nav-logo span:first-child { color: var(--text); }
-.nav-logo span:last-child  { color: var(--accent); }
-.nav-back { font-size: 13px; color: var(--muted); text-decoration: none; }
-.nav-back:hover { color: var(--text); }
-
-.page { max-width: 700px; margin: 0 auto; padding: clamp(40px,6vw,80px) clamp(16px,4vw,40px); }
 h1 { font-family: var(--ff-h); font-size: clamp(26px,4vw,36px); font-weight: 800; color: var(--text); margin-bottom: 8px; }
 .page-sub { font-size: 15px; color: var(--sub); margin-bottom: 40px; line-height: 1.6; }
-
-.form-section { margin-bottom: 36px; }
-.form-section-title {
-  font-family: var(--ff-h); font-size: 14px; font-weight: 700;
-  color: var(--accent); text-transform: uppercase; letter-spacing: .08em;
-  margin-bottom: 18px; padding-bottom: 8px; border-bottom: 1px solid var(--border);
-}
 
 .field { margin-bottom: 20px; }
 .field label { display: block; font-size: 13px; font-weight: 600; color: var(--sub); margin-bottom: 7px; }
 .field label span.req { color: var(--accent); margin-left: 2px; }
-.field input, .field select, .field textarea {
+.field input, .field textarea {
   width: 100%; background: var(--surface); border: 1.5px solid var(--border);
   color: var(--text); font-family: var(--ff-b); font-size: 15px;
   padding: 11px 14px; border-radius: 9px; outline: none; transition: border-color .2s;
   appearance: none;
 }
-.field input:focus, .field select:focus, .field textarea:focus {
+.field input:focus, .field textarea:focus {
   border-color: rgba(0,200,150,0.5);
 }
-.field textarea { resize: vertical; min-height: 120px; }
-.field-hint { font-size: 12px; color: var(--muted); margin-top: 5px; }
+.field textarea { resize: vertical; min-height: 140px; line-height: 1.55; }
 
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 500px) { .field-row { grid-template-columns: 1fr; } }
-
-/* Checkboxes */
-.check-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 10px; }
-.check-item { display: flex; align-items: center; gap: 10px; cursor: pointer; }
-.check-item input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
-.check-item span { font-size: 14px; color: var(--sub); }
-
-/* Aviso documentación */
-.doc-notice {
-  display: flex; gap: 12px; align-items: flex-start;
-  background: var(--surface); border: 1px solid var(--border);
-  border-left: 3px solid rgba(255,255,255,0.18);
-  border-radius: 8px; padding: 16px 18px;
-  font-size: 14px; color: var(--muted); line-height: 1.6;
-}
-
-/* Service selector */
-.service-options { display: grid; gap: 12px; }
-.service-option {
-  border: 1.5px solid var(--border); border-radius: 10px; padding: 16px 18px;
-  cursor: pointer; transition: border-color .2s, background .2s;
-  display: flex; justify-content: space-between; align-items: center;
-}
-.service-option:hover { border-color: rgba(0,200,150,0.3); background: rgba(0,200,150,0.04); }
-.service-option.selected { border-color: var(--accent); background: rgba(0,200,150,0.08); }
-.service-option input[type="radio"] { display: none; }
-.service-option-name { font-weight: 600; color: var(--text); font-size: 15px; }
-
-/* Legal */
-.legal-check { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
-.legal-check input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--accent); margin-top: 2px; flex-shrink: 0; }
-.legal-check span { font-size: 13px; color: var(--sub); line-height: 1.6; }
-.legal-check a { color: var(--accent); text-decoration: none; }
-.legal-check a:hover { text-decoration: underline; }
 
 /* Submit */
 .submit-btn {
@@ -117,6 +67,9 @@ h1 { font-family: var(--ff-h); font-size: clamp(26px,4vw,36px); font-weight: 800
 }
 .submit-btn:hover:not(:disabled) { background: var(--accent2); transform: translateY(-1px); }
 .submit-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+/* Submit hint */
+.submit-hint { text-align: center; font-size: 13px; color: var(--muted); margin-top: 12px; line-height: 1.5; }
 
 /* Error */
 .msg-error {
@@ -140,21 +93,18 @@ h1 { font-family: var(--ff-h); font-size: clamp(26px,4vw,36px); font-weight: 800
 }
 .msg-success-link:hover { background: var(--accent2); }
 
-/* Submit hint */
-.submit-hint { text-align: center; font-size: 12px; color: var(--muted); margin-top: 10px; }
-
+@media (max-width: 600px) {
+  .msg-success { padding: 28px 20px; }
+}
 </style>
 </head>
 <body>
 
-<nav>
-  <a href="/" class="nav-logo"><span>Mariano</span><span>Sevilla</span></a>
-  <a href="/asesoramiento-fiscal-criptomonedas" class="nav-back">← Volver</a>
-</nav>
+<nav id="site-nav"></nav>
 
 <div class="page">
-  <h1>Solicitar revisión fiscal</h1>
-  <p class="page-sub">Describe tu situación fiscal. Revisaremos el caso y te enviaremos un presupuesto personalizado por email.</p>
+  <h1>Solicita asistencia fiscal personalizada</h1>
+  <p class="page-sub">Cuéntanos brevemente tu situación y Rafa revisará tu caso para enviarte un presupuesto antes de empezar.</p>
 
   <div id="errorMsg" class="msg-error" style="display:none"></div>
 
@@ -168,265 +118,68 @@ h1 { font-family: var(--ff-h); font-size: clamp(26px,4vw,36px); font-weight: 800
 
   <form id="advisoryForm" novalidate>
 
-    <!-- DATOS PERSONALES -->
-    <div class="form-section">
-      <div class="form-section-title">Datos personales</div>
-      <div class="field-row">
-        <div class="field">
-          <label for="fullName">Nombre completo <span class="req">*</span></label>
-          <input type="text" id="fullName" name="full_name" placeholder="Nombre y apellidos" required>
-        </div>
-        <div class="field">
-          <label for="emailField">Email <span class="req">*</span></label>
-          <input type="email" id="emailField" name="email" placeholder="tu@email.com" required>
-        </div>
+    <div class="field">
+      <label for="fullName">Nombre completo <span class="req">*</span></label>
+      <input type="text" id="fullName" name="full_name" placeholder="Nombre y apellidos" autocomplete="name" required>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="emailField">Email <span class="req">*</span></label>
+        <input type="email" id="emailField" name="email" placeholder="tu@email.com" autocomplete="email" required>
       </div>
-      <div class="field-row">
-        <div class="field">
-          <label for="phoneField">Teléfono <small>(opcional)</small></label>
-          <input type="tel" id="phoneField" name="phone" placeholder="+34 600 000 000">
-        </div>
-        <div class="field">
-          <label for="taxCountry">País de residencia fiscal <span class="req">*</span></label>
-          <input type="text" id="taxCountry" name="tax_residence_country" value="España" required>
-        </div>
+      <div class="field">
+        <label for="phoneField">Teléfono <small style="font-weight:400">(opcional)</small></label>
+        <input type="tel" id="phoneField" name="phone" placeholder="+34 600 000 000" autocomplete="tel">
       </div>
     </div>
 
-    <!-- EJERCICIO Y SERVICIO -->
-    <div class="form-section">
-      <div class="form-section-title">Ejercicio fiscal y servicio</div>
-      <div class="field-row">
-        <div class="field">
-          <label for="taxYear">Ejercicio fiscal <span class="req">*</span></label>
-          <select id="taxYear" name="tax_year" required></select>
-        </div>
-      </div>
-
-      <div class="field">
-        <label>Tipo de asesoramiento <span class="req">*</span></label>
-        <div class="service-options" id="serviceOptions">
-          <div style="color:var(--muted);font-size:14px;padding:10px 0">Cargando servicios...</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- OPERATIVA -->
-    <div class="form-section">
-      <div class="form-section-title">Tu operativa cripto</div>
-
-      <div class="field">
-        <label>Tipo de operaciones realizadas</label>
-        <div class="check-grid">
-          <label class="check-item"><input type="checkbox" name="operation_types" value="compraventas"><span>Compraventas</span></label>
-          <label class="check-item"><input type="checkbox" name="operation_types" value="swaps"><span>Swaps (intercambios)</span></label>
-          <label class="check-item"><input type="checkbox" name="operation_types" value="staking"><span>Staking</span></label>
-          <label class="check-item"><input type="checkbox" name="operation_types" value="lending"><span>Lending / intereses</span></label>
-          <label class="check-item"><input type="checkbox" name="operation_types" value="defi"><span>DeFi (liquidez, yield)</span></label>
-          <label class="check-item"><input type="checkbox" name="operation_types" value="nfts"><span>NFTs</span></label>
-          <label class="check-item"><input type="checkbox" name="operation_types" value="mining"><span>Mining</span></label>
-          <label class="check-item"><input type="checkbox" name="operation_types" value="airdrops"><span>Airdrops</span></label>
-          <label class="check-item"><input type="checkbox" name="operation_types" value="futures"><span>Futuros / derivados</span></label>
-        </div>
-      </div>
-
-      <div class="field">
-        <label for="exchangesField">Exchanges y wallets utilizados</label>
-        <input type="text" id="exchangesField" name="exchanges" placeholder="Ej: Binance, Kraken, MetaMask, Ledger...">
-      </div>
-
-      <div class="field">
-        <label for="opVolume">Volumen aproximado de operaciones</label>
-        <select id="opVolume" name="operation_volume">
-          <option value="">Selecciona...</option>
-          <option value="menos_10">Menos de 10 operaciones</option>
-          <option value="10_50">10–50 operaciones</option>
-          <option value="50_200">50–200 operaciones</option>
-          <option value="200_500">200–500 operaciones</option>
-          <option value="mas_500">Más de 500 operaciones</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- SITUACIÓN ACTUAL -->
-    <div class="form-section">
-      <div class="form-section-title">Tu situación actual</div>
-
-      <div class="field">
-        <label>Marca lo que aplica a tu caso</label>
-        <div class="check-grid">
-          <label class="check-item"><input type="checkbox" name="current_situation" value="no_declarado"><span>Nunca he declarado cripto</span></label>
-          <label class="check-item"><input type="checkbox" name="current_situation" value="declarado_anterior"><span>He declarado ejercicios anteriores</span></label>
-          <label class="check-item"><input type="checkbox" name="current_situation" value="dudas_metodo"><span>Dudas sobre el método correcto</span></label>
-          <label class="check-item"><input type="checkbox" name="current_situation" value="requerimiento"><span>He recibido un requerimiento de Hacienda</span></label>
-          <label class="check-item"><input type="checkbox" name="current_situation" value="perdidas"><span>Tengo pérdidas que quiero compensar</span></label>
-          <label class="check-item"><input type="checkbox" name="current_situation" value="varios_anios"><span>Tengo varios ejercicios pendientes</span></label>
-        </div>
-      </div>
-
-      <div class="field">
-        <label for="caseDesc">Describe tu situación <span class="req">*</span></label>
-        <textarea id="caseDesc" name="case_description" placeholder="Cuéntanos brevemente tu situación: qué operaciones has hecho, qué dudas tienes, qué necesitas resolver... (mínimo 20 caracteres)" required></textarea>
-        <div class="field-hint">Cuanta más información proporciones, más precisa será la revisión.</div>
-      </div>
-    </div>
-
-    <!-- DATOS DE FACTURACIÓN -->
-    <div class="form-section">
-      <div class="form-section-title">Datos de facturación</div>
-      <div class="field-row">
-        <div class="field">
-          <label for="billingNif">NIF / NIE / CIF <span class="req">*</span></label>
-          <input type="text" id="billingNif" name="billing_nif" placeholder="12345678A" required>
-        </div>
-        <div class="field">
-          <label for="billingCompany">Razón social <small>(solo si empresa o autónomo)</small></label>
-          <input type="text" id="billingCompany" name="billing_company_name" placeholder="Mi Empresa S.L.">
-        </div>
-      </div>
-      <div class="field">
-        <label for="billingAddress">Dirección (calle y número) <span class="req">*</span></label>
-        <input type="text" id="billingAddress" name="billing_address" placeholder="Calle Mayor 1, 2º B" required>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label for="billingCity">Ciudad <span class="req">*</span></label>
-          <input type="text" id="billingCity" name="billing_city" placeholder="Madrid" required>
-        </div>
-        <div class="field">
-          <label for="billingPostal">Código postal <span class="req">*</span></label>
-          <input type="text" id="billingPostal" name="billing_postal_code" placeholder="28001" required>
-        </div>
-      </div>
-    </div>
-
-    <!-- DOCUMENTACIÓN -->
-    <div class="form-section">
-      <div class="form-section-title">Documentación</div>
-      <div class="doc-notice">
-        <span style="font-size:18px;flex-shrink:0;">🔒</span>
-        <div>
-          <strong style="color:var(--text);">Por seguridad, no almacenamos documentación fiscal sensible en nuestros servidores.</strong><br>
-          Si necesitamos revisar CSVs, informes o documentos adicionales, te indicaremos por email cómo enviarlos de forma segura.
-        </div>
-      </div>
-    </div>
-
-    <!-- LEGAL -->
-    <div class="form-section">
-      <label class="legal-check">
-        <input type="checkbox" id="legalPrivacy" required>
-        <span>He leído y acepto la <a href="/privacidad" target="_blank">Política de privacidad</a>. Mis datos serán tratados para la prestación del servicio de asesoramiento fiscal. <span class="req">*</span></span>
-      </label>
-      <label class="legal-check">
-        <input type="checkbox" id="legalTerms" required>
-        <span>Entiendo que este servicio consiste en asesoramiento y revisión fiscal, no en la presentación de declaraciones ante la AEAT. <span class="req">*</span></span>
-      </label>
+    <div class="field">
+      <label for="caseDesc">Describe tu situación <span class="req">*</span></label>
+      <textarea id="caseDesc" name="case_description"
+        placeholder="Cuéntanos brevemente tu situación: qué operaciones has hecho, en qué exchanges, qué dudas tienes o qué necesitas resolver..."
+        required></textarea>
     </div>
 
     <button type="submit" class="submit-btn" id="submitBtn">Enviar solicitud</button>
-    <p class="submit-hint">Sin pago previo · Recibirás un presupuesto por email</p>
+    <p class="submit-hint">Sin pago previo. Revisaremos tu caso y te enviaremos un presupuesto por email.</p>
+
   </form>
 </div>
 
 <script>
-// Pre-fill year selector
-(function() {
-  const sel = document.getElementById('taxYear');
-  const thisYear = new Date().getFullYear();
-  for (let y = thisYear - 1; y >= 2015; y--) {
-    const opt = document.createElement('option');
-    opt.value = y;
-    opt.textContent = y;
-    if (y === thisYear - 1) opt.selected = true;
-    sel.appendChild(opt);
-  }
-})();
-
-// Load user data
+// Pre-fill si el usuario ya tiene sesión
 (async () => {
   try {
     const r = await fetch('/api/me', { credentials: 'include' });
     const d = await r.json();
     if (d.user) {
-      if (d.user.full_name) document.getElementById('fullName').value = d.user.full_name;
+      if (d.user.full_name) document.getElementById('fullName').value  = d.user.full_name;
       if (d.user.email)     document.getElementById('emailField').value = d.user.email;
-      if (d.user.nif)       document.getElementById('billingNif').value = d.user.nif;
     }
   } catch {}
 })();
 
-// Load prices and build service options
-(async () => {
-  try {
-    const r = await fetch('/api/asesoramiento/precios');
-    const prices = await r.json();
-    const container = document.getElementById('serviceOptions');
-    container.innerHTML = '';
-    const order = ['revision_basica', 'revision_avanzada', 'caso_complejo'];
-    order.forEach((key, i) => {
-      if (!prices[key]) return;
-      const opt = document.createElement('label');
-      opt.className = 'service-option' + (i === 1 ? ' selected' : '');
-      opt.innerHTML = `
-        <input type="radio" name="service_type" value="${key}" ${i === 1 ? 'checked' : ''}>
-        <span class="service-option-name">${prices[key].label}</span>
-      `;
-      opt.addEventListener('click', () => {
-        document.querySelectorAll('.service-option').forEach(el => el.classList.remove('selected'));
-        opt.classList.add('selected');
-      });
-      container.appendChild(opt);
-    });
-  } catch {
-    document.getElementById('serviceOptions').innerHTML = '<p style="color:var(--muted);font-size:14px">Error cargando servicios. Recarga la página.</p>';
-  }
-})();
-
-// Form submit
-const form    = document.getElementById('advisoryForm');
-const errorEl = document.getElementById('errorMsg');
+// Submit
+const form      = document.getElementById('advisoryForm');
+const errorEl   = document.getElementById('errorMsg');
 const submitBtn = document.getElementById('submitBtn');
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   errorEl.style.display = 'none';
 
-  // Validate legal
-  if (!document.getElementById('legalPrivacy').checked || !document.getElementById('legalTerms').checked) {
-    errorEl.textContent = 'Debes aceptar ambas casillas legales para continuar.';
-    errorEl.style.display = 'block';
-    errorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    return;
-  }
-
-  const serviceType = form.querySelector('input[name="service_type"]:checked')?.value;
-  if (!serviceType) {
-    errorEl.textContent = 'Selecciona un tipo de asesoramiento.';
-    errorEl.style.display = 'block';
-    return;
-  }
-
-  const opTypes = Array.from(form.querySelectorAll('input[name="operation_types"]:checked')).map(el => el.value);
-  const curSit  = Array.from(form.querySelectorAll('input[name="current_situation"]:checked')).map(el => el.value);
-
   const payload = {
     full_name:             document.getElementById('fullName').value.trim(),
     email:                 document.getElementById('emailField').value.trim(),
     phone:                 document.getElementById('phoneField').value.trim() || null,
-    tax_residence_country: document.getElementById('taxCountry').value.trim() || 'España',
-    tax_year:              parseInt(document.getElementById('taxYear').value),
-    service_type:          serviceType,
-    operation_types:       opTypes,
-    exchanges:             document.getElementById('exchangesField').value.trim() || null,
-    operation_volume:      document.getElementById('opVolume').value || null,
-    current_situation:     curSit,
     case_description:      document.getElementById('caseDesc').value.trim(),
-    billing_nif:           document.getElementById('billingNif').value.trim() || null,
-    billing_address:       document.getElementById('billingAddress').value.trim() || null,
-    billing_city:          document.getElementById('billingCity').value.trim() || null,
-    billing_postal_code:   document.getElementById('billingPostal').value.trim() || null,
-    billing_company_name:  document.getElementById('billingCompany').value.trim() || null,
+    // Valores internos por defecto — el usuario no necesita seleccionarlos
+    tax_residence_country: 'España',
+    tax_year:              new Date().getFullYear() - 1,
+    service_type:          'revision_avanzada',
+    operation_types:       [],
+    current_situation:     [],
   };
 
   submitBtn.disabled = true;
@@ -460,5 +213,6 @@ function showSuccess() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 </script>
+<script src="/static/nav.js" defer></script>
 </body>
 </html>
