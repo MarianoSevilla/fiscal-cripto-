@@ -205,14 +205,18 @@ _ADVISORY_NOTIFY_EMAILS = [
 ]
 # Precios en céntimos. Configura en Railway env vars.
 _ADVISORY_PRICES = {
-    "revision_basica":   int(os.environ.get("FISCAL_ADVISORY_BASIC_PRICE",   "7900")),
-    "revision_avanzada": int(os.environ.get("FISCAL_ADVISORY_ADVANCED_PRICE","14900")),
-    "caso_complejo":     int(os.environ.get("FISCAL_ADVISORY_COMPLEX_PRICE", "4900")),
+    "revision_basica":          int(os.environ.get("FISCAL_ADVISORY_BASIC_PRICE",   "7900")),
+    "revision_avanzada":        int(os.environ.get("FISCAL_ADVISORY_ADVANCED_PRICE","14900")),
+    "caso_complejo":            int(os.environ.get("FISCAL_ADVISORY_COMPLEX_PRICE", "4900")),
+    # Tipo genérico para solicitudes de presupuesto: el usuario pide valoración
+    # sin seleccionar servicio; Rafa asigna tipo y precio al revisar el caso.
+    "presupuesto_personalizado": 0,
 }
 _ADVISORY_PRICE_LABELS = {
-    "revision_basica":   "Revisión fiscal básica",
-    "revision_avanzada": "Revisión fiscal avanzada",
-    "caso_complejo":     "Valoración inicial — caso complejo",
+    "revision_basica":          "Revisión fiscal básica",
+    "revision_avanzada":        "Revisión fiscal avanzada",
+    "caso_complejo":            "Valoración inicial — caso complejo",
+    "presupuesto_personalizado": "Solicitud de presupuesto personalizado",
 }
 
 # Feature flag: emails automáticos al usuario al cambiar estado de solicitud.

@@ -149,9 +149,10 @@ class FiscalAdvisoryRequest(db.Model):
         "refunded":          "Reembolsado",
     }
     SERVICE_LABELS = {
-        "revision_basica":   "Revisión fiscal básica",
-        "revision_avanzada": "Revisión fiscal avanzada",
-        "caso_complejo":     "Caso complejo / valoración personalizada",
+        "revision_basica":          "Revisión fiscal básica",
+        "revision_avanzada":        "Revisión fiscal avanzada",
+        "caso_complejo":            "Caso complejo / valoración personalizada",
+        "presupuesto_personalizado": "Solicitud de presupuesto personalizado",
     }
 
     id                         = db.Column(db.Integer, primary_key=True)

@@ -68,6 +68,13 @@ h1 { font-family: var(--ff-h); font-size: clamp(26px,4vw,36px); font-weight: 800
 .submit-btn:hover:not(:disabled) { background: var(--accent2); transform: translateY(-1px); }
 .submit-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
 
+/* Legal checkbox */
+.legal-check { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 20px; }
+.legal-check input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--accent); margin-top: 2px; flex-shrink: 0; cursor: pointer; }
+.legal-check span { font-size: 13px; color: var(--sub); line-height: 1.6; }
+.legal-check a { color: var(--accent); text-decoration: none; }
+.legal-check a:hover { text-decoration: underline; }
+
 /* Submit hint */
 .submit-hint { text-align: center; font-size: 13px; color: var(--muted); margin-top: 12px; line-height: 1.5; }
 
@@ -141,6 +148,11 @@ h1 { font-family: var(--ff-h); font-size: clamp(26px,4vw,36px); font-weight: 800
         required></textarea>
     </div>
 
+    <label class="legal-check">
+      <input type="checkbox" id="legalPrivacy" required>
+      <span>He leído y acepto la <a href="/privacidad" target="_blank">política de privacidad</a> y autorizo a Mariano Sevilla a contactar conmigo para valorar mi solicitud de asistencia fiscal. <span class="req">*</span></span>
+    </label>
+
     <button type="submit" class="submit-btn" id="submitBtn">Enviar solicitud</button>
     <p class="submit-hint">Sin pago previo. Revisaremos tu caso y te enviaremos un presupuesto por email.</p>
 
@@ -169,6 +181,14 @@ form.addEventListener('submit', async (e) => {
   e.preventDefault();
   errorEl.style.display = 'none';
 
+  // Validar consentimiento legal
+  if (!document.getElementById('legalPrivacy').checked) {
+    errorEl.textContent = 'Debes aceptar la política de privacidad para continuar.';
+    errorEl.style.display = 'block';
+    errorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
   const payload = {
     full_name:             document.getElementById('fullName').value.trim(),
     email:                 document.getElementById('emailField').value.trim(),
@@ -177,7 +197,7 @@ form.addEventListener('submit', async (e) => {
     // Valores internos por defecto — el usuario no necesita seleccionarlos
     tax_residence_country: 'España',
     tax_year:              new Date().getFullYear() - 1,
-    service_type:          'revision_avanzada',
+    service_type:          'presupuesto_personalizado',
     operation_types:       [],
     current_situation:     [],
   };
