@@ -3777,11 +3777,14 @@ def advisory_enviar_presupuesto(req_id):
     advisory.paypal_order_id     = None
     advisory.paypal_capture_id   = None
 
+    history_note = f"Presupuesto enviado: €{amount_euros:.2f} a {advisory.email}"
+    if quote_message:
+        history_note += ". Mensaje incluido."
     db.session.add(FiscalAdvisoryStatusHistory(
         request_id = advisory.id,
         status     = "quote_sent",
         changed_by = current_user.id,
-        note       = f"Presupuesto enviado: €{amount_euros:.2f}",
+        note       = history_note,
     ))
     db.session.commit()
 

@@ -704,17 +704,20 @@ async function enviarPresupuesto(id) {
     if (!r.ok) throw new Error(data.error || 'Error al enviar el presupuesto.');
 
     if (data.email_warning) {
-      // Expediente guardado pero email falló — mostrar aviso llamativo
-      errEl.innerHTML = `⚠️ ${data.email_warning}`;
+      // Expediente guardado pero email falló
+      okEl.textContent    = `✅ Presupuesto guardado correctamente.`;
+      okEl.style.display  = 'block';
+      errEl.textContent   = `⚠️ El presupuesto se guardó correctamente, pero el email no pudo enviarse a ${data.email_to}. Revisa los logs de Railway.`;
       errEl.style.display = 'block';
-      okEl.textContent = `✓ Presupuesto guardado (enviado a ${data.email_to})`;
     } else {
-      okEl.textContent = `✓ Presupuesto enviado a ${data.email_to}`;
+      okEl.textContent   = `✅ Presupuesto enviado correctamente a ${data.email_to}`;
+      okEl.style.display = 'block';
     }
-    okEl.style.display  = 'block';
-    btn.textContent     = 'Reenviar link de pago';
-    // Reload detail to show updated state
-    setTimeout(() => loadDetail(id), 1500);
+
+    // Refresco inmediato: lista (badge de estado) + panel de detalle
+    await loadList();
+    // Pequeña pausa para que el usuario lea el mensaje antes de que el panel se reconstruya
+    setTimeout(() => openDetail(id), 1200);
   } catch (err) {
     errEl.textContent   = err.message;
     errEl.style.display = 'block';
