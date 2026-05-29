@@ -3786,9 +3786,19 @@ def advisory_enviar_presupuesto(req_id):
     db.session.commit()
 
     payment_url = f"{_APP_BASE_URL.rstrip('/')}/pagar/{advisory.payment_link_token}"
-    _send_advisory_quote_email(advisory, payment_url)
+    email_ok    = _send_advisory_quote_email(advisory, payment_url)
 
-    return jsonify({"ok": True, "payment_url": payment_url})
+    return jsonify({
+        "ok":           True,
+        "payment_url":  payment_url,
+        "email_sent":   email_ok,
+        "email_to":     advisory.email,
+        # Si email_sent es False el expediente ya está guardado; el admin puede reenviar.
+        "email_warning": None if email_ok else (
+            f"El presupuesto se guardó correctamente pero el email a {advisory.email} "
+            "no pudo enviarse. Revisa los logs de Railway."
+        ),
+    })
 
 
 # ── PÁGINA DE PAGO PÚBLICA ────────────────────────────────────────────────────
@@ -4184,21 +4194,43 @@ def _send_advisory_internal_notification(advisory: "FiscalAdvisoryRequest"):
 
 
 def _send_advisory_quote_email(advisory: "FiscalAdvisoryRequest", payment_url: str):
-    """Email al cliente con el presupuesto y el link de pago."""
+    """Email al cliente con el presupuesto y el link de pago.
+    Devuelve True si el envío fue aceptado por Resend, False en caso contrario.
+    """
     if not resend.api_key:
-        return
+        app.logger.error(
+            "RESEND_API_KEY no configurada — email de presupuesto NO enviado "
+            "(advisory_id=%s, to=%s)", advisory.id, advisory.email
+        )
+        return False
+
     html, text = advisory_quote_email(advisory, payment_url)
     amount_str = f"{advisory.quoted_amount / 100:.2f}" if advisory.quoted_amount else "?"
+    subject    = f"Tu presupuesto de asesoramiento fiscal — {amount_str} €"
+
+    app.logger.info(
+        "Enviando email de presupuesto | advisory_id=%s | to=%s | from=%s | subject=%r",
+        advisory.id, advisory.email, _RESEND_FROM_DISPLAY, subject,
+    )
     try:
-        resend.Emails.send({
+        resp = resend.Emails.send({
             "from":    _RESEND_FROM_DISPLAY,
             "to":      [advisory.email],
-            "subject": f"Tu presupuesto de asesoramiento fiscal — {amount_str} €",
+            "subject": subject,
             "html":    html,
             "text":    text,
         })
+        app.logger.info(
+            "Email de presupuesto enviado OK | advisory_id=%s | resend_id=%s",
+            advisory.id, getattr(resp, "id", resp),
+        )
+        return True
     except Exception as exc:
-        app.logger.error("Error enviando email presupuesto advisory: %s", exc)
+        app.logger.error(
+            "ERROR enviando email de presupuesto | advisory_id=%s | to=%s | error=%s",
+            advisory.id, advisory.email, exc,
+        )
+        return False
 
 
 def _send_advisory_payment_confirmed_email(advisory: "FiscalAdvisoryRequest"):
