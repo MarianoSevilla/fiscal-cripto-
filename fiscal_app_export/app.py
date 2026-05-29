@@ -3497,8 +3497,8 @@ def payload_too_large(e):
 def advisory_landing():
     return send_from_directory("static", "asesoramiento-fiscal.html")
 
+@app.route("/pedir-asesoramiento", strict_slashes=False)
 @app.route("/pedir-asesoramiento-fiscal", strict_slashes=False)
-@login_required
 def advisory_request_page():
     return send_from_directory("static", "pedir-asesoramiento.html")
 
@@ -3539,7 +3539,6 @@ def advisory_prices():
 
 
 @app.route("/api/asesoramiento/solicitar", methods=["POST"])
-@login_required
 @limiter.limit("3 per hour")
 def advisory_solicitar():
     """Crea la solicitud. Rafa revisará el caso y enviará un presupuesto por email."""
@@ -3592,7 +3591,7 @@ def advisory_solicitar():
 
     import json as _json
     advisory = FiscalAdvisoryRequest(
-        user_id               = current_user.id,
+        user_id               = current_user.id if current_user.is_authenticated else None,
         full_name             = full_name,
         email                 = email_val,
         phone                 = phone,

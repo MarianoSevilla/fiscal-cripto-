@@ -257,6 +257,13 @@ msg.addEventListener('input', () => {
   cc.parentElement.classList.toggle('over', n > 3000);
 });
 
+// Si el usuario selecciona "Asistencia fiscal", redirigir al formulario dedicado
+document.getElementById('tipo').addEventListener('change', function () {
+  if (this.value === 'asistencia_fiscal') {
+    window.location.href = '/pedir-asesoramiento';
+  }
+});
+
 // form submit
 document.getElementById('contactForm').addEventListener('submit', async (e) => {
   e.preventDefault();
