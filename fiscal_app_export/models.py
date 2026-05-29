@@ -138,8 +138,9 @@ class FiscalAdvisoryRequest(db.Model):
     __tablename__ = "fiscal_advisory_requests"
 
     STATUS_LABELS = {
-        "pending_payment":   "Pendiente de pago",
-        "paid_received":     "Solicitud recibida",
+        "submitted":         "Solicitud recibida",
+        "quote_sent":        "Presupuesto enviado",
+        "paid_received":     "Pago confirmado",
         "under_review":      "En revisión",
         "waiting_user_info": "Esperando información",
         "in_progress":       "En curso",
@@ -166,11 +167,32 @@ class FiscalAdvisoryRequest(db.Model):
     operation_volume           = db.Column(db.String(50), nullable=True)
     current_situation          = db.Column(db.Text, nullable=True)   # JSON array
     case_description           = db.Column(db.Text, nullable=False)
-    status                     = db.Column(db.String(30), nullable=False, default="pending_payment", index=True)
+    status                     = db.Column(db.String(30), nullable=False, default="submitted", index=True)
     stripe_checkout_session_id = db.Column(db.String(255), nullable=True, unique=True)
     stripe_payment_intent_id   = db.Column(db.String(255), nullable=True)
-    amount_paid                = db.Column(db.Integer, nullable=True)   # céntimos
+    paypal_order_id            = db.Column(db.String(64),  nullable=True, index=True)
+    paypal_capture_id          = db.Column(db.String(64),  nullable=True)
+    payment_provider           = db.Column(db.String(16),  nullable=True)   # 'paypal' | 'stripe'
+    amount_paid                = db.Column(db.Integer, nullable=True)   # céntimos — lo que el cliente pagó realmente
     currency                   = db.Column(db.String(3), nullable=True, default="eur")
+    paid_at                    = db.Column(db.DateTime, nullable=True)
+    # ── Facturación ──────────────────────────────────────────────────────────
+    billing_nif                = db.Column(db.String(20),  nullable=True)
+    billing_address            = db.Column(db.String(255), nullable=True)
+    billing_city               = db.Column(db.String(100), nullable=True)
+    billing_postal_code        = db.Column(db.String(20),  nullable=True)
+    billing_company_name       = db.Column(db.String(255), nullable=True)
+    # ── Presupuesto ──────────────────────────────────────────────────────────
+    quoted_amount              = db.Column(db.Integer,     nullable=True)   # céntimos — precio fijado por Rafa
+    quoted_by_user_id          = db.Column(db.Integer,     db.ForeignKey("users.id"), nullable=True)
+    quote_message              = db.Column(db.Text,        nullable=True)   # mensaje personalizado al cliente
+    quote_sent_at              = db.Column(db.DateTime,    nullable=True)
+    quote_expires_at           = db.Column(db.DateTime,    nullable=True)   # default: now + 30 días
+    payment_link_token         = db.Column(db.String(64),  nullable=True, unique=True, index=True)
+    # ── Aceptación del presupuesto ───────────────────────────────────────────
+    quote_accepted_at          = db.Column(db.DateTime,    nullable=True)
+    quote_acceptance_ip        = db.Column(db.String(45),  nullable=True)
+    quote_acceptance_user_agent = db.Column(db.String(512), nullable=True)
     assigned_to                = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     internal_notes             = db.Column(db.Text, nullable=True)
     created_at                 = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -217,6 +239,22 @@ class FiscalAdvisoryRequest(db.Model):
                 "internal_notes": self.internal_notes,
                 "assigned_to": self.assigned_to,
                 "stripe_checkout_session_id": self.stripe_checkout_session_id,
+                "paypal_order_id": self.paypal_order_id,
+                "paypal_capture_id": self.paypal_capture_id,
+                "payment_provider": self.payment_provider,
+                "paid_at": self.paid_at.isoformat() if self.paid_at else None,
+                "billing_nif": self.billing_nif,
+                "billing_address": self.billing_address,
+                "billing_city": self.billing_city,
+                "billing_postal_code": self.billing_postal_code,
+                "billing_company_name": self.billing_company_name,
+                "quoted_amount": self.quoted_amount,
+                "quoted_by_user_id": self.quoted_by_user_id,
+                "quote_message": self.quote_message,
+                "quote_sent_at": self.quote_sent_at.isoformat() if self.quote_sent_at else None,
+                "quote_expires_at": self.quote_expires_at.isoformat() if self.quote_expires_at else None,
+                "quote_accepted_at": self.quote_accepted_at.isoformat() if self.quote_accepted_at else None,
+                "quote_acceptance_ip": self.quote_acceptance_ip,
             })
         return d
 

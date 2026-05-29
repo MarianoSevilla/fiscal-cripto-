@@ -142,6 +142,7 @@ h1 { font-family: var(--ff-h); font-size: clamp(26px,4vw,36px); font-weight: 800
 
 /* Submit hint */
 .submit-hint { text-align: center; font-size: 12px; color: var(--muted); margin-top: 10px; }
+
 </style>
 </head>
 <body>
@@ -153,15 +154,15 @@ h1 { font-family: var(--ff-h); font-size: clamp(26px,4vw,36px); font-weight: 800
 
 <div class="page">
   <h1>Solicitar revisión fiscal</h1>
-  <p class="page-sub">Describe tu situación fiscal. Revisaremos el caso y, si podemos ayudarte, te contactaremos por email con los siguientes pasos.</p>
+  <p class="page-sub">Describe tu situación fiscal. Revisaremos el caso y te enviaremos un presupuesto personalizado por email.</p>
 
   <div id="errorMsg" class="msg-error" style="display:none"></div>
 
   <div id="successMsg" class="msg-success" style="display:none">
     <div class="msg-success-icon">✅</div>
     <h2>Solicitud recibida</h2>
-    <p>Hemos recibido tu solicitud de asesoramiento fiscal. Revisaremos el caso y, si podemos ayudarte, te contactaremos por email con los siguientes pasos.</p>
-    <p class="msg-success-note">No se realizará ningún cargo al enviar esta solicitud.</p>
+    <p>Hemos recibido tu solicitud. Rafa revisará tu caso y te enviará un presupuesto personalizado por email en los próximos días.</p>
+    <p class="msg-success-note">No se realizará ningún cargo hasta que aceptes el presupuesto.</p>
     <a href="/mis-solicitudes-fiscales" class="msg-success-link">Ver mis solicitudes</a>
   </div>
 
@@ -270,6 +271,35 @@ h1 { font-family: var(--ff-h); font-size: clamp(26px,4vw,36px); font-weight: 800
       </div>
     </div>
 
+    <!-- DATOS DE FACTURACIÓN -->
+    <div class="form-section">
+      <div class="form-section-title">Datos de facturación</div>
+      <div class="field-row">
+        <div class="field">
+          <label for="billingNif">NIF / NIE / CIF <span class="req">*</span></label>
+          <input type="text" id="billingNif" name="billing_nif" placeholder="12345678A" required>
+        </div>
+        <div class="field">
+          <label for="billingCompany">Razón social <small>(solo si empresa o autónomo)</small></label>
+          <input type="text" id="billingCompany" name="billing_company_name" placeholder="Mi Empresa S.L.">
+        </div>
+      </div>
+      <div class="field">
+        <label for="billingAddress">Dirección (calle y número) <span class="req">*</span></label>
+        <input type="text" id="billingAddress" name="billing_address" placeholder="Calle Mayor 1, 2º B" required>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="billingCity">Ciudad <span class="req">*</span></label>
+          <input type="text" id="billingCity" name="billing_city" placeholder="Madrid" required>
+        </div>
+        <div class="field">
+          <label for="billingPostal">Código postal <span class="req">*</span></label>
+          <input type="text" id="billingPostal" name="billing_postal_code" placeholder="28001" required>
+        </div>
+      </div>
+    </div>
+
     <!-- DOCUMENTACIÓN -->
     <div class="form-section">
       <div class="form-section-title">Documentación</div>
@@ -295,7 +325,7 @@ h1 { font-family: var(--ff-h); font-size: clamp(26px,4vw,36px); font-weight: 800
     </div>
 
     <button type="submit" class="submit-btn" id="submitBtn">Enviar solicitud</button>
-    <p class="submit-hint">Sin pago previo · Te responderemos por email</p>
+    <p class="submit-hint">Sin pago previo · Recibirás un presupuesto por email</p>
   </form>
 </div>
 
@@ -321,6 +351,7 @@ h1 { font-family: var(--ff-h); font-size: clamp(26px,4vw,36px); font-weight: 800
     if (d.user) {
       if (d.user.full_name) document.getElementById('fullName').value = d.user.full_name;
       if (d.user.email)     document.getElementById('emailField').value = d.user.email;
+      if (d.user.nif)       document.getElementById('billingNif').value = d.user.nif;
     }
   } catch {}
 })();
@@ -391,6 +422,11 @@ form.addEventListener('submit', async (e) => {
     operation_volume:      document.getElementById('opVolume').value || null,
     current_situation:     curSit,
     case_description:      document.getElementById('caseDesc').value.trim(),
+    billing_nif:           document.getElementById('billingNif').value.trim() || null,
+    billing_address:       document.getElementById('billingAddress').value.trim() || null,
+    billing_city:          document.getElementById('billingCity').value.trim() || null,
+    billing_postal_code:   document.getElementById('billingPostal').value.trim() || null,
+    billing_company_name:  document.getElementById('billingCompany').value.trim() || null,
   };
 
   submitBtn.disabled = true;

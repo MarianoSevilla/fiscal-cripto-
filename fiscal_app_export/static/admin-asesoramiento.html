@@ -76,7 +76,8 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
   font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px;
   white-space: nowrap;
 }
-.badge-pending_payment  { background: rgba(251,191,36,0.15);  color: #fbbf24; }
+.badge-submitted        { background: rgba(56,189,248,0.15);  color: #38bdf8; }
+.badge-quote_sent       { background: rgba(251,191,36,0.15);  color: #fbbf24; }
 .badge-paid_received    { background: rgba(0,200,150,0.15);   color: #00C896; }
 .badge-under_review     { background: rgba(99,102,241,0.15);  color: #818cf8; }
 .badge-waiting_user_info{ background: rgba(251,146,60,0.15);  color: #fb923c; }
@@ -84,6 +85,22 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
 .badge-completed        { background: rgba(34,197,94,0.15);   color: #4ade80; }
 .badge-cancelled        { background: rgba(226,75,74,0.15);   color: #f87171; }
 .badge-refunded         { background: rgba(156,163,175,0.15); color: #9ca3af; }
+
+/* Quote form */
+.quote-section { background: rgba(251,191,36,0.05); border: 1px solid rgba(251,191,36,0.2); border-radius: 10px; padding: 18px 20px; margin-bottom: 20px; }
+.quote-section-title { font-size: 12px; font-weight: 700; color: #fbbf24; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 14px; }
+.quote-field { margin-bottom: 12px; }
+.quote-field label { display: block; font-size: 12px; font-weight: 600; color: var(--sub); margin-bottom: 6px; }
+.quote-field input, .quote-field textarea { width: 100%; background: var(--surface); border: 1.5px solid var(--border); color: var(--text); font-family: var(--ff-b); font-size: 14px; padding: 9px 12px; border-radius: 7px; outline: none; transition: border-color .2s; }
+.quote-field input:focus, .quote-field textarea:focus { border-color: rgba(251,191,36,0.5); }
+.quote-field textarea { resize: vertical; min-height: 80px; }
+.quote-send-btn { width: 100%; background: #fbbf24; color: #1a1200; font-weight: 700; font-size: 14px; padding: 10px; border: none; border-radius: 7px; cursor: pointer; transition: background .2s; }
+.quote-send-btn:hover:not(:disabled) { background: #f59e0b; }
+.quote-send-btn:disabled { opacity: .55; cursor: not-allowed; }
+.quote-sent-info { font-size: 13px; color: var(--muted); margin-top: 10px; line-height: 1.6; }
+.quote-sent-link { font-size: 12px; color: var(--accent); word-break: break-all; }
+.quote-msg-ok  { font-size: 13px; color: #4ade80; margin-top: 8px; display: none; }
+.quote-msg-err { font-size: 13px; color: #f87171; margin-top: 8px; display: none; }
 
 /* DETAIL PANEL */
 .detail-panel {
@@ -284,8 +301,9 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
       <div class="sidebar-filter-row">
         <select id="filterStatus" onchange="loadList()">
           <option value="">Todos los estados</option>
-          <option value="pending_payment">Pendiente pago</option>
-          <option value="paid_received">Solicitud recibida</option>
+          <option value="submitted">Solicitud recibida</option>
+          <option value="quote_sent">Presupuesto enviado</option>
+          <option value="paid_received">Pago confirmado</option>
           <option value="under_review">En revisión</option>
           <option value="waiting_user_info">Esperando info</option>
           <option value="in_progress">En curso</option>
@@ -335,16 +353,18 @@ function relativeTime(iso) {
 function getPriority(status) {
   if (['paid_received', 'under_review'].includes(status)) return 'high';
   if (status === 'in_progress')                           return 'active';
-  if (status === 'pending_payment')                       return 'payment';
+  if (status === 'submitted')                             return 'payment';
+  if (status === 'quote_sent')                            return 'payment';
   if (status === 'waiting_user_info')                     return 'waiting';
   return 'done';
 }
 function getPriorityTitle(status) {
   const map = {
-    paid_received:     'Requiere revisión',
+    submitted:         'Pendiente de presupuesto',
+    quote_sent:        'Esperando pago del cliente',
+    paid_received:     'Pago recibido — comenzar',
     under_review:      'Requiere revisión',
     in_progress:       'En curso',
-    pending_payment:   'Pendiente de pago',
     waiting_user_info: 'Esperando cliente',
     completed:         'Finalizado',
     cancelled:         'Cancelado',
@@ -354,8 +374,9 @@ function getPriorityTitle(status) {
 }
 
 const STATUS_LABELS = {
-  pending_payment:   'Pendiente de pago',
-  paid_received:     'Solicitud recibida',
+  submitted:         'Solicitud recibida',
+  quote_sent:        'Presupuesto enviado',
+  paid_received:     'Pago confirmado',
   under_review:      'En revisión',
   waiting_user_info: 'Esperando información',
   in_progress:       'En curso',
@@ -489,8 +510,9 @@ async function openDetail(id, el) {
 
     // Status options (dropdown cambio de estado)
     const statusOptions = {
-      pending_payment:   'Pendiente de pago',
-      paid_received:     'Solicitud recibida',
+      submitted:         'Solicitud recibida',
+      quote_sent:        'Presupuesto enviado',
+      paid_received:     'Pago confirmado',
       under_review:      'En revisión',
       waiting_user_info: 'Esperando información',
       in_progress:       'En curso',
@@ -505,8 +527,9 @@ async function openDetail(id, el) {
 
     // Próximo paso recomendado
     const NEXT_STEPS = {
-      pending_payment:   'Esperar confirmación de pago.',
-      paid_received:     'Revisar el caso y decidir si se puede aceptar.',
+      submitted:         'Revisar el caso y enviar un presupuesto al cliente.',
+      quote_sent:        'Esperar a que el cliente complete el pago.',
+      paid_received:     'Comenzar a trabajar en el caso del cliente.',
       under_review:      'Valorar complejidad y preparar propuesta o confirmación.',
       waiting_user_info: 'Esperar respuesta del cliente al email enviado.',
       in_progress:       'Continuar el trabajo con el cliente.',
@@ -540,8 +563,15 @@ async function openDetail(id, el) {
         <div class="detail-field"><div class="detail-field-label">Ejercicio fiscal</div><div class="detail-field-value">${d.tax_year||'—'}</div></div>
         <div class="detail-field"><div class="detail-field-label">Exchanges</div><div class="detail-field-value">${escHtml(d.exchanges||'—')}</div></div>
         <div class="detail-field"><div class="detail-field-label">Volumen</div><div class="detail-field-value">${escHtml(d.operation_volume||'—')}</div></div>
-        <div class="detail-field"><div class="detail-field-label">Importe pagado</div><div class="detail-field-value" style="color:var(--accent);font-weight:600">${amount}</div></div>
-        <div class="detail-field"><div class="detail-field-label">Stripe CS</div><div class="detail-field-value" style="font-size:12px;word-break:break-all">${escHtml(d.stripe_checkout_session_id||'—')}</div></div>
+        <div class="detail-field"><div class="detail-field-label">Importe presupuestado</div><div class="detail-field-value" style="color:#fbbf24;font-weight:600">${d.quoted_amount ? (d.quoted_amount/100).toLocaleString('es-ES',{minimumFractionDigits:2}) + ' €' : '—'}</div></div>
+        <div class="detail-field"><div class="detail-field-label">Importe cobrado</div><div class="detail-field-value" style="color:var(--accent);font-weight:600">${amount}</div></div>
+        <div class="detail-field"><div class="detail-field-label">Fecha de pago</div><div class="detail-field-value">${d.paid_at ? new Date(d.paid_at).toLocaleDateString('es-ES') : '—'}</div></div>
+        <div class="detail-field"><div class="detail-field-label">Proveedor de pago</div><div class="detail-field-value">${escHtml((d.payment_provider||'').toUpperCase()||'—')}</div></div>
+        <div class="detail-field"><div class="detail-field-label">PayPal Capture ID</div><div class="detail-field-value" style="font-size:12px;word-break:break-all">${escHtml(d.paypal_capture_id||'—')}</div></div>
+        <div class="detail-field"><div class="detail-field-label">NIF / NIE / CIF</div><div class="detail-field-value">${escHtml(d.billing_nif||'—')}</div></div>
+        <div class="detail-field"><div class="detail-field-label">Dirección de facturación</div><div class="detail-field-value">${d.billing_address ? escHtml([d.billing_address, d.billing_postal_code, d.billing_city].filter(Boolean).join(', ')) : '—'}</div></div>
+        ${d.billing_company_name ? `<div class="detail-field"><div class="detail-field-label">Razón social</div><div class="detail-field-value">${escHtml(d.billing_company_name)}</div></div>` : ''}
+        ${d.quote_accepted_at ? `<div class="detail-field"><div class="detail-field-label">Presupuesto aceptado</div><div class="detail-field-value">${new Date(d.quote_accepted_at).toLocaleString('es-ES')} · ${escHtml(d.quote_acceptance_ip||'')}</div></div>` : ''}
       </div>
 
       <div class="detail-section">
@@ -558,6 +588,32 @@ async function openDetail(id, el) {
         <div class="detail-section-title">Descripción del caso</div>
         <div class="text-block">${escHtml(d.case_description||'—')}</div>
       </div>
+
+      ${['submitted','quote_sent'].includes(d.status) ? `
+      <div class="detail-section">
+        <div class="detail-section-title">Presupuesto</div>
+        <div class="quote-section">
+          <div class="quote-section-title">${d.status === 'quote_sent' ? 'Reenviar presupuesto' : 'Enviar presupuesto al cliente'}</div>
+          ${d.status === 'quote_sent' && d.quote_sent_at ? `
+            <p class="quote-sent-info">Enviado el ${new Date(d.quote_sent_at).toLocaleDateString('es-ES')} · Caduca el ${d.quote_expires_at ? new Date(d.quote_expires_at).toLocaleDateString('es-ES') : '—'}</p>
+            <p class="quote-sent-link" style="margin-bottom:12px;">${location.origin}/pagar/${escHtml(d.payment_link_token||'')}</p>
+          ` : ''}
+          <div class="quote-field">
+            <label>Importe (€) *</label>
+            <input type="number" id="quoteAmount" min="1" step="0.01" placeholder="79.00" value="${d.quoted_amount ? (d.quoted_amount/100).toFixed(2) : ''}">
+          </div>
+          <div class="quote-field">
+            <label>Mensaje personalizado para el cliente (opcional)</label>
+            <textarea id="quoteMessage" placeholder="Hola, he revisado tu caso y...">${escHtml(d.quote_message||'')}</textarea>
+          </div>
+          <button class="quote-send-btn" id="quoteSendBtn" onclick="enviarPresupuesto(${d.id})">
+            ${d.status === 'quote_sent' ? 'Reenviar link de pago' : 'Enviar presupuesto y link de pago'}
+          </button>
+          <div class="quote-msg-ok" id="quoteMsgOk">✓ Presupuesto enviado al cliente</div>
+          <div class="quote-msg-err" id="quoteMsgErr"></div>
+        </div>
+      </div>
+      ` : ''}
 
       <div class="detail-section">
         <div class="detail-section-title">Notas internas</div>
@@ -616,6 +672,45 @@ async function openDetail(id, el) {
     `;
   } catch {
     panel.innerHTML = '<div class="detail-empty">Error al cargar los detalles.</div>';
+  }
+}
+
+async function enviarPresupuesto(id) {
+  const btn    = document.getElementById('quoteSendBtn');
+  const okEl   = document.getElementById('quoteMsgOk');
+  const errEl  = document.getElementById('quoteMsgErr');
+  const amount = parseFloat(document.getElementById('quoteAmount').value.replace(',', '.'));
+  const msg    = document.getElementById('quoteMessage').value.trim();
+
+  okEl.style.display  = 'none';
+  errEl.style.display = 'none';
+
+  if (!amount || amount < 1) {
+    errEl.textContent   = 'Introduce un importe válido (mínimo 1 €).';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled    = true;
+  btn.textContent = 'Enviando…';
+
+  try {
+    const r = await fetch(`/api/admin/asesoramiento/solicitudes/${id}/enviar-presupuesto`, {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount_euros: amount, message: msg }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Error al enviar el presupuesto.');
+    okEl.style.display  = 'block';
+    btn.textContent     = 'Reenviar link de pago';
+    // Reload detail to show updated state
+    setTimeout(() => loadDetail(id), 1500);
+  } catch (err) {
+    errEl.textContent   = err.message;
+    errEl.style.display = 'block';
+    btn.disabled        = false;
+    btn.textContent     = 'Enviar presupuesto y link de pago';
   }
 }
 

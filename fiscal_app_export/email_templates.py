@@ -445,3 +445,177 @@ def processing_error_email(exchange: str, context_line: str) -> tuple[str, str]:
         _footer_text(),
     ])
     return html, text
+
+
+def advisory_quote_email(advisory, payment_url: str) -> tuple[str, str]:
+    """Email al cliente con el presupuesto y el link de pago PayPal."""
+    name         = _html.escape(advisory.full_name)
+    service      = _html.escape(advisory.service_label())
+    year         = _html.escape(str(advisory.tax_year))
+    amount_euros = f"{advisory.quoted_amount / 100:.2f}".replace(".", ",")
+    ref_id       = advisory.id
+
+    amount_block = (
+        f'<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;'
+        f'padding:20px 24px;margin:20px 0;">'
+        f'<p style="margin:0 0 4px;font-size:12px;color:#6b7280;font-family:{_FF};">IMPORTE</p>'
+        f'<p style="margin:0;font-size:28px;font-weight:700;color:#111827;'
+        f'font-family:{_FF};">{_html.escape(amount_euros)}&nbsp;€</p>'
+        f'<p style="margin:6px 0 0;font-size:13px;color:#6b7280;font-family:{_FF};">'
+        f'{service} &middot; Ejercicio {year}</p>'
+        f'</div>'
+    )
+
+    message_block = ""
+    if advisory.quote_message:
+        message_block = _note(advisory.quote_message, variant="info")
+
+    expiry_block = ""
+    if advisory.quote_expires_at:
+        exp = advisory.quote_expires_at.strftime("%d/%m/%Y")
+        expiry_block = _p(
+            f'Este presupuesto es válido hasta el <strong style="font-weight:600;color:#111827;">'
+            f'{_html.escape(exp)}</strong>.'
+        )
+
+    body_html = (
+        _p(f"Hola, {name}.") +
+        _p("Hemos revisado tu caso y ya tienes el presupuesto listo.") +
+        amount_block +
+        message_block +
+        expiry_block +
+        _p("Para confirmar el servicio, haz clic en el botón y completa el pago con PayPal:") +
+        _cta("Pagar con PayPal", payment_url) +
+        _url_fallback(payment_url) +
+        _p(
+            "El pago es seguro y está procesado por PayPal. "
+            "Una vez confirmado, Rafa comenzará a trabajar en tu caso.",
+            last=True,
+        ) +
+        _ref(f"Solicitud #{ref_id}")
+    )
+    html = _wrap("Tu presupuesto de asesoramiento fiscal", body_html, legal_footer=True)
+
+    exp_line = ""
+    if advisory.quote_expires_at:
+        exp_line = f"Válido hasta: {advisory.quote_expires_at.strftime('%d/%m/%Y')}\n"
+
+    msg_line = f"\nMensaje de Rafa:\n{advisory.quote_message}\n" if advisory.quote_message else ""
+
+    text = "\n".join([
+        "Tu presupuesto de asesoramiento fiscal",
+        "",
+        f"Hola, {advisory.full_name}.",
+        "",
+        "Hemos revisado tu caso y ya tienes el presupuesto listo.",
+        "",
+        f"Importe: {amount_euros} €",
+        f"Servicio: {advisory.service_label()}",
+        f"Ejercicio: {advisory.tax_year}",
+        exp_line.strip(),
+        msg_line.strip(),
+        "",
+        "Para confirmar el servicio, accede al siguiente enlace y completa el pago:",
+        payment_url,
+        "",
+        f"Solicitud #{ref_id}",
+        "",
+        _footer_text(legal=True),
+    ])
+    return html, text
+
+
+def advisory_payment_confirmed_email(advisory) -> tuple[str, str]:
+    """Email al cliente confirmando que el pago se ha recibido y el trabajo comenzará."""
+    name    = _html.escape(advisory.full_name)
+    service = _html.escape(advisory.service_label())
+    year    = _html.escape(str(advisory.tax_year))
+    ref_id  = advisory.id
+    amount  = ""
+    if advisory.amount_paid:
+        amount = f"{advisory.amount_paid / 100:.2f}".replace(".", ",")
+
+    amount_block = ""
+    if amount:
+        amount_block = (
+            f'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;'
+            f'padding:16px 20px;margin:20px 0;">'
+            f'<p style="margin:0 0 2px;font-size:12px;color:#16a34a;font-family:{_FF};">PAGO CONFIRMADO</p>'
+            f'<p style="margin:0;font-size:24px;font-weight:700;color:#111827;'
+            f'font-family:{_FF};">{_html.escape(amount)}&nbsp;€</p>'
+            f'</div>'
+        )
+
+    body_html = (
+        _p(f"Hola, {name}.") +
+        _p("Hemos confirmado tu pago. Gracias.") +
+        amount_block +
+        _p(
+            f"Rafa comenzará a trabajar en tu <strong style='font-weight:600;color:#111827;'>"
+            f"{service}</strong> para el ejercicio "
+            f"<strong style='font-weight:600;color:#111827;'>{year}</strong> "
+            f"y te contactará por email cuando tenga novedades."
+        ) +
+        _p("Si tienes alguna pregunta, responde directamente a este correo.", last=True) +
+        _ref(f"Solicitud #{ref_id}")
+    )
+    html = _wrap("Pago confirmado — comenzamos", body_html, legal_footer=True)
+    text = "\n".join([
+        "Pago confirmado — comenzamos",
+        "",
+        f"Hola, {advisory.full_name}.",
+        "",
+        "Hemos confirmado tu pago. Gracias.",
+        *(([f"Importe: {amount} €", ""] if amount else [])),
+        f"Rafa comenzará a trabajar en tu {advisory.service_label()} "
+        f"para el ejercicio {advisory.tax_year} "
+        "y te contactará por email cuando tenga novedades.",
+        "",
+        "Si tienes alguna pregunta, responde directamente a este correo.",
+        "",
+        f"Solicitud #{ref_id}",
+        "",
+        _footer_text(legal=True),
+    ])
+    return html, text
+
+
+def advisory_payment_internal_email(advisory) -> tuple[str, str]:
+    """Email interno a Rafa cuando un cliente completa el pago."""
+    service  = advisory.service_label()
+    ref_id   = advisory.id
+    amount   = f"{advisory.amount_paid / 100:.2f} €" if advisory.amount_paid else "—"
+    provider = (advisory.payment_provider or "").upper()
+    capture  = advisory.paypal_capture_id or advisory.stripe_payment_intent_id or "—"
+    admin_url = f"{_BASE}/admin/asesoramiento"
+
+    lines = [
+        f"Nombre: {advisory.full_name}",
+        f"Email:  {advisory.email}",
+        f"Servicio: {service} · Ejercicio {advisory.tax_year}",
+        f"Importe: {amount} ({provider})",
+        f"Capture ID: {capture}",
+        f"Solicitud #{ref_id}",
+    ]
+    detail = "\n".join(f"  {l}" for l in lines)
+
+    body_html = (
+        _p(f"<strong style='font-weight:600;color:#111827;'>{_html.escape(advisory.full_name)}</strong> "
+           f"ha completado el pago de "
+           f"<strong style='font-weight:600;color:#111827;'>{_html.escape(amount)}</strong>.") +
+        _note("\n".join(lines), variant="success") +
+        _cta("Ver expediente en el panel", admin_url)
+    )
+    html = _wrap(f"💰 Pago confirmado — {advisory.full_name}", body_html)
+    text = "\n".join([
+        f"Pago confirmado — {advisory.full_name}",
+        "",
+        f"{advisory.full_name} ha completado el pago de {amount}.",
+        "",
+        detail,
+        "",
+        f"Panel: {admin_url}",
+        "",
+        _footer_text(),
+    ])
+    return html, text

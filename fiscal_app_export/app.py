@@ -180,12 +180,26 @@ from email_templates import (  # noqa: E402
     verification_email,
     advisory_confirmation_email,
     advisory_status_email,
+    advisory_quote_email,
+    advisory_payment_confirmed_email,
+    advisory_payment_internal_email,
     password_reset_email,
 )
 
 # ── ADVISORY / STRIPE ────────────────────────
 _STRIPE_SECRET_KEY      = os.environ.get("STRIPE_SECRET_KEY", "")
 _STRIPE_WEBHOOK_SECRET  = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+
+# ── PAYPAL ────────────────────────────────────
+_PAYPAL_CLIENT_ID      = os.environ.get("PAYPAL_CLIENT_ID", "")
+_PAYPAL_CLIENT_SECRET  = os.environ.get("PAYPAL_CLIENT_SECRET", "")
+_PAYPAL_WEBHOOK_ID     = os.environ.get("PAYPAL_WEBHOOK_ID", "")
+_PAYPAL_ENV            = os.environ.get("PAYPAL_ENVIRONMENT", "sandbox")   # 'sandbox' | 'live'
+_PAYPAL_BASE_URL       = (
+    "https://api-m.sandbox.paypal.com" if _PAYPAL_ENV == "sandbox"
+    else "https://api-m.paypal.com"
+)
+_PAYPAL_ENABLED        = bool(_PAYPAL_CLIENT_ID and _PAYPAL_CLIENT_SECRET)
 _ADVISORY_NOTIFY_EMAILS = [
     e.strip() for e in os.environ.get("FISCAL_ADVISORY_NOTIFY_EMAILS", "").split(",") if e.strip()
 ]
@@ -3039,7 +3053,7 @@ def _api_stats_data():
         *_no_adm_adv, FiscalAdvisoryRequest.status.in_(list(PAID_ST))
     ).scalar() or 0
     adv_pend    = db.session.query(func.count(FiscalAdvisoryRequest.id)).filter(
-        *_no_adm_adv, FiscalAdvisoryRequest.status == "pending_payment"
+        *_no_adm_adv, FiscalAdvisoryRequest.status.in_(["submitted", "quote_sent"])
     ).scalar() or 0
     adv_sin_asig = db.session.query(func.count(FiscalAdvisoryRequest.id)).filter(
         *_no_adm_adv,
@@ -3528,7 +3542,7 @@ def advisory_prices():
 @login_required
 @limiter.limit("3 per hour")
 def advisory_solicitar():
-    """Crea una solicitud gratuita. No requiere pago. El presupuesto se envía por email tras revisar el caso."""
+    """Crea la solicitud. Rafa revisará el caso y enviará un presupuesto por email."""
     data = request.get_json(silent=True) or {}
 
     # Validaciones
@@ -3557,10 +3571,16 @@ def advisory_solicitar():
     if len(case_description) > 5000:
         return jsonify({"error": "La descripción del caso es demasiado larga."}), 400
 
-    tax_country = _sanitizar_texto(data.get("tax_residence_country") or "España", max_len=100)
-    phone       = _sanitizar_texto(data.get("phone") or "", max_len=30) or None
-    exchanges   = _sanitizar_texto(data.get("exchanges") or "", max_len=500) or None
-    op_volume   = _sanitizar_texto(data.get("operation_volume") or "", max_len=50) or None
+    tax_country  = _sanitizar_texto(data.get("tax_residence_country") or "España", max_len=100)
+    phone        = _sanitizar_texto(data.get("phone") or "", max_len=30) or None
+    exchanges    = _sanitizar_texto(data.get("exchanges") or "", max_len=500) or None
+    op_volume    = _sanitizar_texto(data.get("operation_volume") or "", max_len=50) or None
+
+    billing_nif          = _sanitizar_texto(data.get("billing_nif") or "", max_len=20) or None
+    billing_address      = _sanitizar_texto(data.get("billing_address") or "", max_len=255) or None
+    billing_city         = _sanitizar_texto(data.get("billing_city") or "", max_len=100) or None
+    billing_postal_code  = _sanitizar_texto(data.get("billing_postal_code") or "", max_len=20) or None
+    billing_company_name = _sanitizar_texto(data.get("billing_company_name") or "", max_len=255) or None
 
     op_types = data.get("operation_types") or []
     if not isinstance(op_types, list): op_types = []
@@ -3570,8 +3590,6 @@ def advisory_solicitar():
     if not isinstance(cur_situation, list): cur_situation = []
     cur_situation = [str(x)[:100] for x in cur_situation[:20]]
 
-    # Crear solicitud en DB — estado inicial "paid_received" = "Solicitud recibida"
-    # No se procesa pago. El presupuesto se define manualmente tras revisar el caso.
     import json as _json
     advisory = FiscalAdvisoryRequest(
         user_id               = current_user.id,
@@ -3586,25 +3604,492 @@ def advisory_solicitar():
         operation_volume      = op_volume,
         current_situation     = _json.dumps(cur_situation),
         case_description      = case_description,
-        status                = "paid_received",   # muestra "Solicitud recibida" en UI
+        status                = "submitted",
+        billing_nif           = billing_nif,
+        billing_address       = billing_address,
+        billing_city          = billing_city,
+        billing_postal_code   = billing_postal_code,
+        billing_company_name  = billing_company_name,
     )
     db.session.add(advisory)
-    db.session.flush()  # obtener ID antes del commit
+    db.session.flush()
 
-    history = FiscalAdvisoryStatusHistory(
+    db.session.add(FiscalAdvisoryStatusHistory(
         request_id = advisory.id,
-        status     = "paid_received",
+        status     = "submitted",
         changed_by = None,
         note       = "Solicitud recibida",
-    )
-    db.session.add(history)
+    ))
     db.session.commit()
 
-    # Notificaciones — se envían siempre que haya clave Resend (no dependen del feature flag)
     _send_advisory_confirmation_email(advisory)
     _send_advisory_internal_notification(advisory)
 
     return jsonify({"ok": True, "advisory_id": advisory.id})
+
+
+# ── PAYPAL HELPERS ───────────────────────────────────────────────────────────
+
+def _paypal_get_access_token() -> str:
+    """Obtiene un Bearer token OAuth2 de PayPal (válido ~9h, sin caché intencional)."""
+    import requests as _req
+    resp = _req.post(
+        f"{_PAYPAL_BASE_URL}/v1/oauth2/token",
+        auth=(_PAYPAL_CLIENT_ID, _PAYPAL_CLIENT_SECRET),
+        data={"grant_type": "client_credentials"},
+        timeout=10,
+    )
+    resp.raise_for_status()
+    return resp.json()["access_token"]
+
+
+def _paypal_create_order(advisory: "FiscalAdvisoryRequest") -> dict:
+    """Crea una orden PayPal usando quoted_amount y devuelve {order_id, approval_url}.
+    Se llama on-demand cuando el cliente visita /pagar/<token> y pulsa Pagar.
+    """
+    import requests as _req
+    if not advisory.quoted_amount:
+        raise ValueError("La solicitud no tiene un importe presupuestado")
+    token  = _paypal_get_access_token()
+    euros  = f"{advisory.quoted_amount / 100:.2f}"
+    base   = _APP_BASE_URL.rstrip("/")
+    token_ = advisory.payment_link_token
+    payload = {
+        "intent": "CAPTURE",
+        "purchase_units": [{
+            "custom_id":   str(advisory.id),
+            "description": advisory.service_label()[:127],
+            "amount": {
+                "currency_code": "EUR",
+                "value": euros,
+            },
+        }],
+        "application_context": {
+            "brand_name":   "Mariano Sevilla",
+            "locale":       "es-ES",
+            "landing_page": "NO_PREFERENCE",
+            "user_action":  "PAY_NOW",
+            "return_url":   f"{base}/api/pago/paypal/capture?request_id={advisory.id}",
+            "cancel_url":   f"{base}/pagar/{token_}?cancelado=1",
+        },
+    }
+    resp = _req.post(
+        f"{_PAYPAL_BASE_URL}/v2/checkout/orders",
+        json=payload,
+        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+        timeout=15,
+    )
+    resp.raise_for_status()
+    data         = resp.json()
+    order_id     = data["id"]
+    approval_url = next(
+        (lnk["href"] for lnk in data.get("links", []) if lnk.get("rel") == "approve"),
+        None,
+    )
+    if not approval_url:
+        raise ValueError("PayPal no devolvió approval_url")
+    return {"order_id": order_id, "approval_url": approval_url}
+
+
+def _paypal_capture_order(order_id: str) -> dict:
+    """Ejecuta el capture de una orden PayPal aprobada. Devuelve el JSON de PayPal."""
+    import requests as _req
+    token = _paypal_get_access_token()
+    resp  = _req.post(
+        f"{_PAYPAL_BASE_URL}/v2/checkout/orders/{order_id}/capture",
+        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+        json={},
+        timeout=15,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def _on_payment_completed(
+    advisory: "FiscalAdvisoryRequest",
+    amount_cents: int,
+    currency: str,
+    provider: str,
+    capture_note: str,
+) -> None:
+    """Centraliza la confirmación de pago de cualquier proveedor.
+    Actualiza el expediente, crea historial y envía notificaciones.
+    El caller debe verificar advisory.status == 'quote_sent' antes de llamar.
+    """
+    now = datetime.utcnow()
+    advisory.status           = "paid_received"
+    advisory.amount_paid      = amount_cents
+    advisory.currency         = currency.lower()
+    advisory.payment_provider = provider
+    advisory.paid_at          = now
+
+    db.session.add(FiscalAdvisoryStatusHistory(
+        request_id = advisory.id,
+        status     = "paid_received",
+        changed_by = None,
+        note       = capture_note,
+    ))
+    db.session.commit()
+
+    _send_advisory_payment_confirmed_email(advisory)
+    _send_advisory_payment_internal_notification(advisory)
+
+
+# ── ADMIN: ENVIAR PRESUPUESTO ─────────────────────────────────────────────────
+
+@app.route("/api/admin/asesoramiento/solicitudes/<int:req_id>/enviar-presupuesto", methods=["POST"])
+@login_required
+def advisory_enviar_presupuesto(req_id):
+    """Rafa introduce el precio y el sistema envía el link de pago al cliente."""
+    if not _is_fiscal_advisor():
+        return jsonify({"error": "No autorizado"}), 403
+
+    advisory = FiscalAdvisoryRequest.query.get_or_404(req_id)
+
+    if advisory.status not in ("submitted", "quote_sent"):
+        return jsonify({"error": f"No se puede enviar presupuesto en estado '{advisory.status}'."}), 409
+
+    data = request.get_json(silent=True) or {}
+
+    # Importe
+    try:
+        amount_euros = float(str(data.get("amount_euros", "")).replace(",", "."))
+        assert amount_euros >= 1
+    except Exception:
+        return jsonify({"error": "Importe inválido. Debe ser un número >= 1."}), 400
+    amount_cents = int(round(amount_euros * 100))
+
+    quote_message = (data.get("message") or "").strip()[:2000] or None
+
+    import secrets as _secrets
+    from datetime import timedelta
+
+    now                          = datetime.utcnow()
+    advisory.quoted_amount       = amount_cents
+    advisory.quoted_by_user_id   = current_user.id
+    advisory.quote_message       = quote_message
+    advisory.quote_sent_at       = now
+    advisory.quote_expires_at    = now + timedelta(days=30)
+    advisory.payment_link_token  = _secrets.token_urlsafe(32)
+    advisory.status              = "quote_sent"
+    # Invalidar cualquier orden de PayPal anterior: el capture endpoint rechaza
+    # órdenes cuyo ID no coincida con el almacenado, así que limpiar aquí
+    # hace que los links antiguos ya no puedan completar un pago.
+    advisory.paypal_order_id     = None
+    advisory.paypal_capture_id   = None
+
+    db.session.add(FiscalAdvisoryStatusHistory(
+        request_id = advisory.id,
+        status     = "quote_sent",
+        changed_by = current_user.id,
+        note       = f"Presupuesto enviado: €{amount_euros:.2f}",
+    ))
+    db.session.commit()
+
+    payment_url = f"{_APP_BASE_URL.rstrip('/')}/pagar/{advisory.payment_link_token}"
+    _send_advisory_quote_email(advisory, payment_url)
+
+    return jsonify({"ok": True, "payment_url": payment_url})
+
+
+# ── PÁGINA DE PAGO PÚBLICA ────────────────────────────────────────────────────
+
+@app.route("/pagar/<token>")
+def pago_page(token):
+    """Página pública de pago para el cliente. No requiere login."""
+    return send_from_directory("static", "pagar.html")
+
+
+# ── API: INFO DEL PRESUPUESTO (para la página /pagar/<token>) ────────────────
+
+@app.route("/api/pago/info/<token>", methods=["GET"])
+@limiter.limit("30 per minute")
+def pago_info(token):
+    """Devuelve los datos públicos del presupuesto para mostrar en la página de pago."""
+    advisory = FiscalAdvisoryRequest.query.filter_by(payment_link_token=token).first()
+    if not advisory:
+        return jsonify({"error": "Enlace no válido o expirado."}), 404
+
+    now = datetime.utcnow()
+
+    if advisory.status == "paid_received":
+        return jsonify({"state": "already_paid"})
+
+    if advisory.status not in ("quote_sent",):
+        return jsonify({"error": "Este presupuesto ya no está disponible."}), 410
+
+    if advisory.quote_expires_at and now > advisory.quote_expires_at:
+        return jsonify({"state": "expired",
+                        "expired_at": advisory.quote_expires_at.isoformat()})
+
+    return jsonify({
+        "state":           "pending",
+        "service_label":   advisory.service_label(),
+        "tax_year":        advisory.tax_year,
+        "full_name":       advisory.full_name,
+        "quoted_amount":   advisory.quoted_amount,
+        "quote_message":   advisory.quote_message,
+        "quote_expires_at": advisory.quote_expires_at.isoformat() if advisory.quote_expires_at else None,
+    })
+
+
+# ── API: INICIAR PAGO (acepta presupuesto + crea orden PayPal) ───────────────
+
+@app.route("/api/pago/iniciar/<token>", methods=["POST"])
+@limiter.limit("10 per hour")
+def pago_iniciar(token):
+    """El cliente acepta el presupuesto y solicita el link de PayPal.
+    Registra la aceptación antes de crear la orden PayPal.
+    """
+    if not _PAYPAL_ENABLED:
+        return jsonify({"error": "El sistema de pago no está disponible. Inténtalo más tarde."}), 503
+
+    # FOR UPDATE: bloquea la fila durante toda la transacción para evitar
+    # que dos requests concurrentes creen dos órdenes de PayPal.
+    advisory = (FiscalAdvisoryRequest.query
+                .filter_by(payment_link_token=token)
+                .with_for_update()
+                .first())
+    if not advisory:
+        return jsonify({"error": "Enlace no válido o expirado."}), 404
+
+    if advisory.status == "paid_received":
+        return jsonify({"error": "Este presupuesto ya ha sido pagado."}), 409
+
+    if advisory.status != "quote_sent":
+        return jsonify({"error": "Este presupuesto ya no está disponible."}), 410
+
+    now = datetime.utcnow()
+    if advisory.quote_expires_at and now > advisory.quote_expires_at:
+        return jsonify({"error": "El presupuesto ha caducado. Contacta con nosotros para renovarlo."}), 410
+
+    # Registrar aceptación del presupuesto
+    client_ip = (
+        request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+        or request.remote_addr
+        or ""
+    )
+    advisory.quote_accepted_at           = now
+    advisory.quote_acceptance_ip         = client_ip[:45]
+    advisory.quote_acceptance_user_agent = (request.user_agent.string or "")[:512]
+
+    try:
+        paypal_data          = _paypal_create_order(advisory)
+        advisory.paypal_order_id = paypal_data["order_id"]
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        app.logger.error("PayPal create_order error (token=%s): %s", token, exc)
+        return jsonify({"error": "No se pudo conectar con PayPal. Inténtalo de nuevo."}), 502
+
+    return jsonify({"ok": True, "redirect_url": paypal_data["approval_url"]})
+
+
+# ── PAYPAL CAPTURE (return URL — pública, no requiere login) ──────────────────
+
+@app.route("/api/pago/paypal/capture", methods=["GET"])
+@limiter.limit("30 per minute")
+def pago_paypal_capture():
+    """PayPal redirige aquí tras el pago. Ejecuta el capture y actualiza el expediente."""
+    request_id   = request.args.get("request_id", "")
+    paypal_token = request.args.get("token", "")   # PayPal añade ?token=ORDER_ID
+
+    try:
+        request_id = int(request_id)
+    except (ValueError, TypeError):
+        return redirect("/asesoramiento-fiscal-cancelado")
+
+    # FOR UPDATE: garantiza que si el webhook corre en paralelo,
+    # solo uno de los dos procesará el pago (el segundo verá status != 'quote_sent').
+    advisory = (FiscalAdvisoryRequest.query
+                .filter_by(id=request_id)
+                .with_for_update()
+                .first())
+    if not advisory:
+        return redirect("/asesoramiento-fiscal-cancelado")
+
+    # Idempotente
+    if advisory.status == "paid_received":
+        return redirect("/asesoramiento-fiscal-confirmado")
+
+    if advisory.status != "quote_sent":
+        return redirect("/asesoramiento-fiscal-cancelado")
+
+    # paypal_order_id debe existir y coincidir con el token que PayPal envía.
+    # Si es NULL el cliente nunca completó pago_iniciar — rechazar siempre.
+    if not advisory.paypal_order_id or advisory.paypal_order_id != paypal_token:
+        app.logger.warning("PayPal token mismatch/null request_id=%s stored=%s received=%s",
+                           request_id, advisory.paypal_order_id, paypal_token)
+        return redirect("/asesoramiento-fiscal-cancelado")
+
+    try:
+        capture_data = _paypal_capture_order(paypal_token)
+    except Exception as exc:
+        app.logger.error("PayPal capture error request_id=%s: %s", request_id, exc)
+        token_link = advisory.payment_link_token or ""
+        return redirect(f"/pagar/{token_link}?error=capture")
+
+    capture_status = capture_data.get("status", "")
+    if capture_status != "COMPLETED":
+        app.logger.warning("PayPal capture status inesperado: %s", capture_status)
+        token_link = advisory.payment_link_token or ""
+        return redirect(f"/pagar/{token_link}?error=status")
+
+    purchase_units = capture_data.get("purchase_units", [{}])
+    captures       = purchase_units[0].get("payments", {}).get("captures", [{}])
+    capture_obj    = captures[0] if captures else {}
+    capture_id     = capture_obj.get("id", "")
+    amount_value   = capture_obj.get("amount", {}).get("value", "0")
+    currency_code  = capture_obj.get("amount", {}).get("currency_code", "EUR")
+
+    try:
+        amount_cents = int(float(amount_value) * 100)
+    except ValueError:
+        amount_cents = advisory.quoted_amount or 0
+
+    advisory.paypal_order_id   = paypal_token
+    advisory.paypal_capture_id = capture_id
+
+    try:
+        _on_payment_completed(
+            advisory,
+            amount_cents = amount_cents,
+            currency     = currency_code,
+            provider     = "paypal",
+            capture_note = f"Pago confirmado por PayPal. Capture ID: {capture_id}",
+        )
+    except Exception as exc:
+        db.session.rollback()
+        app.logger.error("PayPal _on_payment_completed error: %s", exc)
+        token_link = advisory.payment_link_token or ""
+        return redirect(f"/pagar/{token_link}?error=db")
+
+    return redirect("/asesoramiento-fiscal-confirmado")
+
+
+# ── PAYPAL WEBHOOK ────────────────────────────────────────────────────────────
+
+@app.route("/api/webhooks/paypal", methods=["POST"])
+@limiter.limit("120 per minute")
+def paypal_webhook():
+    """Red de seguridad: PayPal notifica el pago aunque el usuario cierre la pestaña."""
+    if not _PAYPAL_ENABLED:
+        return "", 200
+
+    payload = request.get_data()
+    event   = {}
+    try:
+        import json as _json
+        event = _json.loads(payload)
+    except Exception:
+        return jsonify({"error": "Invalid JSON"}), 400
+
+    # Verificación de firma — obligatoria. Si PAYPAL_WEBHOOK_ID no está configurado
+    # no podemos verificar la autenticidad del evento: no procesar y registrar el error.
+    if not _PAYPAL_WEBHOOK_ID:
+        app.logger.critical(
+            "PayPal webhook recibido pero PAYPAL_WEBHOOK_ID no está configurado. "
+            "Evento ignorado. Configura la variable de entorno para activar el webhook."
+        )
+        return "", 200  # 200 para evitar reintentos de PayPal; el admin debe corregir la config.
+
+    import requests as _req
+    try:
+        token = _paypal_get_access_token()
+        verify_resp = _req.post(
+            f"{_PAYPAL_BASE_URL}/v1/notifications/verify-webhook-signature",
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json={
+                "auth_algo":         request.headers.get("PAYPAL-AUTH-ALGO", ""),
+                "cert_url":          request.headers.get("PAYPAL-CERT-URL", ""),
+                "transmission_id":   request.headers.get("PAYPAL-TRANSMISSION-ID", ""),
+                "transmission_sig":  request.headers.get("PAYPAL-TRANSMISSION-SIG", ""),
+                "transmission_time": request.headers.get("PAYPAL-TRANSMISSION-TIME", ""),
+                "webhook_id":        _PAYPAL_WEBHOOK_ID,
+                "webhook_event":     event,
+            },
+            timeout=10,
+        )
+        if not verify_resp.ok or verify_resp.json().get("verification_status") != "SUCCESS":
+            app.logger.warning("PayPal webhook firma inválida — evento rechazado")
+            return jsonify({"error": "Signature mismatch"}), 400
+    except Exception as exc:
+        app.logger.error("PayPal webhook verify error: %s — evento rechazado", exc)
+        return jsonify({"error": "Verification failed"}), 500
+
+    event_type = event.get("event_type", "")
+
+    if event_type == "PAYMENT.CAPTURE.COMPLETED":
+        resource    = event.get("resource", {})
+        capture_id  = resource.get("id", "")
+        custom_id   = resource.get("custom_id") or (
+            resource.get("purchase_units", [{}])[0].get("custom_id", "")
+            if resource.get("purchase_units") else ""
+        )
+        # custom_id puede venir también en supplementary_data
+        if not custom_id:
+            supp = resource.get("supplementary_data", {})
+            custom_id = supp.get("related_ids", {}).get("order_id", "")
+
+        # Buscar por paypal_capture_id (ya procesado vía return URL) o por custom_id.
+        # FOR UPDATE: previene doble procesado si capture y webhook llegan a la vez.
+        advisory = None
+        if capture_id:
+            advisory = (FiscalAdvisoryRequest.query
+                        .filter_by(paypal_capture_id=capture_id)
+                        .with_for_update()
+                        .first())
+        if not advisory and custom_id:
+            try:
+                advisory = (FiscalAdvisoryRequest.query
+                            .filter_by(id=int(custom_id))
+                            .with_for_update()
+                            .first())
+            except (ValueError, TypeError):
+                pass
+
+        if advisory and advisory.status == "quote_sent":
+            amount_value  = resource.get("amount", {}).get("value", "0")
+            currency_code = resource.get("amount", {}).get("currency_code", "EUR")
+            try:
+                amount_cents = int(float(amount_value) * 100)
+            except ValueError:
+                amount_cents = advisory.amount_paid or 0
+
+            advisory.paypal_capture_id = capture_id
+            try:
+                _on_payment_completed(
+                    advisory,
+                    amount_cents = amount_cents,
+                    currency     = currency_code,
+                    provider     = "paypal",
+                    capture_note = f"Pago confirmado por webhook PayPal. Capture ID: {capture_id}",
+                )
+            except Exception as exc:
+                db.session.rollback()
+                app.logger.error("PayPal webhook _on_payment_completed error: %s", exc)
+                return "", 500
+
+    elif event_type == "PAYMENT.CAPTURE.REFUNDED":
+        resource   = event.get("resource", {})
+        capture_id = resource.get("id", "")
+        if capture_id:
+            advisory = FiscalAdvisoryRequest.query.filter_by(paypal_capture_id=capture_id).first()
+            if advisory and advisory.status not in ("refunded", "cancelled"):
+                advisory.status = "refunded"
+                history = FiscalAdvisoryStatusHistory(
+                    request_id = advisory.id,
+                    status     = "refunded",
+                    changed_by = None,
+                    note       = f"Reembolso confirmado por PayPal. Capture ID: {capture_id}",
+                )
+                db.session.add(history)
+                try:
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+
+    return "", 200
 
 
 @app.route("/api/webhooks/stripe", methods=["POST"])
@@ -3635,28 +4120,19 @@ def stripe_webhook():
         amount_total = session_obj.get("amount_total")
 
         advisory = FiscalAdvisoryRequest.query.filter_by(stripe_checkout_session_id=cs_id).first()
-        if advisory and advisory.status == "pending_payment":
-            advisory.status                   = "paid_received"
+        if advisory and advisory.status == "quote_sent":
             advisory.stripe_payment_intent_id = pi_id
-            advisory.amount_paid              = amount_total
-            advisory.currency                 = session_obj.get("currency", "eur")
-
-            history = FiscalAdvisoryStatusHistory(
-                request_id = advisory.id,
-                status     = "paid_received",
-                changed_by = None,
-                note       = f"Pago confirmado por Stripe. PI: {pi_id}",
-            )
-            db.session.add(history)
             try:
-                db.session.commit()
+                _on_payment_completed(
+                    advisory,
+                    amount_cents = amount_total or 0,
+                    currency     = session_obj.get("currency", "eur"),
+                    provider     = "stripe",
+                    capture_note = f"Pago confirmado por Stripe. PI: {pi_id}",
+                )
             except Exception:
                 db.session.rollback()
                 return "", 500
-
-            # Notificaciones
-            _send_advisory_confirmation_email(advisory)
-            _send_advisory_internal_notification(advisory)
 
     return "", 200
 
@@ -3708,6 +4184,59 @@ def _send_advisory_internal_notification(advisory: "FiscalAdvisoryRequest"):
         app.logger.error("Error enviando notificación interna advisory: %s", exc)
 
 
+def _send_advisory_quote_email(advisory: "FiscalAdvisoryRequest", payment_url: str):
+    """Email al cliente con el presupuesto y el link de pago."""
+    if not resend.api_key:
+        return
+    html, text = advisory_quote_email(advisory, payment_url)
+    amount_str = f"{advisory.quoted_amount / 100:.2f}" if advisory.quoted_amount else "?"
+    try:
+        resend.Emails.send({
+            "from":    _RESEND_FROM_DISPLAY,
+            "to":      [advisory.email],
+            "subject": f"Tu presupuesto de asesoramiento fiscal — {amount_str} €",
+            "html":    html,
+            "text":    text,
+        })
+    except Exception as exc:
+        app.logger.error("Error enviando email presupuesto advisory: %s", exc)
+
+
+def _send_advisory_payment_confirmed_email(advisory: "FiscalAdvisoryRequest"):
+    """Email al cliente confirmando su pago."""
+    if not resend.api_key:
+        return
+    html, text = advisory_payment_confirmed_email(advisory)
+    try:
+        resend.Emails.send({
+            "from":    _RESEND_FROM_DISPLAY,
+            "to":      [advisory.email],
+            "subject": "Pago confirmado — comenzamos a trabajar en tu caso",
+            "html":    html,
+            "text":    text,
+        })
+    except Exception as exc:
+        app.logger.error("Error enviando email pago confirmado advisory: %s", exc)
+
+
+def _send_advisory_payment_internal_notification(advisory: "FiscalAdvisoryRequest"):
+    """Email interno a Rafa cuando un cliente paga."""
+    if not resend.api_key or not _ADVISORY_NOTIFY_EMAILS:
+        return
+    html, text = advisory_payment_internal_email(advisory)
+    amount_str = f"{advisory.amount_paid / 100:.2f} €" if advisory.amount_paid else "?"
+    try:
+        resend.Emails.send({
+            "from":    _RESEND_FROM_DISPLAY,
+            "to":      _ADVISORY_NOTIFY_EMAILS,
+            "subject": f"💰 Pago confirmado — {advisory.full_name} · {amount_str}",
+            "html":    html,
+            "text":    text,
+        })
+    except Exception as exc:
+        app.logger.error("Error enviando notificación interna pago advisory: %s", exc)
+
+
 def _send_advisory_status_update_email(advisory: "FiscalAdvisoryRequest", note: str = "") -> None:
     """Email al usuario cuando el admin cambia el estado de su solicitud.
 
@@ -3716,7 +4245,7 @@ def _send_advisory_status_update_email(advisory: "FiscalAdvisoryRequest", note: 
 
     Estados que generan email: under_review, waiting_user_info, in_progress,
     completed, cancelled.
-    Omitidos: pending_payment, paid_received, refunded.
+    Omitidos: submitted, quote_sent, paid_received, refunded.
     """
     html, text = advisory_status_email(advisory, note=note, app_base_url=_APP_BASE_URL)
     if html is None:
