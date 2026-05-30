@@ -239,6 +239,15 @@
   }
   .asistencia-block p strong { color: var(--text); display: block; margin-bottom: 3px; font-size: 0.95rem; }
 
+  .asistencia-bullets {
+    list-style: none; margin: 0 0 1rem;
+    display: flex; flex-direction: column; gap: 5px;
+  }
+  .asistencia-bullets li {
+    font-size: 0.82rem; color: var(--accent);
+    letter-spacing: 0.01em;
+  }
+
   .btn-asistencia {
     display: flex; align-items: center; gap: 10px; width: 100%;
     justify-content: center;
@@ -533,13 +542,18 @@
     <a href="/signup/" class="btn-primary">Crea tu cuenta gratis</a>
     <p class="cta-micro">Sin tarjeta · Importa tus CSVs · Generación automática FIFO</p>
 
-    <!-- Bloque asistencia fiscal — visible solo para el usuario autorizado -->
-    <div class="asistencia-block" id="asistenciaBlock" style="display:none;">
+    <!-- Bloque asistencia fiscal -->
+    <div class="asistencia-block" id="asistenciaBlock">
       <div class="asistencia-badge">Asistencia especializada</div>
       <p>
         <strong>¿Necesitas ayuda con tu declaración?</strong>
         Asistencia fiscal especializada para usuarios con criptomonedas, supervisada por economista colegiado.
       </p>
+      <ul class="asistencia-bullets">
+        <li>✓ Consulta inicial sin compromiso</li>
+        <li>✓ Casos complejos de criptomonedas</li>
+        <li>✓ Supervisado por economista colegiado</li>
+      </ul>
       <a href="/pedir-asesoramiento" class="btn-asistencia">
         Solicitar asistencia fiscal
       </a>
@@ -797,17 +811,6 @@
     finally { _setLoading(form, false, 'Crear cuenta'); }
   });
 
-  // Bloque de asistencia fiscal — visible solo para el usuario autorizado
-  fetch('/api/me', { credentials: 'include' })
-    .then(r => r.ok ? r.json() : null)
-    .then(d => {
-      if (!d || !d.user) return;
-      if (d.user.email === 'masetru@hotmail.com') {
-        const bloque = document.getElementById('asistenciaBlock');
-        if (bloque) bloque.style.display = '';
-      }
-    })
-    .catch(() => {});
 
 </script>
 </body>
