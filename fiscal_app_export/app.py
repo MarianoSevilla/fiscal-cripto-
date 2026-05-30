@@ -2061,28 +2061,38 @@ def api_modelo_721():
                 "error": f"El ejercicio no puede ser posterior a {AÑO_MAX}."
             }), 400
 
-        # ── 4. Validar fichero CSV ─────────────────────────────────────────────
+        # ── 4. Validar fichero — MEXC usa XLS/XLSX, resto CSV ────────────────────
         filename = archivo.filename or ""
-        if not filename.lower().endswith(".csv"):
-            return jsonify({"error": "El fichero debe tener extensión .csv."}), 400
+        if exchange == "mexc":
+            if not (filename.lower().endswith(".xlsx") or filename.lower().endswith(".xls")):
+                return jsonify({
+                    "error": "MEXC requiere el archivo XLS o XLSX exportado desde la plataforma."
+                }), 400
+            _suffix_721 = ".xlsx"
+        else:
+            if not filename.lower().endswith(".csv"):
+                return jsonify({"error": "El fichero debe tener extensión .csv."}), 400
+            _suffix_721 = ".csv"
 
-        with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(suffix=_suffix_721, delete=False) as tmp:
             archivo.save(tmp.name)
             tmp_path = tmp.name
 
-        csv_rows = _contar_csv_rows(tmp_path)
+        csv_rows = _contar_filas_xlsx(tmp_path) if exchange == "mexc" else _contar_csv_rows(tmp_path)
         if csv_rows > MAX_CSV_ROWS:
             return jsonify({
                 "error": (
-                    f"El CSV tiene demasiadas filas ({csv_rows:,}). "
+                    f"El archivo tiene demasiadas filas ({csv_rows:,}). "
                     f"El máximo permitido es {MAX_CSV_ROWS:,} filas."
                 )
             }), 400
 
         try:
-            valido, error_msg = _validar_csv(tmp_path, exchange)
-            if not valido:
-                return jsonify({"error": error_msg}), 400
+            # MEXC usa XLSX — su validación es interna al clasificador (no _validar_csv)
+            if exchange != "mexc":
+                valido, error_msg = _validar_csv(tmp_path, exchange)
+                if not valido:
+                    return jsonify({"error": error_msg}), 400
 
             # ── 5. Construir motor sin filtrar por ejercicio ───────────────────
             # posicion_a_fecha(31/12/ejercicio) dentro de generar_datos_modelo_721

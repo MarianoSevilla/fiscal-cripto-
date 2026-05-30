@@ -311,6 +311,33 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
 .footer-links a { font-size: 13px; color: var(--muted); transition: color .15s; }
 .footer-links a:hover { color: var(--text); }
 
+/* ── DRAFT BANNER ── */
+.draft-banner {
+  background: var(--surface); border-radius: var(--r); margin-bottom: 1.25rem;
+  border: 1px solid rgba(245,158,11,.25);
+  padding: 1rem 1.25rem; display: flex; gap: .875rem; align-items: flex-start;
+}
+.draft-banner-icon { flex-shrink: 0; margin-top: 2px; color: var(--amber); }
+.draft-banner-body { flex: 1; min-width: 0; }
+.draft-banner-title { font-size: .9rem; font-weight: 600; margin-bottom: .2rem; }
+.draft-banner-meta  { font-size: .78rem; color: var(--muted); margin-bottom: .75rem; line-height: 1.4; }
+.draft-banner-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+.draft-btn-continue {
+  padding: .5rem 1rem; border-radius: 8px;
+  background: var(--amber); color: var(--black);
+  font-family: var(--font-b); font-size: .85rem; font-weight: 600;
+  border: none; cursor: pointer; transition: opacity .15s;
+}
+.draft-btn-continue:hover { opacity: .88; }
+.draft-btn-discard {
+  padding: .5rem 1rem; border-radius: 8px;
+  background: none; color: var(--muted);
+  font-family: var(--font-b); font-size: .85rem;
+  border: 1px solid var(--border); cursor: pointer;
+  transition: border-color .15s, color .15s;
+}
+.draft-btn-discard:hover { border-color: var(--border-hover); color: var(--text); }
+
 /* ── COMPLETAR FORM ── */
 .completar-section-title {
   font-size: .75rem; font-weight: 700; letter-spacing: .07em;
@@ -387,6 +414,27 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
 
 <main>
 
+  <!-- ── BANNER: BORRADOR GUARDADO ── -->
+  <div id="draft-banner" style="display:none;" class="draft-banner">
+    <div class="draft-banner-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+      </svg>
+    </div>
+    <div class="draft-banner-body">
+      <div class="draft-banner-title">Tienes un borrador guardado</div>
+      <div class="draft-banner-meta" id="draft-meta">Análisis guardado automáticamente.</div>
+      <div class="draft-banner-actions">
+        <button type="button" class="draft-btn-continue" id="draft-btn-continue">Continuar borrador</button>
+        <button type="button" class="draft-btn-discard"  id="draft-btn-discard">Descartar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── PANEL: FORMULARIO ── -->
   <div id="panel-form">
 
@@ -407,11 +455,13 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
           <select id="sel-exchange" required>
             <option value="">— Selecciona —</option>
             <option value="binance">Binance</option>
+            <option value="bitget">Bitget</option>
             <option value="bitvavo">Bitvavo</option>
             <option value="bit2me">Bit2Me</option>
             <option value="coinbase">Coinbase</option>
             <option value="cryptocom">Crypto.com</option>
             <option value="kraken">Kraken</option>
+            <option value="mexc">MEXC</option>
             <option value="nexo">Nexo</option>
             <option value="uphold">Uphold</option>
           </select>
@@ -430,22 +480,22 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
       </div>
     </div>
 
-    <!-- CSV upload -->
+    <!-- CSV / XLSX upload -->
     <div class="card" id="card-csv">
       <div class="card-title">Historial de operaciones</div>
       <div class="field">
-        <label>Archivo CSV</label>
+        <label id="csv-label">Archivo CSV</label>
         <div class="drop-zone" id="drop-zone">
-          <input type="file" id="file-input" accept=".csv,.txt" aria-label="Subir CSV">
+          <input type="file" id="file-input" accept=".csv,.txt" aria-label="Subir archivo">
           <div class="drop-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           </div>
-          <div class="drop-label">
+          <div class="drop-label" id="drop-label-text">
             <strong>Elige un archivo</strong> o arrástralo aquí
           </div>
           <div class="drop-filename" id="drop-filename" style="display:none;"></div>
         </div>
-        <p class="field-hint">El archivo nunca se almacena — se procesa en el servidor y se descarta inmediatamente.</p>
+        <p class="field-hint" id="csv-hint">El archivo nunca se almacena — se procesa en el servidor y se descarta inmediatamente.</p>
       </div>
     </div>
 
@@ -619,6 +669,14 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
       </a>
     </div>
     <p class="xml-msg err" id="xml-error-msg" style="display:none;"></p>
+    <p style="margin-top:.5rem;">
+      <button type="button" id="btn-borrar-borrador"
+              style="display:none;background:none;border:none;
+                     font-family:var(--font-b);font-size:.78rem;color:var(--muted2);
+                     cursor:pointer;padding:.2rem 0;transition:color .15s;">
+        × Borrar borrador guardado
+      </button>
+    </p>
 
   </div><!-- /panel-result -->
 
@@ -645,6 +703,144 @@ let lastAnalysisData     = null;   // respuesta completa de /api/721
 let lastAnalysisExchange = '';
 let lastAnalysisEjercicio= '';
 
+// ── DRAFT — localStorage ───────────────────────────────────────────────────
+// Clave única de este usuario/navegador. No contiene PII — los datos son
+// estrictamente locales (nunca se envían al servidor de forma adicional).
+const _DRAFT_KEY     = 'm721_draft_v1';
+const _DRAFT_MAX_B   = 200 * 1024; // 200 KB — safety cap
+let   _draftTimer    = null;
+
+function saveDraft() {
+  if (!lastAnalysisData) return;
+  try {
+    const payload = {
+      v:             1,
+      ts:            new Date().toISOString(),
+      exchange:      lastAnalysisExchange,
+      ejercicio:     lastAnalysisEjercicio,
+      analysisData:  lastAnalysisData,
+      valores:       _draftCollectValores(),
+      custodios:     _draftCollectCustodios(),
+      nif_inline:    (document.getElementById('completar-nif')?.value    || '').trim().toUpperCase(),
+      nombre_inline: (document.getElementById('completar-nombre')?.value || '').trim(),
+    };
+    const json = JSON.stringify(payload);
+    // Si el JSON excede el límite, eliminar el analysisData para no perder los inputs manuales
+    if (json.length > _DRAFT_MAX_B) {
+      payload.analysisData = null;
+      payload._truncated   = true;
+    }
+    localStorage.setItem(_DRAFT_KEY, JSON.stringify(payload));
+    _draftShowDeleteBtn(true);
+  } catch { /* localStorage indisponible (cuota, modo privado) — fallar silenciosamente */ }
+}
+
+function saveDraftDebounced() {
+  clearTimeout(_draftTimer);
+  _draftTimer = setTimeout(saveDraft, 500);
+}
+
+function loadDraft() {
+  try {
+    const raw = localStorage.getItem(_DRAFT_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    if (!d || d.v !== 1 || !d.analysisData) return null;
+    return d;
+  } catch { return null; }
+}
+
+function clearDraft() {
+  try { localStorage.removeItem(_DRAFT_KEY); } catch {}
+  _draftShowDeleteBtn(false);
+  document.getElementById('draft-banner').style.display = 'none';
+}
+
+function _draftShowDeleteBtn(visible) {
+  const btn = document.getElementById('btn-borrar-borrador');
+  if (btn) btn.style.display = visible ? '' : 'none';
+}
+
+function showDraftBanner(draft) {
+  if (!draft) return;
+  const exch = exchangeLabel(draft.exchange || '');
+  const ej   = draft.ejercicio || '';
+  let ts = '';
+  try {
+    ts = new Date(draft.ts).toLocaleString('es-ES', {
+      day: 'numeric', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  } catch {}
+  document.getElementById('draft-meta').textContent =
+    `${exch} · Ejercicio ${ej}` + (ts ? ` · Guardado el ${ts}` : '');
+  document.getElementById('draft-banner').style.display = '';
+}
+
+// Recoge los valores EUR + fuentes del formulario de completar
+function _draftCollectValores() {
+  const vals = {};
+  document.querySelectorAll('.valor-input').forEach(el => {
+    const ticker = el.getAttribute('data-ticker');
+    if (!ticker || !el.value) return;
+    const orig = document.querySelector(`.origen-select[data-ticker="${ticker}"]`);
+    vals[ticker] = { valor_eur: parseFloat(el.value) || null, origen: orig?.value || '' };
+  });
+  return vals;
+}
+
+// Recoge los identificadores fiscales de custodios del formulario
+function _draftCollectCustodios() {
+  const custs = {};
+  document.querySelectorAll('.custodio-block').forEach(block => {
+    const k = block.getAttribute('data-exchange');
+    if (!k) return;
+    custs[k] = {
+      codigo_pais: (block.querySelector('.custodio-pais')?.value   || '').toUpperCase(),
+      id_type:      block.querySelector('.custodio-idtype')?.value || '',
+      id:           block.querySelector('.custodio-id')?.value     || '',
+    };
+  });
+  return custs;
+}
+
+// Restaura los valores manuales del borrador en el formulario completar
+function restoreDraftFormValues(draft) {
+  if (!draft) return;
+
+  // Valores de precio
+  Object.entries(draft.valores || {}).forEach(([ticker, v]) => {
+    const valEl  = document.querySelector(`.valor-input[data-ticker="${ticker}"]`);
+    const origEl = document.querySelector(`.origen-select[data-ticker="${ticker}"]`);
+    if (valEl  && v.valor_eur != null) valEl.value  = String(v.valor_eur);
+    if (origEl && v.origen)            origEl.value = v.origen;
+    // Marcar campo visualmente como rellenado
+    if (valEl && valEl.value) valEl.classList.add('is-valid');
+  });
+
+  // Custodios
+  Object.entries(draft.custodios || {}).forEach(([k, c]) => {
+    const paisEl = document.querySelector(`.custodio-pais[data-exchange="${k}"]`);
+    const typEl  = document.querySelector(`.custodio-idtype[data-exchange="${k}"]`);
+    const idEl   = document.querySelector(`.custodio-id[data-exchange="${k}"]`);
+    if (paisEl && c.codigo_pais) paisEl.value = c.codigo_pais;
+    if (typEl  && c.id_type)     typEl.value  = c.id_type;
+    if (idEl   && c.id)          idEl.value   = c.id;
+  });
+
+  // NIF inline (solo si el campo existe y está vacío)
+  if (draft.nif_inline) {
+    const nifEl = document.getElementById('completar-nif');
+    if (nifEl && !nifEl.value) nifEl.value = draft.nif_inline;
+  }
+  if (draft.nombre_inline) {
+    const nomEl = document.getElementById('completar-nombre');
+    if (nomEl && !nomEl.value) nomEl.value = draft.nombre_inline;
+  }
+
+  validateXMLReadiness();
+}
+
 // ── AUTH GUARD + prefill desde perfil ──────────────────────────────────────
 (async () => {
   try {
@@ -654,6 +850,9 @@ let lastAnalysisEjercicio= '';
     // Pre-rellenar NIF y nombre si el usuario los tiene guardados
     if (d.user.nif)       document.getElementById('inp-nif').value    = d.user.nif;
     if (d.user.full_name) document.getElementById('inp-nombre').value = d.user.full_name;
+    // ── Comprobar borrador guardado ────────────────────────────────────────
+    const draft = loadDraft();
+    if (draft) showDraftBanner(draft);
   } catch {
     window.location.replace('/login/');
   }
@@ -705,7 +904,7 @@ function setFile(f) {
   dropZone.classList.add('has-file');
   dropFilename.textContent = f.name;
   dropFilename.style.display = 'block';
-  dropZone.querySelector('.drop-label').innerHTML =
+  document.getElementById('drop-label-text').innerHTML =
     '<strong>Archivo seleccionado</strong> — haz clic para cambiar';
   updateFormState();
 }
@@ -722,19 +921,53 @@ toggleBtn.addEventListener('click', () => {
 function updateFormState() {
   const exchange = selExchange.value;
   const esBit2Me = exchange === 'bit2me';
+  const esMEXC   = exchange === 'mexc';
+
   bit2meInfo.style.display = esBit2Me ? 'block' : 'none';
   cardCsv.style.display    = esBit2Me ? 'none'  : '';
+
+  // ── Actualizar tipo de archivo aceptado y labels según exchange ──────────
+  if (!esBit2Me) {
+    if (esMEXC) {
+      fileInput.accept = '.xlsx,.xls';
+      document.getElementById('csv-label').textContent = 'Archivo XLS / XLSX';
+      document.getElementById('csv-hint').innerHTML =
+        'MEXC exporta en formato XLS/XLSX desde <strong>Órdenes → Historial de operaciones → Exportar</strong>. ' +
+        'El archivo nunca se almacena — se descarta inmediatamente tras el análisis.';
+    } else {
+      fileInput.accept = '.csv,.txt';
+      document.getElementById('csv-label').textContent = 'Archivo CSV';
+      document.getElementById('csv-hint').textContent =
+        'El archivo nunca se almacena — se procesa en el servidor y se descarta inmediatamente.';
+    }
+
+    // Si había un archivo seleccionado de otro tipo, limpiarlo
+    if (selectedFile) {
+      const esXlsx = /\.(xlsx|xls)$/i.test(selectedFile.name);
+      const esCsv  = /\.(csv|txt)$/i.test(selectedFile.name);
+      if ((esMEXC && !esXlsx) || (!esMEXC && !esCsv)) {
+        selectedFile = null;
+        fileInput.value = '';
+        dropZone.classList.remove('has-file');
+        document.getElementById('drop-filename').style.display = 'none';
+        document.getElementById('drop-label-text').innerHTML =
+          '<strong>Elige un archivo</strong> o arrástralo aquí';
+      }
+    }
+  }
+
   if (esBit2Me) {
     btnSubmit.disabled = !exchange;
     btnSubmit.textContent = 'Ver explicación';
   } else {
     btnSubmit.disabled = !(exchange && selectedFile);
+    const labelAnalizar = esMEXC ? 'Analizar XLSX' : 'Analizar CSV';
     btnSubmit.innerHTML = `
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
       </svg>
-      Analizar CSV`;
+      ${labelAnalizar}`;
   }
 }
 
@@ -954,6 +1187,9 @@ function renderResult(data) {
 
   // ── FORMULARIO COMPLETAR + BOTÓN XML ──────────────────────────────────
   buildCompletarForm(data);
+
+  // ── GUARDAR BORRADOR ─────────────────────────────────────────────────
+  saveDraft();
 }
 
 // ── COMPLETAR FORM ─────────────────────────────────────────────────────────
@@ -1147,6 +1383,9 @@ function validateXMLReadiness() {
     btnXml.disabled = !ready;
   }
 
+  // Auto-guardar borrador cuando cambia el estado del formulario
+  saveDraftDebounced();
+
   return ready;
 }
 
@@ -1300,12 +1539,15 @@ document.getElementById('btn-nuevo').addEventListener('click', () => {
   lastAnalysisExchange  = '';
   lastAnalysisEjercicio = '';
 
+  // Limpiar borrador — el usuario ha decidido empezar de cero explícitamente
+  clearDraft();
+
   // Reset formulario
   selectedFile = null;
   fileInput.value = '';
   dropZone.classList.remove('has-file');
   dropFilename.style.display = 'none';
-  dropZone.querySelector('.drop-label').innerHTML =
+  document.getElementById('drop-label-text').innerHTML =
     '<strong>Elige un archivo</strong> o arrástralo aquí';
 
   // Re-poner NIF/nombre del perfil (los inputs de /panel-form)
@@ -1315,6 +1557,35 @@ document.getElementById('btn-nuevo').addEventListener('click', () => {
   panelResult.style.display  = 'none';
   panelLoading.style.display = 'none';
   panelForm.style.display    = '';
+});
+
+// ── DRAFT: botones del banner y botón "Borrar borrador" ───────────────────
+
+document.getElementById('draft-btn-continue').addEventListener('click', () => {
+  const draft = loadDraft();
+  if (!draft || !draft.analysisData) {
+    clearDraft();
+    return;
+  }
+  document.getElementById('draft-banner').style.display = 'none';
+  renderResult(draft.analysisData);
+  // Restaurar valores manuales después de que renderResult haya construido el formulario
+  requestAnimationFrame(() => restoreDraftFormValues(draft));
+});
+
+document.getElementById('draft-btn-discard').addEventListener('click', () => {
+  clearDraft();
+  document.getElementById('draft-banner').style.display = 'none';
+});
+
+document.getElementById('btn-borrar-borrador').addEventListener('click', () => {
+  clearDraft();
+  // Mostrar confirmación ligera en el mismo botón
+  const btn = document.getElementById('btn-borrar-borrador');
+  const orig = btn.textContent;
+  btn.textContent = '✓ Borrador eliminado';
+  btn.style.display = '';
+  setTimeout(() => { btn.textContent = orig; btn.style.display = 'none'; }, 2000);
 });
 
 // ── DESCARGAR XML ──────────────────────────────────────────────────────────
@@ -1366,9 +1637,9 @@ function fmtCantidad(s) {
 }
 
 const EXCHANGE_LABELS = {
-  binance: 'Binance', bitvavo: 'Bitvavo', bit2me: 'Bit2Me',
+  binance: 'Binance', bitget: 'Bitget', bitvavo: 'Bitvavo', bit2me: 'Bit2Me',
   coinbase: 'Coinbase', cryptocom: 'Crypto.com',
-  kraken: 'Kraken', nexo: 'Nexo', uphold: 'Uphold',
+  kraken: 'Kraken', mexc: 'MEXC', nexo: 'Nexo', uphold: 'Uphold',
 };
 function exchangeLabel(key) { return EXCHANGE_LABELS[key] || key; }
 
