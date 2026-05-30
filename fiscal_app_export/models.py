@@ -156,7 +156,7 @@ class FiscalAdvisoryRequest(db.Model):
     }
 
     id                         = db.Column(db.Integer, primary_key=True)
-    user_id                    = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    user_id                    = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
     full_name                  = db.Column(db.String(150), nullable=False)
     email                      = db.Column(db.String(254), nullable=False)
     phone                      = db.Column(db.String(30), nullable=True)

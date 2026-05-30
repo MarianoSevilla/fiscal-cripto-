@@ -35,7 +35,7 @@ from flask_migrate import Migrate
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from authlib.integrations.flask_client import OAuth
 import resend
-from sqlalchemy import func, extract, text
+from sqlalchemy import func, extract, text, or_
 from models import db, bcrypt, User, FifoReport, Contacto, ProcessingError, CommunicationCampaign, CommunicationDelivery
 
 # Advisory / Stripe imports
@@ -2898,7 +2898,15 @@ def _api_stats_data():
         ]
     _no_adm_rep  = [FifoReport.user_id.notin_(_admin_uids)] if _admin_uids else []
     _no_adm_usr  = [User.id.notin_(_admin_uids)]            if _admin_uids else []
-    _no_adm_adv  = [FiscalAdvisoryRequest.user_id.notin_(_admin_uids)] if _admin_uids else []
+    # Excluir solicitudes de admins, pero incluir las anónimas (user_id IS NULL).
+    # SQL: NULL NOT IN (...) → NULL (falsy), por lo que sin el OR las solicitudes
+    # anónimas desaparecerían de las estadísticas del panel.
+    _no_adm_adv  = [
+        or_(
+            FiscalAdvisoryRequest.user_id.is_(None),
+            FiscalAdvisoryRequest.user_id.notin_(_admin_uids),
+        )
+    ] if _admin_uids else []
     _no_adm_proc = [ProcessingError.email.notin_(list(ADMIN_EMAILS))] if ADMIN_EMAILS else []
 
     # Ventana de 6 meses: primer día del mes de hace 5 meses
