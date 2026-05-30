@@ -122,6 +122,20 @@ def client(_app):
     return _app.test_client()
 
 
+@pytest.fixture(autouse=True)
+def clear_flask_login_g(_app):
+    """Limpia g._login_user del app context compartido entre tests.
+
+    En Flask 2.x, `g` vive en el APP context (no en el request context).
+    Flask-Login guarda el usuario en `g._login_user`. Como el fixture de módulo
+    mantiene un app context activo durante toda la sesión, el estado de login de
+    un test autenticado persiste para el siguiente test anónimo si no se limpia.
+    """
+    yield
+    from flask import g
+    g.pop("_login_user", None)
+
+
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def _login_admin(client):
@@ -229,16 +243,19 @@ def test_bd_acepta_user_id_null(_app):
         db.session.remove()
 
 
-def test_endpoint_acepta_solicitud_anonima(client, _app):
-    """Endpoint /api/asesoramiento/solicitar devuelve 200 sin sesión activa."""
-    # client es función-scoped: nuevo objeto sin cookies de tests anteriores
+def test_endpoint_rechaza_solicitud_anonima(client, _app):
+    """Endpoint /api/asesoramiento/solicitar devuelve 401 sin sesión activa.
+
+    Política de producto: solo usuarios autenticados pueden crear solicitudes.
+    La columna user_id permanece nullable=True por compatibilidad (Opción A),
+    pero el endpoint bloquea el acceso antes de llegar a la BD.
+    """
+    # client es función-scoped: sin cookies → usuario anónimo
     r = _post_solicitud(client)
+    assert r.status_code == 401, \
+        f"Se esperaba 401 para visitante anónimo, se obtuvo {r.status_code}: {r.get_json()}"
     data = r.get_json()
-    assert r.status_code == 200, data
-    assert data.get("ok") is True
-    assert "advisory_id" in data
-    # Cleanup
-    _delete_advisory(_app, data["advisory_id"])
+    assert "error" in data  # unauthorized_handler devuelve {"error": "Autenticación requerida"}
 
 
 def test_admin_ve_solicitudes_autenticada_y_anonima(client, normal_user, admin_user, _app):

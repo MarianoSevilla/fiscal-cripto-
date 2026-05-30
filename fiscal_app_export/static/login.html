@@ -272,6 +272,13 @@ html, body {
     if (d.user) { const nextUrl = new URLSearchParams(location.search).get('next'); window.location.replace((nextUrl && nextUrl.startsWith('/')) ? nextUrl : '/dashboard'); return; }
   } catch {}
 
+  // Mensaje contextual si el usuario viene desde /pedir-asesoramiento
+  const nextParam = new URLSearchParams(location.search).get('next') || '';
+  if (nextParam.includes('pedir-asesoramiento')) {
+    const sub = document.querySelector('.card-sub');
+    if (sub) sub.textContent = 'Inicia sesión o crea una cuenta gratis para solicitar asesoramiento fiscal.';
+  }
+
   // Show OAuth error if redirected back with error param
   const err = new URLSearchParams(location.search).get('error');
   if (err) {
