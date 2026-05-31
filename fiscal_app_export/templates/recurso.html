@@ -45,7 +45,7 @@
   --accent-dim:  rgba(0,200,150,0.12);
   --accent-glow: rgba(0,200,150,0.25);
   --footer-bg:   #070e1a;
-  --max-w:       800px;
+  --max-w:       1100px;
   --pad-x:       3rem;
   --font-display:'Syne', sans-serif;
   --font-body:   'DM Sans', sans-serif;
@@ -406,8 +406,9 @@ select option { background: #101829; }
     <div class="form-section" id="solicitud">
       <h2>{{ resource.cta_text or 'Solicitar el recurso' }}</h2>
       <p class="form-intro">
-        Rellena el formulario y revisaremos tu solicitud. Te contactaremos por
-        email o Telegram en cuanto lo hayamos verificado.
+        Para recibir el Dossier Experimento Bitcoin, necesitamos poder comprobar que
+        te has registrado en uno de los exchanges asociados al canal. Introduce tu UID
+        o identificador de usuario para que podamos validar la solicitud.
       </p>
 
       <form id="resource-form" novalidate>
@@ -431,10 +432,6 @@ select option { background: #101829; }
               <option value="">Selecciona un exchange</option>
               <option value="bitvavo">Bitvavo</option>
               <option value="binance">Binance</option>
-              <option value="kraken">Kraken</option>
-              <option value="coinbase">Coinbase</option>
-              <option value="bit2me">Bit2Me</option>
-              <option value="otro">Otro</option>
             </select>
           </div>
 
@@ -450,15 +447,15 @@ select option { background: #101829; }
           </div>
 
           <div class="form-field full">
-            <label for="uid">UID / Identificador de usuario<span class="optional">opcional</span></label>
+            <label for="uid">UID / Identificador de usuario</label>
             <input type="text" id="uid" name="uid" placeholder="Ej: 12345678">
-            <p class="uid-helper" id="uid-helper">Puedes encontrar tu UID en Ajustes → Perfil dentro de tu cuenta de Bitvavo.</p>
+            <p class="uid-helper" id="uid-helper">Puedes encontrar tu UID en Ajustes → Perfil dentro de tu cuenta de Bitvavo o Binance.</p>
           </div>
 
           <div class="form-field full">
             <div class="checkbox-row">
               <input type="checkbox" id="uid_unknown" name="uid_unknown">
-              <label for="uid_unknown">No sé dónde encontrar mi UID o no tengo cuenta todavía</label>
+              <label for="uid_unknown">No sé dónde encontrar mi UID o todavía no tengo cuenta — lo revisaremos manualmente</label>
             </div>
           </div>
 
@@ -467,24 +464,11 @@ select option { background: #101829; }
             <input type="text" id="telegram_user" name="telegram_user" placeholder="@tunombre">
           </div>
 
-          <div class="form-field full">
-            <label for="source">¿Cómo has llegado hasta aquí?<span class="optional">opcional</span></label>
-            <select id="source" name="source">
-              <option value="">Selecciona una opción</option>
-              <option value="youtube">YouTube</option>
-              <option value="telegram">Telegram</option>
-              <option value="comunidad">Comunidad / Discord</option>
-              <option value="web">Web / Google</option>
-              <option value="directo">Enlace directo</option>
-              <option value="otro">Otro</option>
-            </select>
-          </div>
-
         </div><!-- /form-grid -->
 
         <div style="margin-top:1.25rem;display:flex;flex-direction:column;gap:.6rem;">
           <div class="checkbox-row">
-            <input type="checkbox" id="legal_accepted" name="legal_accepted" required>
+            <input type="checkbox" id="legal_accepted" name="legal_accepted">
             <label for="legal_accepted">
               He leído y acepto la <a href="/privacidad" target="_blank">política de privacidad</a>.
               Entiendo que este formulario recopila mis datos para gestionar la solicitud. <strong style="color:var(--text)">*</strong>
@@ -493,13 +477,14 @@ select option { background: #101829; }
           <div class="checkbox-row">
             <input type="checkbox" id="marketing_consent" name="marketing_consent">
             <label for="marketing_consent">
-              Acepto recibir comunicaciones del canal (novedades, recursos y contenido educativo).
-              Puedo darme de baja en cualquier momento.
+              Acepto recibir comunicaciones del canal: novedades, recursos y contenido educativo.
+              Puedo darme de baja en cualquier momento. <strong style="color:var(--text)">*</strong>
             </label>
           </div>
+          <p style="font-size:.78rem;color:#4a5a78;margin-top:.25rem;">* Ambas opciones son obligatorias para enviar la solicitud.</p>
         </div>
 
-        <button type="submit" class="btn-submit" id="submit-btn">
+        <button type="submit" class="btn-submit" id="submit-btn" disabled>
           {{ resource.cta_text or 'Solicitar el recurso' }}
         </button>
 
@@ -539,13 +524,23 @@ select option { background: #101829; }
   const btn       = document.getElementById('submit-btn');
   const successEl = document.getElementById('form-success');
   const errorEl   = document.getElementById('form-error');
+  const chkLegal  = document.getElementById('legal_accepted');
+  const chkComms  = document.getElementById('marketing_consent');
+  const CTA_TEXT  = '{{ resource.cta_text or "Solicitar el recurso" }}';
+
+  // Habilitar botón solo cuando ambos checkboxes obligatorios estén marcados
+  function updateBtn() {
+    btn.disabled = !(chkLegal.checked && chkComms.checked);
+  }
+  chkLegal.addEventListener('change', updateBtn);
+  chkComms.addEventListener('change', updateBtn);
 
   // Toggle helper text cuando marca "no sé mi UID"
   document.getElementById('uid_unknown').addEventListener('change', function () {
     const helper = document.getElementById('uid-helper');
     helper.textContent = this.checked
       ? 'Sin problema, puedes dejarlo en blanco. Lo gestionaremos manualmente.'
-      : 'Puedes encontrar tu UID en Ajustes → Perfil dentro de tu cuenta de Bitvavo.';
+      : 'Puedes encontrar tu UID en Ajustes → Perfil dentro de tu cuenta de Bitvavo o Binance.';
   });
 
   form.addEventListener('submit', async function (e) {
@@ -553,13 +548,22 @@ select option { background: #101829; }
     successEl.style.display = 'none';
     errorEl.style.display   = 'none';
 
-    if (!document.getElementById('legal_accepted').checked) {
-      errorEl.textContent = 'Debes aceptar la política de privacidad para continuar.';
+    // Guardia frontend (el botón ya debería estar deshabilitado, pero por si acaso)
+    if (!chkLegal.checked || !chkComms.checked) {
+      errorEl.textContent   = 'Debes marcar ambas opciones obligatorias para continuar.';
       errorEl.style.display = 'block';
       return;
     }
 
-    btn.disabled = true;
+    const uid        = document.getElementById('uid').value.trim();
+    const uidUnknown = document.getElementById('uid_unknown').checked;
+    if (!uid && !uidUnknown) {
+      errorEl.textContent   = 'Introduce tu UID o marca que no sabes dónde encontrarlo.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    btn.disabled    = true;
     btn.textContent = 'Enviando…';
 
     const payload = {
@@ -568,12 +572,11 @@ select option { background: #101829; }
       email:             document.getElementById('email').value.trim(),
       exchange:          document.getElementById('exchange').value || null,
       bitvavo_status:    document.getElementById('bitvavo_status').value || null,
-      uid:               document.getElementById('uid').value.trim() || null,
-      uid_unknown:       document.getElementById('uid_unknown').checked,
+      uid:               uid || null,
+      uid_unknown:       uidUnknown,
       telegram_user:     document.getElementById('telegram_user').value.trim() || null,
-      source:            document.getElementById('source').value || null,
       legal_accepted:    true,
-      marketing_consent: document.getElementById('marketing_consent').checked,
+      marketing_consent: true,
     };
 
     try {
@@ -584,19 +587,19 @@ select option { background: #101829; }
       });
       const data = await res.json();
       if (res.ok) {
-        form.style.display  = 'none';
+        form.style.display      = 'none';
         successEl.style.display = 'block';
       } else {
-        errorEl.textContent  = data.error || 'Error desconocido. Por favor, inténtalo de nuevo.';
+        errorEl.textContent   = data.error || 'Error desconocido. Por favor, inténtalo de nuevo.';
         errorEl.style.display = 'block';
-        btn.disabled   = false;
-        btn.textContent = '{{ resource.cta_text or "Solicitar el recurso" }}';
+        btn.disabled    = false;
+        btn.textContent = CTA_TEXT;
       }
     } catch (_) {
       errorEl.textContent   = 'Error de conexión. Comprueba tu conexión e inténtalo de nuevo.';
       errorEl.style.display = 'block';
-      btn.disabled   = false;
-      btn.textContent = '{{ resource.cta_text or "Solicitar el recurso" }}';
+      btn.disabled    = false;
+      btn.textContent = CTA_TEXT;
     }
   });
 })();

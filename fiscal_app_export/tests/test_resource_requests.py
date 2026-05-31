@@ -138,9 +138,9 @@ _VALID_PAYLOAD_TEMPLATE = {
     "uid":               "12345678",
     "uid_unknown":       False,
     "telegram_user":     "@juanprueba",
-    "source":            "youtube",
     "legal_accepted":    True,
     "marketing_consent": True,
+    # source ya no se envía desde el formulario
 }
 
 
@@ -169,12 +169,12 @@ def test_solicitud_valida_crea_registro(client, resource, _app):
         db.session.remove()
         rr = ResourceRequest.query.filter_by(id=data["id"]).first()
         assert rr is not None
-        assert rr.status    == "recibido"
-        assert rr.name      == "Juan Prueba"
-        assert rr.email     == "juan.prueba@example.com"
-        assert rr.source    == "youtube"
-        assert rr.legal_accepted is True
-        assert rr.marketing_consent is True
+        assert rr.status             == "recibido"
+        assert rr.name               == "Juan Prueba"
+        assert rr.email              == "juan.prueba@example.com"
+        assert rr.source             is None   # source ya no se recoge
+        assert rr.legal_accepted     is True
+        assert rr.marketing_consent  is True
         db.session.delete(rr)
         db.session.commit()
         db.session.remove()
@@ -185,6 +185,13 @@ def test_solicitud_sin_legal_accepted(client, resource):
     r = _post_solicitud(client, resource, {"legal_accepted": False})
     assert r.status_code == 400
     assert "privacidad" in r.get_json().get("error", "").lower()
+
+
+def test_solicitud_sin_marketing_consent(client, resource):
+    """marketing_consent es ahora obligatorio → 400."""
+    r = _post_solicitud(client, resource, {"marketing_consent": False})
+    assert r.status_code == 400
+    assert "comunicaciones" in r.get_json().get("error", "").lower()
 
 
 def test_solicitud_email_invalido(client, resource):
@@ -205,18 +212,74 @@ def test_solicitud_resource_inexistente(client):
     assert r.status_code == 404
 
 
-def test_solicitud_sin_uid_entra_como_recibido(client, resource, _app):
-    """Sin UID ni uid_unknown → status=recibido (sin estados extra)."""
+def test_solicitud_uid_vacio_sin_uid_unknown_rechazada(client, resource):
+    """UID vacío sin uid_unknown → 400 (ahora es obligatorio)."""
     r = _post_solicitud(client, resource, {"uid": None, "uid_unknown": False})
+    assert r.status_code == 400
+    assert "uid" in r.get_json().get("error", "").lower()
+
+
+def test_solicitud_uid_vacio_con_uid_unknown_aceptada(client, resource, _app):
+    """UID vacío pero uid_unknown=True → 201, entra como recibido."""
+    r = _post_solicitud(client, resource, {"uid": None, "uid_unknown": True})
     assert r.status_code == 201
     rr_id = r.get_json()["id"]
 
     with _app.app_context():
         db.session.remove()
         rr = ResourceRequest.query.filter_by(id=rr_id).first()
-        assert rr.status == "recibido"
-        assert rr.uid is None
-        assert rr.uid_unknown is False
+        assert rr.status      == "recibido"
+        assert rr.uid         is None
+        assert rr.uid_unknown is True
+        db.session.delete(rr)
+        db.session.commit()
+        db.session.remove()
+
+
+def test_solicitud_exchange_invalido(client, resource):
+    """Exchange fuera de la lista permitida → 400."""
+    r = _post_solicitud(client, resource, {"exchange": "kraken"})
+    assert r.status_code == 400
+
+
+def test_solicitud_exchanges_validos(client, resource, _app):
+    """Bitvavo y Binance son los únicos exchanges aceptados."""
+    for exch in ("bitvavo", "binance"):
+        r = _post_solicitud(client, resource, {
+            "exchange": exch,
+            "email":    f"{exch}@test.com",
+        })
+        assert r.status_code == 201, f"Exchange '{exch}' debería aceptarse: {r.get_json()}"
+        with _app.app_context():
+            db.session.remove()
+            rr = ResourceRequest.query.filter_by(email=f"{exch}@test.com").first()
+            if rr:
+                db.session.delete(rr)
+                db.session.commit()
+            db.session.remove()
+
+
+def test_solicitud_exchange_none_aceptado(client, resource, _app):
+    """Exchange vacío (None) también se acepta — campo opcional."""
+    r = _post_solicitud(client, resource, {"exchange": None, "email": "noexch@test.com"})
+    assert r.status_code == 201
+    with _app.app_context():
+        db.session.remove()
+        rr = ResourceRequest.query.filter_by(email="noexch@test.com").first()
+        if rr:
+            db.session.delete(rr)
+            db.session.commit()
+        db.session.remove()
+
+
+def test_source_no_se_guarda(client, resource, _app):
+    """El campo source no se recibe ni guarda (eliminado del formulario)."""
+    r = _post_solicitud(client, resource, {"email": "nosource@test.com"})
+    assert r.status_code == 201
+    with _app.app_context():
+        db.session.remove()
+        rr = ResourceRequest.query.filter_by(email="nosource@test.com").first()
+        assert rr.source is None
         db.session.delete(rr)
         db.session.commit()
         db.session.remove()

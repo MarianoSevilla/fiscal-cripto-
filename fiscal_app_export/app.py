@@ -4733,37 +4733,42 @@ def recurso_detail(slug):
 def resource_solicitar():
     data = request.get_json(silent=True) or {}
 
-    resource_id    = data.get("resource_id")
-    name           = (data.get("name") or "").strip()[:150]
-    email_val      = (data.get("email") or "").strip()[:254].lower()
-    exchange       = (data.get("exchange") or "").strip()[:50] or None
-    bitvavo_status = (data.get("bitvavo_status") or "").strip()[:50] or None
-    uid            = (data.get("uid") or "").strip()[:100] or None
-    uid_unknown    = bool(data.get("uid_unknown"))
-    telegram_user  = (data.get("telegram_user") or "").strip()[:100] or None
-    source         = (data.get("source") or "").strip()[:50] or None
-    legal_accepted = bool(data.get("legal_accepted"))
+    resource_id       = data.get("resource_id")
+    name              = (data.get("name") or "").strip()[:150]
+    email_val         = (data.get("email") or "").strip()[:254].lower()
+    exchange          = (data.get("exchange") or "").strip()[:50] or None
+    bitvavo_status    = (data.get("bitvavo_status") or "").strip()[:50] or None
+    uid               = (data.get("uid") or "").strip()[:100] or None
+    uid_unknown       = bool(data.get("uid_unknown"))
+    telegram_user     = (data.get("telegram_user") or "").strip()[:100] or None
+    legal_accepted    = bool(data.get("legal_accepted"))
     marketing_consent = bool(data.get("marketing_consent"))
 
-    # Validación básica
+    # Validación
     if not name:
         return jsonify({"error": "El nombre es obligatorio."}), 400
     if not email_val or "@" not in email_val:
         return jsonify({"error": "El email no es válido."}), 400
     if not legal_accepted:
         return jsonify({"error": "Debes aceptar la política de privacidad."}), 400
+    if not marketing_consent:
+        return jsonify({"error": "Debes aceptar recibir comunicaciones del canal."}), 400
 
     resource = Resource.query.filter_by(id=resource_id, is_active=True).first() if resource_id else None
     if not resource:
         return jsonify({"error": "Recurso no encontrado."}), 404
 
+    # UID obligatorio salvo que el usuario marque que no lo conoce
+    if not uid and not uid_unknown:
+        return jsonify({"error": "Introduce tu UID o marca que no sabes dónde encontrarlo."}), 400
+
+    valid_exchanges = {"bitvavo", "binance", None}
+    if exchange not in valid_exchanges:
+        return jsonify({"error": "Exchange no válido."}), 400
+
     valid_bitvavo = {"registered_via_link", "had_account", "no_account", "not_sure", None}
     if bitvavo_status not in valid_bitvavo:
         bitvavo_status = None
-
-    valid_sources = {"youtube", "telegram", "comunidad", "web", "directo", "otro", None}
-    if source not in valid_sources:
-        source = "otro"
 
     rr = ResourceRequest(
         resource_id       = resource.id,
@@ -4774,9 +4779,9 @@ def resource_solicitar():
         uid               = uid,
         uid_unknown       = uid_unknown,
         telegram_user     = telegram_user,
-        source            = source,
+        source            = None,
         legal_accepted    = True,
-        marketing_consent = marketing_consent,
+        marketing_consent = True,
         status            = "recibido",
         ip                = request.headers.get("X-Forwarded-For", request.remote_addr or "")[:45],
     )
