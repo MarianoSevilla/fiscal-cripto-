@@ -192,11 +192,17 @@ body {
   color: var(--muted);
   line-height: 1.75;
 }
-/* Grid reutilizable — admite múltiples tarjetas de exchange */
+/* Grid reutilizable — 4 columnas en desktop, responsive hacia abajo */
 .exchanges-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 300px));
+  grid-template-columns: repeat(4, 1fr);
   gap: 1.25rem;
+}
+@media (max-width: 900px) {
+  .exchanges-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 540px) {
+  .exchanges-grid { grid-template-columns: 1fr; }
 }
 
 /* Tarjeta vertical — ficha informativa */
@@ -204,10 +210,10 @@ body {
   background: var(--surface);
   border: 1px solid var(--border2);
   border-radius: 16px;
-  padding: 1.75rem;
+  padding: 1.4rem 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: .9rem;
 }
 .exchange-card-logo {
   width: 48px;
