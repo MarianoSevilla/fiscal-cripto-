@@ -34,6 +34,9 @@
   --font-d: 'Syne', sans-serif;
   --font-b: 'DM Sans', sans-serif;
   --max: 1080px;
+  --footer-bg: #070e1a;
+  --max-w:     1280px;
+  --pad-x:     3rem;
 }
 
 html { scroll-behavior: smooth; }
@@ -150,6 +153,18 @@ footer { border-top: 1px solid var(--border); padding: 2rem; text-align: center;
   .page-wrap { padding: 6rem 1.25rem 3rem; }
   .security-grid { grid-template-columns: 1fr; }
 }
+
+/* ── FOOTER ─────────────────────── */
+.page-footer { background: var(--footer-bg); border-top: 1px solid var(--border); padding: 2rem 0; margin-top: auto; }
+.footer-inner { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x); display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.footer-copy { font-size: 13px; color: var(--muted); }
+.footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+.footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; }
+.footer-links a:hover { color: var(--text); }
+@media (max-width: 640px) {
+  .footer-inner { flex-direction: column; align-items: flex-start; }
+  :root { --pad-x: 1.5rem; }
+}
 </style>
 </head>
 <body>
@@ -250,14 +265,17 @@ footer { border-top: 1px solid var(--border); padding: 2rem; text-align: center;
 
 </div>
 
-<footer>
-  <p class="footer-legal">
-    © 2026 Mariano Sevilla &nbsp;·&nbsp;
-    <a href="/seguridad">Seguridad</a> &nbsp;·&nbsp;
-    <a href="/privacidad">Política de privacidad</a> &nbsp;·&nbsp;
-    <a href="/terminos">Términos de servicio</a> &nbsp;·&nbsp;
-    <a href="/aviso-legal">Aviso legal</a>
-  </p>
+<footer class="page-footer">
+  <div class="footer-inner">
+    <span class="footer-copy">© 2025 marianosevilla.com — No constituye asesoramiento fiscal ni legal.</span>
+    <div class="footer-links">
+      <a href="/privacidad">Privacidad</a>
+      <a href="/terminos">Términos</a>
+      <a href="/cookies">Cookies</a>
+      <a href="/aviso-legal">Aviso legal</a>
+      <a href="/faq">FAQ</a>
+    </div>
+  </div>
 </footer>
 
 </body>

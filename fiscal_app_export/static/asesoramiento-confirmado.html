@@ -25,6 +25,9 @@
   --accent:  #00C896;
   --ff-h:    'Syne', sans-serif;
   --ff-b:    'DM Sans', sans-serif;
+  --footer-bg: #070e1a;
+  --max-w:     1280px;
+  --pad-x:     3rem;
 }
 html, body { min-height: 100%; background: var(--bg); font-family: var(--ff-b); color: var(--text); display: flex; flex-direction: column; }
 nav {
@@ -70,6 +73,18 @@ h1 { font-family: var(--ff-h); font-size: clamp(22px,4vw,32px); font-weight: 800
   text-decoration: none; transition: background .2s;
 }
 .btn-home:hover { background: #00a87e; }
+
+/* ── FOOTER ─────────────────────── */
+.page-footer { background: var(--footer-bg); border-top: 1px solid var(--border); padding: 2rem 0; margin-top: auto; }
+.footer-inner { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x); display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.footer-copy { font-size: 13px; color: var(--muted); }
+.footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+.footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; }
+.footer-links a:hover { color: var(--text); }
+@media (max-width: 640px) {
+  .footer-inner { flex-direction: column; align-items: flex-start; }
+  :root { --pad-x: 1.5rem; }
+}
 </style>
 </head>
 <body>
@@ -94,5 +109,19 @@ h1 { font-family: var(--ff-h); font-size: clamp(22px,4vw,32px); font-weight: 800
     <a href="/" class="btn-home">Volver al inicio</a>
   </div>
 </main>
+
+<!-- ── FOOTER ───────────────────── -->
+<footer class="page-footer">
+  <div class="footer-inner">
+    <span class="footer-copy">© 2025 marianosevilla.com — No constituye asesoramiento fiscal ni legal.</span>
+    <div class="footer-links">
+      <a href="/privacidad">Privacidad</a>
+      <a href="/terminos">Términos</a>
+      <a href="/cookies">Cookies</a>
+      <a href="/aviso-legal">Aviso legal</a>
+      <a href="/faq">FAQ</a>
+    </div>
+  </div>
+</footer>
 </body>
 </html>
