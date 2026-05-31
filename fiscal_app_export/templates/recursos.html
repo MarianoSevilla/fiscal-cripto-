@@ -192,48 +192,65 @@ body {
   color: var(--muted);
   line-height: 1.75;
 }
+/* Grid reutilizable — admite múltiples tarjetas de exchange */
+.exchanges-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 300px));
+  gap: 1.25rem;
+}
+
+/* Tarjeta vertical — ficha informativa */
 .exchange-card {
   background: var(--surface);
   border: 1px solid var(--border2);
   border-radius: 16px;
-  padding: 1.5rem 1.75rem;
+  padding: 1.75rem;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-  max-width: 560px;
+  flex-direction: column;
+  gap: 1rem;
 }
-.exchange-card-info { flex: 1; min-width: 160px; }
+.exchange-card-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  object-fit: contain;
+  background: rgba(255,255,255,0.05);
+  padding: 4px;
+}
 .exchange-card-name {
   font-family: var(--font-display);
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   font-weight: 700;
-  margin-bottom: .3rem;
+  margin: 0;
 }
 .exchange-card-desc {
-  font-size: .85rem;
+  font-size: .875rem;
   color: var(--muted);
-  line-height: 1.55;
+  line-height: 1.65;
+  flex: 1;
 }
+/* Botón editorial — outline sutil, no CTA verde dominante */
 .exchange-card-btn {
   display: inline-flex;
   align-items: center;
-  gap: .45rem;
-  background: var(--accent);
-  color: #051a12;
-  font-family: var(--font-display);
+  gap: .4rem;
+  align-self: flex-start;
+  border: 1px solid rgba(0,200,150,0.4);
+  color: var(--accent);
+  font-family: var(--font-body);
   font-size: .85rem;
-  font-weight: 700;
-  padding: .65rem 1.25rem;
-  border-radius: 10px;
+  font-weight: 600;
+  padding: .55rem 1rem;
+  border-radius: 9px;
   text-decoration: none;
-  white-space: nowrap;
-  transition: opacity .2s, transform .15s;
-  flex-shrink: 0;
+  transition: background .2s, border-color .2s;
+  margin-top: .25rem;
 }
-.exchange-card-btn:hover { opacity: .88; transform: translateY(-1px); }
-.exchange-card-btn svg { width: 12px; height: 12px; }
+.exchange-card-btn:hover {
+  background: rgba(0,200,150,0.08);
+  border-color: var(--accent);
+}
+.exchange-card-btn svg { width: 11px; height: 11px; }
 .affiliate-notice {
   margin-top: 1.25rem;
   font-size: .75rem;
@@ -344,18 +361,29 @@ body {
       </p>
     </div>
 
-    <div class="exchange-card">
-      <div class="exchange-card-info">
+    <div class="exchanges-grid">
+
+      <!-- Bitvavo -->
+      <div class="exchange-card">
+        <img src="/static/images/bitvavo.png"
+             alt="Logo Bitvavo"
+             class="exchange-card-logo"
+             width="48" height="48"
+             loading="lazy"
+             decoding="async">
         <div class="exchange-card-name">Bitvavo</div>
         <p class="exchange-card-desc">Exchange europeo regulado utilizado como referencia para el Experimento Bitcoin y otros recursos del canal.</p>
+        <a href="https://bitvavo.com/es/affiliate/marianosevilla"
+           target="_blank"
+           rel="noopener noreferrer sponsored"
+           class="exchange-card-btn">
+          Registrarme en Bitvavo
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+        </a>
       </div>
-      <a href="https://bitvavo.com/es/affiliate/marianosevilla"
-         target="_blank"
-         rel="noopener noreferrer sponsored"
-         class="exchange-card-btn">
-        Registrarme en Bitvavo
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
-      </a>
+
+      <!-- Aquí irán futuros exchanges: Coinbase, Bybit EU, etc. -->
+
     </div>
 
     <p class="affiliate-notice">
