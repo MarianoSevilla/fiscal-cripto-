@@ -57,6 +57,9 @@ body {
   font-family: var(--font-body);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 .wrap { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x); }
@@ -111,6 +114,7 @@ body {
 
 /* ── Contenido ── */
 .content-section {
+  flex: 1;
   padding: 0 0 4rem;
 }
 .content-block {

@@ -57,6 +57,9 @@ body {
   font-family: var(--font-body);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 .wrap { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x); }
@@ -89,8 +92,6 @@ body {
 }
 .hero h1 em { font-style: normal; color: var(--accent); }
 .hero-desc {
-  max-width: 580px;
-  margin: 0 auto;
   color: var(--muted);
   font-size: 1.05rem;
 }
@@ -98,6 +99,7 @@ body {
 /* ── Grid de tarjetas ── */
 .resources-section {
   padding: 2rem 0 5rem;
+  flex: 1;
 }
 .resources-grid {
   display: grid;
