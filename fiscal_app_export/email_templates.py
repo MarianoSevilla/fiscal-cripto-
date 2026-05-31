@@ -9,6 +9,8 @@ Email types
   advisory_confirmation_email(advisory)         → advisory request received
   advisory_status_email(advisory, note)         → advisory status change
   processing_error_email(exchange, context)     → CSV/XLSX processing failure
+  resource_request_confirmation_email(rr, res) → resource request received (user copy)
+  resource_request_internal_email(rr, res)     → resource request notification (internal)
 """
 from __future__ import annotations  # str | None union syntax on Python 3.9
 import html as _html
@@ -619,3 +621,107 @@ def advisory_payment_internal_email(advisory) -> tuple[str, str]:
         _footer_text(),
     ])
     return html, text
+
+
+# ── BIBLIOTECA DE RECURSOS ────────────────────────────────────────────────────
+
+def resource_request_confirmation_email(rr, resource) -> tuple[str, str]:
+    """Confirmación al usuario de que su solicitud de recurso fue recibida."""
+    name     = _html.escape(rr.name)
+    res_title = _html.escape(resource.title)
+
+    body_html = (
+        _p(f"Hola, {name}.") +
+        _p(
+            f"Hemos recibido tu solicitud para el recurso "
+            f"<strong style='font-weight:600;color:#111827;'>{res_title}</strong>."
+        ) +
+        _p(
+            "Revisaremos los datos que nos has facilitado y nos pondremos en contacto "
+            "contigo cuando hayamos verificado tu solicitud."
+        ) +
+        _p(
+            "Si indicaste un usuario de Telegram, es posible que te contactemos por ahí "
+            "para agilizar el proceso.",
+            last=True,
+        ) +
+        _ref(f"Solicitud #{rr.id}")
+    )
+    html = _wrap(f"Solicitud recibida — {res_title}", body_html, legal_footer=True)
+    text = "\n".join([
+        f"Solicitud recibida — {resource.title}",
+        "",
+        f"Hola, {rr.name}.",
+        "",
+        f"Hemos recibido tu solicitud para el recurso \"{resource.title}\".",
+        "",
+        "Revisaremos los datos que nos has facilitado y nos pondremos en contacto "
+        "contigo cuando hayamos verificado tu solicitud.",
+        "",
+        "Si indicaste un usuario de Telegram, es posible que te contactemos por ahí.",
+        "",
+        f"Solicitud #{rr.id}",
+        "",
+        _footer_text(legal=True),
+    ])
+    return html, text
+
+
+def resource_request_internal_email(rr, resource, admin_url: str = _BASE) -> tuple[str, str]:
+    """Notificación interna cuando llega una solicitud de recurso."""
+    res_title = _html.escape(resource.title)
+    name      = _html.escape(rr.name)
+    bitvavo   = _html.escape(rr.bitvavo_status_label())
+    uid_val   = _html.escape(rr.uid or ("No sabe dónde encontrarlo" if rr.uid_unknown else "—"))
+    telegram  = _html.escape(rr.telegram_user or "—")
+    source    = _html.escape(rr.source or "—")
+    panel     = f"{admin_url}/admin/recursos"
+
+    rows_html = "".join(
+        f"<tr><td style='padding:6px 10px;color:#6b7280;font-size:13px;white-space:nowrap'>{k}</td>"
+        f"<td style='padding:6px 10px;font-size:13px;word-break:break-word'>{v}</td></tr>"
+        for k, v in [
+            ("ID",        f"#{rr.id}"),
+            ("Recurso",   res_title),
+            ("Nombre",    name),
+            ("Email",     _html.escape(rr.email)),
+            ("Exchange",  _html.escape(rr.exchange or "—")),
+            ("Bitvavo",   bitvavo),
+            ("UID",       uid_val),
+            ("Telegram",  telegram),
+            ("Origen",    source),
+            ("Consiente comunicaciones", "Sí" if rr.marketing_consent else "No"),
+        ]
+    )
+    table_html = (
+        "<table style='border-collapse:collapse;width:100%;margin:16px 0'>"
+        f"{rows_html}"
+        "</table>"
+    )
+    body_html = (
+        _p(f"Nueva solicitud de <strong style='font-weight:600'>{res_title}</strong>.") +
+        table_html +
+        _p(f"<a href='{panel}' style='color:#4f46e5'>Ver en el panel de admin →</a>", last=True)
+    )
+    html = _wrap(
+        f"[Recursos] Nueva solicitud #{rr.id} — {resource.title}",
+        body_html,
+    )
+    text_lines = [
+        f"[Recursos] Nueva solicitud #{rr.id} — {resource.title}",
+        "",
+        f"Nombre:    {rr.name}",
+        f"Email:     {rr.email}",
+        f"Recurso:   {resource.title}",
+        f"Exchange:  {rr.exchange or '—'}",
+        f"Bitvavo:   {rr.bitvavo_status_label()}",
+        f"UID:       {rr.uid or ('No sabe dónde encontrarlo' if rr.uid_unknown else '—')}",
+        f"Telegram:  {rr.telegram_user or '—'}",
+        f"Origen:    {rr.source or '—'}",
+        f"Newsletter: {'Sí' if rr.marketing_consent else 'No'}",
+        "",
+        f"Panel: {panel}",
+        "",
+        _footer_text(),
+    ]
+    return html, "\n".join(text_lines)

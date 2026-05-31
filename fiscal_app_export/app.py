@@ -46,6 +46,7 @@ except ImportError:
     _stripe_available = False
     _stripe_module = None
 from models import FiscalAdvisoryRequest, FiscalAdvisoryFile, FiscalAdvisoryStatusHistory, AdvisoryInternalNote
+from models import Resource, ResourceRequest
 from error_tracking import record_processing_error_safe, is_actionable_processing_error
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -184,6 +185,8 @@ from email_templates import (  # noqa: E402
     advisory_payment_confirmed_email,
     advisory_payment_internal_email,
     password_reset_email,
+    resource_request_confirmation_email,
+    resource_request_internal_email,
 )
 
 # ── ADVISORY / STRIPE ────────────────────────
@@ -203,6 +206,7 @@ _PAYPAL_ENABLED        = bool(_PAYPAL_CLIENT_ID and _PAYPAL_CLIENT_SECRET)
 _ADVISORY_NOTIFY_EMAILS = [
     e.strip() for e in os.environ.get("FISCAL_ADVISORY_NOTIFY_EMAILS", "").split(",") if e.strip()
 ]
+_RESOURCE_NOTIFY_EMAIL = os.environ.get("RESOURCE_NOTIFY_EMAIL", "colab.marianosevilla@gmail.com")
 # Precios en céntimos. Configura en Railway env vars.
 _ADVISORY_PRICES = {
     "revision_basica":          int(os.environ.get("FISCAL_ADVISORY_BASIC_PRICE",   "7900")),
@@ -4700,6 +4704,200 @@ def admin_advisory_delete(request_id):
     db.session.delete(advisory)
     db.session.commit()
     return jsonify({"ok": True})
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# BIBLIOTECA DE RECURSOS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ── Páginas públicas ──────────────────────────────────────────────────────────
+
+@app.route("/recursos", strict_slashes=False)
+@limiter.exempt
+def recursos_library():
+    resources = Resource.query.filter_by(is_active=True).order_by(Resource.created_at.desc()).all()
+    return render_template("recursos.html", resources=resources)
+
+
+@app.route("/recursos/<slug>", strict_slashes=False)
+@limiter.exempt
+def recurso_detail(slug):
+    resource = Resource.query.filter_by(slug=slug, is_active=True).first_or_404()
+    return render_template("recurso.html", resource=resource)
+
+
+# ── API pública — formulario de solicitud ─────────────────────────────────────
+
+@app.route("/api/recursos/solicitar", methods=["POST"])
+@limiter.limit("5 per hour")
+def resource_solicitar():
+    data = request.get_json(silent=True) or {}
+
+    resource_id    = data.get("resource_id")
+    name           = (data.get("name") or "").strip()[:150]
+    email_val      = (data.get("email") or "").strip()[:254].lower()
+    exchange       = (data.get("exchange") or "").strip()[:50] or None
+    bitvavo_status = (data.get("bitvavo_status") or "").strip()[:50] or None
+    uid            = (data.get("uid") or "").strip()[:100] or None
+    uid_unknown    = bool(data.get("uid_unknown"))
+    telegram_user  = (data.get("telegram_user") or "").strip()[:100] or None
+    source         = (data.get("source") or "").strip()[:50] or None
+    legal_accepted = bool(data.get("legal_accepted"))
+    marketing_consent = bool(data.get("marketing_consent"))
+
+    # Validación básica
+    if not name:
+        return jsonify({"error": "El nombre es obligatorio."}), 400
+    if not email_val or "@" not in email_val:
+        return jsonify({"error": "El email no es válido."}), 400
+    if not legal_accepted:
+        return jsonify({"error": "Debes aceptar la política de privacidad."}), 400
+
+    resource = Resource.query.filter_by(id=resource_id, is_active=True).first() if resource_id else None
+    if not resource:
+        return jsonify({"error": "Recurso no encontrado."}), 404
+
+    valid_bitvavo = {"registered_via_link", "had_account", "no_account", "not_sure", None}
+    if bitvavo_status not in valid_bitvavo:
+        bitvavo_status = None
+
+    valid_sources = {"youtube", "telegram", "comunidad", "web", "directo", "otro", None}
+    if source not in valid_sources:
+        source = "otro"
+
+    rr = ResourceRequest(
+        resource_id       = resource.id,
+        name              = name,
+        email             = email_val,
+        exchange          = exchange,
+        bitvavo_status    = bitvavo_status,
+        uid               = uid,
+        uid_unknown       = uid_unknown,
+        telegram_user     = telegram_user,
+        source            = source,
+        legal_accepted    = True,
+        marketing_consent = marketing_consent,
+        status            = "recibido",
+        ip                = request.headers.get("X-Forwarded-For", request.remote_addr or "")[:45],
+    )
+    db.session.add(rr)
+    db.session.commit()
+
+    _send_resource_confirmation_email(rr, resource)
+    _send_resource_internal_notification(rr, resource)
+
+    return jsonify({"ok": True, "id": rr.id}), 201
+
+
+# ── Email helpers — recursos ──────────────────────────────────────────────────
+
+def _send_resource_confirmation_email(rr: "ResourceRequest", resource: "Resource"):
+    if not resend.api_key:
+        app.logger.warning("RESEND_API_KEY no configurada — confirmación de recurso no enviada.")
+        return
+    html, text = resource_request_confirmation_email(rr, resource)
+    try:
+        resend.Emails.send({
+            "from":    _RESEND_FROM_DISPLAY,
+            "to":      [rr.email],
+            "subject": f"Solicitud recibida — {resource.title}",
+            "html":    html,
+            "text":    text,
+        })
+    except Exception as exc:
+        app.logger.error("Error enviando confirmación de recurso #%s: %s", rr.id, exc)
+
+
+def _send_resource_internal_notification(rr: "ResourceRequest", resource: "Resource"):
+    if not resend.api_key or not _RESOURCE_NOTIFY_EMAIL:
+        return
+    html, text = resource_request_internal_email(rr, resource, _APP_BASE_URL)
+    try:
+        resend.Emails.send({
+            "from":    _RESEND_FROM_DISPLAY,
+            "to":      [_RESOURCE_NOTIFY_EMAIL],
+            "subject": f"[Recursos] Nueva solicitud #{rr.id} — {resource.title}",
+            "html":    html,
+            "text":    text,
+        })
+    except Exception as exc:
+        app.logger.error("Error enviando notificación interna de recurso #%s: %s", rr.id, exc)
+
+
+# ── Admin — panel de solicitudes de recursos ──────────────────────────────────
+
+@app.route("/admin/recursos", strict_slashes=False)
+@login_required
+@limiter.exempt
+def admin_recursos_page():
+    if not _is_fiscal_advisor():
+        return redirect("/dashboard")
+    return send_from_directory("static", "admin-recursos.html")
+
+
+@app.route("/api/admin/recursos/solicitudes")
+@login_required
+def admin_recursos_list():
+    if not _is_fiscal_advisor():
+        return jsonify({"error": "Acceso denegado."}), 403
+    status_filter = request.args.get("status", "")
+    q = ResourceRequest.query
+    if status_filter:
+        q = q.filter_by(status=status_filter)
+    items = q.order_by(ResourceRequest.created_at.desc()).limit(500).all()
+    resource_titles = {r.id: r.title for r in Resource.query.all()}
+    result = []
+    for rr in items:
+        d = rr.to_dict()
+        d["resource_title"] = resource_titles.get(rr.resource_id, "—")
+        result.append(d)
+    return jsonify(result)
+
+
+@app.route("/api/admin/recursos/solicitudes/<int:req_id>")
+@login_required
+def admin_recursos_detail(req_id):
+    if not _is_fiscal_advisor():
+        return jsonify({"error": "Acceso denegado."}), 403
+    rr = ResourceRequest.query.get_or_404(req_id)
+    d  = rr.to_dict(full=True)
+    d["resource_title"] = rr.resource.title if rr.resource else "—"
+    return jsonify(d)
+
+
+@app.route("/api/admin/recursos/solicitudes/<int:req_id>/estado", methods=["POST"])
+@login_required
+def admin_recursos_change_status(req_id):
+    if not _is_fiscal_advisor():
+        return jsonify({"error": "Acceso denegado."}), 403
+    rr         = ResourceRequest.query.get_or_404(req_id)
+    data       = request.get_json(silent=True) or {}
+    new_status = (data.get("status") or "").strip()
+    if new_status not in ResourceRequest.STATUS_LABELS:
+        return jsonify({"error": "Estado inválido."}), 400
+    rr.status     = new_status
+    rr.updated_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify({"ok": True, "status": new_status, "status_label": rr.status_label()})
+
+
+@app.route("/api/admin/recursos/solicitudes/<int:req_id>/nota", methods=["POST"])
+@login_required
+def admin_recursos_add_note(req_id):
+    if not _is_fiscal_advisor():
+        return jsonify({"error": "Acceso denegado."}), 403
+    rr   = ResourceRequest.query.get_or_404(req_id)
+    data = request.get_json(silent=True) or {}
+    text = (data.get("nota") or "").strip()[:2000]
+    if not text:
+        return jsonify({"error": "La nota no puede estar vacía."}), 400
+    author = (current_user.full_name or current_user.email or "Admin").strip()
+    ts     = datetime.utcnow().strftime("%d/%m/%Y %H:%M")
+    prefix = f"[{ts} — {author}]\n"
+    rr.internal_notes = (rr.internal_notes or "") + ("\n\n" if rr.internal_notes else "") + prefix + text
+    rr.updated_at     = datetime.utcnow()
+    db.session.commit()
+    return jsonify({"ok": True, "internal_notes": rr.internal_notes})
 
 
 if __name__ == "__main__":

@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ resource.title }} — Mariano Sevilla</title>
+<meta name="description" content="{{ resource.description or resource.subtitle or resource.title }}">
+<meta name="author" content="Mariano Sevilla">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://marianosevilla.com/recursos/{{ resource.slug }}">
+
+<meta property="og:type"        content="article">
+<meta property="og:url"         content="https://marianosevilla.com/recursos/{{ resource.slug }}">
+<meta property="og:title"       content="{{ resource.title }} — Mariano Sevilla">
+<meta property="og:description" content="{{ resource.description or resource.subtitle or resource.title }}">
+<meta property="og:image"       content="https://marianosevilla.com/static/og-image.png">
+<meta name="twitter:card"       content="summary_large_image">
+<meta name="twitter:site"       content="@MarianoSevilla">
+
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+<link rel="icon" href="/static/favicon.ico">
+<link rel="manifest" href="/static/site.webmanifest">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/nav.css">
+<link rel="preload" href="/static/nav.js" as="script">
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:          #0b1220;
+  --bg2:         #101829;
+  --surface:     #141f32;
+  --surface2:    #1a2540;
+  --border:      rgba(255,255,255,0.07);
+  --border2:     rgba(255,255,255,0.13);
+  --text:        #eef2ff;
+  --muted:       #7a8aa8;
+  --accent:      #00C896;
+  --accent-dim:  rgba(0,200,150,0.12);
+  --accent-glow: rgba(0,200,150,0.25);
+  --footer-bg:   #070e1a;
+  --max-w:       800px;
+  --pad-x:       3rem;
+  --font-display:'Syne', sans-serif;
+  --font-body:   'DM Sans', sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x); }
+@media (max-width: 768px) { :root { --pad-x: 1.25rem; } }
+
+/* ── Breadcrumb ── */
+.breadcrumb {
+  padding: 1.5rem 0 0;
+  font-size: .8rem;
+  color: var(--muted);
+}
+.breadcrumb a { color: var(--muted); text-decoration: none; }
+.breadcrumb a:hover { color: var(--accent); }
+.breadcrumb span { margin: 0 .4rem; }
+
+/* ── Hero ── */
+.hero {
+  padding: 2.5rem 0 2rem;
+}
+.hero-meta {
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+.tag {
+  font-size: .7rem;
+  font-weight: 600;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  padding: .2rem .65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0,200,150,.4);
+  color: var(--accent);
+}
+.tag-neutral {
+  border-color: var(--border2);
+  color: var(--muted);
+}
+.hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 1rem;
+}
+.hero-subtitle {
+  font-size: 1.05rem;
+  color: var(--muted);
+  max-width: 620px;
+  line-height: 1.65;
+}
+
+/* ── Contenido ── */
+.content-section {
+  padding: 0 0 4rem;
+}
+.content-block {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 16px;
+  padding: 1.75rem 2rem;
+  margin-bottom: 1.5rem;
+}
+.content-block h2 {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: var(--text);
+}
+.content-block p,
+.content-block li {
+  font-size: .95rem;
+  color: var(--muted);
+  line-height: 1.65;
+}
+.content-block ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+.content-block li::before {
+  content: "→";
+  color: var(--accent);
+  margin-right: .5rem;
+  font-weight: 700;
+}
+
+/* Aviso legal */
+.legal-notice {
+  background: rgba(251,191,36,.06);
+  border: 1px solid rgba(251,191,36,.25);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  font-size: .82rem;
+  color: #c9a94e;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+/* ── Formulario ── */
+.form-section {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  padding: 2rem 2.25rem;
+  margin-bottom: 4rem;
+}
+.form-section h2 {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin-bottom: .5rem;
+}
+.form-section .form-intro {
+  font-size: .9rem;
+  color: var(--muted);
+  margin-bottom: 1.75rem;
+  line-height: 1.6;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+@media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } }
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+}
+.form-field.full { grid-column: 1 / -1; }
+
+label {
+  font-size: .8rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+label .optional {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #4a5a78;
+  margin-left: .35rem;
+}
+
+input[type="text"],
+input[type="email"],
+select,
+textarea {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: .95rem;
+  padding: .7rem 1rem;
+  width: 100%;
+  transition: border-color .2s;
+  outline: none;
+  appearance: none;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent);
+}
+select option { background: #101829; }
+
+.uid-helper {
+  font-size: .78rem;
+  color: #4a5a78;
+  margin-top: .2rem;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: .65rem;
+  padding: .25rem 0;
+}
+.checkbox-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  margin-top: 3px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.checkbox-row label {
+  font-size: .85rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--muted);
+  cursor: pointer;
+  line-height: 1.5;
+}
+.checkbox-row label a { color: var(--accent); text-decoration: none; }
+
+.btn-submit {
+  display: block;
+  width: 100%;
+  margin-top: 1.5rem;
+  padding: .9rem 1.5rem;
+  background: var(--accent);
+  color: #051a12;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: opacity .2s, transform .15s;
+}
+.btn-submit:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
+.btn-submit:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Estados feedback */
+#form-success, #form-error {
+  display: none;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  font-size: .9rem;
+  margin-top: 1rem;
+  line-height: 1.6;
+}
+#form-success {
+  background: rgba(0,200,150,.1);
+  border: 1px solid rgba(0,200,150,.35);
+  color: var(--accent);
+}
+#form-error {
+  background: rgba(239,68,68,.08);
+  border: 1px solid rgba(239,68,68,.3);
+  color: #f87171;
+}
+
+/* ── Footer ── */
+.page-footer {
+  background: var(--footer-bg);
+  border-top: 1px solid var(--border);
+  padding: 1.5rem 0;
+}
+.footer-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--pad-x);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.footer-copy { font-size: .8rem; color: var(--muted); }
+.footer-links { display: flex; gap: 1.25rem; flex-wrap: wrap; }
+.footer-links a { font-size: .8rem; color: var(--muted); text-decoration: none; }
+.footer-links a:hover { color: var(--text); }
+@media (max-width: 600px) {
+  .footer-inner { flex-direction: column; align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+
+<nav id="site-nav">
+  <div class="snav-inner">
+    <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
+    <ul class="snav-links">
+      <li><a href="/como-funciona">Cómo funciona</a></li>
+      <li><a href="/recursos">Recursos</a></li>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/contacto">Contacto</a></li>
+    </ul>
+    <div class="snav-right">
+      <div class="snav-skeleton" aria-hidden="true"></div>
+    </div>
+  </div>
+</nav>
+<script src="/static/nav.js"></script>
+
+<div class="wrap">
+
+  <!-- Breadcrumb -->
+  <nav class="breadcrumb" aria-label="breadcrumb">
+    <a href="/recursos">Recursos</a>
+    <span>›</span>
+    <span>{{ resource.title }}</span>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-meta">
+      <span class="tag">{{ resource.resource_type | capitalize }}</span>
+      {% if resource.category %}
+      <span class="tag tag-neutral">{{ resource.category | capitalize }}</span>
+      {% endif %}
+    </div>
+    <h1>{{ resource.headline or resource.title }}</h1>
+    {% if resource.subtitle %}
+    <p class="hero-subtitle">{{ resource.subtitle }}</p>
+    {% endif %}
+  </section>
+
+  <!-- Contenido -->
+  <section class="content-section">
+
+    {% if resource.what_you_get %}
+    <div class="content-block">
+      <h2>Qué incluye este recurso</h2>
+      <ul>
+        {% for line in resource.what_you_get.splitlines() %}
+        {% if line.strip() %}
+        <li>{{ line.strip().lstrip('- ').lstrip('• ') }}</li>
+        {% endif %}
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {% if resource.requirements %}
+    <div class="content-block">
+      <h2>Cómo solicitarlo</h2>
+      <ul>
+        {% for line in resource.requirements.splitlines() %}
+        {% if line.strip() %}
+        <li>{{ line.strip().lstrip('- ').lstrip('• ') }}</li>
+        {% endif %}
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <!-- Aviso legal -->
+    <div class="legal-notice">
+      Este recurso tiene carácter exclusivamente educativo. No constituye
+      asesoramiento financiero ni fiscal. Invertir en criptomonedas conlleva
+      riesgo de pérdida total del capital invertido. Este contenido puede incluir
+      referencias a servicios de afiliación.
+    </div>
+
+    <!-- Formulario de solicitud -->
+    <div class="form-section" id="solicitud">
+      <h2>{{ resource.cta_text or 'Solicitar el recurso' }}</h2>
+      <p class="form-intro">
+        Rellena el formulario y revisaremos tu solicitud. Te contactaremos por
+        email o Telegram en cuanto lo hayamos verificado.
+      </p>
+
+      <form id="resource-form" novalidate>
+        <input type="hidden" id="resource_id" value="{{ resource.id }}">
+
+        <div class="form-grid">
+
+          <div class="form-field">
+            <label for="name">Nombre</label>
+            <input type="text" id="name" name="name" placeholder="Tu nombre" required autocomplete="name">
+          </div>
+
+          <div class="form-field">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" placeholder="tu@email.com" required autocomplete="email">
+          </div>
+
+          <div class="form-field">
+            <label for="exchange">Exchange<span class="optional">opcional</span></label>
+            <select id="exchange" name="exchange">
+              <option value="">Selecciona un exchange</option>
+              <option value="bitvavo">Bitvavo</option>
+              <option value="binance">Binance</option>
+              <option value="kraken">Kraken</option>
+              <option value="coinbase">Coinbase</option>
+              <option value="bit2me">Bit2Me</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="bitvavo_status">Situación con Bitvavo<span class="optional">opcional</span></label>
+            <select id="bitvavo_status" name="bitvavo_status">
+              <option value="">Selecciona una opción</option>
+              <option value="registered_via_link">Me he registrado con tu enlace</option>
+              <option value="had_account">Ya tenía cuenta en Bitvavo</option>
+              <option value="no_account">Todavía no tengo cuenta</option>
+              <option value="not_sure">No estoy seguro</option>
+            </select>
+          </div>
+
+          <div class="form-field full">
+            <label for="uid">UID / Identificador de usuario<span class="optional">opcional</span></label>
+            <input type="text" id="uid" name="uid" placeholder="Ej: 12345678">
+            <p class="uid-helper" id="uid-helper">Puedes encontrar tu UID en Ajustes → Perfil dentro de tu cuenta de Bitvavo.</p>
+          </div>
+
+          <div class="form-field full">
+            <div class="checkbox-row">
+              <input type="checkbox" id="uid_unknown" name="uid_unknown">
+              <label for="uid_unknown">No sé dónde encontrar mi UID o no tengo cuenta todavía</label>
+            </div>
+          </div>
+
+          <div class="form-field full">
+            <label for="telegram_user">Usuario de Telegram<span class="optional">opcional</span></label>
+            <input type="text" id="telegram_user" name="telegram_user" placeholder="@tunombre">
+          </div>
+
+          <div class="form-field full">
+            <label for="source">¿Cómo has llegado hasta aquí?<span class="optional">opcional</span></label>
+            <select id="source" name="source">
+              <option value="">Selecciona una opción</option>
+              <option value="youtube">YouTube</option>
+              <option value="telegram">Telegram</option>
+              <option value="comunidad">Comunidad / Discord</option>
+              <option value="web">Web / Google</option>
+              <option value="directo">Enlace directo</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+
+        </div><!-- /form-grid -->
+
+        <div style="margin-top:1.25rem;display:flex;flex-direction:column;gap:.6rem;">
+          <div class="checkbox-row">
+            <input type="checkbox" id="legal_accepted" name="legal_accepted" required>
+            <label for="legal_accepted">
+              He leído y acepto la <a href="/privacidad" target="_blank">política de privacidad</a>.
+              Entiendo que este formulario recopila mis datos para gestionar la solicitud. <strong style="color:var(--text)">*</strong>
+            </label>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="marketing_consent" name="marketing_consent">
+            <label for="marketing_consent">
+              Acepto recibir comunicaciones del canal (novedades, recursos y contenido educativo).
+              Puedo darme de baja en cualquier momento.
+            </label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit" id="submit-btn">
+          {{ resource.cta_text or 'Solicitar el recurso' }}
+        </button>
+
+        <div id="form-success">
+          Solicitud recibida. Te enviaremos un email de confirmación y revisaremos
+          tus datos en breve. Si nos has dejado tu Telegram, puede que te contactemos
+          por ahí también.
+        </div>
+        <div id="form-error">
+          Ha ocurrido un error al enviar la solicitud. Por favor, inténtalo de nuevo
+          o escríbenos directamente por Telegram.
+        </div>
+
+      </form>
+    </div><!-- /form-section -->
+
+  </section>
+
+</div><!-- /wrap -->
+
+<!-- ── Footer ── -->
+<footer class="page-footer">
+  <div class="footer-inner">
+    <span class="footer-copy">© 2025 marianosevilla.com — Contenido educativo. No constituye asesoramiento financiero ni fiscal.</span>
+    <div class="footer-links">
+      <a href="/privacidad">Privacidad</a>
+      <a href="/terminos">Términos</a>
+      <a href="/aviso-legal">Aviso legal</a>
+      <a href="/recursos">Recursos</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  const form      = document.getElementById('resource-form');
+  const btn       = document.getElementById('submit-btn');
+  const successEl = document.getElementById('form-success');
+  const errorEl   = document.getElementById('form-error');
+
+  // Toggle helper text cuando marca "no sé mi UID"
+  document.getElementById('uid_unknown').addEventListener('change', function () {
+    const helper = document.getElementById('uid-helper');
+    helper.textContent = this.checked
+      ? 'Sin problema, puedes dejarlo en blanco. Lo gestionaremos manualmente.'
+      : 'Puedes encontrar tu UID en Ajustes → Perfil dentro de tu cuenta de Bitvavo.';
+  });
+
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    successEl.style.display = 'none';
+    errorEl.style.display   = 'none';
+
+    if (!document.getElementById('legal_accepted').checked) {
+      errorEl.textContent = 'Debes aceptar la política de privacidad para continuar.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Enviando…';
+
+    const payload = {
+      resource_id:       parseInt(document.getElementById('resource_id').value, 10),
+      name:              document.getElementById('name').value.trim(),
+      email:             document.getElementById('email').value.trim(),
+      exchange:          document.getElementById('exchange').value || null,
+      bitvavo_status:    document.getElementById('bitvavo_status').value || null,
+      uid:               document.getElementById('uid').value.trim() || null,
+      uid_unknown:       document.getElementById('uid_unknown').checked,
+      telegram_user:     document.getElementById('telegram_user').value.trim() || null,
+      source:            document.getElementById('source').value || null,
+      legal_accepted:    true,
+      marketing_consent: document.getElementById('marketing_consent').checked,
+    };
+
+    try {
+      const res  = await fetch('/api/recursos/solicitar', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        form.style.display  = 'none';
+        successEl.style.display = 'block';
+      } else {
+        errorEl.textContent  = data.error || 'Error desconocido. Por favor, inténtalo de nuevo.';
+        errorEl.style.display = 'block';
+        btn.disabled   = false;
+        btn.textContent = '{{ resource.cta_text or "Solicitar el recurso" }}';
+      }
+    } catch (_) {
+      errorEl.textContent   = 'Error de conexión. Comprueba tu conexión e inténtalo de nuevo.';
+      errorEl.style.display = 'block';
+      btn.disabled   = false;
+      btn.textContent = '{{ resource.cta_text or "Solicitar el recurso" }}';
+    }
+  });
+})();
+</script>
+
+</body>
+</html>

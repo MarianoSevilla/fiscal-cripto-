@@ -399,3 +399,126 @@ class CommunicationDelivery(db.Model):
 
     def __repr__(self) -> str:
         return f"<CommunicationDelivery campaign={self.campaign_id} email={self.email} status={self.status}>"
+
+
+# ── BIBLIOTECA DE RECURSOS ────────────────────────────────────────────────────
+
+class Resource(db.Model):
+    """Recurso educativo publicable con página propia."""
+
+    __tablename__ = "resources"
+
+    id                            = db.Column(db.Integer, primary_key=True)
+    slug                          = db.Column(db.String(100), unique=True, nullable=False, index=True)
+    title                         = db.Column(db.String(200), nullable=False)
+    headline                      = db.Column(db.String(300), nullable=True)   # titular principal de la página
+    subtitle                      = db.Column(db.Text,        nullable=True)   # texto introductorio
+    description                   = db.Column(db.Text,        nullable=True)   # descripción breve (tarjeta)
+    what_you_get                  = db.Column(db.Text,        nullable=True)   # qué incluye el recurso
+    requirements                  = db.Column(db.Text,        nullable=True)   # requisitos para solicitarlo
+    cta_text                      = db.Column(db.String(100), nullable=True)   # texto del botón/CTA
+    category                      = db.Column(db.String(50),  nullable=True)
+    resource_type                 = db.Column(db.String(30),  nullable=False)  # dossier|guia|checklist|articulo
+    interest_category             = db.Column(db.String(50),  nullable=True)   # bitcoin|xrp|fiscalidad|...
+    is_active                     = db.Column(db.Boolean, default=True,  nullable=False)
+    requires_request              = db.Column(db.Boolean, default=True,  nullable=False)
+    requires_affiliate_validation = db.Column(db.Boolean, default=False, nullable=False)
+    # Preparado para Fase 2 — almacenamiento externo (R2/S3/Supabase)
+    storage_provider              = db.Column(db.String(30),  nullable=True)   # "r2"|"s3"|"supabase"
+    storage_key                   = db.Column(db.String(500), nullable=True)   # ruta en el bucket
+    version                       = db.Column(db.String(20),  nullable=True)
+    created_at                    = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at                    = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    requests = db.relationship("ResourceRequest", backref="resource", lazy="dynamic")
+
+    def to_dict(self) -> dict:
+        return {
+            "id":            self.id,
+            "slug":          self.slug,
+            "title":         self.title,
+            "description":   self.description or "",
+            "category":      self.category or "",
+            "resource_type": self.resource_type,
+            "interest_category": self.interest_category or "",
+            "is_active":     self.is_active,
+            "requires_request": self.requires_request,
+        }
+
+    def __repr__(self) -> str:
+        return f"<Resource {self.slug}>"
+
+
+class ResourceRequest(db.Model):
+    """Solicitud de un usuario para acceder a un recurso."""
+
+    __tablename__ = "resource_requests"
+
+    STATUS_LABELS = {
+        "recibido":             "Recibido",
+        "pendiente_validacion": "Pendiente de validación",
+        "aprobado":             "Aprobado",
+        "rechazado":            "Rechazado",
+        "enviado":              "Enviado",
+    }
+
+    id                = db.Column(db.Integer, primary_key=True)
+    resource_id       = db.Column(db.Integer, db.ForeignKey("resources.id"), nullable=False, index=True)
+    name              = db.Column(db.String(150), nullable=False)
+    email             = db.Column(db.String(254), nullable=False, index=True)
+    exchange          = db.Column(db.String(50),  nullable=True)
+    bitvavo_status    = db.Column(db.String(50),  nullable=True)
+    # "registered_via_link"|"had_account"|"no_account"|"not_sure"
+    uid               = db.Column(db.String(100), nullable=True)
+    uid_unknown       = db.Column(db.Boolean, default=False, nullable=False)
+    telegram_user     = db.Column(db.String(100), nullable=True)
+    source            = db.Column(db.String(50),  nullable=True)   # youtube|telegram|comunidad|web|directo|otro
+    legal_accepted    = db.Column(db.Boolean, nullable=False)
+    marketing_consent = db.Column(db.Boolean, default=False, nullable=False)
+    status            = db.Column(db.String(30),  nullable=False, default="recibido", index=True)
+    internal_notes    = db.Column(db.Text,        nullable=True)
+    ip                = db.Column(db.String(45),  nullable=True)
+    created_at        = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at        = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def status_label(self) -> str:
+        return self.STATUS_LABELS.get(self.status, self.status)
+
+    def bitvavo_status_label(self) -> str:
+        labels = {
+            "registered_via_link": "Se ha registrado con tu enlace",
+            "had_account":         "Ya tenía cuenta en Bitvavo",
+            "no_account":          "Todavía no tiene cuenta",
+            "not_sure":            "No está seguro",
+        }
+        return labels.get(self.bitvavo_status or "", self.bitvavo_status or "—")
+
+    def to_dict(self, full: bool = False) -> dict:
+        d = {
+            "id":           self.id,
+            "resource_id":  self.resource_id,
+            "name":         self.name,
+            "email":        self.email,
+            "exchange":     self.exchange or "",
+            "status":       self.status,
+            "status_label": self.status_label(),
+            "created_at":   self.created_at.isoformat() if self.created_at else None,
+            "updated_at":   self.updated_at.isoformat() if self.updated_at else None,
+        }
+        if full:
+            d.update({
+                "bitvavo_status":       self.bitvavo_status or "",
+                "bitvavo_status_label": self.bitvavo_status_label(),
+                "uid":                  self.uid or "",
+                "uid_unknown":          self.uid_unknown,
+                "telegram_user":        self.telegram_user or "",
+                "source":               self.source or "",
+                "legal_accepted":       self.legal_accepted,
+                "marketing_consent":    self.marketing_consent,
+                "internal_notes":       self.internal_notes or "",
+                "ip":                   self.ip or "",
+            })
+        return d
+
+    def __repr__(self) -> str:
+        return f"<ResourceRequest resource={self.resource_id} email={self.email} status={self.status}>"

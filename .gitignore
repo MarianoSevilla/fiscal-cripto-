@@ -17,7 +17,7 @@ env/
 .env.local
 
 # Claude Code (configuración local, no compartir)
-.claude/settings.local.json
+.claude/
 
 # macOS
 .DS_Store
