@@ -17,6 +17,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/nav.css">
+<link rel="preload" href="/static/nav.js" as="script">
 
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -47,88 +49,6 @@ body {
 }
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
-
-  /* ── NAV ── */
-  nav {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 200;
-    height: 64px;
-    background: rgba(11,18,32,0.95);
-    backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--border);
-  }
-  .nav-inner {
-    max-width: var(--max-w); margin: 0 auto;
-    padding: 0 var(--pad-x); height: 100%;
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .nav-logo {
-    font-family: var(--font-display); font-weight: 800; font-size: 1rem;
-    letter-spacing: -0.02em; color: var(--text); text-decoration: none;
-    white-space: nowrap; flex-shrink: 0;
-  }
-  .nav-logo span { color: var(--accent); }
-  .nav-links {
-    display: flex; align-items: center; gap: 2rem; list-style: none;
-  }
-  .nav-links a {
-    color: var(--muted); text-decoration: none; font-size: 14px;
-    font-weight: 500; transition: color 0.15s;
-  }
-  .nav-links a:hover { color: var(--text); }
-  .nav-right { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
-  .btn-nav-login {
-    background: none; border: 1.5px solid var(--accent); color: var(--text);
-    border-radius: 8px; padding: 8px 18px;
-    font-family: var(--font-body); font-size: 13px; font-weight: 500;
-    cursor: pointer; transition: background 0.15s; white-space: nowrap;
-    text-decoration: none;
-  }
-  .btn-nav-login:hover { background: var(--accent-dim); }
-  .btn-nav-cta {
-    background: var(--accent); color: #0a0a0a;
-    border: none; border-radius: 8px; padding: 8px 18px;
-    font-family: var(--font-display); font-size: 13px; font-weight: 700;
-    cursor: pointer; transition: opacity 0.15s; white-space: nowrap;
-    text-decoration: none; display: inline-block;
-  }
-  .btn-nav-cta:hover { opacity: 0.88; }
-
-  /* ── NAV AVATAR (estado logueado) ─────────── */
-  .nav-avatar-wrap { position: relative; }
-  .nav-avatar {
-    width: 34px; height: 34px; border-radius: 50%;
-    background: var(--accent); color: #080c12;
-    font-family: var(--font-display); font-size: 13px; font-weight: 700;
-    border: 2px solid transparent; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    transition: opacity .15s, border-color .15s;
-  }
-  .nav-avatar:hover { opacity: .85; border-color: rgba(0,200,150,.4); }
-  .nav-dropdown {
-    position: absolute; right: 0; top: calc(100% + 10px);
-    background: var(--surface2); border: 1px solid var(--border2);
-    border-radius: 14px; min-width: 180px;
-    box-shadow: 0 12px 40px rgba(0,0,0,.6);
-    padding: 6px; z-index: 300; display: none;
-  }
-  .nav-dropdown.open { display: block; }
-  .nav-dd-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 13px; border-radius: 9px;
-    color: var(--text); font-family: var(--font-body); font-size: 14px; font-weight: 500;
-    cursor: pointer; text-decoration: none; transition: background .12s;
-    background: none; border: none; width: 100%; text-align: left;
-  }
-  .nav-dd-item:hover { background: var(--surface2); }
-  .nav-dd-divider { height: 1px; background: var(--border); margin: 4px 0; }
-  .nav-dd-item.danger { color: #e55; }
-  .nav-dd-item.danger:hover { background: rgba(220,60,60,.1); }
-
-  @media (max-width: 768px) {
-    .nav-links { display: none; }
-    .nav-inner { padding: 0 1.25rem; }
-  }
-
 .page-wrap { max-width: var(--max-w); margin: 0 auto; padding: 7rem var(--pad-x) 5rem; }
 .page-kicker {
   font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
@@ -197,30 +117,7 @@ a:hover { text-decoration: underline; }
 <body>
 
 <!-- ── NAV ── -->
-<nav>
-  <div class="nav-inner">
-    <a href="/" class="nav-logo">mariano<span>sevilla</span>.com</a>
-    <ul class="nav-links">
-      <li id="navLinkDashItem" hidden><a href="/dashboard">Dashboard</a></li>
-      <li><a href="/como-funciona">Cómo funciona</a></li>
-      <li><a href="/faq">FAQ</a></li>
-      <li><a href="/contacto">Contacto</a></li>
-    </ul>
-    <div class="nav-right">
-      <a href="/login/" class="btn-nav-login" id="navBtnLogin">Iniciar sesión</a>
-      <a href="/signup/" class="btn-nav-cta" id="navBtnSignup">Crea tu cuenta gratis</a>
-      <!-- Avatar (visible solo con sesión activa) -->
-      <div class="nav-avatar-wrap" id="navAvatarWrap" hidden>
-        <button class="nav-avatar" id="navAvatar" aria-label="Menú de usuario">U</button>
-        <div class="nav-dropdown" id="navDropdown">
-          <a href="/account" class="nav-dd-item">👤&nbsp; Mi cuenta</a>
-          <div class="nav-dd-divider"></div>
-          <button class="nav-dd-item danger" id="navBtnLogout">↩&nbsp; Cerrar sesión</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</nav>
+<nav id="site-nav"></nav>
 
 <!-- ── CONTENIDO ── -->
 <div class="page-wrap">
@@ -364,42 +261,6 @@ a:hover { text-decoration: underline; }
   </div>
 </footer>
 
-<script>
-  fetch('/api/me', { credentials: 'include' })
-    .then(r => r.ok ? r.json() : null)
-    .then(d => {
-      if (!d || !d.user) return;
-      const btnLogin  = document.getElementById('navBtnLogin');
-      const btnSignup = document.getElementById('navBtnSignup');
-      if (btnLogin)  btnLogin.style.display = 'none';
-      if (btnSignup) btnSignup.style.display = 'none';
-      const dashItem   = document.getElementById('navLinkDashItem');
-      const avatarWrap = document.getElementById('navAvatarWrap');
-      const avatar     = document.getElementById('navAvatar');
-      if (dashItem)   dashItem.hidden = false;
-      if (avatarWrap) avatarWrap.hidden = false;
-      if (avatar)     avatar.textContent = d.user.email.charAt(0).toUpperCase();
-    })
-    .catch(() => {});
-
-  // Avatar dropdown
-  (function () {
-    const avatar   = document.getElementById('navAvatar');
-    const dropdown = document.getElementById('navDropdown');
-    if (!avatar || !dropdown) return;
-    avatar.addEventListener('click', e => {
-      e.stopPropagation();
-      dropdown.classList.toggle('open');
-    });
-    document.addEventListener('click', () => dropdown.classList.remove('open'));
-    const logoutBtn = document.getElementById('navBtnLogout');
-    if (logoutBtn) {
-      logoutBtn.addEventListener('click', async () => {
-        await fetch('/api/logout', { method: 'POST', credentials: 'include' });
-        window.location.reload();
-      });
-    }
-  })();
-</script>
+<script src="/static/nav.js"></script>
 </body>
 </html>
