@@ -37,6 +37,9 @@
   --font-b: 'DM Sans', sans-serif;
   --max: 1080px;
   --r: 12px;
+  --footer-bg: #070e1a;
+  --max-w:     1080px;
+  --pad-x:     3rem;
 }
 
 html { scroll-behavior: smooth; }
@@ -221,7 +224,16 @@ footer {
   .page-hero { padding: 6rem 1.25rem 2.5rem; }
   .team-wrap { padding: 3rem 1.25rem 4rem; gap: 3.5rem; }
   .closing-quote { padding: 2rem 1.25rem 3rem; }
+  .footer-inner { flex-direction: column; align-items: flex-start; }
 }
+
+/* ── FOOTER ─────────────────────── */
+.page-footer { background: var(--footer-bg); border-top: 1px solid var(--border); padding: 2rem 0; margin-top: auto; }
+.footer-inner { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x); display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.footer-copy { font-size: 13px; color: var(--muted); }
+.footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+.footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; }
+.footer-links a:hover { color: var(--text); }
 </style>
 
 <script type="application/ld+json">
@@ -356,13 +368,17 @@ footer {
 </div>
 
 <!-- ── FOOTER ── -->
-<footer>
-  <p class="footer-legal">
-    © 2025 Mariano Sevilla. Auxiliar de organización fiscal. No constituye asesoramiento fiscal ni legal.<br>
-    <a href="/privacidad">Privacidad</a> &nbsp;·&nbsp;
-    <a href="/terminos">Términos</a> &nbsp;·&nbsp;
-    <a href="/aviso-legal">Aviso legal</a>
-  </p>
+<footer class="page-footer">
+  <div class="footer-inner">
+    <span class="footer-copy">© 2025 marianosevilla.com — No constituye asesoramiento fiscal ni legal.</span>
+    <div class="footer-links">
+      <a href="/privacidad">Privacidad</a>
+      <a href="/terminos">Términos</a>
+      <a href="/cookies">Cookies</a>
+      <a href="/aviso-legal">Aviso legal</a>
+      <a href="/faq">FAQ</a>
+    </div>
+  </div>
 </footer>
 
 </body>

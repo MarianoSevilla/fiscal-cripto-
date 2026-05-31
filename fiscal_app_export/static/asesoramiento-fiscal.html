@@ -32,6 +32,9 @@
   --accent2: #00a87e;
   --ff-h:    'Syne', sans-serif;
   --ff-b:    'DM Sans', sans-serif;
+  --footer-bg: #070e1a;
+  --max-w:     1280px;
+  --pad-x:     3rem;
 }
 html, body { min-height: 100%; background: var(--bg); font-family: var(--ff-b); color: var(--text); overflow-x: hidden; }
 
@@ -191,18 +194,16 @@ nav {
 .cta-section p { font-size: 17px; color: var(--sub); margin-bottom: 32px; }
 
 /* FOOTER */
-footer {
-  border-top: 1px solid var(--border);
-  padding: 28px clamp(16px,5vw,80px);
-  display: flex; align-items: center; justify-content: space-between;
-  flex-wrap: wrap; gap: 12px;
-}
-.footer-brand { font-family: var(--ff-h); font-size: 15px; font-weight: 700; }
-.footer-brand span:first-child { color: var(--text); }
-.footer-brand span:last-child  { color: var(--accent); }
-.footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
+.page-footer { background: var(--footer-bg); border-top: 1px solid var(--border); padding: 2rem 0; margin-top: auto; }
+.footer-inner { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x); display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.footer-copy { font-size: 13px; color: var(--muted); }
+.footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
 .footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; }
 .footer-links a:hover { color: var(--text); }
+@media (max-width: 640px) {
+  .footer-inner { flex-direction: column; align-items: flex-start; }
+  :root { --pad-x: 1.5rem; }
+}
 </style>
 
 <script type="application/ld+json">
@@ -397,14 +398,16 @@ footer {
   <a href="#" class="btn-primary" id="finalCta">Solicitar revisión fiscal</a>
 </section>
 
-<footer>
-  <div class="footer-brand"><span>Mariano</span><span>Sevilla</span></div>
-  <div class="footer-links">
-    <a href="/">Inicio</a>
-    <a href="/privacidad">Privacidad</a>
-    <a href="/terminos">Términos</a>
-    <a href="/aviso-legal">Aviso legal</a>
-    <a href="/contacto">Contacto</a>
+<footer class="page-footer">
+  <div class="footer-inner">
+    <span class="footer-copy">© 2025 marianosevilla.com — No constituye asesoramiento fiscal ni legal.</span>
+    <div class="footer-links">
+      <a href="/privacidad">Privacidad</a>
+      <a href="/terminos">Términos</a>
+      <a href="/cookies">Cookies</a>
+      <a href="/aviso-legal">Aviso legal</a>
+      <a href="/faq">FAQ</a>
+    </div>
   </div>
 </footer>
 
