@@ -174,6 +174,75 @@ body {
   font-size: 1rem;
 }
 
+/* ── Bloque exchanges afiliados ── */
+.exchanges-section {
+  padding: 0 0 4rem;
+}
+.exchanges-section-header {
+  margin-bottom: 1.5rem;
+}
+.exchanges-section-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: .5rem;
+}
+.exchanges-section-desc {
+  font-size: .9rem;
+  color: var(--muted);
+  max-width: 640px;
+  line-height: 1.65;
+}
+.exchange-card {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 16px;
+  padding: 1.5rem 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  max-width: 560px;
+}
+.exchange-card-info { flex: 1; min-width: 160px; }
+.exchange-card-name {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: .3rem;
+}
+.exchange-card-desc {
+  font-size: .85rem;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.exchange-card-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  background: var(--accent);
+  color: #051a12;
+  font-family: var(--font-display);
+  font-size: .85rem;
+  font-weight: 700;
+  padding: .65rem 1.25rem;
+  border-radius: 10px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity .2s, transform .15s;
+  flex-shrink: 0;
+}
+.exchange-card-btn:hover { opacity: .88; transform: translateY(-1px); }
+.exchange-card-btn svg { width: 12px; height: 12px; }
+.affiliate-notice {
+  margin-top: 1.25rem;
+  font-size: .75rem;
+  color: #4a5a78;
+  line-height: 1.6;
+  max-width: 560px;
+}
+
 /* ── Footer ── */
 .page-footer {
   background: var(--footer-bg);
@@ -258,6 +327,39 @@ body {
       <p>Próximamente. Los primeros recursos estarán disponibles muy pronto.</p>
     </div>
     {% endif %}
+  </div>
+</section>
+
+<!-- ── Exchanges afiliados ── -->
+<section class="exchanges-section">
+  <div class="wrap">
+    <div class="exchanges-section-header">
+      <div class="exchanges-section-title">Exchange asociado al canal</div>
+      <p class="exchanges-section-desc">
+        Algunos recursos pueden requerir validación de registro en un exchange
+        asociado al canal. Si todavía no tienes cuenta, puedes registrarte desde
+        el enlace oficial del canal y después solicitar el recurso correspondiente.
+      </p>
+    </div>
+
+    <div class="exchange-card">
+      <div class="exchange-card-info">
+        <div class="exchange-card-name">Bitvavo</div>
+        <p class="exchange-card-desc">Exchange europeo utilizado como referencia para el Experimento Bitcoin.</p>
+      </div>
+      <a href="https://bitvavo.com/es/affiliate/marianosevilla"
+         target="_blank"
+         rel="noopener noreferrer sponsored"
+         class="exchange-card-btn">
+        Registrarme en Bitvavo
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+      </a>
+    </div>
+
+    <p class="affiliate-notice">
+      El uso de este enlace puede generar una comisión para Mariano Sevilla sin coste adicional para ti.
+      El contenido de esta web es educativo y no constituye asesoramiento financiero.
+    </p>
   </div>
 </section>
 
