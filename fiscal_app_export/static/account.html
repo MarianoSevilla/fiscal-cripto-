@@ -165,6 +165,34 @@ main {
   .row { flex-direction: column; align-items: flex-start; gap: 0.4rem; }
 }
 
+/* ── DELETE MODAL ── */
+.del-backdrop {
+  display: none; position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,.65); backdrop-filter: blur(4px);
+  align-items: center; justify-content: center; padding: 1rem;
+}
+.del-backdrop.open { display: flex; }
+.del-dialog {
+  background: var(--surface); border: 1px solid var(--red-brd);
+  border-radius: 16px; padding: 2rem; width: 100%; max-width: 420px;
+  display: flex; flex-direction: column; gap: 1.25rem;
+}
+.del-title {
+  font-family: var(--font-d); font-size: 1.15rem; font-weight: 800;
+  color: var(--red);
+}
+.del-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+.del-input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-family: var(--font-b);
+  font-size: 14px; padding: 11px 14px; outline: none;
+  transition: border-color .2s;
+}
+.del-input:focus { border-color: var(--red); }
+.del-input::placeholder { color: var(--muted2); }
+.del-error { font-size: 12.5px; color: var(--red); display: none; }
+.del-actions { display: flex; gap: .75rem; justify-content: flex-end; flex-wrap: wrap; }
+
 /* ── FOOTER ─────────────────────── */
 .page-footer { background: var(--footer-bg); border-top: 1px solid var(--border); padding: 2rem 0; margin-top: auto; }
 .footer-inner { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x); display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
@@ -266,6 +294,40 @@ main {
   </div>
 </main>
 
+<!-- ── MODAL ELIMINACIÓN DE CUENTA ── -->
+<div class="del-backdrop" id="deleteModal" role="dialog" aria-modal="true" aria-labelledby="delTitle">
+  <div class="del-dialog">
+    <p class="del-title" id="delTitle">Eliminar cuenta</p>
+
+    <!-- Usuarios con contraseña -->
+    <div id="delPanelPassword">
+      <p class="del-desc">Para confirmar la eliminación introduce tu contraseña actual. Esta acción no se puede deshacer.</p>
+      <input class="del-input" type="password" id="delPasswordInput"
+             placeholder="Contraseña actual" autocomplete="current-password" style="margin-top:.5rem">
+    </div>
+
+    <!-- Usuarios OAuth — paso 1: solicitar código -->
+    <div id="delPanelOAuthStep1" hidden>
+      <p class="del-desc">Te enviaremos un código de confirmación a tu email. Introdúcelo para completar la eliminación. El código es válido durante 10 minutos.</p>
+    </div>
+
+    <!-- Usuarios OAuth — paso 2: introducir código -->
+    <div id="delPanelOAuthStep2" hidden>
+      <p class="del-desc">Introduce el código que hemos enviado a tu email.</p>
+      <input class="del-input" type="text" id="delTokenInput"
+             placeholder="Código de confirmación" autocomplete="one-time-code"
+             spellcheck="false" style="margin-top:.5rem;letter-spacing:.1em">
+    </div>
+
+    <p class="del-error" id="delError"></p>
+
+    <div class="del-actions">
+      <button class="btn btn-muted" id="delBtnCancel">Cancelar</button>
+      <button class="btn btn-danger" id="delBtnConfirm">Eliminar cuenta</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── Cargar datos de usuario ─────────────────────
 (async () => {
@@ -311,6 +373,9 @@ main {
     if (!u.is_google) {
       document.getElementById('sectionPassword').hidden = false;
     }
+
+    // Exponer tipo de cuenta para el modal de eliminación
+    document.body.dataset.isGoogle = u.is_google ? 'true' : 'false';
   } catch {
     window.location.replace('/login/');
   }
@@ -396,20 +461,138 @@ document.getElementById('pwBtn').addEventListener('click', async () => {
   }
 });
 
-// ── Eliminar cuenta ─────────────────────────────
-document.getElementById('btnDeleteAccount').addEventListener('click', async () => {
-  if (!confirm('¿Seguro que quieres eliminar tu cuenta? Se borrarán tus datos personales y no podrás volver a iniciar sesión. Esta acción no se puede deshacer.')) return;
-  const btn = document.getElementById('btnDeleteAccount');
-  btn.disabled = true; btn.textContent = 'Eliminando…';
-  try {
-    const res = await fetch('/api/delete-account', { method: 'POST', credentials: 'include' });
-    if (!res.ok) throw new Error();
-    window.location.replace('/');
-  } catch {
-    btn.disabled = false; btn.textContent = 'Eliminar mi cuenta';
-    alert('Error al eliminar la cuenta. Inténtalo de nuevo.');
+// ── Eliminar cuenta — modal con reautenticación ─────────────────────────────
+(function () {
+  // Estado: se rellena cuando el usuario carga la página
+  let _isOAuth = false;
+  let _oauthStep = 1; // 1 = solicitar código, 2 = introducir código
+
+  const modal      = document.getElementById('deleteModal');
+  const btnOpen    = document.getElementById('btnDeleteAccount');
+  const btnCancel  = document.getElementById('delBtnCancel');
+  const btnConfirm = document.getElementById('delBtnConfirm');
+  const errEl      = document.getElementById('delError');
+
+  const panelPw    = document.getElementById('delPanelPassword');
+  const panelOA1   = document.getElementById('delPanelOAuthStep1');
+  const panelOA2   = document.getElementById('delPanelOAuthStep2');
+  const pwInput    = document.getElementById('delPasswordInput');
+  const tokenInput = document.getElementById('delTokenInput');
+
+  function showError(msg) {
+    errEl.textContent = msg;
+    errEl.style.display = 'block';
   }
-});
+  function clearError() {
+    errEl.textContent = '';
+    errEl.style.display = 'none';
+  }
+
+  function openModal() {
+    clearError();
+    pwInput.value = '';
+    tokenInput.value = '';
+    _oauthStep = 1;
+
+    if (_isOAuth) {
+      panelPw.hidden  = true;
+      panelOA1.hidden = false;
+      panelOA2.hidden = true;
+      btnConfirm.textContent = 'Enviar código';
+    } else {
+      panelPw.hidden  = false;
+      panelOA1.hidden = true;
+      panelOA2.hidden = true;
+      btnConfirm.textContent = 'Eliminar cuenta';
+      setTimeout(() => pwInput.focus(), 80);
+    }
+    modal.classList.add('open');
+  }
+
+  function closeModal() {
+    modal.classList.remove('open');
+    pwInput.value = '';
+    tokenInput.value = '';
+    clearError();
+    btnConfirm.disabled = false;
+    btnConfirm.textContent = _isOAuth && _oauthStep === 1 ? 'Enviar código' : 'Eliminar cuenta';
+  }
+
+  btnOpen.addEventListener('click', openModal);
+  btnCancel.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.classList.contains('open')) closeModal(); });
+
+  btnConfirm.addEventListener('click', async () => {
+    clearError();
+    btnConfirm.disabled = true;
+
+    if (!_isOAuth) {
+      // ── Flujo contraseña ──────────────────────────────────────────────────
+      const pw = pwInput.value;
+      if (!pw) { showError('Introduce tu contraseña.'); btnConfirm.disabled = false; return; }
+      btnConfirm.textContent = 'Eliminando…';
+      try {
+        const res = await fetch('/api/delete-account', {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: pw }),
+        });
+        const data = await res.json();
+        if (!res.ok) { showError(data.error || 'Error al eliminar la cuenta.'); btnConfirm.disabled = false; btnConfirm.textContent = 'Eliminar cuenta'; return; }
+        window.location.replace('/');
+      } catch {
+        showError('Error de red. Inténtalo de nuevo.'); btnConfirm.disabled = false; btnConfirm.textContent = 'Eliminar cuenta';
+      }
+
+    } else if (_oauthStep === 1) {
+      // ── Flujo OAuth paso 1: solicitar código ──────────────────────────────
+      btnConfirm.textContent = 'Enviando…';
+      try {
+        const res = await fetch('/api/delete-account/request', {
+          method: 'POST', credentials: 'include',
+        });
+        const data = await res.json();
+        if (!res.ok) { showError(data.error || 'No se pudo enviar el código.'); btnConfirm.disabled = false; btnConfirm.textContent = 'Enviar código'; return; }
+        // Pasar a paso 2
+        _oauthStep = 2;
+        panelOA1.hidden = true;
+        panelOA2.hidden = false;
+        btnConfirm.textContent = 'Confirmar eliminación';
+        btnConfirm.disabled = false;
+        setTimeout(() => tokenInput.focus(), 80);
+      } catch {
+        showError('Error de red. Inténtalo de nuevo.'); btnConfirm.disabled = false; btnConfirm.textContent = 'Enviar código';
+      }
+
+    } else {
+      // ── Flujo OAuth paso 2: confirmar con token ───────────────────────────
+      const token = tokenInput.value.trim();
+      if (!token) { showError('Introduce el código recibido por email.'); btnConfirm.disabled = false; return; }
+      btnConfirm.textContent = 'Eliminando…';
+      try {
+        const res = await fetch('/api/delete-account', {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token }),
+        });
+        const data = await res.json();
+        if (!res.ok) { showError(data.error || 'Código inválido o expirado.'); btnConfirm.disabled = false; btnConfirm.textContent = 'Confirmar eliminación'; return; }
+        window.location.replace('/');
+      } catch {
+        showError('Error de red. Inténtalo de nuevo.'); btnConfirm.disabled = false; btnConfirm.textContent = 'Confirmar eliminación';
+      }
+    }
+  });
+
+  // Detectar si el usuario es OAuth (esperar a que /api/me resuelva en el bloque de carga superior)
+  // La variable _isOAuth se rellena leyendo el atributo data-is-google que el bloque de carga pone en <body>
+  // Para no duplicar fetch, usamos un observer sobre el atributo.
+  const observer = new MutationObserver(() => {
+    _isOAuth = document.body.dataset.isGoogle === 'true';
+  });
+  observer.observe(document.body, { attributes: true, attributeFilter: ['data-is-google'] });
+})();
 </script>
 
 <!-- ── FOOTER ───────────────────── -->

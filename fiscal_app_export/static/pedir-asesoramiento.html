@@ -191,8 +191,13 @@ h1 { font-family: var(--ff-h); font-size: clamp(26px,4vw,36px); font-weight: 800
     const r = await fetch('/api/me', { credentials: 'include' });
     const d = await r.json();
     if (d.user) {
-      if (d.user.full_name) document.getElementById('fullName').value  = d.user.full_name;
-      if (d.user.email)     document.getElementById('emailField').value = d.user.email;
+      if (d.user.full_name) document.getElementById('fullName').value = d.user.full_name;
+      if (d.user.email) {
+        const emailEl = document.getElementById('emailField');
+        emailEl.value = d.user.email;
+        emailEl.setAttribute('readonly', 'true');
+        emailEl.title = 'El email se toma de tu cuenta registrada';
+      }
     }
   } catch {}
 })();

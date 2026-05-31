@@ -198,6 +198,72 @@ def _delete_advisory(_app, adv_id):
 
 # ── Tests ──────────────────────────────────────────────────────────────────────
 
+# ── Tests H4: email forzado desde current_user ────────────────────────────────
+
+def test_h4_autenticado_email_body_ignorado(client, normal_user, _app):
+    """H4: usuario autenticado envía email ajeno en el body → BD almacena current_user.email."""
+    _login_normal(client)
+    payload = {**_VALID_PAYLOAD, "email": "victima@tercero.com"}
+    with patch("app._send_advisory_confirmation_email"), \
+         patch("app._send_advisory_internal_notification"):
+        r = client.post("/api/asesoramiento/solicitar", json=payload,
+                        content_type="application/json")
+    assert r.status_code == 200, r.get_json()
+    adv_id = r.get_json()["advisory_id"]
+
+    with _app.app_context():
+        db.session.remove()
+        adv = FiscalAdvisoryRequest.query.filter_by(id=adv_id).first()
+        assert adv.email == "normal_anon_adv@example.com", \
+            f"Se esperaba el email del usuario, se obtuvo: {adv.email}"
+        db.session.delete(adv)
+        db.session.commit()
+        db.session.remove()
+
+
+def test_h4_autenticado_sin_email_en_body(client, normal_user, _app):
+    """H4: usuario autenticado no envía campo email → BD almacena current_user.email igualmente."""
+    _login_normal(client)
+    payload = {k: v for k, v in _VALID_PAYLOAD.items() if k != "email"}
+    with patch("app._send_advisory_confirmation_email"), \
+         patch("app._send_advisory_internal_notification"):
+        r = client.post("/api/asesoramiento/solicitar", json=payload,
+                        content_type="application/json")
+    assert r.status_code == 200, r.get_json()
+    adv_id = r.get_json()["advisory_id"]
+
+    with _app.app_context():
+        db.session.remove()
+        adv = FiscalAdvisoryRequest.query.filter_by(id=adv_id).first()
+        assert adv.email == "normal_anon_adv@example.com", \
+            f"Se esperaba el email del usuario, se obtuvo: {adv.email}"
+        db.session.delete(adv)
+        db.session.commit()
+        db.session.remove()
+
+
+def test_h4_autenticado_email_propio_en_body_es_idempotente(client, normal_user, _app):
+    """H4: usuario autenticado envía su propio email → resultado idéntico, sin error."""
+    _login_normal(client)
+    payload = {**_VALID_PAYLOAD, "email": "normal_anon_adv@example.com"}
+    with patch("app._send_advisory_confirmation_email"), \
+         patch("app._send_advisory_internal_notification"):
+        r = client.post("/api/asesoramiento/solicitar", json=payload,
+                        content_type="application/json")
+    assert r.status_code == 200, r.get_json()
+    adv_id = r.get_json()["advisory_id"]
+
+    with _app.app_context():
+        db.session.remove()
+        adv = FiscalAdvisoryRequest.query.filter_by(id=adv_id).first()
+        assert adv.email == "normal_anon_adv@example.com"
+        db.session.delete(adv)
+        db.session.commit()
+        db.session.remove()
+
+
+# ── Tests originales ───────────────────────────────────────────────────────────
+
 def test_usuario_autenticado_crea_solicitud(client, normal_user, _app):
     """Usuario autenticado crea solicitud → user_id correcto, estado submitted."""
     _login_normal(client)

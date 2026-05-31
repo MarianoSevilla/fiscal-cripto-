@@ -1332,9 +1332,11 @@ def account():
 
 # ── EMAIL VERIFICATION ────────────────────────
 
-_VERIFY_TOKEN_SALT = "email-verification-v1"
-_VERIFY_TOKEN_TTL  = 86_400  # 24 horas
-_RESET_TOKEN_TTL   = 3_600   # 1 hora
+_VERIFY_TOKEN_SALT   = "email-verification-v1"
+_DELETE_ACCOUNT_SALT = "delete-account-v1"
+_VERIFY_TOKEN_TTL    = 86_400  # 24 horas
+_RESET_TOKEN_TTL     = 3_600   # 1 hora
+_DELETE_TOKEN_TTL    = 600     # 10 minutos
 
 
 def _generate_verification_token(email: str) -> str:
@@ -1410,6 +1412,64 @@ def _send_password_reset_email(user: User) -> bool:
         return True
     except Exception as exc:
         app.logger.error("Error enviando email de reset: %s", exc)
+        return False
+
+
+def _generate_delete_token(user_id: int) -> str:
+    """Genera token firmado con itsdangerous que codifica el user_id. Sin persistencia en BD."""
+    s = URLSafeTimedSerializer(app.config["SECRET_KEY"])
+    return s.dumps(user_id, salt=_DELETE_ACCOUNT_SALT)
+
+
+def _verify_delete_token(token: str, expected_user_id: int) -> tuple[bool, str]:
+    """Valida el token de eliminación. Devuelve (ok, error_msg).
+
+    Falla si: expirado, manipulado, o pertenece a otro usuario.
+    """
+    s = URLSafeTimedSerializer(app.config["SECRET_KEY"])
+    try:
+        user_id = s.loads(token, salt=_DELETE_ACCOUNT_SALT, max_age=_DELETE_TOKEN_TTL)
+    except SignatureExpired:
+        return False, "El código ha expirado. Solicita uno nuevo."
+    except Exception:
+        return False, "Código de confirmación inválido."
+    if int(user_id) != expected_user_id:
+        return False, "Código de confirmación inválido."
+    return True, ""
+
+
+def _send_delete_account_email(user: User) -> bool:
+    """Genera token firmado con itsdangerous y lo envía por email. Sin escritura en BD."""
+    if not resend.api_key:
+        app.logger.warning("RESEND_API_KEY no configurada — email de eliminación no enviado.")
+        return False
+
+    token   = _generate_delete_token(user.id)
+    subject = "Confirma la eliminación de tu cuenta — marianosevilla.com"
+    html    = f"""
+<p>Has solicitado eliminar tu cuenta en <strong>marianosevilla.com</strong>.</p>
+<p>Introduce este código en la página para confirmar. Es válido durante <strong>10 minutos</strong>.</p>
+<p style="font-family:monospace;word-break:break-all;background:#f4f4f4;color:#111;
+          padding:14px;border-radius:6px;margin:24px 0;font-size:0.9rem">{token}</p>
+<p>Si no has sido tú, ignora este email. Tu cuenta permanecerá intacta.</p>
+"""
+    text = (
+        f"Has solicitado eliminar tu cuenta en marianosevilla.com.\n\n"
+        f"Código de confirmación:\n{token}\n\n"
+        f"Es válido durante 10 minutos. Si no has sido tú, ignora este email."
+    )
+
+    try:
+        resend.Emails.send({
+            "from":    _RESEND_FROM_DISPLAY,
+            "to":      [user.email],
+            "subject": subject,
+            "html":    html,
+            "text":    text,
+        })
+        return True
+    except Exception as exc:
+        app.logger.error("Error enviando email de eliminación: %s", exc)
         return False
 
 
@@ -2738,19 +2798,61 @@ def update_nif():
     return jsonify({"message": "NIF actualizado.", "nif_saved": bool(nif)})
 
 
+@app.route("/api/delete-account/request", methods=["POST"])
+@login_required
+@limiter.limit("3 per hour")
+def delete_account_request():
+    """Solo para usuarios OAuth: genera y envía el token de confirmación por email."""
+    if current_user.password_hash is not None:
+        return jsonify({"error": "Usa tu contraseña para confirmar la eliminación."}), 400
+    sent = _send_delete_account_email(current_user)
+    if not sent:
+        return jsonify({"error": "No se pudo enviar el email. Inténtalo más tarde."}), 503
+    return jsonify({"ok": True, "message": "Código enviado a tu email."})
+
+
+def _anonymize_user(user: User) -> None:
+    """Anonimiza PII del usuario. Se llama tras verificar identidad."""
+    uid = user.id
+    user.email             = f"deleted_{uid}@deleted"
+    user.password_hash     = None
+    user.google_id         = None
+    user.full_name         = None
+    user.nif               = None
+    user.is_active         = False
+    user.email_verified_at = None
+    db.session.commit()
+
+
 @app.route("/api/delete-account", methods=["POST"])
 @login_required
+@limiter.limit("5 per hour")
 def delete_account():
-    """Anonimiza la cuenta: borra PII pero mantiene la fila para estadísticas."""
-    uid = current_user.id
-    current_user.email             = f"deleted_{uid}@deleted"
-    current_user.password_hash     = None
-    current_user.google_id         = None
-    current_user.full_name         = None
-    current_user.nif               = None
-    current_user.is_active         = False
-    current_user.email_verified_at = None
-    db.session.commit()
+    """Anonimiza la cuenta tras verificar identidad.
+
+    Usuarios con contraseña: requiere campo 'password' en el body.
+    Usuarios OAuth (sin password_hash): requiere campo 'token' en el body
+    (código recibido por email vía /api/delete-account/request).
+    """
+    data = request.get_json(silent=True) or {}
+
+    if current_user.password_hash is not None:
+        # Usuarios con contraseña
+        password = data.get("password") or ""
+        if not password:
+            return jsonify({"error": "Introduce tu contraseña para confirmar."}), 400
+        if not current_user.check_password(password):
+            return jsonify({"error": "Contraseña incorrecta."}), 403
+    else:
+        # Usuarios OAuth — verificar token itsdangerous enviado por email
+        token = (data.get("token") or "").strip()
+        if not token:
+            return jsonify({"error": "Introduce el código de confirmación recibido por email."}), 400
+        ok, err = _verify_delete_token(token, current_user.id)
+        if not ok:
+            return jsonify({"error": err}), 403
+
+    _anonymize_user(current_user)
     logout_user()
     return jsonify({"message": "Cuenta eliminada correctamente."})
 
@@ -3635,12 +3737,13 @@ def advisory_solicitar():
         return jsonify({"error": "Tipo de servicio inválido."}), 400
 
     full_name = _sanitizar_texto(data.get("full_name") or "", max_len=150)
-    email_val = (data.get("email") or "").strip().lower()
     if not full_name:
         return jsonify({"error": "El nombre es obligatorio."}), 400
-    ok, err = _validar_email(email_val)
-    if not ok:
-        return jsonify({"error": err}), 400
+    # H4: usuario siempre autenticado aquí (@login_required). Ignorar email del
+    # body para evitar que un usuario vincule solicitudes con email de un tercero.
+    if not current_user.email:
+        return jsonify({"error": "Tu cuenta no tiene email asociado."}), 400
+    email_val = current_user.email.strip().lower()
 
     tax_year = data.get("tax_year")
     try:
