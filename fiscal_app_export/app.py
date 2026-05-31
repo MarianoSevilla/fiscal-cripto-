@@ -4905,6 +4905,17 @@ def admin_recursos_add_note(req_id):
     return jsonify({"ok": True, "internal_notes": rr.internal_notes})
 
 
+@app.route("/api/admin/recursos/solicitudes/<int:req_id>", methods=["DELETE"])
+@login_required
+def admin_recursos_delete(req_id):
+    if not _is_fiscal_advisor():
+        return jsonify({"error": "Acceso denegado."}), 403
+    rr = ResourceRequest.query.get_or_404(req_id)
+    db.session.delete(rr)
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
 if __name__ == "__main__":
     os.makedirs("static", exist_ok=True)
     app.run(debug=False, port=5050)

@@ -150,6 +150,30 @@ body { padding-top: 64px; }
   padding: 14px 16px; font-size: 13px; color: var(--sub); line-height: 1.7; white-space: pre-wrap; word-break: break-word;
 }
 .notes-empty { font-size: 13px; color: var(--muted); padding: 8px 0; }
+
+/* Danger button */
+.btn-danger {
+  background: transparent; color: #f87171; font-family: var(--ff-b);
+  font-weight: 600; font-size: 13px; padding: 9px 18px;
+  border: 1px solid rgba(248,113,113,0.35);
+  border-radius: 7px; cursor: pointer; white-space: nowrap; transition: all .2s;
+}
+.btn-danger:hover { background: rgba(248,113,113,0.08); border-color: rgba(248,113,113,0.6); }
+.btn-danger:disabled { opacity: .4; cursor: not-allowed; }
+
+/* Confirm modal */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000; padding: 16px;
+}
+.modal-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 28px 28px 24px; max-width: 380px; width: 100%;
+}
+.modal-title { font-family: var(--ff-h); font-size: 18px; color: var(--text); margin-bottom: 10px; }
+.modal-body  { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 22px; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
 </style>
 </head>
 <body>
@@ -158,13 +182,27 @@ body { padding-top: 64px; }
   <div class="snav-inner">
     <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
     <ul class="snav-links">
-      <li><a href="/admin/asesoramiento">Asesoramiento</a></li>
-      <li><a href="/admin/recursos" class="active">Recursos</a></li>
+      <li><a href="/como-funciona">Cómo funciona</a></li>
+      <li><a href="/recursos">Recursos</a></li>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/contacto">Contacto</a></li>
     </ul>
     <div class="snav-right"><div class="snav-skeleton" aria-hidden="true"></div></div>
   </div>
 </nav>
 <script src="/static/nav.js"></script>
+
+<!-- Confirm delete modal (hidden by default) -->
+<div class="modal-backdrop" id="deleteModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+  <div class="modal-box">
+    <div class="modal-title" id="deleteModalTitle">Eliminar solicitud</div>
+    <div class="modal-body">¿Seguro que quieres eliminar esta solicitud? Esta acción no se puede deshacer.</div>
+    <div class="modal-actions">
+      <button class="action-btn" style="background:var(--surf2);color:var(--text);" onclick="closeDeleteModal()">Cancelar</button>
+      <button class="btn-danger" id="deleteConfirmBtn" onclick="confirmDelete()">Eliminar</button>
+    </div>
+  </div>
+</div>
 
 <div class="layout">
 
@@ -270,12 +308,11 @@ body { padding-top: 64px; }
       </div>
 
       <div class="detail-grid">
-        ${field('Email',    r.email)}
-        ${field('Exchange', r.exchange || '—')}
-        ${field('Bitvavo',  r.bitvavo_status_label || '—')}
-        ${field('UID',      r.uid || (r.uid_unknown ? 'No sabe dónde encontrarlo' : '—'))}
-        ${field('Telegram', r.telegram_user || '—')}
-        ${field('Origen',   r.source || '—')}
+        ${field('Email',      r.email)}
+        ${field('Exchange',   r.exchange || '—')}
+        ${field('Bitvavo',    r.bitvavo_status_label || '—')}
+        ${field('UID',        r.uid || (r.uid_unknown ? 'No sabe dónde encontrarlo' : '—'))}
+        ${field('Telegram',   r.telegram_user || '—')}
         ${field('Newsletter', r.marketing_consent ? 'Sí' : 'No')}
         ${field('Estado', `<span class="req-badge badge-${r.status}">${esc(r.status_label)}</span>`)}
       </div>
@@ -312,6 +349,11 @@ body { padding-top: 64px; }
         </div>
         <div class="msg-ok" id="note-ok"></div>
         <div class="msg-err" id="note-err"></div>
+      </div>
+
+      <!-- Eliminar -->
+      <div class="detail-section" style="margin-top:8px;">
+        <button class="btn-danger" onclick="deleteRequest(${r.id})">Eliminar solicitud</button>
       </div>
     `;
     el.style.display = 'block';
@@ -372,6 +414,49 @@ body { padding-top: 64px; }
       errEl.textContent = 'Error de conexión.';
     }
   };
+
+  // ── Delete request ────────────────────────────────────────────────────────
+  let pendingDeleteId = null;
+
+  window.deleteRequest = function (id) {
+    pendingDeleteId = id;
+    document.getElementById('deleteModal').style.display = 'flex';
+  };
+
+  window.closeDeleteModal = function () {
+    pendingDeleteId = null;
+    document.getElementById('deleteModal').style.display = 'none';
+  };
+
+  window.confirmDelete = async function () {
+    if (!pendingDeleteId) return;
+    const id  = pendingDeleteId;
+    const btn = document.getElementById('deleteConfirmBtn');
+    btn.disabled = true;
+    try {
+      const res = await fetch(`/api/admin/recursos/solicitudes/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        closeDeleteModal();
+        allItems = allItems.filter(r => r.id !== id);
+        currentId = null;
+        renderList(applySearch(document.getElementById('search').value));
+        document.getElementById('detail-content').style.display = 'none';
+        document.getElementById('detail-empty').style.display   = 'flex';
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Error al eliminar la solicitud.');
+        btn.disabled = false;
+      }
+    } catch (_) {
+      alert('Error de conexión.');
+      btn.disabled = false;
+    }
+  };
+
+  // Cerrar modal al pulsar fuera
+  document.getElementById('deleteModal').addEventListener('click', function (e) {
+    if (e.target === this) closeDeleteModal();
+  });
 
   // ── Search / filter ────────────────────────────────────────────────────────
   function applySearch(q) {

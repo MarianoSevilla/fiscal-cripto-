@@ -445,6 +445,72 @@ def test_admin_nota_vacia(client, resource, admin_user, _app):
         db.session.remove()
 
 
+def test_admin_delete_sin_login(client, resource, _app):
+    """DELETE sin login → 401."""
+    with _app.app_context():
+        rr = ResourceRequest(
+            resource_id=resource, name="Delete Sin Login",
+            email="del_no_login@example.com", legal_accepted=True, status="recibido",
+        )
+        db.session.add(rr); db.session.commit()
+        rr_id = rr.id; db.session.remove()
+
+    r = client.delete(f"/api/admin/recursos/solicitudes/{rr_id}")
+    assert r.status_code == 401
+
+    with _app.app_context():
+        ResourceRequest.query.filter_by(id=rr_id).delete()
+        db.session.commit(); db.session.remove()
+
+
+def test_admin_delete_con_admin(client, resource, admin_user, _app):
+    """Admin puede borrar una solicitud existente."""
+    with _app.app_context():
+        rr = ResourceRequest(
+            resource_id=resource, name="Para Borrar",
+            email="del_admin@example.com", legal_accepted=True, status="recibido",
+        )
+        db.session.add(rr); db.session.commit()
+        rr_id = rr.id; db.session.remove()
+
+    _login_admin(client)
+    r = client.delete(f"/api/admin/recursos/solicitudes/{rr_id}")
+    assert r.status_code == 200
+    assert r.get_json()["ok"] is True
+
+    with _app.app_context():
+        db.session.remove()
+        assert ResourceRequest.query.filter_by(id=rr_id).first() is None
+        db.session.remove()
+
+
+def test_admin_delete_inexistente(client, admin_user, _app):
+    """DELETE de id que no existe → 404."""
+    _login_admin(client)
+    r = client.delete("/api/admin/recursos/solicitudes/99999")
+    assert r.status_code == 404
+
+
+def test_admin_delete_no_toca_resource(client, resource, admin_user, _app):
+    """Borrar una solicitud no elimina el Resource asociado."""
+    with _app.app_context():
+        rr = ResourceRequest(
+            resource_id=resource, name="Borrar Sin Tocar Recurso",
+            email="del_safe@example.com", legal_accepted=True, status="recibido",
+        )
+        db.session.add(rr); db.session.commit()
+        rr_id = rr.id; db.session.remove()
+
+    _login_admin(client)
+    client.delete(f"/api/admin/recursos/solicitudes/{rr_id}")
+
+    with _app.app_context():
+        from models import Resource
+        db.session.remove()
+        assert Resource.query.filter_by(id=resource).first() is not None
+        db.session.remove()
+
+
 # ── Tests de modelos ───────────────────────────────────────────────────────────
 
 def test_to_dict_basic_y_full(_app, resource):

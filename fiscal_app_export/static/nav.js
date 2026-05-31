@@ -33,6 +33,7 @@
               <a href="/stats"     class="snav-dd-item snav-hidden" id="snavItemStats"          role="menuitem">📊&nbsp; Stats</a>
               <a href="/admin/asesoramiento"      class="snav-dd-item snav-hidden" id="snavItemAdminAsesoria"    role="menuitem">🛠&nbsp; Panel asesoramiento</a>
               <a href="/admin/comunicaciones"     class="snav-dd-item snav-hidden" id="snavItemAdminComms"       role="menuitem">📢&nbsp; Comunicaciones</a>
+              <a href="/admin/recursos"           class="snav-dd-item snav-hidden" id="snavItemAdminRecursos"    role="menuitem">📚&nbsp; Solicitudes de recursos</a>
               <a href="/mis-solicitudes-fiscales" class="snav-dd-item snav-hidden" id="snavItemMisSolicitudes"  role="menuitem">📋&nbsp; Mis solicitudes fiscales</a>
               <div class="snav-dd-divider"></div>
               <button class="snav-dd-item danger" id="snavBtnLogout" role="menuitem">↩&nbsp; Cerrar sesión</button>
@@ -71,6 +72,7 @@
       '/pricing':                   'snavItemPlanes',
       '/admin/asesoramiento':       'snavItemAdminAsesoria',
       '/admin/comunicaciones':      'snavItemAdminComms',
+      '/admin/recursos':            'snavItemAdminRecursos',
       '/mis-solicitudes-fiscales':  'snavItemMisSolicitudes',
     };
     for (const [prefix, id] of Object.entries(map)) {
@@ -162,11 +164,13 @@
             const stats           = document.getElementById('snavItemStats');
             const adminAsesoria   = document.getElementById('snavItemAdminAsesoria');
             const adminComms      = document.getElementById('snavItemAdminComms');
+            const adminRecursos   = document.getElementById('snavItemAdminRecursos');
             const misSolicitudes  = document.getElementById('snavItemMisSolicitudes');
             if (planes)         planes.classList.remove('snav-hidden');
             if (stats)          stats.classList.remove('snav-hidden');
             if (adminAsesoria)  adminAsesoria.classList.remove('snav-hidden');
             if (adminComms)     adminComms.classList.remove('snav-hidden');
+            if (adminRecursos)  adminRecursos.classList.remove('snav-hidden');
             if (misSolicitudes) misSolicitudes.classList.remove('snav-hidden');
           }
         }
