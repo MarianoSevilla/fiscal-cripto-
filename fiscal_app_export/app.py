@@ -1257,6 +1257,7 @@ def healthz():
 
 
 @app.route("/")
+@limiter.exempt
 def landing():
     return send_from_directory("static", "landing.html")
 
@@ -1268,53 +1269,63 @@ def fiscal():
 
 
 @app.route("/about", strict_slashes=False)
+@limiter.exempt
 def about():
     return send_from_directory("static", "about.html")
 
 
 @app.route("/privacidad", strict_slashes=False)
+@limiter.exempt
 def privacidad():
     return send_from_directory("static", "privacidad.html")
 
 
 @app.route("/terminos", strict_slashes=False)
+@limiter.exempt
 def terminos():
     return send_from_directory("static", "terminos.html")
 
 
 @app.route("/aviso-legal", strict_slashes=False)
+@limiter.exempt
 def aviso_legal():
     return send_from_directory("static", "aviso-legal.html")
 
 
 @app.route("/seguridad", strict_slashes=False)
+@limiter.exempt
 def seguridad():
     return send_from_directory("static", "seguridad.html")
 
 
 @app.route("/cookies", strict_slashes=False)
+@limiter.exempt
 def cookies():
     return send_from_directory("static", "cookies.html")
 
 
 @app.route("/preferencias", strict_slashes=False)
+@limiter.exempt
 def preferencias():
     return send_from_directory("static", "preferencias.html")
 
 
 @app.route("/dashboard", strict_slashes=False)
+@limiter.exempt
 def dashboard():
     """Dashboard principal: selector de exchange. Requiere autenticación (gestionada en JS)."""
     return send_from_directory("static", "dashboard.html")
 
 
 @app.route("/modelo721", strict_slashes=False)
+@limiter.exempt
 def modelo721_page():
     """Herramienta Modelo 721 — criptomonedas en el extranjero. Auth gestionada en JS."""
     return send_from_directory("static", "modelo721.html")
 
 
 @app.route("/account", strict_slashes=False)
+@limiter.exempt
 def account():
     return send_from_directory("static", "account.html")
 
@@ -1403,6 +1414,7 @@ def _send_password_reset_email(user: User) -> bool:
 
 
 @app.route("/login/", strict_slashes=False)
+@limiter.exempt
 def login_page():
     """Página dedicada de inicio de sesión."""
     if current_user.is_authenticated:
@@ -1411,6 +1423,7 @@ def login_page():
 
 
 @app.route("/signup/", strict_slashes=False)
+@limiter.exempt
 def signup_page():
     """Página dedicada de registro."""
     if current_user.is_authenticated:
@@ -1482,60 +1495,70 @@ def auth_google_callback():
 
 @app.route("/binance")
 @login_required
+@limiter.exempt
 def page_binance():
     return render_template("tool.html", **EXCHANGE_PAGES["binance"])
 
 
 @app.route("/bitvavo")
 @login_required
+@limiter.exempt
 def page_bitvavo():
     return render_template("tool.html", **EXCHANGE_PAGES["bitvavo"])
 
 
 @app.route("/bit2me")
 @login_required
+@limiter.exempt
 def page_bit2me():
     return render_template("tool.html", **EXCHANGE_PAGES["bit2me"])
 
 
 @app.route("/kraken")
 @login_required
+@limiter.exempt
 def page_kraken():
     return render_template("tool.html", **EXCHANGE_PAGES["kraken"])
 
 
 @app.route("/coinbase")
 @login_required
+@limiter.exempt
 def page_coinbase():
     return render_template("tool.html", **EXCHANGE_PAGES["coinbase"])
 
 
 @app.route("/nexo")
 @login_required
+@limiter.exempt
 def page_nexo():
     return render_template("tool.html", **EXCHANGE_PAGES["nexo"])
 
 
 @app.route("/cryptocom")
 @login_required
+@limiter.exempt
 def page_cryptocom():
     return render_template("tool.html", **EXCHANGE_PAGES["cryptocom"])
 
 
 @app.route("/uphold")
 @login_required
+@limiter.exempt
 def page_uphold():
     return render_template("tool.html", **EXCHANGE_PAGES["uphold"])
 
 
 @app.route("/mexc")
 @login_required
+@limiter.exempt
 def page_mexc():
     return render_template("tool.html", **EXCHANGE_PAGES["mexc"])
 
 
 @app.route("/bitget")
 @login_required
+@limiter.exempt
 def page_bitget():
     return render_template("tool.html", **EXCHANGE_PAGES["bitget"])
 
@@ -3503,9 +3526,41 @@ def _api_stats_data():
 
 @app.errorhandler(429)
 def ratelimit_error(e):
-    return jsonify({
-        "error": "Has alcanzado el límite de análisis. Por favor espera 10 minutos antes de intentarlo de nuevo."
-    }), 429
+    # Rutas API: devolver JSON (consumido por JS del frontend)
+    if request.path.startswith("/api/"):
+        return jsonify({
+            "error": "Has alcanzado el límite de análisis. Por favor espera 10 minutos antes de intentarlo de nuevo."
+        }), 429
+    # Rutas de navegador: devolver HTML — nunca mostrar JSON a un visitante
+    retry_after = getattr(e, "retry_after", None)
+    wait = f"Espera {int(retry_after)} segundos e " if retry_after else "Por favor "
+    html = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="refresh" content="60;url={request.path}">
+  <title>Demasiadas peticiones — Mariano Sevilla</title>
+  <style>
+    *{{box-sizing:border-box;margin:0;padding:0}}
+    body{{font-family:'DM Sans',sans-serif;background:#0b1220;color:#eef0f6;
+         min-height:100vh;display:flex;flex-direction:column;
+         align-items:center;justify-content:center;gap:1rem;
+         text-align:center;padding:2rem}}
+    h1{{font-size:1.5rem;font-weight:700}}
+    p{{color:#7a8099;font-size:.95rem;line-height:1.6}}
+    a{{color:#00C896;text-decoration:none}}
+    a:hover{{text-decoration:underline}}
+  </style>
+</head>
+<body>
+  <h1>Demasiadas peticiones</h1>
+  <p>{wait}inténtalo de nuevo en unos momentos.<br>
+     Esta página se recargará automáticamente.</p>
+  <a href="/">← Volver al inicio</a>
+</body>
+</html>"""
+    return html, 429
 
 
 @app.errorhandler(413)
@@ -3516,25 +3571,30 @@ def payload_too_large(e):
 # ── ADVISORY ROUTES ──────────────────────────
 
 @app.route("/asesoramiento-fiscal-criptomonedas", strict_slashes=False)
+@limiter.exempt
 def advisory_landing():
     return send_from_directory("static", "asesoramiento-fiscal.html")
 
 @app.route("/pedir-asesoramiento", strict_slashes=False)
 @app.route("/pedir-asesoramiento-fiscal", strict_slashes=False)
 @login_required
+@limiter.exempt
 def advisory_request_page():
     return send_from_directory("static", "pedir-asesoramiento.html")
 
 @app.route("/asesoramiento-fiscal-confirmado", strict_slashes=False)
+@limiter.exempt
 def advisory_confirmed():
     return send_from_directory("static", "asesoramiento-confirmado.html")
 
 @app.route("/asesoramiento-fiscal-cancelado", strict_slashes=False)
+@limiter.exempt
 def advisory_cancelled():
     return send_from_directory("static", "asesoramiento-cancelado.html")
 
 @app.route("/mis-solicitudes-fiscales", strict_slashes=False)
 @login_required
+@limiter.exempt
 def advisory_my_requests_page():
     # Vista de usuario "Mis solicitudes" — restringida a admins hasta validación.
     # Para usuarios normales devuelve 404 (no revela que existe la página).
@@ -3544,6 +3604,7 @@ def advisory_my_requests_page():
 
 @app.route("/admin/asesoramiento", strict_slashes=False)
 @login_required
+@limiter.exempt
 def admin_advisory_page():
     if not _is_fiscal_advisor():
         return redirect("/dashboard")
