@@ -627,40 +627,42 @@ def advisory_payment_internal_email(advisory) -> tuple[str, str]:
 
 def resource_request_confirmation_email(rr, resource) -> tuple[str, str]:
     """Confirmación al usuario de que su solicitud de recurso fue recibida."""
-    name     = _html.escape(rr.name)
+    name      = _html.escape(rr.name)
     res_title = _html.escape(resource.title)
+    ref_id    = rr.id
 
     body_html = (
         _p(f"Hola, {name}.") +
         _p(
-            f"Hemos recibido tu solicitud para el recurso "
-            f"<strong style='font-weight:600;color:#111827;'>{res_title}</strong>."
+            f"Hemos recibido tu solicitud para "
+            f"<strong style=\"font-weight:600;color:#111827;\">{res_title}</strong>."
         ) +
         _p(
-            "Revisaremos los datos que nos has facilitado y nos pondremos en contacto "
-            "contigo cuando hayamos verificado tu solicitud."
+            "Revisaremos tu solicitud y, si todo está en orden, te enviaremos el recurso "
+            "en los próximos días. Si necesitamos confirmar algún dato, nos pondremos "
+            "en contacto contigo por email o Telegram."
         ) +
         _p(
-            "Si indicaste un usuario de Telegram, es posible que te contactemos por ahí "
-            "para agilizar el proceso.",
+            "Si tienes alguna pregunta, responde directamente a este correo.",
             last=True,
         ) +
-        _ref(f"Solicitud #{rr.id}")
+        _ref(f"Solicitud #{ref_id}")
     )
-    html = _wrap(f"Solicitud recibida — {res_title}", body_html, legal_footer=True)
+    html = _wrap(f"Solicitud recibida — {resource.title}", body_html, legal_footer=True)
     text = "\n".join([
         f"Solicitud recibida — {resource.title}",
         "",
         f"Hola, {rr.name}.",
         "",
-        f"Hemos recibido tu solicitud para el recurso \"{resource.title}\".",
+        f"Hemos recibido tu solicitud para \"{resource.title}\".",
         "",
-        "Revisaremos los datos que nos has facilitado y nos pondremos en contacto "
-        "contigo cuando hayamos verificado tu solicitud.",
+        "Revisaremos tu solicitud y, si todo está en orden, te enviaremos el recurso "
+        "en los próximos días. Si necesitamos confirmar algún dato, nos pondremos "
+        "en contacto contigo por email o Telegram.",
         "",
-        "Si indicaste un usuario de Telegram, es posible que te contactemos por ahí.",
+        "Si tienes alguna pregunta, responde directamente a este correo.",
         "",
-        f"Solicitud #{rr.id}",
+        f"Solicitud #{ref_id}",
         "",
         _footer_text(legal=True),
     ])
@@ -669,59 +671,42 @@ def resource_request_confirmation_email(rr, resource) -> tuple[str, str]:
 
 def resource_request_internal_email(rr, resource, admin_url: str = _BASE) -> tuple[str, str]:
     """Notificación interna cuando llega una solicitud de recurso."""
-    res_title = _html.escape(resource.title)
-    name      = _html.escape(rr.name)
-    bitvavo   = _html.escape(rr.bitvavo_status_label())
-    uid_val   = _html.escape(rr.uid or ("No sabe dónde encontrarlo" if rr.uid_unknown else "—"))
-    telegram  = _html.escape(rr.telegram_user or "—")
-    source    = _html.escape(rr.source or "—")
-    panel     = f"{admin_url}/admin/recursos"
+    ref_id  = rr.id
+    panel   = f"{admin_url}/admin/recursos"
+    uid_val = rr.uid or ("No sabe dónde encontrarlo" if rr.uid_unknown else "—")
 
-    rows_html = "".join(
-        f"<tr><td style='padding:6px 10px;color:#6b7280;font-size:13px;white-space:nowrap'>{k}</td>"
-        f"<td style='padding:6px 10px;font-size:13px;word-break:break-word'>{v}</td></tr>"
-        for k, v in [
-            ("ID",        f"#{rr.id}"),
-            ("Recurso",   res_title),
-            ("Nombre",    name),
-            ("Email",     _html.escape(rr.email)),
-            ("Exchange",  _html.escape(rr.exchange or "—")),
-            ("Bitvavo",   bitvavo),
-            ("UID",       uid_val),
-            ("Telegram",  telegram),
-            ("Origen",    source),
-            ("Consiente comunicaciones", "Sí" if rr.marketing_consent else "No"),
-        ]
-    )
-    table_html = (
-        "<table style='border-collapse:collapse;width:100%;margin:16px 0'>"
-        f"{rows_html}"
-        "</table>"
-    )
-    body_html = (
-        _p(f"Nueva solicitud de <strong style='font-weight:600'>{res_title}</strong>.") +
-        table_html +
-        _p(f"<a href='{panel}' style='color:#4f46e5'>Ver en el panel de admin →</a>", last=True)
-    )
-    html = _wrap(
-        f"[Recursos] Nueva solicitud #{rr.id} — {resource.title}",
-        body_html,
-    )
-    text_lines = [
-        f"[Recursos] Nueva solicitud #{rr.id} — {resource.title}",
-        "",
+    note_lines = [
+        f"Solicitud #{ref_id}",
+        f"Recurso:   {resource.title}",
         f"Nombre:    {rr.name}",
         f"Email:     {rr.email}",
-        f"Recurso:   {resource.title}",
         f"Exchange:  {rr.exchange or '—'}",
         f"Bitvavo:   {rr.bitvavo_status_label()}",
-        f"UID:       {rr.uid or ('No sabe dónde encontrarlo' if rr.uid_unknown else '—')}",
+        f"UID:       {uid_val}",
         f"Telegram:  {rr.telegram_user or '—'}",
-        f"Origen:    {rr.source or '—'}",
         f"Newsletter: {'Sí' if rr.marketing_consent else 'No'}",
+    ]
+
+    body_html = (
+        _p(
+            f"<strong style=\"font-weight:600;color:#111827;\">{_html.escape(rr.name)}</strong> "
+            f"ha solicitado <strong style=\"font-weight:600;color:#111827;\">"
+            f"{_html.escape(resource.title)}</strong>."
+        ) +
+        _note("\n".join(note_lines), variant="info") +
+        _cta("Ver solicitud en el panel", panel)
+    )
+    html = _wrap(
+        f"[Recursos] Nueva solicitud #{ref_id} — {resource.title}",
+        body_html,
+    )
+    text = "\n".join([
+        f"[Recursos] Nueva solicitud #{ref_id} — {resource.title}",
+        "",
+        *note_lines,
         "",
         f"Panel: {panel}",
         "",
         _footer_text(),
-    ]
-    return html, "\n".join(text_lines)
+    ])
+    return html, text
