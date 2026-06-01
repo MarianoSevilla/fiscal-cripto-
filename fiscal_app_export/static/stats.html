@@ -602,7 +602,7 @@ tbody tr:hover { background: var(--surface2); }
           <div class="health-sub">fallos recientes</div>
         </div>
         <div class="health-card">
-          <div class="health-label">Exchange problemático</div>
+          <div class="health-label">Exchange problemático (30d)</div>
           <div class="health-value neu" id="healthExcProb" style="font-size:1rem;">—</div>
           <div class="health-sub" id="healthExcProbPct">tasa de error</div>
         </div>
@@ -951,7 +951,7 @@ function generateInsights(d) {
   // Exchange más problemático
   if (meta.exchange_mas_problematico?.exchange !== 'N/A' && meta.exchange_mas_problematico?.tasa_error > 10) {
     const ep = meta.exchange_mas_problematico;
-    items.push({ icon: '🔧', html: `Exchange más problemático: <span class="crit">${ep.exchange}</span> con <span class="crit">${ep.tasa_error}%</span> de tasa de error. Revisar clasificador.` });
+    items.push({ icon: '🔧', html: `Exchange más problemático (últimos 30d): <span class="crit">${ep.exchange}</span> con <span class="crit">${ep.tasa_error}%</span> de tasa de error. Revisar clasificador.` });
   }
 
   // Pro users
@@ -1242,7 +1242,7 @@ async function loadStats() {
     const ep = meta.exchange_mas_problematico || {};
     document.getElementById('healthExcProb').textContent = ep.exchange || 'N/A';
     document.getElementById('healthExcProbPct').textContent =
-      ep.exchange && ep.exchange !== 'N/A' ? ep.tasa_error + '% tasa de error' : 'sin datos suficientes';
+      ep.exchange && ep.exchange !== 'N/A' ? ep.tasa_error + '% error (últimos 30d)' : 'sin datos suficientes';
 
     const hMs = document.getElementById('healthAvgMs');
     hMs.textContent = (fi.avg_processing_ms || 0).toLocaleString('es');

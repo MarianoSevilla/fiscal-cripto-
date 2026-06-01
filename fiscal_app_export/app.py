@@ -3362,6 +3362,13 @@ def _api_stats_data():
     except Exception:
         db.session.rollback()
 
+    # Window for "exchange más problemático": last 30 days only.
+    # Using the full history inflates rates with launch-period bugs already fixed,
+    # making healthy exchanges appear problematic (e.g. cryptocom at 45.8% historically,
+    # 0% in the last 30 days). Rolling window reflects current parser health.
+    _PROB_WINDOW = treinta_dias_atras
+    _MIN_UPLOADS_THRESHOLD = 5
+
     if _err_cat_col_ok:
         # Only count REAL parser bugs — exclude unsupported formats and user mistakes.
         # NULL legacy rows (pre-taxonomy) are treated as parser_error by default.
@@ -3370,6 +3377,7 @@ def _api_stats_data():
             .filter(
                 *_no_adm_rep,
                 FifoReport.status == "failed",
+                FifoReport.created_at >= _PROB_WINDOW,
                 (FifoReport.error_category == "parser_error")
                 | FifoReport.error_category.is_(None),
             )
@@ -3404,19 +3412,31 @@ def _api_stats_data():
         # Migration not yet applied — fall back to unfiltered count (old behavior)
         exc_fail_raw = (
             db.session.query(FifoReport.exchange, func.count(FifoReport.id).label("c"))
-            .filter(*_no_adm_rep, FifoReport.status == "failed")
+            .filter(
+                *_no_adm_rep,
+                FifoReport.status == "failed",
+                FifoReport.created_at >= _PROB_WINDOW,
+            )
             .group_by(FifoReport.exchange)
             .all()
         )
         exc_error_breakdown = {}
 
+    # Denominator: uploads (ok + failed) in the same 30-day window per exchange,
+    # so numerator and denominator are consistent.
+    _exc_total_30d_raw = (
+        db.session.query(FifoReport.exchange, func.count(FifoReport.id).label("c"))
+        .filter(*_no_adm_rep, FifoReport.created_at >= _PROB_WINDOW)
+        .group_by(FifoReport.exchange)
+        .all()
+    )
+    _exc_total_30d_map = {r.exchange: r.c for r in _exc_total_30d_raw}
+
     exc_mas_prob        = None
     exc_mas_prob_pct    = 0.0
     exc_mas_prob_total  = 0
-    # Minimum 5 uploads to avoid statistically meaningless rates (e.g. 2/3 = 66%)
-    _MIN_UPLOADS_THRESHOLD = 5
     for r in exc_fail_raw:
-        total_exc = exc_gen_map.get(r.exchange, 0) + r.c
+        total_exc = _exc_total_30d_map.get(r.exchange, r.c)
         if total_exc >= _MIN_UPLOADS_THRESHOLD:
             rate = round(r.c / total_exc * 100, 1)
             if rate > exc_mas_prob_pct:
@@ -3552,6 +3572,7 @@ def _api_stats_data():
                 "tasa_error":    exc_mas_prob_pct,
                 "total_uploads": exc_mas_prob_total,
                 "min_threshold": _MIN_UPLOADS_THRESHOLD,
+                "ventana_dias":  30,
             },
         },
         "sparklines": {
