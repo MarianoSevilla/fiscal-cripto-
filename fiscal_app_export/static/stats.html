@@ -334,13 +334,13 @@ tbody tr:hover { background: var(--surface2); }
       </div>
 
       <!-- 5: Contactos pendientes -->
-      <div class="kpi-card clickable" id="kpiContactCard" onclick="window.location='/admin/contactos?estado=nuevo'" title="Ver contactos pendientes">
+      <a href="/admin/contactos?estado=nuevo" class="kpi-card clickable" id="kpiContactCard" title="Ver contactos pendientes" style="text-decoration:none;display:block;color:inherit;">
         <div class="kpi-top">
           <span class="kpi-label">Pendientes</span>
         </div>
         <div class="kpi-value yellow" id="kpiContactos">—</div>
         <div class="kpi-sub">contactos sin responder</div>
-      </div>
+      </a>
 
       <!-- 6: Ingresos acumulados -->
       <div class="kpi-card hi">
