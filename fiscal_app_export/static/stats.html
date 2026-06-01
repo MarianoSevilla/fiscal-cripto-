@@ -106,6 +106,8 @@ main { max-width: var(--max); margin: 0 auto; padding: 4.5rem 1.5rem 4rem; }
   transition: border-color .15s;
 }
 .kpi-card:hover { border-color: var(--border-hi); }
+.kpi-card.clickable { cursor: pointer; }
+.kpi-card.clickable:hover { border-color: var(--border-hi); background: #19253d; }
 .kpi-card.hi   { border-color: rgba(0,200,150,0.22); }
 .kpi-card.warn { border-color: rgba(251,191,36,0.22); }
 .kpi-card.crit { border-color: rgba(248,113,113,0.22); }
@@ -332,7 +334,7 @@ tbody tr:hover { background: var(--surface2); }
       </div>
 
       <!-- 5: Contactos pendientes -->
-      <div class="kpi-card" id="kpiContactCard">
+      <div class="kpi-card clickable" id="kpiContactCard" onclick="window.location='/admin/contactos?estado=nuevo'" title="Ver contactos pendientes">
         <div class="kpi-top">
           <span class="kpi-label">Pendientes</span>
         </div>

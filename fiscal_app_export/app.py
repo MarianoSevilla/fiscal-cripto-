@@ -4858,6 +4858,15 @@ def _send_resource_internal_notification(rr: "ResourceRequest", resource: "Resou
 
 # ── Admin — panel de solicitudes de recursos ──────────────────────────────────
 
+@app.route("/admin/contactos", strict_slashes=False)
+@login_required
+@limiter.exempt
+def admin_contactos_page():
+    if not _is_admin():
+        return redirect("/dashboard")
+    return send_from_directory("static", "admin-contactos.html")
+
+
 @app.route("/admin/recursos", strict_slashes=False)
 @login_required
 @limiter.exempt

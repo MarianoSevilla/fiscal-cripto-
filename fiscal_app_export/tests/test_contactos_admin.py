@@ -340,3 +340,46 @@ def test_get_lista_incluye_archivados_con_param(client, admin_user, _app):
     with _app.app_context():
         Contacto.query.filter_by(id=cid_arch).delete()
         db.session.commit()
+
+
+# ── Tests página HTML /admin/contactos ───────────────────────────────────────
+
+def test_admin_page_accesible_para_admin(client, admin_user, _app):
+    """/admin/contactos devuelve 200 para admin."""
+    _login_admin(client)
+    r = client.get("/admin/contactos")
+    assert r.status_code == 200
+    assert b"admin-contactos" in r.data or b"contactos" in r.data.lower()
+
+
+def test_admin_page_redirige_usuario_normal(client, normal_user, _app):
+    """/admin/contactos redirige a /dashboard para usuario sin privilegios."""
+    _login_normal(client)
+    r = client.get("/admin/contactos")
+    assert r.status_code in (302, 403)
+    if r.status_code == 302:
+        assert b"/dashboard" in r.data or r.location.endswith("/dashboard")
+
+
+def test_admin_page_sin_sesion_redirige_login(client, _app):
+    """/admin/contactos sin sesión redirige al login."""
+    r = client.get("/admin/contactos")
+    assert r.status_code in (302, 401)
+
+
+def test_respuesta_api_incluye_campos_requeridos(client, admin_user, _app):
+    """Cada item del GET /api/admin/contactos tiene los campos esperados por la UI."""
+    cid = _make_contacto(_app, nombre="Campo test")
+    _login_admin(client)
+    r = client.get("/api/admin/contactos")
+    assert r.status_code == 200
+    items = r.get_json()
+    item  = next((c for c in items if c["id"] == cid), None)
+    assert item is not None
+    for campo in ("id", "created_at", "nombre", "email_mask", "tipo_consulta",
+                  "estado", "archived_at", "mensaje_corto"):
+        assert campo in item, f"Falta campo '{campo}' en respuesta API"
+
+    with _app.app_context():
+        Contacto.query.filter_by(id=cid).delete()
+        db.session.commit()
