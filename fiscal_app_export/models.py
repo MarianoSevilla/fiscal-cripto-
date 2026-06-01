@@ -129,6 +129,7 @@ class Contacto(db.Model):
     ip            = db.Column(db.String(45),  nullable=True)
     user_agent    = db.Column(db.Text,        nullable=True)
     estado        = db.Column(db.String(20),  default="nuevo", nullable=False)
+    archived_at   = db.Column(db.DateTime,   nullable=True,  default=None)
 
     def __repr__(self) -> str:
         return f"<Contacto {self.email} tipo={self.tipo_consulta}>"

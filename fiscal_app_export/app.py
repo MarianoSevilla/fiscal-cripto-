@@ -3187,12 +3187,14 @@ def _api_stats_data():
         *_no_adm_rep, FifoReport.status == "generated", FifoReport.created_at >= siete_dias_atras
     ).all()
 
-    # ── CONTACTOS ─────────────────────────────────────────────────────────────
-    total_c    = db.session.query(func.count(Contacto.id)).scalar() or 0
-    c_nuevos   = db.session.query(func.count(Contacto.id)).filter(Contacto.estado == "nuevo").scalar() or 0
-    c_resp     = db.session.query(func.count(Contacto.id)).filter(Contacto.estado == "respondido").scalar() or 0
+    # ── CONTACTOS — excluye archivados ───────────────────────────────────────
+    _no_arch   = [Contacto.archived_at.is_(None)]
+    total_c    = db.session.query(func.count(Contacto.id)).filter(*_no_arch).scalar() or 0
+    c_nuevos   = db.session.query(func.count(Contacto.id)).filter(*_no_arch, Contacto.estado == "nuevo").scalar() or 0
+    c_resp     = db.session.query(func.count(Contacto.id)).filter(*_no_arch, Contacto.estado == "respondido").scalar() or 0
     por_tipo_c = (
         db.session.query(Contacto.tipo_consulta, func.count(Contacto.id).label("c"))
+        .filter(*_no_arch)
         .group_by(Contacto.tipo_consulta)
         .order_by(func.count(Contacto.id).desc())
         .all()
@@ -4939,6 +4941,84 @@ def admin_recursos_delete(req_id):
     db.session.delete(rr)
     db.session.commit()
     return jsonify({"ok": True})
+
+
+# ── ADMIN CONTACTOS ───────────────────────────────────────────────────────────
+
+@app.route("/api/admin/contactos")
+@login_required
+def admin_contactos_lista():
+    """Lista todos los contactos. Admins únicamente.
+    Query params opcionales:
+      - archivados=1  → incluye archivados (por defecto solo activos)
+      - estado=nuevo|respondido|...
+    """
+    if not _is_admin():
+        return jsonify({"error": "Acceso denegado."}), 403
+
+    incluir_archivados = request.args.get("archivados") == "1"
+    filtros = []
+    if not incluir_archivados:
+        filtros.append(Contacto.archived_at.is_(None))
+    estado_q = request.args.get("estado")
+    if estado_q:
+        filtros.append(Contacto.estado == estado_q)
+
+    contactos = (
+        Contacto.query
+        .filter(*filtros)
+        .order_by(Contacto.created_at.desc())
+        .all()
+    )
+
+    def _mask(email):
+        p = email.split("@")
+        return (p[0][:2] + "***@" + p[1]) if len(p) == 2 else "***"
+
+    return jsonify([{
+        "id":           c.id,
+        "created_at":   c.created_at.strftime("%Y-%m-%d %H:%M"),
+        "nombre":       c.nombre,
+        "email_mask":   _mask(c.email),
+        "tipo_consulta": c.tipo_consulta,
+        "estado":       c.estado,
+        "archived_at":  c.archived_at.strftime("%Y-%m-%d %H:%M") if c.archived_at else None,
+        "mensaje_corto": (c.mensaje or "")[:120],
+    } for c in contactos])
+
+
+_ACCIONES_CONTACTO = {"responder", "archivar", "desarchivar"}
+
+@app.route("/api/admin/contactos/<int:contacto_id>", methods=["PATCH"])
+@login_required
+def admin_contactos_patch(contacto_id):
+    """Actualiza estado o archivado de un contacto. Admins únicamente.
+    Body JSON: { "accion": "responder" | "archivar" | "desarchivar" }
+    """
+    if not _is_admin():
+        return jsonify({"error": "Acceso denegado."}), 403
+
+    data   = request.get_json(silent=True) or {}
+    accion = (data.get("accion") or "").strip().lower()
+    if accion not in _ACCIONES_CONTACTO:
+        return jsonify({"error": f"Acción no reconocida. Valores válidos: {sorted(_ACCIONES_CONTACTO)}"}), 400
+
+    c = Contacto.query.get_or_404(contacto_id)
+
+    if accion == "responder":
+        c.estado = "respondido"
+    elif accion == "archivar":
+        c.archived_at = datetime.utcnow()
+    elif accion == "desarchivar":
+        c.archived_at = None
+
+    db.session.commit()
+    return jsonify({
+        "ok":          True,
+        "id":          c.id,
+        "estado":      c.estado,
+        "archived_at": c.archived_at.strftime("%Y-%m-%d %H:%M") if c.archived_at else None,
+    })
 
 
 if __name__ == "__main__":
