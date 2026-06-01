@@ -1955,6 +1955,10 @@ def analizar():
                 # Excepción tipificada: MexcUnsupportedFormatError / MexcUserError
                 _err_category = e.category
                 _err_code     = e.code
+            elif isinstance(e, ValueError) and exchange == "coinbase":
+                _msg_lower = str(e).lower()
+                if "cabecera" in _msg_lower or "historial completo de transacciones" in _msg_lower:
+                    _err_category, _err_code = "user_error", "invalid_coinbase_header"
             elif isinstance(e, ValueError) and exchange == "mexc":
                 # Heurística de fallback para ValueError sin tipar (datos históricos)
                 _msg_lower = str(e).lower()

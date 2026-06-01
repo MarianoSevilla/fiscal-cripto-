@@ -98,11 +98,39 @@ class OperacionDesconocida:
 
 # ── CLASIFICADOR ──────────────────────────────
 
+_COLS_REQUERIDAS = {"Timestamp", "Transaction Type", "Asset", "Quantity Transacted"}
+_HEADER_SEARCH_LIMIT = 20  # máximo de filas en que buscamos la cabecera
+
+
+def _detectar_fila_cabecera(filepath: str) -> int:
+    """
+    Devuelve el índice (0-based) de la fila que contiene la cabecera del CSV.
+    Lanza ValueError si no se encuentra ninguna fila compatible en las primeras
+    _HEADER_SEARCH_LIMIT líneas.
+    """
+    try:
+        with open(filepath, encoding="utf-8", errors="replace") as f:
+            for i, raw_line in enumerate(f):
+                if i >= _HEADER_SEARCH_LIMIT:
+                    break
+                cols = {c.strip().strip('"') for c in raw_line.split(",")}
+                if _COLS_REQUERIDAS.issubset(cols):
+                    return i
+    except OSError:
+        pass
+    raise ValueError(
+        "Este archivo de Coinbase no contiene la cabecera de transacciones esperada. "
+        "Es posible que hayas descargado otro tipo de informe o que Coinbase haya "
+        "cambiado el formato. Descarga el historial completo de transacciones desde "
+        "Coinbase y vuelve a intentarlo."
+    )
+
+
 class ClasificadorCoinbase:
 
     def __init__(self, filepath: str):
-        # Las primeras 3 filas son metadatos: vacía, "Transactions", usuario
-        self.df = pd.read_csv(filepath, skiprows=3)
+        header_row = _detectar_fila_cabecera(filepath)
+        self.df = pd.read_csv(filepath, skiprows=header_row)
         self.compraventas:  list[OperacionCompraventa] = []
         self.swaps:         list[OperacionSwap]        = []
         self.rendimientos:  list[OperacionRendimiento] = []

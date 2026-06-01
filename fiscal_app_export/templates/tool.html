@@ -1752,6 +1752,9 @@
     if (e.includes('vacío')) return { ...ERRORES.ficheroVacio };
     if (e.includes('extensión')) return { ...ERRORES.formatoIncorrecto };
     if (e.includes('no se pudo leer') || e.includes('codec') || e.includes('unicode') || e.includes('Unicode') || e.includes('válido')) return { ...ERRORES.noSeLee };
+    if (e.includes('cabecera de transacciones') || e.includes('historial completo de transacciones desde Coinbase')) {
+      return { icono: '📄', titulo: 'Archivo de Coinbase incorrecto', desc: esc(e), pasos: [] };
+    }
     if (e.includes('columnas') || e.includes('formato esperado')) return { ...ERRORES.columnasIncorrectas };
     if (e.includes('ejercicio') || e.includes('dígitos') || e.includes('anterior a') || e.includes('posterior a')) {
       return { icono: '📅', titulo: 'Año fiscal inválido', desc: esc(e), pasos: [] };
