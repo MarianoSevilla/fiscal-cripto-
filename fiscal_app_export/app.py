@@ -4985,13 +4985,14 @@ def admin_contactos_lista():
         return (p[0][:2] + "***@" + p[1]) if len(p) == 2 else "***"
 
     return jsonify([{
-        "id":           c.id,
-        "created_at":   c.created_at.strftime("%Y-%m-%d %H:%M"),
-        "nombre":       c.nombre,
-        "email_mask":   _mask(c.email),
+        "id":            c.id,
+        "created_at":    c.created_at.strftime("%Y-%m-%d %H:%M"),
+        "nombre":        c.nombre,
+        "email":         c.email,          # real — endpoint admin-only
+        "email_mask":    _mask(c.email),   # para sidebar (privacidad visual)
         "tipo_consulta": c.tipo_consulta,
-        "estado":       c.estado,
-        "archived_at":  c.archived_at.strftime("%Y-%m-%d %H:%M") if c.archived_at else None,
+        "estado":        c.estado,
+        "archived_at":   c.archived_at.strftime("%Y-%m-%d %H:%M") if c.archived_at else None,
         "mensaje_corto": (c.mensaje or "")[:120],
     } for c in contactos])
 

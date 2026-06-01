@@ -376,8 +376,8 @@ def test_respuesta_api_incluye_campos_requeridos(client, admin_user, _app):
     items = r.get_json()
     item  = next((c for c in items if c["id"] == cid), None)
     assert item is not None
-    for campo in ("id", "created_at", "nombre", "email_mask", "tipo_consulta",
-                  "estado", "archived_at", "mensaje_corto"):
+    for campo in ("id", "created_at", "nombre", "email", "email_mask",
+                  "tipo_consulta", "estado", "archived_at", "mensaje_corto"):
         assert campo in item, f"Falta campo '{campo}' en respuesta API"
 
     with _app.app_context():

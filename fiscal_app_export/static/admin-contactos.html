@@ -275,6 +275,9 @@ body { padding-top: 64px; }
 
   function renderDetail(c) {
     const isArchived = !!c.archived_at;
+    const tipoLabel  = TIPO_LABELS[c.tipo_consulta] || c.tipo_consulta;
+    const mailtoHref = buildMailto(c);
+
     document.getElementById('detail-empty').style.display   = 'none';
     const el = document.getElementById('detail-content');
     el.style.display = 'block';
@@ -282,11 +285,13 @@ body { padding-top: 64px; }
       <div class="detail-header">
         <div class="detail-meta-id">#${c.id} · ${fmtDate(c.created_at)}</div>
         <div class="detail-name">${esc(c.nombre)}</div>
-        <div class="detail-email">${esc(c.email_mask)}</div>
+        <div class="detail-email">
+          <a href="mailto:${esc(c.email)}" style="color:inherit;">${esc(c.email)}</a>
+        </div>
       </div>
 
       <div class="detail-grid">
-        ${field('Tipo', TIPO_LABELS[c.tipo_consulta] || c.tipo_consulta)}
+        ${field('Tipo', tipoLabel)}
         ${field('Estado', `<span class="req-badge badge-${isArchived ? 'archivado' : c.estado}">${isArchived ? 'Archivado' : (c.estado === 'respondido' ? 'Respondido' : 'Pendiente')}</span>`)}
         ${field('Recibido', fmtDate(c.created_at))}
         ${field('Archivado', c.archived_at ? fmtDate(c.archived_at) : '—')}
@@ -300,11 +305,12 @@ body { padding-top: 64px; }
       <div class="detail-section">
         <div class="detail-section-title">Acciones</div>
         <div class="action-row">
+          <a href="${mailtoHref}" class="action-btn" style="display:inline-block;">✉ Responder por email</a>
           ${!isArchived && c.estado !== 'respondido' ? `
-            <button class="action-btn" onclick="doAccion(${c.id},'responder')">Marcar respondido</button>
+            <button class="action-btn secondary" onclick="doAccion(${c.id},'responder')">Marcar respondido</button>
           ` : ''}
           ${!isArchived ? `
-            <button class="action-btn secondary" onclick="doAccion(${c.id},'archivar')">Archivar</button>
+            <button class="action-btn danger" onclick="doAccion(${c.id},'archivar')">Archivar</button>
           ` : `
             <button class="action-btn secondary" onclick="doAccion(${c.id},'desarchivar')">Desarchivar</button>
           `}
@@ -313,6 +319,15 @@ body { padding-top: 64px; }
         <div class="msg-err" id="accion-err"></div>
       </div>
     `;
+  }
+
+  function buildMailto(c) {
+    const tipoLabel = TIPO_LABELS[c.tipo_consulta] || c.tipo_consulta;
+    const subject   = encodeURIComponent(`Re: ${tipoLabel} — Mariano Sevilla`);
+    const body      = encodeURIComponent(
+      `Hola ${c.nombre},\n\nGracias por ponerte en contacto.\n\n`
+    );
+    return `mailto:${encodeURIComponent(c.email)}?subject=${subject}&body=${body}`;
   }
 
   // ── Acción PATCH ──────────────────────────────────────────────────────────
