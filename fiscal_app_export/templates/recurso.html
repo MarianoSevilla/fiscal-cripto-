@@ -106,6 +106,10 @@ body {
   line-height: 1.2;
   margin-bottom: 1rem;
 }
+.hero h1 em, .hero-subtitle em {
+  font-style: normal;
+  color: var(--accent);
+}
 .hero-subtitle {
   font-size: 1.05rem;
   color: var(--muted);
@@ -362,9 +366,9 @@ select option { background: #101829; }
       <span class="tag tag-neutral">{{ resource.category | capitalize }}</span>
       {% endif %}
     </div>
-    <h1>{{ resource.headline or resource.title }}</h1>
+    <h1>{{ (resource.headline or resource.title) | safe }}</h1>
     {% if resource.subtitle %}
-    <p class="hero-subtitle">{{ resource.subtitle }}</p>
+    <p class="hero-subtitle">{{ resource.subtitle | safe }}</p>
     {% endif %}
   </section>
 
