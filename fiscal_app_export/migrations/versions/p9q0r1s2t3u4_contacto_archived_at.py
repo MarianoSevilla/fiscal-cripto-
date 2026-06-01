@@ -21,12 +21,9 @@ depends_on    = None
 
 
 def upgrade():
-    with op.batch_alter_table("contactos") as batch_op:
-        batch_op.add_column(
-            sa.Column("archived_at", sa.DateTime(), nullable=True)
-        )
+    # IF NOT EXISTS: idempotente si la columna ya fue creada manualmente.
+    op.execute("ALTER TABLE contactos ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP NULL")
 
 
 def downgrade():
-    with op.batch_alter_table("contactos") as batch_op:
-        batch_op.drop_column("archived_at")
+    op.execute("ALTER TABLE contactos DROP COLUMN IF EXISTS archived_at")
