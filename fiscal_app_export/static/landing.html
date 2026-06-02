@@ -426,6 +426,7 @@
     .footer-inner { grid-template-columns: 1fr; }
     .nav-links { display: none; }
     .authors { grid-template-columns: 1fr; }
+    .faq-grid { grid-template-columns: 1fr !important; }
   }
   @media (max-width: 480px) {
     h1 { font-size: 2rem; letter-spacing: -0.02em; }
@@ -863,6 +864,238 @@
     </a>
 
   </div>
+</section>
+
+<!-- ── FAQ HOMEPAGE ──────────────────────── -->
+<section style="border-top:1px solid var(--border);padding:4rem 0;">
+  <div style="max-width:var(--max-w);margin:0 auto;padding:0 2rem;">
+
+    <h2 style="font-family:var(--font-display);font-size:clamp(1.75rem,2.8vw,2.2rem);font-weight:800;line-height:1.15;margin-bottom:0.75rem;">
+      Preguntas frecuentes sobre impuestos de criptomonedas
+    </h2>
+    <p style="color:var(--muted);max-width:1100px;line-height:1.75;margin-bottom:3rem;">
+      Las dudas más habituales de los contribuyentes con criptomonedas en España.
+      Para consultas sobre tu situación concreta, considera el apoyo de un asesor fiscal cualificado.
+    </p>
+
+    <div class="faq-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:2rem 3rem;">
+
+      <div>
+        <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);">¿Tengo que declarar mis criptomonedas en España?</h3>
+        <p style="color:var(--muted);font-size:15px;line-height:1.75;">
+          Sí. Cualquier ganancia o pérdida derivada de la venta, permuta o intercambio de criptomonedas
+          debe declararse en la declaración de la renta, en la base imponible del ahorro. La obligación existe
+          desde 2019, cuando la Agencia Tributaria incluyó las criptomonedas en sus planes de control.
+          No declarar puede generar sanciones, recargos e intereses. La obligación no depende del importe
+          de las operaciones ni de si has retirado dinero a una cuenta bancaria: el simple intercambio
+          entre criptomonedas ya es un hecho imponible.
+        </p>
+      </div>
+
+      <div>
+        <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);">¿Qué operaciones con criptomonedas tributan ante Hacienda?</h3>
+        <p style="color:var(--muted);font-size:15px;line-height:1.75;">
+          Tributan como ganancias o pérdidas patrimoniales: las ventas por euros u otras monedas fiat,
+          los swaps entre criptomonedas (por ejemplo, Bitcoin por Ethereum) y los pagos con criptomonedas.
+          Tributan como rendimientos del capital mobiliario: el staking, los airdrops y las recompensas
+          por referido. Lo que no genera tributación directa es simplemente mantener criptomonedas sin
+          venderlas ni permutarlas. La herramienta clasifica automáticamente cada tipo de operación al
+          procesar el CSV de tu exchange.
+        </p>
+      </div>
+
+      <div>
+        <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);">¿Qué es el método FIFO y por qué es obligatorio?</h3>
+        <p style="color:var(--muted);font-size:15px;line-height:1.75;">
+          FIFO significa «First In, First Out»: al vender criptomonedas, Hacienda considera que vendes
+          primero las que compraste antes. Está regulado en el artículo 37.2 de la Ley del IRPF y es
+          el único sistema válido en España. Significa que el precio de adquisición depende del historial
+          completo de compras anteriores, independientemente del año fiscal. No puedes elegir qué unidades
+          vender para optimizar el resultado: el orden cronológico de compra es obligatorio por ley.
+        </p>
+      </div>
+
+      <div>
+        <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);">¿Cómo se calculan las ganancias de Bitcoin?</h3>
+        <p style="color:var(--muted);font-size:15px;line-height:1.75;">
+          La ganancia patrimonial de una venta de Bitcoin se calcula como la diferencia entre el valor de
+          transmisión (precio de venta en euros) y el valor de adquisición según el método FIFO (precio
+          de las primeras unidades compradas). Si compraste 0,1 BTC a 20.000 € y lo vendes a 35.000 €,
+          la ganancia es 1.500 €. A esa ganancia se aplica el tipo del ahorro: entre el 19% y el 28%
+          según el importe total del ejercicio. El mismo cálculo aplica a Ethereum, Solana o cualquier
+          otra criptomoneda.
+        </p>
+      </div>
+
+      <div>
+        <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);">¿Qué ocurre si tengo criptomonedas en varios exchanges?</h3>
+        <p style="color:var(--muted);font-size:15px;line-height:1.75;">
+          Si usas más de un exchange —Binance y Bitvavo, por ejemplo— debes consolidar el historial
+          completo de todos ellos para aplicar correctamente el método FIFO. Hacienda considera todas
+          tus criptomonedas de forma conjunta: las compras en Binance afectan al coste de adquisición
+          de las ventas en Bitvavo si son del mismo activo. La herramienta permite procesar el CSV de
+          cada exchange por separado y combina los datos automáticamente para generar un informe fiscal
+          unificado con todos tus exchanges.
+        </p>
+      </div>
+
+      <div>
+        <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);">¿Cómo tributa el staking en España?</h3>
+        <p style="color:var(--muted);font-size:15px;line-height:1.75;">
+          Las recompensas por staking tributan como rendimientos del capital mobiliario a su valor de
+          mercado en el momento de recibirlas (casilla 0033 de la declaración de la renta), no como
+          ganancias patrimoniales. El importe se considera ingreso en el año en que se acredita.
+          Cuando posteriormente vendes esas monedas, la ganancia o pérdida se calcula sobre ese valor
+          de adquisición inicial. La herramienta detecta y clasifica automáticamente las operaciones de
+          staking en el CSV de tu exchange, separándolas en el informe con la clasificación correcta.
+        </p>
+      </div>
+
+      <div>
+        <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);">¿Puedo compensar pérdidas de criptomonedas?</h3>
+        <p style="color:var(--muted);font-size:15px;line-height:1.75;">
+          Sí. Las pérdidas patrimoniales de criptomonedas pueden compensarse con las ganancias del mismo
+          tipo en el mismo ejercicio. Si el saldo es negativo, puedes compensar hasta el 25% de los
+          rendimientos del capital mobiliario positivos del año. El resto puede trasladarse a los cuatro
+          ejercicios siguientes. Por ejemplo, si en 2024 tienes pérdidas de 3.000 € y ganancias de 1.000 €,
+          los 2.000 € negativos se pueden aplicar en ejercicios 2025–2028. El informe detalla el resultado
+          neto del ejercicio para facilitar este cálculo.
+        </p>
+      </div>
+
+      <div>
+        <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);">¿Sirve el informe para Binance, Bitvavo, Coinbase y Kraken?</h3>
+        <p style="color:var(--muted);font-size:15px;line-height:1.75;">
+          Sí. La herramienta procesa directamente los CSV que exportan Binance, Bitvavo, Coinbase, Kraken,
+          Bit2Me, Nexo, Crypto.com y Uphold. Solo descarga el historial de operaciones desde la sección
+          de exportación de cada exchange y súbelo a la plataforma. El sistema identifica automáticamente
+          el formato de cada exchange, clasifica las operaciones y aplica el método FIFO. El PDF incluye
+          todas las operaciones del ejercicio con el detalle necesario para la declaración de la renta o
+          para entregarlo a tu gestor fiscal.
+        </p>
+      </div>
+
+      <div>
+        <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);">¿Qué documentos debo conservar por si Hacienda los solicita?</h3>
+        <p style="color:var(--muted);font-size:15px;line-height:1.75;">
+          La Agencia Tributaria puede solicitar justificación de tus operaciones en una comprobación fiscal.
+          Se recomienda conservar durante al menos cuatro años: el historial completo exportado de cada
+          exchange (CSV o equivalente), justificantes de compra y venta, y el informe fiscal generado.
+          Cuantos más registros tengas del precio de adquisición y la fecha de cada operación, más fácil
+          será demostrar la corrección del cálculo ante un posible requerimiento de la Agencia Tributaria.
+          La herramienta genera un informe detallado que puede servir como documentación de soporte.
+        </p>
+      </div>
+
+      <div>
+        <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);">¿Puedo corregir declaraciones de años anteriores?</h3>
+        <p style="color:var(--muted);font-size:15px;line-height:1.75;">
+          Sí. Si detectas que declaraste incorrectamente las ganancias o pérdidas de criptomonedas en
+          ejercicios anteriores, puedes presentar una declaración rectificativa (si el error perjudicó a
+          Hacienda) o solicitar una rectificación de autoliquidación (si el error fue a tu perjuicio).
+          El plazo general es de cuatro años desde el fin del plazo de presentación original. Si la
+          corrección implica una cuota adicional, la regularización voluntaria reduce las sanciones
+          aplicables. Para estos casos, el asesoramiento de un profesional fiscal es especialmente
+          recomendable.
+        </p>
+      </div>
+
+      <div>
+        <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);">¿El informe sustituye a un asesor fiscal?</h3>
+        <p style="color:var(--muted);font-size:15px;line-height:1.75;">
+          No. El informe es un documento de organización fiscal que aplica el método FIFO según la
+          normativa general española. No constituye asesoramiento fiscal ni legal. Cada situación puede
+          tener particularidades —operaciones en el extranjero, derivados, NFT, pérdidas de ejercicios
+          anteriores, cambios normativos— que requieren la valoración de un profesional. El informe sirve
+          como punto de partida sólido y facilita el trabajo de tu gestor, pero no puede reemplazar el
+          criterio de un asesor cualificado ante situaciones complejas o ante una inspección de la
+          Agencia Tributaria.
+        </p>
+      </div>
+
+      <div>
+        <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);">¿Qué pasa si Hacienda me pide justificar mis operaciones?</h3>
+        <p style="color:var(--muted);font-size:15px;line-height:1.75;">
+          Si recibes un requerimiento de la Agencia Tributaria para justificar operaciones con
+          criptomonedas, debes aportar documentación que acredite el origen, fecha, precio de adquisición
+          y valor de transmisión de cada operación. El informe generado, junto con los CSV originales de
+          los exchanges, puede servir como documentación de soporte. No ignores el requerimiento ni
+          superes el plazo indicado. En estos casos, la asistencia de un asesor fiscal con experiencia
+          en criptomonedas es especialmente recomendable para gestionar correctamente la respuesta.
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "¿Tengo que declarar mis criptomonedas en España?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Sí. Cualquier ganancia o pérdida derivada de la venta, permuta o intercambio de criptomonedas debe declararse en la declaración de la renta, en la base imponible del ahorro. La obligación existe desde 2019. No declarar puede generar sanciones, recargos e intereses. El simple intercambio entre criptomonedas ya es un hecho imponible." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Qué operaciones con criptomonedas tributan ante Hacienda?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Tributan como ganancias o pérdidas patrimoniales: ventas por euros, swaps entre criptomonedas y pagos con criptomonedas. Tributan como rendimientos del capital mobiliario: el staking, los airdrops y las recompensas por referido. Mantener criptomonedas sin venderlas ni permutarlas no genera tributación directa." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Qué es el método FIFO y por qué es obligatorio?",
+        "acceptedAnswer": { "@type": "Answer", "text": "FIFO significa First In, First Out: al vender criptomonedas, Hacienda considera que vendes primero las que compraste antes. Está regulado en el artículo 37.2 de la Ley del IRPF y es el único método válido en España para calcular ganancias y pérdidas patrimoniales de criptomonedas." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Cómo se calculan las ganancias de Bitcoin?",
+        "acceptedAnswer": { "@type": "Answer", "text": "La ganancia patrimonial de una venta de Bitcoin se calcula como la diferencia entre el valor de transmisión (precio de venta en euros) y el valor de adquisición según el método FIFO. A esa ganancia se aplica el tipo del ahorro, entre el 19% y el 28% según el importe total del ejercicio." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Qué ocurre si tengo criptomonedas en varios exchanges?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Debes consolidar el historial completo de todos los exchanges para aplicar correctamente el método FIFO. Hacienda considera todas tus criptomonedas de forma conjunta: las compras en Binance afectan al coste de adquisición de las ventas en Bitvavo si son del mismo activo." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Cómo tributa el staking en España?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Las recompensas por staking tributan como rendimientos del capital mobiliario a su valor de mercado en el momento de recibirlas, en la casilla 0033 de la declaración de la renta. No tributan como ganancias patrimoniales. El importe se considera ingreso en el año en que se acredita." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Puedo compensar pérdidas de criptomonedas?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Sí. Las pérdidas patrimoniales de criptomonedas pueden compensarse con las ganancias del mismo tipo en el mismo ejercicio. Si el saldo es negativo, puedes compensar hasta el 25% de los rendimientos del capital mobiliario positivos del año, y el resto trasladarlo a los cuatro ejercicios siguientes." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Sirve el informe para Binance, Bitvavo, Coinbase y Kraken?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Sí. La herramienta procesa directamente los CSV de Binance, Bitvavo, Coinbase, Kraken, Bit2Me, Nexo, Crypto.com y Uphold. Solo descarga el historial de operaciones de tu exchange y súbelo a la plataforma. El sistema clasifica las operaciones y aplica el método FIFO automáticamente." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Qué documentos debo conservar por si Hacienda los solicita?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Se recomienda conservar durante al menos cuatro años: el historial completo exportado de cada exchange, justificantes de compra y venta, y el informe fiscal generado. Cuantos más registros tengas del precio de adquisición y la fecha de cada operación, más fácil será demostrar la corrección del cálculo ante un requerimiento de la Agencia Tributaria." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Puedo corregir declaraciones de años anteriores?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Sí. Puedes presentar una declaración rectificativa o solicitar una rectificación de autoliquidación. El plazo general es de cuatro años desde el fin del plazo de presentación original. Si la corrección implica una cuota adicional, la regularización voluntaria reduce las sanciones aplicables." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿El informe sustituye a un asesor fiscal?",
+        "acceptedAnswer": { "@type": "Answer", "text": "No. El informe es un documento de organización fiscal que aplica el método FIFO según la normativa general española. No constituye asesoramiento fiscal ni legal. Cada situación puede tener particularidades que requieren la valoración de un profesional cualificado." }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Qué pasa si Hacienda me pide justificar mis operaciones?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Debes aportar documentación que acredite el origen, fecha, precio de adquisición y valor de transmisión de cada operación. El informe generado, junto con los CSV originales de los exchanges, puede servir como documentación de soporte. No ignores el requerimiento ni superes el plazo indicado." }
+      }
+    ]
+  }
+  </script>
 </section>
 
 <!-- ── TEXTO LEGAL (fuera del footer) ───────── -->
