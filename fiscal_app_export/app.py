@@ -2665,7 +2665,8 @@ def me():
         "plan":           current_user.plan,
         "email_verified": current_user.email_verified_at is not None,
         "is_google":      current_user.google_id is not None,
-        "is_admin":       _is_admin(),
+        "is_admin":           _is_admin(),
+        "is_fiscal_advisor":  _is_fiscal_advisor(),
         "created_at":     current_user.created_at.isoformat() if current_user.created_at else None,
     }})
 

@@ -158,7 +158,7 @@
             avatar.textContent = name.charAt(0).toUpperCase();
           }
 
-          // Mostrar items de admin si corresponde
+          // Mostrar items según rol
           if (user.is_admin) {
             const planes          = document.getElementById('snavItemPlanes');
             const stats           = document.getElementById('snavItemStats');
@@ -171,6 +171,11 @@
             if (adminAsesoria)  adminAsesoria.classList.remove('snav-hidden');
             if (adminComms)     adminComms.classList.remove('snav-hidden');
             if (adminRecursos)  adminRecursos.classList.remove('snav-hidden');
+            if (misSolicitudes) misSolicitudes.classList.remove('snav-hidden');
+          } else if (user.is_fiscal_advisor) {
+            const adminAsesoria  = document.getElementById('snavItemAdminAsesoria');
+            const misSolicitudes = document.getElementById('snavItemMisSolicitudes');
+            if (adminAsesoria)  adminAsesoria.classList.remove('snav-hidden');
             if (misSolicitudes) misSolicitudes.classList.remove('snav-hidden');
           }
         }
