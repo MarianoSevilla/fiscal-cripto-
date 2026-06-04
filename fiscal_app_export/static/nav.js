@@ -173,10 +173,8 @@
             if (adminRecursos)  adminRecursos.classList.remove('snav-hidden');
             if (misSolicitudes) misSolicitudes.classList.remove('snav-hidden');
           } else if (user.is_fiscal_advisor) {
-            const adminAsesoria  = document.getElementById('snavItemAdminAsesoria');
-            const misSolicitudes = document.getElementById('snavItemMisSolicitudes');
-            if (adminAsesoria)  adminAsesoria.classList.remove('snav-hidden');
-            if (misSolicitudes) misSolicitudes.classList.remove('snav-hidden');
+            const adminAsesoria = document.getElementById('snavItemAdminAsesoria');
+            if (adminAsesoria) adminAsesoria.classList.remove('snav-hidden');
           }
         }
       }
