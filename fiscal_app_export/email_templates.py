@@ -449,6 +449,44 @@ def processing_error_email(exchange: str, context_line: str) -> tuple[str, str]:
     return html, text
 
 
+def advisory_message_email(advisory, message: str) -> tuple[str, str]:
+    """Email al cliente con un mensaje del asesor (sin presupuesto ni link de pago)."""
+    name    = _html.escape(advisory.full_name)
+    service = _html.escape(advisory.service_label())
+    year    = _html.escape(str(advisory.tax_year))
+    ref_id  = advisory.id
+
+    body_html = (
+        _p(f"Hola, {name}.") +
+        _p("Hemos revisado tu solicitud de asesoramiento fiscal y tenemos un mensaje para ti:") +
+        _note(message, variant="info") +
+        _p(
+            f'Si tienes alguna pregunta o necesitas aclarar algo, responde a este email '
+            f'o contáctanos directamente.',
+            last=True,
+        ) +
+        _ref(f"Solicitud #{ref_id} · {service} · Ejercicio {year}")
+    )
+    html = _wrap("Mensaje sobre tu solicitud de asesoramiento", body_html, legal_footer=False)
+
+    text = "\n".join([
+        "Mensaje sobre tu solicitud de asesoramiento",
+        "",
+        f"Hola, {advisory.full_name}.",
+        "",
+        "Hemos revisado tu solicitud de asesoramiento fiscal y tenemos un mensaje para ti:",
+        "",
+        message,
+        "",
+        "Si tienes alguna pregunta, responde a este email o contáctanos directamente.",
+        "",
+        f"Solicitud #{ref_id} · {advisory.service_label()} · Ejercicio {advisory.tax_year}",
+        "",
+        _footer_text(legal=False),
+    ])
+    return html, text
+
+
 def advisory_quote_email(advisory, payment_url: str) -> tuple[str, str]:
     """Email al cliente con el presupuesto y el link de pago PayPal."""
     name         = _html.escape(advisory.full_name)

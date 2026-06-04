@@ -185,6 +185,7 @@ from email_templates import (  # noqa: E402
     advisory_confirmation_email,
     advisory_status_email,
     advisory_quote_email,
+    advisory_message_email,
     advisory_payment_confirmed_email,
     advisory_payment_internal_email,
     password_reset_email,
@@ -4047,6 +4048,67 @@ def advisory_enviar_presupuesto(req_id):
     })
 
 
+# ── ENVIAR MENSAJE SIN PRESUPUESTO ───────────────────────────────────────────
+
+@app.route("/api/admin/asesoramiento/solicitudes/<int:req_id>/mensaje", methods=["POST"])
+@require_fiscal_advisor
+def advisory_enviar_mensaje(req_id):
+    """Envía un mensaje al cliente sin generar presupuesto ni link de pago.
+
+    Opcionalmente cambia el estado a 'pendiente_info'.
+    Registra el mensaje como nota interna y en el historial de estados.
+    """
+    advisory = FiscalAdvisoryRequest.query.get_or_404(req_id)
+
+    # No permitir mensajes en estados terminales
+    _ESTADOS_BLOQUEADOS = ("paid_received", "completed", "cancelled", "refunded")
+    if advisory.status in _ESTADOS_BLOQUEADOS:
+        return jsonify({"error": f"No se puede enviar mensaje en estado '{advisory.status}'."}), 409
+
+    data    = request.get_json(silent=True) or {}
+    mensaje = (data.get("mensaje") or "").strip()[:4000]
+    if not mensaje:
+        return jsonify({"error": "El mensaje no puede estar vacío."}), 400
+
+    set_pendiente = bool(data.get("set_pendiente_info", False))
+    nuevo_estado  = advisory.status
+
+    if set_pendiente and advisory.status not in ("paid_received", "in_progress", "completed", "cancelled", "refunded"):
+        nuevo_estado      = "pendiente_info"
+        advisory.status   = nuevo_estado
+
+    # Nota interna
+    author_name = current_user.full_name if hasattr(current_user, "full_name") and current_user.full_name else current_user.email
+    db.session.add(AdvisoryInternalNote(
+        request_id  = advisory.id,
+        author_id   = current_user.id,
+        author_name = f"{author_name} [mensaje enviado al cliente]",
+        text        = mensaje,
+    ))
+
+    # Historial
+    db.session.add(FiscalAdvisoryStatusHistory(
+        request_id = advisory.id,
+        status     = nuevo_estado,
+        changed_by = current_user.id,
+        note       = f"Mensaje enviado al cliente. Estado: {nuevo_estado}",
+    ))
+    db.session.commit()
+
+    email_ok = _send_advisory_message_email(advisory, mensaje)
+
+    return jsonify({
+        "ok":           True,
+        "email_sent":   email_ok,
+        "email_to":     advisory.email,
+        "new_status":   nuevo_estado,
+        "email_warning": None if email_ok else (
+            f"El mensaje se registró pero el email a {advisory.email} "
+            "no pudo enviarse. Revisa los logs de Railway."
+        ),
+    })
+
+
 # ── PÁGINA DE PAGO PÚBLICA ────────────────────────────────────────────────────
 
 @app.route("/pagar/<token>")
@@ -4437,6 +4499,44 @@ def _send_advisory_internal_notification(advisory: "FiscalAdvisoryRequest"):
         })
     except Exception as exc:
         app.logger.error("Error enviando notificación interna advisory: %s", exc)
+
+
+def _send_advisory_message_email(advisory: "FiscalAdvisoryRequest", mensaje: str) -> bool:
+    """Email al cliente con un mensaje del asesor, sin presupuesto ni link de pago.
+    Devuelve True si el envío fue aceptado por Resend, False en caso contrario.
+    """
+    if not resend.api_key:
+        app.logger.error(
+            "RESEND_API_KEY no configurada — email de mensaje NO enviado "
+            "(advisory_id=%s, to=%s)", advisory.id, advisory.email
+        )
+        return False
+
+    html, text = advisory_message_email(advisory, mensaje)
+
+    app.logger.info(
+        "Enviando email de mensaje | advisory_id=%s | to=%s | from=%s",
+        advisory.id, advisory.email, _RESEND_FROM_DISPLAY,
+    )
+    try:
+        resp = resend.Emails.send({
+            "from":    _RESEND_FROM_DISPLAY,
+            "to":      [advisory.email],
+            "subject": "Mensaje sobre tu solicitud de asesoramiento fiscal",
+            "html":    html,
+            "text":    text,
+        })
+        app.logger.info(
+            "Email de mensaje enviado OK | advisory_id=%s | resend_id=%s",
+            advisory.id, getattr(resp, "id", resp),
+        )
+        return True
+    except Exception as exc:
+        app.logger.error(
+            "ERROR enviando email de mensaje | advisory_id=%s | to=%s | error=%s",
+            advisory.id, advisory.email, exc,
+        )
+        return False
 
 
 def _send_advisory_quote_email(advisory: "FiscalAdvisoryRequest", payment_url: str):

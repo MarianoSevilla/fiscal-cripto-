@@ -140,6 +140,7 @@ class FiscalAdvisoryRequest(db.Model):
 
     STATUS_LABELS = {
         "submitted":         "Solicitud recibida",
+        "pendiente_info":    "Pendiente de información",
         "quote_sent":        "Presupuesto enviado",
         "paid_received":     "Pago confirmado",
         "under_review":      "En revisión",

@@ -77,6 +77,7 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
   white-space: nowrap;
 }
 .badge-submitted        { background: rgba(56,189,248,0.15);  color: #38bdf8; }
+.badge-pendiente_info   { background: rgba(167,139,250,0.15); color: #a78bfa; }
 .badge-quote_sent       { background: rgba(251,191,36,0.15);  color: #fbbf24; }
 .badge-paid_received    { background: rgba(0,200,150,0.15);   color: #00C896; }
 .badge-under_review     { background: rgba(99,102,241,0.15);  color: #818cf8; }
@@ -101,6 +102,21 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
 .quote-sent-link { font-size: 12px; color: var(--accent); word-break: break-all; }
 .quote-msg-ok  { font-size: 13px; color: #4ade80; margin-top: 8px; display: none; }
 .quote-msg-err { font-size: 13px; color: #f87171; margin-top: 8px; display: none; }
+
+/* Message section */
+.msg-section { background: rgba(167,139,250,0.05); border: 1px solid rgba(167,139,250,0.2); border-radius: 10px; padding: 18px 20px; margin-bottom: 20px; }
+.msg-section-title { font-size: 12px; font-weight: 700; color: #a78bfa; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 14px; }
+.msg-field { margin-bottom: 12px; }
+.msg-field label { display: block; font-size: 12px; font-weight: 600; color: var(--sub); margin-bottom: 6px; }
+.msg-field textarea { width: 100%; background: var(--surface); border: 1.5px solid var(--border); color: var(--text); font-family: var(--ff-b); font-size: 14px; padding: 9px 12px; border-radius: 7px; outline: none; transition: border-color .2s; resize: vertical; min-height: 100px; }
+.msg-field textarea:focus { border-color: rgba(167,139,250,0.5); }
+.msg-field-check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--sub); cursor: pointer; }
+.msg-field-check input[type=checkbox] { accent-color: #a78bfa; width: 14px; height: 14px; }
+.msg-send-btn { width: 100%; background: #a78bfa; color: #0e0720; font-weight: 700; font-size: 14px; padding: 10px; border: none; border-radius: 7px; cursor: pointer; transition: background .2s; }
+.msg-send-btn:hover:not(:disabled) { background: #8b5cf6; }
+.msg-send-btn:disabled { opacity: .55; cursor: not-allowed; }
+.msg-ok  { font-size: 13px; color: #4ade80; margin-top: 8px; display: none; }
+.msg-err { font-size: 13px; color: #f87171; margin-top: 8px; display: none; }
 
 /* DETAIL PANEL */
 .detail-panel {
@@ -302,6 +318,7 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
         <select id="filterStatus" onchange="loadList()">
           <option value="">Todos los estados</option>
           <option value="submitted">Solicitud recibida</option>
+          <option value="pendiente_info">Pendiente de información</option>
           <option value="quote_sent">Presupuesto enviado</option>
           <option value="paid_received">Pago confirmado</option>
           <option value="under_review">En revisión</option>
@@ -355,12 +372,13 @@ function getPriority(status) {
   if (status === 'in_progress')                           return 'active';
   if (status === 'submitted')                             return 'payment';
   if (status === 'quote_sent')                            return 'payment';
-  if (status === 'waiting_user_info')                     return 'waiting';
+  if (['waiting_user_info', 'pendiente_info'].includes(status)) return 'waiting';
   return 'done';
 }
 function getPriorityTitle(status) {
   const map = {
     submitted:         'Pendiente de presupuesto',
+    pendiente_info:    'Esperando información del cliente',
     quote_sent:        'Esperando pago del cliente',
     paid_received:     'Pago recibido — comenzar',
     under_review:      'Requiere revisión',
@@ -375,6 +393,7 @@ function getPriorityTitle(status) {
 
 const STATUS_LABELS = {
   submitted:         'Solicitud recibida',
+  pendiente_info:    'Pendiente de información',
   quote_sent:        'Presupuesto enviado',
   paid_received:     'Pago confirmado',
   under_review:      'En revisión',
@@ -511,6 +530,7 @@ async function openDetail(id, el) {
     // Status options (dropdown cambio de estado)
     const statusOptions = {
       submitted:         'Solicitud recibida',
+      pendiente_info:    'Pendiente de información',
       quote_sent:        'Presupuesto enviado',
       paid_received:     'Pago confirmado',
       under_review:      'En revisión',
@@ -527,7 +547,8 @@ async function openDetail(id, el) {
 
     // Próximo paso recomendado
     const NEXT_STEPS = {
-      submitted:         'Revisar el caso y enviar un presupuesto al cliente.',
+      submitted:         'Revisar el caso y enviar un mensaje o presupuesto al cliente.',
+      pendiente_info:    'Esperar respuesta del cliente al mensaje enviado.',
       quote_sent:        'Esperar a que el cliente complete el pago.',
       paid_received:     'Comenzar a trabajar en el caso del cliente.',
       under_review:      'Valorar complejidad y preparar propuesta o confirmación.',
@@ -589,7 +610,31 @@ async function openDetail(id, el) {
         <div class="text-block">${escHtml(d.case_description||'—')}</div>
       </div>
 
-      ${['submitted','quote_sent'].includes(d.status) ? `
+      ${!['paid_received','completed','cancelled','refunded'].includes(d.status) ? `
+      <div class="detail-section">
+        <div class="detail-section-title">Comunicación</div>
+        <div class="msg-section">
+          <div class="msg-section-title">Enviar mensaje al cliente</div>
+          <div class="msg-field">
+            <label>Mensaje para ${escHtml(d.full_name)}</label>
+            <textarea id="msgText" placeholder="Hola, hemos revisado tu caso y necesitamos que nos confirmes…"></textarea>
+          </div>
+          <div class="msg-field">
+            <label class="msg-field-check">
+              <input type="checkbox" id="msgSetPendiente" checked>
+              Cambiar estado a «Pendiente de información»
+            </label>
+          </div>
+          <button class="msg-send-btn" id="msgSendBtn" onclick="enviarMensaje(${d.id})">
+            Enviar mensaje al cliente
+          </button>
+          <div class="msg-ok" id="msgOk"></div>
+          <div class="msg-err" id="msgErr"></div>
+        </div>
+      </div>
+      ` : ''}
+
+      ${['submitted','quote_sent','pendiente_info'].includes(d.status) ? `
       <div class="detail-section">
         <div class="detail-section-title">Presupuesto</div>
         <div class="quote-section">
@@ -723,6 +768,54 @@ async function enviarPresupuesto(id) {
     errEl.style.display = 'block';
     btn.disabled        = false;
     btn.textContent     = 'Enviar presupuesto y link de pago';
+  }
+}
+
+async function enviarMensaje(id) {
+  const btn         = document.getElementById('msgSendBtn');
+  const okEl        = document.getElementById('msgOk');
+  const errEl       = document.getElementById('msgErr');
+  const mensaje     = (document.getElementById('msgText')?.value || '').trim();
+  const setPendiente = document.getElementById('msgSetPendiente')?.checked ?? true;
+
+  okEl.style.display  = 'none';
+  errEl.style.display = 'none';
+
+  if (!mensaje) {
+    errEl.textContent   = 'El mensaje no puede estar vacío.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled    = true;
+  btn.textContent = 'Enviando…';
+
+  try {
+    const r = await fetch(`/api/admin/asesoramiento/solicitudes/${id}/mensaje`, {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mensaje, set_pendiente_info: setPendiente }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Error al enviar el mensaje.');
+
+    if (data.email_warning) {
+      okEl.textContent    = '✓ Mensaje registrado.';
+      okEl.style.display  = 'block';
+      errEl.textContent   = `⚠️ El mensaje se guardó, pero el email no pudo enviarse a ${data.email_to}. Revisa los logs de Railway.`;
+      errEl.style.display = 'block';
+    } else {
+      okEl.textContent   = `✓ Mensaje enviado correctamente a ${data.email_to}`;
+      okEl.style.display = 'block';
+    }
+
+    await loadList();
+    setTimeout(() => openDetail(id), 1400);
+  } catch (err) {
+    errEl.textContent   = err.message;
+    errEl.style.display = 'block';
+    btn.disabled        = false;
+    btn.textContent     = 'Enviar mensaje al cliente';
   }
 }
 
