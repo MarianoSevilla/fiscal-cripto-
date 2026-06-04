@@ -55,7 +55,7 @@ def admin_user(_app):
         u = User(
             email="admin_c_test@example.com",
             full_name="Admin Contactos Test",
-            role="user",
+            role="admin",
             email_verified_at=datetime.utcnow(),
         )
         u.set_password("admin-c-pass-1234")

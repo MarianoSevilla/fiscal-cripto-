@@ -74,6 +74,17 @@ from precios_historicos import obtener_precios_historicos, enriquecer_721_con_pr
 from generador_xml_721 import (
     validar_para_xml, generar_xml_721, ErrXMLBloqueado, ValidacionXML,
 )
+from auth import (
+    ADMIN_EMAILS,
+    FISCAL_ADVISOR_EMAILS,
+    _role_is_admin,
+    _role_is_fiscal_advisor,
+    require_roles,
+    require_admin,
+    require_fiscal_advisor,
+    require_admin_page,
+    require_fiscal_advisor_page,
+)
 
 app = Flask(__name__, static_folder="static")
 
@@ -102,20 +113,12 @@ app.config["SECRET_KEY"] = _secret
 app.config["DEBUG"]   = False
 app.config["TESTING"] = False
 
-# Emails de administrador: sin rate-limit en /api/analizar
-# Configura en Railway: ADMIN_EMAILS=mario@ejemplo.com,otro@ejemplo.com
-ADMIN_EMAILS = {
-    e.strip().lower()
-    for e in os.environ.get("ADMIN_EMAILS", "").split(",")
-    if e.strip()
-}
-
-def _is_admin() -> bool:
-    """True si el usuario autenticado está en la lista de admins."""
-    return (
-        current_user.is_authenticated
-        and current_user.email.strip().lower() in ADMIN_EMAILS
-    )
+# ADMIN_EMAILS y FISCAL_ADVISOR_EMAILS se importan desde auth.py.
+# _is_admin / _is_fiscal_advisor son aliases de las funciones centralizadas
+# para mantener compatibilidad con exempt_when=_is_admin en rate limiter
+# y cualquier llamada inline que quede durante la migración.
+_is_admin          = _role_is_admin
+_is_fiscal_advisor = _role_is_fiscal_advisor
 
 # Railway usa "postgres://" pero SQLAlchemy requiere "postgresql://"
 _db_url = os.environ.get("DATABASE_URL", f"sqlite:///{os.path.join(_BASE_DIR, 'fiscal_users.db')}")
@@ -235,21 +238,6 @@ _ADVISORY_STATUS_EMAILS_ENABLED = (
 _ADVISORY_UPLOADS_ENABLED = (
     os.environ.get("ENABLE_ADVISORY_UPLOADS", "false").lower() == "true"
 )
-
-FISCAL_ADVISOR_EMAILS = {
-    e.strip().lower()
-    for e in os.environ.get("FISCAL_ADVISOR_EMAILS", "").split(",")
-    if e.strip()
-}
-
-def _is_fiscal_advisor() -> bool:
-    return (
-        current_user.is_authenticated and (
-            getattr(current_user, 'role', 'user') in ('admin', 'fiscal_advisor')
-            or current_user.email.strip().lower() in FISCAL_ADVISOR_EMAILS
-            or _is_admin()
-        )
-    )
 
 _ADVISORY_UPLOAD_DIR = os.path.join(_BASE_DIR, "uploads", "advisory")
 os.makedirs(_ADVISORY_UPLOAD_DIR, exist_ok=True)
@@ -1315,22 +1303,26 @@ def preferencias():
 
 
 @app.route("/dashboard", strict_slashes=False)
+@login_required
 @limiter.exempt
 def dashboard():
-    """Dashboard principal: selector de exchange. Requiere autenticación (gestionada en JS)."""
+    """Dashboard principal: selector de exchange. Requiere autenticación."""
     return send_from_directory("static", "dashboard.html")
 
 
 @app.route("/modelo721", strict_slashes=False)
+@login_required
 @limiter.exempt
 def modelo721_page():
-    """Herramienta Modelo 721 — criptomonedas en el extranjero. Auth gestionada en JS."""
+    """Herramienta Modelo 721 — criptomonedas en el extranjero. Requiere autenticación."""
     return send_from_directory("static", "modelo721.html")
 
 
 @app.route("/account", strict_slashes=False)
+@login_required
 @limiter.exempt
 def account():
+    """Página de cuenta de usuario. Requiere autenticación."""
     return send_from_directory("static", "account.html")
 
 
@@ -2868,10 +2860,8 @@ def delete_account():
 # ── ADMIN STATS ──────────────────────────────────────────────────────────────
 
 @app.route("/stats")
-@login_required
+@require_admin_page
 def stats_page():
-    if not _is_admin():
-        return redirect("/dashboard")
     return send_from_directory("static", "stats.html")
 
 @app.route("/home2")
@@ -3009,11 +2999,8 @@ def api_contacto():
 
 
 @app.route("/api/stats")
-@login_required
+@require_admin
 def api_stats():
-    if not _is_admin():
-        return jsonify({"error": "Acceso denegado."}), 403
-
     try:
         return _api_stats_data()
     except Exception as e:
@@ -3726,21 +3713,16 @@ def advisory_cancelled():
     return send_from_directory("static", "asesoramiento-cancelado.html")
 
 @app.route("/mis-solicitudes-fiscales", strict_slashes=False)
-@login_required
+@require_roles("admin", on_fail_abort=404)
 @limiter.exempt
 def advisory_my_requests_page():
-    # Vista de usuario "Mis solicitudes" — restringida a admins hasta validación.
-    # Para usuarios normales devuelve 404 (no revela que existe la página).
-    if not _is_admin():
-        abort(404)
+    # Restringida a admins — devuelve 404 para no revelar que existe la página.
     return send_from_directory("static", "mis-solicitudes-fiscales.html")
 
 @app.route("/admin/asesoramiento", strict_slashes=False)
-@login_required
+@require_fiscal_advisor_page
 @limiter.exempt
 def admin_advisory_page():
-    if not _is_fiscal_advisor():
-        return redirect("/dashboard")
     return send_from_directory("static", "admin-asesoramiento.html")
 
 
@@ -3956,11 +3938,9 @@ def _on_payment_completed(
 # ── ADMIN: ENVIAR PRESUPUESTO ─────────────────────────────────────────────────
 
 @app.route("/api/admin/asesoramiento/solicitudes/<int:req_id>/enviar-presupuesto", methods=["POST"])
-@login_required
+@require_fiscal_advisor
 def advisory_enviar_presupuesto(req_id):
     """Rafa introduce el precio y el sistema envía el link de pago al cliente."""
-    if not _is_fiscal_advisor():
-        return jsonify({"error": "No autorizado"}), 403
 
     advisory = FiscalAdvisoryRequest.query.get_or_404(req_id)
 
@@ -4626,10 +4606,8 @@ def advisory_my_requests():
 # ── ADMIN ADVISORY API ────────────────────────
 
 @app.route("/api/admin/asesoramiento/solicitudes")
-@login_required
+@require_fiscal_advisor
 def admin_advisory_list():
-    if not _is_fiscal_advisor():
-        return jsonify({"error": "Acceso denegado."}), 403
 
     status_filter  = request.args.get("status", "")
     service_filter = request.args.get("service_type", "")
@@ -4643,10 +4621,8 @@ def admin_advisory_list():
 
 
 @app.route("/api/admin/asesoramiento/solicitudes/<int:request_id>")
-@login_required
+@require_fiscal_advisor
 def admin_advisory_detail(request_id):
-    if not _is_fiscal_advisor():
-        return jsonify({"error": "Acceso denegado."}), 403
     advisory = FiscalAdvisoryRequest.query.get_or_404(request_id)
     d = advisory.to_dict(full=True)
     d["files"] = [
@@ -4668,10 +4644,8 @@ def admin_advisory_detail(request_id):
 
 
 @app.route("/api/admin/asesoramiento/solicitudes/<int:request_id>/estado", methods=["POST"])
-@login_required
+@require_fiscal_advisor
 def admin_advisory_change_status(request_id):
-    if not _is_fiscal_advisor():
-        return jsonify({"error": "Acceso denegado."}), 403
     advisory    = FiscalAdvisoryRequest.query.get_or_404(request_id)
     data        = request.get_json(silent=True) or {}
     new_status  = (data.get("status") or "").strip()
@@ -4693,10 +4667,8 @@ def admin_advisory_change_status(request_id):
 
 
 @app.route("/api/admin/asesoramiento/solicitudes/<int:request_id>/nota", methods=["POST"])
-@login_required
+@require_fiscal_advisor
 def admin_advisory_add_note(request_id):
-    if not _is_fiscal_advisor():
-        return jsonify({"error": "Acceso denegado."}), 403
     advisory = FiscalAdvisoryRequest.query.get_or_404(request_id)
     data     = request.get_json(silent=True) or {}
     text     = (data.get("nota") or "").strip()[:2000]
@@ -4718,10 +4690,8 @@ def admin_advisory_add_note(request_id):
 
 
 @app.route("/api/admin/asesoramiento/solicitudes/<int:request_id>", methods=["DELETE"])
-@login_required
+@require_fiscal_advisor
 def admin_advisory_delete(request_id):
-    if not _is_fiscal_advisor():
-        return jsonify({"error": "Acceso denegado."}), 403
     advisory = FiscalAdvisoryRequest.query.get_or_404(request_id)
     if advisory.amount_paid and advisory.amount_paid > 0:
         return jsonify({
@@ -4859,28 +4829,22 @@ def _send_resource_internal_notification(rr: "ResourceRequest", resource: "Resou
 # ── Admin — panel de solicitudes de recursos ──────────────────────────────────
 
 @app.route("/admin/contactos", strict_slashes=False)
-@login_required
+@require_admin_page
 @limiter.exempt
 def admin_contactos_page():
-    if not _is_admin():
-        return redirect("/dashboard")
     return send_from_directory("static", "admin-contactos.html")
 
 
 @app.route("/admin/recursos", strict_slashes=False)
-@login_required
+@require_fiscal_advisor_page
 @limiter.exempt
 def admin_recursos_page():
-    if not _is_fiscal_advisor():
-        return redirect("/dashboard")
     return send_from_directory("static", "admin-recursos.html")
 
 
 @app.route("/api/admin/recursos/solicitudes")
-@login_required
+@require_fiscal_advisor
 def admin_recursos_list():
-    if not _is_fiscal_advisor():
-        return jsonify({"error": "Acceso denegado."}), 403
     status_filter = request.args.get("status", "")
     q = ResourceRequest.query
     if status_filter:
@@ -4896,10 +4860,8 @@ def admin_recursos_list():
 
 
 @app.route("/api/admin/recursos/solicitudes/<int:req_id>")
-@login_required
+@require_fiscal_advisor
 def admin_recursos_detail(req_id):
-    if not _is_fiscal_advisor():
-        return jsonify({"error": "Acceso denegado."}), 403
     rr = ResourceRequest.query.get_or_404(req_id)
     d  = rr.to_dict(full=True)
     d["resource_title"] = rr.resource.title if rr.resource else "—"
@@ -4907,10 +4869,8 @@ def admin_recursos_detail(req_id):
 
 
 @app.route("/api/admin/recursos/solicitudes/<int:req_id>/estado", methods=["POST"])
-@login_required
+@require_fiscal_advisor
 def admin_recursos_change_status(req_id):
-    if not _is_fiscal_advisor():
-        return jsonify({"error": "Acceso denegado."}), 403
     rr         = ResourceRequest.query.get_or_404(req_id)
     data       = request.get_json(silent=True) or {}
     new_status = (data.get("status") or "").strip()
@@ -4923,10 +4883,8 @@ def admin_recursos_change_status(req_id):
 
 
 @app.route("/api/admin/recursos/solicitudes/<int:req_id>/nota", methods=["POST"])
-@login_required
+@require_fiscal_advisor
 def admin_recursos_add_note(req_id):
-    if not _is_fiscal_advisor():
-        return jsonify({"error": "Acceso denegado."}), 403
     rr   = ResourceRequest.query.get_or_404(req_id)
     data = request.get_json(silent=True) or {}
     text = (data.get("nota") or "").strip()[:2000]
@@ -4942,10 +4900,8 @@ def admin_recursos_add_note(req_id):
 
 
 @app.route("/api/admin/recursos/solicitudes/<int:req_id>", methods=["DELETE"])
-@login_required
+@require_fiscal_advisor
 def admin_recursos_delete(req_id):
-    if not _is_fiscal_advisor():
-        return jsonify({"error": "Acceso denegado."}), 403
     rr = ResourceRequest.query.get_or_404(req_id)
     db.session.delete(rr)
     db.session.commit()
@@ -4955,15 +4911,13 @@ def admin_recursos_delete(req_id):
 # ── ADMIN CONTACTOS ───────────────────────────────────────────────────────────
 
 @app.route("/api/admin/contactos")
-@login_required
+@require_admin
 def admin_contactos_lista():
     """Lista todos los contactos. Admins únicamente.
     Query params opcionales:
       - archivados=1  → incluye archivados (por defecto solo activos)
       - estado=nuevo|respondido|...
     """
-    if not _is_admin():
-        return jsonify({"error": "Acceso denegado."}), 403
 
     incluir_archivados = request.args.get("archivados") == "1"
     filtros = []
@@ -5000,13 +4954,11 @@ def admin_contactos_lista():
 _ACCIONES_CONTACTO = {"responder", "archivar", "desarchivar"}
 
 @app.route("/api/admin/contactos/<int:contacto_id>", methods=["PATCH"])
-@login_required
+@require_admin
 def admin_contactos_patch(contacto_id):
     """Actualiza estado o archivado de un contacto. Admins únicamente.
     Body JSON: { "accion": "responder" | "archivar" | "desarchivar" }
     """
-    if not _is_admin():
-        return jsonify({"error": "Acceso denegado."}), 403
 
     data   = request.get_json(silent=True) or {}
     accion = (data.get("accion") or "").strip().lower()

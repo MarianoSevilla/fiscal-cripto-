@@ -3,7 +3,6 @@ Admin routes for the communications module.
 All /admin/* and /api/admin/comunicaciones/* endpoints live here.
 Public: /unsubscribe (page) and /api/unsubscribe (action).
 """
-import os
 from flask import abort, jsonify, request, current_app
 from flask_login import login_required, current_user
 
@@ -19,20 +18,11 @@ from .service import (
     dispatch_campaign,
 )
 from . import comms_bp
+from auth import _role_is_admin
 
-# Build admin set at import time — same logic as app.py's ADMIN_EMAILS
-_ADMIN_EMAILS = frozenset(
-    e.strip().lower()
-    for e in os.environ.get("ADMIN_EMAILS", "").split(",")
-    if e.strip()
-)
-
-
-def _is_admin() -> bool:
-    return (
-        current_user.is_authenticated
-        and current_user.email.strip().lower() in _ADMIN_EMAILS
-    )
+# Alias local — mantiene intactos todos los if not _is_admin(): abort(404)
+# sin cambiar el comportamiento (abort 404 en comunicaciones se preserva intencionadamente).
+_is_admin = _role_is_admin
 
 
 # ── PAGE ROUTES ───────────────────────────────────────────────────────────────

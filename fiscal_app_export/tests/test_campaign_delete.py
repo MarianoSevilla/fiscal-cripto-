@@ -52,12 +52,12 @@ def _app():
 
 @pytest.fixture(scope="module")
 def admin_user(_app):
-    """Usuario cuyo email está en ADMIN_EMAILS → supera _is_admin()."""
+    """Usuario con role='admin' — fuente primaria de autorización."""
     with _app.app_context():
         u = User(
             email="admin_del_test@example.com",
             full_name="Admin Delete Test",
-            role="user",                      # rol no importa — ADMIN_EMAILS manda
+            role="admin",
             email_verified_at=datetime.utcnow(),
         )
         u.set_password("admin-del-pass-1234")
