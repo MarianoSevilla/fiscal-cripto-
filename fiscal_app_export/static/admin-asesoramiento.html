@@ -87,36 +87,36 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
 .badge-cancelled        { background: rgba(226,75,74,0.15);   color: #f87171; }
 .badge-refunded         { background: rgba(156,163,175,0.15); color: #9ca3af; }
 
-/* Quote form */
-.quote-section { background: rgba(251,191,36,0.05); border: 1px solid rgba(251,191,36,0.2); border-radius: 10px; padding: 18px 20px; margin-bottom: 20px; }
-.quote-section-title { font-size: 12px; font-weight: 700; color: #fbbf24; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 14px; }
-.quote-field { margin-bottom: 12px; }
-.quote-field label { display: block; font-size: 12px; font-weight: 600; color: var(--sub); margin-bottom: 6px; }
-.quote-field input, .quote-field textarea { width: 100%; background: var(--surface); border: 1.5px solid var(--border); color: var(--text); font-family: var(--ff-b); font-size: 14px; padding: 9px 12px; border-radius: 7px; outline: none; transition: border-color .2s; }
-.quote-field input:focus, .quote-field textarea:focus { border-color: rgba(251,191,36,0.5); }
-.quote-field textarea { resize: vertical; min-height: 80px; }
-.quote-send-btn { width: 100%; background: #fbbf24; color: #1a1200; font-weight: 700; font-size: 14px; padding: 10px; border: none; border-radius: 7px; cursor: pointer; transition: background .2s; }
-.quote-send-btn:hover:not(:disabled) { background: #f59e0b; }
-.quote-send-btn:disabled { opacity: .55; cursor: not-allowed; }
-.quote-sent-info { font-size: 13px; color: var(--muted); margin-top: 10px; line-height: 1.6; }
-.quote-sent-link { font-size: 12px; color: var(--accent); word-break: break-all; }
-.quote-msg-ok  { font-size: 13px; color: #4ade80; margin-top: 8px; display: none; }
-.quote-msg-err { font-size: 13px; color: #f87171; margin-top: 8px; display: none; }
-
-/* Message section */
-.msg-section { background: rgba(167,139,250,0.05); border: 1px solid rgba(167,139,250,0.2); border-radius: 10px; padding: 18px 20px; margin-bottom: 20px; }
-.msg-section-title { font-size: 12px; font-weight: 700; color: #a78bfa; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 14px; }
-.msg-field { margin-bottom: 12px; }
-.msg-field label { display: block; font-size: 12px; font-weight: 600; color: var(--sub); margin-bottom: 6px; }
-.msg-field textarea { width: 100%; background: var(--surface); border: 1.5px solid var(--border); color: var(--text); font-family: var(--ff-b); font-size: 14px; padding: 9px 12px; border-radius: 7px; outline: none; transition: border-color .2s; resize: vertical; min-height: 100px; }
-.msg-field textarea:focus { border-color: rgba(167,139,250,0.5); }
-.msg-field-check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--sub); cursor: pointer; }
-.msg-field-check input[type=checkbox] { accent-color: #a78bfa; width: 14px; height: 14px; }
-.msg-send-btn { width: 100%; background: #a78bfa; color: #0e0720; font-weight: 700; font-size: 14px; padding: 10px; border: none; border-radius: 7px; cursor: pointer; transition: background .2s; }
-.msg-send-btn:hover:not(:disabled) { background: #8b5cf6; }
-.msg-send-btn:disabled { opacity: .55; cursor: not-allowed; }
-.msg-ok  { font-size: 13px; color: #4ade80; margin-top: 8px; display: none; }
-.msg-err { font-size: 13px; color: #f87171; margin-top: 8px; display: none; }
+/* Reply section (unified: message + quote) */
+.reply-section { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; }
+.reply-field { margin-bottom: 14px; }
+.reply-field label { display: block; font-size: 12px; font-weight: 600; color: var(--sub); margin-bottom: 6px; }
+.reply-field textarea, .reply-field input[type=number] {
+  width: 100%; background: var(--surf2); border: 1.5px solid var(--border);
+  color: var(--text); font-family: var(--ff-b); font-size: 14px;
+  padding: 9px 12px; border-radius: 7px; outline: none; transition: border-color .2s;
+}
+.reply-field textarea { resize: vertical; min-height: 100px; }
+.reply-field textarea:focus, .reply-field input[type=number]:focus { border-color: rgba(0,200,150,0.4); }
+.reply-check-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--sub); cursor: pointer; margin-bottom: 10px; }
+.reply-check-row input[type=checkbox] { accent-color: var(--accent); width: 15px; height: 15px; flex-shrink: 0; }
+.reply-amount-wrap { overflow: hidden; max-height: 0; opacity: 0; transition: max-height .2s ease, opacity .2s ease; }
+.reply-amount-wrap.visible { max-height: 80px; opacity: 1; }
+.reply-pendiente-wrap { transition: opacity .15s; }
+.reply-pendiente-wrap.hidden { opacity: 0; pointer-events: none; }
+.reply-quote-info { font-size: 13px; color: var(--muted); margin-bottom: 12px; line-height: 1.6; }
+.reply-quote-link { font-size: 12px; color: var(--accent); word-break: break-all; margin-bottom: 12px; }
+.reply-send-btn {
+  width: 100%; font-family: var(--ff-b); font-weight: 700; font-size: 14px;
+  padding: 10px; border: none; border-radius: 7px; cursor: pointer; transition: background .2s;
+}
+.reply-send-btn.mode-msg   { background: var(--accent); color: #0b1220; }
+.reply-send-btn.mode-quote { background: #fbbf24;       color: #1a1200; }
+.reply-send-btn:hover:not(:disabled).mode-msg   { background: var(--accent2); }
+.reply-send-btn:hover:not(:disabled).mode-quote { background: #f59e0b; }
+.reply-send-btn:disabled { opacity: .55; cursor: not-allowed; }
+.reply-ok  { font-size: 13px; color: #4ade80; margin-top: 8px; display: none; }
+.reply-err { font-size: 13px; color: #f87171; margin-top: 8px; display: none; }
 
 /* DETAIL PANEL */
 .detail-panel {
@@ -612,50 +612,37 @@ async function openDetail(id, el) {
 
       ${!['paid_received','completed','cancelled','refunded'].includes(d.status) ? `
       <div class="detail-section">
-        <div class="detail-section-title">Comunicación</div>
-        <div class="msg-section">
-          <div class="msg-section-title">Enviar mensaje al cliente</div>
-          <div class="msg-field">
+        <div class="detail-section-title">Responder al cliente</div>
+        <div class="reply-section">
+          ${d.status === 'quote_sent' && d.quote_sent_at ? `
+            <p class="reply-quote-info">Presupuesto enviado el ${new Date(d.quote_sent_at).toLocaleDateString('es-ES')} · Caduca el ${d.quote_expires_at ? new Date(d.quote_expires_at).toLocaleDateString('es-ES') : '—'}</p>
+            <p class="reply-quote-link">${location.origin}/pagar/${escHtml(d.payment_link_token||'')}</p>
+          ` : ''}
+          <div class="reply-field">
             <label>Mensaje para ${escHtml(d.full_name)}</label>
-            <textarea id="msgText" placeholder="Hola, hemos revisado tu caso y necesitamos que nos confirmes…"></textarea>
+            <textarea id="replyText" placeholder="Hola, hemos revisado tu caso y…">${escHtml(d.status === 'quote_sent' ? (d.quote_message||'') : '')}</textarea>
           </div>
-          <div class="msg-field">
-            <label class="msg-field-check">
-              <input type="checkbox" id="msgSetPendiente" checked>
+          <label class="reply-check-row">
+            <input type="checkbox" id="replyIsQuote" onchange="toggleReplyMode()" ${['submitted','quote_sent','pendiente_info'].includes(d.status) && d.status === 'quote_sent' ? 'checked' : ''}>
+            Es presupuesto (genera importe y link de pago)
+          </label>
+          <div class="reply-amount-wrap ${['submitted','quote_sent','pendiente_info'].includes(d.status) && d.status === 'quote_sent' ? 'visible' : ''}" id="replyAmountWrap">
+            <div class="reply-field" style="margin-bottom:0">
+              <label>Importe (€) *</label>
+              <input type="number" id="replyAmount" min="1" step="0.01" placeholder="79.00" value="${d.quoted_amount ? (d.quoted_amount/100).toFixed(2) : ''}">
+            </div>
+          </div>
+          <div class="reply-pendiente-wrap ${d.status === 'quote_sent' ? 'hidden' : ''}" id="replyPendienteWrap" style="margin-top:10px;">
+            <label class="reply-check-row" style="margin-bottom:0">
+              <input type="checkbox" id="replySetPendiente" ${d.status !== 'quote_sent' ? 'checked' : ''}>
               Cambiar estado a «Pendiente de información»
             </label>
           </div>
-          <button class="msg-send-btn" id="msgSendBtn" onclick="enviarMensaje(${d.id})">
-            Enviar mensaje al cliente
+          <button class="reply-send-btn ${d.status === 'quote_sent' ? 'mode-quote' : 'mode-msg'}" id="replySendBtn" onclick="enviarRespuesta(${d.id})" style="margin-top:14px;">
+            ${d.status === 'quote_sent' ? 'Reenviar link de pago' : 'Enviar mensaje al cliente'}
           </button>
-          <div class="msg-ok" id="msgOk"></div>
-          <div class="msg-err" id="msgErr"></div>
-        </div>
-      </div>
-      ` : ''}
-
-      ${['submitted','quote_sent','pendiente_info'].includes(d.status) ? `
-      <div class="detail-section">
-        <div class="detail-section-title">Presupuesto</div>
-        <div class="quote-section">
-          <div class="quote-section-title">${d.status === 'quote_sent' ? 'Reenviar presupuesto' : 'Enviar presupuesto al cliente'}</div>
-          ${d.status === 'quote_sent' && d.quote_sent_at ? `
-            <p class="quote-sent-info">Enviado el ${new Date(d.quote_sent_at).toLocaleDateString('es-ES')} · Caduca el ${d.quote_expires_at ? new Date(d.quote_expires_at).toLocaleDateString('es-ES') : '—'}</p>
-            <p class="quote-sent-link" style="margin-bottom:12px;">${location.origin}/pagar/${escHtml(d.payment_link_token||'')}</p>
-          ` : ''}
-          <div class="quote-field">
-            <label>Importe (€) *</label>
-            <input type="number" id="quoteAmount" min="1" step="0.01" placeholder="79.00" value="${d.quoted_amount ? (d.quoted_amount/100).toFixed(2) : ''}">
-          </div>
-          <div class="quote-field">
-            <label>Mensaje personalizado para el cliente (opcional)</label>
-            <textarea id="quoteMessage" placeholder="Hola, he revisado tu caso y...">${escHtml(d.quote_message||'')}</textarea>
-          </div>
-          <button class="quote-send-btn" id="quoteSendBtn" onclick="enviarPresupuesto(${d.id})">
-            ${d.status === 'quote_sent' ? 'Reenviar link de pago' : 'Enviar presupuesto y link de pago'}
-          </button>
-          <div class="quote-msg-ok" id="quoteMsgOk">✓ Presupuesto enviado al cliente</div>
-          <div class="quote-msg-err" id="quoteMsgErr"></div>
+          <div class="reply-ok" id="replyOk"></div>
+          <div class="reply-err" id="replyErr"></div>
         </div>
       </div>
       ` : ''}
@@ -720,102 +707,83 @@ async function openDetail(id, el) {
   }
 }
 
-async function enviarPresupuesto(id) {
-  const btn    = document.getElementById('quoteSendBtn');
-  const okEl   = document.getElementById('quoteMsgOk');
-  const errEl  = document.getElementById('quoteMsgErr');
-  const amount = parseFloat(document.getElementById('quoteAmount').value.replace(',', '.'));
-  const msg    = document.getElementById('quoteMessage').value.trim();
-
-  okEl.style.display  = 'none';
-  errEl.style.display = 'none';
-
-  if (!amount || amount < 1) {
-    errEl.textContent   = 'Introduce un importe válido (mínimo 1 €).';
-    errEl.style.display = 'block';
-    return;
-  }
-
-  btn.disabled    = true;
-  btn.textContent = 'Enviando…';
-
-  try {
-    const r = await fetch(`/api/admin/asesoramiento/solicitudes/${id}/enviar-presupuesto`, {
-      method: 'POST', credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount_euros: amount, message: msg }),
-    });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error || 'Error al enviar el presupuesto.');
-
-    if (data.email_warning) {
-      // Expediente guardado pero email falló
-      okEl.textContent    = `✅ Presupuesto guardado correctamente.`;
-      okEl.style.display  = 'block';
-      errEl.textContent   = `⚠️ El presupuesto se guardó correctamente, pero el email no pudo enviarse a ${data.email_to}. Revisa los logs de Railway.`;
-      errEl.style.display = 'block';
-    } else {
-      okEl.textContent   = `✅ Presupuesto enviado correctamente a ${data.email_to}`;
-      okEl.style.display = 'block';
-    }
-
-    // Refresco inmediato: lista (badge de estado) + panel de detalle
-    await loadList();
-    // Pequeña pausa para que el usuario lea el mensaje antes de que el panel se reconstruya
-    setTimeout(() => openDetail(id), 1200);
-  } catch (err) {
-    errEl.textContent   = err.message;
-    errEl.style.display = 'block';
-    btn.disabled        = false;
-    btn.textContent     = 'Enviar presupuesto y link de pago';
+function toggleReplyMode() {
+  const isQuote    = document.getElementById('replyIsQuote')?.checked;
+  const amountWrap = document.getElementById('replyAmountWrap');
+  const pendWrap   = document.getElementById('replyPendienteWrap');
+  const btn        = document.getElementById('replySendBtn');
+  if (amountWrap) amountWrap.classList.toggle('visible', isQuote);
+  if (pendWrap)   pendWrap.classList.toggle('hidden', isQuote);
+  if (btn) {
+    btn.classList.toggle('mode-quote', isQuote);
+    btn.classList.toggle('mode-msg',  !isQuote);
+    btn.textContent = isQuote ? 'Enviar presupuesto y link de pago' : 'Enviar mensaje al cliente';
   }
 }
 
-async function enviarMensaje(id) {
-  const btn         = document.getElementById('msgSendBtn');
-  const okEl        = document.getElementById('msgOk');
-  const errEl       = document.getElementById('msgErr');
-  const mensaje     = (document.getElementById('msgText')?.value || '').trim();
-  const setPendiente = document.getElementById('msgSetPendiente')?.checked ?? true;
+async function enviarRespuesta(id) {
+  const btn     = document.getElementById('replySendBtn');
+  const okEl    = document.getElementById('replyOk');
+  const errEl   = document.getElementById('replyErr');
+  const isQuote = document.getElementById('replyIsQuote')?.checked;
+  const texto   = (document.getElementById('replyText')?.value || '').trim();
 
   okEl.style.display  = 'none';
   errEl.style.display = 'none';
 
-  if (!mensaje) {
-    errEl.textContent   = 'El mensaje no puede estar vacío.';
+  if (!texto) {
+    errEl.textContent = 'El mensaje no puede estar vacío.';
     errEl.style.display = 'block';
     return;
+  }
+
+  if (isQuote) {
+    const amount = parseFloat((document.getElementById('replyAmount')?.value || '').replace(',', '.'));
+    if (!amount || amount < 1) {
+      errEl.textContent = 'Introduce un importe válido (mínimo 1 €).';
+      errEl.style.display = 'block';
+      return;
+    }
   }
 
   btn.disabled    = true;
   btn.textContent = 'Enviando…';
 
   try {
-    const r = await fetch(`/api/admin/asesoramiento/solicitudes/${id}/mensaje`, {
-      method: 'POST', credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mensaje, set_pendiente_info: setPendiente }),
-    });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error || 'Error al enviar el mensaje.');
+    let r, data;
 
-    if (data.email_warning) {
-      okEl.textContent    = '✓ Mensaje registrado.';
-      okEl.style.display  = 'block';
-      errEl.textContent   = `⚠️ El mensaje se guardó, pero el email no pudo enviarse a ${data.email_to}. Revisa los logs de Railway.`;
-      errEl.style.display = 'block';
+    if (isQuote) {
+      const amount = parseFloat((document.getElementById('replyAmount')?.value || '').replace(',', '.'));
+      r    = await fetch(`/api/admin/asesoramiento/solicitudes/${id}/enviar-presupuesto`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount_euros: amount, message: texto }),
+      });
+      data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Error al enviar el presupuesto.');
+      okEl.textContent = data.email_warning ? '✓ Presupuesto guardado.' : `✓ Presupuesto enviado a ${data.email_to}`;
+      if (data.email_warning) { errEl.textContent = `⚠️ Email no enviado a ${data.email_to}. Revisa los logs de Railway.`; errEl.style.display = 'block'; }
     } else {
-      okEl.textContent   = `✓ Mensaje enviado correctamente a ${data.email_to}`;
-      okEl.style.display = 'block';
+      const setPendiente = document.getElementById('replySetPendiente')?.checked ?? true;
+      r    = await fetch(`/api/admin/asesoramiento/solicitudes/${id}/mensaje`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mensaje: texto, set_pendiente_info: setPendiente }),
+      });
+      data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Error al enviar el mensaje.');
+      okEl.textContent = data.email_warning ? '✓ Mensaje registrado.' : `✓ Mensaje enviado a ${data.email_to}`;
+      if (data.email_warning) { errEl.textContent = `⚠️ Email no enviado a ${data.email_to}. Revisa los logs de Railway.`; errEl.style.display = 'block'; }
     }
 
+    okEl.style.display = 'block';
     await loadList();
-    setTimeout(() => openDetail(id), 1400);
+    setTimeout(() => openDetail(id), 1300);
   } catch (err) {
     errEl.textContent   = err.message;
     errEl.style.display = 'block';
     btn.disabled        = false;
-    btn.textContent     = 'Enviar mensaje al cliente';
+    btn.textContent     = isQuote ? 'Enviar presupuesto y link de pago' : 'Enviar mensaje al cliente';
   }
 }
 
