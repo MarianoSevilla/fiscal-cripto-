@@ -1118,13 +1118,12 @@ async function loadStats() {
         fi.por_ejercicio.map(r => r.total));
     }
     if (fi.por_volumen && fi.por_volumen.length) {
-      const volData = fi.por_volumen.filter(r => r.total > 0);
-      if (volData.length) {
-        hbarChart('chartVolumen',
-          volData.map(r => r.rango),
-          volData.map(r => r.total),
-          '#818cf8');
-      }
+      // Mostrar todos los buckets (incluidos los vacíos) para que la escala
+      // refleje el rango completo aunque los tramos altos aún tengan 0.
+      hbarChart('chartVolumen',
+        fi.por_volumen.map(r => r.rango),
+        fi.por_volumen.map(r => r.total),
+        '#818cf8');
     }
 
     const exito_pct = fi.total ? Math.round(fi.generados / fi.total * 100) : 0;
