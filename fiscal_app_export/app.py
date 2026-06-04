@@ -3128,12 +3128,15 @@ def _api_stats_data():
     ).all()
     vol_bkt = defaultdict(int)
     for (r,) in rows_all:
-        if   r < 50:    vol_bkt["< 50"] += 1
-        elif r < 250:   vol_bkt["50–250"] += 1
-        elif r < 1000:  vol_bkt["250–1.000"] += 1
-        elif r < 10000: vol_bkt["1.000–10.000"] += 1
-        else:           vol_bkt["> 10.000"] += 1
-    VOL_ORDER = ["< 50", "50–250", "250–1.000", "1.000–10.000", "> 10.000"]
+        if   r <= 100:   vol_bkt["0–100"] += 1
+        elif r <= 1000:  vol_bkt["101–1.000"] += 1
+        elif r <= 3000:  vol_bkt["1.001–3.000"] += 1
+        elif r <= 10000: vol_bkt["3.001–10.000"] += 1
+        elif r <= 25000: vol_bkt["10.001–25.000"] += 1
+        elif r <= 50000: vol_bkt["25.001–50.000"] += 1
+        else:            vol_bkt["> 50.000"] += 1
+    VOL_ORDER = ["0–100", "101–1.000", "1.001–3.000", "3.001–10.000",
+                 "10.001–25.000", "25.001–50.000", "> 50.000"]
     por_volumen = [{"rango": k, "total": vol_bkt.get(k, 0)} for k in VOL_ORDER]
 
     # TOP 5 usuarios por informes (emails enmascarados)
