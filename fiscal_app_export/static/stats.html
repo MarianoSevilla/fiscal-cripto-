@@ -407,6 +407,19 @@ tbody tr:hover { background: var(--surface2); }
       </div>
     </div>
 
+    <!-- ── VOLUMEN CSV POR EXCHANGE ── -->
+    <div class="section" id="sectionExcVol">
+      <p class="section-title">Volumen CSV por exchange</p>
+      <div class="chart-box" style="padding-bottom:0.5rem;">
+        <div class="chart-title">
+          Distribución de informes por exchange y tamaño del CSV
+          <span style="color:var(--muted);font-weight:400;font-size:11px;margin-left:8px;">(exchanges con ≥ 5 informes · ordenado por media de filas)</span>
+        </div>
+        <div id="excVolLegend" style="display:flex;flex-wrap:wrap;gap:6px 14px;margin:10px 0 4px;font-size:11px;"></div>
+        <div class="chart-wrap auto" id="wrapExcVol"><canvas id="chartExcVol"></canvas></div>
+      </div>
+    </div>
+
     <!-- ── USUARIOS DETALLE ── -->
     <div class="section">
       <p class="section-title">Usuarios</p>
@@ -779,6 +792,58 @@ function barChartEur(id, labels, values, color) {
 }
 
 // ── Horizontal bar chart ──────────────────────────────────────────────────────
+// ── Stacked horizontal bar chart (exchange × volume) ─────────────────────────
+const VOL_COLORS = ['#60a5fa','#34d399','#fbbf24','#f87171','#a78bfa','#fb923c','#38bdf8'];
+
+function stackedHbarChart(id, legendId, exchanges, bucketLabels, data) {
+  // data: array of {exchange, buckets[]}
+  destroyChart(id);
+  const wrapEl = document.getElementById(id)?.parentElement;
+  if (wrapEl) {
+    const h = Math.max(120, exchanges.length * 44);
+    wrapEl.style.height = h + 'px';
+  }
+  const datasets = bucketLabels.map((label, i) => ({
+    label,
+    data: data.map(r => r.buckets[i]),
+    backgroundColor: VOL_COLORS[i % VOL_COLORS.length] + 'cc',
+    borderColor:     VOL_COLORS[i % VOL_COLORS.length],
+    borderWidth: 1,
+    borderRadius: 2,
+  }));
+  _charts[id] = new Chart(document.getElementById(id), {
+    type: 'bar',
+    data: { labels: exchanges, datasets },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: items => items[0].label,
+            label: item => ` ${item.dataset.label}: ${item.raw} informes`,
+          },
+        },
+      },
+      scales: {
+        x: { stacked: true, beginAtZero: true, ticks: { precision: 0 } },
+        y: { stacked: true, grid: { display: false } },
+      },
+    },
+  });
+  // Leyenda manual (fuera del canvas para no saturarlo)
+  const legEl = document.getElementById(legendId);
+  if (legEl) {
+    legEl.innerHTML = bucketLabels.map((l, i) =>
+      `<span style="display:flex;align-items:center;gap:4px;">
+         <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${VOL_COLORS[i % VOL_COLORS.length]};"></span>
+         <span style="color:var(--sub)">${l}</span>
+       </span>`
+    ).join('');
+  }
+}
+
 function hbarChart(id, labels, values, color) {
   destroyChart(id);
   const wrapEl = document.getElementById(id)?.parentElement;
@@ -1124,6 +1189,22 @@ async function loadStats() {
         fi.por_volumen.map(r => r.rango),
         fi.por_volumen.map(r => r.total),
         '#818cf8');
+    }
+
+    // ── Exchange × Volumen CSV ────────────────────────────────────────────────
+    const excVol = fi.por_exchange_volumen;
+    if (excVol && excVol.length) {
+      const bucketLabels = fi.por_volumen.map(r => r.rango);
+      stackedHbarChart(
+        'chartExcVol',
+        'excVolLegend',
+        excVol.map(r => r.exchange),
+        bucketLabels,
+        excVol,
+      );
+    } else {
+      const sec = document.getElementById('sectionExcVol');
+      if (sec) sec.style.display = 'none';
     }
 
     const exito_pct = fi.total ? Math.round(fi.generados / fi.total * 100) : 0;

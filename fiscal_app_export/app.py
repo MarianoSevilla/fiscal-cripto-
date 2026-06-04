@@ -3139,6 +3139,46 @@ def _api_stats_data():
                  "10.001–25.000", "25.001–50.000", "> 50.000"]
     por_volumen = [{"rango": k, "total": vol_bkt.get(k, 0)} for k in VOL_ORDER]
 
+    # Distribución de volumen csv_rows por exchange
+    # Carga (exchange, csv_rows) en una sola query y bucketiza en Python.
+    exc_vol_raw = db.session.query(FifoReport.exchange, FifoReport.csv_rows).filter(
+        *_no_adm_rep, FifoReport.status == "generated", FifoReport.csv_rows.isnot(None)
+    ).all()
+    _exc_vol: dict = {}   # exchange → {bucket: count, _sum: int, _max: int, _n: int}
+    for exc, rows in exc_vol_raw:
+        if exc not in _exc_vol:
+            _exc_vol[exc] = {k: 0 for k in VOL_ORDER}
+            _exc_vol[exc]["_sum"] = 0
+            _exc_vol[exc]["_max"] = 0
+            _exc_vol[exc]["_n"]   = 0
+        if   rows <= 100:   _exc_vol[exc]["0–100"] += 1
+        elif rows <= 1000:  _exc_vol[exc]["101–1.000"] += 1
+        elif rows <= 3000:  _exc_vol[exc]["1.001–3.000"] += 1
+        elif rows <= 10000: _exc_vol[exc]["3.001–10.000"] += 1
+        elif rows <= 25000: _exc_vol[exc]["10.001–25.000"] += 1
+        elif rows <= 50000: _exc_vol[exc]["25.001–50.000"] += 1
+        else:               _exc_vol[exc]["> 50.000"] += 1
+        _exc_vol[exc]["_sum"] += rows
+        _exc_vol[exc]["_max"]  = max(_exc_vol[exc]["_max"], rows)
+        _exc_vol[exc]["_n"]   += 1
+    # Filtrar exchanges con ≥ 5 informes y ordenar por avg_rows desc
+    _MIN_EXC = 5
+    por_exchange_volumen = sorted(
+        [
+            {
+                "exchange": exc,
+                "buckets":  [d[k] for k in VOL_ORDER],
+                "avg_rows": round(d["_sum"] / d["_n"]) if d["_n"] else 0,
+                "max_rows": d["_max"],
+                "total":    d["_n"],
+            }
+            for exc, d in _exc_vol.items()
+            if d["_n"] >= _MIN_EXC
+        ],
+        key=lambda x: x["avg_rows"],
+        reverse=True,
+    )
+
     # TOP 5 usuarios por informes (emails enmascarados)
     top5_raw = (
         db.session.query(FifoReport.user_id, func.count(FifoReport.id).label("c"))
@@ -3597,8 +3637,9 @@ def _api_stats_data():
             "avg_per_user":      round(gen / con_informes, 1) if con_informes else 0.0,
             "por_exchange":      [{"exchange": r.exchange, "total": r.c} for r in por_exchange_raw],
             "por_ejercicio":     [{"ejercicio": r.fiscal_year, "total": r.c} for r in por_ejercicio_raw],
-            "por_volumen":       por_volumen,
-            "por_mes":           informes_por_mes,
+            "por_volumen":           por_volumen,
+            "por_exchange_volumen":  por_exchange_volumen,
+            "por_mes":               informes_por_mes,
             "top_usuarios":      top5,
             "por_error_type":           por_error,
             "exchange_error_breakdown": exc_error_breakdown,
