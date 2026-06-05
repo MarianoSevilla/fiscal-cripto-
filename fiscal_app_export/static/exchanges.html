@@ -67,6 +67,11 @@
           "@type": "WebPage",
           "url": "https://marianosevilla.com/exchanges/bitvavo",
           "name": "Declarar Bitvavo en Hacienda: CSV, FIFO e informe fiscal"
+        },
+        {
+          "@type": "WebPage",
+          "url": "https://marianosevilla.com/exchanges/kraken",
+          "name": "Declarar Kraken en Hacienda: Ledger CSV, FIFO e informe fiscal"
         }
       ]
     },
@@ -608,7 +613,7 @@ details[open] .faq-q::after { transform: rotate(45deg); }
       </a>
 
       <!-- Kraken -->
-      <div class="ex-hub-card">
+      <a href="/exchanges/kraken" class="ex-hub-card">
         <div class="ex-hub-head">
           <img src="/static/images/kraken.png" alt="Kraken" class="ex-hub-img">
           <div>
@@ -618,9 +623,10 @@ details[open] .faq-q::after { transform: rotate(45deg); }
         </div>
         <p class="ex-hub-desc">
           Historial disponible desde 2011 sin truncar. Soporta staking,
-          margin y spot. Exportación en CSV con timestamps completos.
+          margin y spot. Exporta el Ledger CSV con el rango completo desde el origen.
         </p>
-      </div>
+        <span class="ex-hub-cta">Ver guía</span>
+      </a>
 
       <!-- Coinbase -->
       <div class="ex-hub-card">
@@ -932,7 +938,7 @@ details[open] .faq-q::after { transform: rotate(45deg); }
             <td>Historial → Exportar</td>
             <td><span class="ex-tag">CSV</span></td>
             <td>Completo desde 2011</td>
-            <td>Disponible</td>
+            <td><a href="/exchanges/kraken">Ver guía →</a></td>
           </tr>
           <tr>
             <td><strong>Coinbase</strong></td>
@@ -1089,7 +1095,7 @@ details[open] .faq-q::after { transform: rotate(45deg); }
     <div class="selector-grid">
       <a href="/exchanges/binance" class="selector-btn"><img src="/static/images/binance.jpg"   alt="">Binance</a>
       <a href="/exchanges/bitvavo" class="selector-btn"><img src="/static/images/bitvavo.png" alt="">Bitvavo</a>
-      <span class="selector-btn"><img src="/static/images/kraken.png"    alt="">Kraken</span>
+      <a href="/exchanges/kraken" class="selector-btn"><img src="/static/images/kraken.png" alt="">Kraken</a>
       <span class="selector-btn"><img src="/static/images/coinbase.png"  alt="">Coinbase</span>
       <span class="selector-btn"><img src="/static/images/nexo.jpg"      alt="">Nexo</span>
       <span class="selector-btn"><img src="/static/images/crypto.png"    alt="">Crypto.com</span>

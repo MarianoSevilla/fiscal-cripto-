@@ -2904,6 +2904,12 @@ def exchanges_bitvavo():
     return send_from_directory("static/exchanges", "bitvavo.html")
 
 
+@app.route("/exchanges/kraken", strict_slashes=False)
+@limiter.exempt
+def exchanges_kraken():
+    return send_from_directory("static/exchanges", "kraken.html")
+
+
 @app.route("/como-funciona", strict_slashes=False)
 def como_funciona():
     return send_from_directory("static", "como-funciona.html")
