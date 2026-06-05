@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Declarar Binance en Hacienda: CSV, FIFO e informe fiscal</title>
+<meta name="description" content="Exporta el historial completo de Binance —spot, Earn, conversiones y comisiones en BNB— y genera el informe FIFO listo para Hacienda.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://marianosevilla.com/exchanges/binance">
+
+<!-- Open Graph -->
+<meta property="og:type"        content="article">
+<meta property="og:url"         content="https://marianosevilla.com/exchanges/binance">
+<meta property="og:title"       content="Declarar Binance en Hacienda: CSV, FIFO e informe fiscal">
+<meta property="og:description" content="Exporta el historial completo de Binance —spot, Earn, conversiones y comisiones en BNB— y genera el informe FIFO listo para Hacienda.">
+<meta property="og:image"       content="https://marianosevilla.com/static/mariano-sevilla-logo.png">
+<meta name="twitter:card"       content="summary_large_image">
+
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+<link rel="icon" href="/static/favicon.ico">
+<link rel="manifest" href="/static/site.webmanifest">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/nav.css">
+<link rel="preload" href="/static/nav.js" as="script">
+
+<!-- Schema: BreadcrumbList + Article + HowTo + FAQPage -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Inicio",                  "item": "https://marianosevilla.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Exchanges compatibles",   "item": "https://marianosevilla.com/exchanges" },
+        { "@type": "ListItem", "position": 3, "name": "Binance",                 "item": "https://marianosevilla.com/exchanges/binance" }
+      ]
+    },
+    {
+      "@type": "Article",
+      "@id": "https://marianosevilla.com/exchanges/binance#article",
+      "headline": "Cómo declarar las operaciones de Binance en Hacienda con un informe FIFO correcto",
+      "description": "Exporta el historial completo de Binance —spot, Earn, conversiones y comisiones en BNB— y genera el informe FIFO listo para Hacienda.",
+      "url": "https://marianosevilla.com/exchanges/binance",
+      "inLanguage": "es",
+      "datePublished": "2026-06-05",
+      "dateModified": "2026-06-05",
+      "author": {
+        "@type": "Person",
+        "name": "Rafael Ramos Martínez",
+        "description": "Economista colegiado nº 4.579 — Colegio de Economistas de Valencia"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Mariano Sevilla",
+        "url": "https://marianosevilla.com"
+      },
+      "isPartOf": { "@id": "https://marianosevilla.com/exchanges#webpage" }
+    },
+    {
+      "@type": "HowTo",
+      "name": "Cómo exportar el historial de Binance para declarar en Hacienda",
+      "description": "Pasos para obtener todos los archivos CSV necesarios de Binance y generar el informe fiscal FIFO.",
+      "step": [
+        {
+          "@type": "HowToStep",
+          "position": 1,
+          "name": "Accede al historial de transacciones",
+          "text": "Inicia sesión en Binance y accede a Cartera → Historial de transacciones → Exportar historial."
+        },
+        {
+          "@type": "HowToStep",
+          "position": 2,
+          "name": "Selecciona Transaction History y el rango anual",
+          "text": "Elige 'Transaction History' como tipo. Establece el rango desde el 1 de enero hasta el 31 de diciembre del primer año en que operaste."
+        },
+        {
+          "@type": "HowToStep",
+          "position": 3,
+          "name": "Descarga el CSV y repite por cada año",
+          "text": "Descarga el archivo CSV. Repite el paso para cada año hasta el ejercicio actual, ya que el FIFO es acumulativo desde tu primera compra."
+        },
+        {
+          "@type": "HowToStep",
+          "position": 4,
+          "name": "Exporta el historial de Binance Earn",
+          "text": "Accede a Cartera → Earn → Historial de recompensas y descarga el CSV. Estos rendimientos tributan como rendimientos del capital mobiliario."
+        },
+        {
+          "@type": "HowToStep",
+          "position": 5,
+          "name": "Exporta el historial de conversiones",
+          "text": "Accede a Comercio → Convertir → Historial de conversiones y descarga el CSV. Cada conversión es una permuta y un hecho imponible independiente."
+        },
+        {
+          "@type": "HowToStep",
+          "position": 6,
+          "name": "Sube todos los archivos al generador FIFO",
+          "text": "Crea tu cuenta, sube todos los CSV descargados y genera el informe PDF listo para Hacienda."
+        }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "¿Tengo que declarar todas las operaciones de Binance aunque sean muy pequeñas?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Sí. No existe umbral mínimo por operación en el IRPF. Todas las transmisiones de criptoactivos, incluidas las microoperaciones y las comisiones en BNB, son hechos imponibles. El generador FIFO las consolida automáticamente." }
+        },
+        {
+          "@type": "Question",
+          "name": "Llevo operando en Binance desde 2019. ¿Necesito todo el historial?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Sí. El FIFO calcula el coste de adquisición de cada activo desde la primera compra registrada. Sin el historial completo, el sistema asignaría coste cero a esas posiciones, lo que produce ganancias artificialmente infladas o pérdidas que no puedes justificar ante la AEAT." }
+        },
+        {
+          "@type": "Question",
+          "name": "¿El staking de Binance Earn tributa igual que vender criptomonedas?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. Los rendimientos de staking y savings tributan como rendimientos del capital mobiliario (Base del Ahorro, tipo 19-28%), no como ganancias patrimoniales. Van en una línea diferente de la declaración. El generador FIFO los separa automáticamente." }
+        },
+        {
+          "@type": "Question",
+          "name": "Uso la función Convert de Binance habitualmente. ¿Eso es un problema?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Es una complejidad adicional, no un problema. Cada conversión se trata como una permuta: venta del criptoactivo origen a valor de mercado más compra del criptoactivo destino. Si subes el archivo de historial de Convert, el generador procesa estas operaciones de forma automática." }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Hacienda sabe que tengo criptos en Binance?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Los proveedores de servicios de criptoactivos en España están sujetos a obligaciones de información fiscal crecientes. Con la directiva DAC8, los proveedores que operen con residentes en la UE deberán reportar información fiscal a las autoridades tributarias de los países miembros. No es prudente asumir que Hacienda no dispone de datos." }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Necesito el Modelo 721 si tengo criptos en Binance?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Si el valor total de tus criptoactivos en exchanges extranjeros supera los 50.000 € el 31 de diciembre, sí estás obligado a presentar el Modelo 721. Binance es una entidad con sede fuera de España. Consulta la guía completa en /modelo-721-criptomonedas." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:          #0b1220;
+  --bg2:         #101829;
+  --surface:     #141f32;
+  --surface2:    #1a2540;
+  --border:      rgba(255,255,255,0.07);
+  --border2:     rgba(255,255,255,0.13);
+  --text:        #eef2ff;
+  --muted:       #7a8aa8;
+  --accent:      #00C896;
+  --accent-dim:  rgba(0,200,150,0.12);
+  --accent-glow: rgba(0,200,150,0.25);
+  --footer-bg:   #070e1a;
+  --max-w:       1280px;
+  --pad-x:       3rem;
+  --font-display:'Syne', sans-serif;
+  --font-body:   'DM Sans', sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.7;
+  min-height: 100vh; -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.wrap {
+  max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x);
+}
+.section { padding: 5rem 0; }
+.section + .section { border-top: 1px solid var(--border); }
+
+.kicker {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--accent);
+  margin-bottom: 0.85rem; display: block;
+}
+.section-title {
+  font-family: var(--font-display); font-size: 2.1rem; font-weight: 800;
+  letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 1rem;
+}
+.section-title em { font-style: normal; color: var(--accent); }
+.section-desc {
+  font-size: 1rem; color: var(--muted); max-width: 680px; line-height: 1.75;
+  margin-bottom: 2rem;
+}
+
+/* ── HERO ─────────────────────────── */
+.hero {
+  padding: 7rem 0 5rem;
+  animation: fadeUp 0.45s ease both;
+}
+.breadcrumb {
+  font-size: 13px; color: var(--muted); margin-bottom: 2rem;
+  display: flex; align-items: center; gap: 6px;
+}
+.breadcrumb a { color: var(--muted); }
+.breadcrumb a:hover { color: var(--text); text-decoration: none; }
+.breadcrumb-sep { color: var(--border2); }
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--accent-dim); border: 1px solid var(--accent-glow);
+  color: var(--accent); border-radius: 100px;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+  padding: 5px 14px; margin-bottom: 1.5rem;
+  text-transform: uppercase;
+}
+.hero-badge::before {
+  content: ''; display: block; width: 6px; height: 6px;
+  border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent);
+}
+.hero h1 {
+  font-family: var(--font-display); font-size: clamp(2rem, 3.5vw, 3rem);
+  font-weight: 800; line-height: 1.1; letter-spacing: -0.03em;
+  margin-bottom: 1.25rem; max-width: 820px;
+}
+.hero h1 em { font-style: normal; color: var(--accent); }
+.hero-desc {
+  font-size: 1.1rem; color: var(--muted); max-width: 620px;
+  margin-bottom: 2rem; line-height: 1.75;
+}
+.hero-cta-group {
+  display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;
+}
+.btn-cta {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--accent); color: #0a0a0a;
+  border: none; border-radius: 10px; padding: 17px 48px;
+  font-family: var(--font-display); font-size: 1.05rem; font-weight: 700;
+  cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+  text-decoration: none; letter-spacing: -0.01em;
+}
+.btn-cta:hover { opacity: 0.88; text-decoration: none; }
+.btn-cta:active { transform: scale(0.98); }
+.btn-outline {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: none; color: var(--accent);
+  border: 1.5px solid var(--accent); border-radius: 10px; padding: 13px 28px;
+  font-family: var(--font-display); font-size: 0.97rem; font-weight: 700;
+  cursor: pointer; transition: background 0.15s;
+  text-decoration: none; letter-spacing: -0.01em;
+}
+.btn-outline:hover { background: var(--accent-dim); text-decoration: none; }
+.hero-micro {
+  font-size: 13px; color: var(--muted); margin-top: 1rem; opacity: 0.8;
+}
+
+/* ── CONTENT LAYOUT ──────────────── */
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 4rem;
+  align-items: start;
+}
+.content-main { min-width: 0; }
+
+/* ── SIDEBAR ─────────────────────── */
+.sidebar {
+  position: sticky; top: 5rem;
+  display: flex; flex-direction: column; gap: 1rem;
+}
+.sidebar-card {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 14px; padding: 1.5rem;
+}
+.sidebar-card-title {
+  font-family: var(--font-display); font-size: 0.93rem; font-weight: 700;
+  margin-bottom: 1rem; color: var(--text);
+}
+.sidebar-steps {
+  list-style: none; display: flex; flex-direction: column; gap: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+.sidebar-steps li {
+  font-size: 0.85rem; color: var(--muted); line-height: 1.5;
+  display: flex; gap: 8px; align-items: flex-start;
+}
+.sidebar-steps li::before {
+  content: attr(data-n);
+  flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--accent-dim); border: 1px solid var(--accent-glow);
+  color: var(--accent); font-size: 9px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  margin-top: 2px;
+}
+.sidebar-cta {
+  display: block; width: 100%; text-align: center;
+  background: var(--accent); color: #0a0a0a;
+  border-radius: 10px; padding: 14px 20px;
+  font-family: var(--font-display); font-size: 0.95rem; font-weight: 700;
+  text-decoration: none; transition: opacity 0.15s;
+}
+.sidebar-cta:hover { opacity: 0.88; text-decoration: none; }
+.sidebar-note {
+  font-size: 12px; color: var(--muted); text-align: center;
+  margin-top: 0.75rem; line-height: 1.5;
+}
+.sidebar-links {
+  list-style: none; display: flex; flex-direction: column; gap: 0.5rem;
+}
+.sidebar-links a {
+  font-size: 0.87rem; color: var(--muted);
+  display: flex; align-items: center; gap: 6px;
+}
+.sidebar-links a:hover { color: var(--text); text-decoration: none; }
+.sidebar-links a::before { content: '→'; color: var(--accent); font-size: 0.8rem; }
+
+/* ── PROSE SECTIONS ──────────────── */
+.prose h2 {
+  font-family: var(--font-display); font-size: 1.55rem; font-weight: 800;
+  letter-spacing: -0.025em; line-height: 1.2;
+  margin: 3rem 0 1rem; color: var(--text);
+}
+.prose h2:first-child { margin-top: 0; }
+.prose h3 {
+  font-family: var(--font-display); font-size: 1.1rem; font-weight: 700;
+  letter-spacing: -0.015em; margin: 2rem 0 0.65rem; color: var(--text);
+}
+.prose p {
+  font-size: 0.97rem; color: var(--muted); line-height: 1.78;
+  margin-bottom: 1rem;
+}
+.prose p:last-child { margin-bottom: 0; }
+.prose strong { color: var(--text); font-weight: 600; }
+.prose a { color: var(--accent); }
+
+/* ── ARCHIVOS TABLE ──────────────── */
+.files-table-wrap {
+  overflow-x: auto; margin: 1.75rem 0;
+  border: 1px solid var(--border); border-radius: 14px;
+}
+.files-table {
+  width: 100%; border-collapse: collapse; font-size: 0.87rem;
+}
+.files-table th {
+  background: var(--surface2); padding: 0.7rem 1rem;
+  text-align: left; font-weight: 600; color: var(--muted);
+  font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+  border-bottom: 1px solid var(--border2);
+}
+.files-table td {
+  padding: 0.85rem 1rem; border-bottom: 1px solid var(--border);
+  color: var(--text); vertical-align: top; line-height: 1.55;
+}
+.files-table tr:last-child td { border-bottom: none; }
+.files-table tr:hover td { background: var(--surface); }
+.files-table td:first-child { font-weight: 600; white-space: nowrap; }
+.files-table td .tag-muted {
+  display: inline-block; background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border2); border-radius: 5px;
+  padding: 1px 7px; font-size: 11px; color: var(--muted);
+}
+
+/* ── STEPS ───────────────────────── */
+.steps-list {
+  list-style: none; display: flex; flex-direction: column; gap: 1.25rem;
+  margin: 1.75rem 0;
+}
+.step-item {
+  display: flex; gap: 1.1rem; align-items: flex-start;
+}
+.step-num {
+  flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%;
+  background: var(--accent-dim); border: 1px solid var(--accent-glow);
+  color: var(--accent); font-family: var(--font-display);
+  font-size: 0.85rem; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  margin-top: 2px;
+}
+.step-body { flex: 1; min-width: 0; }
+.step-title {
+  font-family: var(--font-display); font-size: 0.97rem; font-weight: 700;
+  color: var(--text); margin-bottom: 0.3rem;
+}
+.step-desc { font-size: 0.9rem; color: var(--muted); line-height: 1.65; }
+.step-desc strong { color: var(--text); }
+.step-note {
+  display: inline-block; margin-top: 0.4rem;
+  font-size: 0.82rem; color: var(--accent); background: var(--accent-dim);
+  border: 1px solid var(--accent-glow); border-radius: 6px;
+  padding: 2px 9px;
+}
+
+/* ── ERROR CARDS ─────────────────── */
+.error-list {
+  display: flex; flex-direction: column; gap: 1.25rem; margin: 1.75rem 0;
+}
+.error-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 1.4rem 1.5rem;
+}
+.error-header {
+  display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.65rem;
+}
+.error-num {
+  flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(229,85,85,0.1); border: 1px solid rgba(229,85,85,0.3);
+  color: #e55; font-family: var(--font-display);
+  font-size: 0.8rem; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+}
+.error-title {
+  font-family: var(--font-display); font-size: 0.97rem; font-weight: 700;
+  color: var(--text);
+}
+.error-body { font-size: 0.9rem; color: var(--muted); line-height: 1.68; }
+.error-body strong { color: var(--text); }
+
+/* ── HIGHLIGHT BOX ───────────────── */
+.highlight-box {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 12px 12px 0; padding: 1.25rem 1.5rem;
+  margin: 1.75rem 0;
+  font-size: 0.93rem; color: var(--muted); line-height: 1.7;
+}
+.highlight-box strong { color: var(--text); }
+
+/* ── WARNING BOX ─────────────────── */
+.warning-box {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: rgba(229,85,85,0.07); border: 1px solid rgba(229,85,85,0.2);
+  border-radius: 10px; padding: 1rem 1.25rem; margin: 1.5rem 0;
+}
+.warning-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 2px; }
+.warning-text { font-size: 0.88rem; color: var(--muted); line-height: 1.6; }
+.warning-text strong { color: #e55; font-weight: 600; }
+
+/* ── INFO BOX ────────────────────── */
+.info-box {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: var(--accent-dim); border: 1px solid var(--accent-glow);
+  border-radius: 10px; padding: 1rem 1.25rem; margin: 1.5rem 0;
+}
+.info-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 2px; }
+.info-text { font-size: 0.88rem; color: var(--text); line-height: 1.6; }
+.info-text a { color: var(--accent); }
+
+/* ── FAQ ─────────────────────────── */
+.faq-list { margin-top: 2rem; display: flex; flex-direction: column; gap: 0; }
+.faq-item { border-bottom: 1px solid var(--border); }
+.faq-item:first-child { border-top: 1px solid var(--border); }
+.faq-q {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 1.2rem 0; cursor: pointer; list-style: none; gap: 1rem;
+  font-weight: 600; font-size: 0.97rem; color: var(--text);
+  user-select: none;
+}
+.faq-q::after {
+  content: '+'; font-family: var(--font-display); font-size: 1.3rem;
+  color: var(--accent); flex-shrink: 0; transition: transform 0.2s;
+}
+details[open] .faq-q::after { transform: rotate(45deg); }
+.faq-a {
+  padding: 0 0 1.2rem;
+  font-size: 0.93rem; color: var(--muted); line-height: 1.7;
+}
+.faq-a a { color: var(--accent); }
+
+/* ── CTA MID-PAGE ────────────────── */
+.cta-mid {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 16px; padding: 2rem 2.25rem;
+  margin: 2.5rem 0; text-align: center;
+}
+.cta-mid h3 {
+  font-family: var(--font-display); font-size: 1.3rem; font-weight: 800;
+  letter-spacing: -0.02em; margin-bottom: 0.65rem;
+}
+.cta-mid h3 em { font-style: normal; color: var(--accent); }
+.cta-mid p { font-size: 0.93rem; color: var(--muted); margin-bottom: 1.5rem; line-height: 1.65; }
+.cta-buttons {
+  display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;
+}
+.cta-micro-text {
+  font-size: 12px; color: var(--muted); margin-top: 0.75rem; opacity: 0.8;
+}
+
+/* ── CTA FINAL ───────────────────── */
+.cta-final {
+  text-align: center; padding: 5rem 0 4rem;
+  border-top: 1px solid var(--border);
+}
+.cta-final h2 {
+  font-family: var(--font-display); font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 800; letter-spacing: -0.03em; line-height: 1.15;
+  margin-bottom: 1rem;
+}
+.cta-final h2 em { font-style: normal; color: var(--accent); }
+.cta-final p {
+  font-size: 1rem; color: var(--muted); max-width: 480px;
+  margin: 0 auto 2.25rem; line-height: 1.7;
+}
+.cta-micro {
+  font-size: 13px; color: var(--muted); margin-top: 1rem; opacity: 0.75;
+}
+
+/* ── FOOTER ──────────────────────── */
+.page-footer {
+  background: var(--footer-bg); border-top: 1px solid var(--border);
+  padding: 2rem 0;
+}
+.footer-inner {
+  max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x);
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 1rem; flex-wrap: wrap;
+}
+.footer-copy { font-size: 13px; color: var(--muted); }
+.footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+.footer-links a { font-size: 13px; color: var(--muted); }
+.footer-links a:hover { color: var(--text); text-decoration: none; }
+
+/* ── RESPONSIVE ──────────────────── */
+@media (max-width: 1024px) {
+  .content-grid { grid-template-columns: 1fr; }
+  .sidebar { position: static; display: grid; grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 900px) {
+  :root { --pad-x: 1.5rem; }
+  .sidebar { grid-template-columns: 1fr; }
+  .footer-inner { flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 640px) {
+  :root { --pad-x: 1.25rem; }
+  .hero { padding: 5rem 0 3.5rem; }
+  .hero h1 { font-size: 1.85rem; }
+  .prose h2 { font-size: 1.35rem; }
+  .section { padding: 3.5rem 0; }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<!-- ── NAV ──────────────────────────── -->
+<nav id="site-nav">
+  <div class="snav-inner"></div>
+</nav>
+<script src="/static/nav.js"></script>
+
+<!-- ── HERO ──────────────────────────── -->
+<section class="hero">
+  <div class="wrap">
+
+    <nav class="breadcrumb" aria-label="Ruta de navegación">
+      <a href="/">Inicio</a>
+      <span class="breadcrumb-sep">›</span>
+      <a href="/exchanges">Exchanges compatibles</a>
+      <span class="breadcrumb-sep">›</span>
+      <span>Binance</span>
+    </nav>
+
+    <span class="hero-badge">Binance · Guía fiscal</span>
+
+    <h1>Cómo declarar las operaciones de Binance en Hacienda con un informe <em>FIFO</em> correcto</h1>
+
+    <p class="hero-desc">
+      El CSV de Binance no es un archivo único. Dependiendo de lo que hayas hecho en la
+      plataforma —spot, Earn, conversiones, comisiones en BNB— necesitas entre tres y
+      cuatro exportaciones distintas. Esta guía explica cuáles, cómo obtenerlas y cómo
+      convertirlas en el informe que Hacienda necesita.
+    </p>
+
+    <div class="hero-cta-group">
+      <a href="/binance" class="btn-cta">Generar informe fiscal de Binance</a>
+      <a href="/exchanges" class="btn-outline">Ver todos los exchanges</a>
+    </div>
+    <p class="hero-micro">Crea tu cuenta gratis y sube el CSV exportado desde Binance.</p>
+
+  </div>
+</section>
+
+<!-- ── CONTENIDO + SIDEBAR ────────────── -->
+<section class="section">
+  <div class="wrap">
+    <div class="content-grid">
+
+      <!-- ── CONTENIDO PRINCIPAL ─────── -->
+      <div class="content-main prose">
+
+        <h2>Por qué el CSV de Binance es diferente al de otros exchanges</h2>
+
+        <p>
+          Plataformas como Bitvavo o Kraken tienen un único historial de transacciones que
+          recoge prácticamente todo. Binance tiene, al menos, tres subsistemas con
+          exportaciones separadas y formatos de columna distintos. Si solo descargas uno,
+          estás dejando operaciones fuera del cálculo FIFO.
+        </p>
+
+        <h3>Binance no tiene un único historial</h3>
+        <p>
+          Las operaciones spot, las conversiones mediante la función "Convert", y los
+          rendimientos de Earn se generan en módulos diferentes y se exportan por separado.
+          No aparecen en el mismo CSV. Un usuario activo de Binance necesita descargar como
+          mínimo el historial de transacciones, el de Earn y el de Convert antes de tener
+          el conjunto completo de hechos imponibles.
+        </p>
+
+        <h3>El límite de 12 meses por exportación</h3>
+        <p>
+          Binance limita cada exportación de Transaction History a un intervalo máximo de
+          12 meses. Si llevas operando desde 2019, eso supone al menos seis descargas
+          solo para el historial spot, más los correspondientes archivos de Earn y Convert
+          de cada período. <strong>El error más habitual es exportar únicamente el año que se
+          declara.</strong> El FIFO es acumulativo: para calcular la ganancia de una venta
+          en 2024 se necesita el precio de adquisición de la posición, que puede venir de
+          una compra de 2020.
+        </p>
+
+        <h3>Las conversiones no aparecen en el historial spot</h3>
+        <p>
+          La función Convert de Binance (cambiar directamente entre dos criptoactivos sin
+          pasar por órdenes de mercado) no se registra en el historial de transacciones
+          estándar. Tiene su propio archivo de exportación. Cada conversión es una
+          <strong>permuta</strong>: venta del criptoactivo A a precio de mercado en ese
+          instante, más compra del criptoactivo B. Si no incluyes ese archivo, esas
+          operaciones desaparecen del cálculo.
+        </p>
+
+        <h2>Qué archivos necesitas exportar de Binance</h2>
+
+        <p>Cuatro tipos de exportación, según lo que hayas utilizado en la plataforma:</p>
+
+        <div class="files-table-wrap">
+          <table class="files-table">
+            <thead>
+              <tr>
+                <th>Archivo</th>
+                <th>Ruta en Binance</th>
+                <th>Contenido</th>
+                <th>Límite</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Transaction History</td>
+                <td>Cartera → Historial → Exportar</td>
+                <td>Compras, ventas spot, depósitos, retiradas</td>
+                <td><span class="tag-muted">12 meses</span></td>
+              </tr>
+              <tr>
+                <td>Earn / Rewards History</td>
+                <td>Cartera → Earn → Historial</td>
+                <td>Staking, Savings, Liquidity Farming</td>
+                <td><span class="tag-muted">12 meses</span></td>
+              </tr>
+              <tr>
+                <td>Convert History</td>
+                <td>Comercio → Convertir → Historial</td>
+                <td>Permutas entre criptoactivos</td>
+                <td><span class="tag-muted">12 meses</span></td>
+              </tr>
+              <tr>
+                <td>Comisiones en BNB</td>
+                <td>Incluidas en Transaction History</td>
+                <td>Comisiones pagadas en BNB (requieren tratamiento especial)</td>
+                <td>—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          P2P, Futures y Margin tienen una casuística fiscal distinta y quedan fuera del
+          alcance de esta guía. Si tienes operaciones de futuros o margen, consulta con
+          un asesor fiscal especializado.
+        </p>
+
+        <h2 id="exportar">Guía paso a paso para exportar el historial de Binance</h2>
+
+        <ol class="steps-list">
+          <li class="step-item">
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <div class="step-title">Accede al historial de transacciones</div>
+              <div class="step-desc">Inicia sesión en Binance y navega a <strong>Cartera → Historial de transacciones → Exportar historial</strong>.</div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <div class="step-title">Selecciona "Transaction History" y el rango anual</div>
+              <div class="step-desc">
+                Elige el tipo de informe "Transaction History". Establece el rango desde el
+                1 de enero hasta el 31 de diciembre del <strong>primer año en que operaste</strong>.
+                <span class="step-note">Empieza siempre desde el origen, no desde el año que declaras.</span>
+              </div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <div class="step-title">Descarga el CSV y repite para cada año siguiente</div>
+              <div class="step-desc">
+                Descarga el archivo generado y repite el proceso avanzando de año en año
+                hasta el ejercicio actual. Guarda todos los archivos: los necesitarás todos
+                al subir el historial al generador.
+              </div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">4</div>
+            <div class="step-body">
+              <div class="step-title">Exporta el historial de Binance Earn</div>
+              <div class="step-desc">
+                Accede a <strong>Cartera → Earn → Historial de recompensas</strong> y descarga el CSV
+                por cada período. Estos rendimientos tributan de forma diferente
+                (rendimientos del capital mobiliario) y el generador los trata de forma separada.
+              </div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">5</div>
+            <div class="step-body">
+              <div class="step-title">Exporta el historial de conversiones (Convert)</div>
+              <div class="step-desc">
+                Accede a <strong>Comercio → Convertir → Historial de conversiones</strong> y descarga
+                el CSV. Si has usado Convert con frecuencia, es posible que tengas
+                centenares de permutas que sin este archivo quedarían sin declarar.
+              </div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">6</div>
+            <div class="step-body">
+              <div class="step-title">Sube todos los archivos al generador FIFO</div>
+              <div class="step-desc">
+                Crea tu cuenta, sube todos los CSV descargados en el mismo proceso y genera
+                el informe PDF. El sistema consolida automáticamente todos los archivos y
+                aplica el FIFO sobre el conjunto global de cada activo.
+              </div>
+            </div>
+          </li>
+        </ol>
+
+        <div class="warning-box">
+          <span class="warning-icon">⚠️</span>
+          <div class="warning-text">
+            <strong>No importes los archivos de año en año.</strong> Sube el historial
+            completo de todos los años de una sola vez. El FIFO es una cola global: si
+            divides el historial, el coste de adquisición de las posiciones antiguas
+            queda huérfano.
+          </div>
+        </div>
+
+        <h2>Los 3 errores más comunes al declarar Binance</h2>
+
+        <div class="error-list">
+          <div class="error-card">
+            <div class="error-header">
+              <div class="error-num">1</div>
+              <div class="error-title">Declarar solo el año en curso</div>
+            </div>
+            <div class="error-body">
+              El FIFO aplica sobre el stock total acumulado. Si vendiste ETH en 2024
+              pero lo compraste en partes durante 2020, 2021 y 2022, el coste de
+              adquisición imputable está distribuido en tres archivos de esos años. Sin
+              ellos, el sistema asigna coste cero y la ganancia declarada puede ser
+              <strong>varias veces mayor</strong> que la real. Hacienda no te avisa de
+              que has sobredeclarado.
+            </div>
+          </div>
+
+          <div class="error-card">
+            <div class="error-header">
+              <div class="error-num">2</div>
+              <div class="error-title">Ignorar Binance Earn</div>
+            </div>
+            <div class="error-body">
+              Los rendimientos de staking y savings son <strong>rendimientos del capital
+              mobiliario</strong>, no ganancias patrimoniales. Si los sumas al cálculo
+              FIFO como si fueran compras, inflas artificialmente el coste de adquisición
+              de las posiciones y subestimas el rendimiento declarable. Son bases
+              imponibles distintas dentro del IRPF.
+            </div>
+          </div>
+
+          <div class="error-card">
+            <div class="error-header">
+              <div class="error-num">3</div>
+              <div class="error-title">Olvidar las conversiones</div>
+            </div>
+            <div class="error-body">
+              Convertir USDT a BTC en Binance no es "mover dinero" entre criptomonedas.
+              Es una permuta: venta de USDT a precio de mercado (hecho imponible) y
+              compra de BTC al mismo valor. Si usas Convert con frecuencia, puedes tener
+              <strong>decenas o centenares de hechos imponibles no declarados</strong>
+              por no haber exportado el archivo correcto.
+            </div>
+          </div>
+        </div>
+
+        <h2>Comisiones pagadas en BNB: ¿hay que declararlas?</h2>
+
+        <p>
+          Cuando activas el descuento del 25% pagando comisiones en BNB, cada comisión
+          supone una disposición de BNB a valor de mercado en ese momento. La doctrina
+          técnica más extendida entre asesores especializados en fiscalidad española de
+          criptoactivos es que esas disposiciones <strong>sí constituyen transmisión de
+          BNB</strong> y generan ganancia o pérdida patrimonial por la diferencia entre el
+          coste de adquisición FIFO del BNB utilizado y su valor en el momento del pago.
+        </p>
+
+        <p>
+          Para un usuario con dos o tres años de trading activo en Binance con comisiones
+          en BNB activadas, esto puede representar centenares de microoperaciones. El
+          generador FIFO lee directamente las comisiones incluidas en el Transaction
+          History y las procesa de forma automática junto al resto del historial.
+        </p>
+
+        <div class="highlight-box">
+          Si quieres entender en detalle cómo el FIFO determina el coste de adquisición
+          de cada disposición de BNB usada en comisiones, consulta la guía completa
+          del <a href="/metodo-fifo-criptomonedas">método FIFO para criptomonedas</a>.
+        </div>
+
+        <h2>¿Necesito el Modelo 721 por tener criptos en Binance?</h2>
+
+        <p>
+          Binance opera con entidades con sede fuera de España. Si el valor total de tus
+          criptoactivos en exchanges extranjeros supera los <strong>50.000 € el 31 de
+          diciembre</strong>, estás obligado a presentar el Modelo 721 ante la AEAT.
+        </p>
+
+        <p>
+          A diferencia de Bit2me —registrado en el Banco de España—, las posiciones en
+          Binance cuentan a efectos del Modelo 721. Si tienes criptos distribuidas entre
+          Binance y otros exchanges internacionales, los saldos se agregan para determinar
+          si superas el umbral.
+        </p>
+
+        <div class="info-box">
+          <span class="info-icon">ℹ️</span>
+          <div class="info-text">
+            Guía completa: <a href="/modelo-721-criptomonedas">Modelo 721 para criptomonedas —
+            quién debe presentarlo, cómo calcular el saldo y cuándo se presenta</a>.
+          </div>
+        </div>
+
+        <h2>¿Hacienda ya tiene datos de mis operaciones en Binance?</h2>
+
+        <p>
+          Los proveedores de servicios de criptoactivos están sujetos a obligaciones de
+          información fiscal cada vez más amplias en Europa. Con la directiva DAC8, los
+          proveedores que operen con residentes en la UE deberán reportar a las
+          autoridades tributarias de los países miembros información sobre saldos,
+          transacciones e identidad de clientes. El calendario de implementación de DAC8
+          sitúa las primeras comunicaciones en 2026.
+        </p>
+
+        <p>
+          No es prudente asumir que Hacienda no dispone de información sobre actividad
+          en Binance. Un informe fiscal que cuadre con los datos que los proveedores
+          pueden reportar reduce significativamente el riesgo de requerimientos posteriores.
+        </p>
+
+        <!-- CTA mid-page -->
+        <div class="cta-mid">
+          <h3>Tienes los CSV. <em>Genera el informe.</em></h3>
+          <p>Sube todos los archivos de Binance y obtén el informe FIFO listo para tu gestor o para la Renta.</p>
+          <div class="cta-buttons">
+            <a href="/binance" class="btn-cta">Subir CSV de Binance</a>
+            <a href="/asesoramiento-fiscal-criptomonedas" class="btn-outline">Solicitar asesoramiento</a>
+          </div>
+          <p class="cta-micro-text">Crea tu cuenta gratis y sube el CSV exportado desde Binance.</p>
+        </div>
+
+        <h2>Preguntas frecuentes sobre Binance y Hacienda</h2>
+
+        <div class="faq-list">
+
+          <details class="faq-item">
+            <summary class="faq-q">¿Tengo que declarar todas las operaciones de Binance aunque sean muy pequeñas?</summary>
+            <p class="faq-a">
+              Sí. No existe umbral mínimo por operación en el IRPF. Todas las transmisiones
+              de criptoactivos, incluidas las microoperaciones y las comisiones pagadas en BNB,
+              son hechos imponibles. El generador FIFO las consolida automáticamente sin que
+              tengas que revisarlas una a una.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">Llevo operando en Binance desde 2019. ¿Necesito todo el historial?</summary>
+            <p class="faq-a">
+              Sí. El FIFO calcula el coste de adquisición de cada activo desde la primera
+              compra registrada. Sin el historial completo, el sistema asignaría coste cero
+              a las posiciones antiguas, lo que produce ganancias artificialmente infladas
+              o pérdidas que no puedes justificar ante la AEAT. Exporta año a año desde
+              tu primera operación.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">¿El staking de Binance Earn tributa igual que vender criptomonedas?</summary>
+            <p class="faq-a">
+              No. Los rendimientos de staking y savings tributan como
+              <strong>rendimientos del capital mobiliario</strong> (Base del Ahorro, tipo del
+              19% al 28%), no como ganancias patrimoniales. El tipo marginal es el mismo en
+              muchos tramos, pero van en líneas distintas de la declaración y afectan a
+              bases imponibles diferentes. El generador FIFO los separa automáticamente al
+              importar el historial de Earn.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">Uso la función Convert de Binance habitualmente. ¿Es un problema?</summary>
+            <p class="faq-a">
+              Es una complejidad adicional, no un problema insalvable. Cada conversión es
+              una permuta fiscal: venta del criptoactivo origen a valor de mercado en ese
+              instante, más compra del criptoactivo destino. Si subes el archivo de
+              historial de Convert junto al resto, el generador lo procesa automáticamente.
+              El problema surge cuando ese archivo no se descarga y esas operaciones
+              quedan sin declarar.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">¿Hacienda sabe que tengo criptos en Binance?</summary>
+            <p class="faq-a">
+              Los proveedores de servicios de criptoactivos están sujetos a obligaciones de
+              información fiscal cada vez más amplias en Europa. Con la directiva DAC8, los
+              proveedores deberán reportar información sobre sus clientes residentes en la UE
+              a las autoridades tributarias correspondientes. No es prudente asumir que
+              Hacienda no dispone de datos sobre actividad en la plataforma.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">¿Necesito el Modelo 721 si tengo criptos en Binance?</summary>
+            <p class="faq-a">
+              Si el valor total de tus criptoactivos en exchanges extranjeros supera los
+              50.000 € el 31 de diciembre, sí estás obligado a presentar el Modelo 721.
+              Binance opera con entidades con sede fuera de España, por lo que las posiciones
+              en Binance computan a efectos de este modelo. Consulta la guía completa en
+              <a href="/modelo-721-criptomonedas">Modelo 721 para criptomonedas</a>.
+            </p>
+          </details>
+
+        </div>
+
+      </div>
+      <!-- ── FIN CONTENIDO PRINCIPAL ──── -->
+
+      <!-- ── SIDEBAR ─────────────────── -->
+      <aside class="sidebar">
+
+        <div class="sidebar-card">
+          <div class="sidebar-card-title">Pasos para declarar Binance</div>
+          <ul class="sidebar-steps">
+            <li data-n="1">Exportar Transaction History (año a año desde el origen)</li>
+            <li data-n="2">Exportar Earn / Rewards History</li>
+            <li data-n="3">Exportar Convert History</li>
+            <li data-n="4">Subir todos los archivos al generador</li>
+            <li data-n="5">Descargar informe PDF para Hacienda</li>
+          </ul>
+          <a href="/binance" class="sidebar-cta">Generar informe de Binance</a>
+          <p class="sidebar-note">Crea tu cuenta gratis y sube el CSV exportado desde Binance.</p>
+        </div>
+
+        <div class="sidebar-card">
+          <div class="sidebar-card-title">Páginas relacionadas</div>
+          <ul class="sidebar-links">
+            <li><a href="/exchanges">Todos los exchanges compatibles</a></li>
+            <li><a href="/como-funciona">Cómo funciona la herramienta</a></li>
+            <li><a href="/modelo-721-criptomonedas">Guía Modelo 721</a></li>
+            <li><a href="/asesoramiento-fiscal-criptomonedas">Asesoramiento fiscal cripto</a></li>
+            <li><a href="/about">Quiénes somos</a></li>
+          </ul>
+        </div>
+
+      </aside>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA FINAL ──────────────────────── -->
+<section class="cta-final">
+  <div class="wrap">
+    <h2>Genera tu informe fiscal de<br><em>Binance hoy</em></h2>
+    <p>
+      Exporta los archivos, súbelos al generador y descarga el PDF listo
+      para tu gestor o para introducir los datos directamente en la Renta.
+    </p>
+    <div class="cta-buttons">
+      <a href="/binance"   class="btn-cta">Subir CSV de Binance</a>
+      <a href="/exchanges" class="btn-outline">Ver todos los exchanges</a>
+    </div>
+    <p class="cta-micro">
+      Supervisado por <a href="/about">Rafael Ramos Martínez</a>,
+      economista colegiado nº 4.579 · Colegio de Economistas de Valencia
+    </p>
+  </div>
+</section>
+
+<!-- ── FOOTER ──────────────────────────── -->
+<footer class="page-footer">
+  <div class="footer-inner">
+    <span class="footer-copy">© 2025 marianosevilla.com — No constituye asesoramiento fiscal ni legal.</span>
+    <div class="footer-links">
+      <a href="/privacidad">Privacidad</a>
+      <a href="/terminos">Términos</a>
+      <a href="/cookies">Cookies</a>
+      <a href="/contacto">Contacto</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

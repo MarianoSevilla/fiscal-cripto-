@@ -2892,6 +2892,12 @@ def exchanges_hub():
     return send_from_directory("static", "exchanges.html")
 
 
+@app.route("/exchanges/binance", strict_slashes=False)
+@limiter.exempt
+def exchanges_binance():
+    return send_from_directory("static/exchanges", "binance.html")
+
+
 @app.route("/como-funciona", strict_slashes=False)
 def como_funciona():
     return send_from_directory("static", "como-funciona.html")
