@@ -2886,6 +2886,12 @@ def sitemap():
     return send_from_directory("static", "sitemap.xml", mimetype="application/xml")
 
 
+@app.route("/exchanges", strict_slashes=False)
+@limiter.exempt
+def exchanges_hub():
+    return send_from_directory("static", "exchanges.html")
+
+
 @app.route("/como-funciona", strict_slashes=False)
 def como_funciona():
     return send_from_directory("static", "como-funciona.html")

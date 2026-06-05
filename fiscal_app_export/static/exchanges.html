@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Informe fiscal FIFO por exchange: Binance, Bitvavo, Kraken y más</title>
+<meta name="description" content="Sube el CSV de tu exchange, calcula el FIFO obligatorio y genera el informe fiscal listo para Hacienda 2026. Supervisado por economista colegiado.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://marianosevilla.com/exchanges">
+
+<!-- Open Graph -->
+<meta property="og:type"        content="website">
+<meta property="og:url"         content="https://marianosevilla.com/exchanges">
+<meta property="og:title"       content="Informe fiscal FIFO por exchange: Binance, Bitvavo, Kraken y más">
+<meta property="og:description" content="Sube el CSV de tu exchange, calcula el FIFO obligatorio y genera el informe fiscal listo para Hacienda 2026. Supervisado por economista colegiado.">
+<meta property="og:image"       content="https://marianosevilla.com/static/mariano-sevilla-logo.png">
+<meta name="twitter:card"       content="summary_large_image">
+
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+<link rel="icon" href="/static/favicon.ico">
+<link rel="manifest" href="/static/site.webmanifest">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/nav.css">
+<link rel="preload" href="/static/nav.js" as="script">
+
+<!-- Schema: CollectionPage + BreadcrumbList + FAQPage -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "CollectionPage",
+      "@id": "https://marianosevilla.com/exchanges#webpage",
+      "url": "https://marianosevilla.com/exchanges",
+      "name": "Informe fiscal FIFO por exchange: Binance, Bitvavo, Kraken y más",
+      "description": "Sube el CSV de tu exchange, calcula el FIFO obligatorio y genera el informe fiscal listo para Hacienda 2026. Supervisado por economista colegiado.",
+      "inLanguage": "es",
+      "isPartOf": { "@id": "https://marianosevilla.com/#website" },
+      "author": [
+        {
+          "@type": "Person",
+          "name": "Mariano Sevilla",
+          "url": "https://marianosevilla.com/about"
+        },
+        {
+          "@type": "Person",
+          "name": "Rafael Ramos Martínez",
+          "description": "Economista colegiado nº 4.579 — Colegio de Economistas de Valencia"
+        }
+      ],
+      "about": {
+        "@type": "Thing",
+        "name": "Exchanges de criptomonedas compatibles para declarar en Hacienda España"
+      }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Inicio",     "item": "https://marianosevilla.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Exchanges",  "item": "https://marianosevilla.com/exchanges" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "¿Necesito exportar el historial completo o solo el del año que declaro?",
+          "acceptedAnswer": { "@type": "Answer", "text": "El historial completo desde tu primera operación. El método FIFO es acumulativo: para calcular el precio de adquisición imputado a una venta en 2024, la herramienta necesita todas las compras anteriores, incluso las de 2017 o 2018." }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Qué pasa si he operado en varios exchanges con el mismo activo?",
+          "acceptedAnswer": { "@type": "Answer", "text": "La herramienta los consolida automáticamente. Puedes subir los CSV de todos tus exchanges en el mismo proceso y el FIFO se calcula sobre el conjunto global de cada activo, que es el criterio que aplica Hacienda." }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Sabe Hacienda que tengo criptomonedas en estos exchanges?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Sí. Los exchanges registrados en España presentan los modelos 172 y 173, que informan a la AEAT sobre saldos y operaciones. Con la directiva DAC8 en aplicación para 2026, los exchanges extranjeros también están obligados a compartir datos fiscales." }
+        },
+        {
+          "@type": "Question",
+          "name": "¿El informe es válido directamente para presentar a Hacienda?",
+          "acceptedAnswer": { "@type": "Answer", "text": "El informe contiene todos los cálculos necesarios para trasladar los datos a la declaración de la Renta, siguiendo el método FIFO del artículo 37.2 LIRPF. Está diseñado para que tu gestor fiscal trabaje directamente con él. No es un modelo oficial de la AEAT." }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Funcionan las operaciones de staking e intereses?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Sí. Las recompensas de staking, intereses de Nexo o Crypto.com Earn y airdrops se clasifican automáticamente como rendimientos del capital mobiliario y se separan de las ganancias patrimoniales en el informe." }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Qué ocurre si me falta parte del historial de un exchange?",
+          "acceptedAnswer": { "@type": "Answer", "text": "El informe genera advertencias específicas para las operaciones donde el coste base no puede determinarse. En esos casos se recomienda revisión con un asesor fiscal antes de presentar la declaración." }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Qué diferencia hay entre esta herramienta y Koinly o Waltio?",
+          "acceptedAnswer": { "@type": "Answer", "text": "El diferenciador principal es que los criterios fiscales aplicados están supervisados por un economista colegiado especializado en fiscalidad española. No es un algoritmo genérico adaptado a múltiples jurisdicciones: está construido específicamente para la normativa de la AEAT." }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Cuándo añadiréis más exchanges?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Se añaden en función de la demanda. Bybit y KuCoin están en desarrollo. Si tu exchange no está en la lista, puedes solicitarlo desde el formulario de contacto." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:          #0b1220;
+  --bg2:         #101829;
+  --surface:     #141f32;
+  --surface2:    #1a2540;
+  --border:      rgba(255,255,255,0.07);
+  --border2:     rgba(255,255,255,0.13);
+  --text:        #eef2ff;
+  --muted:       #7a8aa8;
+  --accent:      #00C896;
+  --accent-dim:  rgba(0,200,150,0.12);
+  --accent-glow: rgba(0,200,150,0.25);
+  --footer-bg:   #070e1a;
+  --max-w:       1280px;
+  --pad-x:       3rem;
+  --font-display:'Syne', sans-serif;
+  --font-body:   'DM Sans', sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.7;
+  min-height: 100vh; -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.wrap {
+  max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x);
+}
+.section { padding: 5rem 0; }
+.section + .section { border-top: 1px solid var(--border); }
+
+.kicker {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--accent);
+  margin-bottom: 0.85rem; display: block;
+}
+.section-title {
+  font-family: var(--font-display); font-size: 2.1rem; font-weight: 800;
+  letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 1rem;
+}
+.section-title em { font-style: normal; color: var(--accent); }
+.section-desc {
+  font-size: 1rem; color: var(--muted); max-width: 620px; line-height: 1.75;
+}
+
+/* ── HERO ───────────────────────────── */
+.hero {
+  padding: 7rem 0 5rem;
+  animation: fadeUp 0.45s ease both;
+}
+.breadcrumb {
+  font-size: 13px; color: var(--muted); margin-bottom: 2rem;
+  display: flex; align-items: center; gap: 6px;
+}
+.breadcrumb a { color: var(--muted); }
+.breadcrumb a:hover { color: var(--text); text-decoration: none; }
+.breadcrumb-sep { color: var(--border2); }
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--accent-dim); border: 1px solid var(--accent-glow);
+  color: var(--accent); border-radius: 100px;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+  padding: 5px 14px; margin-bottom: 1.5rem;
+  text-transform: uppercase;
+}
+.hero-badge::before {
+  content: ''; display: block; width: 6px; height: 6px;
+  border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent);
+}
+.hero h1 {
+  font-family: var(--font-display); font-size: clamp(2.2rem, 3.8vw, 3.2rem);
+  font-weight: 800; line-height: 1.1; letter-spacing: -0.03em;
+  margin-bottom: 1.25rem; max-width: 820px;
+}
+.hero h1 em { font-style: normal; color: var(--accent); }
+.hero-desc {
+  font-size: 1.1rem; color: var(--muted); max-width: 620px;
+  margin-bottom: 2rem; line-height: 1.75;
+}
+.hero-cta-group {
+  display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;
+}
+.btn-cta {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--accent); color: #0a0a0a;
+  border: none; border-radius: 10px; padding: 17px 48px;
+  font-family: var(--font-display); font-size: 1.05rem; font-weight: 700;
+  cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+  text-decoration: none; letter-spacing: -0.01em;
+}
+.btn-cta:hover { opacity: 0.88; text-decoration: none; }
+.btn-cta:active { transform: scale(0.98); }
+.btn-outline {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: none; color: var(--accent);
+  border: 1.5px solid var(--accent); border-radius: 10px; padding: 13px 28px;
+  font-family: var(--font-display); font-size: 0.97rem; font-weight: 700;
+  cursor: pointer; transition: background 0.15s;
+  text-decoration: none; letter-spacing: -0.01em;
+}
+.btn-outline:hover { background: var(--accent-dim); text-decoration: none; }
+.hero-micro {
+  font-size: 13px; color: var(--muted); margin-top: 1rem; opacity: 0.8;
+}
+
+/* ── EXCHANGE GRID PRINCIPAL ────────── */
+.ex-hub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+  margin-top: 2.5rem;
+}
+.ex-hub-card {
+  display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 1.4rem 1.5rem;
+  transition: border-color .18s, background .18s;
+  text-decoration: none; color: var(--text);
+}
+.ex-hub-card:hover {
+  border-color: var(--accent-glow);
+  background: var(--surface2);
+  text-decoration: none;
+}
+.ex-hub-head {
+  display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem;
+}
+.ex-hub-img {
+  width: 44px; height: 44px; border-radius: 10px;
+  object-fit: contain; background: var(--surface2); flex-shrink: 0;
+}
+.ex-hub-name {
+  font-family: var(--font-display); font-size: 1rem; font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.ex-hub-badge {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--accent); margin-top: 1px;
+}
+.ex-hub-desc {
+  font-size: 0.87rem; color: var(--muted); line-height: 1.6;
+  flex: 1; margin-bottom: 1rem;
+}
+.ex-hub-cta {
+  font-size: 0.85rem; font-weight: 600; color: var(--accent);
+  display: flex; align-items: center; gap: 5px;
+}
+.ex-hub-cta::after { content: '→'; }
+
+/* Sección secundaria */
+.ex-secondary-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--muted);
+  margin: 2.5rem 0 1rem;
+}
+.ex-secondary-grid {
+  display: flex; gap: 0.75rem; flex-wrap: wrap;
+}
+.ex-secondary-card {
+  display: flex; align-items: center; gap: 0.75rem;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 0.85rem 1.1rem;
+  text-decoration: none; color: var(--text);
+  transition: border-color .18s, background .18s;
+}
+.ex-secondary-card:hover {
+  border-color: var(--border2); background: var(--surface2);
+  text-decoration: none;
+}
+.ex-secondary-img {
+  width: 32px; height: 32px; border-radius: 8px;
+  object-fit: contain; background: var(--surface2); flex-shrink: 0;
+}
+.ex-secondary-name {
+  font-family: var(--font-display); font-size: 0.9rem; font-weight: 700;
+}
+.ex-secondary-badge {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--accent);
+}
+
+/* ── AUTORIDAD ──────────────────────── */
+.trust-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem; margin-top: 2.5rem;
+}
+.trust-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 1.5rem;
+  display: flex; flex-direction: column; gap: 0.65rem;
+}
+.trust-icon { font-size: 1.6rem; }
+.trust-title {
+  font-family: var(--font-display); font-size: 0.97rem; font-weight: 700;
+  color: var(--text);
+}
+.trust-body { font-size: 0.88rem; color: var(--muted); line-height: 1.65; }
+.trust-body a { color: var(--accent); }
+.trust-body strong { color: var(--text); font-weight: 600; }
+
+/* ── MULTI-EXCHANGE ─────────────────── */
+.multi-box {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 16px; padding: 2rem 2.25rem;
+  margin-top: 2.5rem;
+}
+.multi-box-title {
+  font-family: var(--font-display); font-size: 1.15rem; font-weight: 700;
+  margin-bottom: 0.85rem; color: var(--text);
+}
+.multi-box p {
+  font-size: 0.93rem; color: var(--muted); line-height: 1.75;
+  margin-bottom: 1rem;
+}
+.multi-box p:last-child { margin-bottom: 0; }
+.multi-steps {
+  list-style: none; display: flex; flex-direction: column; gap: 0.6rem;
+  margin: 1rem 0;
+}
+.multi-steps li {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 0.91rem; color: var(--text); line-height: 1.55;
+}
+.multi-steps li::before {
+  content: attr(data-n);
+  flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--accent-dim); border: 1px solid var(--accent-glow);
+  color: var(--accent); font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  margin-top: 1px;
+}
+.warning-box {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: rgba(229,85,85,0.07); border: 1px solid rgba(229,85,85,0.2);
+  border-radius: 10px; padding: 1rem 1.25rem;
+  margin-top: 1.5rem;
+}
+.warning-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 2px; }
+.warning-text { font-size: 0.88rem; color: var(--muted); line-height: 1.6; }
+.warning-text strong { color: #e55; font-weight: 600; }
+
+/* ── INFORME ────────────────────────── */
+.informe-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem; margin-top: 2.5rem;
+}
+.informe-item {
+  display: flex; align-items: flex-start; gap: 14px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 1.2rem 1.3rem;
+}
+.informe-icon { font-size: 1.4rem; flex-shrink: 0; }
+.informe-title {
+  font-family: var(--font-display); font-size: 0.93rem; font-weight: 700;
+  color: var(--text); margin-bottom: 4px;
+}
+.informe-desc { font-size: 0.85rem; color: var(--muted); line-height: 1.55; }
+.informe-desc a { color: var(--accent); }
+
+/* ── TABLA EXPORTACIÓN ──────────────── */
+.export-table-wrap {
+  overflow-x: auto; margin-top: 2.5rem;
+  border: 1px solid var(--border); border-radius: 14px;
+}
+.export-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 0.87rem;
+}
+.export-table th {
+  background: var(--surface2); padding: 0.75rem 1rem;
+  text-align: left; font-weight: 600; color: var(--muted);
+  font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+  border-bottom: 1px solid var(--border2);
+}
+.export-table td {
+  padding: 0.85rem 1rem; border-bottom: 1px solid var(--border);
+  color: var(--text); vertical-align: top;
+}
+.export-table tr:last-child td { border-bottom: none; }
+.export-table tr:hover td { background: var(--surface); }
+.export-table td a { color: var(--accent); font-weight: 600; }
+.export-table td .ex-tag {
+  display: inline-block; background: var(--accent-dim);
+  border: 1px solid var(--accent-glow); border-radius: 6px;
+  padding: 2px 8px; font-size: 11px; color: var(--accent); font-weight: 600;
+}
+
+/* ── FAQ ─────────────────────────────── */
+.faq-list { margin-top: 2.5rem; display: flex; flex-direction: column; gap: 0; }
+.faq-item { border-bottom: 1px solid var(--border); }
+.faq-item:first-child { border-top: 1px solid var(--border); }
+.faq-q {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 1.2rem 0; cursor: pointer; list-style: none; gap: 1rem;
+  font-weight: 600; font-size: 0.97rem; color: var(--text);
+  user-select: none;
+}
+.faq-q::after {
+  content: '+'; font-family: var(--font-display); font-size: 1.3rem;
+  color: var(--accent); flex-shrink: 0; transition: transform 0.2s;
+}
+details[open] .faq-q::after { transform: rotate(45deg); }
+.faq-a {
+  padding: 0 0 1.2rem;
+  font-size: 0.93rem; color: var(--muted); line-height: 1.7;
+}
+.faq-a a { color: var(--accent); }
+
+/* ── SELECTOR FINAL ─────────────────── */
+.selector-grid {
+  display: flex; flex-wrap: wrap; gap: 0.65rem;
+  margin-top: 2rem;
+}
+.selector-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 10px 18px;
+  font-family: var(--font-display); font-size: 0.93rem; font-weight: 700;
+  color: var(--text); text-decoration: none;
+  transition: border-color .15s, background .15s;
+}
+.selector-btn:hover {
+  border-color: var(--accent-glow); background: var(--surface2);
+  text-decoration: none;
+}
+.selector-btn img {
+  width: 22px; height: 22px; border-radius: 5px;
+  object-fit: contain; background: var(--surface2);
+}
+.selector-note {
+  margin-top: 1.5rem; font-size: 0.9rem; color: var(--muted); line-height: 1.65;
+}
+
+/* ── CTA FINAL ───────────────────────── */
+.cta-final {
+  text-align: center; padding: 5rem 0 4rem;
+  border-top: 1px solid var(--border);
+}
+.cta-final h2 {
+  font-family: var(--font-display); font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 800; letter-spacing: -0.03em; line-height: 1.15;
+  margin-bottom: 1rem;
+}
+.cta-final h2 em { font-style: normal; color: var(--accent); }
+.cta-final p {
+  font-size: 1rem; color: var(--muted); max-width: 480px;
+  margin: 0 auto 2.25rem; line-height: 1.7;
+}
+.cta-buttons {
+  display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;
+}
+.cta-micro {
+  font-size: 13px; color: var(--muted); margin-top: 1rem; opacity: 0.75;
+}
+
+/* ── FOOTER ──────────────────────────── */
+.page-footer {
+  background: var(--footer-bg); border-top: 1px solid var(--border);
+  padding: 2rem 0;
+}
+.footer-inner {
+  max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x);
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 1rem; flex-wrap: wrap;
+}
+.footer-copy { font-size: 13px; color: var(--muted); }
+.footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+.footer-links a { font-size: 13px; color: var(--muted); }
+.footer-links a:hover { color: var(--text); text-decoration: none; }
+
+/* ── RESPONSIVE ──────────────────────── */
+@media (max-width: 900px) {
+  :root { --pad-x: 1.5rem; }
+  .ex-hub-grid { grid-template-columns: 1fr 1fr; }
+  .trust-grid  { grid-template-columns: 1fr; }
+  .informe-grid { grid-template-columns: 1fr; }
+  .footer-inner { flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 640px) {
+  .hero h1 { font-size: 1.9rem; }
+  .section-title { font-size: 1.6rem; }
+  .ex-hub-grid { grid-template-columns: 1fr; }
+  .multi-box { padding: 1.5rem; }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<!-- ── NAV ──────────────────────────── -->
+<nav id="site-nav">
+  <div class="snav-inner"></div>
+</nav>
+<script src="/static/nav.js"></script>
+
+<!-- ── HERO ──────────────────────────── -->
+<section class="hero">
+  <div class="wrap">
+
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb" aria-label="Ruta de navegación">
+      <a href="/">Inicio</a>
+      <span class="breadcrumb-sep">›</span>
+      <span>Exchanges</span>
+    </nav>
+
+    <span class="hero-badge">Exchanges compatibles</span>
+
+    <h1>Declara las criptomonedas de tu exchange con un informe fiscal <em>FIFO</em> listo para Hacienda</h1>
+
+    <p class="hero-desc">
+      Cada exchange exporta sus datos en un formato diferente. Ninguno te entrega
+      el cálculo que Hacienda necesita. Esta herramienta lee el historial real de
+      tu plataforma, aplica el FIFO obligatorio y genera un informe PDF que tu
+      gestor puede usar directamente.
+    </p>
+
+    <div class="hero-cta-group">
+      <a href="/signup/" class="btn-cta">Genera tu informe fiscal</a>
+      <a href="/como-funciona" class="btn-outline">Cómo funciona</a>
+    </div>
+    <p class="hero-micro">FIFO automático · PDF listo para Hacienda · 10 exchanges disponibles</p>
+
+  </div>
+</section>
+
+<!-- ── EXCHANGES PRINCIPALES ─────────── -->
+<section class="section" id="exchanges-principales">
+  <div class="wrap">
+    <span class="kicker">Soporte completo</span>
+    <h2 class="section-title">Exchanges con soporte completo — <em>elige el tuyo</em></h2>
+    <p class="section-desc">
+      Cada plataforma tiene un parser específico que lee su formato de exportación
+      real. Sin adaptadores genéricos.
+    </p>
+
+    <div class="ex-hub-grid">
+
+      <!-- Binance -->
+      <div class="ex-hub-card">
+        <div class="ex-hub-head">
+          <img src="/static/images/binance.jpg" alt="Binance" class="ex-hub-img">
+          <div>
+            <div class="ex-hub-name">Binance</div>
+            <div class="ex-hub-badge">Disponible</div>
+          </div>
+        </div>
+        <p class="ex-hub-desc">
+          El exchange con más operaciones en España. Soporta spot, conversiones,
+          Earn y comisiones en BNB. Requiere exportación en bloques de 12 meses.
+        </p>
+      </div>
+
+      <!-- Bitvavo -->
+      <div class="ex-hub-card">
+        <div class="ex-hub-head">
+          <img src="/static/images/bitvavo.png" alt="Bitvavo" class="ex-hub-img">
+          <div>
+            <div class="ex-hub-name">Bitvavo</div>
+            <div class="ex-hub-badge">Disponible</div>
+          </div>
+        </div>
+        <p class="ex-hub-desc">
+          El preferido del inversor europeo moderado. Compatible con el formato
+          de exportación completo, incluyendo staking y órdenes recurrentes.
+        </p>
+      </div>
+
+      <!-- Kraken -->
+      <div class="ex-hub-card">
+        <div class="ex-hub-head">
+          <img src="/static/images/kraken.png" alt="Kraken" class="ex-hub-img">
+          <div>
+            <div class="ex-hub-name">Kraken</div>
+            <div class="ex-hub-badge">Disponible</div>
+          </div>
+        </div>
+        <p class="ex-hub-desc">
+          Historial disponible desde 2011 sin truncar. Soporta staking,
+          margin y spot. Exportación en CSV con timestamps completos.
+        </p>
+      </div>
+
+      <!-- Coinbase -->
+      <div class="ex-hub-card">
+        <div class="ex-hub-head">
+          <img src="/static/images/coinbase.png" alt="Coinbase" class="ex-hub-img">
+          <div>
+            <div class="ex-hub-name">Coinbase</div>
+            <div class="ex-hub-badge">Disponible</div>
+          </div>
+        </div>
+        <p class="ex-hub-desc">
+          Spot, Advanced Trade y Earn incluidos. Formato normalizado a euros
+          automáticamente. Compatible con historial completo desde el origen.
+        </p>
+      </div>
+
+      <!-- Nexo -->
+      <div class="ex-hub-card">
+        <div class="ex-hub-head">
+          <img src="/static/images/nexo.jpg" alt="Nexo" class="ex-hub-img">
+          <div>
+            <div class="ex-hub-name">Nexo</div>
+            <div class="ex-hub-badge">Disponible</div>
+          </div>
+        </div>
+        <p class="ex-hub-desc">
+          Intereses, préstamos y swaps tratados correctamente como rendimientos
+          del capital mobiliario. Separados de las ganancias patrimoniales en el informe.
+        </p>
+      </div>
+
+      <!-- Crypto.com -->
+      <div class="ex-hub-card">
+        <div class="ex-hub-head">
+          <img src="/static/images/crypto.png" alt="Crypto.com" class="ex-hub-img">
+          <div>
+            <div class="ex-hub-name">Crypto.com</div>
+            <div class="ex-hub-badge">Disponible</div>
+          </div>
+        </div>
+        <p class="ex-hub-desc">
+          App, Exchange y Earn unificados. Cashback y recompensas clasificados
+          automáticamente según su naturaleza fiscal.
+        </p>
+      </div>
+
+      <!-- Bit2me -->
+      <div class="ex-hub-card">
+        <div class="ex-hub-head">
+          <img src="/static/images/bit2me.jpg" alt="Bit2me" class="ex-hub-img">
+          <div>
+            <div class="ex-hub-name">Bit2me</div>
+            <div class="ex-hub-badge">Disponible</div>
+          </div>
+        </div>
+        <p class="ex-hub-desc">
+          El exchange español de referencia. Registrado en el Banco de España —
+          las posiciones en Bit2me no requieren Modelo 721.
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Exchanges secundarios -->
+    <div class="ex-secondary-label">También compatible con</div>
+    <div class="ex-secondary-grid">
+
+      <div class="ex-secondary-card">
+        <img src="/static/images/bitget.png" alt="Bitget" class="ex-secondary-img">
+        <div>
+          <div class="ex-secondary-name">Bitget</div>
+          <div class="ex-secondary-badge">Disponible</div>
+        </div>
+      </div>
+
+      <div class="ex-secondary-card">
+        <img src="/static/images/mexc.png" alt="MEXC" class="ex-secondary-img">
+        <div>
+          <div class="ex-secondary-name">MEXC</div>
+          <div class="ex-secondary-badge">Disponible</div>
+        </div>
+      </div>
+
+      <div class="ex-secondary-card">
+        <img src="/static/images/uphold.png" alt="Uphold" class="ex-secondary-img">
+        <div>
+          <div class="ex-secondary-name">Uphold</div>
+          <div class="ex-secondary-badge">Disponible</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+<!-- ── AUTORIDAD ──────────────────────── -->
+<section class="section" id="autoridad">
+  <div class="wrap">
+    <span class="kicker">Por qué este informe</span>
+    <h2 class="section-title">Un informe fiscal <em>riguroso</em>, no una estimación</h2>
+    <p class="section-desc">
+      Las herramientas automáticas de criptoimpuestos calculan.
+      Esta calcula y está supervisada por un profesional.
+    </p>
+
+    <div class="trust-grid">
+
+      <div class="trust-card">
+        <span class="trust-icon">⚖️</span>
+        <div class="trust-title">FIFO obligatorio según el art. 37.2 LIRPF</div>
+        <p class="trust-body">
+          En España no existe elección de método. El artículo 37.2 de la LIRPF
+          y las consultas vinculantes de la Dirección General de Tributos establecen
+          que las criptomonedas de la misma especie transmitidas se corresponden con
+          las adquiridas en primer lugar.
+          <br><br>
+          La herramienta aplica ese criterio sobre el historial completo de cada activo,
+          sin importar en cuántos exchanges o en cuántos años estén distribuidas las operaciones.
+        </p>
+      </div>
+
+      <div class="trust-card">
+        <span class="trust-icon">🎓</span>
+        <div class="trust-title">Supervisado por economista colegiado</div>
+        <p class="trust-body">
+          Los criterios fiscales aplicados en cada informe están revisados por
+          <strong>Rafael Ramos Martínez</strong>, economista colegiado nº&nbsp;4.579
+          del Colegio de Economistas de Valencia, con más de 25 años de experiencia
+          en fiscalidad empresarial.
+          <br><br>
+          No es un disclaimer. Es la persona que supervisa que el tratamiento
+          de swaps, staking, transfers entre exchanges y operaciones complejas
+          se ajusta a la normativa española vigente.
+          <br><br>
+          <a href="/about">Conoce el equipo →</a>
+        </p>
+      </div>
+
+      <div class="trust-card">
+        <span class="trust-icon">🔒</span>
+        <div class="trust-title">Sin acceso a tu cuenta — solo el CSV que exportas tú</div>
+        <p class="trust-body">
+          La herramienta no solicita claves API ni acceso a tu exchange.
+          Solo necesitas el archivo CSV que tú mismo exportas desde tu plataforma.
+          <br><br>
+          Ese archivo se procesa y se elimina — no se almacena en el servidor de forma permanente.
+          Comunicación cifrada TLS en todo momento.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── MULTI-EXCHANGE ─────────────────── -->
+<section class="section" id="multi-exchange">
+  <div class="wrap">
+    <span class="kicker">El error más frecuente</span>
+    <h2 class="section-title">Si operas en más de un exchange, <em>este bloque es para ti</em></h2>
+
+    <div class="multi-box">
+      <div class="multi-box-title">Por qué el FIFO no se calcula por exchange sino en global</div>
+      <p>
+        El error más frecuente — y el que más diferencias genera en las liquidaciones —
+        es calcular el FIFO de forma independiente en cada exchange.
+      </p>
+      <p>
+        Hacienda no lo acepta así. Si tienes BTC en Binance y BTC en Kraken, no son
+        dos posiciones independientes: son la misma posición en el mismo activo.
+        El FIFO se aplica sobre el <strong style="color:var(--text)">total histórico consolidado</strong>
+        de cada activo, ordenado cronológicamente con independencia de en qué plataforma esté custodiado.
+      </p>
+
+      <div class="warning-box">
+        <span class="warning-icon">⚠️</span>
+        <p class="warning-text">
+          Calcularlo de forma separada puede generar una diferencia de miles de euros
+          en la ganancia declarada — y Hacienda recibe los datos de ambos exchanges
+          a través de los <strong>modelos 172 y 173</strong>.
+        </p>
+      </div>
+    </div>
+
+    <div class="multi-box" style="margin-top:1.25rem;">
+      <div class="multi-box-title">Cómo la herramienta consolida varios CSV en un único informe</div>
+      <p>
+        Puedes subir los CSV de Binance, Kraken y Bitvavo en el mismo proceso.
+        La herramienta hace el resto:
+      </p>
+      <ol class="multi-steps">
+        <li data-n="1">Unifica las operaciones en una línea de tiempo cronológica global</li>
+        <li data-n="2">Construye el pool FIFO de cada activo sobre el conjunto consolidado</li>
+        <li data-n="3">Clasifica rendimientos del capital mobiliario por separado</li>
+        <li data-n="4">Genera un único informe PDF con el desglose por plataforma para tu referencia</li>
+      </ol>
+      <p>Sin hojas de cálculo intermedias. Sin cruzar datos a mano.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── QUÉ INCLUYE EL INFORME ─────────── -->
+<section class="section" id="informe">
+  <div class="wrap">
+    <span class="kicker">El informe</span>
+    <h2 class="section-title">Qué incluye el informe <em>fiscal generado</em></h2>
+    <p class="section-desc">
+      Un documento estructurado que tu gestor puede usar directamente,
+      sin reconstruir los cálculos.
+    </p>
+
+    <div class="informe-grid">
+
+      <div class="informe-item">
+        <span class="informe-icon">📊</span>
+        <div>
+          <div class="informe-title">Ganancias y pérdidas patrimoniales (casilla 1626)</div>
+          <p class="informe-desc">
+            Tabla completa con cada operación de venta o swap: fecha, activo,
+            precio de adquisición FIFO imputado, precio de transmisión y resultado neto.
+            Agrupado por ejercicio fiscal.
+          </p>
+        </div>
+      </div>
+
+      <div class="informe-item">
+        <span class="informe-icon">💰</span>
+        <div>
+          <div class="informe-title">Rendimientos del capital mobiliario (casilla 0033)</div>
+          <p class="informe-desc">
+            Las recompensas de staking, intereses de Nexo o Crypto.com Earn y airdrops
+            se separan automáticamente. Tributan como rendimientos del capital mobiliario,
+            no como ganancias patrimoniales.
+          </p>
+        </div>
+      </div>
+
+      <div class="informe-item">
+        <span class="informe-icon">📋</span>
+        <div>
+          <div class="informe-title">Posiciones a 31 de diciembre — base para el Modelo 721</div>
+          <p class="informe-desc">
+            Saldo de criptomonedas en exchanges extranjeros a 31 de diciembre.
+            Es el dato de partida para evaluar si tienes obligación de presentar
+            el Modelo 721. <a href="/modelo-721-criptomonedas">¿Qué es el Modelo 721? →</a>
+          </p>
+        </div>
+      </div>
+
+      <div class="informe-item">
+        <span class="informe-icon">🔔</span>
+        <div>
+          <div class="informe-title">Advertencias automáticas</div>
+          <p class="informe-desc">
+            Si hay operaciones con coste base indeterminado, transfers sin origen
+            identificado o datos que requieren revisión manual, el informe incluye
+            una sección de advertencias específicas. Nada queda oculto.
+          </p>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="margin-top:2rem;">
+      <a href="/como-funciona#informe-pdf" class="btn-outline">Ver el informe en detalle →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── TABLA EXPORTACIÓN ──────────────── -->
+<section class="section" id="exportar">
+  <div class="wrap">
+    <span class="kicker">Cómo empezar</span>
+    <h2 class="section-title">Cómo exportar el historial de <em>tu exchange</em></h2>
+    <p class="section-desc">
+      Necesitas el historial completo desde tu primera operación —
+      no solo el año que declaras. Cada exchange tiene una guía detallada.
+    </p>
+
+    <div class="export-table-wrap">
+      <table class="export-table">
+        <thead>
+          <tr>
+            <th>Exchange</th>
+            <th>Dónde exportar</th>
+            <th>Formato</th>
+            <th>Historial</th>
+            <th>Guía</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Binance</strong></td>
+            <td>Cartera → Historial → Exportar</td>
+            <td><span class="ex-tag">CSV</span></td>
+            <td>Completo (bloques 12 meses)</td>
+            <td>Disponible</td>
+          </tr>
+          <tr>
+            <td><strong>Bitvavo</strong></td>
+            <td>Cuenta → Historial → Exportar CSV</td>
+            <td><span class="ex-tag">CSV</span></td>
+            <td>Completo</td>
+            <td>Disponible</td>
+          </tr>
+          <tr>
+            <td><strong>Kraken</strong></td>
+            <td>Historial → Exportar</td>
+            <td><span class="ex-tag">CSV</span></td>
+            <td>Completo desde 2011</td>
+            <td>Disponible</td>
+          </tr>
+          <tr>
+            <td><strong>Coinbase</strong></td>
+            <td>Perfil → Extractos → Generar informe</td>
+            <td><span class="ex-tag">CSV</span></td>
+            <td>Completo</td>
+            <td>Disponible</td>
+          </tr>
+          <tr>
+            <td><strong>Nexo</strong></td>
+            <td>Transacciones → Exportar</td>
+            <td><span class="ex-tag">CSV</span></td>
+            <td>Completo</td>
+            <td>Disponible</td>
+          </tr>
+          <tr>
+            <td><strong>Crypto.com</strong></td>
+            <td>App → Cuentas → Historial → Exportar</td>
+            <td><span class="ex-tag">CSV</span></td>
+            <td>Completo</td>
+            <td>Disponible</td>
+          </tr>
+          <tr>
+            <td><strong>Bit2me</strong></td>
+            <td>Perfil → Mis operaciones → Exportar</td>
+            <td><span class="ex-tag">CSV</span></td>
+            <td>Completo</td>
+            <td>Disponible</td>
+          </tr>
+          <tr>
+            <td><strong>Bitget</strong></td>
+            <td>Activos → Historial → Exportar</td>
+            <td><span class="ex-tag">CSV</span></td>
+            <td>Completo</td>
+            <td>Disponible</td>
+          </tr>
+          <tr>
+            <td><strong>MEXC</strong></td>
+            <td>Historial de órdenes → Exportar</td>
+            <td><span class="ex-tag">CSV</span></td>
+            <td>Completo</td>
+            <td>Disponible</td>
+          </tr>
+          <tr>
+            <td><strong>Uphold</strong></td>
+            <td>Actividad → Exportar</td>
+            <td><span class="ex-tag">CSV</span></td>
+            <td>Completo</td>
+            <td>Disponible</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ── FAQ ───────────────────────────── -->
+<section class="section" id="faq">
+  <div class="wrap">
+    <span class="kicker">Preguntas frecuentes</span>
+    <h2 class="section-title">Preguntas frecuentes</h2>
+
+    <div class="faq-list">
+
+      <details class="faq-item">
+        <summary class="faq-q">¿Necesito exportar el historial completo o solo el del año que declaro?</summary>
+        <p class="faq-a">
+          El historial completo desde tu primera operación. El método FIFO es acumulativo:
+          para calcular el precio de adquisición imputado a una venta en 2024, la herramienta
+          necesita todas las compras anteriores, incluso las de 2017 o 2018.
+        </p>
+      </details>
+
+      <details class="faq-item">
+        <summary class="faq-q">¿Qué pasa si he operado en varios exchanges con el mismo activo?</summary>
+        <p class="faq-a">
+          La herramienta los consolida automáticamente. Puedes subir los CSV de todos tus
+          exchanges en el mismo proceso y el FIFO se calcula sobre el conjunto global de
+          cada activo, que es el criterio que aplica Hacienda.
+        </p>
+      </details>
+
+      <details class="faq-item">
+        <summary class="faq-q">¿Sabe Hacienda que tengo criptomonedas en estos exchanges?</summary>
+        <p class="faq-a">
+          Sí. Los exchanges registrados en España presentan los modelos 172 y 173,
+          que informan a la AEAT sobre saldos y operaciones de sus usuarios.
+          Con la directiva DAC8 en aplicación para 2026, los exchanges extranjeros
+          también están obligados a compartir datos fiscales con las autoridades de
+          cada país de residencia del titular. Declarar correctamente no es opcional.
+        </p>
+      </details>
+
+      <details class="faq-item">
+        <summary class="faq-q">¿El informe es válido directamente para presentar a Hacienda?</summary>
+        <p class="faq-a">
+          El informe contiene todos los cálculos necesarios para trasladar los datos
+          a la declaración de la Renta, siguiendo el método FIFO del artículo 37.2 LIRPF.
+          Está diseñado para que tu gestor fiscal trabaje directamente con él.
+          No es un modelo oficial de la AEAT.
+        </p>
+      </details>
+
+      <details class="faq-item">
+        <summary class="faq-q">¿Funcionan las operaciones de staking e intereses?</summary>
+        <p class="faq-a">
+          Sí. Las recompensas de staking, intereses de Nexo o Crypto.com Earn y airdrops
+          se clasifican automáticamente como rendimientos del capital mobiliario y se separan
+          de las ganancias patrimoniales en el informe. Tributan por la casilla 0033, no por la 1626.
+        </p>
+      </details>
+
+      <details class="faq-item">
+        <summary class="faq-q">¿Qué ocurre si me falta parte del historial de un exchange?</summary>
+        <p class="faq-a">
+          El informe genera advertencias específicas para las operaciones donde el coste base
+          no puede determinarse con certeza. En esos casos se recomienda revisión con un
+          <a href="/asesoramiento-fiscal">asesor fiscal</a> antes de presentar la declaración.
+        </p>
+      </details>
+
+      <details class="faq-item">
+        <summary class="faq-q">¿Qué diferencia hay entre esta herramienta y Koinly o Waltio?</summary>
+        <p class="faq-a">
+          El diferenciador principal es que los criterios fiscales aplicados están supervisados
+          por un economista colegiado especializado en fiscalidad española. No es un algoritmo
+          genérico adaptado a múltiples jurisdicciones: está construido específicamente para
+          la normativa de la AEAT.
+        </p>
+      </details>
+
+      <details class="faq-item">
+        <summary class="faq-q">¿Cuándo añadiréis más exchanges?</summary>
+        <p class="faq-a">
+          Se añaden en función de la demanda. Bybit y KuCoin están en desarrollo.
+          Si tu exchange no está en la lista, puedes solicitarlo desde
+          el <a href="/contacto">formulario de contacto</a>.
+        </p>
+      </details>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── SELECTOR FINAL ─────────────────── -->
+<section class="section" id="selector">
+  <div class="wrap">
+    <span class="kicker">Empieza ahora</span>
+    <h2 class="section-title">¿Qué exchange <em>usas?</em></h2>
+    <p class="section-desc">
+      Selecciona tu exchange para ir directamente a la guía de exportación e informe fiscal.
+    </p>
+
+    <div class="selector-grid">
+      <span class="selector-btn"><img src="/static/images/binance.jpg"   alt="">Binance</span>
+      <span class="selector-btn"><img src="/static/images/bitvavo.png"   alt="">Bitvavo</span>
+      <span class="selector-btn"><img src="/static/images/kraken.png"    alt="">Kraken</span>
+      <span class="selector-btn"><img src="/static/images/coinbase.png"  alt="">Coinbase</span>
+      <span class="selector-btn"><img src="/static/images/nexo.jpg"      alt="">Nexo</span>
+      <span class="selector-btn"><img src="/static/images/crypto.png"    alt="">Crypto.com</span>
+      <span class="selector-btn"><img src="/static/images/bit2me.jpg"    alt="">Bit2me</span>
+      <span class="selector-btn"><img src="/static/images/bitget.png"    alt="">Bitget</span>
+      <span class="selector-btn"><img src="/static/images/mexc.png"      alt="">MEXC</span>
+      <span class="selector-btn"><img src="/static/images/uphold.png"    alt="">Uphold</span>
+    </div>
+
+    <p class="selector-note">
+      ¿Operas en varios? No importa — puedes subir todos los CSV en el mismo proceso.<br>
+      El FIFO se calcula sobre el conjunto consolidado de cada activo.
+    </p>
+
+  </div>
+</section>
+
+<!-- ── CTA FINAL ──────────────────────── -->
+<section class="cta-final">
+  <div class="wrap">
+    <h2>Genera tu informe fiscal<br><em>cripto hoy</em></h2>
+    <p>
+      Sin fórmulas manuales. Sube el CSV de tu exchange, aplica FIFO automático
+      y descarga el PDF listo para tu gestor.
+    </p>
+    <div class="cta-buttons">
+      <a href="/signup/"             class="btn-cta">Crear cuenta gratis</a>
+      <a href="/como-funciona"       class="btn-outline">Cómo funciona</a>
+    </div>
+    <p class="cta-micro">FIFO automático · PDF listo para tu gestor · Supervisado por economista colegiado</p>
+  </div>
+</section>
+
+<!-- ── FOOTER ──────────────────────────── -->
+<footer class="page-footer">
+  <div class="footer-inner">
+    <span class="footer-copy">© 2025 marianosevilla.com — No constituye asesoramiento fiscal ni legal.</span>
+    <div class="footer-links">
+      <a href="/privacidad">Privacidad</a>
+      <a href="/terminos">Términos</a>
+      <a href="/cookies">Cookies</a>
+      <a href="/contacto">Contacto</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
