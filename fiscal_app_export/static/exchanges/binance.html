@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Declarar Binance en Hacienda: CSV, FIFO e informe fiscal</title>
-<meta name="description" content="Exporta el historial completo de Binance —spot, Earn, conversiones y comisiones en BNB— y genera el informe FIFO listo para Hacienda.">
+<meta name="description" content="Exporta el historial de Binance —spot, Earn, conversiones y BNB— y genera el informe FIFO para los impuestos de tus criptos en España. Guía paso a paso.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://marianosevilla.com/exchanges/binance">
 
@@ -12,7 +12,7 @@
 <meta property="og:type"        content="article">
 <meta property="og:url"         content="https://marianosevilla.com/exchanges/binance">
 <meta property="og:title"       content="Declarar Binance en Hacienda: CSV, FIFO e informe fiscal">
-<meta property="og:description" content="Exporta el historial completo de Binance —spot, Earn, conversiones y comisiones en BNB— y genera el informe FIFO listo para Hacienda.">
+<meta property="og:description" content="Exporta el historial de Binance —spot, Earn, conversiones y BNB— y genera el informe FIFO para los impuestos de tus criptos en España. Guía paso a paso.">
 <meta property="og:image"       content="https://marianosevilla.com/static/mariano-sevilla-logo.png">
 <meta name="twitter:card"       content="summary_large_image">
 
@@ -44,16 +44,22 @@
     {
       "@type": "Article",
       "@id": "https://marianosevilla.com/exchanges/binance#article",
-      "headline": "Cómo declarar las operaciones de Binance en Hacienda con un informe FIFO correcto",
-      "description": "Exporta el historial completo de Binance —spot, Earn, conversiones y comisiones en BNB— y genera el informe FIFO listo para Hacienda.",
+      "headline": "Cómo declarar las criptomonedas de Binance en Hacienda con un informe FIFO",
+      "description": "Exporta el historial de Binance —spot, Earn, conversiones y BNB— y genera el informe FIFO para los impuestos de tus criptos en España.",
       "url": "https://marianosevilla.com/exchanges/binance",
       "inLanguage": "es",
       "datePublished": "2026-06-05",
       "dateModified": "2026-06-05",
+      "image": {
+        "@type": "ImageObject",
+        "url": "https://marianosevilla.com/static/mariano-sevilla-logo.png",
+        "width": 400,
+        "height": 400
+      },
       "author": {
         "@type": "Person",
         "name": "Rafael Ramos Martínez",
-        "description": "Economista colegiado nº 4.579 — Colegio de Economistas de Valencia"
+        "jobTitle": "Economista colegiado nº 4.579 — Colegio de Economistas de Valencia"
       },
       "publisher": {
         "@type": "Organization",
@@ -66,6 +72,7 @@
       "@type": "HowTo",
       "name": "Cómo exportar el historial de Binance para declarar en Hacienda",
       "description": "Pasos para obtener todos los archivos CSV necesarios de Binance y generar el informe fiscal FIFO.",
+      "totalTime": "PT30M",
       "step": [
         {
           "@type": "HowToStep",
@@ -101,7 +108,7 @@
           "@type": "HowToStep",
           "position": 6,
           "name": "Sube todos los archivos al generador FIFO",
-          "text": "Crea tu cuenta, sube todos los CSV descargados y genera el informe PDF listo para Hacienda."
+          "text": "Reúne todos los CSV descargados —Transaction History, Earn y Convert, de todos los años— y súbelos al generador en el mismo proceso. El sistema consolida el historial completo y aplica el FIFO sobre el conjunto global de cada activo."
         }
       ]
     },
@@ -136,7 +143,7 @@
         {
           "@type": "Question",
           "name": "¿Necesito el Modelo 721 si tengo criptos en Binance?",
-          "acceptedAnswer": { "@type": "Answer", "text": "Si el valor total de tus criptoactivos en exchanges extranjeros supera los 50.000 € el 31 de diciembre, sí estás obligado a presentar el Modelo 721. Binance es una entidad con sede fuera de España. Consulta la guía completa en /modelo-721-criptomonedas." }
+          "acceptedAnswer": { "@type": "Answer", "text": "Si el valor total de tus criptoactivos en exchanges extranjeros supera los 50.000 € el 31 de diciembre, sí estás obligado a presentar el Modelo 721. Binance opera con entidades con sede fuera de España, por lo que las posiciones en Binance computan a efectos de este modelo. Consulta la guía completa del Modelo 721 para criptomonedas en marianosevilla.com." }
         }
       ]
     }
@@ -475,11 +482,11 @@ details[open] .faq-q::after { transform: rotate(45deg); }
   border-radius: 16px; padding: 2rem 2.25rem;
   margin: 2.5rem 0; text-align: center;
 }
-.cta-mid h3 {
+.cta-mid-title {
   font-family: var(--font-display); font-size: 1.3rem; font-weight: 800;
-  letter-spacing: -0.02em; margin-bottom: 0.65rem;
+  letter-spacing: -0.02em; margin-bottom: 0.65rem; color: var(--text);
 }
-.cta-mid h3 em { font-style: normal; color: var(--accent); }
+.cta-mid-title em { font-style: normal; color: var(--accent); }
 .cta-mid p { font-size: 0.93rem; color: var(--muted); margin-bottom: 1.5rem; line-height: 1.65; }
 .cta-buttons {
   display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;
@@ -568,13 +575,14 @@ details[open] .faq-q::after { transform: rotate(45deg); }
 
     <span class="hero-badge">Binance · Guía fiscal</span>
 
-    <h1>Cómo declarar las operaciones de Binance en Hacienda con un informe <em>FIFO</em> correcto</h1>
+    <h1>Cómo declarar las criptomonedas de Binance en Hacienda con un informe <em>FIFO</em></h1>
 
     <p class="hero-desc">
       El CSV de Binance no es un archivo único. Dependiendo de lo que hayas hecho en la
       plataforma —spot, Earn, conversiones, comisiones en BNB— necesitas entre tres y
       cuatro exportaciones distintas. Esta guía explica cuáles, cómo obtenerlas y cómo
-      convertirlas en el informe que Hacienda necesita.
+      convertirlas en el informe que necesitas para declarar los impuestos de tus
+      criptomonedas en España.
     </p>
 
     <div class="hero-cta-group">
@@ -741,9 +749,11 @@ details[open] .faq-q::after { transform: rotate(45deg); }
             <div class="step-body">
               <div class="step-title">Sube todos los archivos al generador FIFO</div>
               <div class="step-desc">
-                Crea tu cuenta, sube todos los CSV descargados en el mismo proceso y genera
-                el informe PDF. El sistema consolida automáticamente todos los archivos y
-                aplica el FIFO sobre el conjunto global de cada activo.
+                Reúne todos los CSV descargados —Transaction History, Earn y Convert, de
+                todos los años— y súbelos en el mismo proceso. El sistema consolida el
+                historial completo y aplica el FIFO sobre el conjunto global de cada activo.
+                Puedes ver cómo funciona el proceso de cálculo en la
+                <a href="/como-funciona">guía de la herramienta</a>.
               </div>
             </div>
           </li>
@@ -872,7 +882,7 @@ details[open] .faq-q::after { transform: rotate(45deg); }
 
         <!-- CTA mid-page -->
         <div class="cta-mid">
-          <h3>Tienes los CSV. <em>Genera el informe.</em></h3>
+          <p class="cta-mid-title">Tienes los CSV. <em>Genera el informe.</em></p>
           <p>Sube todos los archivos de Binance y obtén el informe FIFO listo para tu gestor o para la Renta.</p>
           <div class="cta-buttons">
             <a href="/binance" class="btn-cta">Subir CSV de Binance</a>
