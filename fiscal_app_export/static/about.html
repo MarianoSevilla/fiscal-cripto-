@@ -17,6 +17,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/nav.css">
+<link rel="preload" href="/static/nav.js" as="script">
 
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -50,27 +52,6 @@ body {
 }
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
-
-/* ── NAV ── */
-nav {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
-  border-bottom: 1px solid var(--border);
-  background: rgba(10,10,10,0.88); backdrop-filter: blur(14px);
-}
-.nav-inner {
-  max-width: var(--max); margin: 0 auto; padding: 0 2rem;
-  height: 64px; display: flex; align-items: center; justify-content: space-between;
-}
-.nav-logo {
-  font-family: var(--font-d); font-weight: 800; font-size: 0.95rem;
-  letter-spacing: -0.02em; color: var(--text); text-decoration: none;
-}
-.nav-logo span { color: var(--accent); }
-.nav-back {
-  font-size: 14px; color: var(--muted);
-  transition: color .15s; text-decoration: none;
-}
-.nav-back:hover { color: var(--text); text-decoration: none; }
 
 /* ── HERO ── */
 .page-hero {
@@ -252,13 +233,22 @@ footer {
 </head>
 <body>
 
-<!-- ── NAV ── -->
-<nav>
-  <div class="nav-inner">
-    <a href="/" class="nav-logo">mariano<span>sevilla</span>.com</a>
-    <a href="/" class="nav-back">← Volver al inicio</a>
+<!-- ── NAV ────────────────────────────────── -->
+<nav id="site-nav">
+  <div class="snav-inner">
+    <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
+    <ul class="snav-links">
+      <li><a href="/como-funciona">Cómo funciona</a></li>
+      <li><a href="/recursos">Recursos</a></li>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/contacto">Contacto</a></li>
+    </ul>
+    <div class="snav-right">
+      <div class="snav-skeleton" aria-hidden="true"></div>
+    </div>
   </div>
 </nav>
+<script src="/static/nav.js"></script>
 
 <!-- ── HERO ── -->
 <section class="page-hero">
