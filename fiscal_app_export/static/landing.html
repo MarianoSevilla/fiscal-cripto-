@@ -677,6 +677,7 @@
 <div style="border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
   <div style="max-width:var(--max-w);margin:0 auto;padding:1rem var(--pad-x);">
     <span style="font-size:13px;color:var(--muted);">Calculadora de impuestos de criptomonedas compatible con Bitvavo, Nexo, Binance, Coinbase, Crypto.com y Bit2Me</span>
+    <a href="/exchanges" style="font-size:13px;color:var(--accent);text-decoration:none;margin-left:1rem;white-space:nowrap;">Ver todos los exchanges compatibles →</a>
   </div>
 </div>
 
@@ -801,23 +802,25 @@
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1rem;">
 
-      <div style="background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:1.25rem 1.5rem;">
-        <h3 style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:0.5rem;">Binance</h3>
-        <p style="color:var(--muted);font-size:14px;line-height:1.65;">
+      <a href="/exchanges/binance" style="display:block;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:1.25rem 1.5rem;text-decoration:none;transition:border-color 0.15s,background 0.15s;" onmouseover="this.style.borderColor='rgba(0,200,150,0.4)';this.style.background='#1a2540'" onmouseout="this.style.borderColor='rgba(255,255,255,0.13)';this.style.background='var(--surface)'">
+        <h3 style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:0.5rem;color:var(--text);">Binance</h3>
+        <p style="color:var(--muted);font-size:14px;line-height:1.65;margin-bottom:0.65rem;">
           El exchange más grande del mundo. Exporta tu historial desde
           <em>Órdenes → Historial de transacciones</em> y súbelo directamente.
           Compatible con el CSV estándar de Binance España.
         </p>
-      </div>
+        <span style="font-size:12px;color:var(--accent);font-weight:600;">Ver guía fiscal →</span>
+      </a>
 
-      <div style="background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:1.25rem 1.5rem;">
-        <h3 style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:0.5rem;">Bitvavo</h3>
-        <p style="color:var(--muted);font-size:14px;line-height:1.65;">
+      <a href="/exchanges/bitvavo" style="display:block;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:1.25rem 1.5rem;text-decoration:none;transition:border-color 0.15s,background 0.15s;" onmouseover="this.style.borderColor='rgba(0,200,150,0.4)';this.style.background='#1a2540'" onmouseout="this.style.borderColor='rgba(255,255,255,0.13)';this.style.background='var(--surface)'">
+        <h3 style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:0.5rem;color:var(--text);">Bitvavo</h3>
+        <p style="color:var(--muted);font-size:14px;line-height:1.65;margin-bottom:0.65rem;">
           Exchange europeo muy popular en España. Descarga tu CSV desde la
           sección <em>Historial</em> de tu cuenta y genera el informe FIFO
           en segundos.
         </p>
-      </div>
+        <span style="font-size:12px;color:var(--accent);font-weight:600;">Ver guía fiscal →</span>
+      </a>
 
       <div style="background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:1.25rem 1.5rem;">
         <h3 style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:0.5rem;">Kraken</h3>
