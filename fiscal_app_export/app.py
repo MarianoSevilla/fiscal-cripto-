@@ -2898,6 +2898,12 @@ def exchanges_binance():
     return send_from_directory("static/exchanges", "binance.html")
 
 
+@app.route("/exchanges/bitvavo", strict_slashes=False)
+@limiter.exempt
+def exchanges_bitvavo():
+    return send_from_directory("static/exchanges", "bitvavo.html")
+
+
 @app.route("/como-funciona", strict_slashes=False)
 def como_funciona():
     return send_from_directory("static", "como-funciona.html")

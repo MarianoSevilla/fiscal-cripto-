@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Declarar Bitvavo en Hacienda: CSV, FIFO e informe fiscal</title>
+<meta name="description" content="Exporta el historial de Bitvavo en un CSV y genera el informe FIFO para declarar los impuestos de tus criptos en España. Staking y recurrentes incluidos.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://marianosevilla.com/exchanges/bitvavo">
+
+<!-- Open Graph -->
+<meta property="og:type"        content="article">
+<meta property="og:url"         content="https://marianosevilla.com/exchanges/bitvavo">
+<meta property="og:title"       content="Declarar Bitvavo en Hacienda: CSV, FIFO e informe fiscal">
+<meta property="og:description" content="Exporta el historial de Bitvavo en un CSV y genera el informe FIFO para declarar los impuestos de tus criptos en España. Staking y recurrentes incluidos.">
+<meta property="og:image"       content="https://marianosevilla.com/static/mariano-sevilla-logo.png">
+<meta name="twitter:card"       content="summary_large_image">
+
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+<link rel="icon" href="/static/favicon.ico">
+<link rel="manifest" href="/static/site.webmanifest">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/nav.css">
+<link rel="preload" href="/static/nav.js" as="script">
+
+<!-- Schema: BreadcrumbList + Article + HowTo + FAQPage -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Inicio",                  "item": "https://marianosevilla.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Exchanges compatibles",   "item": "https://marianosevilla.com/exchanges" },
+        { "@type": "ListItem", "position": 3, "name": "Bitvavo",                 "item": "https://marianosevilla.com/exchanges/bitvavo" }
+      ]
+    },
+    {
+      "@type": "Article",
+      "@id": "https://marianosevilla.com/exchanges/bitvavo#article",
+      "headline": "Cómo declarar las criptomonedas de Bitvavo en Hacienda con un informe FIFO",
+      "description": "Exporta el historial de Bitvavo en un CSV y genera el informe FIFO para declarar los impuestos de tus criptos en España. Staking y recurrentes incluidos.",
+      "url": "https://marianosevilla.com/exchanges/bitvavo",
+      "inLanguage": "es",
+      "datePublished": "2026-06-05",
+      "dateModified": "2026-06-05",
+      "image": {
+        "@type": "ImageObject",
+        "url": "https://marianosevilla.com/static/mariano-sevilla-logo.png",
+        "width": 400,
+        "height": 400
+      },
+      "author": {
+        "@type": "Person",
+        "name": "Rafael Ramos Martínez",
+        "jobTitle": "Economista colegiado nº 4.579 — Colegio de Economistas de Valencia"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Mariano Sevilla",
+        "url": "https://marianosevilla.com"
+      },
+      "isPartOf": { "@id": "https://marianosevilla.com/exchanges#webpage" }
+    },
+    {
+      "@type": "HowTo",
+      "name": "Cómo exportar el historial de Bitvavo para declarar en Hacienda",
+      "description": "Pasos para obtener el CSV de Bitvavo y generar el informe fiscal FIFO con el historial completo.",
+      "totalTime": "PT10M",
+      "step": [
+        {
+          "@type": "HowToStep",
+          "position": 1,
+          "name": "Accede al historial de transacciones",
+          "text": "Inicia sesión en Bitvavo y accede a Cuenta → Historial de transacciones."
+        },
+        {
+          "@type": "HowToStep",
+          "position": 2,
+          "name": "Selecciona el rango completo",
+          "text": "Establece el rango desde la fecha de tu primera operación en Bitvavo hasta hoy. Bitvavo permite exportar el historial completo en un único archivo."
+        },
+        {
+          "@type": "HowToStep",
+          "position": 3,
+          "name": "Descarga el CSV",
+          "text": "Descarga el archivo CSV. Este único archivo incluye compras, ventas, depósitos, retiradas, recompensas de staking y órdenes recurrentes."
+        },
+        {
+          "@type": "HowToStep",
+          "position": 4,
+          "name": "Obtén también los historiales de origen si has transferido criptos",
+          "text": "Si has movido criptomonedas desde otro exchange o wallet a Bitvavo, obtén el historial completo de esa plataforma de origen. El coste de adquisición de esos activos no consta en el CSV de Bitvavo."
+        },
+        {
+          "@type": "HowToStep",
+          "position": 5,
+          "name": "Sube todos los archivos al generador FIFO",
+          "text": "Reúne el CSV de Bitvavo y los historiales de origen si los hay, y súbelos al generador en el mismo proceso. El sistema consolida el historial completo y aplica el FIFO sobre el conjunto global de cada activo. Puedes ver cómo funciona el proceso de cálculo en la guía de la herramienta."
+        }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "¿Es suficiente con el CSV de Bitvavo si también he operado en Binance?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. Si has transferido criptomonedas desde Binance a Bitvavo, el coste de adquisición de esos activos está registrado en Binance, no en Bitvavo. Para calcular el FIFO correctamente necesitas los historiales de ambas plataformas. El generador los consolida automáticamente si subes los dos archivos en el mismo proceso." }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Tengo que declarar las recompensas de staking de Bitvavo?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Sí. Las recompensas de staking son rendimientos del capital mobiliario y deben declararse en el año en que se reciben, al valor de mercado de los tokens en la fecha de cada recompensa. El generador FIFO los identifica automáticamente a partir del tipo de transacción en el CSV y los separa de las ganancias patrimoniales." }
+        },
+        {
+          "@type": "Question",
+          "name": "Llevo comprando en Bitvavo con órdenes recurrentes desde 2021. ¿Hay algún problema?",
+          "acceptedAnswer": { "@type": "Answer", "text": "En principio no. Cada orden recurrente crea un lote de adquisición con su fecha y precio. El CSV de Bitvavo los incluye todos. El generador FIFO los aplica en el orden correcto. La clave es asegurarse de que el CSV cubre desde la primera orden ejecutada." }
+        },
+        {
+          "@type": "Question",
+          "name": "He movido criptos desde mi wallet personal a Bitvavo para venderlas. ¿Es un problema?",
+          "acceptedAnswer": { "@type": "Answer", "text": "El movimiento de una wallet a Bitvavo no es en sí mismo un hecho imponible, pero cuando vendas esos activos necesitarás poder acreditar cuánto pagaste por ellos originalmente. Si los compraste en otro exchange, ese historial es necesario para calcular correctamente la ganancia." }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Bitvavo reporta mis datos a Hacienda?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Los proveedores de servicios de criptoactivos en la UE están sujetos a obligaciones de información fiscal crecientes. Con la directiva DAC8, los proveedores que operen con residentes en la UE deberán reportar información sobre sus clientes a las autoridades tributarias de los países miembros. Al ser Bitvavo una entidad europea, queda dentro del ámbito de aplicación directo de este marco." }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Necesito el Modelo 721 si tengo criptos en Bitvavo?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Bitvavo es una entidad con sede en los Países Bajos, fuera de España, por lo que se considera un proveedor extranjero a efectos del Modelo 721. Si el valor total de tus criptoactivos en exchanges extranjeros —incluyendo Bitvavo— supera los 50.000 € el 31 de diciembre, estás obligado a presentar el Modelo 721. Las posiciones en Bitvavo se agregan con las de otros exchanges extranjeros para determinar si se supera ese umbral. Consulta la guía completa del Modelo 721 para criptomonedas en marianosevilla.com." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:          #0b1220;
+  --bg2:         #101829;
+  --surface:     #141f32;
+  --surface2:    #1a2540;
+  --border:      rgba(255,255,255,0.07);
+  --border2:     rgba(255,255,255,0.13);
+  --text:        #eef2ff;
+  --muted:       #7a8aa8;
+  --accent:      #00C896;
+  --accent-dim:  rgba(0,200,150,0.12);
+  --accent-glow: rgba(0,200,150,0.25);
+  --footer-bg:   #070e1a;
+  --max-w:       1280px;
+  --pad-x:       3rem;
+  --font-display:'Syne', sans-serif;
+  --font-body:   'DM Sans', sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.7;
+  min-height: 100vh; -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.wrap { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x); }
+.section { padding: 5rem 0; }
+.section + .section { border-top: 1px solid var(--border); }
+
+.kicker {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--accent);
+  margin-bottom: 0.85rem; display: block;
+}
+.section-title {
+  font-family: var(--font-display); font-size: 2.1rem; font-weight: 800;
+  letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 1rem;
+}
+.section-title em { font-style: normal; color: var(--accent); }
+.section-desc {
+  font-size: 1rem; color: var(--muted); max-width: 680px; line-height: 1.75;
+  margin-bottom: 2rem;
+}
+
+/* ── HERO ─────────────────────────── */
+.hero { padding: 7rem 0 5rem; animation: fadeUp 0.45s ease both; }
+.breadcrumb {
+  font-size: 13px; color: var(--muted); margin-bottom: 2rem;
+  display: flex; align-items: center; gap: 6px;
+}
+.breadcrumb a { color: var(--muted); }
+.breadcrumb a:hover { color: var(--text); text-decoration: none; }
+.breadcrumb-sep { color: var(--border2); }
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--accent-dim); border: 1px solid var(--accent-glow);
+  color: var(--accent); border-radius: 100px;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+  padding: 5px 14px; margin-bottom: 1.5rem; text-transform: uppercase;
+}
+.hero-badge::before {
+  content: ''; display: block; width: 6px; height: 6px;
+  border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent);
+}
+.hero h1 {
+  font-family: var(--font-display); font-size: clamp(2rem, 3.5vw, 3rem);
+  font-weight: 800; line-height: 1.1; letter-spacing: -0.03em;
+  margin-bottom: 1.25rem; max-width: 820px;
+}
+.hero h1 em { font-style: normal; color: var(--accent); }
+.hero-desc {
+  font-size: 1.1rem; color: var(--muted); max-width: 620px;
+  margin-bottom: 2rem; line-height: 1.75;
+}
+.hero-cta-group {
+  display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;
+}
+.btn-cta {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--accent); color: #0a0a0a;
+  border: none; border-radius: 10px; padding: 17px 48px;
+  font-family: var(--font-display); font-size: 1.05rem; font-weight: 700;
+  cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+  text-decoration: none; letter-spacing: -0.01em;
+}
+.btn-cta:hover { opacity: 0.88; text-decoration: none; }
+.btn-cta:active { transform: scale(0.98); }
+.btn-outline {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: none; color: var(--accent);
+  border: 1.5px solid var(--accent); border-radius: 10px; padding: 13px 28px;
+  font-family: var(--font-display); font-size: 0.97rem; font-weight: 700;
+  cursor: pointer; transition: background 0.15s;
+  text-decoration: none; letter-spacing: -0.01em;
+}
+.btn-outline:hover { background: var(--accent-dim); text-decoration: none; }
+.hero-micro { font-size: 13px; color: var(--muted); margin-top: 1rem; opacity: 0.8; }
+
+/* ── CONTENT LAYOUT ──────────────── */
+.content-grid {
+  display: grid; grid-template-columns: 1fr 320px;
+  gap: 4rem; align-items: start;
+}
+.content-main { min-width: 0; }
+
+/* ── SIDEBAR ─────────────────────── */
+.sidebar { position: sticky; top: 5rem; display: flex; flex-direction: column; gap: 1rem; }
+.sidebar-card {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 14px; padding: 1.5rem;
+}
+.sidebar-card-title {
+  font-family: var(--font-display); font-size: 0.93rem; font-weight: 700;
+  margin-bottom: 1rem; color: var(--text);
+}
+.sidebar-steps { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1.25rem; }
+.sidebar-steps li {
+  font-size: 0.85rem; color: var(--muted); line-height: 1.5;
+  display: flex; gap: 8px; align-items: flex-start;
+}
+.sidebar-steps li::before {
+  content: attr(data-n); flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--accent-dim); border: 1px solid var(--accent-glow);
+  color: var(--accent); font-size: 9px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; margin-top: 2px;
+}
+.sidebar-cta {
+  display: block; width: 100%; text-align: center;
+  background: var(--accent); color: #0a0a0a;
+  border-radius: 10px; padding: 14px 20px;
+  font-family: var(--font-display); font-size: 0.95rem; font-weight: 700;
+  text-decoration: none; transition: opacity 0.15s;
+}
+.sidebar-cta:hover { opacity: 0.88; text-decoration: none; }
+.sidebar-note { font-size: 12px; color: var(--muted); text-align: center; margin-top: 0.75rem; line-height: 1.5; }
+.sidebar-links { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+.sidebar-links a { font-size: 0.87rem; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.sidebar-links a:hover { color: var(--text); text-decoration: none; }
+.sidebar-links a::before { content: '→'; color: var(--accent); font-size: 0.8rem; }
+
+/* ── PROSE ───────────────────────── */
+.prose h2 {
+  font-family: var(--font-display); font-size: 1.55rem; font-weight: 800;
+  letter-spacing: -0.025em; line-height: 1.2; margin: 3rem 0 1rem; color: var(--text);
+}
+.prose h2:first-child { margin-top: 0; }
+.prose h3 {
+  font-family: var(--font-display); font-size: 1.1rem; font-weight: 700;
+  letter-spacing: -0.015em; margin: 2rem 0 0.65rem; color: var(--text);
+}
+.prose p { font-size: 0.97rem; color: var(--muted); line-height: 1.78; margin-bottom: 1rem; }
+.prose p:last-child { margin-bottom: 0; }
+.prose strong { color: var(--text); font-weight: 600; }
+.prose a { color: var(--accent); }
+
+/* ── TABLES ──────────────────────── */
+.files-table-wrap {
+  overflow-x: auto; margin: 1.75rem 0;
+  border: 1px solid var(--border); border-radius: 14px;
+}
+.files-table { width: 100%; border-collapse: collapse; font-size: 0.87rem; }
+.files-table th {
+  background: var(--surface2); padding: 0.7rem 1rem;
+  text-align: left; font-weight: 600; color: var(--muted);
+  font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+  border-bottom: 1px solid var(--border2);
+}
+.files-table td {
+  padding: 0.85rem 1rem; border-bottom: 1px solid var(--border);
+  color: var(--text); vertical-align: top; line-height: 1.55;
+}
+.files-table tr:last-child td { border-bottom: none; }
+.files-table tr:hover td { background: var(--surface); }
+.files-table td:first-child { font-weight: 600; white-space: nowrap; }
+.files-table td .tag-muted {
+  display: inline-block; background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border2); border-radius: 5px;
+  padding: 1px 7px; font-size: 11px; color: var(--muted);
+}
+.files-table td .tag-green {
+  display: inline-block; background: var(--accent-dim);
+  border: 1px solid var(--accent-glow); border-radius: 5px;
+  padding: 1px 7px; font-size: 11px; color: var(--accent); font-weight: 600;
+}
+
+/* ── STEPS ───────────────────────── */
+.steps-list { list-style: none; display: flex; flex-direction: column; gap: 1.25rem; margin: 1.75rem 0; }
+.step-item { display: flex; gap: 1.1rem; align-items: flex-start; }
+.step-num {
+  flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%;
+  background: var(--accent-dim); border: 1px solid var(--accent-glow);
+  color: var(--accent); font-family: var(--font-display);
+  font-size: 0.85rem; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; margin-top: 2px;
+}
+.step-body { flex: 1; min-width: 0; }
+.step-title { font-family: var(--font-display); font-size: 0.97rem; font-weight: 700; color: var(--text); margin-bottom: 0.3rem; }
+.step-desc { font-size: 0.9rem; color: var(--muted); line-height: 1.65; }
+.step-desc strong { color: var(--text); }
+.step-note {
+  display: inline-block; margin-top: 0.4rem;
+  font-size: 0.82rem; color: var(--accent); background: var(--accent-dim);
+  border: 1px solid var(--accent-glow); border-radius: 6px; padding: 2px 9px;
+}
+
+/* ── ERROR CARDS ─────────────────── */
+.error-list { display: flex; flex-direction: column; gap: 1.25rem; margin: 1.75rem 0; }
+.error-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 1.4rem 1.5rem;
+}
+.error-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.65rem; }
+.error-num {
+  flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(229,85,85,0.1); border: 1px solid rgba(229,85,85,0.3);
+  color: #e55; font-family: var(--font-display); font-size: 0.8rem; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+}
+.error-title { font-family: var(--font-display); font-size: 0.97rem; font-weight: 700; color: var(--text); }
+.error-body { font-size: 0.9rem; color: var(--muted); line-height: 1.68; }
+.error-body strong { color: var(--text); }
+
+/* ── HIGHLIGHT / WARNING / INFO ──── */
+.highlight-box {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-left: 3px solid var(--accent); border-radius: 0 12px 12px 0;
+  padding: 1.25rem 1.5rem; margin: 1.75rem 0;
+  font-size: 0.93rem; color: var(--muted); line-height: 1.7;
+}
+.highlight-box strong { color: var(--text); }
+.warning-box {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: rgba(229,85,85,0.07); border: 1px solid rgba(229,85,85,0.2);
+  border-radius: 10px; padding: 1rem 1.25rem; margin: 1.5rem 0;
+}
+.warning-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 2px; }
+.warning-text { font-size: 0.88rem; color: var(--muted); line-height: 1.6; }
+.warning-text strong { color: #e55; font-weight: 600; }
+.info-box {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: var(--accent-dim); border: 1px solid var(--accent-glow);
+  border-radius: 10px; padding: 1rem 1.25rem; margin: 1.5rem 0;
+}
+.info-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 2px; }
+.info-text { font-size: 0.88rem; color: var(--text); line-height: 1.6; }
+.info-text a { color: var(--accent); }
+
+/* ── FAQ ─────────────────────────── */
+.faq-list { margin-top: 2rem; display: flex; flex-direction: column; gap: 0; }
+.faq-item { border-bottom: 1px solid var(--border); }
+.faq-item:first-child { border-top: 1px solid var(--border); }
+.faq-q {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 1.2rem 0; cursor: pointer; list-style: none; gap: 1rem;
+  font-weight: 600; font-size: 0.97rem; color: var(--text); user-select: none;
+}
+.faq-q::after {
+  content: '+'; font-family: var(--font-display); font-size: 1.3rem;
+  color: var(--accent); flex-shrink: 0; transition: transform 0.2s;
+}
+details[open] .faq-q::after { transform: rotate(45deg); }
+.faq-a { padding: 0 0 1.2rem; font-size: 0.93rem; color: var(--muted); line-height: 1.7; }
+.faq-a a { color: var(--accent); }
+
+/* ── CTA MID-PAGE ────────────────── */
+.cta-mid {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 16px; padding: 2rem 2.25rem; margin: 2.5rem 0; text-align: center;
+}
+.cta-mid-title {
+  font-family: var(--font-display); font-size: 1.3rem; font-weight: 800;
+  letter-spacing: -0.02em; margin-bottom: 0.65rem; color: var(--text);
+}
+.cta-mid-title em { font-style: normal; color: var(--accent); }
+.cta-mid p { font-size: 0.93rem; color: var(--muted); margin-bottom: 1.5rem; line-height: 1.65; }
+.cta-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+.cta-micro-text { font-size: 12px; color: var(--muted); margin-top: 0.75rem; opacity: 0.8; }
+
+/* ── CTA FINAL ───────────────────── */
+.cta-final { text-align: center; padding: 5rem 0 4rem; border-top: 1px solid var(--border); }
+.cta-final h2 {
+  font-family: var(--font-display); font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 1rem;
+}
+.cta-final h2 em { font-style: normal; color: var(--accent); }
+.cta-final p { font-size: 1rem; color: var(--muted); max-width: 480px; margin: 0 auto 2.25rem; line-height: 1.7; }
+.cta-micro { font-size: 13px; color: var(--muted); margin-top: 1rem; opacity: 0.75; }
+
+/* ── FOOTER ──────────────────────── */
+.page-footer { background: var(--footer-bg); border-top: 1px solid var(--border); padding: 2rem 0; }
+.footer-inner {
+  max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x);
+  display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;
+}
+.footer-copy { font-size: 13px; color: var(--muted); }
+.footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+.footer-links a { font-size: 13px; color: var(--muted); }
+.footer-links a:hover { color: var(--text); text-decoration: none; }
+
+/* ── RESPONSIVE ──────────────────── */
+@media (max-width: 1024px) {
+  .content-grid { grid-template-columns: 1fr; }
+  .sidebar { position: static; display: grid; grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 900px) {
+  :root { --pad-x: 1.5rem; }
+  .sidebar { grid-template-columns: 1fr; }
+  .footer-inner { flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 640px) {
+  :root { --pad-x: 1.25rem; }
+  .hero { padding: 5rem 0 3.5rem; }
+  .hero h1 { font-size: 1.85rem; }
+  .prose h2 { font-size: 1.35rem; }
+  .section { padding: 3.5rem 0; }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<!-- ── NAV ──────────────────────────── -->
+<nav id="site-nav">
+  <div class="snav-inner"></div>
+</nav>
+<script src="/static/nav.js"></script>
+
+<!-- ── HERO ──────────────────────────── -->
+<section class="hero">
+  <div class="wrap">
+
+    <nav class="breadcrumb" aria-label="Ruta de navegación">
+      <a href="/">Inicio</a>
+      <span class="breadcrumb-sep">›</span>
+      <a href="/exchanges">Exchanges compatibles</a>
+      <span class="breadcrumb-sep">›</span>
+      <span>Bitvavo</span>
+    </nav>
+
+    <span class="hero-badge">Bitvavo · Guía fiscal</span>
+
+    <h1>Cómo declarar las criptomonedas de Bitvavo en Hacienda con un informe <em>FIFO</em></h1>
+
+    <p class="hero-desc">
+      Bitvavo exporta todo el historial en un único CSV: compras, ventas, staking y
+      órdenes recurrentes en un solo archivo. La exportación es sencilla. La complicación
+      real es otra: si en algún momento has transferido criptomonedas desde otro exchange
+      a Bitvavo, el coste de adquisición de esos activos no está en el CSV de Bitvavo.
+      Esta guía explica cómo resolver esa situación y calcular correctamente los
+      impuestos de tus criptomonedas en España.
+    </p>
+
+    <div class="hero-cta-group">
+      <a href="/bitvavo" class="btn-cta">Generar informe fiscal de Bitvavo</a>
+      <a href="/exchanges" class="btn-outline">Ver todos los exchanges</a>
+    </div>
+    <p class="hero-micro">Crea tu cuenta gratis y sube el CSV exportado desde Bitvavo.</p>
+
+  </div>
+</section>
+
+<!-- ── CONTENIDO + SIDEBAR ────────────── -->
+<section class="section">
+  <div class="wrap">
+    <div class="content-grid">
+
+      <!-- ── CONTENIDO PRINCIPAL ─────── -->
+      <div class="content-main prose">
+
+        <h2>Por qué Bitvavo es más sencillo de exportar —y cuándo no lo es</h2>
+
+        <p>
+          Bitvavo nació en los Países Bajos con la vocación de hacer el acceso a
+          criptomonedas más sencillo para el inversor europeo. Esa filosofía se refleja
+          en la exportación: a diferencia de plataformas como Binance —que separa el
+          historial spot, el de Earn y el de Convert en archivos distintos con límites
+          anuales—, Bitvavo consolida todas las operaciones en un único CSV descargable
+          de una vez.
+        </p>
+
+        <p>
+          Para el usuario que ha operado exclusivamente en Bitvavo desde el primer día,
+          ese es el único archivo que necesita. Para quien ha movido activos desde otras
+          plataformas, hay una trampa que no se ve hasta que se genera el informe.
+        </p>
+
+        <h3>Un solo CSV cubre todo el historial</h3>
+        <p>
+          El archivo de exportación de Bitvavo incluye todos los tipos de operaciones
+          —compras, ventas, depósitos, retiradas, recompensas de staking y ejecuciones
+          de órdenes recurrentes— en columnas estructuradas que el generador FIFO lee
+          directamente. No es necesario descargar archivos por año ni combinar
+          exportaciones parciales.
+        </p>
+
+        <h3>La trampa del activo transferido desde otro exchange</h3>
+        <p>
+          El CSV de Bitvavo registra los depósitos de criptomonedas como entradas sin
+          precio de adquisición. Bitvavo recibe el activo, pero no sabe cuánto pagaste
+          por él ni dónde. Si compraste ETH en Binance, lo transferiste a Bitvavo y lo
+          vendiste allí, Bitvavo registra la venta pero no tiene constancia del coste
+          original.
+        </p>
+
+        <p>
+          Ejemplo concreto: compras 1 ETH en Binance por 1.800 € en 2021, lo
+          transftieres a Bitvavo y lo vendes por 2.400 € en 2023. El CSV de Bitvavo
+          solo ve una venta de 1 ETH a 2.400 €. Sin el historial de Binance, el sistema
+          asigna coste cero y puedes terminar declarando una ganancia de 2.400 €
+          cuando la ganancia real es 600 €. Con los dos historiales, el generador
+          FIFO lo calcula correctamente de forma automática.
+        </p>
+
+        <div class="warning-box">
+          <span class="warning-icon">⚠️</span>
+          <div class="warning-text">
+            <strong>Si has transferido criptos desde otro exchange a Bitvavo</strong>,
+            necesitas también el historial completo de ese exchange de origen. El
+            depósito en Bitvavo no transporta el coste de adquisición.
+          </div>
+        </div>
+
+        <h2>Qué contiene el CSV de Bitvavo</h2>
+
+        <p>
+          Todos estos tipos de operaciones aparecen en el mismo archivo, identificados
+          por la columna "Type":
+        </p>
+
+        <div class="files-table-wrap">
+          <table class="files-table">
+            <thead>
+              <tr>
+                <th>Tipo en el CSV</th>
+                <th>Qué es</th>
+                <th>Tratamiento fiscal</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Buy</td>
+                <td>Compra de criptoactivo con euros</td>
+                <td>Adquisición — entra en el pool FIFO <span class="tag-green">Automático</span></td>
+              </tr>
+              <tr>
+                <td>Sell</td>
+                <td>Venta de criptoactivo a euros</td>
+                <td>Transmisión — genera ganancia o pérdida patrimonial</td>
+              </tr>
+              <tr>
+                <td>Deposit (fiat)</td>
+                <td>Ingreso de euros desde cuenta bancaria</td>
+                <td>Neutro — no es hecho imponible</td>
+              </tr>
+              <tr>
+                <td>Deposit (cripto)</td>
+                <td>Entrada de cripto desde otro exchange o wallet</td>
+                <td>Neutro per se — requiere coste de adquisición de origen</td>
+              </tr>
+              <tr>
+                <td>Withdrawal</td>
+                <td>Salida de cripto a wallet o exchange externo</td>
+                <td>Neutro — no genera hecho imponible</td>
+              </tr>
+              <tr>
+                <td>Staking reward</td>
+                <td>Recompensa de staking</td>
+                <td>Rendimiento del capital mobiliario <span class="tag-green">Separado automáticamente</span></td>
+              </tr>
+              <tr>
+                <td>Recurring buy</td>
+                <td>Ejecución de orden de compra programada</td>
+                <td>Adquisición — crea un lote FIFO independiente por ejecución</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="exportar">Guía paso a paso para exportar el historial de Bitvavo</h2>
+
+        <ol class="steps-list">
+          <li class="step-item">
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <div class="step-title">Accede al historial de transacciones</div>
+              <div class="step-desc">
+                Inicia sesión en Bitvavo y navega a
+                <strong>Cuenta → Historial de transacciones</strong>.
+              </div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <div class="step-title">Selecciona el rango completo desde el origen</div>
+              <div class="step-desc">
+                Establece el rango desde la fecha de tu primera operación en Bitvavo
+                hasta hoy. Bitvavo permite exportar el historial completo en un único
+                archivo, sin necesidad de dividirlo por años.
+                <span class="step-note">Empieza siempre desde tu primera operación.</span>
+              </div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <div class="step-title">Descarga el CSV</div>
+              <div class="step-desc">
+                Descarga el archivo. Este único CSV incluye todos los tipos de operaciones:
+                compras, ventas, depósitos, retiradas, staking y órdenes recurrentes.
+                Si has operado exclusivamente en Bitvavo, este es el único archivo que
+                necesitas.
+              </div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">4</div>
+            <div class="step-body">
+              <div class="step-title">Si has transferido criptos desde otro exchange, obtén ese historial también</div>
+              <div class="step-desc">
+                Si has movido criptomonedas a Bitvavo desde
+                <a href="/exchanges/binance">Binance</a>, Kraken u otro exchange,
+                descarga también el historial completo de esa plataforma. El coste de
+                adquisición de esos activos no consta en el CSV de Bitvavo y es necesario
+                para un cálculo FIFO correcto.
+              </div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">5</div>
+            <div class="step-body">
+              <div class="step-title">Sube todos los archivos al generador FIFO</div>
+              <div class="step-desc">
+                Reúne el CSV de Bitvavo y los historiales de origen si los hay, y súbelos
+                en el mismo proceso. El sistema consolida el historial completo y aplica
+                el FIFO sobre el conjunto global de cada activo. Puedes ver cómo funciona
+                el proceso de cálculo en la
+                <a href="/como-funciona">guía de la herramienta</a>.
+              </div>
+            </div>
+          </li>
+        </ol>
+
+        <h2>Los 3 errores más comunes al declarar Bitvavo</h2>
+
+        <div class="error-list">
+
+          <div class="error-card">
+            <div class="error-header">
+              <div class="error-num">1</div>
+              <div class="error-title">Subir solo el CSV de Bitvavo cuando el activo viene de otro exchange</div>
+            </div>
+            <div class="error-body">
+              Este es el error específico de Bitvavo que no existe de la misma forma en
+              exchanges cerrados. Los usuarios que compran en Binance o Kraken y venden
+              en Bitvavo por su interfaz más sencilla necesitan los historiales de origen.
+              El depósito en Bitvavo registra la entrada del activo, pero no su coste de
+              adquisición — porque esa compra ocurrió fuera de la plataforma.
+              <br><br>
+              Sin ese dato, puedes terminar declarando una ganancia superior a la real
+              si no puedes justificar el coste de adquisición. Con los historiales de
+              origen, el generador FIFO lo resuelve automáticamente.
+            </div>
+          </div>
+
+          <div class="error-card">
+            <div class="error-header">
+              <div class="error-num">2</div>
+              <div class="error-title">Confundir las recompensas de staking con adquisiciones</div>
+            </div>
+            <div class="error-body">
+              El CSV de Bitvavo incluye las recompensas de staking como entradas de
+              activos. Si se procesan como compras a precio cero, se infla el pool de
+              activos con un coste base incorrecto, generando pérdidas ficticias al
+              vender. Las recompensas de staking son <strong>rendimientos del capital
+              mobiliario</strong>, declarables en el año en que se reciben al valor de
+              mercado en esa fecha — no son compras y no entran en el FIFO como tal.
+              El generador las clasifica automáticamente a partir de la columna Type
+              del CSV.
+            </div>
+          </div>
+
+          <div class="error-card">
+            <div class="error-header">
+              <div class="error-num">3</div>
+              <div class="error-title">Creer que Bitvavo, por ser europeo, reporta menos a Hacienda</div>
+            </div>
+            <div class="error-body">
+              La intuición es comprensible pero no se sostiene. La directiva DAC8 se
+              aplica a proveedores de activos virtuales en la UE, lo que incluye
+              directamente a los exchanges europeos. Al ser Bitvavo una entidad
+              establecida en la UE, queda dentro del marco de cooperación fiscal
+              comunitario desde el que se canaliza el intercambio de información con
+              las autoridades tributarias de los países miembros, incluida la AEAT.
+            </div>
+          </div>
+
+        </div>
+
+        <h2>Staking en Bitvavo: cómo tributan las recompensas en España</h2>
+
+        <p>
+          Bitvavo ofrece staking nativo para varios activos. Las recompensas aparecen
+          automáticamente en el CSV con el tipo "staking reward" y el generador FIFO
+          las trata como rendimientos del capital mobiliario, no como adquisiciones.
+        </p>
+
+        <p>
+          Tratamiento fiscal: los rendimientos de staking tributan en la
+          <strong>Base del Ahorro del IRPF</strong> al tipo del 19-28% según tramo.
+          El importe a declarar es el valor de mercado de los tokens recibidos en la
+          fecha de cada recompensa. Esos mismos tokens entran después en el pool FIFO
+          al precio con el que se valoraron como rendimiento: cuando se vendan, la
+          diferencia entre el precio de venta y ese precio de entrada generará una
+          ganancia o pérdida patrimonial adicional.
+        </p>
+
+        <div class="highlight-box">
+          La interacción entre rendimiento de staking y ganancia patrimonial posterior
+          es uno de los aspectos más técnicos de la fiscalidad de criptoactivos en España.
+          Para entender cómo el FIFO gestiona esos lotes, consulta la guía completa del
+          <a href="/metodo-fifo-criptomonedas">método FIFO para criptomonedas</a>.
+        </div>
+
+        <h2>Órdenes recurrentes: cuántos lotes de adquisición tienes acumulados</h2>
+
+        <p>
+          Bitvavo tiene una función de inversión automática muy popular entre inversores
+          españoles: la compra recurrente semanal o mensual. Para alguien que lleva tres
+          años comprando 100 € de BTC cada semana, eso son más de 150 lotes de
+          adquisición distintos en el pool FIFO — cada uno con su precio y su fecha.
+        </p>
+
+        <p>
+          El CSV de Bitvavo incluye cada ejecución como una línea de tipo "recurring buy".
+          El generador los procesa todos automáticamente. Lo que no puede reconstruir
+          son lotes anteriores a la fecha más antigua del CSV exportado: si el rango
+          de exportación no empieza desde la primera orden, algunos lotes tempranos
+          quedan sin coste base. Por eso el paso 2 de la guía insiste en empezar
+          siempre desde el origen.
+        </p>
+
+        <h2>¿Necesito el Modelo 721 por tener criptos en Bitvavo?</h2>
+
+        <p>
+          Bitvavo es una entidad con sede en los Países Bajos, fuera de España.
+          A efectos del Modelo 721, se considera un proveedor extranjero. Si el valor
+          total de tus criptoactivos en exchanges extranjeros —incluyendo Bitvavo—
+          <strong>supera los 50.000 € el 31 de diciembre</strong>, estás obligado a
+          presentar el Modelo 721 ante la AEAT.
+        </p>
+
+        <p>
+          Las posiciones en Bitvavo se agregan con las de otros exchanges extranjeros
+          (Binance, Kraken, Coinbase, etc.) para determinar si se supera ese umbral.
+          Si tienes criptos distribuidas entre varias plataformas, el saldo computable
+          es la suma de todas ellas, no cada una por separado.
+        </p>
+
+        <div class="info-box">
+          <span class="info-icon">ℹ️</span>
+          <div class="info-text">
+            Guía completa: <a href="/modelo-721-criptomonedas">Modelo 721 para
+            criptomonedas — quién debe presentarlo, cómo calcular el saldo y cuándo
+            se presenta</a>.
+          </div>
+        </div>
+
+        <h2>¿Hacienda ya tiene datos de mis operaciones en Bitvavo?</h2>
+
+        <p>
+          Los proveedores de servicios de criptoactivos en la UE están sujetos a
+          obligaciones de información fiscal cada vez más amplias. Con la directiva
+          DAC8, los proveedores que operen con residentes en la UE deberán reportar
+          a las autoridades tributarias de los países miembros información sobre saldos,
+          transacciones e identidad de clientes. Al ser Bitvavo una entidad europea,
+          queda dentro del ámbito de aplicación directo de este marco de intercambio de
+          información fiscal.
+        </p>
+
+        <p>
+          No es prudente asumir que Hacienda no dispone de información sobre actividad
+          en Bitvavo. Un informe fiscal que refleje correctamente las ganancias, pérdidas
+          y rendimientos reduce el riesgo de requerimientos posteriores.
+        </p>
+
+        <!-- CTA mid-page -->
+        <div class="cta-mid">
+          <p class="cta-mid-title">Tienes el CSV. <em>Genera el informe.</em></p>
+          <p>Sube el historial de Bitvavo —y los de origen si los hay— y obtén el
+          informe FIFO listo para tu gestor o para la Renta.</p>
+          <div class="cta-buttons">
+            <a href="/bitvavo" class="btn-cta">Subir CSV de Bitvavo</a>
+            <a href="/asesoramiento-fiscal-criptomonedas" class="btn-outline">Solicitar asesoramiento</a>
+          </div>
+          <p class="cta-micro-text">Crea tu cuenta gratis y sube el CSV exportado desde Bitvavo.</p>
+        </div>
+
+        <h2>Preguntas frecuentes sobre Bitvavo y Hacienda</h2>
+
+        <div class="faq-list">
+
+          <details class="faq-item">
+            <summary class="faq-q">¿Es suficiente con el CSV de Bitvavo si también he operado en Binance?</summary>
+            <p class="faq-a">
+              No. Si has transferido criptomonedas desde <a href="/exchanges/binance">Binance</a>
+              a Bitvavo, el coste de adquisición de esos activos está registrado en Binance,
+              no en Bitvavo. Para calcular el FIFO correctamente necesitas los historiales de
+              ambas plataformas. El generador los consolida automáticamente si subes los dos
+              archivos en el mismo proceso.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">¿Tengo que declarar las recompensas de staking de Bitvavo?</summary>
+            <p class="faq-a">
+              Sí. Las recompensas de staking son rendimientos del capital mobiliario y deben
+              declararse en el año en que se reciben, al valor de mercado de los tokens en la
+              fecha de cada recompensa. El generador FIFO los identifica automáticamente a
+              partir de la columna Type del CSV de Bitvavo y los separa de las ganancias
+              patrimoniales en el informe.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">Llevo comprando en Bitvavo con órdenes recurrentes desde 2021. ¿Hay algún problema?</summary>
+            <p class="faq-a">
+              En principio no. Cada orden recurrente crea un lote de adquisición con su fecha
+              y precio, y el CSV de Bitvavo los incluye todos. El generador FIFO los aplica en
+              el orden correcto automáticamente. La clave es asegurarse de que el CSV exportado
+              cubre desde la primera orden ejecutada, sin cortar el rango de fechas.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">He movido criptos desde mi wallet personal a Bitvavo para venderlas. ¿Es un problema?</summary>
+            <p class="faq-a">
+              El movimiento desde una wallet a Bitvavo no es en sí mismo un hecho imponible.
+              Pero cuando vendas esos activos en Bitvavo necesitarás poder acreditar cuánto
+              pagaste por ellos originalmente. Si los compraste en otro exchange, ese historial
+              es necesario para que el generador calcule correctamente la ganancia. Si los
+              compraste fuera de plataformas registradas, el coste puede ser más difícil de
+              documentar.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">¿Bitvavo reporta mis datos a Hacienda?</summary>
+            <p class="faq-a">
+              Los proveedores de servicios de criptoactivos en la UE están sujetos a
+              obligaciones de información fiscal crecientes. Con la directiva DAC8, los
+              proveedores que operen con residentes en la UE deberán reportar información
+              sobre sus clientes a las autoridades tributarias de los países miembros. Al ser
+              Bitvavo una entidad europea, queda dentro del ámbito de aplicación directo de
+              este marco de intercambio de información fiscal.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">¿Necesito el Modelo 721 si tengo criptos en Bitvavo?</summary>
+            <p class="faq-a">
+              Bitvavo es una entidad con sede en los Países Bajos, fuera de España.
+              A efectos del Modelo 721, se considera un proveedor extranjero. Si el valor total
+              de tus criptoactivos en exchanges extranjeros —incluyendo Bitvavo— supera los
+              50.000 € el 31 de diciembre, estás obligado a presentar el Modelo 721.
+              Las posiciones en Bitvavo se agregan con las de otros exchanges extranjeros
+              para determinar si se supera ese umbral. Consulta la guía completa en
+              <a href="/modelo-721-criptomonedas">Modelo 721 para criptomonedas</a>.
+            </p>
+          </details>
+
+        </div>
+
+      </div>
+      <!-- ── FIN CONTENIDO PRINCIPAL ──── -->
+
+      <!-- ── SIDEBAR ─────────────────── -->
+      <aside class="sidebar">
+
+        <div class="sidebar-card">
+          <div class="sidebar-card-title">Pasos para declarar Bitvavo</div>
+          <ul class="sidebar-steps">
+            <li data-n="1">Exportar Transaction History completo desde el origen</li>
+            <li data-n="2">Si has transferido criptos: obtener historiales de origen</li>
+            <li data-n="3">Subir todos los archivos al generador</li>
+            <li data-n="4">Descargar informe PDF para Hacienda</li>
+          </ul>
+          <a href="/bitvavo" class="sidebar-cta">Generar informe de Bitvavo</a>
+          <p class="sidebar-note">Crea tu cuenta gratis y sube el CSV exportado desde Bitvavo.</p>
+        </div>
+
+        <div class="sidebar-card">
+          <div class="sidebar-card-title">Páginas relacionadas</div>
+          <ul class="sidebar-links">
+            <li><a href="/exchanges">Todos los exchanges compatibles</a></li>
+            <li><a href="/exchanges/binance">Guía fiscal de Binance</a></li>
+            <li><a href="/como-funciona">Cómo funciona la herramienta</a></li>
+            <li><a href="/modelo-721-criptomonedas">Guía Modelo 721</a></li>
+            <li><a href="/asesoramiento-fiscal-criptomonedas">Asesoramiento fiscal cripto</a></li>
+            <li><a href="/about">Quiénes somos</a></li>
+          </ul>
+        </div>
+
+      </aside>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA FINAL ──────────────────────── -->
+<section class="cta-final">
+  <div class="wrap">
+    <h2>Genera tu informe fiscal de<br><em>Bitvavo hoy</em></h2>
+    <p>
+      Exporta el historial, súbelo al generador y descarga el PDF listo
+      para tu gestor o para introducir los datos en la Renta.
+    </p>
+    <div class="cta-buttons">
+      <a href="/bitvavo"   class="btn-cta">Subir CSV de Bitvavo</a>
+      <a href="/exchanges" class="btn-outline">Ver todos los exchanges</a>
+    </div>
+    <p class="cta-micro">
+      Supervisado por <a href="/about">Rafael Ramos Martínez</a>,
+      economista colegiado nº 4.579 · Colegio de Economistas de Valencia
+    </p>
+  </div>
+</section>
+
+<!-- ── FOOTER ──────────────────────────── -->
+<footer class="page-footer">
+  <div class="footer-inner">
+    <span class="footer-copy">© 2025 marianosevilla.com — No constituye asesoramiento fiscal ni legal.</span>
+    <div class="footer-links">
+      <a href="/privacidad">Privacidad</a>
+      <a href="/terminos">Términos</a>
+      <a href="/cookies">Cookies</a>
+      <a href="/contacto">Contacto</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
