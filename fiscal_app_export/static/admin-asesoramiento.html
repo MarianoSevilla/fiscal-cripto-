@@ -86,6 +86,16 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
 .badge-completed        { background: rgba(34,197,94,0.15);   color: #4ade80; }
 .badge-cancelled        { background: rgba(226,75,74,0.15);   color: #f87171; }
 .badge-refunded         { background: rgba(156,163,175,0.15); color: #9ca3af; }
+.badge-archived         { background: rgba(100,116,139,0.15); color: #94a3b8; }
+.badge-test             { background: rgba(251,191,36,0.12);  color: #fbbf24; font-style: italic; }
+
+/* Is-test pill */
+.test-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.25);
+  color: #fbbf24; font-size: 11px; font-weight: 600; padding: 2px 8px;
+  border-radius: 20px; letter-spacing: .04em;
+}
 
 /* Reply section (unified: message + quote) */
 .reply-section { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; }
@@ -327,6 +337,7 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
           <option value="completed">Finalizado</option>
           <option value="cancelled">Cancelado</option>
           <option value="refunded">Reembolsado</option>
+          <option value="archived">Archivada</option>
         </select>
         <select id="filterService" onchange="loadList()">
           <option value="">Todos los servicios</option>
@@ -348,8 +359,18 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
 </div>
 
 <script>
-let currentId  = null;
-let _allItems  = [];   // caché de la última carga para búsqueda client-side
+let currentId    = null;
+let _allItems    = [];   // caché de la última carga para búsqueda client-side
+let _currentUser = null; // cacheado desde /api/me al cargar la página
+
+// Obtener usuario actual para saber si es admin (ocultar/mostrar acciones)
+(async () => {
+  try {
+    const r = await fetch('/api/me', { credentials: 'include' });
+    const d = await r.json();
+    _currentUser = d?.user || null;
+  } catch (_) {}
+})();
 
 // ── Tiempo relativo ────────────────────────────────────────────────────────
 function relativeTime(iso) {
@@ -387,6 +408,7 @@ function getPriorityTitle(status) {
     completed:         'Finalizado',
     cancelled:         'Cancelado',
     refunded:          'Reembolsado',
+    archived:          'Archivada',
   };
   return map[status] || '';
 }
@@ -402,6 +424,7 @@ const STATUS_LABELS = {
   completed:         'Finalizado',
   cancelled:         'Cancelado',
   refunded:          'Reembolsado',
+  archived:          'Archivada',
 };
 
 function renderList(items) {
@@ -422,7 +445,7 @@ function renderList(items) {
     const pTitle   = getPriorityTitle(item.status);
     el.innerHTML = `
       <div class="req-item-header">
-        <div class="req-name">${escHtml(item.full_name)}</div>
+        <div class="req-name">${escHtml(item.full_name)}${item.is_test ? ' <span class="test-pill">PRUEBA</span>' : ''}</div>
         <span class="priority-dot p-${priority}" title="${escHtml(pTitle)}"></span>
       </div>
       <div class="req-meta">
@@ -539,6 +562,7 @@ async function openDetail(id, el) {
       completed:         'Finalizado',
       cancelled:         'Cancelado',
       refunded:          'Reembolsado',
+      archived:          'Archivada',
     };
     let statusOpts = '';
     Object.entries(statusOptions).forEach(([k,v]) => {
@@ -557,6 +581,7 @@ async function openDetail(id, el) {
       completed:         'Sin acción requerida.',
       cancelled:         'Sin acción requerida.',
       refunded:          'Sin acción requerida.',
+      archived:          'Archivada — visible solo con filtro explícito.',
     };
     const nextStep  = NEXT_STEPS[d.status] || '—';
     const updatedAt = d.updated_at ? new Date(d.updated_at).toLocaleDateString('es-ES', { day:'numeric', month:'short', year:'numeric' }) : null;
@@ -568,7 +593,7 @@ async function openDetail(id, el) {
 
     panel.innerHTML = `
       <div class="detail-header">
-        <div class="detail-id">Solicitud #${d.id} · ${dateStr}${showUpd ? ' · Actualizado ' + updatedAt : ''}</div>
+        <div class="detail-id">Solicitud #${d.id} · ${dateStr}${showUpd ? ' · Actualizado ' + updatedAt : ''}${d.is_test ? ' · <span class="test-pill">🧪 PRUEBA</span>' : ''}</div>
         <div class="detail-name">${escHtml(d.full_name)}</div>
         <div class="detail-service">${escHtml(d.service_label)} · <span class="req-badge badge-${d.status}">${escHtml(d.status_label)}</span></div>
         <div style="margin-top:10px;display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border-radius:8px;background:rgba(0,200,150,0.07);border:1px solid rgba(0,200,150,0.15);font-size:13px;color:var(--sub);">
@@ -694,12 +719,29 @@ async function openDetail(id, el) {
           </div>
         </div>
 
+        ${_currentUser?.is_admin ? `
+        <div class="action-card" style="border-color:rgba(251,191,36,0.2);margin-top:4px;">
+          <div class="action-title">Marcar como prueba</div>
+          <div style="font-size:13px;color:var(--sub);margin-bottom:12px;">
+            Las solicitudes de prueba se identifican visualmente en el panel. No se filtran por defecto.
+          </div>
+          <label class="reply-check-row" style="margin-bottom:0">
+            <input type="checkbox" id="isTestCheck" ${d.is_test ? 'checked' : ''} onchange="toggleIsTest(${d.id})">
+            Esta solicitud es una prueba interna
+          </label>
+          <div id="isTestMsg" style="font-size:13px;margin-top:6px;"></div>
+        </div>
+
         <div class="action-card" style="border-color:rgba(248,113,113,0.2);margin-top:4px;">
           <div class="action-title" style="color:#f87171">Zona de peligro</div>
-          <div style="font-size:13px;color:var(--sub);margin-bottom:12px;">Solo para solicitudes de prueba, huérfanas o sin pago. Esta acción no se puede deshacer.</div>
+          <div style="font-size:13px;color:var(--sub);margin-bottom:12px;">
+            Solo administradores. Elimina permanentemente la solicitud y todos sus datos asociados
+            (notas, historial, archivos). <strong style="color:#f87171">Esta acción no se puede deshacer.</strong>
+          </div>
           <button class="btn-danger" data-name="${escHtml(d.full_name)}" onclick="showDeleteModal(${d.id}, this.dataset.name)">🗑&nbsp; Eliminar solicitud</button>
           <div id="deleteMsg"></div>
         </div>
+        ` : ''}
       </div>
     `;
   } catch {
@@ -862,6 +904,26 @@ function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ── Is-test toggle ────────────────────────────────────────────────────────
+async function toggleIsTest(id) {
+  const checked = document.getElementById('isTestCheck')?.checked ?? false;
+  const msg     = document.getElementById('isTestMsg');
+  try {
+    const r = await fetch(`/api/admin/asesoramiento/solicitudes/${id}/is-test`, {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_test: checked }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Error');
+    if (msg) { msg.style.color = 'var(--accent)'; msg.textContent = checked ? '✓ Marcada como prueba' : '✓ Desmarcada'; }
+    loadList();
+    setTimeout(() => { if (msg) msg.textContent = ''; }, 2500);
+  } catch (e) {
+    if (msg) { msg.style.color = '#f87171'; msg.textContent = e.message; }
+  }
+}
+
 // ── Delete advisory ────────────────────────────────────────────────────────
 function showDeleteModal(id, name) {
   const modal = document.createElement('div');
@@ -871,8 +933,8 @@ function showDeleteModal(id, name) {
     <div class="modal-box" onclick="event.stopPropagation()">
       <div class="modal-title">Eliminar solicitud</div>
       <div class="modal-body">
-        Esta acción eliminará la solicitud de <strong>${escHtml(name)}</strong>
-        y sus notas internas. No debería usarse para solicitudes reales ya gestionadas.<br><br>
+        Esta acción eliminará <strong>permanentemente</strong> la solicitud de <strong>${escHtml(name)}</strong>,
+        incluyendo notas internas, historial de estados y archivos asociados.<br><br>
         <strong style="color:#f87171">Esta acción no se puede deshacer.</strong>
       </div>
       <div class="modal-confirm-wrap">

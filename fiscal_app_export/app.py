@@ -45,7 +45,7 @@ try:
 except ImportError:
     _stripe_available = False
     _stripe_module = None
-from models import FiscalAdvisoryRequest, FiscalAdvisoryFile, FiscalAdvisoryStatusHistory, AdvisoryInternalNote
+from models import FiscalAdvisoryRequest, FiscalAdvisoryFile, FiscalAdvisoryStatusHistory, AdvisoryInternalNote, AdvisoryAuditLog
 from models import Resource, ResourceRequest
 from error_tracking import record_processing_error_safe, is_actionable_processing_error
 
@@ -4031,6 +4031,12 @@ def advisory_enviar_presupuesto(req_id):
         changed_by = current_user.id,
         note       = history_note,
     ))
+    db.session.add(AdvisoryAuditLog(
+        request_id = advisory.id,
+        admin_id   = current_user.id,
+        action     = AdvisoryAuditLog.ACTION_QUOTE_SENT,
+        detail     = f"Importe: {amount_euros:.2f} € a {advisory.email}",
+    ))
     db.session.commit()
 
     payment_url = f"{_APP_BASE_URL.rstrip('/')}/pagar/{advisory.payment_link_token}"
@@ -4093,6 +4099,12 @@ def advisory_enviar_mensaje(req_id):
         status     = nuevo_estado,
         changed_by = current_user.id,
         note       = f"Mensaje enviado al cliente. Estado: {nuevo_estado}",
+    ))
+    db.session.add(AdvisoryAuditLog(
+        request_id = advisory.id,
+        admin_id   = current_user.id,
+        action     = AdvisoryAuditLog.ACTION_MESSAGE_SENT,
+        detail     = f"Estado resultante: {nuevo_estado} · Mensaje: {mensaje[:200]}",
     ))
     db.session.commit()
 
@@ -4798,6 +4810,7 @@ def admin_advisory_change_status(request_id):
     valid_statuses = list(FiscalAdvisoryRequest.STATUS_LABELS.keys())
     if new_status not in valid_statuses:
         return jsonify({"error": "Estado inválido."}), 400
+    old_status      = advisory.status
     advisory.status = new_status
     history = FiscalAdvisoryStatusHistory(
         request_id = advisory.id,
@@ -4806,9 +4819,35 @@ def admin_advisory_change_status(request_id):
         note       = note or None,
     )
     db.session.add(history)
+
+    # Determinar la acción de auditoría
+    if new_status == "completed":
+        audit_action = AdvisoryAuditLog.ACTION_COMPLETED
+    elif new_status == "cancelled":
+        audit_action = AdvisoryAuditLog.ACTION_CANCELLED
+    else:
+        audit_action = AdvisoryAuditLog.ACTION_STATUS_CHANGED
+    db.session.add(AdvisoryAuditLog(
+        request_id = advisory.id,
+        admin_id   = current_user.id,
+        action     = audit_action,
+        detail     = f"{old_status} → {new_status}" + (f" · {note}" if note else ""),
+    ))
+
     db.session.commit()
     _send_advisory_status_update_email(advisory, note)
     return jsonify({"ok": True, "status": new_status, "status_label": advisory.status_label()})
+
+
+@app.route("/api/admin/asesoramiento/solicitudes/<int:request_id>/is-test", methods=["POST"])
+@require_roles("admin")
+def admin_advisory_set_is_test(request_id):
+    """Marca o desmarca una solicitud como 'prueba'. Solo admins."""
+    advisory      = FiscalAdvisoryRequest.query.get_or_404(request_id)
+    data          = request.get_json(silent=True) or {}
+    advisory.is_test = bool(data.get("is_test", False))
+    db.session.commit()
+    return jsonify({"ok": True, "is_test": advisory.is_test})
 
 
 @app.route("/api/admin/asesoramiento/solicitudes/<int:request_id>/nota", methods=["POST"])
@@ -4835,14 +4874,28 @@ def admin_advisory_add_note(request_id):
 
 
 @app.route("/api/admin/asesoramiento/solicitudes/<int:request_id>", methods=["DELETE"])
-@require_fiscal_advisor
+@require_roles("admin")
 def admin_advisory_delete(request_id):
+    """Elimina una solicitud. Solo accesible para administradores.
+    Los asesores fiscales reciben 403.
+    El cascade de SQLAlchemy elimina automáticamente notas, historial y archivos.
+    """
     advisory = FiscalAdvisoryRequest.query.get_or_404(request_id)
+
+    # Registrar en auditoría antes de borrar (el id ya no existirá después)
+    detail_parts = [f"Solicitud de {advisory.full_name} <{advisory.email}>"]
     if advisory.amount_paid and advisory.amount_paid > 0:
-        return jsonify({
-            "error": "No se puede eliminar una solicitud con pago registrado. "
-                     "Cancélala o márcala como finalizada."
-        }), 400
+        detail_parts.append(f"Con pago de {advisory.amount_paid / 100:.2f} €")
+    if advisory.status:
+        detail_parts.append(f"Estado: {advisory.status_label()}")
+
+    db.session.add(AdvisoryAuditLog(
+        request_id = advisory.id,
+        admin_id   = current_user.id,
+        action     = AdvisoryAuditLog.ACTION_DELETED,
+        detail     = " · ".join(detail_parts),
+    ))
+
     db.session.delete(advisory)
     db.session.commit()
     return jsonify({"ok": True})

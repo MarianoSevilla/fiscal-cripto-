@@ -149,6 +149,7 @@ class FiscalAdvisoryRequest(db.Model):
         "completed":         "Finalizado",
         "cancelled":         "Cancelado",
         "refunded":          "Reembolsado",
+        "archived":          "Archivada",
     }
     SERVICE_LABELS = {
         "revision_basica":          "Revisión fiscal básica",
@@ -198,6 +199,7 @@ class FiscalAdvisoryRequest(db.Model):
     quote_acceptance_user_agent = db.Column(db.String(512), nullable=True)
     assigned_to                = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     internal_notes             = db.Column(db.Text, nullable=True)
+    is_test                    = db.Column(db.Boolean, nullable=False, default=False)
     created_at                 = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at                 = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
@@ -227,6 +229,7 @@ class FiscalAdvisoryRequest(db.Model):
             "service_label": self.service_label(),
             "status": self.status, "status_label": self.status_label(),
             "amount_paid": self.amount_paid, "currency": self.currency,
+            "is_test": bool(self.is_test),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
@@ -308,6 +311,37 @@ class AdvisoryInternalNote(db.Model):
 
     def __repr__(self) -> str:
         return f"<AdvisoryInternalNote request={self.request_id} author={self.author_name}>"
+
+
+class AdvisoryAuditLog(db.Model):
+    """Registro de auditoría para acciones administrativas sobre solicitudes de asesoramiento."""
+
+    __tablename__ = "advisory_audit_log"
+
+    # Acciones registradas
+    ACTION_DELETED         = "deleted"
+    ACTION_QUOTE_SENT      = "quote_sent"
+    ACTION_STATUS_CHANGED  = "status_changed"
+    ACTION_MESSAGE_SENT    = "message_sent"
+    ACTION_COMPLETED       = "completed"
+    ACTION_CANCELLED       = "cancelled"
+
+    id         = db.Column(db.Integer, primary_key=True)
+    request_id = db.Column(db.Integer, nullable=True, index=True)   # nullable: la solicitud puede haber sido eliminada
+    admin_id   = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    action     = db.Column(db.String(50), nullable=False, index=True)
+    detail     = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    def to_dict(self) -> dict:
+        return {
+            "id":         self.id,
+            "request_id": self.request_id,
+            "admin_id":   self.admin_id,
+            "action":     self.action,
+            "detail":     self.detail,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
 
 
 class CommunicationCampaign(db.Model):
