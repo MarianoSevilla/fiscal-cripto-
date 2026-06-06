@@ -28,11 +28,33 @@
 <link rel="stylesheet" href="/static/nav.css">
 <link rel="preload" href="/static/nav.js" as="script">
 
-<!-- Schema: BreadcrumbList + Article + HowTo + FAQPage -->
+<!-- Schema: Person + BreadcrumbList + Article + HowTo + FAQPage -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@graph": [
+    {
+      "@type": "Person",
+      "@id": "https://marianosevilla.com/#rafael-ramos",
+      "name": "Rafael Ramos Martínez",
+      "jobTitle": "Economista Colegiado",
+      "hasCredential": {
+        "@type": "EducationalOccupationalCredential",
+        "credentialCategory": "Economista Colegiado",
+        "recognizedBy": {
+          "@type": "Organization",
+          "name": "Colegio de Economistas de Valencia",
+          "url": "https://www.coev.es"
+        },
+        "identifier": "nº 4.579"
+      },
+      "worksFor": {
+        "@type": "Organization",
+        "name": "Mariano Sevilla",
+        "url": "https://marianosevilla.com"
+      },
+      "url": "https://marianosevilla.com/asesoramiento-fiscal-criptomonedas"
+    },
     {
       "@type": "BreadcrumbList",
       "itemListElement": [
@@ -55,12 +77,7 @@
         "width": 400,
         "height": 400
       },
-      "author": {
-        "@type": "Person",
-        "name": "Rafael Ramos Martínez",
-        "jobTitle": "Economista colegiado nº 4.579 — Colegio de Economistas de Valencia",
-        "url": "https://marianosevilla.com/asesoramiento-fiscal-criptomonedas"
-      },
+      "author": { "@id": "https://marianosevilla.com/#rafael-ramos" },
       "publisher": {
         "@type": "Organization",
         "name": "Mariano Sevilla",
@@ -1171,6 +1188,18 @@ footer {
           </li>
         </ul>
 
+        <!-- ─── NORMA ANTIAPLICACIÓN CALLOUT ─────── -->
+        <div class="callout">
+          <p class="callout-title">¿Has vendido con pérdidas y recomprado el mismo activo?</p>
+          <p>
+            El método FIFO determina si tienes una pérdida patrimonial, pero hay una regla adicional
+            que puede bloquear su declaración: la norma antiaplicación del art.&nbsp;33.5 LIRPF.
+            Si recompraste el mismo activo en los doce meses anteriores o posteriores a la venta,
+            la pérdida podría quedar diferida. Ver: <a href="/regla-dos-meses-criptomonedas">la
+            regla de los dos meses complementa el cálculo FIFO →</a>
+          </p>
+        </div>
+
         <!-- ─── 9. CALCULADORA ─────────────────────── -->
         <h2 id="calculadora">Cómo calcular tu FIFO automáticamente</h2>
 
@@ -1325,6 +1354,10 @@ footer {
         <!-- Related guides -->
         <h3 style="margin-top:2.5rem;margin-bottom:1rem;font-size:1rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;font-size:11px;font-weight:700;">Guías relacionadas</h3>
         <div class="related-grid">
+          <a href="/regla-dos-meses-criptomonedas" class="related-card">
+            <div class="related-card-label">Norma antiaplicación</div>
+            <div class="related-card-title">Regla de los dos meses en cripto: AEAT, DGT y riesgo fiscal</div>
+          </a>
           <a href="/exchanges" class="related-card">
             <div class="related-card-label">Herramienta</div>
             <div class="related-card-title">Exchanges compatibles y guías de exportación CSV</div>
@@ -1332,10 +1365,6 @@ footer {
           <a href="/modelo-721-criptomonedas" class="related-card">
             <div class="related-card-label">Declaración</div>
             <div class="related-card-title">Modelo 721: criptomonedas en exchanges extranjeros</div>
-          </a>
-          <a href="/asesoramiento-fiscal-criptomonedas" class="related-card">
-            <div class="related-card-label">Servicio</div>
-            <div class="related-card-title">Asesoramiento fiscal personalizado con economista</div>
           </a>
         </div>
 
@@ -1357,6 +1386,7 @@ footer {
         <div class="sidebar-card">
           <div class="sidebar-card-title">Recursos fiscales</div>
           <ul class="sidebar-links">
+            <li><a href="/regla-dos-meses-criptomonedas">Regla de los dos meses en cripto</a></li>
             <li><a href="/modelo-721-criptomonedas">Modelo 721 cripto</a></li>
             <li><a href="/como-funciona">Cómo funciona la herramienta</a></li>
             <li><a href="/faq">Preguntas frecuentes</a></li>

@@ -2916,6 +2916,12 @@ def metodo_fifo_criptomonedas():
     return send_from_directory("static", "metodo-fifo-criptomonedas.html")
 
 
+@app.route("/regla-dos-meses-criptomonedas", strict_slashes=False)
+@limiter.exempt
+def regla_dos_meses_criptomonedas():
+    return send_from_directory("static", "regla-dos-meses-criptomonedas.html")
+
+
 @app.route("/llms.txt")
 @limiter.exempt
 def llms_txt():
