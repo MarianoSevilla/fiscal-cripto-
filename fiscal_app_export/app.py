@@ -2910,6 +2910,18 @@ def exchanges_kraken():
     return send_from_directory("static/exchanges", "kraken.html")
 
 
+@app.route("/metodo-fifo-criptomonedas", strict_slashes=False)
+@limiter.exempt
+def metodo_fifo_criptomonedas():
+    return send_from_directory("static", "metodo-fifo-criptomonedas.html")
+
+
+@app.route("/llms.txt")
+@limiter.exempt
+def llms_txt():
+    return send_from_directory("static", "llms.txt", mimetype="text/plain")
+
+
 @app.route("/como-funciona", strict_slashes=False)
 def como_funciona():
     return send_from_directory("static", "como-funciona.html")
