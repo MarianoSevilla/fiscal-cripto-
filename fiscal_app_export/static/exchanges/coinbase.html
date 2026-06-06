@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Declarar Coinbase en Hacienda: CSV, FIFO y staking</title>
+<meta name="description" content="Cómo declarar Coinbase en Hacienda: exporta el historial CSV, calcula el FIFO y declara staking y ganancias en el IRPF. Supervisado por economista colegiado.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://marianosevilla.com/exchanges/coinbase">
+
+<!-- Open Graph -->
+<meta property="og:type"        content="article">
+<meta property="og:url"         content="https://marianosevilla.com/exchanges/coinbase">
+<meta property="og:title"       content="Declarar Coinbase en Hacienda: CSV, FIFO y staking">
+<meta property="og:description" content="Cómo declarar Coinbase en Hacienda: exporta el historial CSV, calcula el FIFO y declara staking y ganancias en el IRPF. Supervisado por economista colegiado.">
+<meta property="og:image"       content="https://marianosevilla.com/static/mariano-sevilla-logo.png">
+<meta name="twitter:card"       content="summary_large_image">
+
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+<link rel="icon" href="/static/favicon.ico">
+<link rel="manifest" href="/static/site.webmanifest">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/nav.css">
+<link rel="preload" href="/static/nav.js" as="script">
+
+<!-- Schema: Person + BreadcrumbList + Article + FAQPage + WebPage -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Person",
+      "@id": "https://marianosevilla.com/#rafael-ramos",
+      "name": "Rafael Ramos Martínez",
+      "jobTitle": "Economista Colegiado",
+      "hasCredential": {
+        "@type": "EducationalOccupationalCredential",
+        "credentialCategory": "Economista Colegiado",
+        "recognizedBy": {
+          "@type": "Organization",
+          "name": "Colegio de Economistas de Valencia",
+          "url": "https://www.coev.es"
+        },
+        "identifier": "nº 4.579"
+      },
+      "worksFor": {
+        "@type": "Organization",
+        "name": "Mariano Sevilla",
+        "url": "https://marianosevilla.com"
+      },
+      "url": "https://marianosevilla.com/asesoramiento-fiscal-criptomonedas"
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://marianosevilla.com/exchanges/coinbase#breadcrumb",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Inicio",               "item": "https://marianosevilla.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Exchanges compatibles","item": "https://marianosevilla.com/exchanges" },
+        { "@type": "ListItem", "position": 3, "name": "Coinbase",             "item": "https://marianosevilla.com/exchanges/coinbase" }
+      ]
+    },
+    {
+      "@type": "Article",
+      "@id": "https://marianosevilla.com/exchanges/coinbase#article",
+      "headline": "Cómo declarar Coinbase en Hacienda: historial CSV, FIFO y staking",
+      "description": "Guía paso a paso para exportar el historial de Coinbase, evitar duplicados con Coinbase Pro, calcular el FIFO y declarar ganancias, pérdidas y staking en el IRPF español.",
+      "url": "https://marianosevilla.com/exchanges/coinbase",
+      "inLanguage": "es",
+      "datePublished": "2026-06-06",
+      "dateModified": "2026-06-06",
+      "image": {
+        "@type": "ImageObject",
+        "url": "https://marianosevilla.com/static/mariano-sevilla-logo.png",
+        "width": 400,
+        "height": 400
+      },
+      "author": { "@id": "https://marianosevilla.com/#rafael-ramos" },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Mariano Sevilla",
+        "url": "https://marianosevilla.com",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://marianosevilla.com/static/mariano-sevilla-logo.png",
+          "width": 400,
+          "height": 400
+        }
+      },
+      "about": [
+        { "@type": "Thing", "name": "Declarar Coinbase Hacienda" },
+        { "@type": "Thing", "name": "Exportar historial Coinbase España" },
+        { "@type": "Thing", "name": "Coinbase staking IRPF" },
+        { "@type": "Thing", "name": "Método FIFO criptomonedas España" }
+      ],
+      "citation": [
+        {
+          "@type": "Legislation",
+          "name": "Ley 35/2006 del IRPF, artículo 37.2",
+          "url": "https://www.boe.es/buscar/act.php?id=BOE-A-2006-20764"
+        },
+        {
+          "@type": "CreativeWork",
+          "name": "Directiva DAC8 — Directiva 2023/2226/UE del Consejo",
+          "publisher": {
+            "@type": "GovernmentOrganization",
+            "name": "Consejo de la Unión Europea"
+          }
+        }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "¿Coinbase informa a Hacienda automáticamente en 2026?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sí. Desde el 1 de enero de 2026, Coinbase está sujeto a las obligaciones de reporte de la Directiva DAC8 (Directiva 2023/2226/UE), que obliga a los proveedores de servicios de criptoactivos a comunicar automáticamente saldos y transacciones de sus clientes residentes en la UE a las autoridades tributarias correspondientes. En el caso de España, esos datos llegan a la AEAT. Antes de DAC8, Coinbase ya estaba obligado a suministrar información bajo la Ley 11/2021, aunque de forma menos sistemática. La obligación de autoliquidar sigue siendo tuya: DAC8 no presenta la declaración en tu nombre, sino que permite a Hacienda cruzar lo que declares con los datos que recibe directamente de la plataforma. No declarar confiando en que Coinbase no informe es un error con consecuencias crecientes a partir de 2026."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Cómo declaro el staking de Coinbase en el IRPF?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Las recompensas de staking de Coinbase tributan como rendimientos del capital mobiliario y se declaran en la casilla 0033 del Modelo 100, no en la 1626 de ganancias patrimoniales. El importe a declarar es el valor en euros de cada recompensa en la fecha exacta de recepción, al precio de mercado de ese momento. El tipo impositivo es del 19% hasta 6.000 €, 21% entre 6.001 y 50.000 €, y 23% por encima. Cuando vendas posteriormente esos tokens, esa operación sí genera ganancia o pérdida patrimonial (casilla 1626) calculada sobre el coste de adquisición, que coincide con el valor que declaraste al recibirlos. El error más frecuente es declarar las recompensas de staking en la misma casilla que las ventas: son bases imponibles distintas aunque el tipo marginal sea similar en muchos tramos."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Cómo exporto el historial completo de Coinbase para la renta?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Accede a accounts.coinbase.com/statements desde el navegador web, no desde la app móvil. En 'Generar extracto personalizado', selecciona todos los activos y todos los tipos de transacción. Establece el rango de fechas desde tu primera operación en Coinbase, no solo desde el año que declaras: el método FIFO es acumulativo y necesita el historial completo para calcular el coste de adquisición correcto. Selecciona el formato CSV, ya que el PDF no es procesable por herramientas fiscales. Coinbase generará el archivo y te lo enviará por correo o lo dejará disponible para descarga inmediata. Si tienes operaciones de 2020 o anteriores procedentes de Coinbase Pro, lee primero la sección sobre duplicados de esta guía antes de combinar archivos."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Hay que presentar el Modelo 721 por tener cuenta en Coinbase?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sí, si el valor total de tus criptoactivos en plataformas extranjeras supera los 50.000 € el 31 de diciembre del ejercicio. Aunque Coinbase Spain S.L. está registrada como entidad en España, Coinbase se considera plataforma extranjera a efectos del Modelo 721, por lo que las criptomonedas custodiadas computan para el umbral. Si tienes criptos distribuidas entre Coinbase y otros exchanges internacionales como Binance, Kraken o Bitvavo, los saldos se suman para determinar si superas los 50.000 €. El Modelo 721 se presenta entre enero y marzo del año siguiente al de referencia. No presentarlo o presentarlo fuera de plazo conlleva sanciones que pueden ser muy superiores al valor de las posiciones no declaradas."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Qué pasa si tenía cuenta en Coinbase Pro antes de 2024?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Coinbase cerró Coinbase Pro en diciembre de 2023 y migró todas las cuentas a Coinbase Advanced Trade. El historial de operaciones de Coinbase Pro está integrado en el CSV estándar de Coinbase actual. Si exportas el CSV desde accounts.coinbase.com/statements, ya incluye las operaciones migradas de Coinbase Pro. El problema surge si, además, descargas el CSV heredado de Coinbase Pro de forma separada y combinas ambos archivos: obtendrás operaciones duplicadas en el cálculo FIFO. La solución es utilizar únicamente el CSV estándar de Coinbase. Coinbase mantiene acceso al historial legacy de Coinbase Pro hasta 2027 a través del soporte, pero no debes combinarlo con el CSV actual salvo para períodos estrictamente anteriores que no aparezcan en el historial migrado."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Puedo declarar las pérdidas de Coinbase aunque las haya tenido el año pasado?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Las pérdidas patrimoniales de criptomonedas pueden compensarse con ganancias patrimoniales de hasta cuatro ejercicios posteriores. Si tuviste pérdidas en Coinbase en 2023 y no las compensaste ese año, puedes aplicarlas contra ganancias de 2024, 2025, 2026 o 2027. No obstante, existe una regla adicional que puede bloquear la declaración de esas pérdidas: si compraste el mismo activo en los 12 meses anteriores o posteriores a la venta, la pérdida queda diferida —no eliminada— hasta que transmitas esas posiciones sin recompra en el plazo. Esta norma antiaplicación del art. 33.5 LIRPF es especialmente relevante para usuarios de Coinbase que hacen DCA continuo. Ver guía completa: regla de los dos meses en criptomonedas."
+          }
+        }
+      ]
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://marianosevilla.com/exchanges/coinbase",
+      "isPartOf": { "@id": "https://marianosevilla.com/#website" },
+      "breadcrumb": { "@id": "https://marianosevilla.com/exchanges/coinbase#breadcrumb" }
+    }
+  ]
+}
+</script>
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:          #0b1220;
+  --bg2:         #101829;
+  --surface:     #141f32;
+  --surface2:    #1a2540;
+  --border:      rgba(255,255,255,0.07);
+  --border2:     rgba(255,255,255,0.13);
+  --text:        #eef2ff;
+  --muted:       #7a8aa8;
+  --accent:      #00C896;
+  --accent-dim:  rgba(0,200,150,0.12);
+  --accent-glow: rgba(0,200,150,0.25);
+  --footer-bg:   #070e1a;
+  --max-w:       1280px;
+  --pad-x:       3rem;
+  --font-display:'Syne', sans-serif;
+  --font-body:   'DM Sans', sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.7;
+  min-height: 100vh; -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.wrap {
+  max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x);
+}
+.section { padding: 5rem 0; }
+.section + .section { border-top: 1px solid var(--border); }
+
+.kicker {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--accent);
+  margin-bottom: 0.85rem; display: block;
+}
+.section-title {
+  font-family: var(--font-display); font-size: 2.1rem; font-weight: 800;
+  letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 1rem;
+}
+.section-title em { font-style: normal; color: var(--accent); }
+.section-desc {
+  font-size: 1rem; color: var(--muted); max-width: 680px; line-height: 1.75;
+  margin-bottom: 2rem;
+}
+
+/* ── HERO ─────────────────────────── */
+.hero {
+  padding: 7rem 0 5rem;
+  animation: fadeUp 0.45s ease both;
+}
+.breadcrumb {
+  font-size: 13px; color: var(--muted); margin-bottom: 2rem;
+  display: flex; align-items: center; gap: 6px;
+}
+.breadcrumb a { color: var(--muted); }
+.breadcrumb a:hover { color: var(--text); text-decoration: none; }
+.breadcrumb-sep { color: var(--border2); }
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--accent-dim); border: 1px solid var(--accent-glow);
+  color: var(--accent); border-radius: 100px;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+  padding: 5px 14px; margin-bottom: 1.5rem;
+  text-transform: uppercase;
+}
+.hero-badge::before {
+  content: ''; display: block; width: 6px; height: 6px;
+  border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent);
+}
+.hero h1 {
+  font-family: var(--font-display); font-size: clamp(2rem, 3.5vw, 3rem);
+  font-weight: 800; line-height: 1.1; letter-spacing: -0.03em;
+  margin-bottom: 1.25rem; max-width: 820px;
+}
+.hero h1 em { font-style: normal; color: var(--accent); }
+
+/* FEATURED SNIPPET TARGET */
+.hero-snippet {
+  font-size: 1.0rem; color: var(--text); max-width: 720px;
+  line-height: 1.75; margin-bottom: 1rem;
+  padding: 1.1rem 1.4rem;
+  background: var(--surface); border: 1px solid var(--border2);
+  border-left: 4px solid var(--accent); border-radius: 0 10px 10px 0;
+}
+.hero-snippet strong { color: var(--accent); }
+
+.hero-desc {
+  font-size: 1.0rem; color: var(--muted); max-width: 680px;
+  margin-bottom: 2rem; line-height: 1.75;
+}
+.hero-cta-group {
+  display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;
+}
+.btn-cta {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--accent); color: #0a0a0a;
+  border: none; border-radius: 10px; padding: 17px 48px;
+  font-family: var(--font-display); font-size: 1.05rem; font-weight: 700;
+  cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+  text-decoration: none; letter-spacing: -0.01em;
+}
+.btn-cta:hover { opacity: 0.88; text-decoration: none; }
+.btn-cta:active { transform: scale(0.98); }
+.btn-outline {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: none; color: var(--accent);
+  border: 1.5px solid var(--accent); border-radius: 10px; padding: 13px 28px;
+  font-family: var(--font-display); font-size: 0.97rem; font-weight: 700;
+  cursor: pointer; transition: background 0.15s;
+  text-decoration: none; letter-spacing: -0.01em;
+}
+.btn-outline:hover { background: var(--accent-dim); text-decoration: none; }
+.hero-micro {
+  font-size: 13px; color: var(--muted); margin-top: 1rem; opacity: 0.8;
+}
+
+/* ── CONTENT LAYOUT ──────────────── */
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 4rem;
+  align-items: start;
+}
+.content-main { min-width: 0; }
+
+/* ── SIDEBAR ─────────────────────── */
+.sidebar {
+  position: sticky; top: 5rem;
+  display: flex; flex-direction: column; gap: 1rem;
+}
+.sidebar-card {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 14px; padding: 1.5rem;
+}
+.sidebar-card-title {
+  font-family: var(--font-display); font-size: 0.93rem; font-weight: 700;
+  margin-bottom: 1rem; color: var(--text);
+}
+.sidebar-steps {
+  list-style: none; display: flex; flex-direction: column; gap: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+.sidebar-steps li {
+  font-size: 0.85rem; color: var(--muted); line-height: 1.5;
+  display: flex; gap: 8px; align-items: flex-start;
+}
+.sidebar-steps li::before {
+  content: attr(data-n);
+  flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--accent-dim); border: 1px solid var(--accent-glow);
+  color: var(--accent); font-size: 9px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  margin-top: 2px;
+}
+.sidebar-cta {
+  display: block; width: 100%; text-align: center;
+  background: var(--accent); color: #0a0a0a;
+  border-radius: 10px; padding: 14px 20px;
+  font-family: var(--font-display); font-size: 0.95rem; font-weight: 700;
+  text-decoration: none; transition: opacity 0.15s;
+}
+.sidebar-cta:hover { opacity: 0.88; text-decoration: none; }
+.sidebar-note {
+  font-size: 12px; color: var(--muted); text-align: center;
+  margin-top: 0.75rem; line-height: 1.5;
+}
+.sidebar-links {
+  list-style: none; display: flex; flex-direction: column; gap: 0.5rem;
+}
+.sidebar-links a {
+  font-size: 0.87rem; color: var(--muted);
+  display: flex; align-items: center; gap: 6px;
+}
+.sidebar-links a:hover { color: var(--text); text-decoration: none; }
+.sidebar-links a::before { content: '→'; color: var(--accent); font-size: 0.8rem; }
+
+/* ── PROSE SECTIONS ──────────────── */
+.prose h2 {
+  font-family: var(--font-display); font-size: 1.55rem; font-weight: 800;
+  letter-spacing: -0.025em; line-height: 1.2;
+  margin: 3rem 0 1rem; color: var(--text);
+  scroll-margin-top: 5rem;
+}
+.prose h2:first-child { margin-top: 0; }
+.prose h3 {
+  font-family: var(--font-display); font-size: 1.1rem; font-weight: 700;
+  letter-spacing: -0.015em; margin: 2rem 0 0.65rem; color: var(--text);
+}
+.prose p {
+  font-size: 0.97rem; color: var(--muted); line-height: 1.78;
+  margin-bottom: 1rem;
+}
+.prose p:last-child { margin-bottom: 0; }
+.prose strong { color: var(--text); font-weight: 600; }
+.prose a { color: var(--accent); }
+
+/* ── TABLE ───────────────────────── */
+.files-table-wrap {
+  overflow-x: auto; margin: 1.75rem 0;
+  border: 1px solid var(--border); border-radius: 14px;
+}
+.files-table {
+  width: 100%; border-collapse: collapse; font-size: 0.87rem;
+}
+.files-table th {
+  background: var(--surface2); padding: 0.7rem 1rem;
+  text-align: left; font-weight: 600; color: var(--muted);
+  font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+  border-bottom: 1px solid var(--border2);
+}
+.files-table td {
+  padding: 0.85rem 1rem; border-bottom: 1px solid var(--border);
+  color: var(--text); vertical-align: top; line-height: 1.55;
+}
+.files-table tr:last-child td { border-bottom: none; }
+.files-table tr:hover td { background: var(--surface); }
+.files-table td:first-child { font-weight: 600; }
+.tag-muted {
+  display: inline-block; background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border2); border-radius: 5px;
+  padding: 1px 7px; font-size: 11px; color: var(--muted);
+}
+.tag-green {
+  display: inline-block; background: var(--accent-dim);
+  border: 1px solid var(--accent-glow); border-radius: 5px;
+  padding: 1px 7px; font-size: 11px; color: var(--accent); font-weight: 600;
+}
+.tag-orange {
+  display: inline-block; background: rgba(245,166,35,0.1);
+  border: 1px solid rgba(245,166,35,0.3); border-radius: 5px;
+  padding: 1px 7px; font-size: 11px; color: #f5a623; font-weight: 600;
+}
+
+/* ── STEPS ───────────────────────── */
+.steps-list {
+  list-style: none; display: flex; flex-direction: column; gap: 1.25rem;
+  margin: 1.75rem 0;
+}
+.step-item {
+  display: flex; gap: 1.1rem; align-items: flex-start;
+}
+.step-num {
+  flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%;
+  background: var(--accent-dim); border: 1px solid var(--accent-glow);
+  color: var(--accent); font-family: var(--font-display);
+  font-size: 0.85rem; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  margin-top: 2px;
+}
+.step-body { flex: 1; min-width: 0; }
+.step-title {
+  font-family: var(--font-display); font-size: 0.97rem; font-weight: 700;
+  color: var(--text); margin-bottom: 0.3rem;
+}
+.step-desc { font-size: 0.9rem; color: var(--muted); line-height: 1.65; }
+.step-desc strong { color: var(--text); }
+.step-note {
+  display: inline-block; margin-top: 0.4rem;
+  font-size: 0.82rem; color: var(--accent); background: var(--accent-dim);
+  border: 1px solid var(--accent-glow); border-radius: 6px;
+  padding: 2px 9px;
+}
+
+/* ── ERROR CARDS ─────────────────── */
+.error-list {
+  display: flex; flex-direction: column; gap: 1.25rem; margin: 1.75rem 0;
+}
+.error-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 1.4rem 1.5rem;
+}
+.error-header {
+  display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.65rem;
+}
+.error-num {
+  flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(229,85,85,0.1); border: 1px solid rgba(229,85,85,0.3);
+  color: #e55; font-family: var(--font-display);
+  font-size: 0.8rem; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+}
+.error-title {
+  font-family: var(--font-display); font-size: 0.97rem; font-weight: 700;
+  color: var(--text);
+}
+.error-body { font-size: 0.9rem; color: var(--muted); line-height: 1.68; }
+.error-body strong { color: var(--text); }
+
+/* ── HIGHLIGHT BOX ───────────────── */
+.highlight-box {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 12px 12px 0; padding: 1.25rem 1.5rem;
+  margin: 1.75rem 0;
+  font-size: 0.93rem; color: var(--muted); line-height: 1.7;
+}
+.highlight-box strong { color: var(--text); }
+
+/* ── WARNING BOX ─────────────────── */
+.warning-box {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: rgba(229,85,85,0.07); border: 1px solid rgba(229,85,85,0.2);
+  border-radius: 10px; padding: 1rem 1.25rem; margin: 1.5rem 0;
+}
+.warning-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 2px; }
+.warning-text { font-size: 0.88rem; color: var(--muted); line-height: 1.6; }
+.warning-text strong { color: #e55; font-weight: 600; }
+
+/* ── INFO BOX ────────────────────── */
+.info-box {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: var(--accent-dim); border: 1px solid var(--accent-glow);
+  border-radius: 10px; padding: 1rem 1.25rem; margin: 1.5rem 0;
+}
+.info-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 2px; }
+.info-text { font-size: 0.88rem; color: var(--text); line-height: 1.6; }
+.info-text a { color: var(--accent); }
+
+/* ── FAQ ─────────────────────────── */
+.faq-list { margin-top: 2rem; display: flex; flex-direction: column; gap: 0; }
+.faq-item { border-bottom: 1px solid var(--border); }
+.faq-item:first-child { border-top: 1px solid var(--border); }
+.faq-q {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 1.2rem 0; cursor: pointer; list-style: none; gap: 1rem;
+  font-weight: 600; font-size: 0.97rem; color: var(--text);
+  user-select: none;
+}
+.faq-q::after {
+  content: '+'; font-family: var(--font-display); font-size: 1.3rem;
+  color: var(--accent); flex-shrink: 0; transition: transform 0.2s;
+}
+details[open] .faq-q::after { transform: rotate(45deg); }
+.faq-a {
+  padding: 0 0 1.2rem;
+  font-size: 0.93rem; color: var(--muted); line-height: 1.7;
+}
+.faq-a a { color: var(--accent); }
+
+/* ── CTA MID-PAGE ────────────────── */
+.cta-mid {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 16px; padding: 2rem 2.25rem;
+  margin: 2.5rem 0; text-align: center;
+}
+.cta-mid-title {
+  font-family: var(--font-display); font-size: 1.3rem; font-weight: 800;
+  letter-spacing: -0.02em; margin-bottom: 0.65rem; color: var(--text);
+}
+.cta-mid-title em { font-style: normal; color: var(--accent); }
+.cta-mid p { font-size: 0.93rem; color: var(--muted); margin-bottom: 1.5rem; line-height: 1.65; }
+.cta-buttons {
+  display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;
+}
+.cta-micro-text {
+  font-size: 12px; color: var(--muted); margin-top: 0.75rem; opacity: 0.8;
+}
+
+/* ── CTA FINAL ───────────────────── */
+.cta-final {
+  text-align: center; padding: 5rem 0 4rem;
+  border-top: 1px solid var(--border);
+}
+.cta-final h2 {
+  font-family: var(--font-display); font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 800; letter-spacing: -0.03em; line-height: 1.15;
+  margin-bottom: 1rem;
+}
+.cta-final h2 em { font-style: normal; color: var(--accent); }
+.cta-final p {
+  font-size: 1rem; color: var(--muted); max-width: 480px;
+  margin: 0 auto 2.25rem; line-height: 1.7;
+}
+.cta-micro {
+  font-size: 13px; color: var(--muted); margin-top: 1rem; opacity: 0.75;
+}
+
+/* ── FOOTER ──────────────────────── */
+.page-footer {
+  background: var(--footer-bg); border-top: 1px solid var(--border);
+  padding: 2rem 0;
+}
+.footer-inner {
+  max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x);
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 1rem; flex-wrap: wrap;
+}
+.footer-copy { font-size: 13px; color: var(--muted); }
+.footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+.footer-links a { font-size: 13px; color: var(--muted); }
+.footer-links a:hover { color: var(--text); text-decoration: none; }
+
+/* ── RESPONSIVE ──────────────────── */
+@media (max-width: 1024px) {
+  .content-grid { grid-template-columns: 1fr; }
+  .sidebar { position: static; display: grid; grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 900px) {
+  :root { --pad-x: 1.5rem; }
+  .sidebar { grid-template-columns: 1fr; }
+  .footer-inner { flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 640px) {
+  :root { --pad-x: 1.25rem; }
+  .hero { padding: 5rem 0 3.5rem; }
+  .hero h1 { font-size: 1.85rem; }
+  .prose h2 { font-size: 1.35rem; }
+  .section { padding: 3.5rem 0; }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<!-- ── NAV ──────────────────────────── -->
+<nav id="site-nav">
+  <div class="snav-inner"></div>
+</nav>
+<script src="/static/nav.js"></script>
+
+<!-- ── HERO ──────────────────────────── -->
+<section class="hero">
+  <div class="wrap">
+
+    <nav class="breadcrumb" aria-label="Ruta de navegación">
+      <a href="/">Inicio</a>
+      <span class="breadcrumb-sep">›</span>
+      <a href="/exchanges">Exchanges compatibles</a>
+      <span class="breadcrumb-sep">›</span>
+      <span>Coinbase</span>
+    </nav>
+
+    <span class="hero-badge">Coinbase · Guía fiscal</span>
+
+    <h1>Cómo declarar <em>Coinbase</em> en Hacienda: historial, FIFO y staking</h1>
+
+    <!-- FEATURED SNIPPET TARGET — primero tras el H1 -->
+    <p class="hero-snippet" id="definicion">
+      Para declarar Coinbase en Hacienda hay que exportar el historial completo de
+      transacciones en formato CSV desde <strong>accounts.coinbase.com/statements</strong>,
+      calcular las ganancias y pérdidas patrimoniales con el método FIFO (art.&nbsp;37.2 LIRPF)
+      y declarar las transmisiones en la <strong>casilla&nbsp;1626</strong> del Modelo&nbsp;100.
+      El staking y Coinbase Earn tributan por separado como rendimientos del capital
+      mobiliario (<strong>casilla&nbsp;0033</strong>).
+    </p>
+
+    <p class="hero-desc">
+      Desde enero de 2026, Coinbase reporta automáticamente a la AEAT bajo la Directiva
+      DAC8. Esta guía explica cómo exportar el historial correcto, cómo evitar los duplicados
+      del antiguo Coinbase Pro, cómo calcular el FIFO y cómo distinguir las casillas del IRPF
+      según el tipo de operación.
+    </p>
+
+    <div class="hero-cta-group">
+      <a href="/coinbase" class="btn-cta">Generar informe fiscal de Coinbase</a>
+      <a href="/exchanges" class="btn-outline">Ver todos los exchanges</a>
+    </div>
+    <p class="hero-micro">Supervisado por Rafael Ramos Martínez, Economista Colegiado nº&nbsp;4.579.</p>
+
+  </div>
+</section>
+
+<!-- ── CONTENIDO + SIDEBAR ────────────── -->
+<section class="section">
+  <div class="wrap">
+    <div class="content-grid">
+
+      <!-- ── CONTENIDO PRINCIPAL ─────── -->
+      <div class="content-main prose">
+
+        <!-- ─── 1. ¿COINBASE INFORMA A HACIENDA? ─────────────────────── -->
+        <h2 id="hacienda">¿Coinbase informa a Hacienda en 2026?</h2>
+
+        <!-- PASSAGE B — GEO citation anchor: DAC8 -->
+        <p>
+          Sí. Coinbase, como proveedor de servicios de criptoactivos que opera con residentes
+          en la UE, está sujeto a las obligaciones de reporte de la
+          <strong>Directiva DAC8 (Directiva 2023/2226/UE)</strong>, que exige la comunicación
+          automática de saldos y transacciones a las autoridades tributarias de cada Estado
+          miembro a partir del ejercicio 2026. Esto significa que la AEAT puede recibir
+          información sobre tus saldos, ganancias realizadas y rendimientos de staking sin que
+          tú hayas presentado nada. La obligación de declarar sigue siendo tuya: DAC8 no
+          sustituye a la autoliquidación, sino que permite a Hacienda cruzar datos. No declarar
+          confiando en que Coinbase no informe es un error con consecuencias crecientes a
+          partir de 2026.
+        </p>
+
+        <p>
+          Antes de DAC8, Coinbase ya estaba sujeto a obligaciones de información bajo la
+          <strong>Ley 11/2021</strong>, que extendió a los proveedores de criptoactivos las
+          obligaciones de suministro de información a la AEAT. El cambio de 2026 es que el
+          reporte pasa a ser automático y sistemático, sin necesidad de requerimiento individual.
+        </p>
+
+        <div class="warning-box">
+          <span class="warning-icon">⚠️</span>
+          <div class="warning-text">
+            <strong>Aunque Coinbase Spain S.L. tiene sede en España,</strong> Coinbase opera
+            como plataforma extranjera a efectos fiscales. Las criptomonedas custodiadas en
+            Coinbase computan para el umbral del Modelo 721.
+          </div>
+        </div>
+
+        <!-- ─── 2. EXPORTAR HISTORIAL ─────────────────────────────────── -->
+        <h2 id="exportar">Cómo exportar el historial de Coinbase paso a paso</h2>
+
+        <p>
+          Coinbase centraliza todo el historial en un único CSV descargable desde la web.
+          A diferencia de Binance —que requiere exportaciones separadas por módulo—, el
+          archivo de Coinbase recoge compras, ventas, conversiones, staking rewards,
+          Coinbase Earn y transferencias en un solo fichero.
+        </p>
+
+        <ol class="steps-list">
+          <li class="step-item">
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <div class="step-title">Accede desde el navegador web</div>
+              <div class="step-desc">
+                Ve a <strong>accounts.coinbase.com/statements</strong> desde el navegador
+                (Chrome, Firefox, Safari). La app móvil no permite generar extractos
+                completos en CSV.
+              </div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <div class="step-title">Selecciona "Generar extracto personalizado"</div>
+              <div class="step-desc">
+                Elige <strong>Todos los activos</strong> y <strong>Todos los tipos de
+                transacción</strong>. No filtres por activo ni por tipo de operación.
+              </div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <div class="step-title">Establece el rango desde tu primera operación</div>
+              <div class="step-desc">
+                Pon la fecha de inicio en el <strong>día de tu primera compra</strong>,
+                no en el 1 de enero del año que declaras. El FIFO es acumulativo: una
+                venta de 2024 puede imputarse contra lotes de 2020.
+                <span class="step-note">No exportes solo el año corriente.</span>
+              </div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">4</div>
+            <div class="step-body">
+              <div class="step-title">Selecciona formato CSV</div>
+              <div class="step-desc">
+                El formato <strong>CSV</strong> es el único procesable por herramientas
+                fiscales. El PDF no contiene datos estructurados y no puede importarse al
+                generador FIFO.
+              </div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">5</div>
+            <div class="step-body">
+              <div class="step-title">Descarga el archivo generado</div>
+              <div class="step-desc">
+                Coinbase genera el CSV y lo deja disponible para descarga inmediata o te
+                lo envía por correo si el volumen es elevado. Las columnas clave son:
+                <strong>Timestamp</strong>, <strong>Transaction Type</strong>,
+                <strong>Asset</strong>, <strong>Quantity Transacted</strong>,
+                <strong>Spot Price at Transaction</strong> y <strong>Subtotal</strong>.
+              </div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">6</div>
+            <div class="step-body">
+              <div class="step-title">Sube el CSV al generador FIFO</div>
+              <div class="step-desc">
+                Con un único archivo tienes todo el historial. Súbelo al generador y el
+                sistema aplicará el FIFO sobre el pool global de cada activo, separando
+                automáticamente los rendimientos de staking de las ganancias patrimoniales.
+              </div>
+            </div>
+          </li>
+        </ol>
+
+        <!-- ─── 3. COINBASE PRO / ADVANCED TRADE ─────────────────────── -->
+        <h2 id="duplicados">Coinbase Pro y Advanced Trade: cómo evitar operaciones duplicadas</h2>
+
+        <!-- PASSAGE C — GEO citation anchor: duplicados -->
+        <p>
+          Coinbase absorbió Coinbase Pro en 2023 y migró las cuentas al producto
+          Advanced Trade. Si descargaste el historial de Coinbase Pro antes de la
+          migración y también el historial actual de Coinbase, es muy probable que
+          tengas operaciones duplicadas: la misma transacción aparece en los dos archivos
+          CSV con fechas o identificadores ligeramente distintos.
+        </p>
+
+        <p>
+          El problema no es cosmético. Un duplicado en el historial supone calcular el
+          FIFO sobre una base incorrecta: crea adquisiciones ficticias que reducen
+          artificialmente las ganancias declaradas, lo que puede derivar en un
+          requerimiento de la AEAT si los datos no cuadran con los reportados por DAC8.
+        </p>
+
+        <p>
+          La solución es usar <strong>solo el CSV de Coinbase actual</strong> —que incluye
+          el historial migrado desde Advanced Trade— y no combinarlo con archivos
+          exportados directamente desde Coinbase Pro. Si tienes operaciones anteriores a
+          2021 que no aparezcan en el historial migrado, solicítalas al soporte de
+          Coinbase antes de exportar.
+        </p>
+
+        <div class="files-table-wrap">
+          <table class="files-table">
+            <thead>
+              <tr>
+                <th>Fuente</th>
+                <th>Período cubierto</th>
+                <th>¿Usar?</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>CSV estándar Coinbase<br><span class="tag-muted">accounts.coinbase.com/statements</span></td>
+                <td>Desde 2023 en adelante + historial migrado de Coinbase Pro</td>
+                <td><span class="tag-green">Sí — fuente única</span></td>
+              </tr>
+              <tr>
+                <td>CSV Coinbase Pro (legacy)<br><span class="tag-muted">hasta dic. 2023</span></td>
+                <td>Hasta diciembre 2023</td>
+                <td><span class="tag-orange">Solo si falta historial pre-2021</span></td>
+              </tr>
+              <tr>
+                <td>API Coinbase (herramientas terceros)</td>
+                <td>Variable según integración</td>
+                <td><span class="tag-orange">No combinar con CSV Pro</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ─── 4. FIFO CON CSV COINBASE ─────────────────────────────── -->
+        <h2 id="fifo">Calcular el FIFO con el CSV de Coinbase</h2>
+
+        <p>
+          El CSV de Coinbase es multi-activo: una sola exportación contiene todas las
+          operaciones de BTC, ETH, SOL y el resto de criptomonedas de tu cuenta. El FIFO
+          opera de forma independiente sobre cada activo, calculando una cola cronológica
+          separada por moneda.
+        </p>
+
+        <p>
+          Un punto crítico: el FIFO <strong>no se calcula por exchange</strong> sino sobre
+          el pool global del mismo activo. Si tienes BTC en Coinbase y también en
+          <a href="/exchanges/binance">Binance</a> o <a href="/exchanges/kraken">Kraken</a>,
+          todos los lotes de BTC forman una única cola ordenada por fecha de adquisición.
+          Calcular el FIFO de Coinbase por separado produce resultados incorrectos.
+        </p>
+
+        <p>
+          El coste de adquisición de cada lote incluye la comisión de compra (columna
+          <code>Fees</code> en el CSV). No incluirlas infla las ganancias declaradas.
+        </p>
+
+        <div class="highlight-box">
+          Para entender cómo se construye el pool global FIFO y cómo afecta a las
+          operaciones entre distintos exchanges, consulta la guía completa del
+          <a href="/metodo-fifo-criptomonedas">método FIFO para criptomonedas en España</a>.
+        </div>
+
+        <!-- ─── 5. ERRORES FRECUENTES ─────────────────────────────────── -->
+        <h2 id="errores">Los errores más frecuentes al declarar Coinbase</h2>
+
+        <div class="error-list">
+
+          <div class="error-card">
+            <div class="error-header">
+              <div class="error-num">1</div>
+              <div class="error-title">Importar Coinbase y Coinbase Pro como fuentes separadas</div>
+            </div>
+            <div class="error-body">
+              Si tu herramienta fiscal permite conectar "Coinbase" y "Coinbase Pro"
+              como dos integraciones distintas y las tienes activas a la vez, casi con
+              certeza tienes <strong>operaciones duplicadas para el período 2020-2023</strong>.
+              El CSV estándar de Coinbase ya incluye el historial migrado de Coinbase Pro.
+              Usa solo una fuente.
+            </div>
+          </div>
+
+          <div class="error-card">
+            <div class="error-header">
+              <div class="error-num">2</div>
+              <div class="error-title">Exportar solo el año que se declara</div>
+            </div>
+            <div class="error-body">
+              El FIFO aplica sobre el stock acumulado desde tu primera compra. Si compraste
+              BTC en 2020 y lo vendiste en 2024, el coste de adquisición está en el archivo
+              de 2020. Sin ese historial, el generador asigna <strong>coste cero</strong> y
+              la ganancia calculada puede ser varias veces mayor que la real.
+            </div>
+          </div>
+
+          <div class="error-card">
+            <div class="error-header">
+              <div class="error-num">3</div>
+              <div class="error-title">Tratar los rewards de Coinbase Earn como compras a coste cero</div>
+            </div>
+            <div class="error-body">
+              Las recompensas de Coinbase Earn y staking tienen como coste de adquisición
+              <strong>su valor de mercado en la fecha de recepción</strong>: ese importe ya
+              se declaró como rendimiento del capital mobiliario (casilla&nbsp;0033). Usar
+              coste cero infla la ganancia patrimonial futura cuando vendas esos tokens.
+            </div>
+          </div>
+
+          <div class="error-card">
+            <div class="error-header">
+              <div class="error-num">4</div>
+              <div class="error-title">Declarar el staking en la casilla 1626 en lugar de la 0033</div>
+            </div>
+            <div class="error-body">
+              Las recompensas de staking son <strong>rendimientos del capital mobiliario</strong>
+              (casilla&nbsp;0033), no ganancias patrimoniales (casilla&nbsp;1626). Son bases
+              imponibles distintas. Declararlos en la casilla equivocada es un error que la
+              AEAT puede detectar directamente al cruzar con los datos de DAC8.
+            </div>
+          </div>
+
+          <div class="error-card">
+            <div class="error-header">
+              <div class="error-num">5</div>
+              <div class="error-title">Omitir el Modelo 721 porque Coinbase "tiene sede en España"</div>
+            </div>
+            <div class="error-body">
+              Coinbase Spain S.L. está registrada en España, pero Coinbase opera como
+              plataforma extranjera a efectos del Modelo 721. Las criptomonedas en Coinbase
+              <strong>sí computan</strong> para el umbral de 50.000&nbsp;€. No presentar el
+              Modelo 721 cuando se supera ese umbral conlleva sanciones desproporcionadas.
+            </div>
+          </div>
+
+          <div class="error-card">
+            <div class="error-header">
+              <div class="error-num">6</div>
+              <div class="error-title">Confundir conversiones con transferencias internas</div>
+            </div>
+            <div class="error-body">
+              Convertir USDC a ETH en Coinbase es una <strong>permuta fiscal</strong>: venta
+              de USDC a valor de mercado (hecho imponible) y compra de ETH. No es una
+              transferencia interna. El CSV de Coinbase registra estas operaciones con el
+              tipo "Convert" — deben procesarse como ventas, no ignorarse.
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ─── 6. STAKING Y COINBASE EARN ───────────────────────────── -->
+        <h2 id="staking">Cómo declarar el staking y Coinbase Earn en el IRPF</h2>
+
+        <!-- PASSAGE A — GEO citation anchor: casilla 0033 vs 1626 -->
+        <p>
+          Las recompensas de staking de Coinbase tributan como rendimientos del capital
+          mobiliario en la Base del Ahorro del IRPF, no como ganancias patrimoniales.
+          Se declaran en la <strong>casilla&nbsp;0033</strong> del Modelo&nbsp;100, al valor
+          de mercado de cada token en la fecha exacta de recepción. El tipo impositivo
+          oscila entre el 19% y el 28% según tramo. Las operaciones de compraventa de las
+          criptomonedas que hayas adquirido vía staking —cuando las vendas— sí generan
+          ganancia o pérdida patrimonial y van en la <strong>casilla&nbsp;1626</strong>.
+          El error habitual es mezclar ambas categorías: el staking va a rendimientos
+          (0033), la venta posterior va a ganancias (1626). El coste de adquisición de los
+          tokens recibidos por staking es su valor de mercado en el día de recepción,
+          que es el mismo importe que ya declaraste como rendimiento.
+        </p>
+
+        <div class="files-table-wrap">
+          <table class="files-table">
+            <thead>
+              <tr>
+                <th>Tipo de operación en Coinbase</th>
+                <th>Tributación</th>
+                <th>Casilla Modelo 100</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Venta de criptomonedas (sell)</td>
+                <td>Ganancia / pérdida patrimonial</td>
+                <td><span class="tag-green">1626</span></td>
+              </tr>
+              <tr>
+                <td>Conversión entre criptomonedas (convert)</td>
+                <td>Ganancia / pérdida patrimonial (permuta)</td>
+                <td><span class="tag-green">1626</span></td>
+              </tr>
+              <tr>
+                <td>Staking rewards</td>
+                <td>Rendimiento del capital mobiliario</td>
+                <td><span class="tag-orange">0033</span></td>
+              </tr>
+              <tr>
+                <td>Coinbase Earn rewards</td>
+                <td>Rendimiento del capital mobiliario</td>
+                <td><span class="tag-orange">0033</span></td>
+              </tr>
+              <tr>
+                <td>Transferencias entre wallets propias</td>
+                <td>No es hecho imponible</td>
+                <td>—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="warning-box">
+          <span class="warning-icon">⚠️</span>
+          <div class="warning-text">
+            El tratamiento del staking líquido (stETH, cbETH) y los productos de DeFi
+            puede diferir del staking estándar. Si tienes posiciones en estos productos,
+            consulta con un asesor antes de clasificarlos.
+          </div>
+        </div>
+
+        <!-- ─── 7. GANANCIAS Y PÉRDIDAS — IRPF ───────────────────────── -->
+        <h2 id="irpf">Ganancias y pérdidas de Coinbase en la declaración de la renta</h2>
+
+        <p>
+          Las ganancias y pérdidas por transmisión de criptomonedas de Coinbase se
+          integran en la <strong>base del ahorro del IRPF</strong> junto al resto de
+          ganancias patrimoniales. Se declaran en la sección C del Modelo&nbsp;100,
+          casilla&nbsp;1626. El importe es: valor de transmisión (precio de venta en euros)
+          menos coste de adquisición FIFO menos comisiones de venta.
+        </p>
+
+        <p>
+          Las pérdidas patrimoniales pueden compensarse con ganancias del mismo ejercicio
+          o de los cuatro ejercicios siguientes. Sin embargo, si compraste el mismo activo
+          en los 12 meses anteriores o posteriores a la venta con pérdida, esa pérdida
+          puede quedar diferida por la norma antiaplicación del art.&nbsp;33.5 LIRPF. Esta
+          regla es especialmente relevante para inversores con DCA continuo en Coinbase.
+        </p>
+
+        <div class="info-box">
+          <span class="info-icon">ℹ️</span>
+          <div class="info-text">
+            Si has recomprado el mismo activo en los 12 meses anteriores o posteriores a
+            una venta con pérdidas, esa pérdida podría quedar bloqueada. Ver guía:
+            <a href="/regla-dos-meses-criptomonedas">la regla de los dos meses en
+            criptomonedas →</a>
+          </div>
+        </div>
+
+        <!-- ─── 8. MODELO 721 ─────────────────────────────────────────── -->
+        <h2 id="modelo721">¿Necesito el Modelo 721 por tener cuenta en Coinbase?</h2>
+
+        <p>
+          Si el valor total de tus criptoactivos en exchanges extranjeros supera los
+          <strong>50.000&nbsp;€ el 31 de diciembre</strong>, estás obligado a presentar el
+          Modelo 721. Aunque Coinbase Spain S.L. opera en España, la plataforma se
+          considera extranjera a estos efectos —al igual que Binance, Kraken o Bitvavo—,
+          por lo que las criptos en Coinbase computan para el umbral. Si tienes criptos
+          repartidas entre varios exchanges internacionales, los saldos se suman.
+        </p>
+
+        <div class="info-box">
+          <span class="info-icon">ℹ️</span>
+          <div class="info-text">
+            Guía completa: <a href="/modelo-721-criptomonedas">Modelo 721 para
+            criptomonedas — quién debe presentarlo, cómo calcular el saldo y cuándo</a>.
+          </div>
+        </div>
+
+        <!-- CTA mid-page -->
+        <div class="cta-mid">
+          <p class="cta-mid-title">Tienes el CSV. <em>Genera el informe.</em></p>
+          <p>Sube el historial de Coinbase al generador y obtén el informe FIFO listo para tu gestor o para la Renta.</p>
+          <div class="cta-buttons">
+            <a href="/coinbase" class="btn-cta">Subir CSV de Coinbase</a>
+            <a href="/asesoramiento-fiscal-criptomonedas" class="btn-outline">Solicitar asesoramiento</a>
+          </div>
+          <p class="cta-micro-text">Supervisado por Rafael Ramos Martínez, Economista Colegiado nº&nbsp;4.579.</p>
+        </div>
+
+        <!-- ─── 9. FAQ ─────────────────────────────────────────────────── -->
+        <h2 id="faq">Preguntas frecuentes sobre Coinbase y Hacienda</h2>
+
+        <div class="faq-list">
+
+          <details class="faq-item">
+            <summary class="faq-q">¿Coinbase informa a Hacienda automáticamente en 2026?</summary>
+            <p class="faq-a">
+              Sí. Desde el 1 de enero de 2026, Coinbase está sujeto a las obligaciones de
+              reporte de la Directiva DAC8 (Directiva 2023/2226/UE), que obliga a los
+              proveedores de servicios de criptoactivos a comunicar automáticamente saldos
+              y transacciones de sus clientes residentes en la UE a las autoridades tributarias
+              correspondientes. En el caso de España, esos datos llegan a la AEAT. Antes de
+              DAC8, Coinbase ya estaba obligado a suministrar información bajo la Ley 11/2021,
+              aunque de forma menos sistemática. La obligación de autoliquidar sigue siendo
+              tuya: DAC8 no presenta la declaración en tu nombre, sino que permite a Hacienda
+              cruzar lo que declares con los datos que recibe directamente de la plataforma.
+              No declarar confiando en que Coinbase no informe es un error con consecuencias
+              crecientes a partir de 2026.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">¿Cómo declaro el staking de Coinbase en el IRPF?</summary>
+            <p class="faq-a">
+              Las recompensas de staking de Coinbase tributan como rendimientos del capital
+              mobiliario y se declaran en la <strong>casilla&nbsp;0033</strong> del
+              Modelo&nbsp;100, no en la 1626 de ganancias patrimoniales. El importe a
+              declarar es el valor en euros de cada recompensa en la fecha exacta de
+              recepción, al precio de mercado de ese momento. El tipo impositivo es del 19%
+              hasta 6.000&nbsp;€, 21% entre 6.001 y 50.000&nbsp;€, y 23% por encima. Cuando
+              vendas posteriormente esos tokens, esa operación sí genera ganancia o pérdida
+              patrimonial (casilla&nbsp;1626) calculada sobre el coste de adquisición, que
+              coincide con el valor que declaraste al recibirlos. El error más frecuente es
+              declarar las recompensas de staking en la misma casilla que las ventas.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">¿Cómo exporto el historial completo de Coinbase para la renta?</summary>
+            <p class="faq-a">
+              Accede a <strong>accounts.coinbase.com/statements</strong> desde el navegador
+              web, no desde la app móvil. En "Generar extracto personalizado", selecciona
+              todos los activos y todos los tipos de transacción. Establece el rango de
+              fechas desde tu primera operación en Coinbase, no solo desde el año que
+              declaras: el método FIFO es acumulativo y necesita el historial completo para
+              calcular el coste de adquisición correcto. Selecciona el formato CSV, ya que
+              el PDF no es procesable por herramientas fiscales. Si tienes operaciones de
+              2020 o anteriores procedentes de Coinbase Pro, lee la sección sobre duplicados
+              de esta guía antes de combinar archivos.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">¿Hay que presentar el Modelo 721 por tener cuenta en Coinbase?</summary>
+            <p class="faq-a">
+              Sí, si el valor total de tus criptoactivos en plataformas extranjeras supera
+              los <strong>50.000&nbsp;€ el 31 de diciembre</strong> del ejercicio. Aunque
+              Coinbase Spain S.L. está registrada en España, Coinbase se considera plataforma
+              extranjera a efectos del Modelo 721, por lo que las criptomonedas custodiadas
+              computan para el umbral. Si tienes criptos distribuidas entre Coinbase y otros
+              exchanges internacionales como <a href="/exchanges/binance">Binance</a>,
+              <a href="/exchanges/kraken">Kraken</a> o
+              <a href="/exchanges/bitvavo">Bitvavo</a>, los saldos se suman para determinar
+              si superas los 50.000&nbsp;€. No presentarlo conlleva sanciones que pueden ser
+              muy superiores al valor de las posiciones no declaradas.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">¿Qué pasa si tenía cuenta en Coinbase Pro antes de 2024?</summary>
+            <p class="faq-a">
+              Coinbase cerró Coinbase Pro en diciembre de 2023 y migró todas las cuentas a
+              Coinbase Advanced Trade. El historial de operaciones de Coinbase Pro está
+              integrado en el CSV estándar de Coinbase actual. Si exportas el CSV desde
+              <strong>accounts.coinbase.com/statements</strong>, ya incluye las operaciones
+              migradas de Coinbase Pro. El problema surge si, además, descargas el CSV
+              heredado de Coinbase Pro de forma separada y combinas ambos archivos:
+              obtendrás operaciones duplicadas en el cálculo FIFO. La solución es utilizar
+              únicamente el CSV estándar de Coinbase. Coinbase mantiene acceso al historial
+              legacy de Coinbase Pro hasta 2027 a través del soporte, pero no debes
+              combinarlo con el CSV actual salvo para períodos estrictamente anteriores que
+              no aparezcan en el historial migrado.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">¿Puedo declarar las pérdidas de Coinbase aunque las haya tenido el año pasado?</summary>
+            <p class="faq-a">
+              Las pérdidas patrimoniales de criptomonedas pueden compensarse con ganancias
+              patrimoniales de hasta cuatro ejercicios posteriores. Si tuviste pérdidas en
+              Coinbase en 2023 y no las compensaste ese año, puedes aplicarlas contra
+              ganancias de 2024, 2025, 2026 o 2027. No obstante, existe una regla adicional
+              que puede bloquear la declaración de esas pérdidas: si compraste el mismo
+              activo en los 12 meses anteriores o posteriores a la venta, la pérdida queda
+              diferida —no eliminada— hasta que transmitas esas posiciones sin recompra en
+              el plazo. Esta norma antiaplicación del art.&nbsp;33.5 LIRPF es especialmente
+              relevante para usuarios de Coinbase que hacen DCA continuo. Ver guía:
+              <a href="/regla-dos-meses-criptomonedas">la regla de los dos meses en
+              criptomonedas →</a>
+            </p>
+          </details>
+
+        </div>
+
+      </div>
+      <!-- ── FIN CONTENIDO PRINCIPAL ──── -->
+
+      <!-- ── SIDEBAR ─────────────────── -->
+      <aside class="sidebar">
+
+        <div class="sidebar-card">
+          <div class="sidebar-card-title">Pasos para declarar Coinbase</div>
+          <ul class="sidebar-steps">
+            <li data-n="1">Accede a accounts.coinbase.com/statements</li>
+            <li data-n="2">Exportar historial completo desde el origen en CSV</li>
+            <li data-n="3">Verificar que no hay duplicados de Coinbase Pro</li>
+            <li data-n="4">Subir el CSV al generador FIFO</li>
+            <li data-n="5">Descargar informe PDF para Hacienda</li>
+          </ul>
+          <a href="/coinbase" class="sidebar-cta">Generar informe de Coinbase</a>
+          <p class="sidebar-note">Supervisado por Rafael Ramos Martínez, Economista Colegiado nº&nbsp;4.579.</p>
+        </div>
+
+        <div class="sidebar-card">
+          <div class="sidebar-card-title">Páginas relacionadas</div>
+          <ul class="sidebar-links">
+            <li><a href="/exchanges">Todos los exchanges compatibles</a></li>
+            <li><a href="/metodo-fifo-criptomonedas">Método FIFO para criptomonedas</a></li>
+            <li><a href="/regla-dos-meses-criptomonedas">Regla de los dos meses en cripto</a></li>
+            <li><a href="/modelo-721-criptomonedas">Guía Modelo 721</a></li>
+            <li><a href="/asesoramiento-fiscal-criptomonedas">Asesoramiento fiscal cripto</a></li>
+          </ul>
+        </div>
+
+      </aside>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA FINAL ──────────────────────── -->
+<section class="cta-final">
+  <div class="wrap">
+    <h2>Genera tu informe fiscal de<br><em>Coinbase hoy</em></h2>
+    <p>
+      Exporta el historial, súbelo al generador y descarga el PDF listo
+      para tu gestor o para introducir los datos directamente en la Renta.
+    </p>
+    <div class="cta-buttons">
+      <a href="/coinbase"  class="btn-cta">Subir CSV de Coinbase</a>
+      <a href="/exchanges" class="btn-outline">Ver todos los exchanges</a>
+    </div>
+    <p class="cta-micro">
+      Supervisado por <a href="/about">Rafael Ramos Martínez</a>,
+      economista colegiado nº&nbsp;4.579 · Colegio de Economistas de Valencia
+    </p>
+  </div>
+</section>
+
+<!-- ── FOOTER ──────────────────────────── -->
+<footer class="page-footer">
+  <div class="footer-inner">
+    <span class="footer-copy">© 2025 marianosevilla.com — No constituye asesoramiento fiscal ni legal.</span>
+    <div class="footer-links">
+      <a href="/privacidad">Privacidad</a>
+      <a href="/terminos">Términos</a>
+      <a href="/cookies">Cookies</a>
+      <a href="/contacto">Contacto</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -2910,6 +2910,12 @@ def exchanges_kraken():
     return send_from_directory("static/exchanges", "kraken.html")
 
 
+@app.route("/exchanges/coinbase", strict_slashes=False)
+@limiter.exempt
+def exchanges_coinbase():
+    return send_from_directory("static/exchanges", "coinbase.html")
+
+
 @app.route("/metodo-fifo-criptomonedas", strict_slashes=False)
 @limiter.exempt
 def metodo_fifo_criptomonedas():
