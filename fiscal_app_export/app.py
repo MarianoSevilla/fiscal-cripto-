@@ -2916,6 +2916,12 @@ def exchanges_coinbase():
     return send_from_directory("static/exchanges", "coinbase.html")
 
 
+@app.route("/compensar-perdidas-criptomonedas", strict_slashes=False)
+@limiter.exempt
+def compensar_perdidas_criptomonedas():
+    return send_from_directory("static", "compensar-perdidas-criptomonedas.html")
+
+
 @app.route("/metodo-fifo-criptomonedas", strict_slashes=False)
 @limiter.exempt
 def metodo_fifo_criptomonedas():
