@@ -214,7 +214,8 @@ def api_create_draft():
     body              = (data.get("body") or "").strip()
     preview_text      = (data.get("preview_text") or "").strip()
     recipient_segment = (data.get("recipient_segment") or "all").strip()
-    individual_email  = (data.get("individual_email") or "").strip() or None
+    individual_email     = (data.get("individual_email") or "").strip() or None
+    processing_error_id  = data.get("processing_error_id") or None
     if recipient_segment not in VALID_SEGMENTS:
         recipient_segment = "all"
 
@@ -227,8 +228,16 @@ def api_create_draft():
     if recipient_segment == "individual" and not individual_email:
         return jsonify({"error": "individual_email es obligatorio para el segmento individual."}), 400
 
+    # Validate processing_error_id belongs to a real error (best-effort, no abort)
+    if processing_error_id:
+        try:
+            processing_error_id = int(processing_error_id)
+        except (TypeError, ValueError):
+            processing_error_id = None
+
     campaign = create_campaign_draft(
-        subject, body, preview_text, current_user.id, recipient_segment, individual_email
+        subject, body, preview_text, current_user.id, recipient_segment,
+        individual_email, processing_error_id
     )
     return jsonify(campaign.to_dict()), 201
 
@@ -242,6 +251,12 @@ def api_update_draft(campaign_id):
     if campaign.status != "draft":
         return jsonify({"error": f"Solo se puede editar un borrador. Estado actual: {campaign.status}."}), 409
     data = request.get_json(silent=True) or {}
+    proc_err_id = data.get("processing_error_id")
+    if proc_err_id is not None:
+        try:
+            proc_err_id = int(proc_err_id)
+        except (TypeError, ValueError):
+            proc_err_id = None
     update_campaign_draft(
         campaign,
         subject=data.get("subject"),
@@ -249,6 +264,7 @@ def api_update_draft(campaign_id):
         preview_text=data.get("preview_text"),
         recipient_segment=data.get("recipient_segment"),
         individual_email=data.get("individual_email"),
+        processing_error_id=proc_err_id,
     )
     return jsonify(campaign.to_dict())
 

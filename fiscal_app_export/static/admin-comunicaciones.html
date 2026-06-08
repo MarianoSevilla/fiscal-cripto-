@@ -737,8 +737,9 @@ async function _maybeLoadProcessingErrorDraft() {
     document.getElementById('f-body').value     = ctx.body   || '';
     document.getElementById('f-preview-text').value = '';
 
-    // Store the individual email for later save
-    window._pendingIndividualEmail = ctx.email;
+    // Store context for later draft save
+    window._pendingIndividualEmail    = ctx.email;
+    window._pendingProcessingErrorId  = ctx.id;
 
     // Update recipient display
     const recCount = document.getElementById('rec-count');
@@ -839,6 +840,8 @@ function setTab(btn, tab) {
 function newCampaign() {
   activeCampaign  = null;
   draftCampaignId = null;
+  window._pendingIndividualEmail   = null;
+  window._pendingProcessingErrorId = null;
   document.getElementById('f-subject').value      = '';
   document.getElementById('f-preview-text').value = '';
   document.getElementById('f-body').value          = '';
@@ -897,13 +900,15 @@ async function selectCampaign(id) {
     });
     document.getElementById('seg-hint').textContent = _SEG_HINTS[seg] || '';
     if (seg === 'individual' && c.individual_email) {
-      window._pendingIndividualEmail = c.individual_email;
+      window._pendingIndividualEmail   = c.individual_email;
+      window._pendingProcessingErrorId = c.processing_error_id || null;
       const masked = c.individual_email.replace(/^(.).*@/, '$1***@');
       document.getElementById('rec-count').textContent = '1';
       document.getElementById('rec-right').innerHTML   =
         `${masked}<br><span style="font-size:10px;color:var(--muted)">Envío individual</span>`;
     } else {
-      window._pendingIndividualEmail = null;
+      window._pendingIndividualEmail   = null;
+      window._pendingProcessingErrorId = null;
       updateRecipientDisplay();
     }
     // Show delete button — a real saved draft is loaded
@@ -1154,13 +1159,15 @@ async function ensureDraftSaved() {
 
   if (!subject || !body) return null;
 
-  const indEmail = currentSegment === 'individual' ? (window._pendingIndividualEmail || null) : null;
+  const indEmail   = currentSegment === 'individual' ? (window._pendingIndividualEmail || null) : null;
+  const procErrId  = currentSegment === 'individual' ? (window._pendingProcessingErrorId || null) : null;
 
   try {
     if (draftCampaignId) {
       // Update existing draft
       const payload = {subject, body, preview_text: previewText, recipient_segment: currentSegment};
-      if (indEmail) payload.individual_email = indEmail;
+      if (indEmail)  payload.individual_email    = indEmail;
+      if (procErrId) payload.processing_error_id = procErrId;
       const res = await fetch(`/api/admin/comunicaciones/drafts/${draftCampaignId}`, {
         method: 'PATCH',
         headers: {'Content-Type': 'application/json'},
@@ -1177,7 +1184,8 @@ async function ensureDraftSaved() {
     } else {
       // Create new draft
       const payload = {subject, body, preview_text: previewText, recipient_segment: currentSegment};
-      if (indEmail) payload.individual_email = indEmail;
+      if (indEmail)  payload.individual_email    = indEmail;
+      if (procErrId) payload.processing_error_id = procErrId;
       const res = await fetch('/api/admin/comunicaciones/drafts', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -1239,22 +1247,28 @@ async function openSendModal() {
   await loadCampaigns();  // refresh list
 
   const subject   = document.getElementById('f-subject').value.trim();
-  const segCount  = recipientCounts[currentSegment] ?? 0;
+  const isIndividual = currentSegment === 'individual';
+  const segCount  = isIndividual ? 1 : (recipientCounts[currentSegment] ?? 0);
   const _EXCLUDED_BY_SEG = {
     all:        'Admins · asesores · desuscritos',
     verified:   'Admins · asesores · desuscritos · no verificados',
     unverified: 'Admins · asesores · desuscritos · verificados',
+    individual: '—',
   };
   const _SEG_DESC = {
     all:        'usuarios (verif. + no verif.)',
     verified:   'usuarios verificados',
     unverified: 'usuarios no verificados',
+    individual: 'usuario',
   };
+  const recipientsLabel = isIndividual && window._pendingIndividualEmail
+    ? `1 usuario (${window._pendingIndividualEmail.replace(/^(.).*@/, '$1***@')})`
+    : `${segCount.toLocaleString('es')} ${_SEG_DESC[currentSegment] || 'usuarios'}`;
   document.getElementById('modal-subject').textContent     = subject || '—';
   document.getElementById('modal-segment').textContent     = _SEG_LABELS[currentSegment] || currentSegment;
-  document.getElementById('modal-recipients').textContent  = `${segCount.toLocaleString('es')} ${_SEG_DESC[currentSegment] || 'usuarios'}`;
+  document.getElementById('modal-recipients').textContent  = recipientsLabel;
   document.getElementById('modal-excluded').textContent    = _EXCLUDED_BY_SEG[currentSegment] || 'Admins · asesores · desuscritos';
-  document.getElementById('btn-modal-confirm').textContent = `Enviar a ${segCount.toLocaleString('es')} usuarios`;
+  document.getElementById('btn-modal-confirm').textContent = `Enviar a ${segCount.toLocaleString('es')} usuario${segCount !== 1 ? 's' : ''}`;
   document.getElementById('btn-modal-confirm').disabled    = false;
   document.getElementById('modal-confirm').classList.add('open');
 }

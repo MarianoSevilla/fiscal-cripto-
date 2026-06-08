@@ -169,6 +169,7 @@ def create_campaign_draft(
     admin_user_id: int,
     recipient_segment: str = "all",
     individual_email: Optional[str] = None,
+    processing_error_id: Optional[int] = None,
 ) -> CommunicationCampaign:
     seg = recipient_segment if recipient_segment in VALID_SEGMENTS else "all"
     campaign = CommunicationCampaign(
@@ -180,6 +181,7 @@ def create_campaign_draft(
         idempotency_key=uuid.uuid4().hex,
         recipient_segment=seg,
         individual_email=(individual_email or "").strip() or None,
+        processing_error_id=processing_error_id,
     )
     db.session.add(campaign)
     db.session.commit()
@@ -193,6 +195,7 @@ def update_campaign_draft(
     preview_text: Optional[str] = None,
     recipient_segment: Optional[str] = None,
     individual_email: Optional[str] = None,
+    processing_error_id: Optional[int] = None,
 ) -> CommunicationCampaign:
     if subject is not None:
         campaign.subject = subject.strip()[:500]
@@ -204,6 +207,8 @@ def update_campaign_draft(
         campaign.recipient_segment = recipient_segment
     if individual_email is not None:
         campaign.individual_email = individual_email.strip() or None
+    if processing_error_id is not None:
+        campaign.processing_error_id = processing_error_id
     db.session.commit()
     return campaign
 
@@ -260,6 +265,7 @@ def _is_rate_limit_error(exc: Exception) -> bool:
 
 def _send_individual_no_user(campaign, email: str, campaign_id: int) -> None:
     """Sends to an email address not registered as a User (no unsubscribe token)."""
+    from models import ProcessingError
     delivery = CommunicationDelivery(
         campaign_id=campaign_id,
         user_id=None,
@@ -283,6 +289,12 @@ def _send_individual_no_user(campaign, email: str, campaign_id: int) -> None:
         delivery.sent_at     = datetime.utcnow()
         campaign.status           = "sent"
         campaign.recipients_count = 1
+        # Mark the originating processing error as manually contacted
+        if campaign.processing_error_id:
+            err = db.session.get(ProcessingError, campaign.processing_error_id)
+            if err:
+                err.auto_email_sent    = True
+                err.auto_email_sent_at = datetime.utcnow()
     except Exception as exc:
         delivery.status = "failed"
         delivery.error  = str(exc)[:500]
@@ -417,6 +429,13 @@ def _execute_campaign(campaign_id: int) -> None:
         campaign.status = final_status
         # recipients_count stays as the original eligible-total set before dispatch.
         # Actual sent/failed counts come from delivery records (sent_count/failed_count).
+        # For individual campaigns linked to a processing error, mark it as contacted
+        if seg == "individual" and sent_ok > 0 and campaign.processing_error_id:
+            from models import ProcessingError
+            err = db.session.get(ProcessingError, campaign.processing_error_id)
+            if err:
+                err.auto_email_sent    = True
+                err.auto_email_sent_at = datetime.utcnow()
         db.session.commit()
         logger.info(
             "Campaign %s done: %d/%d sent, %d failed → status=%s",

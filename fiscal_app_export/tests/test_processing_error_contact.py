@@ -250,3 +250,56 @@ class TestIndividualDraft:
         _login(client, "admin_pec@example.com", "adminpass")
         r = client.get("/admin/comunicaciones")
         assert r.status_code == 200
+
+    def test_borrador_individual_guarda_processing_error_id(self, client, admin_user, error_with_email):
+        _login(client, "admin_pec@example.com", "adminpass")
+        r = client.post(
+            "/api/admin/comunicaciones/drafts",
+            json={
+                "subject":              "Corrección error",
+                "body":                 "Ya está arreglado.",
+                "recipient_segment":    "individual",
+                "individual_email":     "victim@example.com",
+                "processing_error_id":  error_with_email,
+            },
+        )
+        assert r.status_code == 201
+        data = r.get_json()
+        assert data["processing_error_id"] == error_with_email
+
+    def test_processing_error_id_invalido_ignorado(self, client, admin_user):
+        _login(client, "admin_pec@example.com", "adminpass")
+        r = client.post(
+            "/api/admin/comunicaciones/drafts",
+            json={
+                "subject":              "Test",
+                "body":                 "Cuerpo.",
+                "recipient_segment":    "individual",
+                "individual_email":     "victim@example.com",
+                "processing_error_id":  "no-es-un-numero",
+            },
+        )
+        assert r.status_code == 201
+        assert r.get_json()["processing_error_id"] is None
+
+
+# ── Tests: modal contador ──────────────────────────────────────────────────────
+
+class TestModalCount:
+    def test_recipient_count_individual_devuelve_1(self, client, admin_user):
+        """count_eligible_recipients('individual') debe devolver 1, no 0."""
+        _login(client, "admin_pec@example.com", "adminpass")
+        r = client.get("/api/admin/comunicaciones/recipients/count?segment=individual")
+        assert r.status_code == 200
+        assert r.get_json()["count"] == 1
+
+    def test_recipient_counts_no_incluye_individual(self, client, admin_user):
+        """El endpoint de counts masivos no incluye 'individual' — no afecta campañas masivas."""
+        _login(client, "admin_pec@example.com", "adminpass")
+        r = client.get("/api/admin/comunicaciones/recipients/counts")
+        data = r.get_json()
+        assert "all" in data
+        assert "verified" in data
+        assert "unverified" in data
+        # individual no está en el bulk counts endpoint
+        assert "individual" not in data

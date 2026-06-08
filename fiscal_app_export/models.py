@@ -364,7 +364,9 @@ class CommunicationCampaign(db.Model):
     # Recipient segment: "all" | "verified" | "unverified" | "individual"
     recipient_segment = db.Column(db.String(20), default="all", nullable=False)
     # For individual campaigns: single recipient email (segment="individual")
-    individual_email  = db.Column(db.String(254), nullable=True)
+    individual_email      = db.Column(db.String(254), nullable=True)
+    # Optional back-link to the processing error that originated this campaign
+    processing_error_id   = db.Column(db.Integer, db.ForeignKey("processing_errors.id"), nullable=True)
 
     deliveries = db.relationship("CommunicationDelivery", backref="campaign", lazy="dynamic")
 
@@ -391,7 +393,8 @@ class CommunicationCampaign(db.Model):
             "idempotency_key":   self.idempotency_key,
             "error_message":     self.error_message,
             "recipient_segment": self.recipient_segment or "all",
-            "individual_email":  self.individual_email or None,
+            "individual_email":      self.individual_email or None,
+            "processing_error_id":   self.processing_error_id,
         }
         if with_stats:
             d["stats"] = {
