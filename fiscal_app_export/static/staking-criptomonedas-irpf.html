@@ -13,12 +13,12 @@
 <meta property="og:url"         content="https://marianosevilla.com/staking-criptomonedas-irpf">
 <meta property="og:title"       content="Staking criptomonedas IRPF: cómo tributan las recompensas">
 <meta property="og:description" content="¿Recibes recompensas de staking? Hacienda las clasifica como rendimiento del capital mobiliario. Casillas exactas, cálculo y los errores más frecuentes.">
-<meta property="og:image"        content="https://marianosevilla.com/static/og/og-staking-criptomonedas-irpf.png">
-<meta property="og:image:width"  content="1200">
-<meta property="og:image:height" content="630">
+<meta property="og:image"        content="https://marianosevilla.com/static/og/og-staking-criptomonedas.png">
+<meta property="og:image:width"  content="1740">
+<meta property="og:image:height" content="904">
 <meta property="og:image:type"   content="image/png">
 <meta name="twitter:card"        content="summary_large_image">
-<meta name="twitter:image"       content="https://marianosevilla.com/static/og/og-staking-criptomonedas-irpf.png">
+<meta name="twitter:image"       content="https://marianosevilla.com/static/og/og-staking-criptomonedas.png">
 
 <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
@@ -77,9 +77,9 @@
       "isPartOf": { "@id": "https://marianosevilla.com/#website" },
       "primaryImageOfPage": {
         "@type": "ImageObject",
-        "url": "https://marianosevilla.com/static/og/og-staking-criptomonedas-irpf.png",
-        "width": 1200,
-        "height": 630
+        "url": "https://marianosevilla.com/static/og/og-staking-criptomonedas.png",
+        "width": 1740,
+        "height": 904
       }
     },
     {
@@ -594,6 +594,46 @@ footer {
   .hero h1 { font-size: 1.6rem; }
   .fifo-result { grid-template-columns: 1fr; }
 }
+
+/* ── ASISTENCIA BLOCK (= home canonical) ──────── */
+.asistencia-badge {
+  display: inline-flex; align-items: center;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted); border: 1px solid var(--border2);
+  border-radius: 100px; padding: 3px 10px;
+  margin-bottom: 0.6rem;
+}
+.asistencia-block {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 1.1rem 1.25rem;
+  margin-bottom: 2rem;
+}
+.asistencia-block p {
+  font-size: 0.88rem; color: var(--muted); line-height: 1.55;
+  margin-bottom: 0.85rem;
+}
+.asistencia-block p strong { color: var(--text); display: block; margin-bottom: 3px; font-size: 0.95rem; }
+.asistencia-bullets {
+  list-style: none; margin: 0 0 1rem;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.asistencia-bullets li {
+  font-size: 0.82rem; color: var(--accent);
+  letter-spacing: 0.01em;
+}
+.btn-asistencia {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  justify-content: center;
+  background: none; color: var(--accent);
+  border: 1.5px solid var(--accent); border-radius: 10px;
+  padding: 13px 24px;
+  font-family: var(--font-display); font-size: 1rem; font-weight: 700;
+  cursor: pointer; transition: background 0.15s;
+  text-decoration: none; letter-spacing: -0.01em;
+}
+.btn-asistencia:hover { background: var(--accent-dim); text-decoration: none; }
 </style>
 </head>
 <body>
@@ -647,7 +687,21 @@ footer {
       </ol>
     </nav>
 
-    <a href="/asesoramiento-fiscal-criptomonedas" class="btn-hero">Consultar con el asesor →</a>
+    <div class="asistencia-block">
+      <div class="asistencia-badge">Asistencia especializada</div>
+      <p>
+        <strong>¿Necesitas ayuda con tu declaración?</strong>
+        Asistencia fiscal especializada para usuarios con criptomonedas, supervisada por economista colegiado.
+      </p>
+      <ul class="asistencia-bullets">
+        <li>✓ Consulta inicial sin compromiso</li>
+        <li>✓ Casos complejos de criptomonedas</li>
+        <li>✓ Supervisado por economista colegiado</li>
+      </ul>
+      <a href="/pedir-asesoramiento" class="btn-asistencia">
+        Solicitar asistencia fiscal
+      </a>
+    </div>
 
   </div>
 </header>
@@ -1188,20 +1242,20 @@ footer {
         </div>
 
         <!-- ─── CTA MID ─────────────────────────────────── -->
-        <div class="cta-mid">
-          <div class="cta-mid-title">¿Tienes staking en Binance, Kraken, Coinbase o Bitvavo?</div>
+        <div class="asistencia-block" style="max-width:580px;margin:3rem 0;">
+          <div class="asistencia-badge">Asistencia especializada</div>
           <p>
-            Las recompensas de staking generan obligaciones fiscales en el año en que se reciben.
-            Si tienes staking activo, liquid staking o no sabes qué tipo tienes,
-            Rafael Ramos Martínez calcula tu situación exacta y te da el número para la declaración.
+            <strong>¿Necesitas ayuda con tu declaración?</strong>
+            Asistencia fiscal especializada para usuarios con criptomonedas, supervisada por economista colegiado.
           </p>
-          <div class="cta-buttons">
-            <a href="/asesoramiento-fiscal-criptomonedas" class="btn-cta">Solicitar consulta personalizada</a>
-            <a href="/metodo-fifo-criptomonedas" class="btn-outline">Entender el método FIFO →</a>
-          </div>
-          <p class="cta-micro-text">
-            Supervisado por Rafael Ramos Martínez, Economista Colegiado nº&nbsp;4.579 · Colegio de Economistas de Valencia.
-          </p>
+          <ul class="asistencia-bullets">
+            <li>✓ Consulta inicial sin compromiso</li>
+            <li>✓ Casos complejos de criptomonedas</li>
+            <li>✓ Supervisado por economista colegiado</li>
+          </ul>
+          <a href="/pedir-asesoramiento" class="btn-asistencia">
+            Solicitar asistencia fiscal
+          </a>
         </div>
 
         <!-- ─── 10. FAQ ────────────────────────────── -->
