@@ -683,6 +683,20 @@ li{margin-bottom:.4rem}
   h1{font-size:1.55rem}
   .fifo-table{font-size:.78rem}
 }
+footer {
+  background: var(--footer-bg); border-top: 1px solid var(--border);
+  padding: 3rem 0; margin-top: 4rem;
+}
+.footer-inner {
+  max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x);
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 2rem; flex-wrap: wrap;
+}
+.footer-brand { font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; color: var(--text); }
+.footer-copy { font-size: 13px; color: var(--muted); margin-top: 0.4rem; }
+.footer-links { display: flex; flex-direction: column; gap: 0.35rem; }
+.footer-links a { font-size: 13px; color: var(--muted); }
+.footer-links a:hover { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -1277,5 +1291,25 @@ function toggleFaq(btn) {
   }
 }
 </script>
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-brand">Mariano Sevilla</div>
+      <div class="footer-copy">Herramienta fiscal para criptomonedas · marianosevilla.com</div>
+    </div>
+    <div class="footer-links">
+      <a href="/">Inicio</a>
+      <a href="/exchanges">Exchanges</a>
+      <a href="/como-funciona">Cómo funciona</a>
+      <a href="/modelo-721-criptomonedas">Modelo 721</a>
+      <a href="/asesoramiento-fiscal-criptomonedas">Asesoramiento</a>
+      <a href="/privacidad">Privacidad</a>
+      <a href="/terminos">Términos</a>
+      <a href="/aviso-legal">Aviso legal</a>
+      <a href="/about">About</a>
+    </div>
+  </div>
+</footer>
+
 </body>
 </html>

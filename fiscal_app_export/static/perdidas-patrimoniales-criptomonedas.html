@@ -583,39 +583,20 @@ a:hover { text-decoration: underline; }
 .faq-item.open .faq-a { display: block; }
 
 /* ── FOOTER ───────────────────────────────── */
-.site-footer {
-  background: var(--footer-bg);
-  border-top: 1px solid var(--border);
-  padding: 3.5rem 0 2rem;
+footer {
+  background: var(--footer-bg); border-top: 1px solid var(--border);
+  padding: 3rem 0; margin-top: 4rem;
 }
 .footer-inner {
   max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x);
-  display: flex; flex-wrap: wrap; gap: 3rem; justify-content: space-between;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 2rem; flex-wrap: wrap;
 }
-.footer-brand { max-width: 320px; }
-.footer-brand .brand-name {
-  font-family: var(--font-display); font-size: 1.1rem; font-weight: 800;
-  color: var(--text); margin-bottom: 0.5rem;
-}
-.footer-brand p { font-size: 13px; color: var(--muted); line-height: 1.65; }
-.footer-col h4 {
-  font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--muted); margin-bottom: 1rem;
-}
-.footer-col ul { list-style: none; padding: 0; }
-.footer-col ul li { margin-bottom: 0.45rem; }
-.footer-col ul li a { font-size: 13.5px; color: var(--muted); }
-.footer-col ul li a:hover { color: var(--accent); }
-.footer-bottom {
-  max-width: var(--max-w); margin: 2rem auto 0; padding: 1.5rem var(--pad-x) 0;
-  border-top: 1px solid var(--border);
-  display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between;
-  align-items: center; font-size: 12px; color: var(--muted);
-}
-.disclaimer {
-  font-size: 12px; color: var(--muted); line-height: 1.6;
-  border-top: 1px solid var(--border); padding-top: 1.5rem; margin-top: 2rem;
-}
+.footer-brand { font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; color: var(--text); }
+.footer-copy { font-size: 13px; color: var(--muted); margin-top: 0.4rem; }
+.footer-links { display: flex; flex-direction: column; gap: 0.35rem; }
+.footer-links a { font-size: 13px; color: var(--muted); }
+.footer-links a:hover { color: var(--accent); }
 
 /* ── RESPONSIVE ───────────────────────────── */
 @media (max-width: 900px) {
@@ -1314,46 +1295,23 @@ a:hover { text-decoration: underline; }
 </div><!-- .wrap -->
 
 <!-- ── FOOTER ── -->
-<footer class="site-footer">
+<footer>
   <div class="footer-inner">
-    <div class="footer-brand">
-      <div class="brand-name">marianosevilla.com</div>
-      <p>Herramienta de cálculo fiscal FIFO para criptomonedas en España. Supervisada por Rafael Ramos Martínez, Economista Colegiado nº 4.579.</p>
+    <div>
+      <div class="footer-brand">Mariano Sevilla</div>
+      <div class="footer-copy">Herramienta fiscal para criptomonedas · marianosevilla.com</div>
     </div>
-    <div class="footer-col">
-      <h4>Guías fiscales</h4>
-      <ul>
-        <li><a href="/metodo-fifo-criptomonedas">Método FIFO</a></li>
-        <li><a href="/regla-dos-meses-criptomonedas">Regla dos meses</a></li>
-        <li><a href="/perdidas-patrimoniales-criptomonedas">Pérdidas patrimoniales</a></li>
-        <li><a href="/compensar-perdidas-criptomonedas">Compensar pérdidas</a></li>
-        <li><a href="/modelo-721-criptomonedas">Modelo 721</a></li>
-      </ul>
+    <div class="footer-links">
+      <a href="/">Inicio</a>
+      <a href="/exchanges">Exchanges</a>
+      <a href="/como-funciona">Cómo funciona</a>
+      <a href="/modelo-721-criptomonedas">Modelo 721</a>
+      <a href="/asesoramiento-fiscal-criptomonedas">Asesoramiento</a>
+      <a href="/privacidad">Privacidad</a>
+      <a href="/terminos">Términos</a>
+      <a href="/aviso-legal">Aviso legal</a>
+      <a href="/about">About</a>
     </div>
-    <div class="footer-col">
-      <h4>Exchanges</h4>
-      <ul>
-        <li><a href="/exchanges">Todos los exchanges</a></li>
-        <li><a href="/exchanges/binance">Binance</a></li>
-        <li><a href="/exchanges/kraken">Kraken</a></li>
-        <li><a href="/exchanges/coinbase">Coinbase</a></li>
-        <li><a href="/exchanges/bitvavo">Bitvavo</a></li>
-      </ul>
-    </div>
-    <div class="footer-col">
-      <h4>Legal</h4>
-      <ul>
-        <li><a href="/privacidad">Privacidad</a></li>
-        <li><a href="/terminos">Términos</a></li>
-        <li><a href="/aviso-legal">Aviso legal</a></li>
-        <li><a href="/cookies">Cookies</a></li>
-        <li><a href="/seguridad">Seguridad</a></li>
-      </ul>
-    </div>
-  </div>
-  <div class="footer-bottom">
-    <span>© 2026 marianosevilla.com</span>
-    <span>Supervisado por Economista Colegiado nº 4.579 · Colegio de Economistas de Valencia</span>
   </div>
 </footer>
 
