@@ -636,8 +636,6 @@ ALLOWED_ORIGINS = [
     "https://marianosevilla.com",
     "https://www.marianosevilla.com",
     "https://fiscal.marianosevilla.com",
-    "http://localhost:5050",
-    "http://127.0.0.1:5050",
 ]
 CORS(
     app,
