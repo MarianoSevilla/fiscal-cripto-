@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Permuta criptomonedas IRPF: cómo tributa el swap cripto</title>
+<meta name="description" content="¿Cambias bitcoin por ethereum? Hacienda lo considera una permuta sujeta al IRPF. Cálculo exacto, casillas 1800-1814, consultas DGT y errores a evitar.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://marianosevilla.com/permuta-criptomonedas-irpf">
+
+<!-- Open Graph -->
+<meta property="og:type"        content="article">
+<meta property="og:url"         content="https://marianosevilla.com/permuta-criptomonedas-irpf">
+<meta property="og:title"       content="Permuta criptomonedas IRPF: cómo tributa el swap cripto">
+<meta property="og:description" content="¿Cambias bitcoin por ethereum? Hacienda lo considera una permuta sujeta al IRPF. Cálculo exacto, casillas 1800-1814, consultas DGT y errores a evitar.">
+<meta property="og:image"        content="https://marianosevilla.com/static/og/og-metodo-fifo-criptomonedas.png">
+<meta property="og:image:width"  content="1731">
+<meta property="og:image:height" content="909">
+<meta property="og:image:type"   content="image/png">
+<meta name="twitter:card"        content="summary_large_image">
+<meta name="twitter:image"       content="https://marianosevilla.com/static/og/og-metodo-fifo-criptomonedas.png">
+
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+<link rel="icon" href="/static/favicon.ico">
+<link rel="manifest" href="/static/site.webmanifest">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/nav.css">
+<link rel="preload" href="/static/nav.js" as="script">
+
+<!-- Schema: Person + BreadcrumbList + WebPage + Article + FAQPage -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Person",
+      "@id": "https://marianosevilla.com/#rafael-ramos",
+      "name": "Rafael Ramos Martínez",
+      "jobTitle": "Economista Colegiado",
+      "hasCredential": {
+        "@type": "EducationalOccupationalCredential",
+        "credentialCategory": "Economista Colegiado",
+        "recognizedBy": {
+          "@type": "Organization",
+          "name": "Colegio de Economistas de Valencia",
+          "url": "https://www.coev.es"
+        },
+        "identifier": "nº 4.579"
+      },
+      "worksFor": {
+        "@type": "Organization",
+        "name": "Mariano Sevilla",
+        "url": "https://marianosevilla.com"
+      },
+      "url": "https://marianosevilla.com/asesoramiento-fiscal-criptomonedas"
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Inicio", "item": "https://marianosevilla.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Método FIFO criptomonedas", "item": "https://marianosevilla.com/metodo-fifo-criptomonedas" },
+        { "@type": "ListItem", "position": 3, "name": "Permuta criptomonedas IRPF", "item": "https://marianosevilla.com/permuta-criptomonedas-irpf" }
+      ]
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://marianosevilla.com/permuta-criptomonedas-irpf#webpage",
+      "url": "https://marianosevilla.com/permuta-criptomonedas-irpf",
+      "name": "Permuta criptomonedas IRPF: cómo tributa el swap cripto",
+      "description": "Guía completa sobre la permuta de criptomonedas en el IRPF español. Art. 37.1.h) LIRPF, consultas DGT V0999-18 y V3513-19, ejemplo de cálculo paso a paso, casillas 1800-1814 del Modelo 100.",
+      "inLanguage": "es",
+      "isPartOf": { "@id": "https://marianosevilla.com/#website" },
+      "primaryImageOfPage": {
+        "@type": "ImageObject",
+        "url": "https://marianosevilla.com/static/og/og-metodo-fifo-criptomonedas.png"
+      }
+    },
+    {
+      "@type": "Article",
+      "@id": "https://marianosevilla.com/permuta-criptomonedas-irpf#article",
+      "headline": "Permuta de criptomonedas en el IRPF: cómo tributa el intercambio cripto a cripto",
+      "description": "El intercambio de una criptomoneda por otra (permuta) es un hecho imponible en el IRPF español aunque no se conviertan a euros. Guía completa: base legal art. 37.1.h) LIRPF, consultas DGT V0999-18 y V3513-19, cálculo con ejemplo real BTC→ETH, casillas 1800-1814 del Modelo 100 y errores más frecuentes.",
+      "url": "https://marianosevilla.com/permuta-criptomonedas-irpf",
+      "inLanguage": "es",
+      "datePublished": "2026-06-08",
+      "dateModified": "2026-06-08",
+      "image": {
+        "@type": "ImageObject",
+        "url": "https://marianosevilla.com/static/mariano-sevilla-logo.png",
+        "width": 400,
+        "height": 400
+      },
+      "author": { "@id": "https://marianosevilla.com/#rafael-ramos" },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Mariano Sevilla",
+        "url": "https://marianosevilla.com",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://marianosevilla.com/static/mariano-sevilla-logo.png",
+          "width": 400,
+          "height": 400
+        }
+      },
+      "about": [
+        { "@type": "Thing", "name": "Permuta de criptomonedas" },
+        { "@type": "Thing", "name": "IRPF España" },
+        { "@type": "Thing", "name": "Ganancias patrimoniales" },
+        { "@type": "Thing", "name": "Método FIFO" }
+      ],
+      "mentions": [
+        { "@type": "Legislation", "name": "Ley 35/2006 del IRPF", "legislationIdentifier": "BOE-A-2006-20764" },
+        { "@type": "Legislation", "name": "Ley 11/2021 de medidas de prevención del fraude fiscal", "legislationIdentifier": "BOE-A-2021-11473" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "¿Tributa el intercambio de una criptomoneda por otra si no convierto a euros?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sí. En España, el intercambio de una criptomoneda por otra distinta es una permuta sujeta al IRPF, con independencia de que no exista conversión a euros. La obligación nace en el momento del intercambio. Así lo establece el artículo 37.1.h) de la Ley 35/2006 del IRPF y confirma la consulta vinculante DGT V0999-18, de 18 de abril de 2018."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Cómo se calcula la ganancia patrimonial en una permuta de criptomonedas?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "La ganancia o pérdida patrimonial es la diferencia entre el valor de adquisición de la criptomoneda entregada (calculado con el método FIFO) y el mayor de estos dos valores: el valor de mercado de la criptomoneda entregada o el valor de mercado de la criptomoneda recibida, en la fecha de la permuta. Este criterio está en el artículo 37.1.h) de la Ley del IRPF."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Qué fuente de precio debo usar para valorar la permuta?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "La DGT acepta fuentes objetivas de valoración de mercado como CoinMarketCap o CoinGecko, tomando el precio en euros en el momento exacto de la transacción. Así lo establece la consulta vinculante DGT V3513-19."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Cuál es el valor de adquisición de la criptomoneda recibida en una permuta?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "El valor de adquisición de la criptomoneda recibida será el mismo valor que se utilizó como valor de transmisión en la permuta. Esto resulta esencial para calcular correctamente la ganancia o pérdida en la futura venta o permuta de esa criptomoneda. Lo establece el artículo 37.1.h) LIRPF."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿En qué casillas de la declaración de la renta se declara una permuta de criptomonedas?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Las permutas se declaran en las casillas 1800 a 1814 del Modelo 100, dentro del apartado específico de ganancias y pérdidas patrimoniales por transmisión o permuta de monedas virtuales. Concretamente en la casilla 1804. La casilla 1626 ya no se utiliza para criptomonedas desde el ejercicio fiscal 2022."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Se aplica el método FIFO en las permutas de criptomonedas?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sí. Las criptomonedas del mismo tipo son bienes homogéneos, por lo que cuando realizas una permuta se entiende que entregas las unidades adquiridas en primer lugar (método FIFO). Esto afecta directamente al valor de adquisición que debes imputar. Lo establece la Disposición adicional primera de la Ley 11/2021 de medidas de prevención del fraude fiscal."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Son deducibles los gas fees o comisiones del exchange en una permuta?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sí. Los gastos directos e inherentes a la operación —comisiones del exchange, gas fees— son computables en el valor de adquisición o en el valor de transmisión según el artículo 35.1.b) LIRPF, reduciendo así la ganancia o aumentando la pérdida patrimonial declarable."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "¿Las pérdidas por una permuta de criptomonedas se pueden compensar?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Sí. Las pérdidas patrimoniales derivadas de permutas forman parte de la base imponible del ahorro y se compensan con otras ganancias patrimoniales del mismo ejercicio, conforme a los artículos 48 y 49 LIRPF. El exceso no compensado puede arrastrarse durante los cuatro ejercicios fiscales siguientes."
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:          #0b1220;
+  --bg2:         #101829;
+  --surface:     #141f32;
+  --surface2:    #1a2540;
+  --border:      rgba(255,255,255,0.07);
+  --border2:     rgba(255,255,255,0.13);
+  --text:        #eef2ff;
+  --muted:       #7a8aa8;
+  --accent:      #00C896;
+  --accent-dim:  rgba(0,200,150,0.12);
+  --accent-glow: rgba(0,200,150,0.25);
+  --footer-bg:   #070e1a;
+  --max-w:       1280px;
+  --pad-x:       3rem;
+  --font-display:'Syne', sans-serif;
+  --font-body:   'DM Sans', sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.7;
+  min-height: 100vh; -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.wrap { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x); }
+.section { padding: 5rem 0; }
+.section + .section { border-top: 1px solid var(--border); }
+
+.kicker {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--accent);
+  margin-bottom: 0.85rem; display: block;
+}
+
+/* ── HERO ─────────────────────────────────── */
+.hero {
+  padding: 5rem 0 4rem;
+  border-bottom: 1px solid var(--border);
+}
+.hero-inner { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x); }
+
+.breadcrumb {
+  display: flex; align-items: center; gap: 0.5rem;
+  font-size: 13px; color: var(--muted); margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+.breadcrumb a { color: var(--muted); }
+.breadcrumb a:hover { color: var(--accent); }
+.breadcrumb span { color: var(--border2); }
+
+.hero h1 {
+  font-family: var(--font-display); font-size: clamp(1.8rem, 3.5vw, 2.9rem);
+  font-weight: 800; letter-spacing: -0.03em; line-height: 1.12;
+  margin-bottom: 1.25rem;
+}
+.hero h1 em { color: var(--accent); font-style: normal; }
+
+.hero-meta {
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+  font-size: 13px; color: var(--muted); margin-bottom: 1.5rem;
+}
+.hero-meta .tag {
+  background: var(--accent-dim); color: var(--accent);
+  border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 600;
+}
+
+.hero-deck {
+  font-size: 1.05rem; color: var(--muted); max-width: 780px;
+  line-height: 1.75; margin-bottom: 2rem;
+}
+
+.toc {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 14px; padding: 1.5rem 1.75rem; margin-bottom: 2.5rem;
+  max-width: 680px;
+}
+.toc-title {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 1rem;
+}
+.toc ol {
+  list-style: decimal; padding-left: 1.25rem;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem 2rem;
+}
+.toc ol li { font-size: 14px; }
+.toc ol li a { color: var(--muted); }
+.toc ol li a:hover { color: var(--accent); }
+
+.btn-hero {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  background: var(--accent); color: #000; font-weight: 700;
+  font-size: 15px; padding: 0.75rem 1.75rem; border-radius: 8px;
+  text-decoration: none; transition: opacity 0.2s;
+}
+.btn-hero:hover { opacity: 0.88; text-decoration: none; }
+
+/* ── CONTENT LAYOUT ───────────────────────── */
+.content-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 4rem; align-items: start;
+  padding: 5rem 0;
+}
+.content-main {}
+.content-sidebar {
+  position: sticky; top: 5rem;
+}
+
+/* ── PROSE ────────────────────────────────── */
+.prose h2 {
+  font-family: var(--font-display); font-size: 1.65rem; font-weight: 800;
+  letter-spacing: -0.025em; line-height: 1.2;
+  margin: 3.5rem 0 1.25rem; color: var(--text);
+  scroll-margin-top: 6rem;
+}
+.prose h2:first-child { margin-top: 0; }
+.prose h3 {
+  font-family: var(--font-display); font-size: 1.15rem; font-weight: 700;
+  margin: 2rem 0 0.75rem; color: var(--text);
+}
+.prose p { margin-bottom: 1.1rem; color: var(--muted); line-height: 1.8; }
+.prose p strong { color: var(--text); }
+.prose ul, .prose ol { padding-left: 1.4rem; margin-bottom: 1.25rem; }
+.prose ul li, .prose ol li { color: var(--muted); margin-bottom: 0.4rem; line-height: 1.75; }
+.prose ul li strong, .prose ol li strong { color: var(--text); }
+
+/* ── CALLOUT BOX ──────────────────────────── */
+.callout {
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-left: 4px solid var(--accent); border-radius: 0 12px 12px 0;
+  padding: 1.25rem 1.5rem; margin: 1.75rem 0;
+}
+.callout p { color: var(--muted); font-size: 14.5px; margin: 0; line-height: 1.7; }
+.callout p + p { margin-top: 0.75rem; }
+.callout p strong { color: var(--text); }
+.callout-title {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--accent); margin-bottom: 0.5rem;
+}
+
+.callout-legal {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 1rem 1.5rem;
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+  margin: 1.5rem 0;
+}
+.callout-legal span {
+  font-size: 13px; color: var(--muted);
+  border-right: 1px solid var(--border2); padding-right: 1rem;
+}
+.callout-legal span:last-child { border-right: none; padding-right: 0; }
+.callout-legal span strong { color: var(--accent); }
+
+.error-callout {
+  background: rgba(229, 85, 85, 0.08); border: 1px solid rgba(229,85,85,0.25);
+  border-left: 4px solid #e55; border-radius: 0 12px 12px 0;
+  padding: 1.25rem 1.5rem; margin: 1.5rem 0;
+}
+.error-callout p { color: var(--muted); font-size: 14.5px; margin: 0; }
+.error-callout .callout-title { color: #e55; }
+
+/* ── TABLES ───────────────────────────────── */
+.fifo-table {
+  width: 100%; border-collapse: collapse;
+  margin: 1.5rem 0; font-size: 14px;
+}
+.fifo-table th {
+  text-align: left; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--muted); padding: 0.6rem 0.9rem;
+  border-bottom: 1px solid var(--border2);
+}
+.fifo-table td {
+  padding: 0.7rem 0.9rem; color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+.fifo-table td strong { color: var(--text); }
+.fifo-table td.accent { color: var(--accent); font-weight: 600; }
+.fifo-table td.green { color: var(--accent); }
+.fifo-table td.red { color: #e55; }
+.fifo-table tr:last-child td { border-bottom: none; }
+.fifo-table tr.highlight td { background: var(--accent-dim); }
+
+/* ── RESULT CARDS ─────────────────────────── */
+.fifo-result {
+  margin-top: 1.5rem; display: grid;
+  grid-template-columns: repeat(3, 1fr); gap: 1rem;
+}
+.result-card {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 1rem 1.25rem; text-align: center;
+}
+.result-card-label { font-size: 12px; color: var(--muted); margin-bottom: 0.3rem; }
+.result-card-val {
+  font-family: var(--font-display); font-size: 1.2rem; font-weight: 800;
+  color: var(--text);
+}
+.result-card-val.green { color: var(--accent); }
+.result-card-val.red { color: #e55; }
+
+/* ── STEP LIST ────────────────────────────── */
+.step-list { list-style: none; padding: 0; margin: 1.5rem 0; }
+.step-item {
+  display: flex; gap: 1rem; margin-bottom: 1.25rem;
+  align-items: flex-start;
+}
+.step-num {
+  background: var(--accent-dim); color: var(--accent); font-weight: 800;
+  font-family: var(--font-display); font-size: 0.9rem;
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 2px;
+}
+.step-body {}
+.step-title { font-weight: 600; color: var(--text); margin-bottom: 0.2rem; }
+.step-desc { font-size: 14.5px; color: var(--muted); line-height: 1.7; }
+
+/* ── COMPARISON TABLE ─────────────────────── */
+.comparison-wrap { overflow-x: auto; margin: 1.5rem 0; }
+.comparison-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.comparison-table th {
+  text-align: left; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--muted); padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--border2);
+}
+.comparison-table td {
+  padding: 0.85rem 1rem; color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.comparison-table td:first-child { font-weight: 700; color: var(--text); white-space: nowrap; }
+.comparison-table tr:last-child td { border-bottom: none; }
+.badge-yes  { background: var(--accent-dim); color: var(--accent); border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.badge-no   { background: rgba(229,85,85,0.1); color: #e55; border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.badge-warn { background: rgba(245,166,35,0.1); color: #f5a623; border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+
+/* ── CASILLA BOX ──────────────────────────── */
+.casilla-box {
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0;
+  display: grid; grid-template-columns: auto 1fr; gap: 1rem;
+  align-items: center;
+}
+.casilla-num {
+  font-family: var(--font-display); font-size: 2rem; font-weight: 800;
+  color: var(--accent); line-height: 1; white-space: nowrap;
+}
+.casilla-desc { font-size: 14px; color: var(--muted); line-height: 1.65; }
+.casilla-desc strong { color: var(--text); }
+
+/* ── FAQ ──────────────────────────────────── */
+.faq-list { margin-top: 1rem; }
+.faq-item {
+  border-bottom: 1px solid var(--border);
+  padding: 0.25rem 0;
+}
+.faq-item:last-child { border-bottom: none; }
+.faq-q {
+  font-size: 15.5px; font-weight: 600; color: var(--text);
+  cursor: pointer; padding: 1rem 0;
+  list-style: none; display: flex; justify-content: space-between; align-items: center;
+  gap: 1rem;
+}
+.faq-q::after {
+  content: '+'; color: var(--accent); font-size: 20px;
+  font-weight: 400; flex-shrink: 0; line-height: 1;
+}
+details[open] .faq-q::after { content: '−'; }
+.faq-a {
+  color: var(--muted); font-size: 14.5px; line-height: 1.8;
+  padding-bottom: 1rem;
+}
+.faq-a a { color: var(--accent); }
+
+/* ── SIDEBAR ──────────────────────────────── */
+.sidebar-card {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 14px; padding: 1.5rem; margin-bottom: 1.5rem;
+}
+.sidebar-card-title {
+  font-family: var(--font-display); font-size: 0.95rem; font-weight: 800;
+  color: var(--text); margin-bottom: 1rem;
+}
+.sidebar-links { list-style: none; padding: 0; }
+.sidebar-links li { margin-bottom: 0.5rem; }
+.sidebar-links li a {
+  color: var(--muted); font-size: 14px;
+  display: flex; align-items: center; gap: 0.4rem;
+}
+.sidebar-links li a:hover { color: var(--accent); text-decoration: none; }
+.sidebar-links li a::before { content: '→'; color: var(--accent); font-size: 12px; }
+
+.author-card {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 14px; padding: 1.25rem 1.5rem;
+}
+.author-name { font-weight: 700; color: var(--text); font-size: 14.5px; margin-bottom: 0.2rem; }
+.author-role { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+
+/* ── CTA MID ──────────────────────────────── */
+.cta-mid {
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 14px; padding: 2rem 2.25rem; margin: 3rem 0;
+  text-align: center;
+}
+.cta-mid-title {
+  font-family: var(--font-display); font-size: 1.35rem; font-weight: 800;
+  color: var(--text); margin-bottom: 0.75rem;
+}
+.cta-mid p { color: var(--muted); margin-bottom: 1.25rem; }
+.cta-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+.btn-cta {
+  background: var(--accent); color: #000; font-weight: 700;
+  padding: 0.7rem 1.6rem; border-radius: 8px; font-size: 14.5px;
+  text-decoration: none; transition: opacity 0.2s;
+}
+.btn-cta:hover { opacity: 0.88; text-decoration: none; }
+.btn-outline {
+  border: 1.5px solid var(--border2); color: var(--muted);
+  padding: 0.7rem 1.6rem; border-radius: 8px; font-size: 14.5px;
+  text-decoration: none; transition: border-color 0.2s, color 0.2s;
+}
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+.cta-micro-text { font-size: 12px; color: var(--muted); margin-top: 0.75rem; margin-bottom: 0; }
+
+/* ── AUTHOR BIO ───────────────────────────── */
+.author-bio {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 14px; padding: 1.75rem 2rem;
+  display: flex; gap: 1.5rem; align-items: flex-start;
+  margin: 3rem 0 2rem;
+}
+.author-avatar {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--accent-dim); border: 2px solid rgba(0,200,150,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 800; font-size: 1.1rem;
+  color: var(--accent); flex-shrink: 0;
+}
+.author-bio-name { font-weight: 700; color: var(--text); margin-bottom: 0.25rem; }
+.author-bio-role { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 0.5rem; }
+.author-bio-text { font-size: 13.5px; color: var(--muted); line-height: 1.7; }
+
+/* ── RELATED GUIDES ───────────────────────── */
+.related-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
+  margin-top: 1.5rem;
+}
+.related-card {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 1rem 1.25rem;
+  text-decoration: none; display: block;
+  transition: border-color 0.2s;
+}
+.related-card:hover { border-color: var(--accent); text-decoration: none; }
+.related-card-label { font-size: 11px; color: var(--accent); font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 0.4rem; }
+.related-card-title { font-size: 14px; font-weight: 600; color: var(--text); line-height: 1.4; }
+
+/* ── FOOTER ───────────────────────────────── */
+footer {
+  background: var(--footer-bg); border-top: 1px solid var(--border);
+  padding: 3rem 0; margin-top: 4rem;
+}
+.footer-inner {
+  max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x);
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 2rem; flex-wrap: wrap;
+}
+.footer-brand { font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; color: var(--text); }
+.footer-copy { font-size: 13px; color: var(--muted); margin-top: 0.4rem; }
+.footer-links { display: flex; flex-direction: column; gap: 0.35rem; }
+.footer-links a { font-size: 13px; color: var(--muted); }
+.footer-links a:hover { color: var(--accent); }
+.disclaimer {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 1rem 1.25rem; margin-top: 2rem;
+  font-size: 12.5px; color: var(--muted); line-height: 1.65;
+}
+
+@media (max-width: 900px) {
+  :root { --pad-x: 1.25rem; }
+  .content-layout { grid-template-columns: 1fr; gap: 3rem; }
+  .content-sidebar { position: static; }
+  .toc ol { grid-template-columns: 1fr; }
+  .fifo-result { grid-template-columns: 1fr 1fr; }
+  .related-grid { grid-template-columns: 1fr; }
+  .casilla-box { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .hero h1 { font-size: 1.6rem; }
+  .fifo-result { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- Navigation -->
+<div id="nav-placeholder"></div>
+<script src="/static/nav.js" defer></script>
+
+<!-- ── HERO ──────────────────────────────────── -->
+<header class="hero">
+  <div class="hero-inner">
+
+    <nav class="breadcrumb" aria-label="Ruta de navegación">
+      <a href="/">Inicio</a>
+      <span>›</span>
+      <a href="/metodo-fifo-criptomonedas">Método FIFO</a>
+      <span>›</span>
+      <span>Permuta criptomonedas IRPF</span>
+    </nav>
+
+    <h1>Permuta de criptomonedas en el IRPF:<br>cómo tributa el <em>intercambio cripto a cripto</em></h1>
+
+    <div class="hero-meta">
+      <span class="tag">Guía fiscal</span>
+      <span>Por Rafael Ramos Martínez · Economista Colegiado nº&nbsp;4.579</span>
+      <span>Actualizado: junio 2026</span>
+    </div>
+
+    <p class="hero-deck">
+      En España, <strong>cambiar una criptomoneda por otra es un hecho imponible en el IRPF</strong>
+      aunque no conviertas a euros. La permuta de criptomonedas genera una ganancia o pérdida patrimonial
+      regulada por el <strong>art.&nbsp;37.1.h) LIRPF</strong> y confirmada por la consulta vinculante
+      <strong>DGT V0999-18</strong>. Esta guía explica exactamente cómo calcularlo, qué casillas
+      rellenar y cuáles son los errores más frecuentes.
+    </p>
+
+    <nav class="toc" aria-label="Contenidos">
+      <div class="toc-title">Contenidos</div>
+      <ol>
+        <li><a href="#que-es">¿Qué es una permuta para Hacienda?</a></li>
+        <li><a href="#cuando-tributa">¿Cuándo genera ganancia patrimonial?</a></li>
+        <li><a href="#como-calcular">Cómo se calcula (con ejemplo real)</a></li>
+        <li><a href="#valor-adquisicion">Valor de adquisición de la cripto recibida</a></li>
+        <li><a href="#comisiones">Comisiones: ¿son deducibles?</a></li>
+        <li><a href="#como-declarar">Cómo declarar en la renta</a></li>
+        <li><a href="#perdidas">Permutas con pérdidas</a></li>
+        <li><a href="#errores">Errores frecuentes</a></li>
+        <li><a href="#faq">Preguntas frecuentes</a></li>
+      </ol>
+    </nav>
+
+    <a href="/asesoramiento-fiscal-criptomonedas" class="btn-hero">Consultar con el asesor →</a>
+
+  </div>
+</header>
+
+<!-- ── MAIN CONTENT ───────────────────────────── -->
+<main>
+  <div class="wrap">
+    <div class="content-layout">
+
+      <!-- PROSE -->
+      <article class="prose">
+
+        <!-- ─── 1. QUÉ ES ──────────────────────────── -->
+        <h2 id="que-es">¿Qué es una permuta de criptomonedas para Hacienda?</h2>
+
+        <p>
+          En España, la <strong>permuta de criptomonedas</strong> es el intercambio de una moneda
+          virtual por otra distinta: BTC por ETH, ETH por USDT, SOL por BNB, o cualquier
+          combinación. Aunque en el lenguaje cripto se usa el término <em>swap</em>, a efectos
+          fiscales el nombre técnico es permuta, regulada por el <strong>artículo 1538 del Código Civil</strong>
+          como "contrato por el que cada uno de los contratantes se obliga a dar una cosa para
+          recibir otra".
+        </p>
+
+        <p>
+          La Dirección General de Tributos (<strong>DGT</strong>) estableció en la consulta
+          vinculante <strong>V0999-18, de 18 de abril de 2018</strong>, que el intercambio entre
+          dos criptomonedas distintas, realizado por un contribuyente particular al margen de una
+          actividad económica, constituye <strong>una alteración en la composición del patrimonio</strong>
+          que genera una variación de valor sujeta al IRPF. La base legal es el
+          <strong>artículo 37.1.h) de la Ley 35/2006 del IRPF</strong>.
+        </p>
+
+        <div class="callout-legal">
+          <span><strong>Base legal:</strong> Art. 37.1.h) LIRPF</span>
+          <span><strong>DGT:</strong> V0999-18 (18 abr 2018)</span>
+          <span><strong>DGT:</strong> V0808-18 (22 mar 2018)</span>
+          <span><strong>CC:</strong> Art. 1538</span>
+        </div>
+
+        <h3>Permuta vs. compraventa cripto-euro: diferencias fiscales clave</h3>
+        <p>
+          En una <strong>compraventa cripto-euro</strong> el valor de transmisión es directo: el importe
+          en euros recibido. En una <strong>permuta cripto-cripto</strong>, no hay euros de por medio,
+          por lo que el artículo 37.1.h) LIRPF establece una regla especial: el valor de transmisión
+          es el <strong>mayor de dos valores de mercado</strong>, el de la cripto entregada o el de
+          la cripto recibida, en la fecha de la operación. Esto es lo que distingue la permuta del
+          resto de transmisiones de criptomonedas a efectos del IRPF.
+        </p>
+
+        <!-- ─── 2. CUÁNDO TRIBUTA ───────────────────── -->
+        <h2 id="cuando-tributa">¿Cuándo genera ganancia patrimonial una permuta?</h2>
+
+        <p>
+          El <strong>hecho imponible nace en el momento exacto en que se ejecuta el intercambio</strong>,
+          no cuando retiras a euros, no cuando el precio sube, y no cuando aparece en el extracto
+          de fin de año. Según el artículo 33.1 LIRPF, son ganancias o pérdidas patrimoniales las
+          <em>variaciones en el valor del patrimonio del contribuyente que se pongan de manifiesto
+          con ocasión de cualquier alteración en la composición de aquél</em>.
+        </p>
+
+        <div class="callout">
+          <div class="callout-title">Respuesta directa — optimizada para AI Overview</div>
+          <p>
+            <strong>Sí, el intercambio cripto a cripto tributa en España aunque no pases por euros.</strong>
+            Cada permuta de criptomonedas es un hecho imponible en el IRPF. La ganancia o pérdida
+            patrimonial se calcula en el momento del intercambio aplicando el art.&nbsp;37.1.h) LIRPF:
+            valor de transmisión = mayor entre el valor de mercado de la cripto entregada y el de
+            la cripto recibida. Se integra en la <strong>base imponible del ahorro</strong> y se
+            declara en las <strong>casillas 1800–1814</strong> del Modelo 100.
+          </p>
+        </div>
+
+        <h3>¿Cuándo se devenga exactamente?</h3>
+        <p>
+          El devengo del IRPF se produce en el <strong>período impositivo en que se realiza la permuta</strong>
+          (artículo 14 LIRPF). Si intercambias BTC por ETH el 15 de octubre de 2025, esa ganancia
+          o pérdida corresponde al ejercicio 2025 y debes declararla en la renta que se presenta entre
+          abril y junio de 2026. La fecha que determina el período impositivo es la de ejecución del
+          intercambio, no la de liquidación o confirmación en la blockchain.
+        </p>
+
+        <h3>¿Qué ocurre si la permuta es entre stablecoins?</h3>
+        <p>
+          El intercambio de USDT por USDC, o de cualquier stablecoin por otra, sigue siendo
+          técnicamente una permuta sujeta al IRPF. En la práctica la ganancia suele ser
+          prácticamente nula (ambas valen ~1 USD), pero la operación debe declararse igualmente.
+          La DGT no ha emitido consulta vinculante específica que exima estas permutas.
+        </p>
+
+        <!-- ─── 3. CÓMO CALCULAR ────────────────────── -->
+        <h2 id="como-calcular">Cómo se calcula la ganancia o pérdida en una permuta de criptomonedas</h2>
+
+        <p>
+          El artículo 37.1.h) LIRPF establece la <strong>fórmula de cálculo específica para permutas</strong>:
+        </p>
+
+        <div class="callout">
+          <div class="callout-title">Fórmula art. 37.1.h) LIRPF</div>
+          <p>
+            <strong>Ganancia / pérdida patrimonial</strong> =
+            Valor de transmisión <strong>−</strong> Valor de adquisición (FIFO)<br><br>
+            Donde <strong>Valor de transmisión</strong> = el <strong>mayor</strong> de:
+            <ul style="margin: 0.5rem 0 0 1.2rem;">
+              <li>Valor de mercado de la criptomoneda entregada en la fecha de la permuta</li>
+              <li>Valor de mercado de la criptomoneda recibida en la fecha de la permuta</li>
+            </ul>
+          </p>
+        </div>
+
+        <h3>La regla del "mayor valor de mercado": por qué existe</h3>
+        <p>
+          La razón de esta regla es evitar que se manipule el valor de transmisión en permutas entre
+          activos con poca liquidez. Si usaras solo el valor de la cripto recibida y esta fuera
+          ilíquida o poco negociada, podrías fijar un valor de transmisión artificialmente bajo.
+          La AEAT obliga a tomar el valor más alto de los dos para garantizar que la base de cálculo
+          es representativa del mercado.
+        </p>
+
+        <h3>¿Qué fuente de precio acepta Hacienda?</h3>
+        <p>
+          La consulta vinculante <strong>DGT V3513-19</strong> acepta fuentes objetivas de mercado
+          como <strong>CoinMarketCap</strong> o <strong>CoinGecko</strong>, tomando el precio en
+          euros en el momento exacto de la transacción. En caso de que una criptomoneda no tenga
+          cotización en plataformas de referencia, la DGT admite valoraciones alternativas
+          documentadas, pero la carga de la prueba recae sobre el contribuyente.
+        </p>
+
+        <h3>Cómo interviene el método FIFO</h3>
+        <p>
+          El <strong>valor de adquisición</strong> de la criptomoneda entregada en la permuta
+          no es el precio que pagaste por ella en la última compra, sino el que corresponde
+          aplicando el <strong>método FIFO obligatorio</strong>. Las criptomonedas del mismo tipo son
+          <a href="/bienes-homogeneos-criptomonedas">bienes homogéneos</a> según la DGT
+          (V0999-18), lo que obliga a imputar el coste de los lotes más antiguos primero. Si tienes
+          varios lotes de BTC comprados a distintos precios, el FIFO determina cuáles se están
+          entregando en la permuta. Lee la guía del <a href="/metodo-fifo-criptomonedas">método FIFO
+          en criptomonedas</a> para el detalle completo del cálculo de lotes.
+        </p>
+
+        <h3>Ejemplo práctico paso a paso: BTC → ETH</h3>
+
+        <p>Un trader tiene el siguiente historial de Bitcoin en su cartera global:</p>
+
+        <table class="fifo-table" aria-label="Historial de compras de Bitcoin para el ejemplo de permuta">
+          <thead>
+            <tr>
+              <th>Lote</th>
+              <th>Fecha compra</th>
+              <th>Unidades BTC</th>
+              <th>Precio compra</th>
+              <th>Coste total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Lote 1</strong></td>
+              <td>mar 2023</td>
+              <td>0,10 BTC</td>
+              <td>24.000 €/BTC</td>
+              <td class="accent">2.400 €</td>
+            </tr>
+            <tr>
+              <td><strong>Lote 2</strong></td>
+              <td>sep 2023</td>
+              <td>0,10 BTC</td>
+              <td>25.500 €/BTC</td>
+              <td class="accent">2.550 €</td>
+            </tr>
+            <tr>
+              <td><strong>Lote 3</strong></td>
+              <td>ene 2024</td>
+              <td>0,10 BTC</td>
+              <td>39.000 €/BTC</td>
+              <td class="accent">3.900 €</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>
+          El 20 de junio de 2025 realiza la siguiente permuta en su exchange:
+          <strong>intercambia 0,05 BTC por 1,5 ETH</strong>.
+        </p>
+
+        <p>
+          Valores de mercado en el momento de la permuta (fuente: CoinMarketCap, 20 jun 2025):
+        </p>
+
+        <table class="fifo-table" aria-label="Valores de mercado en la fecha de la permuta">
+          <thead>
+            <tr>
+              <th>Activo</th>
+              <th>Precio de mercado</th>
+              <th>Cantidad</th>
+              <th>Valor en euros</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>BTC entregado</strong></td>
+              <td>90.000 €/BTC</td>
+              <td>0,05 BTC</td>
+              <td class="accent">4.500 €</td>
+            </tr>
+            <tr>
+              <td><strong>ETH recibido</strong></td>
+              <td>2.900 €/ETH</td>
+              <td>1,5 ETH</td>
+              <td class="accent">4.350 €</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <ul class="step-list">
+          <li class="step-item">
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <div class="step-title">Identificar el lote FIFO del BTC entregado</div>
+              <div class="step-desc">Se entregan 0,05 BTC. Por FIFO, salen del <strong>Lote 1</strong> (mar 2023, el más antiguo). Coste: 0,05 BTC × 24.000 €/BTC = <strong>1.200 €</strong>.</div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <div class="step-title">Determinar el valor de transmisión (mayor de los dos)</div>
+              <div class="step-desc">BTC entregado = 4.500 € · ETH recibido = 4.350 €. <strong>Valor de transmisión = 4.500 €</strong> (el mayor de los dos, artículo 37.1.h) LIRPF).</div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <div class="step-title">Calcular la ganancia patrimonial</div>
+              <div class="step-desc">4.500 € (valor transmisión) − 1.200 € (coste FIFO) = <strong>3.300 € de ganancia patrimonial</strong>.</div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">4</div>
+            <div class="step-body">
+              <div class="step-title">Calcular la cuota a pagar</div>
+              <div class="step-desc">3.300 € × 19% (primer tramo base del ahorro) = <strong>627 €</strong>. Se declara en la casilla 1804 del Modelo 100, dentro del bloque 1800–1814.</div>
+            </div>
+          </li>
+        </ul>
+
+        <div class="fifo-result">
+          <div class="result-card">
+            <div class="result-card-label">Valor de transmisión</div>
+            <div class="result-card-val">4.500 €</div>
+          </div>
+          <div class="result-card">
+            <div class="result-card-label">Coste FIFO (Lote 1)</div>
+            <div class="result-card-val">1.200 €</div>
+          </div>
+          <div class="result-card">
+            <div class="result-card-label">Ganancia patrimonial</div>
+            <div class="result-card-val green">3.300 €</div>
+          </div>
+        </div>
+
+        <!-- ─── 4. VALOR ADQUISICIÓN ───────────────────── -->
+        <h2 id="valor-adquisicion">Valor de adquisición de la criptomoneda recibida</h2>
+
+        <p>
+          Cuando recibes ETH en una permuta por BTC, el <strong>ETH tiene un nuevo valor de adquisición
+          a efectos fiscales</strong>: exactamente el valor que se usó como valor de transmisión del BTC en
+          esa permuta. En el ejemplo anterior, los 1,5 ETH recibidos tienen un valor de adquisición
+          de <strong>4.500 €</strong> (es decir, 3.000 €/ETH).
+        </p>
+
+        <div class="callout">
+          <div class="callout-title">Regla de "herencia de valor" — Art. 37.1.h) LIRPF</div>
+          <p>
+            El valor de adquisición de la criptomoneda recibida en la permuta será el valor que
+            haya resultado de la aplicación de las reglas del apartado anterior, es decir, el valor
+            de transmisión reconocido en la permuta. Esta cadena de valores es fundamental para
+            calcular correctamente la ganancia o pérdida en la futura venta o permuta de esos ETH.
+          </p>
+        </div>
+
+        <h3>Por qué esto importa en la siguiente operación</h3>
+        <p>
+          Si en octubre de 2025 vendes esos 1,5 ETH a 3.500 €/ETH (total: 5.250 €), el cálculo correcto es:
+        </p>
+        <ul>
+          <li>Valor de transmisión: 5.250 €</li>
+          <li>Valor de adquisición FIFO: <strong>4.500 €</strong> (heredado de la permuta)</li>
+          <li>Ganancia: <strong>750 €</strong></li>
+        </ul>
+        <p>
+          Si por error usas el precio de mercado del día de la venta como base de adquisición, o si
+          no tienes registrado el valor de la permuta, calcularás incorrectamente la ganancia de
+          la venta posterior. Este es uno de los errores más frecuentes en contribuyentes con
+          historial de permutas.
+        </p>
+
+        <!-- ─── 5. COMISIONES ──────────────────────────── -->
+        <h2 id="comisiones">¿Son deducibles las comisiones en una permuta de criptomonedas?</h2>
+
+        <p>
+          Sí. El artículo 35.1 LIRPF establece que el valor de adquisición está formado por el importe
+          real satisfecho más <em>los gastos y tributos inherentes a la adquisición</em>, y que el valor
+          de transmisión es el importe real de la enajenación menos los <em>gastos y tributos
+          inherentes a la transmisión</em>. Esto incluye los siguientes costes en una permuta:
+        </p>
+
+        <div class="comparison-wrap">
+          <table class="comparison-table" aria-label="Deducibilidad de comisiones en permutas de criptomonedas">
+            <thead>
+              <tr>
+                <th>Tipo de comisión</th>
+                <th>Efecto fiscal</th>
+                <th>¿Deducible?</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Trading fee del exchange (taker/maker)</td>
+                <td>Reduce el valor de transmisión de la permuta</td>
+                <td><span class="badge-yes">Sí — reduce ganancia</span></td>
+              </tr>
+              <tr>
+                <td>Gas fee (on-chain, DeFi swap)</td>
+                <td>Gasto inherente a la transmisión; puede ser pérdida patrimonial separada si se paga en ETH</td>
+                <td><span class="badge-yes">Sí — pérdida declarable</span></td>
+              </tr>
+              <tr>
+                <td>Slippage (deslizamiento de precio)</td>
+                <td>Ya está reflejado en el precio de mercado ejecutado</td>
+                <td><span class="badge-warn">Implícito — no por separado</span></td>
+              </tr>
+              <tr>
+                <td>Comisión de retiro a wallet propia</td>
+                <td>No hay transmisión, no hay gasto deducible en ese momento</td>
+                <td><span class="badge-no">No en el momento del retiro</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Gas fees en permutas DeFi (Uniswap, Curve, etc.)</h3>
+        <p>
+          En un swap DeFi, el gas fee se paga en ETH. Esa fracción de ETH utilizada como gas es en sí
+          misma una <strong>transmisión de ETH</strong> (se entrega ETH a la red), lo que genera una
+          ganancia o pérdida patrimonial independiente sobre esa fracción de ETH, calculada con su
+          propio lote FIFO. Es el coste fiscal oculto de operar en DeFi que muchos contribuyentes no
+          incluyen en su declaración.
+        </p>
+
+        <!-- ─── 6. CÓMO DECLARAR ────────────────────────── -->
+        <h2 id="como-declarar">Cómo declarar la permuta de criptomonedas en la declaración de la renta</h2>
+
+        <p>
+          Desde el ejercicio fiscal 2022, las permutas de criptomonedas se declaran exclusivamente
+          en el <strong>bloque de casillas 1800–1814 del Modelo 100</strong>, dentro del apartado
+          específico <em>"Ganancias y pérdidas patrimoniales derivadas de la transmisión o permuta
+          de monedas virtuales por particulares"</em>. La casilla 1626 ya no se aplica a
+          criptomonedas desde ese ejercicio.
+        </p>
+
+        <div class="casilla-box">
+          <div class="casilla-num">1804</div>
+          <div class="casilla-desc">
+            <strong>Ganancias y pérdidas por transmisión o permuta de criptomonedas</strong><br>
+            Casilla donde se introduce cada operación individual. Incluye: tipo de moneda virtual,
+            fecha de adquisición (del lote FIFO), fecha de transmisión/permuta, valor de adquisición
+            y valor de transmisión. El clave de contraprestación para permutas es el código 3.
+          </div>
+        </div>
+
+        <h3>Pasos en Renta WEB para declarar una permuta</h3>
+        <ul class="step-list">
+          <li class="step-item">
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <div class="step-title">Accede a Renta WEB y localiza el apartado de criptomonedas</div>
+              <div class="step-desc">En el menú principal: Ganancias y pérdidas patrimoniales → Transmisión o permuta de monedas virtuales por particulares.</div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <div class="step-title">Pulsa "Nueva transmisión"</div>
+              <div class="step-desc">Introduce para cada permuta: tipo de moneda virtual entregada, fecha de adquisición del lote FIFO, fecha de la permuta, valor de adquisición (coste FIFO) y valor de transmisión (mayor valor de mercado según art. 37.1.h). Selecciona <strong>clave de contraprestación 3</strong> (permuta).</div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <div class="step-title">Repite para cada permuta del ejercicio</div>
+              <div class="step-desc">Cada intercambio cripto a cripto es una operación separada. Si tuviste 50 permutas, son 50 entradas. La herramienta de marianosevilla.com genera el listado completo de operaciones con los importes calculados.</div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">4</div>
+            <div class="step-body">
+              <div class="step-title">Conserva la documentación justificante</div>
+              <div class="step-desc">Guarda los extractos de transacciones del exchange (con hora y precio exactos), la fuente de precio utilizada (CoinMarketCap o CoinGecko a esa fecha) y el cálculo FIFO aplicado. La AEAT puede solicitar justificación durante los 4 años de plazo de prescripción.</div>
+            </div>
+          </li>
+        </ul>
+
+        <h3>Permutas no reflejadas en los datos fiscales de la AEAT</h3>
+        <p>
+          Desde 2023, los exchanges con presencia en España están obligados a reportar operaciones
+          con criptomonedas a través del <strong>modelo 172</strong>. Sin embargo, los intercambios
+          cripto-cripto en exchanges extranjeros sin establecimiento en España pueden no aparecer en
+          los datos fiscales que la AEAT pone a disposición del contribuyente. La ausencia de datos
+          en la declaración borrador no implica que no exista obligación de declarar.
+        </p>
+
+        <div class="callout">
+          <div class="callout-title">Modelos informativos relacionados</div>
+          <p>
+            Si tus criptomonedas (incluidas las recibidas en permutas) están en exchanges del extranjero
+            y el saldo superó <strong>50.000 € a 31 de diciembre</strong>, debes presentar también el
+            <a href="/modelo-721-criptomonedas">Modelo 721</a> — declaración informativa de monedas
+            virtuales en el extranjero (Ley 13/2023, en vigor desde enero de 2024).
+          </p>
+        </div>
+
+        <!-- ─── 7. PÉRDIDAS ────────────────────────────── -->
+        <h2 id="perdidas">Permutas con pérdidas: ¿qué ocurre?</h2>
+
+        <p>
+          Una permuta también puede generar una <strong>pérdida patrimonial</strong> si el valor
+          de adquisición FIFO de la cripto entregada es superior al valor de transmisión. Esto ocurre
+          cuando has comprado criptomonedas a un precio más alto del que tienen en el momento de la
+          permuta, y el intercambio materializa esa minusvalía.
+        </p>
+
+        <h3>Las pérdidas de permuta son deducibles en la base del ahorro</h3>
+        <p>
+          Las pérdidas patrimoniales derivadas de permutas de criptomonedas forman parte de la
+          <strong>base imponible del ahorro</strong> (artículos 48 y 49 LIRPF) y se compensan con
+          otras ganancias patrimoniales del mismo ejercicio: ventas de acciones, fondos de inversión,
+          inmuebles u otras criptomonedas. Consulta la guía de
+          <a href="/perdidas-patrimoniales-criptomonedas">pérdidas patrimoniales de criptomonedas</a>
+          para el detalle de las casillas y el mecanismo de compensación.
+        </p>
+
+        <h3>Arrastre de pérdidas no compensadas</h3>
+        <p>
+          Si en el ejercicio no tienes suficientes ganancias para absorber la pérdida, el importe
+          restante se puede <strong>arrastrar durante los cuatro ejercicios fiscales siguientes</strong>.
+          La guía de <a href="/compensar-perdidas-criptomonedas">compensar pérdidas de criptomonedas
+          en el IRPF</a> explica los cuatro pasos del mecanismo y los límites del 25% sobre
+          rendimientos de capital mobiliario positivos.
+        </p>
+
+        <h3>Atención: la regla de los dos meses</h3>
+        <p>
+          Si realizas una permuta con pérdida y después readquieres la misma criptomoneda
+          (o una equivalente) en los <strong>dos meses anteriores o posteriores</strong>, la
+          pérdida puede quedar diferida por la <strong>norma antiaplicación del art.&nbsp;33.5.g)
+          LIRPF</strong>. La posición dominante de la AEAT aplica esta norma a criptomonedas aunque
+          la DGT no haya emitido consulta vinculante expresa al respecto. Lee la guía de la
+          <a href="/regla-dos-meses-criptomonedas">regla de los dos meses en criptomonedas</a>
+          antes de aplicar tax loss harvesting con permutas.
+        </p>
+
+        <!-- ─── 8. ERRORES ──────────────────────────────── -->
+        <h2 id="errores">Errores frecuentes al declarar permutas de criptomonedas</h2>
+
+        <ul class="step-list">
+          <li class="step-item">
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <div class="step-title">Creer que si no conviertes a euros, no hay obligación fiscal</div>
+              <div class="step-desc">
+                Es el error más extendido. La DGT V0999-18 es inequívoca: el intercambio
+                entre dos criptomonedas distintas genera ganancia o pérdida patrimonial en el IRPF
+                aunque no intervenga ninguna moneda fiat en la operación. Omitir estas operaciones
+                equivale a una declaración incorrecta.
+              </div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <div class="step-title">Usar el precio de compra original en lugar del valor de adquisición FIFO</div>
+              <div class="step-desc">
+                Si tienes varios lotes del activo entregado comprados a distintos precios, el coste
+                que se imputa no es el de la última compra ni el de la primera, sino el que resulta
+                de aplicar FIFO al pool global de ese activo en todos tus exchanges y wallets.
+              </div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <div class="step-title">No registrar el valor de adquisición de la cripto recibida</div>
+              <div class="step-desc">
+                El ETH (u otro activo) recibido en la permuta entra en tu pool FIFO con el valor
+                de transmisión reconocido en la permuta. Si no lo registras, en la siguiente
+                operación sobre ese activo calcularás mal la ganancia o pérdida. Esta cadena de
+                errores se acumula sobre todo en perfiles con muchas permutas en DeFi.
+              </div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">4</div>
+            <div class="step-body">
+              <div class="step-title">Usar el valor de la cripto recibida como valor de transmisión (sin comparar)</div>
+              <div class="step-desc">
+                El art. 37.1.h) LIRPF ordena usar el <em>mayor</em> de los dos valores de mercado.
+                Si usas automáticamente el valor de la cripto recibida sin compararlo con el de la
+                cripto entregada, puedes subdeclarar la ganancia cuando el activo entregado vale
+                más que el recibido.
+              </div>
+            </div>
+          </li>
+          <li class="step-item">
+            <div class="step-num">5</div>
+            <div class="step-body">
+              <div class="step-title">Confundir la fecha de la permuta con la fecha de confirmación</div>
+              <div class="step-desc">
+                El devengo fiscal se produce en la fecha de ejecución del intercambio, no cuando
+                aparece en el extracto mensual ni cuando el balance de la wallet se actualiza. En
+                operaciones cross-chain o en exchanges con demoras de liquidación, esta diferencia
+                puede mover la operación de un ejercicio fiscal a otro.
+              </div>
+            </div>
+          </li>
+        </ul>
+
+        <div class="error-callout">
+          <div class="callout-title">Riesgo real — La AEAT cruza datos</div>
+          <p>
+            Desde 2023, los exchanges con presencia en España reportan operaciones mediante los
+            modelos 172 y 173. Declarar solo las ventas a euros e ignorar las permutas genera
+            discrepancias que la AEAT detecta fácilmente. La regularización incluye cuota,
+            intereses de demora y, en función del importe, posibles sanciones.
+          </p>
+        </div>
+
+        <!-- ─── CTA MID ─────────────────────────────────── -->
+        <div class="cta-mid">
+          <div class="cta-mid-title">¿Realizaste permutas en el último ejercicio?</div>
+          <p>
+            Cada permuta cripto a cripto es un hecho imponible. Si tuviste intercambios en Binance,
+            Kraken, Bitvavo, exchanges DeFi o cualquier plataforma, Rafael Ramos Martínez calcula
+            tu FIFO completo y te da el número exacto para la declaración de la renta.
+          </p>
+          <div class="cta-buttons">
+            <a href="/asesoramiento-fiscal-criptomonedas" class="btn-cta">Solicitar consulta personalizada</a>
+            <a href="/metodo-fifo-criptomonedas" class="btn-outline">Entender el método FIFO →</a>
+          </div>
+          <p class="cta-micro-text">
+            Supervisado por Rafael Ramos Martínez, Economista Colegiado nº&nbsp;4.579 · Colegio de Economistas de Valencia.
+          </p>
+        </div>
+
+        <!-- ─── 9. FAQ ─────────────────────────────────── -->
+        <h2 id="faq">Preguntas frecuentes sobre la permuta de criptomonedas en el IRPF</h2>
+
+        <div class="faq-list">
+
+          <details class="faq-item">
+            <summary class="faq-q">¿Tributa el intercambio de una criptomoneda por otra si no convierto a euros?</summary>
+            <p class="faq-a">
+              Sí. En España, el intercambio de una criptomoneda por otra distinta es una permuta
+              sujeta al IRPF, con independencia de que no exista conversión a moneda fiat. La obligación
+              fiscal nace en el momento del intercambio. Lo establece el
+              <strong>artículo 37.1.h) de la Ley 35/2006 del IRPF</strong> y lo confirma la consulta
+              vinculante <strong>DGT V0999-18, de 18 de abril de 2018</strong>.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">¿Cómo se calcula la ganancia patrimonial en una permuta de criptomonedas?</summary>
+            <p class="faq-a">
+              La ganancia o pérdida es la diferencia entre el valor de adquisición FIFO de la
+              criptomoneda entregada y el mayor de estos dos valores de mercado: el de la cripto
+              entregada o el de la cripto recibida, en la fecha de la permuta. Esta regla específica
+              está en el <strong>artículo 37.1.h) LIRPF</strong>.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">¿Qué fuente de precio debo usar para valorar la permuta?</summary>
+            <p class="faq-a">
+              La DGT acepta fuentes objetivas de mercado como <strong>CoinMarketCap</strong> o
+              <strong>CoinGecko</strong>, tomando el precio en euros en el momento exacto de la
+              transacción. Así lo establece la consulta vinculante <strong>DGT V3513-19</strong>.
+              Debes conservar el justificante del precio consultado (captura con fecha y hora).
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">¿Cuál es el valor de adquisición de la criptomoneda recibida en la permuta?</summary>
+            <p class="faq-a">
+              El valor de adquisición de la criptomoneda recibida es el mismo valor que se utilizó
+              como valor de transmisión en la permuta (artículo 37.1.h) LIRPF). Si en la permuta
+              el valor de transmisión fue 4.500 €, esos 4.500 € son el coste de adquisición que
+              se asignará al activo recibido para futuras transmisiones.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">¿En qué casillas de la declaración de la renta se declara una permuta?</summary>
+            <p class="faq-a">
+              Las permutas se declaran en las <strong>casillas 1800 a 1814 del Modelo 100</strong>
+              (concretamente casilla 1804), dentro del apartado específico de ganancias y pérdidas
+              por transmisión o permuta de monedas virtuales. La casilla 1626 ya no aplica a
+              criptomonedas desde el ejercicio fiscal 2022.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">¿Se aplica el método FIFO en las permutas de criptomonedas?</summary>
+            <p class="faq-a">
+              Sí. Las criptomonedas del mismo tipo son
+              <a href="/bienes-homogeneos-criptomonedas">bienes homogéneos</a> (DGT V0999-18),
+              por lo que cuando realizas una permuta se entiende que entregas las unidades adquiridas
+              en primer lugar (FIFO). La <strong>Disposición adicional primera de la Ley 11/2021</strong>
+              de medidas de prevención del fraude fiscal confirma este criterio.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">¿Son deducibles los gas fees o comisiones en una permuta?</summary>
+            <p class="faq-a">
+              Sí. Los gastos directos e inherentes a la operación (trading fees del exchange, gas
+              fees) son computables en el valor de adquisición o en el valor de transmisión según
+              el <strong>artículo 35.1.b) LIRPF</strong>, reduciendo la ganancia o aumentando la
+              pérdida patrimonial declarable.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">¿Las pérdidas por una permuta de criptomonedas se pueden compensar?</summary>
+            <p class="faq-a">
+              Sí. Las <a href="/perdidas-patrimoniales-criptomonedas">pérdidas patrimoniales</a>
+              derivadas de permutas forman parte de la base del ahorro y se compensan con otras
+              ganancias patrimoniales del ejercicio. El exceso no compensado puede arrastrarse
+              durante cuatro ejercicios (artículos 48 y 49 LIRPF). Consulta la guía de
+              <a href="/compensar-perdidas-criptomonedas">cómo compensar pérdidas en el IRPF</a>.
+            </p>
+          </details>
+
+        </div>
+
+        <!-- ─── AUTHOR BIO ─────────────────────────── -->
+        <div class="author-bio">
+          <div class="author-avatar">RR</div>
+          <div>
+            <div class="author-bio-name">Rafael Ramos Martínez</div>
+            <div class="author-bio-role">Economista Colegiado nº&nbsp;4.579 · Colegio de Economistas de Valencia</div>
+            <p class="author-bio-text">
+              Más de 25 años de experiencia en fiscalidad empresarial. Supervisa los criterios fiscales
+              aplicados en cada informe generado con marianosevilla.com: tratamiento de permutas,
+              staking, transfers entre exchanges y operaciones complejas según la normativa española
+              vigente, incluyendo la jurisprudencia más reciente del TSJPV y las consultas DGT
+              sobre criptoactivos.
+            </p>
+          </div>
+        </div>
+
+        <div class="disclaimer">
+          <strong>Aviso legal:</strong> Esta guía tiene fines informativos. El contenido ha sido supervisado
+          por un economista colegiado pero no constituye asesoramiento fiscal individualizado para tu situación
+          concreta. Para casos complejos —DeFi, múltiples ejercicios sin declarar, historial de permutas
+          extenso— consulta con un profesional. Última revisión: junio 2026.
+        </div>
+
+        <!-- Related guides -->
+        <h3 style="margin-top:2.5rem;margin-bottom:1rem;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;font-weight:700;">Guías relacionadas</h3>
+        <div class="related-grid">
+          <a href="/metodo-fifo-criptomonedas" class="related-card">
+            <div class="related-card-label">Método de valoración</div>
+            <div class="related-card-title">Método FIFO en criptomonedas: obligatorio, cálculo y base legal</div>
+          </a>
+          <a href="/perdidas-patrimoniales-criptomonedas" class="related-card">
+            <div class="related-card-label">Pérdidas</div>
+            <div class="related-card-title">Pérdidas patrimoniales por criptomonedas: casillas y cómo declararlas</div>
+          </a>
+          <a href="/regla-dos-meses-criptomonedas" class="related-card">
+            <div class="related-card-label">Norma antiaplicación</div>
+            <div class="related-card-title">Regla de los dos meses: cómo afecta a permutas y recompras</div>
+          </a>
+        </div>
+
+      </article>
+
+      <!-- SIDEBAR -->
+      <aside class="content-sidebar" aria-label="Recursos relacionados">
+
+        <div class="sidebar-card">
+          <div class="sidebar-card-title">Silo FIFO — Guías relacionadas</div>
+          <ul class="sidebar-links">
+            <li><a href="/metodo-fifo-criptomonedas">Método FIFO en criptomonedas</a></li>
+            <li><a href="/bienes-homogeneos-criptomonedas">Bienes homogéneos y FIFO</a></li>
+            <li><a href="/perdidas-patrimoniales-criptomonedas">Pérdidas patrimoniales</a></li>
+            <li><a href="/compensar-perdidas-criptomonedas">Compensar pérdidas en el IRPF</a></li>
+            <li><a href="/regla-dos-meses-criptomonedas">Regla de los dos meses</a></li>
+          </ul>
+        </div>
+
+        <div class="sidebar-card">
+          <div class="sidebar-card-title">Recursos fiscales</div>
+          <ul class="sidebar-links">
+            <li><a href="/modelo-721-criptomonedas">Modelo 721 cripto</a></li>
+            <li><a href="/exchanges">Exchanges compatibles</a></li>
+            <li><a href="/como-funciona">Cómo funciona la herramienta</a></li>
+            <li><a href="/faq">Preguntas frecuentes</a></li>
+            <li><a href="/asesoramiento-fiscal-criptomonedas">Consulta personalizada</a></li>
+          </ul>
+        </div>
+
+        <div class="author-card">
+          <div class="author-name">Rafael Ramos Martínez</div>
+          <div class="author-role">Economista Colegiado nº&nbsp;4.579<br>Colegio de Economistas de Valencia<br>+25 años en fiscalidad empresarial</div>
+        </div>
+
+      </aside>
+
+    </div>
+  </div>
+</main>
+
+<!-- ── FOOTER ─────────────────────────────────── -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-brand">Mariano Sevilla</div>
+      <div class="footer-copy">Herramienta fiscal para criptomonedas · marianosevilla.com</div>
+    </div>
+    <div class="footer-links">
+      <a href="/">Inicio</a>
+      <a href="/exchanges">Exchanges</a>
+      <a href="/como-funciona">Cómo funciona</a>
+      <a href="/modelo-721-criptomonedas">Modelo 721</a>
+      <a href="/asesoramiento-fiscal-criptomonedas">Asesoramiento</a>
+      <a href="/privacidad">Privacidad</a>
+      <a href="/terminos">Términos</a>
+      <a href="/aviso-legal">Aviso legal</a>
+      <a href="/about">About</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

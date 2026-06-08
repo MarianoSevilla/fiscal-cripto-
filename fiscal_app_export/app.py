@@ -2961,6 +2961,12 @@ def regla_dos_meses_criptomonedas():
     return send_from_directory("static", "regla-dos-meses-criptomonedas.html")
 
 
+@app.route("/permuta-criptomonedas-irpf", strict_slashes=False)
+@limiter.exempt
+def permuta_criptomonedas_irpf():
+    return send_from_directory("static", "permuta-criptomonedas-irpf.html")
+
+
 @app.route("/llms.txt")
 @limiter.exempt
 def llms_txt():
