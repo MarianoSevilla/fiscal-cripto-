@@ -695,6 +695,23 @@ def redirect_www_to_apex():
     return redirect(target, 301)
 
 
+@app.before_request
+def redirect_trailing_slash():
+    """Redirect canónico 301: /ruta/ → /ruta.
+
+    Excluye la raíz '/' y solo actúa sobre GET/HEAD para no romper POSTs.
+    Preserva query string.
+    """
+    if (
+        request.path != "/"
+        and request.path.endswith("/")
+        and request.method in ("GET", "HEAD")
+    ):
+        clean = request.path.rstrip("/")
+        target = clean + ("?" + request.query_string.decode() if request.query_string else "")
+        return redirect(target, code=301)
+
+
 # ── SECURITY HEADERS ──────────────────────────
 @app.after_request
 def set_security_headers(response):
