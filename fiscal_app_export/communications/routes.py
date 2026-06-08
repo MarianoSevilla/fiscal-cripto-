@@ -6,7 +6,7 @@ Public: /unsubscribe (page) and /api/unsubscribe (action).
 from flask import abort, jsonify, request, current_app
 from flask_login import login_required, current_user
 
-from models import db, User, CommunicationCampaign, CommunicationDelivery
+from models import db, User, CommunicationCampaign, CommunicationDelivery, ProcessingError
 from .service import (
     VALID_SEGMENTS,
     count_eligible_recipients,
@@ -23,6 +23,66 @@ from auth import _role_is_admin
 # Alias local — mantiene intactos todos los if not _is_admin(): abort(404)
 # sin cambiar el comportamiento (abort 404 en comunicaciones se preserva intencionadamente).
 _is_admin = _role_is_admin
+
+
+# ── PROCESSING ERROR CONTACT CONTEXT ─────────────────────────────────────────
+
+@comms_bp.route("/api/admin/processing-errors/<int:error_id>/contact-context")
+@login_required
+def api_processing_error_contact_context(error_id: int):
+    """
+    Returns contact context for a processing error so the admin can compose
+    a targeted follow-up email in /admin/comunicaciones.
+
+    Only accessible by admins. Resolves the real email server-side — never
+    exposed in /stats HTML.
+    """
+    if not _is_admin():
+        abort(404)
+
+    err = ProcessingError.query.get_or_404(error_id)
+
+    if not err.email:
+        return jsonify({"error": "Este error no tiene email asociado."}), 404
+
+    exchange_display = (err.exchange or "tu exchange").capitalize()
+    subject = f"Hemos corregido el problema al procesar tu archivo de {exchange_display}"
+    body = (
+        f"Hola,\n\n"
+        f"Te escribimos porque detectamos que intentaste generar tu informe utilizando "
+        f"un archivo de {exchange_display} y la herramienta devolvió un error durante el procesamiento.\n\n"
+        f"Hemos revisado el problema y ya está corregido.\n\n"
+        f"Puedes volver a subir el mismo archivo y generar el informe de nuevo. "
+        f"No necesitas modificar el CSV.\n\n"
+        f"Si al volver a intentarlo observas cualquier comportamiento extraño, "
+        f"responde a este correo y lo revisaremos.\n\n"
+        f"Un saludo,\n\nMariano Sevilla"
+    )
+
+    return jsonify({
+        "id":             err.id,
+        "email":          err.email,
+        "email_masked":   _mask_email_local(err.email),
+        "exchange":       err.exchange or "",
+        "error_type":     err.error_type or "",
+        "stage":          err.stage or "",
+        "message_short":  err.message_short or "",
+        "fingerprint":    (err.fingerprint or "")[:8],
+        "email_enviado":  bool(err.auto_email_sent),
+        "resuelto":       bool(err.resolved),
+        "subject":        subject,
+        "body":           body,
+    })
+
+
+def _mask_email_local(email: str) -> str:
+    """Returns a masked version of the email (user@domain → u***@domain)."""
+    if not email or "@" not in email:
+        return email or ""
+    local, domain = email.split("@", 1)
+    if len(local) <= 1:
+        return f"*@{domain}"
+    return f"{local[0]}***@{domain}"
 
 
 # ── PAGE ROUTES ───────────────────────────────────────────────────────────────
@@ -154,6 +214,7 @@ def api_create_draft():
     body              = (data.get("body") or "").strip()
     preview_text      = (data.get("preview_text") or "").strip()
     recipient_segment = (data.get("recipient_segment") or "all").strip()
+    individual_email  = (data.get("individual_email") or "").strip() or None
     if recipient_segment not in VALID_SEGMENTS:
         recipient_segment = "all"
 
@@ -163,8 +224,12 @@ def api_create_draft():
         return jsonify({"error": "El contenido es obligatorio."}), 400
     if len(subject) > 500:
         return jsonify({"error": "El asunto no puede superar 500 caracteres."}), 400
+    if recipient_segment == "individual" and not individual_email:
+        return jsonify({"error": "individual_email es obligatorio para el segmento individual."}), 400
 
-    campaign = create_campaign_draft(subject, body, preview_text, current_user.id, recipient_segment)
+    campaign = create_campaign_draft(
+        subject, body, preview_text, current_user.id, recipient_segment, individual_email
+    )
     return jsonify(campaign.to_dict()), 201
 
 
@@ -183,6 +248,7 @@ def api_update_draft(campaign_id):
         body=data.get("body"),
         preview_text=data.get("preview_text"),
         recipient_segment=data.get("recipient_segment"),
+        individual_email=data.get("individual_email"),
     )
     return jsonify(campaign.to_dict())
 
@@ -220,8 +286,11 @@ def api_send_campaign(campaign_id):
     if not data.get("confirm"):
         return jsonify({"error": "Se requiere confirmación explícita (confirm: true)."}), 400
 
-    recipient_count = count_eligible_recipients(campaign.recipient_segment or "all")
-    if recipient_count == 0:
+    seg = campaign.recipient_segment or "all"
+    if seg == "individual" and not campaign.individual_email:
+        return jsonify({"error": "Esta campaña individual no tiene email de destinatario."}), 400
+    recipient_count = count_eligible_recipients(seg)
+    if recipient_count == 0 and seg != "individual":
         return jsonify({"error": "No hay destinatarios elegibles para el segmento seleccionado."}), 400
 
     # Transition to queued before launching thread — prevents double dispatch

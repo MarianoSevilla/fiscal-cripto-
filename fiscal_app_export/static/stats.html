@@ -1381,11 +1381,16 @@ async function loadStats() {
       }
       const totalPages = Math.ceil(detalle.length / PAGE_SIZE);
       const slice = detalle.slice(errPage * PAGE_SIZE, (errPage + 1) * PAGE_SIZE);
-      tbErr.innerHTML = slice.map(r =>
-        `<tr>
+      tbErr.innerHTML = slice.map(r => {
+        const usuarioCell = r.has_contact
+          ? `<a href="/admin/comunicaciones?processing_error_id=${r.id}"
+               style="font-family:monospace;font-size:11px;color:var(--accent);text-decoration:none;cursor:pointer"
+               title="Contactar usuario">${r.usuario || '—'} ✉</a>`
+          : `<span class="td-muted" style="font-family:monospace;font-size:11px">${r.usuario || '—'}</span>`;
+        return `<tr>
           <td style="font-variant-numeric:tabular-nums;white-space:nowrap;font-size:11px">${r.fecha || '—'}</td>
           <td>${r.exchange || '—'}</td>
-          <td class="td-muted" style="font-family:monospace;font-size:11px">${r.usuario || '—'}</td>
+          <td>${usuarioCell}</td>
           <td style="font-size:11px;color:#f87171">${r.error_type || '—'}</td>
           <td style="font-size:11px;color:var(--muted)">${r.stage || '—'}</td>
           <td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(r.resumen||'').replace(/"/g,'&quot;')}">${r.resumen || '—'}</td>
@@ -1393,8 +1398,8 @@ async function loadStats() {
           <td>${badge(r.email_enviado, 'Sí', 'No')}</td>
           <td>${badge(r.resuelto, 'Resuelto', 'Abierto')}</td>
           <td>${badge(r.accionable, 'Sí', 'No')}</td>
-        </tr>`
-      ).join('');
+        </tr>`;
+      }).join('');
       pageInfo.textContent = `Pág. ${errPage + 1}/${totalPages} · ${detalle.length} registros`;
       prevBtn.disabled = errPage === 0;
       nextBtn.disabled = errPage >= totalPages - 1;

@@ -3436,9 +3436,11 @@ def _api_stats_data():
             db.session.rollback()
 
         _proc_query_cols = [
+            ProcessingError.id,
             ProcessingError.created_at,
             ProcessingError.exchange,
             ProcessingError.email,
+            ProcessingError.user_id,
             ProcessingError.error_type,
             ProcessingError.stage,
             ProcessingError.message_short,
@@ -3460,9 +3462,11 @@ def _api_stats_data():
             .all()
         )
         proc_err_detail = [{
+            "id":             r.id,
             "fecha":          r.created_at.strftime("%Y-%m-%d %H:%M") if r.created_at else "",
             "exchange":       r.exchange or "—",
             "usuario":        _mask_email(r.email) if r.email else "—",
+            "has_contact":    bool(r.email),
             "error_type":     r.error_type or "—",
             "stage":          r.stage or "—",
             "resumen":        (r.message_short or "")[:120],

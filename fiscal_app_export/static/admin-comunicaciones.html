@@ -657,6 +657,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadCampaigns();
   loadRecipientCounts();
   showComposer();
+  _maybeLoadProcessingErrorDraft();
 });
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -692,19 +693,75 @@ const _SEG_HINTS = {
   all:        'Usuarios activos no desuscritos — verificados y no verificados.',
   verified:   'Solo usuarios que han confirmado su dirección de email.',
   unverified: 'Usuarios registrados que todavía no han confirmado su email. Útil para campañas de activación.',
+  individual: 'Mensaje individual a un único destinatario. No se envía a la lista general.',
 };
 
 const _SEG_LABELS = {
   all:        'Todos (verificados + no verificados)',
   verified:   'Solo verificados',
   unverified: 'Solo no verificados',
+  individual: 'Individual',
 };
 
 const _REC_SUBTEXTS = {
   all:        'Verificados + no verificados<br>Activos · no desuscritos · no admins',
   verified:   'Solo email confirmado<br>Activos · no desuscritos · no admins',
   unverified: 'Registro sin confirmar<br>Activos · no desuscritos · no admins',
+  individual: 'Envío a un único usuario',
 };
+
+/* ── PROCESSING ERROR PREFILL ─────────────────────────────────────────────── */
+async function _maybeLoadProcessingErrorDraft() {
+  const params = new URLSearchParams(window.location.search);
+  const errorId = params.get('processing_error_id');
+  if (!errorId) return;
+
+  try {
+    const res = await fetch(`/api/admin/processing-errors/${encodeURIComponent(errorId)}/contact-context`);
+    if (!res.ok) {
+      showToast('No se pudo cargar el contexto del error de procesamiento.', true);
+      return;
+    }
+    const ctx = await res.json();
+
+    // Switch to individual segment
+    currentSegment = 'individual';
+    document.querySelectorAll('.seg-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.seg === 'individual');
+    });
+    const segHintEl = document.getElementById('seg-hint');
+    if (segHintEl) segHintEl.textContent = _SEG_HINTS['individual'];
+
+    // Pre-fill composer
+    document.getElementById('f-subject').value = ctx.subject || '';
+    document.getElementById('f-body').value     = ctx.body   || '';
+    document.getElementById('f-preview-text').value = '';
+
+    // Store the individual email for later save
+    window._pendingIndividualEmail = ctx.email;
+
+    // Update recipient display
+    const recCount = document.getElementById('rec-count');
+    const recRight = document.getElementById('rec-right');
+    if (recCount) recCount.textContent = '1';
+    if (recRight) recRight.innerHTML   = `${ctx.email_masked}<br><span style="font-size:10px;color:var(--muted)">Envío individual</span>`;
+
+    document.getElementById('composer-title').textContent = 'Mensaje individual';
+
+    // Show email_sent badge if already contacted
+    if (ctx.email_enviado) {
+      showToast(`Este error ya tiene un email automático enviado (${ctx.email_masked}).`);
+    }
+
+    updateSendButtons();
+    refreshPreview();
+
+    // Clean URL to avoid re-triggering on reload
+    history.replaceState(null, '', '/admin/comunicaciones');
+  } catch (e) {
+    showToast('Error al cargar contexto del error: ' + e.message, true);
+  }
+}
 
 function updateRecipientDisplay() {
   const count = recipientCounts[currentSegment] ?? 0;
@@ -839,7 +896,16 @@ async function selectCampaign(id) {
       b.classList.toggle('active', b.dataset.seg === seg);
     });
     document.getElementById('seg-hint').textContent = _SEG_HINTS[seg] || '';
-    updateRecipientDisplay();
+    if (seg === 'individual' && c.individual_email) {
+      window._pendingIndividualEmail = c.individual_email;
+      const masked = c.individual_email.replace(/^(.).*@/, '$1***@');
+      document.getElementById('rec-count').textContent = '1';
+      document.getElementById('rec-right').innerHTML   =
+        `${masked}<br><span style="font-size:10px;color:var(--muted)">Envío individual</span>`;
+    } else {
+      window._pendingIndividualEmail = null;
+      updateRecipientDisplay();
+    }
     // Show delete button — a real saved draft is loaded
     document.getElementById('delete-draft-row').style.display = 'block';
     updateSendButtons();
@@ -1088,13 +1154,17 @@ async function ensureDraftSaved() {
 
   if (!subject || !body) return null;
 
+  const indEmail = currentSegment === 'individual' ? (window._pendingIndividualEmail || null) : null;
+
   try {
     if (draftCampaignId) {
       // Update existing draft
+      const payload = {subject, body, preview_text: previewText, recipient_segment: currentSegment};
+      if (indEmail) payload.individual_email = indEmail;
       const res = await fetch(`/api/admin/comunicaciones/drafts/${draftCampaignId}`, {
         method: 'PATCH',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({subject, body, preview_text: previewText, recipient_segment: currentSegment}),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('patch failed');
       const data = await res.json();
@@ -1106,10 +1176,12 @@ async function ensureDraftSaved() {
       return draftCampaignId;
     } else {
       // Create new draft
+      const payload = {subject, body, preview_text: previewText, recipient_segment: currentSegment};
+      if (indEmail) payload.individual_email = indEmail;
       const res = await fetch('/api/admin/comunicaciones/drafts', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({subject, body, preview_text: previewText, recipient_segment: currentSegment}),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('create failed');
       const data = await res.json();

@@ -40,7 +40,7 @@ _ADMIN_EMAILS = frozenset(
 _EXCLUDED_ROLES = {"admin", "fiscal_advisor"}
 
 # Valid recipient segments
-VALID_SEGMENTS = frozenset({"all", "verified", "unverified"})
+VALID_SEGMENTS = frozenset({"all", "verified", "unverified", "individual"})
 
 # ── SEND RATE LIMITING ────────────────────────────────────────────────────────
 # Resend free/paid limit: 5 req/sec.  We target ≤4 to stay comfortably under.
@@ -102,6 +102,8 @@ def get_eligible_recipients_query(segment: str = "all"):
 
 
 def count_eligible_recipients(segment: str = "all") -> int:
+    if segment == "individual":
+        return 1  # Single recipient — count not meaningful before dispatch
     return get_eligible_recipients_query(segment).count()
 
 
@@ -166,6 +168,7 @@ def create_campaign_draft(
     preview_text: str,
     admin_user_id: int,
     recipient_segment: str = "all",
+    individual_email: Optional[str] = None,
 ) -> CommunicationCampaign:
     seg = recipient_segment if recipient_segment in VALID_SEGMENTS else "all"
     campaign = CommunicationCampaign(
@@ -176,6 +179,7 @@ def create_campaign_draft(
         created_by_id=admin_user_id,
         idempotency_key=uuid.uuid4().hex,
         recipient_segment=seg,
+        individual_email=(individual_email or "").strip() or None,
     )
     db.session.add(campaign)
     db.session.commit()
@@ -188,6 +192,7 @@ def update_campaign_draft(
     body: Optional[str] = None,
     preview_text: Optional[str] = None,
     recipient_segment: Optional[str] = None,
+    individual_email: Optional[str] = None,
 ) -> CommunicationCampaign:
     if subject is not None:
         campaign.subject = subject.strip()[:500]
@@ -197,6 +202,8 @@ def update_campaign_draft(
         campaign.preview_text = preview_text.strip()[:200]
     if recipient_segment is not None and recipient_segment in VALID_SEGMENTS:
         campaign.recipient_segment = recipient_segment
+    if individual_email is not None:
+        campaign.individual_email = individual_email.strip() or None
     db.session.commit()
     return campaign
 
@@ -251,6 +258,39 @@ def _is_rate_limit_error(exc: Exception) -> bool:
     return any(sig in msg for sig in _RATE_LIMIT_SIGNALS)
 
 
+def _send_individual_no_user(campaign, email: str, campaign_id: int) -> None:
+    """Sends to an email address not registered as a User (no unsubscribe token)."""
+    delivery = CommunicationDelivery(
+        campaign_id=campaign_id,
+        user_id=None,
+        email=email,
+        status="pending",
+    )
+    db.session.add(delivery)
+    db.session.flush()
+    try:
+        html = render_campaign_html(campaign, unsubscribe_url="")
+        text = render_campaign_text(campaign, unsubscribe_url="")
+        result = resend.Emails.send({
+            "from":    _RESEND_FROM_DISPLAY,
+            "to":      [email],
+            "subject": campaign.subject,
+            "html":    html,
+            "text":    text,
+        })
+        delivery.status      = "sent"
+        delivery.provider_id = (result.get("id", "") if isinstance(result, dict) else "")
+        delivery.sent_at     = datetime.utcnow()
+        campaign.status           = "sent"
+        campaign.recipients_count = 1
+    except Exception as exc:
+        delivery.status = "failed"
+        delivery.error  = str(exc)[:500]
+        campaign.status        = "failed"
+        campaign.error_message = str(exc)[:500]
+    db.session.commit()
+
+
 def _execute_campaign(campaign_id: int) -> None:
     """
     Core send loop. Runs in a background thread with app context.
@@ -280,10 +320,27 @@ def _execute_campaign(campaign_id: int) -> None:
         campaign.sent_at = datetime.utcnow()
         db.session.commit()
 
-        seg        = campaign.recipient_segment or "all"
-        recipients = get_eligible_recipients_query(seg).all()
-        total      = len(recipients)
-        sent_ok    = 0
+        seg = campaign.recipient_segment or "all"
+
+        if seg == "individual":
+            # Single-recipient campaign: resolve user by email
+            ind_email = (campaign.individual_email or "").strip()
+            if not ind_email:
+                campaign.status        = "failed"
+                campaign.error_message = "individual_email vacío"
+                db.session.commit()
+                return
+            user_obj = User.query.filter_by(email=ind_email).first()
+            recipients = [user_obj] if user_obj else []
+            if not recipients:
+                # Send to the email even without a user account
+                _send_individual_no_user(campaign, ind_email, campaign_id)
+                return
+        else:
+            recipients = get_eligible_recipients_query(seg).all()
+
+        total   = len(recipients)
+        sent_ok = 0
 
         logger.info(
             "Campaign %s: starting send to %d recipients "

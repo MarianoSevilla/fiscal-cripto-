@@ -361,8 +361,10 @@ class CommunicationCampaign(db.Model):
     recipients_count  = db.Column(db.Integer, default=0, nullable=False)
     error_message     = db.Column(db.Text, nullable=True)
     idempotency_key   = db.Column(db.String(64), unique=True, nullable=True)
-    # Recipient segment: "all" | "verified" | "unverified"
+    # Recipient segment: "all" | "verified" | "unverified" | "individual"
     recipient_segment = db.Column(db.String(20), default="all", nullable=False)
+    # For individual campaigns: single recipient email (segment="individual")
+    individual_email  = db.Column(db.String(254), nullable=True)
 
     deliveries = db.relationship("CommunicationDelivery", backref="campaign", lazy="dynamic")
 
@@ -389,6 +391,7 @@ class CommunicationCampaign(db.Model):
             "idempotency_key":   self.idempotency_key,
             "error_message":     self.error_message,
             "recipient_segment": self.recipient_segment or "all",
+            "individual_email":  self.individual_email or None,
         }
         if with_stats:
             d["stats"] = {
