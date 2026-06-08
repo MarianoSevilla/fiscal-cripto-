@@ -305,6 +305,109 @@ def test_fecha_completamente_rota_lanza_error(tmp_path):
         ClasificadorBinanceTx(_csv_to_tmpfile(csv, tmp_path)).clasificar()
 
 
+# ── Tests NaN en columna "Operación" (bug producción 2026-06-05) ──────────────
+
+def test_operacion_vacia_no_crashea(tmp_path):
+    """
+    CSV con una fila donde "Operación" está vacía.
+    Pandas lee la celda como float NaN — el clasificador no debe lanzar TypeError.
+    Regresión del error: 'sequence item 0: expected str instance, float found'
+    """
+    csv = HEADER + "123,2026-06-05 07:00:00,Spot,,BTC,0.001,\n"
+    # No debe lanzar ninguna excepción
+    c = ClasificadorBinanceTx(_csv_to_tmpfile(csv, tmp_path)).clasificar()
+    assert c is not None
+
+
+def test_operacion_vacia_queda_como_desconocida_o_advertencia(tmp_path):
+    """
+    Una fila con "Operación" vacía debe quedar en desconocidas o generar
+    una advertencia — nunca perderse en silencio ni crashear.
+    """
+    csv = HEADER + "123,2026-06-05 07:00:00,Spot,,BTC,0.001,\n"
+    c = ClasificadorBinanceTx(_csv_to_tmpfile(csv, tmp_path)).clasificar()
+
+    tiene_rastro = len(c.desconocidas) > 0 or len(c.advertencias) > 0
+    assert tiene_rastro, (
+        "Una fila con Operación vacía debe quedar en desconocidas o generar advertencia"
+    )
+
+
+def test_operacion_vacia_no_produce_texto_nan(tmp_path):
+    """
+    El informe/advertencia no debe contener el texto literal 'nan' cuando
+    la columna "Operación" es NaN — ese texto confundiría al usuario.
+    """
+    csv = HEADER + "123,2026-06-05 07:00:00,Spot,,BTC,0.001,\n"
+    c = ClasificadorBinanceTx(_csv_to_tmpfile(csv, tmp_path)).clasificar()
+
+    for adv in c.advertencias:
+        assert "nan" not in adv.lower(), f"Advertencia contiene 'nan': {adv!r}"
+
+    for op in c.desconocidas:
+        subtipo_str = str(op.subtipo) if op.subtipo is not None else ""
+        assert subtipo_str.lower() != "nan", (
+            f"subtipo de desconocida es 'nan' (literal): {op!r}"
+        )
+
+
+def test_advertencia_tipos_desconocidos_legible_con_nan(tmp_path):
+    """
+    Mezcla de fila con Operación vacía y otra con tipo desconocido real.
+    La advertencia de resumen debe ser legible y no incluir 'nan'.
+    """
+    csv = (
+        HEADER
+        + "123,2026-06-05 07:00:00,Spot,,BTC,0.001,\n"
+        + "123,2026-06-05 08:00:00,Spot,Tipo Inventado XYZ,ETH,0.5,\n"
+    )
+    c = ClasificadorBinanceTx(_csv_to_tmpfile(csv, tmp_path)).clasificar()
+
+    assert len(c.advertencias) > 0, "Debe haber al menos una advertencia"
+    adv_texto = " ".join(c.advertencias)
+    assert "nan" not in adv_texto.lower(), (
+        f"La advertencia contiene 'nan': {adv_texto!r}"
+    )
+    # El tipo real sí debe aparecer
+    assert "Tipo Inventado XYZ" in adv_texto, (
+        f"El tipo desconocido real no aparece en la advertencia: {adv_texto!r}"
+    )
+
+
+def test_pipeline_completo_no_lanza_typeerror_con_operacion_nan(tmp_path):
+    """
+    Pipeline completo (clasificar + motor FIFO) con CSV que tiene una fila
+    de Operación vacía. No debe lanzar TypeError en ningún punto de la cadena.
+    Regresión directa del bug de producción 2026-06-05 (fingerprint 1ab51930).
+    """
+    from motor_fifo import MotorFIFO
+
+    csv = (
+        HEADER
+        + "123,2026-06-05 06:00:00,Spot,Transaction Spend,EUR,-100.0,\n"
+        + "123,2026-06-05 06:00:00,Spot,Transaction Buy,BTC,0.001,\n"
+        + "123,2026-06-05 07:00:00,Spot,,BTC,0.001,\n"  # fila con Operación vacía
+    )
+    try:
+        c = ClasificadorBinanceTx(_csv_to_tmpfile(csv, tmp_path)).clasificar()
+        motor = MotorFIFO()
+        for op in c.compraventas:
+            motor.registrar_compra(
+                fecha=op.fecha, activo=op.activo,
+                cantidad=op.cantidad, importe=op.importe,
+                contraparte=op.contraparte,
+                fee_activo=None, fee_cantidad=0,
+            )
+        for op in c.swaps:
+            motor.registrar_swap(
+                fecha=op.fecha,
+                activo_entregado=op.activo_entregado, cantidad_entregada=op.cantidad_entregada,
+                activo_recibido=op.activo_recibido,   cantidad_recibida=op.cantidad_recibida,
+            )
+    except TypeError as e:
+        pytest.fail(f"TypeError inesperado en pipeline completo: {e}")
+
+
 def test_fecha_parse_tiempo_directo_formatos():
     """Prueba unitaria directa de _parse_tiempo para los 4 formatos soportados."""
     casos = [

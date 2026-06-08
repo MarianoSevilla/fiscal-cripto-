@@ -77,6 +77,16 @@ def _parse_tiempo(series: pd.Series) -> pd.Series:
 _WALLET_RE = re.compile(r"Wallet/(\w+)")
 
 
+def _safe_text(value) -> str:
+    """Convierte un valor de celda pandas a str, devolviendo "" para NaN/None."""
+    try:
+        if pd.isna(value):
+            return ""
+    except (TypeError, ValueError):
+        pass
+    return str(value).strip()
+
+
 def _wallet_id(obs: str):
     """Extrae el ID de cartera de la columna Observación, o None si no existe."""
     m = _WALLET_RE.search(str(obs))
@@ -155,10 +165,10 @@ class ClasificadorBinanceTx:
         self._procesar_transaction_buy_spend()
         self._procesar_resto()
         if self.desconocidas:
-            tipos = {d.subtipo for d in self.desconocidas}
+            tipos = {_safe_text(d.subtipo) for d in self.desconocidas}
             self.advertencias.append(
                 f"{len(self.desconocidas)} operación(es) no reconocida(s): "
-                + ", ".join(sorted(tipos))
+                + ", ".join(sorted(t for t in tipos if t))
             )
         return self
 
@@ -210,7 +220,7 @@ class ClasificadorBinanceTx:
                     ))
             else:
                 self.desconocidas.append(OperacionDesconocida(
-                    fecha=str(fila["Tiempo"]), subtipo=fila["Operación"],
+                    fecha=str(fila["Tiempo"]), subtipo=_safe_text(fila["Operación"]),
                     activo=fila["Moneda"], cantidad=cambio, cuenta=fila["Cuenta"],
                 ))
 
@@ -422,7 +432,7 @@ class ClasificadorBinanceTx:
             if buy_rows.empty or spend_rows.empty:
                 for _, fila in grupo.iterrows():
                     self.movimientos.append(OperacionMovimiento(
-                        fecha=fecha, subtipo=fila["Operación"],
+                        fecha=fecha, subtipo=_safe_text(fila["Operación"]),
                         activo=fila["Moneda"], cantidad=float(fila["Cambio"]),
                         observacion=str(fila.get("Observación", "")),
                     ))
@@ -496,7 +506,7 @@ class ClasificadorBinanceTx:
         for idx, fila in self.df.iterrows():
             if idx in self._procesadas:
                 continue
-            op     = fila["Operación"]
+            op     = _safe_text(fila["Operación"])
             moneda = fila["Moneda"]
             cambio = float(fila["Cambio"])
             cuenta = fila["Cuenta"]
