@@ -134,8 +134,12 @@ def _leer_csv(filepath: str) -> tuple:
         rows = list(reader)
         headers = list(reader.fieldnames or [])
 
-    # Eliminar clave None (artefacto de trailing comma)
-    cleaned = [{k: v for k, v in row.items() if k is not None} for row in rows]
+    # Eliminar clave None (artefacto de trailing comma); normalizar valor None a ""
+    # csv.DictReader rellena con None las columnas faltantes en filas cortas (restval=None).
+    cleaned = [
+        {k: (v if v is not None else "") for k, v in row.items() if k is not None}
+        for row in rows
+    ]
     return headers, cleaned
 
 
@@ -355,8 +359,8 @@ class ClasificadorBitget:
         otras_filas = []
 
         for fila in rows:
-            tipo_lower = fila.get("Type", "").strip().lower()
-            ts         = fila.get("Date", "").strip()
+            tipo_lower = (fila.get("Type") or "").strip().lower()
+            ts         = (fila.get("Date") or "").strip()
 
             if tipo_lower == "buy":
                 buy_sell_por_ts[ts]["buy"].append(fila)

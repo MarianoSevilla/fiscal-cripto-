@@ -1234,3 +1234,132 @@ class TestArchivosRealesUsuario:
         c = ClasificadorBitget(_USUARIO_REAL).clasificar()
         contrapartes = {op.contraparte for op in c.compraventas}
         assert contrapartes.issubset({"USDT", "USDC", "BUSD", "FDUSD", "DAI"})
+
+
+# ── REGRESIÓN: AttributeError 'NoneType' has no attribute 'strip' (fingerprint ed927121) ──
+
+class TestNoneValuesRegression:
+    """
+    Regresión para el bug ed927121.
+
+    csv.DictReader rellena con None los campos faltantes en filas cortas (restval=None).
+    El parser debe sobrevivir a cualquier combinación de None en columnas del CSV.
+    """
+
+    def _csv_raw(self, headers: list, lines: list) -> str:
+        """Crea un CSV temporal a partir de líneas en crudo (sin escapado automático)."""
+        fd, path = tempfile.mkstemp(suffix=".csv")
+        os.close(fd)
+        with open(path, "w", encoding="utf-8-sig", newline="") as f:
+            f.write(",".join(headers) + "\n")
+            for line in lines:
+                f.write(line + "\n")
+        return path
+
+    def test_type_none_no_crash(self):
+        """Fila con Type=None (fila más corta que el header) no lanza AttributeError."""
+        # Fila incompleta: solo tiene la columna 'order', el resto queda None en DictReader
+        path = self._csv_raw(
+            TRANSACCIONES_HEADERS,
+            ["ORD001"],  # solo 1 campo; Type, Amount, Fee, Available → None
+        )
+        try:
+            c = ClasificadorBitget(path).clasificar()
+            # No debe lanzar; la fila acaba en desconocidas o ignorada
+            assert isinstance(c, ClasificadorBitget)
+        except AttributeError as e:
+            pytest.fail(f"AttributeError inesperado con Type=None: {e}")
+        finally:
+            os.unlink(path)
+
+    def test_date_none_no_crash(self):
+        """Fila con Date=None no lanza AttributeError."""
+        path = self._csv_raw(
+            TRANSACCIONES_HEADERS,
+            # Tiene Type pero no Date (primera columna ausente → order ocupa Date, etc.)
+            # Simulamos fila corta dejando solo 2 columnas de 7
+            ["ORD001,"],
+        )
+        try:
+            c = ClasificadorBitget(path).clasificar()
+            assert isinstance(c, ClasificadorBitget)
+        except AttributeError as e:
+            pytest.fail(f"AttributeError inesperado con Date=None: {e}")
+        finally:
+            os.unlink(path)
+
+    def test_fila_incompleta_queda_como_desconocida_o_ignorada(self):
+        """Fila con menos columnas que el header termina en desconocidas o ignorada, sin crash."""
+        # Una fila completa válida + una fila incompleta
+        rows_valida = [["ORD1", "2025-01-01 10:00:00", "XRP", "Deposit", "100", "0", "100"]]
+        path_valida = _csv_tmp(TRANSACCIONES_HEADERS, rows_valida)
+
+        # Añadir fila incompleta al final
+        with open(path_valida, "a", encoding="utf-8-sig") as f:
+            f.write("ORD2\n")  # solo 1 campo
+
+        try:
+            c = ClasificadorBitget(path_valida).clasificar()
+            # La fila válida debe haberse procesado
+            assert len(c.movimientos) >= 1
+            # No debe haber crash
+            assert isinstance(c, ClasificadorBitget)
+        except AttributeError as e:
+            pytest.fail(f"AttributeError en fila incompleta: {e}")
+        finally:
+            os.unlink(path_valida)
+
+    def test_pipeline_none_values_no_attributeerror(self):
+        """Pipeline completo con filas None no genera 'NoneType has no attribute strip'."""
+        # CSV con mezcla de filas válidas e incompletas
+        rows = [
+            ["ORD1", "2025-03-01 09:00:00", "BTC", "Deposit", "0.5", "0", "0.5"],
+            ["ORD2", "2025-03-01 09:01:00", "USDT", "Interest", "1.5", "0", "1.5"],
+        ]
+        path = _csv_tmp(TRANSACCIONES_HEADERS, rows)
+        with open(path, "a", encoding="utf-8-sig") as f:
+            f.write("ORD3\n")  # fila incompleta al final
+
+        try:
+            from fiscal_app_export.clasificador_bitget import ClasificadorBitget as CB
+            c = CB(path).clasificar()
+            assert isinstance(c, CB)
+        except AttributeError as e:
+            if "NoneType" in str(e) and "strip" in str(e):
+                pytest.fail(f"Regresión ed927121 no corregida: {e}")
+            raise
+        finally:
+            os.unlink(path)
+
+    def test_csv_produccion_simulado(self):
+        """
+        Simula el CSV de producción del usuario (10 filas, 735 bytes, transacciones spot).
+        Reproduce las condiciones del fingerprint ed927121.
+        Resultado esperado: clasificación correcta o advertencia, nunca AttributeError.
+        """
+        # 10 filas variadas como las que produciría Bitget en un export pequeño
+        rows = [
+            ["6978809769001", "2026-01-15 10:00:00", "USDT",  "Deposit",            "500",  "0",   "500"],
+            ["6978809769002", "2026-01-15 10:01:00", "BGB",   "Transaction fee deduct", "0", "-0.1", "10"],
+            ["6978809769003", "2026-02-10 11:00:00", "USDT",  "Buy",                "100",  "-1",  "400"],
+            ["6978809769004", "2026-02-10 11:00:00", "XRP",   "Sell",               "-50",  "0",   "350"],
+            ["6978809769005", "2026-03-01 09:30:00", "XRP",   "Interest",           "0.5",  "0",   "50"],
+            ["6978809769006", "2026-03-15 14:00:00", "USDT",  "Ordinary Withdrawal","-200", "0",   "150"],
+            ["6978809769007", "2026-04-01 08:00:00", "XRP",   "Financial",          "-10",  "0",   "40"],
+            ["6978809769008", "2026-04-01 08:01:00", "XRP",   "Redemption",         "10",   "0",   "50"],
+            ["6978809769009", "2026-05-01 12:00:00", "USDT",  "Fiat",               "100",  "0",   "250"],
+            ["6978809769010", "2026-05-10 16:00:00", "USDT",  "Transfer out",       "-50",  "0",   "200"],
+        ]
+        path = _csv_tmp(TRANSACCIONES_HEADERS, rows)
+        try:
+            c = ClasificadorBitget(path).clasificar()
+            # No debe producir AttributeError; el resultado es informativo
+            assert isinstance(c, ClasificadorBitget)
+            # Hay al menos movimientos o rendimientos
+            total = (len(c.movimientos) + len(c.rendimientos) +
+                     len(c.compraventas) + len(c.desconocidas))
+            assert total > 0, "El CSV tiene 10 filas pero el clasificador no produjo nada"
+        except AttributeError as e:
+            pytest.fail(f"Regresión ed927121 en CSV simulado de producción: {e}")
+        finally:
+            os.unlink(path)
