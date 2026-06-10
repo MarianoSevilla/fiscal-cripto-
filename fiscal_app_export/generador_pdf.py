@@ -556,7 +556,11 @@ def _resumen_ejecutivo(story, styles, resumen, motor, ejercicio, exchange, rendi
     ejercicio = (ejercicio or "").strip()
 
     # ── Calcular métricas de contexto ─────────────────────────────────────────
-    n_activos      = len(set(r.activo for r in motor.resultados)) if motor.resultados else 0
+    _posicion_actual = motor.posicion_actual()
+    if motor.resultados:
+        n_activos = len(set(r.activo for r in motor.resultados))
+    else:
+        n_activos = len(_posicion_actual)
     n_advertencias = len(motor.advertencias) if motor.advertencias else 0
     n_rendimientos = len(rendimientos) if rendimientos else 0
 
@@ -1442,8 +1446,14 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
     )
     story = []
 
-    # Inyectar n_activos en el resumen para las tarjetas KPI de portada v2
-    resumen["_n_activos"] = len(set(r.activo for r in motor.resultados)) if motor.resultados else 0
+    # Inyectar n_activos en el resumen para las tarjetas KPI de portada v2.
+    # Si hay transmisiones con resultado, contar activos únicos de esos resultados.
+    # Si no hay transmisiones pero sí inventario, contar activos en cartera
+    # para no mostrar "0 Activos Detectados" cuando el CSV sí contiene compras.
+    if motor.resultados:
+        resumen["_n_activos"] = len(set(r.activo for r in motor.resultados))
+    else:
+        resumen["_n_activos"] = len(posiciones)  # posiciones = motor.posicion_actual()
 
     # 1. PORTADA v2 (premium — sin tabla de bases imponibles, esas van al resumen ejecutivo)
     _portada_v2(story, styles, resumen, nombre_usuario, ejercicio, exchange)
@@ -1462,6 +1472,27 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
     # 3b. ESTADO DEL ANÁLISIS (solo cuando se pasa clasificador_stats, p.ej. Binance TX)
     for fl in _bloque_estado_analisis(clasificador_stats, motor, rendimientos, styles):
         story.append(fl)
+
+    # 3c. NOTA INFORMATIVA — sin transmisiones pero con inventario
+    if not motor.resultados and posiciones:
+        activos_en_cartera = ", ".join(p.activo for p in posiciones)
+        for fl in _separador_bloque():
+            story.append(fl)
+        story.append(KeepTogether([
+            Paragraph("Sin Transmisiones con Resultado Fiscal en Este Período", styles["section"]),
+            Paragraph(
+                f"El CSV analizado no contiene ventas ni permutas completadas con base de coste conocida, "
+                f"por lo que el resultado fiscal es cero. Esto no significa que el archivo esté vacío: "
+                f"se han detectado <b>{len(posiciones)} activo{'s' if len(posiciones) != 1 else ''} "
+                f"en cartera</b> ({activos_en_cartera}). "
+                f"Las compras incrementan el inventario FIFO, pero no generan ganancia ni pérdida "
+                f"patrimonial hasta que se produzca una venta o permuta (art. 37.2 LIRPF). "
+                f"Cuando realices esas transmisiones, el coste de adquisición calculado en este período "
+                f"se aplicará automáticamente.",
+                styles["nota_body"]
+            ),
+            Spacer(1, 2*mm),
+        ]))
 
     # 4. RESUMEN POR ACTIVO + GRÁFICO
     if motor.resultados:
