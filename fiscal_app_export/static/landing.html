@@ -146,7 +146,7 @@
   /* ── HERO ────────────────────────────────── */
   .hero-wrap {
     max-width: var(--max-w); margin: 0 auto;
-    padding: 80px var(--pad-x) 2.5rem;
+    padding: 56px var(--pad-x) 2.5rem;
     display: flex;
     flex-direction: column;
   }
@@ -162,20 +162,6 @@
     grid-template-columns: 1fr 460px;
     gap: 4rem;
     align-items: start;
-  }
-
-  .hero-badge {
-    display: inline-flex; align-items: center; gap: 7px;
-    background: var(--accent-dim); border: 1px solid var(--accent-glow);
-    color: var(--accent); border-radius: 100px;
-    font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
-    padding: 5px 14px; margin-bottom: 1.5rem;
-    text-transform: uppercase;
-  }
-  .hero-badge::before {
-    content: ''; display: block; width: 6px; height: 6px;
-    border-radius: 50%; background: var(--accent);
-    box-shadow: 0 0 6px var(--accent);
   }
 
   h1 {
@@ -419,7 +405,7 @@
   }
   @media (max-width: 900px) {
     :root { --pad-x: 1.5rem; }
-    .hero-wrap { padding-top: 88px; }
+    .hero-wrap { padding-top: 64px; }
     .hero-header { margin-bottom: 2rem; }
     .hero-body { grid-template-columns: 1fr; gap: 2rem; }
     .hero-right { order: 1; } /* mockup debajo del CTA en móvil */
@@ -543,10 +529,8 @@
 <!-- ── HERO ───────────────────────────────── -->
 <div class="hero-wrap">
 
-  <!-- Fila 1: full-width — badge, H1, subtítulo, bullets -->
+  <!-- Fila 1: full-width — H1, subtítulo, bullets -->
   <div class="hero-header">
-    <div class="hero-badge">Herramienta gratuita</div>
-
     <h1>Calcula tus impuestos de<br><em>criptomonedas</em> para Hacienda</h1>
 
     <p class="hero-desc">
