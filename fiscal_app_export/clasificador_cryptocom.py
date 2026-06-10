@@ -104,7 +104,7 @@ class OperacionDesconocida:
 class ClasificadorCryptoCom:
 
     def __init__(self, filepath: str):
-        self.df = pd.read_csv(filepath)
+        self.df = pd.read_csv(filepath, encoding='utf-8-sig')
         self.compraventas = []
         self.swaps        = []
         self.rendimientos = []
@@ -114,7 +114,7 @@ class ClasificadorCryptoCom:
 
     def clasificar(self):
         self.df.columns = [c.strip() for c in self.df.columns]
-        self.df["Timestamp (UTC)"] = pd.to_datetime(self.df["Timestamp (UTC)"])
+        self.df["Timestamp (UTC)"] = pd.to_datetime(self.df["Timestamp (UTC)"], errors='coerce')
         self.df = self.df.sort_values("Timestamp (UTC)").reset_index(drop=True)
 
         procesadas = self._procesar_swaps()

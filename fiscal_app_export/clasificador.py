@@ -99,8 +99,8 @@ class OperacionDesconocida:
 class ClasificadorBinance:
 
     def __init__(self, filepath: str):
-        self.df = pd.read_csv(filepath)
-        self.df["Tiempo"] = pd.to_datetime(self.df["Tiempo"], format="%y-%m-%d %H:%M:%S")
+        self.df = pd.read_csv(filepath, encoding='utf-8-sig')
+        self.df["Tiempo"] = pd.to_datetime(self.df["Tiempo"], format="mixed", dayfirst=False)
         self.df = self.df.sort_values("Tiempo").reset_index(drop=True)
 
         self.compraventas:  list[OperacionCompraventa] = []
