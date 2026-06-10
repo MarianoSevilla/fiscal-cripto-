@@ -87,21 +87,8 @@ a:hover { text-decoration: underline; }
 
 /* ── HERO ───────────────────────────── */
 .hero {
-  padding: 7rem 0 5rem;
+  padding: 5rem 0 4rem;
   text-align: left;
-}
-.hero-badge {
-  display: inline-flex; align-items: center; gap: 7px;
-  background: var(--accent-dim); border: 1px solid var(--accent-glow);
-  color: var(--accent); border-radius: 100px;
-  font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
-  padding: 5px 14px; margin-bottom: 1.5rem;
-  text-transform: uppercase;
-}
-.hero-badge::before {
-  content: ''; display: block; width: 6px; height: 6px;
-  border-radius: 50%; background: var(--accent);
-  box-shadow: 0 0 6px var(--accent);
 }
 .hero h1 {
   font-family: var(--font-display); font-size: clamp(2rem, 4.5vw, 3.4rem);
@@ -123,6 +110,24 @@ a:hover { text-decoration: underline; }
 }
 .btn-cta:hover { opacity: 0.88; text-decoration: none; }
 .btn-cta:active { transform: scale(0.98); }
+.hero-actions {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+.hero-cta-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--accent); color: #0a0a0a;
+  border: none; border-radius: 10px; padding: 13px 32px;
+  font-family: var(--font-display); font-size: 1rem; font-weight: 700;
+  cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+  text-decoration: none; letter-spacing: -0.01em;
+}
+.hero-cta-primary:hover { opacity: 0.88; text-decoration: none; }
+.hero-cta-primary:active { transform: scale(0.98); }
+.hero-cta-note {
+  font-size: 13px; color: var(--muted); opacity: 0.75;
+  margin: 0; line-height: 1.5;
+}
 .btn-outline {
   display: inline-flex; align-items: center; gap: 8px;
   background: none; color: var(--accent);
@@ -484,8 +489,6 @@ details[open] .faq-q::after { transform: rotate(45deg); }
 <!-- ── HERO ────────────────────────── -->
 <section class="hero">
   <div class="wrap">
-    <div class="hero-badge">Herramienta gratuita</div>
-
     <h1>Cómo funciona la herramienta <em>fiscal cripto</em></h1>
 
     <p class="hero-desc">
@@ -494,7 +497,10 @@ details[open] .faq-q::after { transform: rotate(45deg); }
       informe PDF listo para la Agencia Tributaria.
     </p>
 
-    <a href="/signup/" class="btn-cta">Probar gratis</a>
+    <div class="hero-actions">
+      <a href="/signup/" class="hero-cta-primary">Crear mi informe fiscal</a>
+      <p class="hero-cta-note">Sube tu CSV y genera el PDF en minutos.</p>
+    </div>
 
     <!-- Steps bar -->
     <div class="steps-bar">
