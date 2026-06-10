@@ -110,23 +110,51 @@ a:hover { text-decoration: underline; }
 }
 .btn-cta:hover { opacity: 0.88; text-decoration: none; }
 .btn-cta:active { transform: scale(0.98); }
-.hero-actions {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem;
-  margin-top: 0.25rem;
+.hero-signup-block {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 1.6rem 1.75rem 1.5rem;
+  margin-top: 2rem;
+  max-width: 480px;
 }
-.hero-cta-primary {
-  display: inline-flex; align-items: center; gap: 8px;
+.hero-signup-kicker {
+  display: inline-flex; align-items: center;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted); border: 1px solid var(--border2);
+  border-radius: 100px; padding: 3px 10px;
+  margin-bottom: 0.85rem;
+}
+.hero-signup-title {
+  font-family: var(--font-display); font-size: 1.15rem; font-weight: 800;
+  letter-spacing: -0.02em; line-height: 1.25;
+  color: var(--text); margin-bottom: 0.5rem;
+}
+.hero-signup-desc {
+  font-size: 0.88rem; color: var(--muted); line-height: 1.55;
+  margin-bottom: 0.9rem;
+}
+.hero-signup-bullets {
+  list-style: none; margin: 0 0 1.1rem;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.hero-signup-bullets li {
+  font-size: 0.83rem; color: var(--accent); letter-spacing: 0.01em;
+}
+.btn-signup-hero {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%;
   background: var(--accent); color: #0a0a0a;
-  border: none; border-radius: 10px; padding: 13px 32px;
+  border: none; border-radius: 10px; padding: 14px 24px;
   font-family: var(--font-display); font-size: 1rem; font-weight: 700;
   cursor: pointer; transition: opacity 0.15s, transform 0.1s;
   text-decoration: none; letter-spacing: -0.01em;
 }
-.hero-cta-primary:hover { opacity: 0.88; text-decoration: none; }
-.hero-cta-primary:active { transform: scale(0.98); }
-.hero-cta-note {
-  font-size: 13px; color: var(--muted); opacity: 0.75;
-  margin: 0; line-height: 1.5;
+.btn-signup-hero:hover { opacity: 0.88; text-decoration: none; }
+.btn-signup-hero:active { transform: scale(0.98); }
+.hero-signup-micro {
+  font-size: 12px; color: var(--muted); opacity: 0.7;
+  text-align: center; margin-top: 0.65rem; line-height: 1.5;
 }
 .btn-outline {
   display: inline-flex; align-items: center; gap: 8px;
@@ -497,9 +525,17 @@ details[open] .faq-q::after { transform: rotate(45deg); }
       informe PDF listo para la Agencia Tributaria.
     </p>
 
-    <div class="hero-actions">
-      <a href="/signup/" class="hero-cta-primary">Crear mi informe fiscal</a>
-      <p class="hero-cta-note">Sube tu CSV y genera el PDF en minutos.</p>
+    <div class="hero-signup-block">
+      <div class="hero-signup-kicker">Empezar ahora</div>
+      <div class="hero-signup-title">¿Listo para generar tu informe fiscal?</div>
+      <p class="hero-signup-desc">Sube el CSV de tu exchange y obtén automáticamente tu informe compatible con Hacienda.</p>
+      <ul class="hero-signup-bullets">
+        <li>✓ Método FIFO automático</li>
+        <li>✓ Compatible con los principales exchanges</li>
+        <li>✓ Informe listo en minutos</li>
+      </ul>
+      <a href="/signup/" class="btn-signup-hero">Crear mi cuenta gratuita</a>
+      <p class="hero-signup-micro">Sin tarjeta · 100% online · Empieza en menos de 1 minuto</p>
     </div>
 
     <!-- Steps bar -->
