@@ -1522,7 +1522,8 @@ def auth_google_callback():
     try:
         token     = google_oauth.authorize_access_token()
         user_info = token.get("userinfo") or {}
-    except Exception:
+    except Exception as exc:
+        app.logger.exception("Google OAuth callback failed: %s", exc)
         return redirect("/login/?error=oauth_failed")
 
     email = (user_info.get("email") or "").strip().lower()
