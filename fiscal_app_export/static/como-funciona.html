@@ -436,6 +436,14 @@ details[open] .faq-q::after { transform: rotate(45deg); }
 .cta-micro {
   font-size: 13px; color: var(--muted); margin-top: 1rem; opacity: 0.75;
 }
+.cta-trust {
+  display: flex; justify-content: center; flex-wrap: wrap;
+  gap: 0.5rem 1.75rem; margin-bottom: 2rem;
+  list-style: none;
+}
+.cta-trust li {
+  font-size: 0.83rem; color: var(--accent); letter-spacing: 0.01em;
+}
 
 /* ── FOOTER ──────────────────────── */
 .page-footer {
@@ -1065,16 +1073,21 @@ details[open] .faq-q::after { transform: rotate(45deg); }
 <!-- ── CTA FINAL ────────────────── -->
 <section class="cta-final">
   <div class="wrap">
-    <h2>Genera tu informe fiscal<br><em>cripto hoy</em></h2>
+    <h2>¿Todo listo para<br><em>generar tu informe?</em></h2>
     <p>
-      Sin tarjeta. Sin complicaciones. Solo sube tu CSV y descarga el PDF
-      listo para Hacienda.
+      La herramienta clasifica automáticamente tus operaciones, aplica FIFO
+      y genera el informe compatible con Hacienda.
     </p>
+    <ul class="cta-trust">
+      <li>✓ Sin tarjeta</li>
+      <li>✓ 100% online</li>
+      <li>✓ Método FIFO automático</li>
+      <li>✓ Compatible con Hacienda</li>
+    </ul>
     <div class="cta-buttons">
-      <a href="/signup/" class="btn-cta">Crear cuenta gratis</a>
-      <a href="/faq"     class="btn-outline">Ver FAQ</a>
+      <a href="/signup/"                class="btn-cta">Crear cuenta gratuita</a>
+      <a href="/pedir-asesoramiento"    class="btn-outline">Necesito ayuda fiscal especializada</a>
     </div>
-    <p class="cta-micro">Sin tarjeta · <a href="/exchanges">Compatible con 10 exchanges</a> · Método FIFO automático</p>
   </div>
 </section>
 
