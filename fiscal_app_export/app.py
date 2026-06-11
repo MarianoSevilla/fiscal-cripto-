@@ -1552,6 +1552,9 @@ def auth_google_callback():
             google_id=google_id,
             email_verified_at=datetime.utcnow(),
             full_name=google_full_name,
+            # Explícito: el default=True de la columna solo se aplica en el
+            # INSERT, y el chequeo is_active de abajo corre antes del commit.
+            is_active=True,
         )
         db.session.add(user)
     else:
