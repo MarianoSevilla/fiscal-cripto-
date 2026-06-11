@@ -62,6 +62,7 @@ Estados del XML (resultado de aplicar las tres capas):
     Todos los datos están presentes y verificados (confianza media o alta).
 """
 
+import logging
 import os
 import re
 import xml.etree.ElementTree as ET
@@ -69,6 +70,8 @@ from dataclasses import dataclass, field
 from decimal import Decimal, ROUND_HALF_UP
 from typing import List, Optional, Tuple
 from xml.dom.minidom import parseString
+
+logger = logging.getLogger(__name__)
 
 
 # ── NAMESPACES ─────────────────────────────────────────────────────────────────
@@ -154,6 +157,18 @@ class ErrXMLBloqueado(Exception):
     def __init__(self, bloqueantes: List[str]) -> None:
         self.bloqueantes = bloqueantes
         super().__init__(f"XML bloqueado: {'; '.join(bloqueantes)}")
+
+
+class ErrXMLInvalidoXSD(Exception):
+    """El XML generado no supera la validación contra el XSD oficial AEAT.
+
+    Indica un bug del generador (no un error del usuario): nunca debe
+    entregarse al usuario un XML que la AEAT rechazaría.
+    """
+    def __init__(self, errores: List[str]) -> None:
+        self.errores = errores
+        resumen = "; ".join(e[:200] for e in errores[:3])
+        super().__init__(f"XML inválido según XSD AEAT: {resumen}")
 
 
 # ── VALIDACIÓN ─────────────────────────────────────────────────────────────────
@@ -412,8 +427,37 @@ def generar_xml_721(
             _elem(reg, _i("OrigenMonedaVirtual"),
                   activo.get("origen_moneda_virtual", "A"))
 
+    # ── Sin registros declarables ─────────────────────────────────────────────
+    # El XSD AEAT exige al menos un RegistroDeDetalle: una declaración sin
+    # activos en custodios extranjeros no es presentable. Antes de la
+    # validación XSD en runtime este caso producía un XML inválido (solo
+    # cabecera) que se entregaba sin aviso.
+    if seq == 0:
+        raise ErrXMLBloqueado([
+            "No hay activos en custodios extranjeros que declarar: el Modelo 721 "
+            "solo incluye monedas virtuales custodiadas fuera de España y el XSD "
+            "de la AEAT exige al menos un registro de detalle."
+        ])
+
     # ── Serializar con formato ────────────────────────────────────────────────
     xml_str = _pretty_xml(root, es_borrador)
+
+    # ── Validación XSD en runtime ─────────────────────────────────────────────
+    # Nunca entregar un XML que no pase el esquema oficial de la AEAT.
+    # Si el validador no está disponible (xmlschema sin instalar o XSD ausente)
+    # se mantiene el comportamiento previo y se deja constancia en el log.
+    try:
+        valido_xsd, errores_xsd = validar_xml_contra_xsd(xml_str)
+    except (ImportError, FileNotFoundError) as exc:
+        logger.warning("Validación XSD del Modelo 721 no disponible: %s", exc)
+    else:
+        if not valido_xsd:
+            logger.error(
+                "XML 721 generado NO pasa el XSD AEAT (%d errores): %s",
+                len(errores_xsd), "; ".join(e[:200] for e in errores_xsd[:3]),
+            )
+            raise ErrXMLInvalidoXSD(errores_xsd)
+
     return xml_str, validacion
 
 
@@ -434,6 +478,22 @@ def validar_xml_contra_xsd(xml_str: str) -> Tuple[bool, List[str]]:
         Tuple (valido: bool, errores: List[str]).
         Si valido=True, errores es una lista vacía.
     """
+    schema  = _get_schema_721()
+    errores = [str(e) for e in schema.iter_errors(xml_str)]
+    return len(errores) == 0, errores
+
+
+#: Caché del XMLSchema parseado — el XSD no cambia en runtime y parsearlo
+#: en cada request sería un coste innecesario por llamada.
+_schema_721_cache = None
+
+
+def _get_schema_721():
+    """Devuelve el XMLSchema del Modelo 721, parseándolo una sola vez."""
+    global _schema_721_cache
+    if _schema_721_cache is not None:
+        return _schema_721_cache
+
     try:
         import xmlschema  # type: ignore
     except ImportError:
@@ -448,9 +508,8 @@ def validar_xml_contra_xsd(xml_str: str) -> Tuple[bool, List[str]]:
             "Descarga Esquemas721.zip de la AEAT y extrae los .xsd en este directorio."
         )
 
-    schema  = xmlschema.XMLSchema(xsd_path)
-    errores = [str(e) for e in schema.iter_errors(xml_str)]
-    return len(errores) == 0, errores
+    _schema_721_cache = xmlschema.XMLSchema(xsd_path)
+    return _schema_721_cache
 
 
 # ── HELPERS PRIVADOS ──────────────────────────────────────────────────────────

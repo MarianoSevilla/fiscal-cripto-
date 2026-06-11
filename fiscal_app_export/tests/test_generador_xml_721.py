@@ -518,13 +518,19 @@ class TestEstructuraXml:
         assert len(decimals) == 6
 
     def test_45_entidad_espanola_no_genera_registro(self):
-        """Entidades con extranjero=False no generan RegistroDeDetalle."""
+        """Entidades con extranjero=False no generan RegistroDeDetalle.
+
+        LOTE 1 (validación XSD runtime): una declaración solo con entidades
+        españolas no tiene registros y el XSD AEAT exige al menos uno, así
+        que ya no se entrega un XML inválido (solo cabecera) — se bloquea
+        con ErrXMLBloqueado y mensaje explicativo.
+        """
         datos = _datos_espanola()
         datos["exchanges"][0]["activos"][0]["valor_eur"] = "5000.00"
         datos["total_valor_eur"] = "5000.00"
-        xml_str, v = generar_xml_721(datos, NIF_OK, NOMBRE_OK)
-        root = _parse_xml(xml_str)
-        assert root.find("RegistroDeDetalle") is None
+        with pytest.raises(ErrXMLBloqueado) as exc_info:
+            generar_xml_721(datos, NIF_OK, NOMBRE_OK)
+        assert "custodios extranjeros" in str(exc_info.value)
 
     def test_46_sin_id_custodio_placeholder_en_id_otro(self):
         """

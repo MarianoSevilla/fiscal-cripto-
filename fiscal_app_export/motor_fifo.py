@@ -430,16 +430,31 @@ class MotorFIFO:
 
     @staticmethod
     def _parsear_fecha(fecha: str) -> datetime:
+        texto = fecha.strip()
         for fmt in (
             "%Y-%m-%d %H:%M:%S",
             "%Y-%m-%d",
             "%d/%m/%Y %H:%M:%S",
             "%d/%m/%Y",
+            # Exportaciones con milisegundos/microsegundos
+            # (str(pandas.Timestamp) y formatos recientes de exchanges)
+            "%Y-%m-%d %H:%M:%S.%f",
+            "%d/%m/%Y %H:%M:%S.%f",
+            # Variantes ISO-8601 con separador 'T'
+            "%Y-%m-%dT%H:%M:%S",
+            "%Y-%m-%dT%H:%M:%S.%f",
         ):
             try:
-                return datetime.strptime(fecha.strip(), fmt)
+                return datetime.strptime(texto, fmt)
             except ValueError:
                 continue
+        # Último recurso: ISO-8601 con offset horario ("+00:00" o sufijo "Z").
+        # El motor trabaja con datetimes naive → se descarta el tzinfo.
+        try:
+            dt = datetime.fromisoformat(texto.replace("Z", "+00:00"))
+            return dt.replace(tzinfo=None)
+        except ValueError:
+            pass
         raise ValueError(f"Formato de fecha no reconocido: {fecha}")
 
 

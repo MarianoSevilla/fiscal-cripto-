@@ -72,7 +72,7 @@ from generador_pdf_bitget import generar_pdf_bitget
 from modelo721 import generar_datos_modelo_721
 from precios_historicos import obtener_precios_historicos, enriquecer_721_con_precios
 from generador_xml_721 import (
-    validar_para_xml, generar_xml_721, ErrXMLBloqueado, ValidacionXML,
+    validar_para_xml, generar_xml_721, ErrXMLBloqueado, ErrXMLInvalidoXSD, ValidacionXML,
 )
 from auth import (
     ADMIN_EMAILS,
@@ -358,6 +358,13 @@ def _contar_csv_rows(filepath: str) -> int:
             return max(0, sum(1 for _ in f) - 1)
     except Exception:
         return 0
+
+
+def _derivar_ruta_pdf(tmp_path: str) -> str:
+    """Ruta del PDF temporal derivada del fichero subido, sea cual sea su
+    extensión (.csv, .xls, .xlsx). El token de descarga es el basename de esta
+    ruta y debe terminar en .pdf para pasar la validación de /api/descargar."""
+    return os.path.splitext(tmp_path)[0] + ".pdf"
 
 
 def _registrar_informe(
@@ -1920,7 +1927,7 @@ def analizar():
             _tel_years = (ejercicio or "")[:50]
             # ────────────────────────────────────────────────────────────────────
 
-            pdf_tmp = tmp_path.replace(".csv", ".pdf")
+            pdf_tmp = _derivar_ruta_pdf(tmp_path)
             with open(pdf_tmp, "wb") as f:
                 f.write(pdf_bytes)
 
@@ -2226,8 +2233,31 @@ def api_modelo_721():
                         nif_declarante,
                         nombre_declarante,
                     )
-                except ErrXMLBloqueado:
-                    pass   # No debería ocurrir (validar_para_xml ya lo indicó)
+                except ErrXMLBloqueado as xml_exc:
+                    # Sí puede ocurrir desde la validación XSD runtime: p.ej.
+                    # exchange extranjero sin posiciones a 31/12 → 0 registros
+                    # de detalle (validar_para_xml no detecta este caso).
+                    # Se mantiene HTTP 200 (el análisis previo es válido) pero
+                    # el estado del XML pasa a bloqueado con el motivo claro,
+                    # que la UI ya sabe pintar via pendiente.xml_bloqueantes.
+                    pendiente["xml_bloqueantes"] = list(
+                        pendiente.get("xml_bloqueantes") or []
+                    ) + xml_exc.bloqueantes
+                    pendiente["xml_generable"] = False
+                    pendiente["completo"]      = False
+                except ErrXMLInvalidoXSD as xml_exc:
+                    # El XML generado no pasa el XSD oficial: no se entrega.
+                    app.logger.error(
+                        "M721 XML no supera el XSD AEAT: %s",
+                        "; ".join(e[:200] for e in xml_exc.errores[:3]),
+                    )
+                    pendiente["xml_advertencias"] = list(
+                        pendiente.get("xml_advertencias") or []
+                    ) + [
+                        "El XML generado no supera la validación contra el esquema "
+                        "oficial de la AEAT y no se ha incluido en la respuesta. "
+                        "Contacta con soporte si el problema persiste."
+                    ]
                 except Exception as xml_exc:
                     import traceback as _tb
                     _tb.print_exc()
@@ -2470,12 +2500,31 @@ def api_721_xml():
             nombre_declarante,
         )
     except ErrXMLBloqueado as e:
+        # El frontend (showXMLError) solo muestra el campo 'error': usar el
+        # primer bloqueante como mensaje para que el usuario vea el motivo
+        # concreto en lugar de un texto genérico.
+        _motivo = (
+            e.bloqueantes[0] if e.bloqueantes
+            else "No podemos generar el XML todavía porque faltan datos obligatorios."
+        )
         return jsonify({
-            "error": (
-                "No podemos generar el XML todavía porque faltan datos obligatorios."
-            ),
+            "error":       _motivo,
             "bloqueantes": e.bloqueantes,
         }), 422
+    except ErrXMLInvalidoXSD as xe:
+        # El XML no pasa el esquema oficial AEAT: error nuestro, no del usuario.
+        # No se entrega un fichero que la AEAT rechazaría.
+        app.logger.error(
+            "api_721_xml: XML no supera el XSD AEAT: %s",
+            "; ".join(e[:200] for e in xe.errores[:5]),
+        )
+        return jsonify({
+            "error": (
+                "El XML generado no supera la validación contra el esquema oficial "
+                "de la AEAT y no se ha entregado para evitar presentar un fichero "
+                "inválido. Contacta con soporte si el problema persiste."
+            ),
+        }), 500
     except ValueError as ve:
         return jsonify({"error": str(ve)}), 400
     except Exception as xe:

@@ -361,7 +361,10 @@ def obtener_precio_historico(ticker: str, ejercicio: int) -> PrecioHistorico:
                     "OrigenValorMonedas: O (valoración propia)."
                 ),
             )
+            _precio_cache[cache_key] = resultado
         else:
+            # Fallo transitorio del BCE (timeout, HTTP error, sin datos):
+            # NO se cachea para que un reintento posterior pueda resolverlo.
             resultado = PrecioHistorico(
                 ticker       = ticker_up,
                 ejercicio    = ejercicio,
@@ -375,7 +378,6 @@ def obtener_precio_historico(ticker: str, ejercicio: int) -> PrecioHistorico:
                     f"EUR/USD a 31/12/{ejercicio}. Actualizar manualmente."
                 ),
             )
-        _precio_cache[cache_key] = resultado
         return resultado
 
     # ── 2. CoinGecko ────────────────────────────────────────────────────────
@@ -397,7 +399,11 @@ def obtener_precio_historico(ticker: str, ejercicio: int) -> PrecioHistorico:
                     "OrigenValorMonedas: O (valoración propia)."
                 ),
             )
+            _precio_cache[cache_key] = resultado
         else:
+            # Fallo transitorio de CoinGecko (429, timeout, HTTP error,
+            # respuesta sin precio): NO se cachea, para que el siguiente
+            # análisis del usuario pueda reintentar sin reiniciar el proceso.
             resultado = PrecioHistorico(
                 ticker       = ticker_up,
                 ejercicio    = ejercicio,
@@ -411,7 +417,6 @@ def obtener_precio_historico(ticker: str, ejercicio: int) -> PrecioHistorico:
                     f"a 31/12/{ejercicio}. Actualizar manualmente."
                 ),
             )
-        _precio_cache[cache_key] = resultado
         return resultado
 
     # ── 3. No disponible ────────────────────────────────────────────────────
