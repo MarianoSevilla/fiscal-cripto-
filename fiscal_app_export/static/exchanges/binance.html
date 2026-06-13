@@ -521,51 +521,43 @@ details[open] .faq-q::after { transform: rotate(45deg); }
   font-size: 13px; color: var(--muted); margin-top: 1rem; opacity: 0.75;
 }
 
-/* ── HERO CTA CARD ───────────────── */
-.hero-cta-card {
+/* ── CTA CARD (patrón asistencia — mismo que home) ── */
+.asistencia-badge {
+  display: inline-flex; align-items: center;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted); border: 1px solid var(--border2);
+  border-radius: 100px; padding: 3px 10px;
+  margin-bottom: 0.6rem;
+}
+.asistencia-block {
   background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 16px; padding: 1.75rem 2rem;
+  border-radius: 12px; padding: 1.1rem 1.25rem;
   max-width: 680px; margin-top: 2rem;
 }
-.hero-cta-card-title {
-  font-family: var(--font-display); font-size: 1.1rem; font-weight: 800;
-  color: var(--text); margin-bottom: 0.35rem; letter-spacing: -0.02em;
-  white-space: nowrap;
+.asistencia-block p {
+  font-size: 0.88rem; color: var(--muted); line-height: 1.55;
+  margin-bottom: 0.85rem;
 }
-.hero-cta-card-sub {
-  font-size: 0.87rem; color: var(--muted); margin-bottom: 1rem; line-height: 1.6;
+.asistencia-block p strong { color: var(--text); display: block; margin-bottom: 3px; font-size: 0.95rem; }
+.asistencia-bullets {
+  list-style: none; margin: 0 0 1rem;
+  display: flex; flex-direction: column; gap: 5px;
 }
-.hero-cta-bullets {
-  list-style: none; display: flex; flex-flow: row wrap;
-  gap: 0.6rem 2.5rem; margin-bottom: 1.4rem;
+.asistencia-bullets li {
+  font-size: 0.82rem; color: var(--accent);
+  letter-spacing: 0.01em;
 }
-.hero-cta-bullets li {
-  font-size: 0.93rem; color: var(--text);
-  display: flex; align-items: center; gap: 10px;
+.btn-asistencia {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  justify-content: center;
+  background: none; color: var(--accent);
+  border: 1.5px solid var(--accent); border-radius: 10px;
+  padding: 13px 24px;
+  font-family: var(--font-display); font-size: 1rem; font-weight: 700;
+  cursor: pointer; transition: background 0.15s;
+  text-decoration: none; letter-spacing: -0.01em;
 }
-.hero-cta-bullets li::before {
-  content: '✓'; flex-shrink: 0;
-  width: 20px; height: 20px; border-radius: 50%;
-  background: var(--accent-dim); border: 1px solid var(--accent-glow);
-  color: var(--accent); font-size: 10px; font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-}
-.hero-cta-card .btn-cta {
-  display: block; width: 100%; text-align: center;
-  padding: 15px 32px; font-size: 1rem; margin-bottom: 0;
-}
-.hero-cta-card-micro {
-  font-size: 13px; color: var(--muted); margin-top: 10px; margin-bottom: 1.5rem; opacity: 0.75; text-align: center;
-}
-.hero-cta-card-secondary {
-  display: block; margin-top: 0.75rem; text-align: center;
-  font-size: 0.85rem; color: var(--muted); text-decoration: none;
-}
-.hero-cta-card-secondary:hover { color: var(--accent); text-decoration: none; }
-@media (max-width: 640px) {
-  .hero-cta-card-title { white-space: normal; }
-  .hero-cta-card { padding: 1.25rem 1.25rem; }
-}
+.btn-asistencia:hover { background: var(--accent-dim); text-decoration: none; }
 
 /* ── HERO TRUST SIGNALS ──────────── */
 .hero-trust {
@@ -676,17 +668,20 @@ details[open] .faq-q::after { transform: rotate(45deg); }
       criptomonedas en España.
     </p>
 
-    <div class="hero-cta-card">
-      <p class="hero-cta-card-title">Genera tu informe FIFO de Binance</p>
-      <p class="hero-cta-card-sub">Sube los CSV de Binance y obtén un PDF fiscal listo para revisar.</p>
-      <ul class="hero-cta-bullets">
-        <li>Spot, Earn y conversiones</li>
-        <li>Método FIFO automático</li>
-        <li>PDF descargable para Hacienda</li>
+    <div class="asistencia-block">
+      <div class="asistencia-badge">INFORME FIFO BINANCE</div>
+      <p>
+        <strong>Genera tu informe FIFO de Binance</strong>
+        Sube los CSV de Binance y obtén un PDF fiscal listo para revisar.
+      </p>
+      <ul class="asistencia-bullets">
+        <li>✓ Spot, Earn y conversiones</li>
+        <li>✓ Método FIFO automático</li>
+        <li>✓ PDF descargable para Hacienda</li>
       </ul>
-      <a href="/binance" class="btn-cta">Generar informe fiscal de Binance</a>
-      <p class="hero-cta-card-micro">Sin tarjeta · 100% online</p>
-      <a href="/exchanges" class="hero-cta-card-secondary">Ver todos los exchanges →</a>
+      <a href="/binance" class="btn-asistencia">
+        Generar informe fiscal de Binance
+      </a>
     </div>
 
   </div>
