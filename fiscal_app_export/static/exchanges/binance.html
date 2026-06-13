@@ -518,21 +518,46 @@ details[open] .faq-q::after { transform: rotate(45deg); }
   font-size: 13px; color: var(--muted); margin-top: 1rem; opacity: 0.75;
 }
 
+/* ── HERO TRUST SIGNALS ──────────── */
+.hero-trust {
+  display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;
+  margin-top: 1.25rem;
+}
+.hero-trust-item {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--muted); font-weight: 500;
+}
+.hero-trust-item::before {
+  content: '✓'; color: var(--accent); font-weight: 700; font-size: 11px;
+}
+
+/* ── CTA BENEFITS ────────────────── */
+.cta-benefits {
+  list-style: none; display: flex; flex-direction: column; gap: 0.45rem;
+  margin: 1rem 0 1.5rem; text-align: left; max-width: 340px; margin-left: auto; margin-right: auto;
+}
+.cta-benefits li {
+  font-size: 0.88rem; color: var(--muted); display: flex; align-items: center; gap: 8px;
+}
+.cta-benefits li::before {
+  content: '✓'; color: var(--accent); font-weight: 700; font-size: 11px; flex-shrink: 0;
+}
+
 /* ── FOOTER ──────────────────────── */
-footer {
-  background: var(--footer-bg); border-top: 1px solid var(--border);
-  padding: 3rem 0; margin-top: 4rem;
+.page-footer {
+  background: var(--footer-bg);
+  border-top: 1px solid var(--border);
+  padding: 2rem 0;
 }
 .footer-inner {
   max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x);
-  display: flex; justify-content: space-between; align-items: flex-start;
-  gap: 2rem; flex-wrap: wrap;
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 1rem; flex-wrap: wrap;
 }
-.footer-brand { font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; color: var(--text); }
-.footer-copy { font-size: 13px; color: var(--muted); margin-top: 0.4rem; }
-.footer-links { display: flex; flex-direction: column; gap: 0.35rem; }
+.footer-copy { font-size: 13px; color: var(--muted); }
+.footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
 .footer-links a { font-size: 13px; color: var(--muted); }
-.footer-links a:hover { color: var(--accent); }
+.footer-links a:hover { color: var(--accent); text-decoration: none; }
 
 /* ── RESPONSIVE ──────────────────── */
 @media (max-width: 1024px) {
@@ -543,6 +568,7 @@ footer {
   :root { --pad-x: 1.5rem; }
   .sidebar { grid-template-columns: 1fr; }
   .footer-inner { flex-direction: column; align-items: flex-start; }
+  .hero-trust { gap: 0.85rem; }
 }
 @media (max-width: 640px) {
   :root { --pad-x: 1.25rem; }
@@ -605,7 +631,12 @@ footer {
       <a href="/binance" class="btn-cta">Generar informe fiscal de Binance</a>
       <a href="/exchanges" class="btn-outline">Ver todos los exchanges</a>
     </div>
-    <p class="hero-micro">Crea tu cuenta gratis y sube el CSV exportado desde Binance.</p>
+    <p class="hero-micro">Sube tu CSV de Binance y descarga tu informe FIFO en minutos.</p>
+    <div class="hero-trust">
+      <span class="hero-trust-item">Sin tarjeta</span>
+      <span class="hero-trust-item">100% online</span>
+      <span class="hero-trust-item">Compatible con CSV real de Binance</span>
+    </div>
 
   </div>
 </section>
@@ -898,11 +929,16 @@ footer {
 
         <!-- CTA mid-page -->
         <div class="cta-mid">
-          <h3 class="cta-mid-title">Tienes los CSV. <em>Genera el informe.</em></h3>
-          <p>Sube todos los archivos de Binance y obtén el informe FIFO listo para tu gestor o para la Renta.</p>
+          <h3 class="cta-mid-title">¿Tienes ya el CSV de Binance?</h3>
+          <p>Súbelo ahora y genera un informe fiscal FIFO preparado para revisar tus operaciones antes de presentar Hacienda.</p>
+          <ul class="cta-benefits">
+            <li>Detecta compras, ventas y permutas</li>
+            <li>Calcula ganancias y pérdidas</li>
+            <li>Genera PDF descargable</li>
+          </ul>
           <div class="cta-buttons">
             <a href="/binance" class="btn-cta">Subir CSV de Binance</a>
-            <a href="/asesoramiento-fiscal-criptomonedas" class="btn-outline">Solicitar asesoramiento</a>
+            <a href="/asesoramiento-fiscal-criptomonedas" class="btn-outline">Solicitar asesoramiento fiscal</a>
           </div>
           <p class="cta-micro-text">Crea tu cuenta gratis y sube el CSV exportado desde Binance.</p>
         </div>
@@ -1037,22 +1073,15 @@ footer {
 </section>
 
 <!-- ── FOOTER ──────────────────────────── -->
-<footer>
+<footer class="page-footer">
   <div class="footer-inner">
-    <div>
-      <div class="footer-brand">Mariano Sevilla</div>
-      <div class="footer-copy">Herramienta fiscal para criptomonedas · marianosevilla.com</div>
-    </div>
+    <span class="footer-copy">© 2025 marianosevilla.com — No constituye asesoramiento fiscal ni legal.</span>
     <div class="footer-links">
-      <a href="/">Inicio</a>
-      <a href="/exchanges">Exchanges</a>
-      <a href="/como-funciona">Cómo funciona</a>
-      <a href="/modelo-721-criptomonedas">Modelo 721</a>
-      <a href="/asesoramiento-fiscal-criptomonedas">Asesoramiento</a>
       <a href="/privacidad">Privacidad</a>
       <a href="/terminos">Términos</a>
+      <a href="/cookies">Cookies</a>
       <a href="/aviso-legal">Aviso legal</a>
-      <a href="/about">About</a>
+      <a href="/faq">FAQ</a>
     </div>
   </div>
 </footer>
