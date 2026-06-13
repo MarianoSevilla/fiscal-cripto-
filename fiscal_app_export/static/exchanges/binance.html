@@ -562,7 +562,18 @@ footer {
 
 <!-- ── NAV ──────────────────────────── -->
 <nav id="site-nav">
-  <div class="snav-inner"></div>
+  <div class="snav-inner">
+    <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
+    <ul class="snav-links">
+      <li><a href="/como-funciona">Cómo funciona</a></li>
+      <li><a href="/recursos">Recursos</a></li>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/contacto">Contacto</a></li>
+    </ul>
+    <div class="snav-right">
+      <div class="snav-skeleton" aria-hidden="true"></div>
+    </div>
+  </div>
 </nav>
 <script src="/static/nav.js" defer></script>
 
@@ -887,7 +898,7 @@ footer {
 
         <!-- CTA mid-page -->
         <div class="cta-mid">
-          <p class="cta-mid-title">Tienes los CSV. <em>Genera el informe.</em></p>
+          <h3 class="cta-mid-title">Tienes los CSV. <em>Genera el informe.</em></h3>
           <p>Sube todos los archivos de Binance y obtén el informe FIFO listo para tu gestor o para la Renta.</p>
           <div class="cta-buttons">
             <a href="/binance" class="btn-cta">Subir CSV de Binance</a>
