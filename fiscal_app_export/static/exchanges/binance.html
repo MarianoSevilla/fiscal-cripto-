@@ -255,6 +255,9 @@ a:hover { text-decoration: underline; }
 }
 .btn-cta:hover { opacity: 0.88; text-decoration: none; }
 .btn-cta:active { transform: scale(0.98); }
+/* override .prose a specificity for CTA buttons inside prose */
+.prose .btn-cta { color: #0a0a0a; }
+.prose .btn-outline { color: var(--accent); }
 .btn-outline {
   display: inline-flex; align-items: center; gap: 8px;
   background: none; color: var(--accent);
@@ -518,6 +521,40 @@ details[open] .faq-q::after { transform: rotate(45deg); }
   font-size: 13px; color: var(--muted); margin-top: 1rem; opacity: 0.75;
 }
 
+/* ── HERO CTA CARD ───────────────── */
+.hero-cta-card {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 16px; padding: 1.75rem 2rem;
+  max-width: 500px; margin-top: 2rem;
+}
+.hero-cta-card-title {
+  font-family: var(--font-display); font-size: 1rem; font-weight: 800;
+  color: var(--text); margin-bottom: 0.35rem; letter-spacing: -0.02em;
+}
+.hero-cta-card-sub {
+  font-size: 0.87rem; color: var(--muted); margin-bottom: 1rem; line-height: 1.6;
+}
+.hero-cta-bullets {
+  list-style: none; display: flex; flex-direction: column; gap: 0.35rem;
+  margin-bottom: 1.4rem;
+}
+.hero-cta-bullets li {
+  font-size: 0.85rem; color: var(--muted);
+  display: flex; align-items: center; gap: 7px;
+}
+.hero-cta-bullets li::before {
+  content: '→'; color: var(--accent); font-size: 0.8rem; flex-shrink: 0;
+}
+.hero-cta-card .btn-cta { width: 100%; justify-content: center; padding: 14px 24px; }
+.hero-cta-card-micro {
+  font-size: 12px; color: var(--muted); margin-top: 0.6rem; opacity: 0.8; text-align: center;
+}
+.hero-cta-card-secondary {
+  display: block; margin-top: 0.75rem; text-align: center;
+  font-size: 0.85rem; color: var(--muted); text-decoration: none;
+}
+.hero-cta-card-secondary:hover { color: var(--accent); text-decoration: none; }
+
 /* ── HERO TRUST SIGNALS ──────────── */
 .hero-trust {
   display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;
@@ -627,15 +664,17 @@ details[open] .faq-q::after { transform: rotate(45deg); }
       criptomonedas en España.
     </p>
 
-    <div class="hero-cta-group">
+    <div class="hero-cta-card">
+      <p class="hero-cta-card-title">Genera tu informe FIFO de Binance</p>
+      <p class="hero-cta-card-sub">Sube los CSV de Binance y obtén un PDF fiscal listo para revisar.</p>
+      <ul class="hero-cta-bullets">
+        <li>Spot, Earn y conversiones</li>
+        <li>Método FIFO automático</li>
+        <li>PDF descargable para Hacienda</li>
+      </ul>
       <a href="/binance" class="btn-cta">Generar informe fiscal de Binance</a>
-      <a href="/exchanges" class="btn-outline">Ver todos los exchanges</a>
-    </div>
-    <p class="hero-micro">Sube tu CSV de Binance y descarga tu informe FIFO en minutos.</p>
-    <div class="hero-trust">
-      <span class="hero-trust-item">Sin tarjeta</span>
-      <span class="hero-trust-item">100% online</span>
-      <span class="hero-trust-item">Compatible con CSV real de Binance</span>
+      <p class="hero-cta-card-micro">Sin tarjeta · 100% online</p>
+      <a href="/exchanges" class="hero-cta-card-secondary">Ver todos los exchanges →</a>
     </div>
 
   </div>
