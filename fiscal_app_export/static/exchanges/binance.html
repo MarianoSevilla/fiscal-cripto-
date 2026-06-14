@@ -519,11 +519,14 @@ details[open] .faq-q::after { transform: rotate(45deg); }
   margin: 0 auto 2.25rem; line-height: 1.7;
 }
 .cta-micro {
-  font-size: 13px; color: var(--muted); margin-top: 1rem; opacity: 0.75;
+  font-size: 13px; color: var(--muted); margin-top: 2.5rem; opacity: 0.75;
 }
+.cta-economist-link { color: var(--accent); text-decoration: none; }
+.cta-economist-link:hover { text-decoration: underline; }
 /* reset .cta-final p cascade leak into nested .cta-mid */
-.cta-final .cta-mid { text-align: left; }
-.cta-final .cta-mid p { max-width: none; margin: 0 0 0.85rem; font-size: 0.88rem; }
+.cta-final .cta-mid { text-align: left; max-width: 680px; margin-left: auto; margin-right: auto; }
+.cta-final .cta-mid p:not(.cta-micro) { max-width: none; margin: 0 0 0.85rem; font-size: 0.88rem; }
+.cta-final .cta-mid .cta-micro { margin-top: 2.5rem; }
 
 /* ── CTA CARD (patrón asistencia — mismo que home) ── */
 .asistencia-badge {
@@ -1118,6 +1121,7 @@ details[open] .faq-q::after { transform: rotate(45deg); }
         <a href="/binance" class="btn-cta">Subir CSV de Binance</a>
         <a href="/asesoramiento-fiscal-criptomonedas" class="btn-outline">Solicitar asesoramiento fiscal</a>
       </div>
+      <p class="cta-micro">Supervisado por <a href="/about" class="cta-economist-link">Rafael Ramos Martínez</a>, economista colegiado nº&nbsp;4.579 · Colegio de Economistas de Valencia</p>
     </div>
   </div>
 </section>

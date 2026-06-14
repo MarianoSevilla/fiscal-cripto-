@@ -235,9 +235,10 @@ a:hover { text-decoration: underline; }
 
 /* ── HERO ─────────────────────────── */
 .hero {
-  padding: 7rem 0 5rem;
+  padding: 7rem 0 2.5rem;
   animation: fadeUp 0.45s ease both;
 }
+.hero + .section { padding-top: 2.5rem; }
 .breadcrumb {
   font-size: 13px; color: var(--muted); margin-bottom: 2rem;
   display: flex; align-items: center; gap: 6px;
@@ -278,9 +279,6 @@ a:hover { text-decoration: underline; }
   font-size: 1.0rem; color: var(--muted);
   margin-bottom: 2rem; line-height: 1.75;
 }
-.hero-cta-group {
-  display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;
-}
 .btn-cta {
   display: inline-flex; align-items: center; gap: 10px;
   background: var(--accent); color: #0a0a0a;
@@ -291,6 +289,9 @@ a:hover { text-decoration: underline; }
 }
 .btn-cta:hover { opacity: 0.88; text-decoration: none; }
 .btn-cta:active { transform: scale(0.98); }
+/* override .prose a specificity for CTA buttons inside prose */
+.prose .btn-cta { color: #0a0a0a; }
+.prose .btn-outline { color: var(--accent); }
 .btn-outline {
   display: inline-flex; align-items: center; gap: 8px;
   background: none; color: var(--accent);
@@ -531,7 +532,7 @@ details[open] .faq-q::after { transform: rotate(45deg); }
 .cta-mid {
   background: var(--surface); border: 1px solid var(--border2);
   border-radius: 16px; padding: 2rem 2.25rem;
-  margin: 2.5rem 0; text-align: center;
+  margin: 2.5rem 0; text-align: left;
 }
 .cta-mid-title {
   font-family: var(--font-display); font-size: 1.3rem; font-weight: 800;
@@ -540,7 +541,7 @@ details[open] .faq-q::after { transform: rotate(45deg); }
 .cta-mid-title em { font-style: normal; color: var(--accent); }
 .cta-mid p { font-size: 0.93rem; color: var(--muted); margin-bottom: 1.5rem; line-height: 1.65; }
 .cta-buttons {
-  display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;
+  display: flex; gap: 1rem; justify-content: flex-start; flex-wrap: wrap;
 }
 .cta-micro-text {
   font-size: 12px; color: var(--muted); margin-top: 0.75rem; opacity: 0.8;
@@ -562,24 +563,74 @@ details[open] .faq-q::after { transform: rotate(45deg); }
   margin: 0 auto 2.25rem; line-height: 1.7;
 }
 .cta-micro {
-  font-size: 13px; color: var(--muted); margin-top: 1rem; opacity: 0.75;
+  font-size: 13px; color: var(--muted); margin-top: 2.5rem; opacity: 0.75;
 }
 
 /* ── FOOTER ──────────────────────── */
-footer {
-  background: var(--footer-bg); border-top: 1px solid var(--border);
-  padding: 3rem 0; margin-top: 4rem;
+.page-footer {
+  background: var(--footer-bg);
+  border-top: 1px solid var(--border);
+  padding: 2rem 0;
 }
 .footer-inner {
   max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x);
-  display: flex; justify-content: space-between; align-items: flex-start;
-  gap: 2rem; flex-wrap: wrap;
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 1rem; flex-wrap: wrap;
 }
-.footer-brand { font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; color: var(--text); }
-.footer-copy { font-size: 13px; color: var(--muted); margin-top: 0.4rem; }
-.footer-links { display: flex; flex-direction: column; gap: 0.35rem; }
+.footer-copy { font-size: 13px; color: var(--muted); }
+.footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
 .footer-links a { font-size: 13px; color: var(--muted); }
-.footer-links a:hover { color: var(--accent); }
+.footer-links a:hover { color: var(--accent); text-decoration: none; }
+
+/* ── ASISTENCIA BLOCK ───────────── */
+.asistencia-badge {
+  display: inline-flex; align-items: center;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted); border: 1px solid var(--border2);
+  border-radius: 100px; padding: 3px 10px; margin-bottom: 0.6rem;
+}
+.asistencia-block {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 12px; padding: 1.1rem 1.25rem;
+  max-width: 680px; margin-top: 2rem;
+}
+.asistencia-block p {
+  font-size: 0.88rem; color: var(--muted); line-height: 1.55; margin-bottom: 0.85rem;
+}
+.asistencia-block p strong { color: var(--text); display: block; margin-bottom: 3px; font-size: 0.95rem; }
+.asistencia-bullets {
+  list-style: none; margin: 0 0 1rem; display: flex; flex-direction: column; gap: 5px;
+}
+.asistencia-bullets li { font-size: 0.82rem; color: var(--accent); letter-spacing: 0.01em; }
+.btn-asistencia {
+  display: flex; align-items: center; gap: 10px; width: 100%; justify-content: center;
+  background: none; color: var(--accent);
+  border: 1.5px solid var(--accent); border-radius: 10px; padding: 13px 24px;
+  font-family: var(--font-display); font-size: 1rem; font-weight: 700;
+  cursor: pointer; transition: background 0.15s; text-decoration: none; letter-spacing: -0.01em;
+}
+.btn-asistencia:hover { background: var(--accent-dim); text-decoration: none; }
+
+/* ── CTA BENEFITS ────────────────── */
+.cta-benefits {
+  list-style: none; display: flex; flex-direction: column; gap: 0.45rem;
+  margin: 1rem 0 1.5rem; text-align: left;
+}
+.cta-benefits li {
+  font-size: 0.88rem; color: var(--muted); display: flex; align-items: center; gap: 8px;
+}
+.cta-benefits li::before {
+  content: '✓'; color: var(--accent); font-weight: 700; font-size: 11px; flex-shrink: 0;
+}
+
+/* economist credit */
+.cta-economist-link { color: var(--accent); text-decoration: none; }
+.cta-economist-link:hover { text-decoration: underline; }
+
+/* reset .cta-final p cascade leak into nested .cta-mid */
+.cta-final .cta-mid { text-align: left; max-width: 680px; margin-left: auto; margin-right: auto; }
+.cta-final .cta-mid p:not(.cta-micro) { max-width: none; margin: 0 0 0.85rem; font-size: 0.88rem; }
+.cta-final .cta-mid .cta-micro { margin-top: 2.5rem; }
 
 /* ── RESPONSIVE ──────────────────── */
 @media (max-width: 1024px) {
@@ -609,7 +660,18 @@ footer {
 
 <!-- ── NAV ──────────────────────────── -->
 <nav id="site-nav">
-  <div class="snav-inner"></div>
+  <div class="snav-inner">
+    <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
+    <ul class="snav-links">
+      <li><a href="/como-funciona">Cómo funciona</a></li>
+      <li><a href="/recursos">Recursos</a></li>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/contacto">Contacto</a></li>
+    </ul>
+    <div class="snav-right">
+      <div class="snav-skeleton" aria-hidden="true"></div>
+    </div>
+  </div>
 </nav>
 <script src="/static/nav.js" defer></script>
 
@@ -646,11 +708,21 @@ footer {
       según el tipo de operación.
     </p>
 
-    <div class="hero-cta-group">
-      <a href="/coinbase" class="btn-cta">Generar informe fiscal de Coinbase</a>
-      <a href="/exchanges" class="btn-outline">Ver todos los exchanges</a>
+    <div class="asistencia-block">
+      <div class="asistencia-badge">INFORME FIFO COINBASE</div>
+      <p>
+        <strong>Genera tu informe FIFO de Coinbase</strong>
+        Sube tu CSV de Coinbase y obtén un PDF fiscal listo para revisar.
+      </p>
+      <ul class="asistencia-bullets">
+        <li>✓ Compras, ventas y conversiones</li>
+        <li>✓ Método FIFO automático</li>
+        <li>✓ PDF descargable para Hacienda</li>
+      </ul>
+      <a href="/coinbase" class="btn-asistencia">
+        Generar informe fiscal de Coinbase
+      </a>
     </div>
-    <p class="hero-micro">Supervisado por Rafael Ramos Martínez, Economista Colegiado nº&nbsp;4.579.</p>
 
   </div>
 </section>
@@ -1065,13 +1137,17 @@ footer {
 
         <!-- CTA mid-page -->
         <div class="cta-mid">
-          <p class="cta-mid-title">Tienes el CSV. <em>Genera el informe.</em></p>
-          <p>Sube el historial de Coinbase al generador y obtén el informe FIFO listo para tu gestor o para la Renta.</p>
+          <h3 class="cta-mid-title">Genera tu informe fiscal de Coinbase</h3>
+          <p>Súbelo ahora y genera un informe fiscal FIFO preparado para revisar tus operaciones antes de presentar Hacienda.</p>
+          <ul class="cta-benefits">
+            <li>Detecta compras, ventas y permutas</li>
+            <li>Calcula ganancias y pérdidas</li>
+            <li>Genera PDF descargable</li>
+          </ul>
           <div class="cta-buttons">
             <a href="/coinbase" class="btn-cta">Subir CSV de Coinbase</a>
-            <a href="/asesoramiento-fiscal-criptomonedas" class="btn-outline">Solicitar asesoramiento</a>
+            <a href="/asesoramiento-fiscal-criptomonedas" class="btn-outline">Solicitar asesoramiento fiscal</a>
           </div>
-          <p class="cta-micro-text">Supervisado por Rafael Ramos Martínez, Economista Colegiado nº&nbsp;4.579.</p>
         </div>
 
         <!-- ─── 9. FAQ ─────────────────────────────────────────────────── -->
@@ -1195,7 +1271,6 @@ footer {
             <li data-n="5">Descargar informe PDF para Hacienda</li>
           </ul>
           <a href="/coinbase" class="sidebar-cta">Generar informe de Coinbase</a>
-          <p class="sidebar-note">Supervisado por Rafael Ramos Martínez, Economista Colegiado nº&nbsp;4.579.</p>
         </div>
 
         <div class="sidebar-card">
@@ -1219,39 +1294,33 @@ footer {
 <!-- ── CTA FINAL ──────────────────────── -->
 <section class="cta-final">
   <div class="wrap">
-    <h2>Genera tu informe fiscal de<br><em>Coinbase hoy</em></h2>
-    <p>
-      Exporta el historial, súbelo al generador y descarga el PDF listo
-      para tu gestor o para introducir los datos directamente en la Renta.
-    </p>
-    <div class="cta-buttons">
-      <a href="/coinbase"  class="btn-cta">Subir CSV de Coinbase</a>
-      <a href="/exchanges" class="btn-outline">Ver todos los exchanges</a>
+    <div class="cta-mid">
+      <h3 class="cta-mid-title">Genera tu informe fiscal de Coinbase hoy</h3>
+      <p>Sube tus archivos de Coinbase, revisa tus operaciones y descarga un informe FIFO preparado para Hacienda.</p>
+      <ul class="cta-benefits">
+        <li>CSV de Coinbase</li>
+        <li>Método FIFO automático</li>
+        <li>PDF descargable</li>
+      </ul>
+      <div class="cta-buttons">
+        <a href="/coinbase" class="btn-cta">Subir CSV de Coinbase</a>
+        <a href="/asesoramiento-fiscal-criptomonedas" class="btn-outline">Solicitar asesoramiento fiscal</a>
+      </div>
+      <p class="cta-micro">Supervisado por <a href="/about" class="cta-economist-link">Rafael Ramos Martínez</a>, economista colegiado nº&nbsp;4.579 · Colegio de Economistas de Valencia</p>
     </div>
-    <p class="cta-micro">
-      Supervisado por <a href="/about">Rafael Ramos Martínez</a>,
-      economista colegiado nº&nbsp;4.579 · Colegio de Economistas de Valencia
-    </p>
   </div>
 </section>
 
 <!-- ── FOOTER ──────────────────────────── -->
-<footer>
+<footer class="page-footer">
   <div class="footer-inner">
-    <div>
-      <div class="footer-brand">Mariano Sevilla</div>
-      <div class="footer-copy">Herramienta fiscal para criptomonedas · marianosevilla.com</div>
-    </div>
+    <span class="footer-copy">© 2025 marianosevilla.com — No constituye asesoramiento fiscal ni legal.</span>
     <div class="footer-links">
-      <a href="/">Inicio</a>
-      <a href="/exchanges">Exchanges</a>
-      <a href="/como-funciona">Cómo funciona</a>
-      <a href="/modelo-721-criptomonedas">Modelo 721</a>
-      <a href="/asesoramiento-fiscal-criptomonedas">Asesoramiento</a>
       <a href="/privacidad">Privacidad</a>
       <a href="/terminos">Términos</a>
+      <a href="/cookies">Cookies</a>
       <a href="/aviso-legal">Aviso legal</a>
-      <a href="/about">About</a>
+      <a href="/faq">FAQ</a>
     </div>
   </div>
 </footer>
