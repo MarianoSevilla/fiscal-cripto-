@@ -521,6 +521,9 @@ details[open] .faq-q::after { transform: rotate(45deg); }
 .cta-micro {
   font-size: 13px; color: var(--muted); margin-top: 1rem; opacity: 0.75;
 }
+/* reset .cta-final p cascade leak into nested .cta-mid */
+.cta-final .cta-mid { text-align: left; }
+.cta-final .cta-mid p { max-width: none; margin: 0 0 0.85rem; font-size: 0.88rem; }
 
 /* ── CTA CARD (patrón asistencia — mismo que home) ── */
 .asistencia-badge {
@@ -1103,19 +1106,19 @@ details[open] .faq-q::after { transform: rotate(45deg); }
 <!-- ── CTA FINAL ──────────────────────── -->
 <section class="cta-final">
   <div class="wrap">
-    <h2>Genera tu informe fiscal de<br><em>Binance hoy</em></h2>
-    <p>
-      Exporta los archivos, súbelos al generador y descarga el PDF listo
-      para tu gestor o para introducir los datos directamente en la Renta.
-    </p>
-    <div class="cta-buttons">
-      <a href="/binance"   class="btn-cta">Subir CSV de Binance</a>
-      <a href="/exchanges" class="btn-outline">Ver todos los exchanges</a>
+    <div class="cta-mid">
+      <h3 class="cta-mid-title">Genera tu informe fiscal de Binance hoy</h3>
+      <p>Sube tus archivos de Binance, revisa tus operaciones y descarga un informe FIFO preparado para Hacienda.</p>
+      <ul class="cta-benefits">
+        <li>CSV de Binance</li>
+        <li>Método FIFO automático</li>
+        <li>PDF descargable</li>
+      </ul>
+      <div class="cta-buttons">
+        <a href="/binance" class="btn-cta">Subir CSV de Binance</a>
+        <a href="/asesoramiento-fiscal-criptomonedas" class="btn-outline">Solicitar asesoramiento fiscal</a>
+      </div>
     </div>
-    <p class="cta-micro">
-      Supervisado por <a href="/about">Rafael Ramos Martínez</a>,
-      economista colegiado nº 4.579 · Colegio de Economistas de Valencia
-    </p>
   </div>
 </section>
 
