@@ -628,9 +628,9 @@ details[open] .faq-q::after { transform: rotate(45deg); }
 .cta-economist-link:hover { text-decoration: underline; }
 
 /* reset .cta-final p cascade leak into nested .cta-mid */
-.cta-final .cta-mid { text-align: left; max-width: 680px; margin-left: auto; margin-right: auto; }
+.cta-final .cta-mid { text-align: left; }
 .cta-final .cta-mid p:not(.cta-micro) { max-width: none; margin: 0 0 0.85rem; font-size: 0.88rem; }
-.cta-final .cta-mid .cta-micro { margin-top: 2.5rem; }
+.cta-final .cta-mid .cta-micro { margin-top: 2.5rem; max-width: none; margin-left: 0; margin-right: 0; }
 
 /* ── RESPONSIVE ──────────────────── */
 @media (max-width: 1024px) {
@@ -1294,19 +1294,23 @@ details[open] .faq-q::after { transform: rotate(45deg); }
 <!-- ── CTA FINAL ──────────────────────── -->
 <section class="cta-final">
   <div class="wrap">
-    <div class="cta-mid">
-      <h3 class="cta-mid-title">Genera tu informe fiscal de Coinbase hoy</h3>
-      <p>Sube tus archivos de Coinbase, revisa tus operaciones y descarga un informe FIFO preparado para Hacienda.</p>
-      <ul class="cta-benefits">
-        <li>CSV de Coinbase</li>
-        <li>Método FIFO automático</li>
-        <li>PDF descargable</li>
-      </ul>
-      <div class="cta-buttons">
-        <a href="/coinbase" class="btn-cta">Subir CSV de Coinbase</a>
-        <a href="/asesoramiento-fiscal-criptomonedas" class="btn-outline">Solicitar asesoramiento fiscal</a>
+    <div class="content-grid">
+      <div class="content-main">
+        <div class="cta-mid">
+          <h3 class="cta-mid-title">Genera tu informe fiscal de Coinbase hoy</h3>
+          <p>Sube tus archivos de Coinbase, revisa tus operaciones y descarga un informe FIFO preparado para Hacienda.</p>
+          <ul class="cta-benefits">
+            <li>CSV de Coinbase</li>
+            <li>Método FIFO automático</li>
+            <li>PDF descargable</li>
+          </ul>
+          <div class="cta-buttons">
+            <a href="/coinbase" class="btn-cta">Subir CSV de Coinbase</a>
+            <a href="/asesoramiento-fiscal-criptomonedas" class="btn-outline">Solicitar asesoramiento fiscal</a>
+          </div>
+          <p class="cta-micro">Supervisado por <a href="/about" class="cta-economist-link">Rafael Ramos Martínez</a>, economista colegiado nº&nbsp;4.579 · Colegio de Economistas de Valencia</p>
+        </div>
       </div>
-      <p class="cta-micro">Supervisado por <a href="/about" class="cta-economist-link">Rafael Ramos Martínez</a>, economista colegiado nº&nbsp;4.579 · Colegio de Economistas de Valencia</p>
     </div>
   </div>
 </section>
