@@ -2984,6 +2984,24 @@ def exchanges_coinbase():
     return send_from_directory("static/exchanges", "coinbase.html")
 
 
+@app.route("/exchanges/nexo", strict_slashes=False)
+@limiter.exempt
+def exchanges_nexo():
+    return send_from_directory("static/exchanges", "nexo.html")
+
+
+@app.route("/exchanges/cryptocom", strict_slashes=False)
+@limiter.exempt
+def exchanges_cryptocom():
+    return send_from_directory("static/exchanges", "cryptocom.html")
+
+
+@app.route("/exchanges/bit2me", strict_slashes=False)
+@limiter.exempt
+def exchanges_bit2me():
+    return send_from_directory("static/exchanges", "bit2me.html")
+
+
 @app.route("/bienes-homogeneos-criptomonedas", strict_slashes=False)
 @limiter.exempt
 def bienes_homogeneos_criptomonedas():
