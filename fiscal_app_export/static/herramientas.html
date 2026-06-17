@@ -179,9 +179,10 @@ a:hover { text-decoration: underline; }
 
 /* ── HERO ───────────────────────────── */
 .hero {
-  padding: 7rem 0 5rem;
+  padding: 7rem 0 0;
   animation: fadeUp 0.45s ease both;
 }
+.hero + .section { padding-top: 2.5rem; }
 .breadcrumb {
   font-size: 13px; color: var(--muted); margin-bottom: 2rem;
   display: flex; align-items: center; gap: 6px;
