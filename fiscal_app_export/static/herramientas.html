@@ -345,21 +345,20 @@ details[open] .faq-q::after { transform: rotate(45deg); }
   font-size: 13px; color: var(--muted); margin-top: 1rem; opacity: 0.75;
 }
 
-/* ── FOOTER ──────────────────────────── */
-footer {
-  background: var(--footer-bg); border-top: 1px solid var(--border);
-  padding: 3rem 0; margin-top: 4rem;
-}
-.footer-inner {
-  max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x);
-  display: flex; justify-content: space-between; align-items: flex-start;
-  gap: 2rem; flex-wrap: wrap;
-}
-.footer-brand { font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; color: var(--text); }
-.footer-copy { font-size: 13px; color: var(--muted); margin-top: 0.4rem; }
-.footer-links { display: flex; flex-direction: column; gap: 0.35rem; }
-.footer-links a { font-size: 13px; color: var(--muted); }
-.footer-links a:hover { color: var(--accent); }
+/* ── CTA card (estilo Binance · Opción B: a ancho de .wrap) ── */
+.cta-mid { background: var(--surface); border: 1px solid var(--border2); border-radius: 16px; padding: 2rem 2.25rem; margin: 2.5rem 0 0; text-align: left; }
+.cta-mid-title { font-family: var(--font-display); font-size: 1.3rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 0.65rem; color: var(--text); }
+.cta-benefits { list-style: none; display: flex; flex-direction: column; gap: 0.45rem; margin: 1rem 0 1.5rem; text-align: left; }
+.cta-benefits li { font-size: 0.88rem; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.cta-benefits li::before { content: '✓'; color: var(--accent); font-weight: 700; font-size: 11px; flex-shrink: 0; }
+.cta-economist-link { color: var(--accent); text-decoration: none; }
+.cta-mid .cta-buttons { justify-content: flex-start; }
+
+/* ── LEGAL-BAR (igual que la home) ───── */
+.legal-bar { max-width: var(--max-w); margin: 0 auto; padding: 0.75rem var(--pad-x); font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 2rem; flex-wrap: wrap; }
+.legal-bar-links { display: flex; gap: 1.25rem; flex-shrink: 0; }
+.legal-bar-links a { font-size: 12px; color: var(--muted); text-decoration: none; transition: color 0.15s; }
+.legal-bar-links a:hover { color: var(--text); }
 
 /* ── RESPONSIVE ──────────────────────── */
 @media (max-width: 900px) {
@@ -653,40 +652,34 @@ footer {
 <!-- ── CTA FINAL ──────────────────────── -->
 <section class="cta-final">
   <div class="wrap">
-    <h2>Empieza a calcular tus impuestos<br><em>cripto hoy</em></h2>
-    <p>
-      Crea tu cuenta gratis, importa el CSV de tu exchange y genera tu informe FIFO.
-      ¿Caso complejo? Habla con un asesor especializado.
-    </p>
-    <div class="cta-buttons">
-      <a href="/signup/"             class="btn-cta">Calcular gratis con FIFO</a>
-      <a href="/asesoramiento-fiscal-criptomonedas" class="btn-outline">Hablar con un asesor</a>
+    <div class="cta-mid">
+      <h3 class="cta-mid-title">Todo lo que necesitas para declarar criptomonedas en España</h3>
+      <p>Importa el historial de tu exchange, aplica el método FIFO obligatorio y descarga un informe listo para Hacienda.</p>
+      <ul class="cta-benefits">
+        <li>Calculadora FIFO gratuita y sin tarjeta</li>
+        <li>Compatible con Binance, Kraken, Coinbase, Bit2Me y más</li>
+        <li>Revisión por asesor fiscal si tu caso es complejo</li>
+      </ul>
+      <div class="cta-buttons">
+        <a href="/signup/" class="btn-cta">Generar informe fiscal gratis</a>
+        <a href="/asesoramiento-fiscal-criptomonedas" class="btn-outline">Hablar con un asesor</a>
+      </div>
+      <p class="cta-micro">Supervisado por <a href="/about" class="cta-economist-link">Rafael Ramos Martínez</a>, economista colegiado nº&nbsp;4.579 · Colegio de Economistas de Valencia</p>
     </div>
-    <p class="cta-micro">FIFO automático · Sin tarjeta · Supervisado por economista colegiado</p>
   </div>
 </section>
 
-<!-- ── FOOTER ──────────────────────────── -->
-<footer>
-  <div class="footer-inner">
-    <div>
-      <div class="footer-brand">Mariano Sevilla</div>
-      <div class="footer-copy">Herramienta fiscal para criptomonedas · marianosevilla.com</div>
-    </div>
-    <div class="footer-links">
-      <a href="/">Inicio</a>
-      <a href="/herramientas">Herramientas</a>
-      <a href="/exchanges">Exchanges</a>
-      <a href="/como-funciona">Cómo funciona</a>
-      <a href="/modelo-721-criptomonedas">Modelo 721</a>
-      <a href="/asesoramiento-fiscal-criptomonedas">Asesoramiento</a>
-      <a href="/privacidad">Privacidad</a>
-      <a href="/terminos">Términos</a>
-      <a href="/aviso-legal">Aviso legal</a>
-      <a href="/about">About</a>
-    </div>
+<!-- ── FOOTER (legal-bar, igual que la home) ──────────── -->
+<div class="legal-bar">
+  <span>Herramienta de generación de informes FIFO para usuarios con criptomonedas. No constituye asesoramiento fiscal ni legal.</span>
+  <div class="legal-bar-links">
+    <a href="/about">Equipo</a>
+    <a href="/privacidad">Privacidad</a>
+    <a href="/terminos">Términos</a>
+    <a href="/cookies">Cookies</a>
+    <a href="/aviso-legal">Aviso legal</a>
   </div>
-</footer>
+</div>
 
 </body>
 </html>
