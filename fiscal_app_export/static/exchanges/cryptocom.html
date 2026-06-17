@@ -575,6 +575,19 @@ details[open] .faq-q::after { transform: rotate(45deg); }
 }
 
 /* ── FOOTER ──────────────────────── */
+/* ── LEGAL BAR (footer estándar, igual que la home) ── */
+.legal-bar {
+  max-width: var(--max-w); margin: 0 auto;
+  padding: 0.75rem var(--pad-x);
+  font-size: 12px; color: var(--muted);
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 2rem; flex-wrap: wrap;
+}
+.legal-bar-links { display: flex; gap: 1.25rem; flex-shrink: 0; }
+.legal-bar-links a { font-size: 12px; color: var(--muted); text-decoration: none; transition: color 0.15s; }
+.legal-bar-links a:hover { color: var(--text); }
+
 .page-footer {
   background: var(--footer-bg);
   border-top: 1px solid var(--border);
@@ -1032,19 +1045,17 @@ details[open] .faq-q::after { transform: rotate(45deg); }
   </div>
 </section>
 
-<!-- ── FOOTER ──────────────────────────── -->
-<footer class="page-footer">
-  <div class="footer-inner">
-    <span class="footer-copy">© 2025 marianosevilla.com — No constituye asesoramiento fiscal ni legal.</span>
-    <div class="footer-links">
-      <a href="/privacidad">Privacidad</a>
-      <a href="/terminos">Términos</a>
-      <a href="/cookies">Cookies</a>
-      <a href="/aviso-legal">Aviso legal</a>
-      <a href="/faq">FAQ</a>
-    </div>
+<!-- ── FOOTER (legal-bar, igual que la home) ──────────── -->
+<div class="legal-bar">
+  <span>Herramienta de generación de informes FIFO para usuarios con criptomonedas. No constituye asesoramiento fiscal ni legal.</span>
+  <div class="legal-bar-links">
+    <a href="/about">Equipo</a>
+    <a href="/privacidad">Privacidad</a>
+    <a href="/terminos">Términos</a>
+    <a href="/cookies">Cookies</a>
+    <a href="/aviso-legal">Aviso legal</a>
   </div>
-</footer>
+</div>
 
 </body>
 </html>

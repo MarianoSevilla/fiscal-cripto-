@@ -512,27 +512,52 @@ details[open] .faq-q::after { transform: rotate(45deg); }
   margin: 0 auto 2.25rem; line-height: 1.7;
 }
 .cta-buttons {
-  display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;
+  display: flex; gap: 1rem; justify-content: flex-start; flex-wrap: wrap;
 }
 .cta-micro {
   font-size: 13px; color: var(--muted); margin-top: 1rem; opacity: 0.75;
 }
 
-/* ── FOOTER ──────────────────────────── */
-footer {
-  background: var(--footer-bg); border-top: 1px solid var(--border);
-  padding: 3rem 0; margin-top: 4rem;
+/* ── CTA card (estilo Binance · Opción B: a ancho de .wrap) ── */
+.cta-mid {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 16px; padding: 2rem 2.25rem;
+  margin: 2.5rem 0 0; text-align: left;
 }
-.footer-inner {
-  max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x);
-  display: flex; justify-content: space-between; align-items: flex-start;
+.cta-mid-title {
+  font-family: var(--font-display); font-size: 1.3rem; font-weight: 800;
+  letter-spacing: -0.02em; margin-bottom: 0.65rem; color: var(--text);
+}
+.cta-mid-title em { font-style: normal; color: var(--accent); }
+.cta-mid p { font-size: 0.93rem; color: var(--muted); margin-bottom: 1.5rem; line-height: 1.65; }
+.cta-benefits {
+  list-style: none; display: flex; flex-direction: column; gap: 0.45rem;
+  margin: 1rem 0 1.5rem; text-align: left;
+}
+.cta-benefits li {
+  font-size: 0.88rem; color: var(--muted); display: flex; align-items: center; gap: 8px;
+}
+.cta-benefits li::before {
+  content: '✓'; color: var(--accent); font-weight: 700; font-size: 11px; flex-shrink: 0;
+}
+.cta-economist-link { color: var(--accent); text-decoration: none; }
+.cta-economist-link:hover { text-decoration: underline; }
+.cta-final .cta-mid { text-align: left; }
+.cta-final .cta-mid p:not(.cta-micro) { max-width: none; margin: 0 0 0.85rem; font-size: 0.88rem; }
+.cta-final .cta-mid .cta-micro { margin-top: 2.5rem; max-width: none; margin-left: 0; margin-right: 0; }
+
+/* ── LEGAL BAR (footer estándar, igual que la home) ── */
+.legal-bar {
+  max-width: var(--max-w); margin: 0 auto;
+  padding: 0.75rem var(--pad-x);
+  font-size: 12px; color: var(--muted);
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
   gap: 2rem; flex-wrap: wrap;
 }
-.footer-brand { font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; color: var(--text); }
-.footer-copy { font-size: 13px; color: var(--muted); margin-top: 0.4rem; }
-.footer-links { display: flex; flex-direction: column; gap: 0.35rem; }
-.footer-links a { font-size: 13px; color: var(--muted); }
-.footer-links a:hover { color: var(--accent); }
+.legal-bar-links { display: flex; gap: 1.25rem; flex-shrink: 0; }
+.legal-bar-links a { font-size: 12px; color: var(--muted); text-decoration: none; transition: color 0.15s; }
+.legal-bar-links a:hover { color: var(--text); }
 
 /* ── RESPONSIVE ──────────────────────── */
 @media (max-width: 900px) {
@@ -1162,40 +1187,34 @@ footer {
 <!-- ── CTA FINAL ──────────────────────── -->
 <section class="cta-final">
   <div class="wrap">
-    <h2>Genera tu informe fiscal<br><em>cripto hoy</em></h2>
-    <p>
-      Sin fórmulas manuales. Sube el CSV de tu exchange, aplica FIFO automático
-      y descarga el PDF listo para tu gestor.
-    </p>
-    <div class="cta-buttons">
-      <a href="/signup/"             class="btn-cta">Crear cuenta gratis</a>
-      <a href="/como-funciona"       class="btn-outline">Cómo funciona</a>
+    <div class="cta-mid">
+      <h3 class="cta-mid-title">Genera tu informe fiscal de criptomonedas hoy</h3>
+      <p>Sube el CSV de tu exchange, revisa tus operaciones y descarga un informe FIFO preparado para Hacienda.</p>
+      <ul class="cta-benefits">
+        <li>Compatible con los principales exchanges</li>
+        <li>Método FIFO automático</li>
+        <li>PDF descargable listo para Hacienda</li>
+      </ul>
+      <div class="cta-buttons">
+        <a href="/signup/" class="btn-cta">Crear cuenta gratis</a>
+        <a href="/asesoramiento-fiscal-criptomonedas" class="btn-outline">Solicitar asesoramiento fiscal</a>
+      </div>
+      <p class="cta-micro">Supervisado por <a href="/about" class="cta-economist-link">Rafael Ramos Martínez</a>, economista colegiado nº&nbsp;4.579 · Colegio de Economistas de Valencia</p>
     </div>
-    <p class="cta-micro">FIFO automático · PDF listo para tu gestor · Supervisado por economista colegiado</p>
   </div>
 </section>
 
-<!-- ── FOOTER ──────────────────────────── -->
-<footer>
-  <div class="footer-inner">
-    <div>
-      <div class="footer-brand">Mariano Sevilla</div>
-      <div class="footer-copy">Herramienta fiscal para criptomonedas · marianosevilla.com</div>
-    </div>
-    <div class="footer-links">
-      <a href="/">Inicio</a>
-      <a href="/herramientas">Herramientas</a>
-      <a href="/exchanges">Exchanges</a>
-      <a href="/como-funciona">Cómo funciona</a>
-      <a href="/modelo-721-criptomonedas">Modelo 721</a>
-      <a href="/asesoramiento-fiscal-criptomonedas">Asesoramiento</a>
-      <a href="/privacidad">Privacidad</a>
-      <a href="/terminos">Términos</a>
-      <a href="/aviso-legal">Aviso legal</a>
-      <a href="/about">About</a>
-    </div>
+<!-- ── FOOTER (legal-bar, igual que la home) ──────────── -->
+<div class="legal-bar">
+  <span>Herramienta de generación de informes FIFO para usuarios con criptomonedas. No constituye asesoramiento fiscal ni legal.</span>
+  <div class="legal-bar-links">
+    <a href="/about">Equipo</a>
+    <a href="/privacidad">Privacidad</a>
+    <a href="/terminos">Términos</a>
+    <a href="/cookies">Cookies</a>
+    <a href="/aviso-legal">Aviso legal</a>
   </div>
-</footer>
+</div>
 
 </body>
 </html>
