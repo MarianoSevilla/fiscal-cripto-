@@ -3060,6 +3060,12 @@ def modelo_721_criptomonedas():
     return send_from_directory("static", "modelo-721-criptomonedas.html")
 
 
+@app.route("/herramientas", strict_slashes=False)
+@limiter.exempt
+def herramientas():
+    return send_from_directory("static", "herramientas.html")
+
+
 @app.route("/faq", strict_slashes=False)
 def faq():
     return send_from_directory("static", "faq.html")
