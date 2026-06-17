@@ -218,7 +218,7 @@ a:hover { text-decoration: underline; }
   display: inline-flex; align-items: center; gap: 10px;
   background: var(--accent); color: #0a0a0a;
   border: none; border-radius: 10px; padding: 17px 48px;
-  font-family: var(--font-display); font-size: 1.05rem; font-weight: 700;
+  font-family: var(--font-display); font-size: 1.1rem; font-weight: 700;
   cursor: pointer; transition: opacity 0.15s, transform 0.1s;
   text-decoration: none; letter-spacing: -0.01em;
 }
@@ -227,8 +227,8 @@ a:hover { text-decoration: underline; }
 .btn-outline {
   display: inline-flex; align-items: center; gap: 8px;
   background: none; color: var(--accent);
-  border: 1.5px solid var(--accent); border-radius: 10px; padding: 13px 28px;
-  font-family: var(--font-display); font-size: 0.97rem; font-weight: 700;
+  border: 1.5px solid var(--accent); border-radius: 10px; padding: 13px 30px;
+  font-family: var(--font-display); font-size: 1rem; font-weight: 700;
   cursor: pointer; transition: background 0.15s;
   text-decoration: none; letter-spacing: -0.01em;
 }
@@ -346,13 +346,15 @@ details[open] .faq-q::after { transform: rotate(45deg); }
 }
 
 /* ── CTA card (estilo Binance · Opción B: a ancho de .wrap) ── */
-.cta-mid { background: var(--surface); border: 1px solid var(--border2); border-radius: 16px; padding: 2rem 2.25rem; margin: 2.5rem 0 0; text-align: left; }
+.cta-mid { background: var(--surface); border: 1px solid var(--border2); border-radius: 16px; padding: 2rem 2.25rem; margin: 2.5rem 0; text-align: left; }
 .cta-mid-title { font-family: var(--font-display); font-size: 1.3rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 0.65rem; color: var(--text); }
 .cta-benefits { list-style: none; display: flex; flex-direction: column; gap: 0.45rem; margin: 1rem 0 1.5rem; text-align: left; }
 .cta-benefits li { font-size: 0.88rem; color: var(--muted); display: flex; align-items: center; gap: 8px; }
 .cta-benefits li::before { content: '✓'; color: var(--accent); font-weight: 700; font-size: 11px; flex-shrink: 0; }
 .cta-economist-link { color: var(--accent); text-decoration: none; }
 .cta-mid .cta-buttons { justify-content: flex-start; }
+.cta-final .cta-mid p:not(.cta-micro) { max-width: none; margin: 0 0 0.85rem; font-size: 0.88rem; }
+.cta-final .cta-mid .cta-micro { margin-top: 2.5rem; max-width: none; margin-left: 0; margin-right: 0; }
 
 /* ── LEGAL-BAR (igual que la home) ───── */
 .legal-bar { max-width: var(--max-w); margin: 0 auto; padding: 0.75rem var(--pad-x); font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 2rem; flex-wrap: wrap; }
@@ -371,6 +373,9 @@ details[open] .faq-q::after { transform: rotate(45deg); }
   .hero h1 { font-size: 1.9rem; }
   .section-title { font-size: 1.6rem; }
   .ex-hub-grid { grid-template-columns: 1fr; }
+  .hero-cta-group { flex-direction: column; align-items: stretch; }
+  .hero-cta-group .btn-cta,
+  .hero-cta-group .btn-outline { width: 100%; justify-content: center; }
 }
 
 @keyframes fadeUp {
