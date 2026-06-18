@@ -54,6 +54,9 @@ sys.path.insert(0, os.path.dirname(__file__))
 from clasificador import ClasificadorBinance
 from clasificador_binance_tx import ClasificadorBinanceTx
 from clasificador_bit2me import ClasificadorBit2Me
+from clasificador_bit2me_excel import (
+    ClasificadorBit2MeExcel, validar_columnas_bit2me_excel, Bit2MeExcelError,
+)
 from clasificador_bitvavo import ClasificadorBitvavo
 from clasificador_kraken import ClasificadorKraken
 from clasificador_coinbase import ClasificadorCoinbase
@@ -238,6 +241,13 @@ _ADVISORY_STATUS_EMAILS_ENABLED = (
 # Activar con ENABLE_ADVISORY_UPLOADS=true solo si se migra a almacenamiento persistente.
 _ADVISORY_UPLOADS_ENABLED = (
     os.environ.get("ENABLE_ADVISORY_UPLOADS", "false").lower() == "true"
+)
+
+# Soporte del Excel "Historial de operaciones" de Bit2Me como fuente del MotorFIFO.
+# Por defecto DESACTIVADO: el código puede desplegarse sin exponer la funcionalidad.
+# Con el flag a false, Bit2Me sigue aceptando solo el CSV "Informe Fiscal" (sin cambios).
+_BIT2ME_EXCEL_ENABLED = (
+    os.environ.get("BIT2ME_EXCEL_ENABLED", "false").lower() == "true"
 )
 
 _ADVISORY_UPLOAD_DIR = os.path.join(_BASE_DIR, "uploads", "advisory")
@@ -1155,6 +1165,30 @@ def procesar_bit2me(filepath: str) -> tuple:
     return c, r, operaciones
 
 
+# Aviso de "estimación" que encabeza las advertencias del informe Excel de Bit2Me.
+# Se inyecta en motor.advertencias → aparece en el PDF (generar_pdf ya las renderiza)
+# y en la respuesta de la API, sin tocar el generador compartido.
+_BIT2ME_EXCEL_BANNER = (
+    "Informe ORIENTATIVO (estimación) calculado a partir del historial de operaciones "
+    "de Bit2Me, no del Informe Fiscal oficial. Para tu cifra fiscal exacta usa el CSV "
+    "«Informe Fiscal» de Bit2Me. Revisa las advertencias siguientes antes de declarar."
+)
+
+
+def procesar_bit2me_excel(filepath: str) -> tuple:
+    """Historial de operaciones Excel de Bit2Me → MotorFIFO (igual que MEXC/Binance).
+
+    Devuelve (motor, rendimientos, clasificador). Fusiona las advertencias del
+    clasificador y el banner de estimación en motor.advertencias para que lleguen
+    al PDF y a la UI."""
+    clasificador = ClasificadorBit2MeExcel(filepath).clasificar()
+    motor, rendimientos, clasificador = procesar_con_fifo(clasificador)
+    motor.advertencias = (
+        [_BIT2ME_EXCEL_BANNER] + clasificador.advertencias + list(motor.advertencias)
+    )
+    return motor, rendimientos, clasificador
+
+
 def _detectar_periodo(motor=None, clasificador=None) -> dict:
     """Detecta las fechas mínima y máxima del CSV procesado."""
     fechas = []
@@ -1594,7 +1628,8 @@ def page_bitvavo():
 @login_required
 @limiter.exempt
 def page_bit2me():
-    return render_template("tool.html", **EXCHANGE_PAGES["bit2me"])
+    return render_template("tool.html", bit2me_excel_enabled=_BIT2ME_EXCEL_ENABLED,
+                           **EXCHANGE_PAGES["bit2me"])
 
 
 @app.route("/kraken")
@@ -1694,6 +1729,61 @@ def api_mexc_anos():
                 pass
 
 
+@app.route("/api/bit2me/anos", methods=["POST"])
+@login_required
+@limiter.limit("30 per minute")
+def api_bit2me_anos():
+    """Detecta ejercicios fiscales en el Excel "Historial de operaciones" de Bit2Me.
+
+    Protegido por BIT2ME_EXCEL_ENABLED. El CSV de Bit2Me detecta años en el
+    navegador; el Excel es binario y se analiza aquí (patrón /api/mexc/anos)."""
+    if not _BIT2ME_EXCEL_ENABLED:
+        return jsonify({"ok": False, "error": "Formato no disponible."}), 404
+
+    archivo = request.files.get("file")
+    if not archivo:
+        return jsonify({"ok": False, "error": "No se recibió ningún fichero."})
+
+    filename = (archivo.filename or "").lower()
+    if not (filename.endswith(".xlsx") or filename.endswith(".xls")):
+        return jsonify({"ok": False, "error": "Se requiere fichero .xls o .xlsx"})
+
+    suffix = ".xlsx" if filename.endswith(".xlsx") else ".xls"
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+            archivo.save(tmp.name)
+            tmp_path = tmp.name
+
+        valido, error_msg = validar_columnas_bit2me_excel(tmp_path)
+        if not valido:
+            return jsonify({"ok": False, "error": error_msg})
+
+        clasificador = ClasificadorBit2MeExcel(tmp_path).clasificar()
+
+        años: set = set()
+        for grupo in (clasificador.compraventas, clasificador.swaps,
+                      clasificador.rendimientos, clasificador.movimientos):
+            for op in grupo:
+                try:
+                    años.add(int(op.fecha[:4]))
+                except (ValueError, TypeError):
+                    pass
+
+        return jsonify({"ok": True, "anos": sorted(años)})
+
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": _error_amigable(exc)})
+    finally:
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+
+
 @app.route("/api/analizar", methods=["POST"])
 @login_required
 @limiter.limit("3 per 10 minutes", exempt_when=_is_admin)
@@ -1733,14 +1823,23 @@ def analizar():
         if not valido_ej:
             return jsonify({"error": error_ej}), 400
 
-        # Validar extensión — MEXC usa XLS/XLSX; el resto CSV
+        # Validar extensión — MEXC usa XLS/XLSX; Bit2Me admite Excel solo con el flag;
+        # el resto CSV.
         filename = archivo.filename or ""
+        low      = filename.lower()
+        # Bit2Me en Excel: solo si el feature flag está activo.
+        _bit2me_excel = (
+            exchange == "bit2me" and _BIT2ME_EXCEL_ENABLED
+            and (low.endswith(".xlsx") or low.endswith(".xls"))
+        )
         if exchange == "mexc":
-            if not (filename.lower().endswith(".xlsx") or filename.lower().endswith(".xls")):
+            if not (low.endswith(".xlsx") or low.endswith(".xls")):
                 return jsonify({"error": "MEXC requiere el archivo XLS o XLSX exportado desde la plataforma."}), 400
             _suffix = ".xlsx"
+        elif _bit2me_excel:
+            _suffix = ".xlsx" if low.endswith(".xlsx") else ".xls"
         else:
-            if not filename.lower().endswith(".csv"):
+            if not low.endswith(".csv"):
                 return jsonify({"error": "El fichero debe tener extensión .csv"}), 400
             _suffix = ".csv"
 
@@ -1749,7 +1848,9 @@ def analizar():
             tmp_path = tmp.name
 
         t_start   = time.time()
-        csv_rows  = _contar_filas_xlsx(tmp_path) if exchange == "mexc" else _contar_csv_rows(tmp_path)
+        csv_rows  = (_contar_filas_xlsx(tmp_path)
+                     if exchange == "mexc" or _bit2me_excel
+                     else _contar_csv_rows(tmp_path))
 
         # ── límite de filas ───────────────────────────────────────────────────
         if csv_rows > MAX_CSV_ROWS:
@@ -1760,8 +1861,14 @@ def analizar():
         # ─────────────────────────────────────────────────────────────────────
 
         try:
-            # MEXC usa validación propia por cabeceras (formato XLSX, no CSV de texto)
-            if exchange != "mexc":
+            # MEXC y Bit2Me-Excel no son CSV de texto: validación propia, no _validar_csv
+            if exchange == "mexc":
+                pass
+            elif _bit2me_excel:
+                valido, error_msg = validar_columnas_bit2me_excel(tmp_path)
+                if not valido:
+                    return jsonify({"error": error_msg}), 400
+            else:
                 valido, error_msg = _validar_csv(tmp_path, exchange)
                 if not valido:
                     return jsonify({"error": error_msg}), 400
@@ -1770,7 +1877,18 @@ def analizar():
             motor       = None   # MotorFIFO — asignado para todos los exchanges excepto bit2me
             clasificador = None  # clasificador original — para telemetría (swaps, movimientos, desconocidas)
 
-            if exchange == "bit2me":
+            if exchange == "bit2me" and _bit2me_excel:
+                # Historial de operaciones Excel → MotorFIFO (estimación). Vía nueva,
+                # detrás del flag BIT2ME_EXCEL_ENABLED. El path CSV no se altera.
+                motor, rendimientos, clasificador = procesar_bit2me_excel(tmp_path)
+                _filtrar_motor_por_ejercicio(motor, ejercicio)
+                rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
+                resumen, posicion, operaciones = _motor_a_json(motor)
+                advertencias = motor.advertencias
+                rendimientos_json = _rendimientos_a_json(rendimientos)
+                pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Bit2Me", rendimientos)
+
+            elif exchange == "bit2me":
                 clasificador, _r, _ops = procesar_bit2me(tmp_path)
                 _filtrar_bit2me_por_ejercicio(clasificador, ejercicio)
                 clasificador.rendimientos = _filtrar_rendimientos_por_ejercicio(
@@ -1962,6 +2080,7 @@ def analizar():
                 "rendimientos": rendimientos_json,
                 "advertencias": advertencias,
                 "token": token,
+                "estimacion": bool(_bit2me_excel),   # Excel Bit2Me = informe orientativo
             })
 
         except Exception as e:

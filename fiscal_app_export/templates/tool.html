@@ -766,16 +766,24 @@
     <span>⚠️</span>
     <span><strong>{% if exchange_id == 'mexc' %}Tu archivo Excel no se almacena:{% else %}Tu CSV no se almacena:{% endif %}</strong> El fichero se procesa en memoria y se elimina automáticamente. Cumplimiento RGPD.</span>
   </div>
+  {% if exchange_id == 'bit2me' and bit2me_excel_enabled %}
+  <div class="bar-privacy" style="background:#fff8e1;border-color:#f5d990;">
+    <span>📄</span>
+    <span><strong>El Excel «Historial de operaciones» produce una estimación.</strong> Para tu cifra fiscal oficial, descarga el <strong>Informe Fiscal (CSV)</strong> desde <em>Mi cuenta → Informes fiscales</em> en Bit2Me. El Excel no incluye la valoración en euros de permutas ni staking, ni el coste de las cripto depositadas desde fuera.</span>
+  </div>
+  {% endif %}
 
   <div class="upload-bar">
 
     <!-- Columna izquierda: drop zone + nombre/año -->
     <div class="bar-left">
       <div class="bar-dropzone" id="dropZone">
-        <input type="file" id="csvInput" accept="{% if exchange_id == 'mexc' %}.xlsx,.xls{% else %}.csv{% endif %}">
+        <input type="file" id="csvInput" accept="{% if exchange_id == 'mexc' %}.xlsx,.xls{% elif exchange_id == 'bit2me' and bit2me_excel_enabled %}.csv,.xlsx,.xls{% else %}.csv{% endif %}">
         <span style="font-size:22px;flex-shrink:0;">📂</span>
         {% if exchange_id == 'mexc' %}
         <span class="bar-drop-text" id="dropHint">Arrastra aquí el XLS/XLSX de {{ exchange_name }} o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Solo ficheros .xls / .xlsx</span></span>
+        {% elif exchange_id == 'bit2me' and bit2me_excel_enabled %}
+        <span class="bar-drop-text" id="dropHint">Arrastra el <strong>CSV (recomendado)</strong> o el Excel de {{ exchange_name }} o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">.csv, .xlsx o .xls</span></span>
         {% elif exchange_id %}
         <span class="bar-drop-text" id="dropHint">Arrastra aquí el CSV de {{ exchange_name }} o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Solo ficheros .csv</span></span>
         {% else %}
@@ -1063,6 +1071,7 @@
 
 <script>
   const EXCHANGE_PAGE = '{{ exchange_id }}';
+  const BIT2ME_EXCEL_ENABLED = {{ 'true' if bit2me_excel_enabled else 'false' }};
   let selectedExchange = EXCHANGE_PAGE || 'binance';
 
   const instrucciones = {
@@ -1341,11 +1350,18 @@
   // ── FILE SELECTION ───────────────────────
   function handleFile(file) {
     if (!file) return;
-    const nombre = file.name.toLowerCase();
-    const isMexc = EXCHANGE_PAGE === 'mexc';
+    const nombre   = file.name.toLowerCase();
+    const isMexc   = EXCHANGE_PAGE === 'mexc';
+    const isB2MExcel = EXCHANGE_PAGE === 'bit2me' && BIT2ME_EXCEL_ENABLED;
+    const esExcel  = nombre.endsWith('.xlsx') || nombre.endsWith('.xls');
     if (isMexc) {
-      if (!nombre.endsWith('.xlsx') && !nombre.endsWith('.xls')) {
+      if (!esExcel) {
         mostrarErrorArchivo('MEXC requiere fichero XLS o XLSX — descárgalo directamente desde la plataforma');
+        selectedFile = null; actualizarBoton(); return;
+      }
+    } else if (isB2MExcel) {
+      if (!esExcel && !nombre.endsWith('.csv')) {
+        mostrarErrorArchivo('Bit2Me admite el informe en .csv (recomendado), .xlsx o .xls');
         selectedFile = null; actualizarBoton(); return;
       }
     } else {
@@ -1365,8 +1381,10 @@
     selectedFile = file;
     fileName.textContent = file.name;
     showFile();
-    if (isMexc) {
-      // XLSX es binario — detección de ejercicios vía endpoint backend
+    // Excel es binario → detección de años vía backend. MEXC siempre; Bit2Me solo si es Excel.
+    const usarBackendAnos = isMexc || (isB2MExcel && esExcel);
+    const endpointAnos    = isMexc ? '/api/mexc/anos' : '/api/bit2me/anos';
+    if (usarBackendAnos) {
       _fetchingAños = true;
       yearPlaceholderBar.style.display = 'none';
       yearChipsWrap.style.display      = 'none';
@@ -1376,7 +1394,7 @@
 
       const _fd = new FormData();
       _fd.append('file', file);
-      fetch('/api/mexc/anos', { method: 'POST', body: _fd, credentials: 'include' })
+      fetch(endpointAnos, { method: 'POST', body: _fd, credentials: 'include' })
         .then(r => r.json())
         .then(data => {
           _fetchingAños = false;
@@ -1796,10 +1814,17 @@
   btnAnalizar.addEventListener('click', async () => {
     if (!selectedFile) return;
     const _isMexc = EXCHANGE_PAGE === 'mexc';
+    const _isB2MExcel = EXCHANGE_PAGE === 'bit2me' && BIT2ME_EXCEL_ENABLED;
     const _ext = selectedFile.name.toLowerCase();
+    const _esExcel = _ext.endsWith('.xlsx') || _ext.endsWith('.xls');
     if (_isMexc) {
-      if (!_ext.endsWith('.xlsx') && !_ext.endsWith('.xls')) {
+      if (!_esExcel) {
         mostrarErrorArchivo('MEXC requiere fichero XLS o XLSX.');
+        return;
+      }
+    } else if (_isB2MExcel) {
+      if (!_esExcel && !_ext.endsWith('.csv')) {
+        mostrarErrorArchivo('Bit2Me admite .csv (recomendado), .xlsx o .xls.');
         return;
       }
     } else if (!_ext.endsWith('.csv')) {
