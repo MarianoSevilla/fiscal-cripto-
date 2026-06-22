@@ -290,47 +290,6 @@ img { max-width: 100%; height: auto; }
 .legal-sources a { color: var(--muted); font-size: 0.78rem; }
 .legal-sources a:hover { color: var(--accent); text-decoration: none; }
 
-/* ── SIDEBAR CTA PREMIUM (mismo componente que /exchanges/binance) ── */
-.sidebar-card-premium {
-  background: var(--surface); border: 1.5px solid rgba(0,200,150,.45);
-  border-radius: 16px; padding: 1.85rem 1.6rem;
-  box-shadow: 0 0 0 1px rgba(0,200,150,.08), 0 12px 32px rgba(0,200,150,.08);
-}
-.sidebar-badge {
-  display: inline-flex; align-items: center; gap: 7px;
-  background: var(--accent-dim); border: 1px solid var(--accent-glow);
-  color: var(--accent); border-radius: 100px;
-  font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-  padding: 5px 12px; margin-bottom: 1.1rem;
-}
-.sidebar-badge::before {
-  content: ''; display: block; width: 6px; height: 6px; border-radius: 50%;
-  background: var(--accent); box-shadow: 0 0 6px var(--accent);
-}
-.sidebar-card-premium .sidebar-card-title {
-  font-family: var(--font-display); font-size: 1.22rem; font-weight: 800;
-  letter-spacing: -.02em; line-height: 1.2; margin-bottom: .65rem; color: var(--text);
-}
-.sidebar-card-premium .sidebar-card-text {
-  font-size: .88rem; color: var(--muted); line-height: 1.6; margin-bottom: 1.1rem;
-}
-.sidebar-card-premium .cta-benefits { margin: 0 0 1.4rem; }
-.sidebar-cta {
-  display: block; width: 100%; text-align: center;
-  background: var(--accent); color: #0a0a0a;
-  border-radius: 10px; padding: 14px 20px;
-  font-family: var(--font-display); font-size: .95rem; font-weight: 700;
-  text-decoration: none; transition: opacity .15s;
-}
-.sidebar-cta:hover { opacity: .88; text-decoration: none; }
-.sidebar-cta-secondary {
-  display: block; width: 100%; text-align: center;
-  color: var(--accent); font-size: .85rem; font-weight: 600;
-  margin-top: .85rem; text-decoration: none;
-}
-.sidebar-cta-secondary:hover { text-decoration: underline; }
-.sidebar-note { font-size: 12px; color: var(--muted); text-align: center; margin-top: .75rem; line-height: 1.5; }
-
 /* ── PROSE SECTIONS ──────────────── */
 .prose h2 {
   font-family: var(--font-display); font-size: 1.55rem; font-weight: 800;
@@ -503,6 +462,12 @@ details[open] .faq-q::after { transform: rotate(45deg); }
 .cta-benefits { list-style: none; display: flex; flex-direction: column; gap: .45rem; margin: 1rem 0 1.5rem; text-align: left; }
 .cta-benefits li { font-size: .88rem; color: var(--muted); display: flex; align-items: center; gap: 8px; }
 .cta-benefits li::before { content: '✓'; color: var(--accent); font-weight: 700; font-size: 11px; flex-shrink: 0; }
+.hero-cta-badge {
+  display: inline-flex; align-items: center;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted); border: 1px solid var(--border2);
+  border-radius: 100px; padding: 3px 10px; margin-bottom: 0.6rem;
+}
 .cta-final { text-align: center; padding: 5rem 0 0; border-top: 1px solid var(--border); }
 .cta-final .cta-mid { text-align: left; }
 .cta-final .cta-mid p:not(.cta-micro) { max-width: none; margin: 0 0 .85rem; font-size: .88rem; }
@@ -569,7 +534,20 @@ details[open] .faq-q::after { transform: rotate(45deg); }
 <body>
 
 <!-- ── NAV ──────────────────────────── -->
-<nav id="site-nav"></nav>
+<nav id="site-nav">
+  <div class="snav-inner">
+    <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
+    <ul class="snav-links">
+      <li><a href="/como-funciona">Cómo funciona</a></li>
+      <li><a href="/recursos">Recursos</a></li>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/contacto">Contacto</a></li>
+    </ul>
+    <div class="snav-right">
+      <div class="snav-skeleton" aria-hidden="true"></div>
+    </div>
+  </div>
+</nav>
 <script src="/static/nav.js" defer></script>
 
 <!-- ── HERO ──────────────────────────── -->
@@ -598,6 +576,23 @@ details[open] .faq-q::after { transform: rotate(45deg); }
       <span class="hero-trust-item">Por <strong>Rafael Ramos Martínez</strong>, Economista Colegiado nº 4.579</span>
       <span class="hero-trust-item">Actualizado: junio 2026</span>
       <span class="hero-trust-item">Base legal: DGT V0999-18 · V0525-25 · Art. 37.2 LIRPF</span>
+    </div>
+
+    <!-- CTA PREMIUM (mismo patrón que /herramientas, debajo del hero) -->
+    <div class="cta-mid">
+      <span class="hero-cta-badge">Informe fiscal FIFO</span>
+      <h3 class="cta-mid-title">Genera tu informe FIFO de criptomonedas</h3>
+      <p>Importa el historial de tus exchanges y descarga un informe fiscal listo para revisar.</p>
+      <ul class="cta-benefits">
+        <li>Método FIFO automático</li>
+        <li>Compatible con varios exchanges</li>
+        <li>Revisión profesional si tu caso es complejo</li>
+      </ul>
+      <div class="cta-buttons">
+        <a href="/signup/" class="btn-cta">Generar informe fiscal</a>
+        <a href="/asesoramiento-fiscal-criptomonedas" class="btn-outline">Hablar con un asesor</a>
+      </div>
+      <p class="cta-micro">Supervisado por Rafael Ramos Martínez, Economista Colegiado nº&nbsp;4.579.</p>
     </div>
 
   </div>
@@ -1083,21 +1078,6 @@ details[open] .faq-q::after { transform: rotate(45deg); }
 
       <!-- ══════════════════════════ SIDEBAR ══════════════════════════ -->
       <aside class="sidebar" aria-label="Recursos adicionales">
-
-        <!-- CTA -->
-        <div class="sidebar-card sidebar-card-premium">
-          <span class="sidebar-badge">Informe fiscal FIFO</span>
-          <div class="sidebar-card-title">Genera tu informe FIFO de criptomonedas</div>
-          <p class="sidebar-card-text">Importa el historial de tus exchanges y descarga un informe fiscal listo para revisar.</p>
-          <ul class="cta-benefits">
-            <li>Método FIFO automático</li>
-            <li>Compatible con varios exchanges</li>
-            <li>Revisión profesional si tu caso es complejo</li>
-          </ul>
-          <a href="/signup/" class="sidebar-cta">Generar informe fiscal</a>
-          <a href="/asesoramiento-fiscal-criptomonedas" class="sidebar-cta-secondary">Hablar con un asesor</a>
-          <p class="sidebar-note">Supervisado por Rafael Ramos Martínez, Economista Colegiado nº&nbsp;4.579.</p>
-        </div>
 
         <!-- IN-PAGE NAV -->
         <div class="sidebar-card">
