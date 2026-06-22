@@ -193,1192 +193,962 @@
 </script>
 
 <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 :root {
-  --bg: #0d1117;
-  --bg2: #161b22;
-  --bg3: #21262d;
-  --border: #30363d;
-  --text: #e6edf3;
-  --text2: #8b949e;
-  --accent: #58a6ff;
-  --accent2: #3fb950;
-  --warn: #d29922;
-  --danger: #f85149;
-  --purple: #bc8cff;
-  --teal: #39d353;
-  --radius: 10px;
-}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
-body{
-  background:var(--bg);
-  color:var(--text);
-  font-family:'DM Sans',system-ui,sans-serif;
-  font-size:1rem;
-  line-height:1.7;
-  min-height:100vh;
-}
-a{color:var(--accent);text-decoration:none}
-a:hover{text-decoration:underline}
-img{max-width:100%;height:auto}
-
-/* LAYOUT */
-.page-wrap{
-  max-width:1200px;
-  margin:0 auto;
-  padding:6rem 1.5rem 4rem;
-}
-.content-grid{
-  display:grid;
-  grid-template-columns:1fr 320px;
-  gap:2.5rem;
-  align-items:start;
-  margin-top:2rem;
-}
-.main-col{}
-.sidebar{
-  position:sticky;
-  top:80px;
-  display:flex;
-  flex-direction:column;
-  gap:1.25rem;
+  --bg:          #0b1220;
+  --surface:     #141f32;
+  --surface2:    #1a2540;
+  --border:      rgba(255,255,255,0.07);
+  --border2:     rgba(255,255,255,0.13);
+  --text:        #eef2ff;
+  --muted:       #7a8aa8;
+  --accent:      #00C896;
+  --accent-dim:  rgba(0,200,150,0.12);
+  --accent-glow: rgba(0,200,150,0.25);
+  --red:         #e55;
+  --red-dim:     rgba(229,85,85,0.1);
+  --warn:        #f5a623;
+  --warn-dim:    rgba(245,166,35,0.07);
+  --max-w:       1280px;
+  --pad-x:       3rem;
+  --font-display:'Syne', sans-serif;
+  --font-body:   'DM Sans', sans-serif;
 }
 
-/* BREADCRUMB */
-.breadcrumb{
-  font-size:0.82rem;
-  color:var(--text2);
-  padding:1.25rem 0 0;
-  display:flex;
-  flex-wrap:wrap;
-  gap:0.4rem;
-  align-items:center;
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.7;
+  min-height: 100vh; -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
-.breadcrumb a{color:var(--text2)}
-.breadcrumb a:hover{color:var(--accent)}
-.breadcrumb span{color:var(--border)}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+img { max-width: 100%; height: auto; }
 
-/* HERO */
-.hero{
-  padding:2.5rem 0 0;
-}
-.eyebrow{
-  display:inline-block;
-  background:rgba(188,140,255,.12);
-  color:var(--purple);
-  font-size:0.78rem;
-  font-weight:700;
-  letter-spacing:.06em;
-  text-transform:uppercase;
-  padding:0.3rem 0.9rem;
-  border-radius:20px;
-  margin-bottom:1rem;
-}
-h1{
-  font-family:'Syne',sans-serif;
-  font-size:clamp(2rem,4.5vw,3.4rem);
-  font-weight:800;
-  line-height:1.08;
-  letter-spacing:-0.03em;
-  color:#fff;
-  margin-bottom:1.25rem;
-}
-.hero-snippet{
-  font-size:1.05rem;
-  line-height:1.75;
-  color:var(--text);
-  background:var(--bg2);
-  border-left:3px solid var(--purple);
-  border-radius:0 var(--radius) var(--radius) 0;
-  padding:1.1rem 1.4rem;
-  margin-bottom:1.5rem;
-}
-.meta-bar{
-  display:flex;
-  flex-wrap:wrap;
-  gap:1rem;
-  font-size:0.82rem;
-  color:var(--text2);
-  padding-bottom:1.5rem;
-  border-bottom:1px solid var(--border);
-  margin-bottom:2rem;
-}
-.meta-bar strong{color:var(--text)}
+.wrap { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x); }
 
-/* HEADINGS */
-h2{
-  font-family:'Syne',sans-serif;
-  font-size:clamp(1.2rem,2.5vw,1.55rem);
-  font-weight:700;
-  color:#fff;
-  margin:2.5rem 0 1rem;
-  padding-top:0.5rem;
-  border-top:1px solid var(--border);
-  scroll-margin-top:80px;
+/* ── HERO ─────────────────────────── */
+.hero { padding: 7rem 0 2.5rem; animation: fadeUp 0.45s ease both; }
+.breadcrumb {
+  font-size: 13px; color: var(--muted); margin-bottom: 2rem;
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
 }
-h3{
-  font-size:1.05rem;
-  font-weight:700;
-  color:var(--text);
-  margin:1.5rem 0 0.6rem;
-  scroll-margin-top:80px;
+.breadcrumb a { color: var(--muted); }
+.breadcrumb a:hover { color: var(--text); text-decoration: none; }
+.breadcrumb-sep { color: var(--border2); }
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--accent-dim); border: 1px solid var(--accent-glow);
+  color: var(--accent); border-radius: 100px;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+  padding: 5px 14px; margin-bottom: 1.5rem; text-transform: uppercase;
 }
-p{margin-bottom:1rem}
-p:last-child{margin-bottom:0}
-ul,ol{margin:.5rem 0 1rem 1.4rem}
-li{margin-bottom:.4rem}
+.hero-badge::before {
+  content: ''; display: block; width: 6px; height: 6px;
+  border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent);
+}
+.hero h1 {
+  font-family: var(--font-display); font-size: clamp(2rem, 4.5vw, 3.4rem);
+  font-weight: 800; line-height: 1.08; letter-spacing: -0.03em;
+  color: var(--text); margin-bottom: 1.25rem;
+}
+.hero-trust {
+  display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;
+  margin-top: 1.25rem;
+}
+.hero-trust-item {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--muted); font-weight: 500;
+}
+.hero-trust-item strong { color: var(--text); font-weight: 600; }
 
-/* CALLOUTS */
-.callout{
-  border-radius:var(--radius);
-  padding:1.1rem 1.4rem;
-  margin:1.4rem 0;
-  border-left:3px solid;
-}
-.callout.info   {background:rgba(88,166,255,.07);border-color:var(--accent)}
-.callout.warn   {background:rgba(210,153,34,.08);border-color:var(--warn)}
-.callout.success{background:rgba(63,185,80,.08);border-color:var(--accent2)}
-.callout.danger {background:rgba(248,81,73,.08);border-color:var(--danger)}
-.callout.purple {background:rgba(188,140,255,.08);border-color:var(--purple)}
-.callout-title{
-  font-weight:700;
-  font-size:0.88rem;
-  text-transform:uppercase;
-  letter-spacing:.05em;
-  margin-bottom:.4rem;
-}
-.callout.info    .callout-title{color:var(--accent)}
-.callout.warn    .callout-title{color:var(--warn)}
-.callout.success .callout-title{color:var(--accent2)}
-.callout.danger  .callout-title{color:var(--danger)}
-.callout.purple  .callout-title{color:var(--purple)}
+/* ── CONTENT LAYOUT ──────────────── */
+.section { padding: 5rem 0; }
+.content-grid { display: grid; grid-template-columns: 1fr 320px; gap: 4rem; align-items: start; }
+.content-main { min-width: 0; }
 
-/* LEVEL BADGES */
-.level-badge{
-  display:inline-block;
-  font-size:0.72rem;
-  font-weight:700;
-  letter-spacing:.05em;
-  text-transform:uppercase;
-  padding:.15rem .55rem;
-  border-radius:4px;
-  vertical-align:middle;
-  margin-left:.4rem;
+/* ── SIDEBAR ─────────────────────── */
+.sidebar { position: sticky; top: 5rem; display: flex; flex-direction: column; gap: 1rem; }
+.sidebar-card {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 14px; padding: 1.5rem;
 }
-.level-1{background:rgba(63,185,80,.18);color:var(--accent2)}
-.level-2{background:rgba(210,153,34,.18);color:var(--warn)}
-.level-3{background:rgba(188,140,255,.18);color:var(--purple)}
+.sidebar-card-title {
+  font-family: var(--font-display); font-size: 0.93rem; font-weight: 700;
+  margin-bottom: 1rem; color: var(--text);
+}
+.sidebar-links { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+.sidebar-links a {
+  font-size: 0.87rem; color: var(--muted);
+  display: flex; align-items: center; gap: 6px;
+}
+.sidebar-links a:hover { color: var(--text); text-decoration: none; }
+.sidebar-links a::before { content: '→'; color: var(--accent); font-size: 0.8rem; }
+.legal-sources { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+.legal-sources a { color: var(--muted); font-size: 0.78rem; }
+.legal-sources a:hover { color: var(--accent); text-decoration: none; }
 
-/* SOURCE BOX */
-.source-box{
-  background:var(--bg3);
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  padding:.85rem 1.1rem;
-  font-size:0.82rem;
-  color:var(--text2);
-  margin:1rem 0;
-}
-.source-box strong{color:var(--text)}
-.source-box a{color:var(--accent);font-size:.8rem}
-
-/* COMPARISON TABLE */
-.comparison-table{
-  width:100%;
-  border-collapse:collapse;
-  margin:1.2rem 0;
-  font-size:.9rem;
-}
-.comparison-table th{
-  background:var(--bg3);
-  color:var(--text2);
-  font-size:.78rem;
-  font-weight:700;
-  text-transform:uppercase;
-  letter-spacing:.05em;
-  padding:.65rem .9rem;
-  text-align:left;
-  border-bottom:2px solid var(--border);
-}
-.comparison-table td{
-  padding:.65rem .9rem;
-  border-bottom:1px solid var(--border);
-  vertical-align:top;
-}
-.comparison-table tr:last-child td{border-bottom:0}
-.comparison-table .check{color:var(--accent2);font-weight:700}
-.comparison-table .cross{color:var(--danger);font-weight:700}
-
-/* EXAMPLE BOX */
-.example-box{
-  background:var(--bg2);
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  padding:1.4rem;
-  margin:1.4rem 0;
-}
-.example-box h4{
-  font-family:'Syne',sans-serif;
-  font-size:1rem;
-  font-weight:700;
-  color:var(--purple);
-  margin-bottom:.8rem;
-}
-.example-box .step{
-  display:flex;
-  gap:.8rem;
-  margin-bottom:.6rem;
-}
-.example-box .step-num{
-  flex-shrink:0;
-  width:1.6rem;
-  height:1.6rem;
-  background:var(--bg3);
-  border:1px solid var(--border);
-  border-radius:50%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:.75rem;
-  font-weight:700;
-  color:var(--purple);
-}
-.example-box .step-body{font-size:.9rem;color:var(--text)}
-.example-box .result{
-  background:var(--bg3);
-  border-radius:8px;
-  padding:.7rem 1rem;
-  font-size:.88rem;
-  margin-top:.8rem;
-}
-.example-box .result strong{color:var(--accent2)}
-.fifo-table{
-  width:100%;
-  font-size:.85rem;
-  border-collapse:collapse;
-  margin:.8rem 0;
-}
-.fifo-table th{
-  background:var(--bg3);
-  color:var(--text2);
-  font-size:.75rem;
-  font-weight:700;
-  text-transform:uppercase;
-  padding:.5rem .8rem;
-  text-align:left;
-  border-bottom:1px solid var(--border);
-}
-.fifo-table td{
-  padding:.5rem .8rem;
-  border-bottom:1px solid rgba(48,54,61,.5);
-  vertical-align:top;
-}
-.fifo-table .gain{color:var(--danger)}
-.fifo-table .loss{color:var(--accent2)}
-
-/* POSITION CARDS */
-.position-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:1rem;
-  margin:1.2rem 0;
-}
-.position-card{
-  background:var(--bg2);
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  padding:1.2rem;
-}
-.position-card.conservative{border-top:3px solid var(--accent2)}
-.position-card.technical{border-top:3px solid var(--purple)}
-.position-card h4{
-  font-weight:700;
-  font-size:.95rem;
-  margin-bottom:.5rem;
-}
-.position-card.conservative h4{color:var(--accent2)}
-.position-card.technical h4{color:var(--purple)}
-.position-card ul{
-  margin:.4rem 0 0 1rem;
-  font-size:.85rem;
-}
-
-/* THREE-LEVEL LEGEND */
-.level-legend{
-  display:flex;
-  flex-wrap:wrap;
-  gap:.6rem;
-  margin:1.2rem 0;
-  padding:1rem 1.2rem;
-  background:var(--bg2);
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  font-size:.82rem;
-}
-.level-legend-item{display:flex;align-items:center;gap:.4rem;color:var(--text2)}
-
-/* GEO BLOCK */
-.geo-block{
-  background:var(--bg2);
-  border:1px solid var(--border);
-  border-left:3px solid var(--teal);
-  border-radius:var(--radius);
-  padding:1rem 1.3rem;
-  margin:1.5rem 0;
-  font-size:.88rem;
-}
-.geo-label{
-  font-size:.72rem;
-  font-weight:700;
-  text-transform:uppercase;
-  letter-spacing:.06em;
-  color:var(--teal);
-  margin-bottom:.4rem;
-}
-
-/* FAQ */
-.faq-list{margin:1rem 0}
-.faq-item{
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  margin-bottom:.75rem;
-  overflow:hidden;
-}
-.faq-btn{
-  width:100%;
-  background:var(--bg2);
-  border:none;
-  padding:1rem 1.2rem;
-  text-align:left;
-  color:var(--text);
-  font-size:.95rem;
-  font-weight:600;
-  cursor:pointer;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:1rem;
-  transition:background .2s;
-  font-family:'DM Sans',sans-serif;
-}
-.faq-btn:hover{background:var(--bg3)}
-.faq-btn.open{background:var(--bg3)}
-.faq-icon{
-  flex-shrink:0;
-  font-size:1.2rem;
-  color:var(--text2);
-  transition:transform .25s;
-  font-style:normal;
-}
-.faq-btn.open .faq-icon{transform:rotate(45deg)}
-.faq-body{
-  display:none;
-  padding:1rem 1.2rem;
-  font-size:.92rem;
-  color:var(--text2);
-  border-top:1px solid var(--border);
-  background:var(--bg);
-}
-.faq-body.open{display:block}
-
-/* SILO ROADMAP */
-.silo-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
-  gap:1rem;
-  margin:1.2rem 0;
-}
-.silo-card{
-  background:var(--bg2);
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  padding:1rem 1.1rem;
-  font-size:.88rem;
-}
-.silo-card .silo-tag{
-  font-size:.68rem;
-  font-weight:700;
-  text-transform:uppercase;
-  letter-spacing:.05em;
-  margin-bottom:.4rem;
-}
-.silo-card.hub .silo-tag{color:var(--warn)}
-.silo-card.subhub .silo-tag{color:var(--accent)}
-.silo-card.current .silo-tag{color:var(--purple)}
-.silo-card.published .silo-tag{color:var(--accent2)}
-.silo-card.planned .silo-tag{color:var(--text2)}
-.silo-card a{color:var(--text);font-weight:600}
-.silo-card a:hover{color:var(--accent)}
-.silo-card p{color:var(--text2);margin-top:.25rem;font-size:.82rem}
-
-/* SIDEBAR BOXES */
-.sidebar-box{
-  background:var(--bg2);
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  padding:1.2rem;
-}
-.sidebar-box h3{
-  font-size:.88rem;
-  font-weight:700;
-  text-transform:uppercase;
-  letter-spacing:.05em;
-  color:var(--text2);
-  margin:0 0 .8rem;
-  border-top:none;
-  padding-top:0;
-}
-.sidebar-nav a{
-  display:block;
-  color:var(--text2);
-  font-size:.88rem;
-  padding:.3rem 0;
-  border-bottom:1px solid rgba(48,54,61,.5);
-}
-.sidebar-nav a:last-child{border-bottom:none}
-.sidebar-nav a:hover{color:var(--accent)}
 /* ── SIDEBAR CTA PREMIUM (mismo componente que /exchanges/binance) ── */
-.sidebar-card{
-  background:#141f32;border:1px solid rgba(255,255,255,.13);
-  border-radius:14px;padding:1.5rem;
+.sidebar-card-premium {
+  background: var(--surface); border: 1.5px solid rgba(0,200,150,.45);
+  border-radius: 16px; padding: 1.85rem 1.6rem;
+  box-shadow: 0 0 0 1px rgba(0,200,150,.08), 0 12px 32px rgba(0,200,150,.08);
 }
-.sidebar-card.sidebar-card-premium{
-  background:#141f32;
-  border:1.5px solid rgba(0,200,150,.45);
-  border-radius:16px;
-  padding:1.85rem 1.6rem;
-  box-shadow:0 0 0 1px rgba(0,200,150,.08), 0 12px 32px rgba(0,200,150,.08);
+.sidebar-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--accent-dim); border: 1px solid var(--accent-glow);
+  color: var(--accent); border-radius: 100px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  padding: 5px 12px; margin-bottom: 1.1rem;
 }
-.sidebar-badge{
-  display:inline-flex;align-items:center;gap:7px;
-  background:rgba(0,200,150,.12);border:1px solid rgba(0,200,150,.25);
-  color:#00C896;border-radius:100px;
-  font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
-  padding:5px 12px;margin-bottom:1.1rem;
+.sidebar-badge::before {
+  content: ''; display: block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 6px var(--accent);
 }
-.sidebar-badge::before{
-  content:'';display:block;width:6px;height:6px;border-radius:50%;
-  background:#00C896;box-shadow:0 0 6px #00C896;
+.sidebar-card-premium .sidebar-card-title {
+  font-family: var(--font-display); font-size: 1.22rem; font-weight: 800;
+  letter-spacing: -.02em; line-height: 1.2; margin-bottom: .65rem; color: var(--text);
 }
-.sidebar-card-premium .sidebar-card-title{
-  font-family:'Syne',sans-serif;font-size:1.22rem;font-weight:800;
-  letter-spacing:-.02em;line-height:1.2;margin-bottom:.65rem;color:#eef2ff;
+.sidebar-card-premium .sidebar-card-text {
+  font-size: .88rem; color: var(--muted); line-height: 1.6; margin-bottom: 1.1rem;
 }
-.sidebar-card-premium .sidebar-card-text{
-  font-size:.88rem;color:#7a8aa8;line-height:1.6;margin-bottom:1.1rem;
+.sidebar-card-premium .cta-benefits { margin: 0 0 1.4rem; }
+.sidebar-cta {
+  display: block; width: 100%; text-align: center;
+  background: var(--accent); color: #0a0a0a;
+  border-radius: 10px; padding: 14px 20px;
+  font-family: var(--font-display); font-size: .95rem; font-weight: 700;
+  text-decoration: none; transition: opacity .15s;
 }
-.sidebar-card-premium .cta-benefits{margin:0 0 1.4rem}
-.sidebar-cta{
-  display:block;width:100%;text-align:center;
-  background:#00C896;color:#0a0a0a;
-  border-radius:10px;padding:14px 20px;
-  font-family:'Syne',sans-serif;font-size:.95rem;font-weight:700;
-  text-decoration:none;transition:opacity .15s;
+.sidebar-cta:hover { opacity: .88; text-decoration: none; }
+.sidebar-cta-secondary {
+  display: block; width: 100%; text-align: center;
+  color: var(--accent); font-size: .85rem; font-weight: 600;
+  margin-top: .85rem; text-decoration: none;
 }
-.sidebar-cta:hover{opacity:.88;text-decoration:none}
-.sidebar-cta-secondary{
-  display:block;width:100%;text-align:center;
-  color:#00C896;font-size:.85rem;font-weight:600;
-  margin-top:.85rem;text-decoration:none;
+.sidebar-cta-secondary:hover { text-decoration: underline; }
+.sidebar-note { font-size: 12px; color: var(--muted); text-align: center; margin-top: .75rem; line-height: 1.5; }
+
+/* ── PROSE SECTIONS ──────────────── */
+.prose h2 {
+  font-family: var(--font-display); font-size: 1.55rem; font-weight: 800;
+  letter-spacing: -0.025em; line-height: 1.2;
+  margin: 3rem 0 1rem; color: var(--text); scroll-margin-top: 80px;
 }
-.sidebar-cta-secondary:hover{text-decoration:underline}
-.sidebar-note{
-  font-size:12px;color:#7a8aa8;text-align:center;
-  margin-top:.75rem;line-height:1.5;
+.prose h2:first-child { margin-top: 0; }
+.prose h3 {
+  font-family: var(--font-display); font-size: 1.1rem; font-weight: 700;
+  letter-spacing: -0.015em; margin: 2rem 0 0.65rem; color: var(--text); scroll-margin-top: 80px;
 }
+.prose p { font-size: 0.97rem; color: var(--muted); line-height: 1.78; margin-bottom: 1rem; }
+.prose p:last-child { margin-bottom: 0; }
+.prose strong { color: var(--text); font-weight: 600; }
+.prose a { color: var(--accent); }
+.prose ul, .prose ol { margin: .5rem 0 1rem 1.4rem; }
+.prose li { margin-bottom: .4rem; color: var(--muted); }
+.prose li strong { color: var(--text); }
+
+/* ── LEVEL LEGEND / BADGES ───────── */
+.level-legend {
+  display: flex; flex-wrap: wrap; gap: .6rem; margin: 1.2rem 0 2rem;
+  padding: 1rem 1.2rem; background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 12px; font-size: .82rem;
+}
+.level-legend-item { display: flex; align-items: center; gap: .4rem; color: var(--muted); }
+.level-badge {
+  display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .05em;
+  text-transform: uppercase; padding: .15rem .55rem; border-radius: 4px;
+  vertical-align: middle; margin-left: .4rem;
+}
+.level-1 { background: var(--accent-dim); color: var(--accent); }
+.level-2 { background: var(--warn-dim); color: var(--warn); }
+.level-3 { background: rgba(255,255,255,.06); color: var(--muted); }
+
+/* ── SOURCE BOX ──────────────────── */
+.source-box {
+  background: var(--surface2); border: 1px solid var(--border2); border-radius: 10px;
+  padding: .85rem 1.1rem; font-size: .82rem; color: var(--muted); margin: 1rem 0;
+}
+.source-box strong { color: var(--text); }
+.source-box a { color: var(--accent); font-size: .8rem; }
+
+/* ── CALLOUTS ────────────────────── */
+.callout {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-left: 3px solid var(--accent); border-radius: 0 12px 12px 0;
+  padding: 1.1rem 1.4rem; margin: 1.4rem 0;
+}
+.callout p { color: var(--muted); margin: 0; }
+.callout p + p { margin-top: .5rem; }
+.callout-title {
+  font-weight: 700; font-size: .88rem; text-transform: uppercase;
+  letter-spacing: .05em; margin-bottom: .4rem; color: var(--accent);
+}
+.callout.warn { background: var(--warn-dim); border-left-color: var(--warn); }
+.callout.warn .callout-title { color: var(--warn); }
+.callout.danger { background: var(--red-dim); border-left-color: var(--red); }
+.callout.danger .callout-title { color: var(--red); }
+
+/* ── GEO BLOCKS (snippets IA) ────── */
+.geo-block {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-left: 3px solid var(--accent); border-radius: 0 12px 12px 0;
+  padding: 1rem 1.3rem; margin: 1.5rem 0; font-size: .88rem; color: var(--muted);
+}
+.geo-block p { color: var(--muted); margin: 0; }
+.geo-label {
+  font-size: .72rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--accent); margin-bottom: .4rem;
+}
+
+/* ── TABLES ──────────────────────── */
+.table-wrap { overflow-x: auto; margin: 1.2rem 0; border: 1px solid var(--border); border-radius: 14px; }
+.comparison-table { width: 100%; border-collapse: collapse; font-size: .87rem; }
+.comparison-table th {
+  background: var(--surface2); color: var(--muted); font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .06em; padding: .7rem 1rem;
+  text-align: left; border-bottom: 1px solid var(--border2);
+}
+.comparison-table td {
+  padding: .85rem 1rem; border-bottom: 1px solid var(--border);
+  color: var(--text); vertical-align: top; line-height: 1.55;
+}
+.comparison-table tr:last-child td { border-bottom: none; }
+.comparison-table .check { color: var(--accent); font-weight: 700; }
+.comparison-table .cross { color: var(--red); font-weight: 700; }
+
+/* ── EXAMPLE BOX ─────────────────── */
+.example-box { background: var(--surface); border: 1px solid var(--border2); border-radius: 14px; padding: 1.4rem; margin: 1.4rem 0; }
+.example-box h4 { font-family: var(--font-display); font-size: 1rem; font-weight: 700; color: var(--accent); margin-bottom: .8rem; }
+.example-box .step { display: flex; gap: .8rem; margin-bottom: .6rem; }
+.example-box .step-num {
+  flex-shrink: 0; width: 1.6rem; height: 1.6rem; background: var(--accent-dim);
+  border: 1px solid var(--accent-glow); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .75rem; font-weight: 700; color: var(--accent);
+}
+.example-box .step-body { font-size: .9rem; color: var(--text); }
+.example-box .result { background: var(--surface2); border-radius: 8px; padding: .7rem 1rem; font-size: .88rem; margin-top: .8rem; color: var(--muted); }
+.example-box .result strong { color: var(--accent); }
+.fifo-table { width: 100%; font-size: .85rem; border-collapse: collapse; margin: .8rem 0; }
+.fifo-table th {
+  background: var(--surface2); color: var(--muted); font-size: .75rem; font-weight: 700;
+  text-transform: uppercase; padding: .5rem .8rem; text-align: left; border-bottom: 1px solid var(--border2);
+}
+.fifo-table td { padding: .5rem .8rem; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--text); }
+.fifo-table .gain { color: var(--red); }
+.fifo-table .loss { color: var(--accent); }
+
+/* ── POSITION CARDS ──────────────── */
+.position-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.2rem 0; }
+.position-card { background: var(--surface); border: 1px solid var(--border2); border-radius: 14px; padding: 1.2rem; }
+.position-card.conservative { border-top: 3px solid var(--accent); }
+.position-card.technical { border-top: 3px solid var(--warn); }
+.position-card h4 { font-weight: 700; font-size: .95rem; margin-bottom: .5rem; color: var(--text); }
+.position-card.conservative h4 { color: var(--accent); }
+.position-card.technical h4 { color: var(--warn); }
+.position-card ul { margin: .4rem 0 0 1rem; font-size: .85rem; }
+.position-card li { color: var(--muted); margin-bottom: .3rem; }
+
+/* ── FAQ (nativo, sin JS) ────────── */
+.faq-list { margin-top: 1rem; display: flex; flex-direction: column; gap: 0; }
+.faq-item { border-bottom: 1px solid var(--border); }
+.faq-item:first-child { border-top: 1px solid var(--border); }
+.faq-q {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 1.2rem 0; cursor: pointer; list-style: none; gap: 1rem;
+  font-weight: 600; font-size: .97rem; color: var(--text); user-select: none;
+}
+.faq-q::after {
+  content: '+'; font-family: var(--font-display); font-size: 1.3rem;
+  color: var(--accent); flex-shrink: 0; transition: transform .2s;
+}
+details[open] .faq-q::after { transform: rotate(45deg); }
+.faq-a { padding: 0 0 1.2rem; font-size: .93rem; color: var(--muted); line-height: 1.7; }
+.faq-a p { margin-bottom: .6rem; color: var(--muted); }
+.faq-a p:last-child { margin-bottom: 0; }
+.faq-a a { color: var(--accent); }
+
+/* ── SILO ROADMAP ────────────────── */
+.silo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap: 1rem; margin: 1.2rem 0; }
+.silo-card { background: var(--surface); border: 1px solid var(--border2); border-radius: 12px; padding: 1rem 1.1rem; font-size: .88rem; }
+.silo-card .silo-tag { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .4rem; color: var(--muted); }
+.silo-card.hub .silo-tag { color: var(--warn); }
+.silo-card.subhub .silo-tag { color: var(--accent); }
+.silo-card.published .silo-tag { color: var(--accent); }
+.silo-card.planned .silo-tag { color: var(--muted); }
+.silo-card.current { background: var(--accent-dim); border-color: var(--accent-glow); }
+.silo-card.current .silo-tag { color: var(--accent); }
+.silo-card a { color: var(--text); font-weight: 600; }
+.silo-card a:hover { color: var(--accent); }
+.silo-card p { color: var(--muted); margin-top: .25rem; font-size: .82rem; }
+
+/* ── LEGAL NOTICE ────────────────── */
+.legal-notice {
+  background: var(--red-dim); border: 1px solid rgba(229,85,85,.2); border-radius: 10px;
+  padding: 1rem 1.2rem; font-size: .83rem; color: var(--muted); margin-top: 2.5rem;
+}
+.legal-notice strong { color: var(--text); }
 
 /* ── CTA MID/FINAL (mismo componente que /exchanges/binance) ── */
-.cta-mid{
-  background:#141f32;border:1px solid rgba(255,255,255,.13);
-  border-radius:16px;padding:2rem 2.25rem;
-  margin:2.5rem 0;text-align:left;
+.cta-mid {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 16px; padding: 2rem 2.25rem; margin: 2.5rem 0; text-align: left;
 }
-.cta-mid-title{
-  font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;
-  letter-spacing:-.02em;margin-bottom:.65rem;color:#eef2ff;
+.cta-mid-title { font-family: var(--font-display); font-size: 1.3rem; font-weight: 800; letter-spacing: -.02em; margin-bottom: .65rem; color: var(--text); }
+.cta-mid p { font-size: .93rem; color: var(--muted); margin-bottom: 1.5rem; line-height: 1.65; }
+.cta-buttons { display: flex; gap: 1rem; justify-content: flex-start; flex-wrap: wrap; }
+.cta-benefits { list-style: none; display: flex; flex-direction: column; gap: .45rem; margin: 1rem 0 1.5rem; text-align: left; }
+.cta-benefits li { font-size: .88rem; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.cta-benefits li::before { content: '✓'; color: var(--accent); font-weight: 700; font-size: 11px; flex-shrink: 0; }
+.cta-final { text-align: center; padding: 5rem 0 0; border-top: 1px solid var(--border); }
+.cta-final .cta-mid { text-align: left; }
+.cta-final .cta-mid p:not(.cta-micro) { max-width: none; margin: 0 0 .85rem; font-size: .88rem; }
+.cta-final .cta-mid .cta-micro { margin-top: 2.5rem; max-width: none; margin-left: 0; margin-right: 0; }
+.cta-micro { font-size: 13px; color: var(--muted); margin-top: 2.5rem; opacity: .75; }
+.cta-economist-link { color: var(--accent); text-decoration: none; }
+.cta-economist-link:hover { text-decoration: underline; }
+.btn-cta {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--accent); color: #0a0a0a;
+  border: none; border-radius: 10px; padding: 17px 48px;
+  font-family: var(--font-display); font-size: 1.05rem; font-weight: 700;
+  cursor: pointer; transition: opacity .15s, transform .1s;
+  text-decoration: none; letter-spacing: -.01em;
 }
-.cta-mid p{font-size:.93rem;color:#7a8aa8;margin-bottom:1.5rem;line-height:1.65}
-.cta-buttons{display:flex;gap:1rem;justify-content:flex-start;flex-wrap:wrap}
-.cta-benefits{list-style:none;display:flex;flex-direction:column;gap:.45rem;margin:1rem 0 1.5rem;text-align:left}
-.cta-benefits li{font-size:.88rem;color:#7a8aa8;display:flex;align-items:center;gap:8px}
-.cta-benefits li::before{content:'✓';color:#00C896;font-weight:700;font-size:11px;flex-shrink:0}
-.cta-final{text-align:center;padding:5rem 0 0;border-top:1px solid rgba(255,255,255,.07)}
-.cta-final .cta-mid{text-align:left}
-.cta-final .cta-mid p:not(.cta-micro){max-width:none;margin:0 0 .85rem;font-size:.88rem}
-.cta-final .cta-mid .cta-micro{margin-top:2.5rem;max-width:none;margin-left:0;margin-right:0}
-.cta-micro{font-size:13px;color:#7a8aa8;margin-top:2.5rem;opacity:.75}
-.cta-economist-link{color:#00C896;text-decoration:none}
-.cta-economist-link:hover{text-decoration:underline}
-.btn-cta{
-  display:inline-flex;align-items:center;gap:10px;
-  background:#00C896;color:#0a0a0a;
-  border:none;border-radius:10px;padding:17px 48px;
-  font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700;
-  cursor:pointer;transition:opacity .15s,transform .1s;
-  text-decoration:none;letter-spacing:-.01em;
+.btn-cta:hover { opacity: .88; text-decoration: none; }
+.btn-cta:active { transform: scale(.98); }
+.btn-outline {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: none; color: var(--accent);
+  border: 1.5px solid var(--accent); border-radius: 10px; padding: 13px 28px;
+  font-family: var(--font-display); font-size: .97rem; font-weight: 700;
+  cursor: pointer; transition: background .15s;
+  text-decoration: none; letter-spacing: -.01em;
 }
-.btn-cta:hover{opacity:.88;text-decoration:none}
-.btn-cta:active{transform:scale(.98)}
-.btn-outline{
-  display:inline-flex;align-items:center;gap:8px;
-  background:none;color:#00C896;
-  border:1.5px solid #00C896;border-radius:10px;padding:13px 28px;
-  font-family:'Syne',sans-serif;font-size:.97rem;font-weight:700;
-  cursor:pointer;transition:background .15s;
-  text-decoration:none;letter-spacing:-.01em;
-}
-.btn-outline:hover{background:rgba(0,200,150,.12);text-decoration:none}
+.btn-outline:hover { background: var(--accent-dim); text-decoration: none; }
 
 /* ── FOOTER LEGAL BAR (mismo componente que /herramientas y /exchanges/binance) ── */
-.legal-bar{
-  max-width:1280px;margin:0 auto;padding:.75rem 3rem;
-  font-size:12px;color:#7a8aa8;
-  border-top:1px solid rgba(255,255,255,.07);
-  display:flex;align-items:center;justify-content:space-between;
-  gap:2rem;flex-wrap:wrap;
+.legal-bar {
+  max-width: var(--max-w); margin: 0 auto; padding: .75rem var(--pad-x);
+  font-size: 12px; color: var(--muted); border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 2rem; flex-wrap: wrap;
 }
-.legal-bar-links{display:flex;gap:1.25rem;flex-shrink:0}
-.legal-bar-links a{font-size:12px;color:#7a8aa8;text-decoration:none;transition:color .15s}
-.legal-bar-links a:hover{color:#eef2ff}
+.legal-bar-links { display: flex; gap: 1.25rem; flex-shrink: 0; }
+.legal-bar-links a { font-size: 12px; color: var(--muted); text-decoration: none; transition: color .15s; }
+.legal-bar-links a:hover { color: var(--text); }
 
-.legal-sources{font-size:.8rem;color:var(--text2)}
-.legal-sources li{margin-bottom:.3rem}
-.legal-sources a{color:var(--text2);font-size:.78rem}
-.legal-sources a:hover{color:var(--accent)}
-
-/* NOTICE */
-.legal-notice{
-  background:rgba(248,81,73,.05);
-  border:1px solid rgba(248,81,73,.2);
-  border-radius:var(--radius);
-  padding:1rem 1.2rem;
-  font-size:.83rem;
-  color:var(--text2);
-  margin-top:2.5rem;
+/* ── RESPONSIVE ──────────────────── */
+@media (max-width: 1024px) {
+  .content-grid { grid-template-columns: 1fr; }
+  .sidebar { position: static; display: grid; grid-template-columns: 1fr 1fr; }
+  .position-grid { grid-template-columns: 1fr; }
 }
-.legal-notice strong{color:var(--text)}
-
-/* RESPONSIVE */
-@media(max-width:900px){
-  .content-grid{grid-template-columns:1fr}
-  .sidebar{position:static}
-  .position-grid{grid-template-columns:1fr}
+@media (max-width: 900px) {
+  :root { --pad-x: 1.5rem; }
+  .sidebar { grid-template-columns: 1fr; }
 }
-@media(max-width:600px){
-  .page-wrap{padding:5.5rem 1rem 3rem}
-  .comparison-table{font-size:.8rem}
-  .comparison-table th,.comparison-table td{padding:.5rem .6rem}
-  h1{font-size:1.55rem}
-  .fifo-table{font-size:.78rem}
+@media (max-width: 640px) {
+  :root { --pad-x: 1.25rem; }
+  .hero { padding: 5rem 0 3.5rem; }
+  .hero h1 { font-size: 1.85rem; }
+  .prose h2 { font-size: 1.35rem; }
+  .comparison-table { font-size: .8rem; }
+  .comparison-table th, .comparison-table td { padding: .5rem .6rem; }
+  .fifo-table { font-size: .78rem; }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 </style>
 </head>
 <body>
+
+<!-- ── NAV ──────────────────────────── -->
 <nav id="site-nav"></nav>
-
-<div class="page-wrap">
-
-  <!-- BREADCRUMB -->
-  <nav class="breadcrumb" aria-label="Breadcrumb">
-    <a href="/">Inicio</a>
-    <span>›</span>
-    <a href="/herramientas">Herramientas</a>
-    <span>›</span>
-    <span aria-current="page">Bienes homogéneos en criptomonedas</span>
-  </nav>
-
-  <div class="content-grid">
-
-    <!-- ══════════════════════════ MAIN COLUMN ══════════════════════════ -->
-    <main class="main-col">
-
-      <!-- HERO -->
-      <header class="hero">
-        <span class="eyebrow">Fundamento legal · Silo de pérdidas</span>
-        <h1>Bienes homogéneos en criptomonedas: qué son, por qué determinan el FIFO y cómo activan la norma antiaplicación</h1>
-
-        <!-- GEO BLOCK 1 — Hero snippet / Google AI Overview (≤60w) -->
-        <div class="geo-block" id="geo-hero" aria-label="Respuesta directa">
-          <div class="geo-label">Respuesta directa</div>
-          <p>Las criptomonedas del mismo tipo son <strong>bienes homogéneos</strong>: son fungibles e intercambiables, de modo que una unidad no se distingue de otra del mismo activo. La DGT lo ha confirmado desde 2018. Esa calificación activa dos consecuencias fiscales: el método FIFO obligatorio con pool global (art. 37.2 LIRPF) y la norma antiaplicación de pérdidas en Renta Web.</p>
-        </div>
-
-        <div class="meta-bar">
-          <span>Por <strong>Rafael Ramos Martínez</strong>, Economista Colegiado nº 4.579</span>
-          <span>Actualizado: junio 2026</span>
-          <span>Base legal: DGT V0999-18 · V0525-25 · Art. 37.2 LIRPF</span>
-        </div>
-      </header>
-
-      <!-- LEVEL LEGEND -->
-      <div class="level-legend" aria-label="Leyenda de niveles de certeza">
-        <div class="level-legend-item"><span class="level-badge level-1">Hecho confirmado</span> Verificado en BOE / AEAT / DGT (petete.tributos)</div>
-        <div class="level-legend-item"><span class="level-badge level-2">Interpretación</span> Doctrina técnica sólida; sin consulta vinculante nacional</div>
-        <div class="level-legend-item"><span class="level-badge level-3">Opinión técnica</span> Posición doctrinal; no exenta de riesgo fiscal</div>
-      </div>
-
-      <!-- ─── H2 1: QUÉ SON ─── -->
-      <h2 id="que-son">Qué son los bienes homogéneos</h2>
-
-      <p>Un bien es <strong>homogéneo</strong> cuando sus unidades son fungibles e intercambiables: no existe diferencia jurídica ni económica entre una unidad y otra del mismo activo. El término no procede de la LIRPF —que lo incorpora de forma implícita en el art. 37.2— sino de la teoría económica y del derecho privado.</p>
-
-      <p>En el ámbito fiscal, la DGT ha calificado las criptomonedas del mismo tipo como bienes homogéneos desde su primera consulta relevante en 2018. La formulación que ha repetido de forma consistente es la siguiente: las criptomonedas son <em>"bienes inmateriales de carácter fungible"</em>, y su fungibilidad las convierte en bienes homogéneos a efectos del art. 37.2 LIRPF. <span class="level-badge level-1">Hecho confirmado</span></p>
-
-      <div class="source-box">
-        <strong>Fuentes primarias DGT (petete.tributos.hacienda.gob.es):</strong><br>
-        V0999-18 · V1604-18 · V0975-22 · V2520-22 · V0525-25<br>
-        Todas confirman la calificación de bienes inmateriales fungibles. V0525-25 es la más reciente y la más completa en la distinción entre <em>bienes homogéneos</em> y <em>valores homogéneos</em>.
-      </div>
-
-      <h3>¿Qué activos son homogéneos entre sí?</h3>
-
-      <table class="comparison-table" aria-label="Homogeneidad entre criptoactivos">
-        <thead>
-          <tr>
-            <th>Activo A</th>
-            <th>Activo B</th>
-            <th>¿Homogéneos?</th>
-            <th>Motivo</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>1 BTC (Binance)</td>
-            <td>1 BTC (Kraken)</td>
-            <td class="check">✓ Sí</td>
-            <td>Mismo protocolo, misma blockchain, misma fungibilidad</td>
-          </tr>
-          <tr>
-            <td>1 ETH</td>
-            <td>1 ETH (staking)</td>
-            <td class="check">✓ Sí</td>
-            <td>Mismo activo subyacente; el staking no crea activo diferente</td>
-          </tr>
-          <tr>
-            <td>1 BTC</td>
-            <td>1 ETH</td>
-            <td class="cross">✗ No</td>
-            <td>Blockchains y protocolos distintos; no son intercambiables</td>
-          </tr>
-          <tr>
-            <td>1 BTC</td>
-            <td>1 WBTC</td>
-            <td class="cross">✗ No</td>
-            <td>WBTC es un token ERC-20 emitido por un tercero; activo diferente</td>
-          </tr>
-          <tr>
-            <td>1 USDT (Ethereum)</td>
-            <td>1 USDT (Tron)</td>
-            <td class="cross">✗ No (criterio pendiente)</td>
-            <td>Mismo emisor pero blockchain diferente; la DGT no ha resuelto este caso</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div class="callout info">
-        <div class="callout-title">Nota sobre tokens multi-chain</div>
-        <p>Para activos como USDT o USDC que existen en múltiples blockchains, la DGT no ha emitido consulta específica. La posición más prudente es tratarlos como homogéneos si el emisor y las condiciones son idénticas, aunque con cautela dado que no hay pronunciamiento vinculante.</p>
-      </div>
-
-      <!-- ─── H2 2: POR QUÉ OBLIGA AL FIFO ─── -->
-      <h2 id="fifo">Por qué la homogeneidad obliga al método FIFO</h2>
-
-      <p>El art. 37.2 de la Ley 35/2006 del IRPF dispone que cuando el contribuyente transmite una parte de sus bienes homogéneos, el valor de adquisición de los transmitidos se determina por el <strong>orden de antigüedad</strong> de las compras, es decir, primero entran, primero salen (FIFO: <em>First In, First Out</em>). <span class="level-badge level-1">Hecho confirmado</span></p>
-
-      <p>La razón de ser de esta norma es precisamente la <strong>indistinguibilidad</strong> de los bienes: si todos los Bitcoins del mismo contribuyente son idénticos, no se puede atribuir una venta a unas unidades concretas. La ley resuelve esa ambigüedad imponiendo el criterio cronológico.</p>
-
-      <div class="callout warn">
-        <div class="callout-title">Sin FIFO, el contribuyente podría optimizar artificialmente</div>
-        <p>Si la ley permitiera elegir qué unidades se venden, el contribuyente siempre vendería las más caras (HIFO) para minimizar ganancias, o las más baratas si quisiera declarar pérdidas. El FIFO obligatorio elimina esa discrecionalidad.</p>
-      </div>
-
-      <h3>¿Se puede aplicar LIFO, HIFO o coste medio?</h3>
-
-      <p>No. La DGT ha rechazado en múltiples consultas que el contribuyente pueda elegir el método de valoración. El FIFO no es una opción entre varias: es el único criterio que admite la LIRPF para bienes homogéneos. El coste medio ponderado puede ser usado internamente en herramientas de cálculo para simplificar, pero el resultado fiscal debe coincidir con el FIFO. <span class="level-badge level-1">Hecho confirmado</span></p>
-
-      <!-- ─── H2 3: POOL GLOBAL ─── -->
-      <h2 id="pool-global">El pool global entre wallets y exchanges</h2>
-
-      <!-- GEO BLOCK 2 — Pool global / Perplexity table format -->
-      <div class="geo-block" id="geo-pool" aria-label="Pool global FIFO">
-        <div class="geo-label">Concepto clave — Pool global FIFO</div>
-        <p>Todos los monederos (hardware, software, exchange) donde el mismo contribuyente tenga el mismo activo forman un único pool FIFO. La DGT lo confirmó en V0975-22 y V2520-22: el lugar de custodia es irrelevante. Solo el orden cronológico de compra importa.</p>
-      </div>
-
-      <p>La DGT fue explícita en V0975-22 y V2520-22: el pool FIFO no es por exchange sino por activo y contribuyente. Todos los BTC que poseas —en Binance, en Kraken, en un cold wallet— forman una sola cola ordenada por fecha de compra. <span class="level-badge level-1">Hecho confirmado</span></p>
-
-      <div class="example-box" id="ejemplo-pool">
-        <h4>Ejemplo: Pool global con tres custodios</h4>
-        <table class="fifo-table" aria-label="Ejemplo pool global FIFO">
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Operación</th>
-              <th>Custodio</th>
-              <th>Unidades BTC</th>
-              <th>Precio unitario</th>
-              <th>Posición en pool</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>01/02/2022</td>
-              <td>Compra</td>
-              <td>Binance</td>
-              <td>+0,50</td>
-              <td>38.000 €</td>
-              <td>Lote 1 (antiguo)</td>
-            </tr>
-            <tr>
-              <td>15/09/2022</td>
-              <td>Compra</td>
-              <td>Kraken</td>
-              <td>+0,30</td>
-              <td>19.000 €</td>
-              <td>Lote 2</td>
-            </tr>
-            <tr>
-              <td>20/03/2023</td>
-              <td>Compra</td>
-              <td>Cold wallet</td>
-              <td>+0,20</td>
-              <td>26.000 €</td>
-              <td>Lote 3 (reciente)</td>
-            </tr>
-            <tr>
-              <td>10/06/2024</td>
-              <td>Venta (Binance)</td>
-              <td>Binance</td>
-              <td>−0,60</td>
-              <td>60.000 €</td>
-              <td>Consume Lote 1 completo + 0,10 de Lote 2</td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="result">
-          Precio de venta: 0,60 × 60.000 € = <strong>36.000 €</strong><br>
-          Coste FIFO: (0,50 × 38.000) + (0,10 × 19.000) = 19.000 + 1.900 = <strong>20.900 €</strong><br>
-          <strong>Ganancia patrimonial: 36.000 − 20.900 = 15.100 €</strong><br>
-          <em>El exchange desde el que se vende (Binance) no altera el cálculo. Se consume el lote más antiguo del pool global.</em>
-        </div>
-      </div>
-
-      <h3>Transferencias entre wallets propias</h3>
-      <p>Mover activos entre tus propios monederos (p. ej., de Binance a un hardware wallet) <strong>no genera hecho imponible</strong>. Sin embargo, las comisiones de red sí deben registrarse como coste adicional que modifica la base de coste del activo transferido. El orden FIFO del pool no cambia por la transferencia.</p>
-
-      <div class="callout info">
-        <div class="callout-title">Implicación práctica</div>
-        <p>Para calcular correctamente el FIFO, necesitas el historial completo de compras desde el inicio, en todos los exchanges y wallets, independientemente de si ya vendiste esas plataformas o cerraste esas cuentas. La herramienta de marianosevilla.com consolida todos los CSVs en un único pool.</p>
-      </div>
-
-      <!-- ─── H2 4: BIENES HOMOGÉNEOS ≠ VALORES HOMOGÉNEOS ─── -->
-      <h2 id="vs-valores">Bienes homogéneos ≠ valores homogéneos: una distinción crítica</h2>
-
-      <p>Esta es la distinción más técnicamente relevante de toda la fiscalidad cripto, y la que genera el principal debate doctrinal actual. Aunque los dos conceptos suenan similares, tienen consecuencias fiscales completamente distintas. <span class="level-badge level-1">Hecho confirmado</span></p>
-
-      <table class="comparison-table" aria-label="Diferencia entre bienes y valores homogéneos">
-        <thead>
-          <tr>
-            <th>Concepto</th>
-            <th>Bienes homogéneos</th>
-            <th>Valores homogéneos</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><strong>Norma que lo define</strong></td>
-            <td>Art. 37.2 LIRPF (implícito en "bienes fungibles")</td>
-            <td>Art. 8 Reglamento del IRPF (RD 439/2007)</td>
-          </tr>
-          <tr>
-            <td><strong>Requisito para ser homogéneo</strong></td>
-            <td>Fungibilidad: unidades intercambiables del mismo activo</td>
-            <td>Emisión por la misma entidad con idénticos derechos y condiciones</td>
-          </tr>
-          <tr>
-            <td><strong>¿Son las criptomonedas?</strong></td>
-            <td class="check">✓ Sí (DGT V0999-18, V0525-25)</td>
-            <td class="cross">✗ No (DGT V0525-25: no hay "entidad emisora" en el sentido legal)</td>
-          </tr>
-          <tr>
-            <td><strong>Efecto principal</strong></td>
-            <td>Obliga al método FIFO (art. 37.2 LIRPF)</td>
-            <td>Activa la norma antiaplicación del art. 33.5 LIRPF (que habla de "valores")</td>
-          </tr>
-          <tr>
-            <td><strong>Consecuencia para cripto</strong></td>
-            <td>FIFO obligatorio, pool global</td>
-            <td>La norma antiaplicación literalmente no aplica (pero la AEAT la aplica de facto)</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <h3 id="v0525-25">Lo que dice la DGT V0525-25</h3>
-
-      <p>La consulta vinculante V0525-25, la más reciente y completa, establece expresamente que las criptomonedas son <em>"bienes inmateriales de naturaleza fungible"</em> y que, por esa razón, a efectos del art. 37.2 LIRPF se aplica el método FIFO. Al mismo tiempo, afirma que no encajan en el concepto de <em>"valores homogéneos"</em> del art. 8 del Reglamento del IRPF, que exige que sean <em>"emitidos por una entidad con idénticos derechos para los tenedores"</em>. <span class="level-badge level-1">Hecho confirmado</span></p>
-
-      <div class="callout warn">
-        <div class="callout-title">El vacío que crea esta distinción</div>
-        <p>Si las criptomonedas no son "valores" (ni homogéneos ni de ningún tipo), entonces el art. 33.5 LIRPF —que regula la norma antiaplicación y habla expresamente de "valores o participaciones"— no les aplica por su literalidad. La DGT V0525-25 reconoce la distinción pero <strong>no resuelve</strong> qué ocurre con la norma antiaplicación en consecuencia. Ese es el centro del debate.</p>
-      </div>
-
-      <!-- ─── H2 5: NORMA ANTIAPLICACIÓN ─── -->
-      <h2 id="norma-antiaplicacion">La norma antiaplicación: qué activa la homogeneidad</h2>
-
-      <!-- GEO BLOCK 3 — Cronología para ChatGPT / norma antiaplicación -->
-      <div class="geo-block" id="geo-norma" aria-label="Cronología norma antiaplicación">
-        <div class="geo-label">Cronología clave — Norma antiaplicación cripto</div>
-        <p><strong>Situación actual:</strong> La AEAT aplica operativamente la norma antiaplicación a criptomonedas a través de la casilla "No imputación de pérdidas por recompra de monedas virtuales homogéneas" de Renta Web, con un plazo de 12 meses. No existe consulta DGT vinculante que lo respalde expresamente en territorio común.</p>
-      </div>
-
-      <p>La norma antiaplicación del art. 33.5 LIRPF impide computar fiscalmente ciertas pérdidas patrimoniales cuando el contribuyente readquiere bienes homogéneos en un plazo determinado antes o después de la transmisión. El objetivo es evitar el <em>tax loss harvesting</em> artificial: vender para declarar una pérdida y recomprar inmediatamente el mismo activo.</p>
-
-      <h3>Lo que la AEAT aplica en la práctica</h3>
-
-      <p>Con independencia del debate jurídico sobre su fundamento literal, la AEAT aplica la norma antiaplicación a criptomonedas de forma operativa. En Renta Web existe la casilla <strong>"No imputación de pérdidas por recompra de monedas virtuales homogéneas"</strong>, y los inspectores y agentes tributarios aplican un plazo de 12 meses (equivalente al de art. 33.5.g para valores no cotizados). <span class="level-badge level-2">Interpretación</span></p>
-
-      <div class="source-box">
-        <strong>Estado de la posición de la AEAT (junio 2026):</strong><br>
-        ✓ Casilla específica en Renta Web: hecho verificable por cualquier usuario<br>
-        ✓ Criterio operativo de 12 meses: consistente con art. 33.5.g LIRPF<br>
-        ✗ Consulta DGT vinculante que aplique art. 33.5 expresamente a cripto en territorio común: <strong>no existe</strong> a la fecha de esta publicación
-      </div>
-
-      <h3>¿Qué letra del art. 33.5 LIRPF aplica?</h3>
-
-      <p>El art. 33.5 LIRPF tiene varias letras que regulan la norma antiaplicación para distintos tipos de activos:</p>
-      <ul>
-        <li><strong>Letra f:</strong> Valores <em>admitidos a negociación</em> en mercados secundarios oficiales → plazo de 2 meses</li>
-        <li><strong>Letra g:</strong> Valores o participaciones <em>no admitidos a negociación</em> en mercados secundarios → plazo de 1 año (12 meses)</li>
-      </ul>
-      <p>Ambas letras hablan de "valores o participaciones", no de bienes inmateriales. Como las criptomonedas no son "valores" según la DGT (V0525-25), ninguna letra aplica <em>literalmente</em>. La AEAT aplica de facto el criterio de la letra g (12 meses), probablemente por analogía con activos no admitidos a negociación en mercados regulados. <span class="level-badge level-2">Interpretación</span></p>
-
-      <div class="callout info">
-        <div class="callout-title">Para saber más sobre la norma antiaplicación</div>
-        <p>El análisis completo del funcionamiento de la norma antiaplicación —con los tres casos numéricos, el plazo exacto y las implicaciones del diferimiento— está desarrollado en <a href="/regla-dos-meses-criptomonedas">la regla de los dos meses (12 meses para cripto)</a>.</p>
-      </div>
-
-      <!-- ─── H2 6: DOCTRINA FORAL ─── -->
-      <h2 id="doctrina-foral">El TSJPV y la doctrina foral: qué aplica y qué no</h2>
-
-      <div class="callout danger">
-        <div class="callout-title">⚠ Ámbito territorial — Leer antes de continuar</div>
-        <p>Las sentencias del Tribunal Superior de Justicia del País Vasco (TSJPV) que se analizan en esta sección se refieren a las <strong>Normas Forales del IRPF</strong> de Álava, Bizkaia y Gipuzkoa. NO se refieren a la Ley nacional 35/2006 del IRPF. Si tributas en <strong>territorio común</strong> (cualquier comunidad autónoma excepto Navarra y el País Vasco), estas sentencias <strong>no te vinculan directamente</strong> ni vinculan a la AEAT.</p>
-      </div>
-
-      <h3>STSJ PV 37/2025 — La sentencia de enero de 2025</h3>
-
-      <p>El Tribunal Superior de Justicia del País Vasco dictó la sentencia STSJ PV 37/2025 (Rec. 75/2024) el 9 de enero de 2025. Es la primera sentencia de un tribunal superior que se pronuncia expresamente sobre la aplicación del FIFO y la norma antiaplicación a criptomonedas en el ámbito del IRPF foral. <span class="level-badge level-1">Hecho confirmado</span></p>
-
-      <div class="source-box">
-        <strong>Datos de la sentencia:</strong><br>
-        STSJ PV 37/2025 · Rec. 75/2024 · ROJ: STSJ PV 41/2025 · 9 enero 2025<br>
-        Sala de lo Contencioso-Administrativo, Sección 1ª<br>
-        Fuente primaria: <a href="https://www.iberley.es/jurisprudencia/sentencia-contencioso-administrativo-tribunal-superior-justicia-sala-lo-contencioso-administrativo-seccion-primera-9-1-25-48651389" target="_blank" rel="noopener">Iberley</a> · <a href="https://vlex.es/vid/1070658339" target="_blank" rel="noopener">vLex</a>
-      </div>
-
-      <p>El razonamiento central del TSJPV fue el siguiente: la Administración Foral aplicó el método FIFO con pool global y la norma antiaplicación a las operaciones cripto del contribuyente recurrente. El tribunal anuló la liquidación y declaró que aplicar esas reglas <strong>sin habilitación expresa en la Norma Foral</strong> viola el principio de reserva de ley tributaria. En aquel momento, ni las Normas Forales de Bizkaia, Álava ni Gipuzkoa recogían expresamente estas reglas para criptomonedas.</p>
-
-      <h3>Sentencias adicionales en 2025</h3>
-
-      <p>Fuentes técnicas de alto nivel (Cuatrecasas, despacho ECIJA y otras) referencian dos sentencias adicionales del TSJPV en la misma línea doctrinal durante el primer semestre de 2025, con los ECLI ECLI:ES:TSJPV:2025:1078 (20 de marzo) y ECLI:ES:TSJPV:2025:1712 (22 de abril). La consistencia de estas referencias en múltiples fuentes independientes hace muy probable su existencia. No obstante, sus datos no han podido ser verificados en bases de datos judiciales primarias en el momento de publicación de esta guía. <span class="level-badge level-2">Interpretación</span></p>
-
-      <h3>El efecto real: reformas forales</h3>
-
-      <p>La consecuencia práctica de las sentencias fue contundente: Bizkaia y Gipuzkoa iniciaron el proceso de reforma de sus Normas Forales para incluir expresamente el método FIFO y la norma antiaplicación para criptomonedas. <span class="level-badge level-1">Hecho confirmado</span></p>
-
-      <div class="source-box">
-        <strong>Reforma Bizkaia (confirmada):</strong><br>
-        Propuesta de nueva letra al art. 43 de la Norma Foral 13/2013 del IRPF de Bizkaia, con efectos desde el 1 de enero de 2025. Fuente: Cuatrecasas, Universidad Comillas.<br><br>
-        <strong>Reforma Gipuzkoa (confirmada):</strong><br>
-        El TSJPV obligó a Gipuzkoa a modificar la tributación de criptomonedas (agosto 2025). Fuente: Naiz.eus.
-      </div>
-
-      <h3>¿Qué relevancia tiene la doctrina TSJPV para el IRPF nacional?</h3>
-
-      <p>La doctrina del TSJPV no vincula a la AEAT ni a los tribunales de territorio común. Sin embargo, su relevancia es real por dos razones:</p>
-      <ol>
-        <li><strong>Identidad de la ratio:</strong> El principio de reserva de ley tributaria que invoca el TSJPV también rige el IRPF nacional (art. 8 Ley General Tributaria). Los argumentos son trasladables.</li>
-        <li><strong>Señal regulatoria:</strong> El hecho de que las administraciones forales hayan reconocido que necesitan habilitación legal expresa —y la estén tramitando— sugiere que el mismo vacío existe en el IRPF nacional.</li>
-      </ol>
-      <p><span class="level-badge level-3">Opinión técnica</span> Un contribuyente en territorio común podría invocar estos argumentos ante la AEAT o en un recurso, pero sin garantía de resultado: no existe jurisprudencia del Tribunal Supremo ni de la Audiencia Nacional que haya validado esta posición en el IRPF nacional.</p>
-
-      <!-- ─── H2 7: POSICIONES ─── -->
-      <h2 id="posiciones">Posición conservadora vs. posición técnica</h2>
-
-      <p>A la vista del estado legal (FIFO obligatorio con apoyo DGT; norma antiaplicación aplicada por la AEAT sin consulta vinculante expresa; doctrina TSJPV favorable pero no vinculante en territorio común), existen dos posiciones que un contribuyente puede adoptar:</p>
-
-      <div class="position-grid">
-        <div class="position-card conservative">
-          <h4>✓ Posición conservadora</h4>
-          <ul>
-            <li>Aplicar FIFO con pool global en todos los exchanges y wallets</li>
-            <li>Aplicar la norma antiaplicación con el plazo de 12 meses</li>
-            <li>Cumplimentar la casilla de Renta Web "No imputación de pérdidas por recompra"</li>
-            <li>Sin riesgo de regularización por este concepto</li>
-          </ul>
-          <div style="margin-top:.8rem;font-size:.82rem;color:var(--text2)"><strong style="color:var(--accent2)">Recomendada</strong> para la mayoría de contribuyentes</div>
-        </div>
-        <div class="position-card technical">
-          <h4>⚠ Posición técnica</h4>
-          <ul>
-            <li>Aplicar FIFO con pool global (igual)</li>
-            <li>NO aplicar la norma antiaplicación: argumentar que art. 33.5 no aplica a bienes inmateriales sin habilitación expresa (doctrina TSJPV)</li>
-            <li>Requiere documentar la posición jurídica tomada</li>
-            <li>Alto riesgo de regularización por la AEAT</li>
-          </ul>
-          <div style="margin-top:.8rem;font-size:.82rem;color:var(--text2)"><strong style="color:var(--warn)">Solo con asesoramiento experto</strong> y para importes en que el ahorro justifique el riesgo</div>
-        </div>
-      </div>
-
-      <div class="callout warn">
-        <div class="callout-title">Coste del riesgo en la posición técnica</div>
-        <p>Si la AEAT regulariza al contribuyente que adoptó la posición técnica, le exigirá: (1) el importe de las pérdidas indebidamente compensadas, (2) intereses de demora desde el ejercicio en que se compensaron, y (3) potencialmente una sanción tributaria si se califica de infracción. El coste puede superar ampliamente el ahorro obtenido, especialmente en operaciones de volumen medio.</p>
-      </div>
-
-      <!-- ─── H2 8: EJEMPLOS NUMÉRICOS ─── -->
-      <h2 id="ejemplos">Ejemplos numéricos: homogeneidad en la práctica</h2>
-
-      <div class="example-box">
-        <h4>Ejemplo 1 — Norma antiaplicación activada y resuelta</h4>
-        <div class="step">
-          <div class="step-num">1</div>
-          <div class="step-body">Enero 2024: vendes 1 ETH comprado en 2021 a 1.800 € (coste de adquisición: 3.200 €). <strong>Pérdida declarable: −1.400 €</strong>.</div>
-        </div>
-        <div class="step">
-          <div class="step-num">2</div>
-          <div class="step-body">Marzo 2024 (2 meses después): compras 0,5 ETH a 3.000 €. La norma antiaplicación <strong>bloquea parte de la pérdida</strong>: de los −1.400 € de pérdida, la parte proporcional correspondiente a 0,5 ETH queda diferida.</div>
-        </div>
-        <div class="step">
-          <div class="step-num">3</div>
-          <div class="step-body">Febrero 2026 (más de 12 meses después de la recompra de marzo 2024): vendes los 0,5 ETH recomprados. En ese momento, la pérdida diferida se integra en la base del ahorro de 2026.</div>
-        </div>
-        <div class="result">
-          <strong>Conclusión:</strong> La pérdida no se pierde; se difiere hasta la venta de los bienes que activaron el bloqueo. Declarar la norma correctamente en la casilla de Renta Web es obligatorio.
-        </div>
-      </div>
-
-      <div class="example-box">
-        <h4>Ejemplo 2 — ¿Cuándo NO se activa la norma?</h4>
-        <div class="step">
-          <div class="step-num">1</div>
-          <div class="step-body">Mayo 2024: vendes 2 BTC con pérdida de −8.000 €.</div>
-        </div>
-        <div class="step">
-          <div class="step-num">2</div>
-          <div class="step-body">No compras ningún BTC en los 12 meses anteriores ni en los 12 meses posteriores a la venta.</div>
-        </div>
-        <div class="step">
-          <div class="step-num">3</div>
-          <div class="step-body">La norma antiaplicación <strong>no se activa</strong>. La pérdida de −8.000 € es computable íntegramente en el ejercicio 2024.</div>
-        </div>
-        <div class="result">
-          <strong>La norma solo afecta cuando hay readquisición.</strong> Si vendes en pérdida y no recompras el mismo activo en el plazo de 12 meses (antes ni después), la pérdida se declara con normalidad.
-        </div>
-      </div>
-
-      <!-- ─── H2 9: FAQ ─── -->
-      <h2 id="faq">Preguntas frecuentes</h2>
-
-      <div class="faq-list" role="list">
-
-        <div class="faq-item" role="listitem">
-          <button class="faq-btn" onclick="toggleFaq(this)" aria-expanded="false">
-            ¿Qué diferencia hay entre bienes homogéneos y valores homogéneos en criptomonedas?
-            <i class="faq-icon" aria-hidden="true">+</i>
-          </button>
-          <div class="faq-body">
-            <p>Son conceptos legalmente distintos. Las criptomonedas son <strong>bienes homogéneos</strong> porque son fungibles e intercambiables (DGT V0525-25), lo que activa el método FIFO obligatorio del art. 37.2 LIRPF. Sin embargo, no son <strong>valores homogéneos</strong> según el art. 8 del Reglamento del IRPF, que exige que sean instrumentos emitidos por una entidad en condiciones idénticas.</p>
-            <p>Esta distinción es importante porque el art. 33.5 LIRPF —que regula la norma antiaplicación— habla de "valores o participaciones", no de "bienes inmateriales". La DGT no ha emitido consulta vinculante que resuelva explícitamente si la norma antiaplicación aplica a cripto en territorio común.</p>
-          </div>
-        </div>
-
-        <div class="faq-item" role="listitem">
-          <button class="faq-btn" onclick="toggleFaq(this)" aria-expanded="false">
-            ¿El método FIFO es obligatorio si tengo criptomonedas en varios exchanges?
-            <i class="faq-icon" aria-hidden="true">+</i>
-          </button>
-          <div class="faq-body">
-            <p>Sí. La DGT confirmó en V0975-22 y V2520-22 que el pool FIFO es global: todos los monederos y exchanges donde tengas el mismo activo forman una única cola FIFO. Si tienes 0,5 BTC en Binance y 0,3 BTC en Kraken, el coste de adquisición se calcula sobre esos 0,8 BTC en orden cronológico de compra, independientemente de en qué plataforma vendas.</p>
-          </div>
-        </div>
-
-        <div class="faq-item" role="listitem">
-          <button class="faq-btn" onclick="toggleFaq(this)" aria-expanded="false">
-            ¿La sentencia del TSJPV de 2025 me beneficia si vivo fuera del País Vasco?
-            <i class="faq-icon" aria-hidden="true">+</i>
-          </button>
-          <div class="faq-body">
-            <p>No directamente. Las sentencias del TSJPV se refieren a la Norma Foral del IRPF del País Vasco (Álava, Bizkaia, Gipuzkoa), no a la Ley nacional 35/2006 del IRPF que aplica en territorio común. El TSJPV no tiene competencia sobre la legislación nacional, y sus sentencias no vinculan a la AEAT.</p>
-            <p>Su relevancia es doctrinal: la ratio decidendi (reserva de ley tributaria) es un principio que también rige el IRPF nacional, y podría usarse como argumento en un recurso. Pero no existe jurisprudencia del Tribunal Supremo ni de la Audiencia Nacional que lo haya validado.</p>
-          </div>
-        </div>
-
-        <div class="faq-item" role="listitem">
-          <button class="faq-btn" onclick="toggleFaq(this)" aria-expanded="false">
-            ¿La pérdida diferida por la norma antiaplicación desaparece o se recupera?
-            <i class="faq-icon" aria-hidden="true">+</i>
-          </button>
-          <div class="faq-body">
-            <p>Se difiere, no desaparece. La pérdida queda pendiente de imputación y se integra en la base del ahorro en el ejercicio en que transmitas los bienes homogéneos que originaron el bloqueo. Si transmites esas unidades dentro de los 4 ejercicios siguientes, la pérdida diferida es compensable. Si nunca transmites y pasan más de 4 ejercicios, la pérdida prescribiría.</p>
-          </div>
-        </div>
-
-        <div class="faq-item" role="listitem">
-          <button class="faq-btn" onclick="toggleFaq(this)" aria-expanded="false">
-            ¿Qué pasa si no reflejo la norma antiaplicación en mi declaración?
-            <i class="faq-icon" aria-hidden="true">+</i>
-          </button>
-          <div class="faq-body">
-            <p>La AEAT puede regularizar la autoliquidación y exigir el importe de la pérdida indebidamente compensada, más intereses de demora. Si la omisión supera el umbral de infracción, puede añadirse una sanción tributaria. La posición operativa de la AEAT es aplicar la norma, y lo hace a través de la casilla específica en Renta Web.</p>
-          </div>
-        </div>
-
-        <div class="faq-item" role="listitem">
-          <button class="faq-btn" onclick="toggleFaq(this)" aria-expanded="false">
-            ¿Puedo reclamar ante la AEAT usando el argumento del TSJPV si me regulariza por el FIFO?
-            <i class="faq-icon" aria-hidden="true">+</i>
-          </button>
-          <div class="faq-body">
-            <p>Técnicamente puedes invocar la ratio decidendi del TSJPV —el principio de reserva de ley tributaria— en un recurso de reposición o reclamación económico-administrativa. Pero no existe jurisprudencia del Tribunal Supremo ni de la Audiencia Nacional que haya validado ese argumento en territorio común para el IRPF nacional.</p>
-            <p>El riesgo de regularización más intereses y posible sanción puede superar el ahorro teórico. Esta decisión de estrategia fiscal debe evaluarse caso por caso con un asesor especializado, comparando el ahorro esperado con el coste del litigio y la probabilidad de éxito.</p>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- ─── SILO ─── -->
-      <h2 id="silo">El silo de pérdidas patrimoniales en cripto</h2>
-      <p>Esta página forma parte del silo de pérdidas patrimoniales de criptomonedas. El conjunto cubre el ciclo completo: desde el fundamento legal (aquí) hasta la compensación final.</p>
-
-      <div class="silo-grid">
-        <div class="silo-card subhub">
-          <div class="silo-tag">Sub-Hub A</div>
-          <a href="/perdidas-patrimoniales-criptomonedas">Pérdidas patrimoniales</a>
-          <p>Cuándo se generan, casilla correcta (1804) y pasos en Renta Web</p>
-        </div>
-        <div class="silo-card current">
-          <div class="silo-tag">Spoke A1 · Esta página</div>
-          <span style="font-weight:600;color:var(--purple)">Bienes homogéneos</span>
-          <p>Fundamento legal del FIFO y de la norma antiaplicación</p>
-        </div>
-        <div class="silo-card published">
-          <div class="silo-tag">Spoke B1 · Publicado</div>
-          <a href="/regla-dos-meses-criptomonedas">Regla de los 12 meses</a>
-          <p>Cómo funciona la norma antiaplicación en la práctica</p>
-        </div>
-        <div class="silo-card published">
-          <div class="silo-tag">Hub B · Publicado</div>
-          <a href="/compensar-perdidas-criptomonedas">Compensar pérdidas</a>
-          <p>Mecanismo de compensación: 4 pasos, arrastre 4 ejercicios</p>
-        </div>
-        <div class="silo-card published">
-          <div class="silo-tag">Fundación</div>
-          <a href="/metodo-fifo-criptomonedas">Método FIFO</a>
-          <p>Guía completa del FIFO obligatorio en España</p>
-        </div>
-        <div class="silo-card planned">
-          <div class="silo-tag">Spoke B2 · Próximamente</div>
-          <span style="color:var(--text2);font-weight:600">Tax loss harvesting</span>
-          <p>Estrategia de cosecha de pérdidas fiscales en España</p>
-        </div>
-      </div>
-
-      <!-- LEGAL NOTICE -->
-      <div class="legal-notice">
-        <strong>Aviso legal:</strong> El contenido de esta página es de carácter informativo y ha sido supervisado por Rafael Ramos Martínez, Economista Colegiado nº 4.579 (Colegio de Economistas de Valencia). No constituye asesoramiento fiscal individualizado. La situación normativa sobre la aplicación de la norma antiaplicación a criptomonedas en territorio común es objeto de debate doctrinal activo a junio de 2026. Para decisiones relevantes sobre tu declaración, consulta con un asesor fiscal colegiado.
-      </div>
-
-    </main>
-
-    <!-- ══════════════════════════ SIDEBAR ══════════════════════════ -->
-    <aside class="sidebar" aria-label="Recursos adicionales">
-
-      <!-- CTA -->
-      <div class="sidebar-card sidebar-card-premium">
-        <span class="sidebar-badge">Informe fiscal FIFO</span>
-        <div class="sidebar-card-title">Genera tu informe FIFO de criptomonedas</div>
-        <p class="sidebar-card-text">Importa el historial de tus exchanges y descarga un informe fiscal listo para revisar.</p>
-        <ul class="cta-benefits">
-          <li>Método FIFO automático</li>
-          <li>Compatible con varios exchanges</li>
-          <li>Revisión profesional si tu caso es complejo</li>
-        </ul>
-        <a href="/signup/" class="sidebar-cta">Generar informe fiscal</a>
-        <a href="/asesoramiento-fiscal-criptomonedas" class="sidebar-cta-secondary">Hablar con un asesor</a>
-        <p class="sidebar-note">Supervisado por Rafael Ramos Martínez, Economista Colegiado nº&nbsp;4.579.</p>
-      </div>
-
-      <!-- IN-PAGE NAV -->
-      <div class="sidebar-box">
-        <h3>En esta página</h3>
-        <nav class="sidebar-nav" aria-label="Navegación en página">
-          <a href="#que-son">Qué son los bienes homogéneos</a>
-          <a href="#fifo">Por qué obliga al método FIFO</a>
-          <a href="#pool-global">El pool global</a>
-          <a href="#vs-valores">Bienes vs. valores homogéneos</a>
-          <a href="#norma-antiaplicacion">La norma antiaplicación</a>
-          <a href="#doctrina-foral">Doctrina del TSJPV</a>
-          <a href="#posiciones">Posición conservadora vs. técnica</a>
-          <a href="#ejemplos">Ejemplos numéricos</a>
-          <a href="#faq">Preguntas frecuentes</a>
-        </nav>
-      </div>
-
-      <!-- BASE LEGAL -->
-      <div class="sidebar-box">
-        <h3>Base legal</h3>
-        <ul class="legal-sources">
-          <li><a href="https://www.boe.es/buscar/act.php?id=BOE-A-2006-20764" target="_blank" rel="noopener">Art. 37.2 LIRPF — Método FIFO</a></li>
-          <li><a href="https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V0999-18" target="_blank" rel="noopener">DGT V0999-18 — Bienes homogéneos</a></li>
-          <li><a href="https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V0975-22" target="_blank" rel="noopener">DGT V0975-22 — Pool global</a></li>
-          <li><a href="https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V0525-25" target="_blank" rel="noopener">DGT V0525-25 — No son "valores"</a></li>
-          <li><a href="https://www.iberley.es/jurisprudencia/sentencia-contencioso-administrativo-tribunal-superior-justicia-sala-lo-contencioso-administrativo-seccion-primera-9-1-25-48651389" target="_blank" rel="noopener">STSJ PV 37/2025 (Iberley)</a></li>
-        </ul>
-      </div>
-
-      <!-- SILO LINKS -->
-      <div class="sidebar-box">
-        <h3>Guías relacionadas</h3>
-        <nav class="sidebar-nav" aria-label="Páginas del silo">
-          <a href="/metodo-fifo-criptomonedas">Método FIFO: guía completa</a>
-          <a href="/permuta-criptomonedas-irpf">Permuta de criptomonedas en el IRPF</a>
-          <a href="/perdidas-patrimoniales-criptomonedas">Pérdidas patrimoniales en el IRPF</a>
-          <a href="/regla-dos-meses-criptomonedas">La norma antiaplicación (12 meses)</a>
-          <a href="/compensar-perdidas-criptomonedas">Compensar pérdidas cripto</a>
-          <a href="/asesoramiento-fiscal-criptomonedas">Asesoramiento fiscal personalizado</a>
-        </nav>
-      </div>
-
-    </aside>
-
-  </div><!-- /content-grid -->
-
-</div><!-- /page-wrap -->
-
 <script src="/static/nav.js" defer></script>
-<script>
-function toggleFaq(btn) {
-  const body = btn.nextElementSibling;
-  const isOpen = btn.classList.contains('open');
-  // Close all
-  document.querySelectorAll('.faq-btn.open').forEach(b => {
-    b.classList.remove('open');
-    b.setAttribute('aria-expanded', 'false');
-    b.nextElementSibling.classList.remove('open');
-  });
-  // Open clicked if it wasn't open
-  if (!isOpen) {
-    btn.classList.add('open');
-    btn.setAttribute('aria-expanded', 'true');
-    body.classList.add('open');
-  }
-}
-</script>
+
+<!-- ── HERO ──────────────────────────── -->
+<section class="hero">
+  <div class="wrap">
+
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a href="/">Inicio</a>
+      <span class="breadcrumb-sep">›</span>
+      <a href="/herramientas">Herramientas</a>
+      <span class="breadcrumb-sep">›</span>
+      <span aria-current="page">Bienes homogéneos en criptomonedas</span>
+    </nav>
+
+    <span class="hero-badge">Fundamento legal · Silo de pérdidas</span>
+
+    <h1>Bienes homogéneos en criptomonedas: qué son, por qué determinan el FIFO y cómo activan la norma antiaplicación</h1>
+
+    <!-- GEO BLOCK 1 — Hero snippet / Google AI Overview (≤60w) -->
+    <div class="geo-block" id="geo-hero" aria-label="Respuesta directa">
+      <div class="geo-label">Respuesta directa</div>
+      <p>Las criptomonedas del mismo tipo son <strong>bienes homogéneos</strong>: son fungibles e intercambiables, de modo que una unidad no se distingue de otra del mismo activo. La DGT lo ha confirmado desde 2018. Esa calificación activa dos consecuencias fiscales: el método FIFO obligatorio con pool global (art. 37.2 LIRPF) y la norma antiaplicación de pérdidas en Renta Web.</p>
+    </div>
+
+    <div class="hero-trust">
+      <span class="hero-trust-item">Por <strong>Rafael Ramos Martínez</strong>, Economista Colegiado nº 4.579</span>
+      <span class="hero-trust-item">Actualizado: junio 2026</span>
+      <span class="hero-trust-item">Base legal: DGT V0999-18 · V0525-25 · Art. 37.2 LIRPF</span>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── CONTENIDO + SIDEBAR ────────────── -->
+<section class="section">
+  <div class="wrap">
+    <div class="content-grid">
+
+      <!-- ══════════════════════════ CONTENIDO PRINCIPAL ══════════════════════════ -->
+      <div class="content-main prose">
+
+        <!-- LEVEL LEGEND -->
+        <div class="level-legend" aria-label="Leyenda de niveles de certeza">
+          <div class="level-legend-item"><span class="level-badge level-1">Hecho confirmado</span> Verificado en BOE / AEAT / DGT (petete.tributos)</div>
+          <div class="level-legend-item"><span class="level-badge level-2">Interpretación</span> Doctrina técnica sólida; sin consulta vinculante nacional</div>
+          <div class="level-legend-item"><span class="level-badge level-3">Opinión técnica</span> Posición doctrinal; no exenta de riesgo fiscal</div>
+        </div>
+
+        <!-- ─── H2 1: QUÉ SON ─── -->
+        <h2 id="que-son">Qué son los bienes homogéneos</h2>
+
+        <p>Un bien es <strong>homogéneo</strong> cuando sus unidades son fungibles e intercambiables: no existe diferencia jurídica ni económica entre una unidad y otra del mismo activo. El término no procede de la LIRPF —que lo incorpora de forma implícita en el art. 37.2— sino de la teoría económica y del derecho privado.</p>
+
+        <p>En el ámbito fiscal, la DGT ha calificado las criptomonedas del mismo tipo como bienes homogéneos desde su primera consulta relevante en 2018. La formulación que ha repetido de forma consistente es la siguiente: las criptomonedas son <em>"bienes inmateriales de carácter fungible"</em>, y su fungibilidad las convierte en bienes homogéneos a efectos del art. 37.2 LIRPF. <span class="level-badge level-1">Hecho confirmado</span></p>
+
+        <div class="source-box">
+          <strong>Fuentes primarias DGT (petete.tributos.hacienda.gob.es):</strong><br>
+          V0999-18 · V1604-18 · V0975-22 · V2520-22 · V0525-25<br>
+          Todas confirman la calificación de bienes inmateriales fungibles. V0525-25 es la más reciente y la más completa en la distinción entre <em>bienes homogéneos</em> y <em>valores homogéneos</em>.
+        </div>
+
+        <h3>¿Qué activos son homogéneos entre sí?</h3>
+
+        <div class="table-wrap">
+          <table class="comparison-table" aria-label="Homogeneidad entre criptoactivos">
+            <thead>
+              <tr>
+                <th>Activo A</th>
+                <th>Activo B</th>
+                <th>¿Homogéneos?</th>
+                <th>Motivo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1 BTC (Binance)</td>
+                <td>1 BTC (Kraken)</td>
+                <td class="check">✓ Sí</td>
+                <td>Mismo protocolo, misma blockchain, misma fungibilidad</td>
+              </tr>
+              <tr>
+                <td>1 ETH</td>
+                <td>1 ETH (staking)</td>
+                <td class="check">✓ Sí</td>
+                <td>Mismo activo subyacente; el staking no crea activo diferente</td>
+              </tr>
+              <tr>
+                <td>1 BTC</td>
+                <td>1 ETH</td>
+                <td class="cross">✗ No</td>
+                <td>Blockchains y protocolos distintos; no son intercambiables</td>
+              </tr>
+              <tr>
+                <td>1 BTC</td>
+                <td>1 WBTC</td>
+                <td class="cross">✗ No</td>
+                <td>WBTC es un token ERC-20 emitido por un tercero; activo diferente</td>
+              </tr>
+              <tr>
+                <td>1 USDT (Ethereum)</td>
+                <td>1 USDT (Tron)</td>
+                <td class="cross">✗ No (criterio pendiente)</td>
+                <td>Mismo emisor pero blockchain diferente; la DGT no ha resuelto este caso</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout">
+          <div class="callout-title">Nota sobre tokens multi-chain</div>
+          <p>Para activos como USDT o USDC que existen en múltiples blockchains, la DGT no ha emitido consulta específica. La posición más prudente es tratarlos como homogéneos si el emisor y las condiciones son idénticas, aunque con cautela dado que no hay pronunciamiento vinculante.</p>
+        </div>
+
+        <!-- ─── H2 2: POR QUÉ OBLIGA AL FIFO ─── -->
+        <h2 id="fifo">Por qué la homogeneidad obliga al método FIFO</h2>
+
+        <p>El art. 37.2 de la Ley 35/2006 del IRPF dispone que cuando el contribuyente transmite una parte de sus bienes homogéneos, el valor de adquisición de los transmitidos se determina por el <strong>orden de antigüedad</strong> de las compras, es decir, primero entran, primero salen (FIFO: <em>First In, First Out</em>). <span class="level-badge level-1">Hecho confirmado</span></p>
+
+        <p>La razón de ser de esta norma es precisamente la <strong>indistinguibilidad</strong> de los bienes: si todos los Bitcoins del mismo contribuyente son idénticos, no se puede atribuir una venta a unas unidades concretas. La ley resuelve esa ambigüedad imponiendo el criterio cronológico.</p>
+
+        <div class="callout warn">
+          <div class="callout-title">Sin FIFO, el contribuyente podría optimizar artificialmente</div>
+          <p>Si la ley permitiera elegir qué unidades se venden, el contribuyente siempre vendería las más caras (HIFO) para minimizar ganancias, o las más baratas si quisiera declarar pérdidas. El FIFO obligatorio elimina esa discrecionalidad.</p>
+        </div>
+
+        <h3>¿Se puede aplicar LIFO, HIFO o coste medio?</h3>
+
+        <p>No. La DGT ha rechazado en múltiples consultas que el contribuyente pueda elegir el método de valoración. El FIFO no es una opción entre varias: es el único criterio que admite la LIRPF para bienes homogéneos. El coste medio ponderado puede ser usado internamente en herramientas de cálculo para simplificar, pero el resultado fiscal debe coincidir con el FIFO. <span class="level-badge level-1">Hecho confirmado</span></p>
+
+        <!-- ─── H2 3: POOL GLOBAL ─── -->
+        <h2 id="pool-global">El pool global entre wallets y exchanges</h2>
+
+        <!-- GEO BLOCK 2 — Pool global / Perplexity table format -->
+        <div class="geo-block" id="geo-pool" aria-label="Pool global FIFO">
+          <div class="geo-label">Concepto clave — Pool global FIFO</div>
+          <p>Todos los monederos (hardware, software, exchange) donde el mismo contribuyente tenga el mismo activo forman un único pool FIFO. La DGT lo confirmó en V0975-22 y V2520-22: el lugar de custodia es irrelevante. Solo el orden cronológico de compra importa.</p>
+        </div>
+
+        <p>La DGT fue explícita en V0975-22 y V2520-22: el pool FIFO no es por exchange sino por activo y contribuyente. Todos los BTC que poseas —en Binance, en Kraken, en un cold wallet— forman una sola cola ordenada por fecha de compra. <span class="level-badge level-1">Hecho confirmado</span></p>
+
+        <div class="example-box" id="ejemplo-pool">
+          <h4>Ejemplo: Pool global con tres custodios</h4>
+          <div class="table-wrap">
+            <table class="fifo-table" aria-label="Ejemplo pool global FIFO">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Operación</th>
+                  <th>Custodio</th>
+                  <th>Unidades BTC</th>
+                  <th>Precio unitario</th>
+                  <th>Posición en pool</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>01/02/2022</td>
+                  <td>Compra</td>
+                  <td>Binance</td>
+                  <td>+0,50</td>
+                  <td>38.000 €</td>
+                  <td>Lote 1 (antiguo)</td>
+                </tr>
+                <tr>
+                  <td>15/09/2022</td>
+                  <td>Compra</td>
+                  <td>Kraken</td>
+                  <td>+0,30</td>
+                  <td>19.000 €</td>
+                  <td>Lote 2</td>
+                </tr>
+                <tr>
+                  <td>20/03/2023</td>
+                  <td>Compra</td>
+                  <td>Cold wallet</td>
+                  <td>+0,20</td>
+                  <td>26.000 €</td>
+                  <td>Lote 3 (reciente)</td>
+                </tr>
+                <tr>
+                  <td>10/06/2024</td>
+                  <td>Venta (Binance)</td>
+                  <td>Binance</td>
+                  <td>−0,60</td>
+                  <td>60.000 €</td>
+                  <td>Consume Lote 1 completo + 0,10 de Lote 2</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="result">
+            Precio de venta: 0,60 × 60.000 € = <strong>36.000 €</strong><br>
+            Coste FIFO: (0,50 × 38.000) + (0,10 × 19.000) = 19.000 + 1.900 = <strong>20.900 €</strong><br>
+            <strong>Ganancia patrimonial: 36.000 − 20.900 = 15.100 €</strong><br>
+            <em>El exchange desde el que se vende (Binance) no altera el cálculo. Se consume el lote más antiguo del pool global.</em>
+          </div>
+        </div>
+
+        <h3>Transferencias entre wallets propias</h3>
+        <p>Mover activos entre tus propios monederos (p. ej., de Binance a un hardware wallet) <strong>no genera hecho imponible</strong>. Sin embargo, las comisiones de red sí deben registrarse como coste adicional que modifica la base de coste del activo transferido. El orden FIFO del pool no cambia por la transferencia.</p>
+
+        <div class="callout">
+          <div class="callout-title">Implicación práctica</div>
+          <p>Para calcular correctamente el FIFO, necesitas el historial completo de compras desde el inicio, en todos los exchanges y wallets, independientemente de si ya vendiste esas plataformas o cerraste esas cuentas. La herramienta de marianosevilla.com consolida todos los CSVs en un único pool.</p>
+        </div>
+
+        <!-- ─── H2 4: BIENES HOMOGÉNEOS ≠ VALORES HOMOGÉNEOS ─── -->
+        <h2 id="vs-valores">Bienes homogéneos ≠ valores homogéneos: una distinción crítica</h2>
+
+        <p>Esta es la distinción más técnicamente relevante de toda la fiscalidad cripto, y la que genera el principal debate doctrinal actual. Aunque los dos conceptos suenan similares, tienen consecuencias fiscales completamente distintas. <span class="level-badge level-1">Hecho confirmado</span></p>
+
+        <div class="table-wrap">
+          <table class="comparison-table" aria-label="Diferencia entre bienes y valores homogéneos">
+            <thead>
+              <tr>
+                <th>Concepto</th>
+                <th>Bienes homogéneos</th>
+                <th>Valores homogéneos</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Norma que lo define</strong></td>
+                <td>Art. 37.2 LIRPF (implícito en "bienes fungibles")</td>
+                <td>Art. 8 Reglamento del IRPF (RD 439/2007)</td>
+              </tr>
+              <tr>
+                <td><strong>Requisito para ser homogéneo</strong></td>
+                <td>Fungibilidad: unidades intercambiables del mismo activo</td>
+                <td>Emisión por la misma entidad con idénticos derechos y condiciones</td>
+              </tr>
+              <tr>
+                <td><strong>¿Son las criptomonedas?</strong></td>
+                <td class="check">✓ Sí (DGT V0999-18, V0525-25)</td>
+                <td class="cross">✗ No (DGT V0525-25: no hay "entidad emisora" en el sentido legal)</td>
+              </tr>
+              <tr>
+                <td><strong>Efecto principal</strong></td>
+                <td>Obliga al método FIFO (art. 37.2 LIRPF)</td>
+                <td>Activa la norma antiaplicación del art. 33.5 LIRPF (que habla de "valores")</td>
+              </tr>
+              <tr>
+                <td><strong>Consecuencia para cripto</strong></td>
+                <td>FIFO obligatorio, pool global</td>
+                <td>La norma antiaplicación literalmente no aplica (pero la AEAT la aplica de facto)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 id="v0525-25">Lo que dice la DGT V0525-25</h3>
+
+        <p>La consulta vinculante V0525-25, la más reciente y completa, establece expresamente que las criptomonedas son <em>"bienes inmateriales de naturaleza fungible"</em> y que, por esa razón, a efectos del art. 37.2 LIRPF se aplica el método FIFO. Al mismo tiempo, afirma que no encajan en el concepto de <em>"valores homogéneos"</em> del art. 8 del Reglamento del IRPF, que exige que sean <em>"emitidos por una entidad con idénticos derechos para los tenedores"</em>. <span class="level-badge level-1">Hecho confirmado</span></p>
+
+        <div class="callout warn">
+          <div class="callout-title">El vacío que crea esta distinción</div>
+          <p>Si las criptomonedas no son "valores" (ni homogéneos ni de ningún tipo), entonces el art. 33.5 LIRPF —que regula la norma antiaplicación y habla expresamente de "valores o participaciones"— no les aplica por su literalidad. La DGT V0525-25 reconoce la distinción pero <strong>no resuelve</strong> qué ocurre con la norma antiaplicación en consecuencia. Ese es el centro del debate.</p>
+        </div>
+
+        <!-- ─── H2 5: NORMA ANTIAPLICACIÓN ─── -->
+        <h2 id="norma-antiaplicacion">La norma antiaplicación: qué activa la homogeneidad</h2>
+
+        <!-- GEO BLOCK 3 — Cronología para ChatGPT / norma antiaplicación -->
+        <div class="geo-block" id="geo-norma" aria-label="Cronología norma antiaplicación">
+          <div class="geo-label">Cronología clave — Norma antiaplicación cripto</div>
+          <p><strong>Situación actual:</strong> La AEAT aplica operativamente la norma antiaplicación a criptomonedas a través de la casilla "No imputación de pérdidas por recompra de monedas virtuales homogéneas" de Renta Web, con un plazo de 12 meses. No existe consulta DGT vinculante que lo respalde expresamente en territorio común.</p>
+        </div>
+
+        <p>La norma antiaplicación del art. 33.5 LIRPF impide computar fiscalmente ciertas pérdidas patrimoniales cuando el contribuyente readquiere bienes homogéneos en un plazo determinado antes o después de la transmisión. El objetivo es evitar el <em>tax loss harvesting</em> artificial: vender para declarar una pérdida y recomprar inmediatamente el mismo activo.</p>
+
+        <h3>Lo que la AEAT aplica en la práctica</h3>
+
+        <p>Con independencia del debate jurídico sobre su fundamento literal, la AEAT aplica la norma antiaplicación a criptomonedas de forma operativa. En Renta Web existe la casilla <strong>"No imputación de pérdidas por recompra de monedas virtuales homogéneas"</strong>, y los inspectores y agentes tributarios aplican un plazo de 12 meses (equivalente al de art. 33.5.g para valores no cotizados). <span class="level-badge level-2">Interpretación</span></p>
+
+        <div class="source-box">
+          <strong>Estado de la posición de la AEAT (junio 2026):</strong><br>
+          ✓ Casilla específica en Renta Web: hecho verificable por cualquier usuario<br>
+          ✓ Criterio operativo de 12 meses: consistente con art. 33.5.g LIRPF<br>
+          ✗ Consulta DGT vinculante que aplique art. 33.5 expresamente a cripto en territorio común: <strong>no existe</strong> a la fecha de esta publicación
+        </div>
+
+        <h3>¿Qué letra del art. 33.5 LIRPF aplica?</h3>
+
+        <p>El art. 33.5 LIRPF tiene varias letras que regulan la norma antiaplicación para distintos tipos de activos:</p>
+        <ul>
+          <li><strong>Letra f:</strong> Valores <em>admitidos a negociación</em> en mercados secundarios oficiales → plazo de 2 meses</li>
+          <li><strong>Letra g:</strong> Valores o participaciones <em>no admitidos a negociación</em> en mercados secundarios → plazo de 1 año (12 meses)</li>
+        </ul>
+        <p>Ambas letras hablan de "valores o participaciones", no de bienes inmateriales. Como las criptomonedas no son "valores" según la DGT (V0525-25), ninguna letra aplica <em>literalmente</em>. La AEAT aplica de facto el criterio de la letra g (12 meses), probablemente por analogía con activos no admitidos a negociación en mercados regulados. <span class="level-badge level-2">Interpretación</span></p>
+
+        <div class="callout">
+          <div class="callout-title">Para saber más sobre la norma antiaplicación</div>
+          <p>El análisis completo del funcionamiento de la norma antiaplicación —con los tres casos numéricos, el plazo exacto y las implicaciones del diferimiento— está desarrollado en <a href="/regla-dos-meses-criptomonedas">la regla de los dos meses (12 meses para cripto)</a>.</p>
+        </div>
+
+        <!-- ─── H2 6: DOCTRINA FORAL ─── -->
+        <h2 id="doctrina-foral">El TSJPV y la doctrina foral: qué aplica y qué no</h2>
+
+        <div class="callout danger">
+          <div class="callout-title">⚠ Ámbito territorial — Leer antes de continuar</div>
+          <p>Las sentencias del Tribunal Superior de Justicia del País Vasco (TSJPV) que se analizan en esta sección se refieren a las <strong>Normas Forales del IRPF</strong> de Álava, Bizkaia y Gipuzkoa. NO se refieren a la Ley nacional 35/2006 del IRPF. Si tributas en <strong>territorio común</strong> (cualquier comunidad autónoma excepto Navarra y el País Vasco), estas sentencias <strong>no te vinculan directamente</strong> ni vinculan a la AEAT.</p>
+        </div>
+
+        <h3>STSJ PV 37/2025 — La sentencia de enero de 2025</h3>
+
+        <p>El Tribunal Superior de Justicia del País Vasco dictó la sentencia STSJ PV 37/2025 (Rec. 75/2024) el 9 de enero de 2025. Es la primera sentencia de un tribunal superior que se pronuncia expresamente sobre la aplicación del FIFO y la norma antiaplicación a criptomonedas en el ámbito del IRPF foral. <span class="level-badge level-1">Hecho confirmado</span></p>
+
+        <div class="source-box">
+          <strong>Datos de la sentencia:</strong><br>
+          STSJ PV 37/2025 · Rec. 75/2024 · ROJ: STSJ PV 41/2025 · 9 enero 2025<br>
+          Sala de lo Contencioso-Administrativo, Sección 1ª<br>
+          Fuente primaria: <a href="https://www.iberley.es/jurisprudencia/sentencia-contencioso-administrativo-tribunal-superior-justicia-sala-lo-contencioso-administrativo-seccion-primera-9-1-25-48651389" target="_blank" rel="noopener">Iberley</a> · <a href="https://vlex.es/vid/1070658339" target="_blank" rel="noopener">vLex</a>
+        </div>
+
+        <p>El razonamiento central del TSJPV fue el siguiente: la Administración Foral aplicó el método FIFO con pool global y la norma antiaplicación a las operaciones cripto del contribuyente recurrente. El tribunal anuló la liquidación y declaró que aplicar esas reglas <strong>sin habilitación expresa en la Norma Foral</strong> viola el principio de reserva de ley tributaria. En aquel momento, ni las Normas Forales de Bizkaia, Álava ni Gipuzkoa recogían expresamente estas reglas para criptomonedas.</p>
+
+        <h3>Sentencias adicionales en 2025</h3>
+
+        <p>Fuentes técnicas de alto nivel (Cuatrecasas, despacho ECIJA y otras) referencian dos sentencias adicionales del TSJPV en la misma línea doctrinal durante el primer semestre de 2025, con los ECLI ECLI:ES:TSJPV:2025:1078 (20 de marzo) y ECLI:ES:TSJPV:2025:1712 (22 de abril). La consistencia de estas referencias en múltiples fuentes independientes hace muy probable su existencia. No obstante, sus datos no han podido ser verificados en bases de datos judiciales primarias en el momento de publicación de esta guía. <span class="level-badge level-2">Interpretación</span></p>
+
+        <h3>El efecto real: reformas forales</h3>
+
+        <p>La consecuencia práctica de las sentencias fue contundente: Bizkaia y Gipuzkoa iniciaron el proceso de reforma de sus Normas Forales para incluir expresamente el método FIFO y la norma antiaplicación para criptomonedas. <span class="level-badge level-1">Hecho confirmado</span></p>
+
+        <div class="source-box">
+          <strong>Reforma Bizkaia (confirmada):</strong><br>
+          Propuesta de nueva letra al art. 43 de la Norma Foral 13/2013 del IRPF de Bizkaia, con efectos desde el 1 de enero de 2025. Fuente: Cuatrecasas, Universidad Comillas.<br><br>
+          <strong>Reforma Gipuzkoa (confirmada):</strong><br>
+          El TSJPV obligó a Gipuzkoa a modificar la tributación de criptomonedas (agosto 2025). Fuente: Naiz.eus.
+        </div>
+
+        <h3>¿Qué relevancia tiene la doctrina TSJPV para el IRPF nacional?</h3>
+
+        <p>La doctrina del TSJPV no vincula a la AEAT ni a los tribunales de territorio común. Sin embargo, su relevancia es real por dos razones:</p>
+        <ol>
+          <li><strong>Identidad de la ratio:</strong> El principio de reserva de ley tributaria que invoca el TSJPV también rige el IRPF nacional (art. 8 Ley General Tributaria). Los argumentos son trasladables.</li>
+          <li><strong>Señal regulatoria:</strong> El hecho de que las administraciones forales hayan reconocido que necesitan habilitación legal expresa —y la estén tramitando— sugiere que el mismo vacío existe en el IRPF nacional.</li>
+        </ol>
+        <p><span class="level-badge level-3">Opinión técnica</span> Un contribuyente en territorio común podría invocar estos argumentos ante la AEAT o en un recurso, pero sin garantía de resultado: no existe jurisprudencia del Tribunal Supremo ni de la Audiencia Nacional que haya validado esta posición en el IRPF nacional.</p>
+
+        <!-- ─── H2 7: POSICIONES ─── -->
+        <h2 id="posiciones">Posición conservadora vs. posición técnica</h2>
+
+        <p>A la vista del estado legal (FIFO obligatorio con apoyo DGT; norma antiaplicación aplicada por la AEAT sin consulta vinculante expresa; doctrina TSJPV favorable pero no vinculante en territorio común), existen dos posiciones que un contribuyente puede adoptar:</p>
+
+        <div class="position-grid">
+          <div class="position-card conservative">
+            <h4>✓ Posición conservadora</h4>
+            <ul>
+              <li>Aplicar FIFO con pool global en todos los exchanges y wallets</li>
+              <li>Aplicar la norma antiaplicación con el plazo de 12 meses</li>
+              <li>Cumplimentar la casilla de Renta Web "No imputación de pérdidas por recompra"</li>
+              <li>Sin riesgo de regularización por este concepto</li>
+            </ul>
+            <div style="margin-top:.8rem;font-size:.82rem;color:var(--muted)"><strong style="color:var(--accent)">Recomendada</strong> para la mayoría de contribuyentes</div>
+          </div>
+          <div class="position-card technical">
+            <h4>⚠ Posición técnica</h4>
+            <ul>
+              <li>Aplicar FIFO con pool global (igual)</li>
+              <li>NO aplicar la norma antiaplicación: argumentar que art. 33.5 no aplica a bienes inmateriales sin habilitación expresa (doctrina TSJPV)</li>
+              <li>Requiere documentar la posición jurídica tomada</li>
+              <li>Alto riesgo de regularización por la AEAT</li>
+            </ul>
+            <div style="margin-top:.8rem;font-size:.82rem;color:var(--muted)"><strong style="color:var(--warn)">Solo con asesoramiento experto</strong> y para importes en que el ahorro justifique el riesgo</div>
+          </div>
+        </div>
+
+        <div class="callout warn">
+          <div class="callout-title">Coste del riesgo en la posición técnica</div>
+          <p>Si la AEAT regulariza al contribuyente que adoptó la posición técnica, le exigirá: (1) el importe de las pérdidas indebidamente compensadas, (2) intereses de demora desde el ejercicio en que se compensaron, y (3) potencialmente una sanción tributaria si se califica de infracción. El coste puede superar ampliamente el ahorro obtenido, especialmente en operaciones de volumen medio.</p>
+        </div>
+
+        <!-- ─── H2 8: EJEMPLOS NUMÉRICOS ─── -->
+        <h2 id="ejemplos">Ejemplos numéricos: homogeneidad en la práctica</h2>
+
+        <div class="example-box">
+          <h4>Ejemplo 1 — Norma antiaplicación activada y resuelta</h4>
+          <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-body">Enero 2024: vendes 1 ETH comprado en 2021 a 1.800 € (coste de adquisición: 3.200 €). <strong>Pérdida declarable: −1.400 €</strong>.</div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-body">Marzo 2024 (2 meses después): compras 0,5 ETH a 3.000 €. La norma antiaplicación <strong>bloquea parte de la pérdida</strong>: de los −1.400 € de pérdida, la parte proporcional correspondiente a 0,5 ETH queda diferida.</div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-body">Febrero 2026 (más de 12 meses después de la recompra de marzo 2024): vendes los 0,5 ETH recomprados. En ese momento, la pérdida diferida se integra en la base del ahorro de 2026.</div>
+          </div>
+          <div class="result">
+            <strong>Conclusión:</strong> La pérdida no se pierde; se difiere hasta la venta de los bienes que activaron el bloqueo. Declarar la norma correctamente en la casilla de Renta Web es obligatorio.
+          </div>
+        </div>
+
+        <div class="example-box">
+          <h4>Ejemplo 2 — ¿Cuándo NO se activa la norma?</h4>
+          <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-body">Mayo 2024: vendes 2 BTC con pérdida de −8.000 €.</div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-body">No compras ningún BTC en los 12 meses anteriores ni en los 12 meses posteriores a la venta.</div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-body">La norma antiaplicación <strong>no se activa</strong>. La pérdida de −8.000 € es computable íntegramente en el ejercicio 2024.</div>
+          </div>
+          <div class="result">
+            <strong>La norma solo afecta cuando hay readquisición.</strong> Si vendes en pérdida y no recompras el mismo activo en el plazo de 12 meses (antes ni después), la pérdida se declara con normalidad.
+          </div>
+        </div>
+
+        <!-- ─── H2 9: FAQ ─── -->
+        <h2 id="faq">Preguntas frecuentes</h2>
+
+        <div class="faq-list">
+
+          <details class="faq-item">
+            <summary class="faq-q">¿Qué diferencia hay entre bienes homogéneos y valores homogéneos en criptomonedas?</summary>
+            <div class="faq-a">
+              <p>Son conceptos legalmente distintos. Las criptomonedas son <strong>bienes homogéneos</strong> porque son fungibles e intercambiables (DGT V0525-25), lo que activa el método FIFO obligatorio del art. 37.2 LIRPF. Sin embargo, no son <strong>valores homogéneos</strong> según el art. 8 del Reglamento del IRPF, que exige que sean instrumentos emitidos por una entidad en condiciones idénticas.</p>
+              <p>Esta distinción es importante porque el art. 33.5 LIRPF —que regula la norma antiaplicación— habla de "valores o participaciones", no de "bienes inmateriales". La DGT no ha emitido consulta vinculante que resuelva explícitamente si la norma antiaplicación aplica a cripto en territorio común.</p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">¿El método FIFO es obligatorio si tengo criptomonedas en varios exchanges?</summary>
+            <div class="faq-a">
+              <p>Sí. La DGT confirmó en V0975-22 y V2520-22 que el pool FIFO es global: todos los monederos y exchanges donde tengas el mismo activo forman una única cola FIFO. Si tienes 0,5 BTC en Binance y 0,3 BTC en Kraken, el coste de adquisición se calcula sobre esos 0,8 BTC en orden cronológico de compra, independientemente de en qué plataforma vendas.</p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">¿La sentencia del TSJPV de 2025 me beneficia si vivo fuera del País Vasco?</summary>
+            <div class="faq-a">
+              <p>No directamente. Las sentencias del TSJPV se refieren a la Norma Foral del IRPF del País Vasco (Álava, Bizkaia, Gipuzkoa), no a la Ley nacional 35/2006 del IRPF que aplica en territorio común. El TSJPV no tiene competencia sobre la legislación nacional, y sus sentencias no vinculan a la AEAT.</p>
+              <p>Su relevancia es doctrinal: la ratio decidendi (reserva de ley tributaria) es un principio que también rige el IRPF nacional, y podría usarse como argumento en un recurso. Pero no existe jurisprudencia del Tribunal Supremo ni de la Audiencia Nacional que lo haya validado.</p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">¿La pérdida diferida por la norma antiaplicación desaparece o se recupera?</summary>
+            <div class="faq-a">
+              <p>Se difiere, no desaparece. La pérdida queda pendiente de imputación y se integra en la base del ahorro en el ejercicio en que transmitas los bienes homogéneos que originaron el bloqueo. Si transmites esas unidades dentro de los 4 ejercicios siguientes, la pérdida diferida es compensable. Si nunca transmites y pasan más de 4 ejercicios, la pérdida prescribiría.</p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">¿Qué pasa si no reflejo la norma antiaplicación en mi declaración?</summary>
+            <div class="faq-a">
+              <p>La AEAT puede regularizar la autoliquidación y exigir el importe de la pérdida indebidamente compensada, más intereses de demora. Si la omisión supera el umbral de infracción, puede añadirse una sanción tributaria. La posición operativa de la AEAT es aplicar la norma, y lo hace a través de la casilla específica en Renta Web.</p>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-q">¿Puedo reclamar ante la AEAT usando el argumento del TSJPV si me regulariza por el FIFO?</summary>
+            <div class="faq-a">
+              <p>Técnicamente puedes invocar la ratio decidendi del TSJPV —el principio de reserva de ley tributaria— en un recurso de reposición o reclamación económico-administrativa. Pero no existe jurisprudencia del Tribunal Supremo ni de la Audiencia Nacional que haya validado ese argumento en territorio común para el IRPF nacional.</p>
+              <p>El riesgo de regularización más intereses y posible sanción puede superar el ahorro teórico. Esta decisión de estrategia fiscal debe evaluarse caso por caso con un asesor especializado, comparando el ahorro esperado con el coste del litigio y la probabilidad de éxito.</p>
+            </div>
+          </details>
+
+        </div>
+
+        <!-- ─── SILO ─── -->
+        <h2 id="silo">El silo de pérdidas patrimoniales en cripto</h2>
+        <p>Esta página forma parte del silo de pérdidas patrimoniales de criptomonedas. El conjunto cubre el ciclo completo: desde el fundamento legal (aquí) hasta la compensación final.</p>
+
+        <div class="silo-grid">
+          <div class="silo-card subhub">
+            <div class="silo-tag">Sub-Hub A</div>
+            <a href="/perdidas-patrimoniales-criptomonedas">Pérdidas patrimoniales</a>
+            <p>Cuándo se generan, casilla correcta (1804) y pasos en Renta Web</p>
+          </div>
+          <div class="silo-card current">
+            <div class="silo-tag">Spoke A1 · Esta página</div>
+            <span style="font-weight:600;color:var(--accent)">Bienes homogéneos</span>
+            <p>Fundamento legal del FIFO y de la norma antiaplicación</p>
+          </div>
+          <div class="silo-card published">
+            <div class="silo-tag">Spoke B1 · Publicado</div>
+            <a href="/regla-dos-meses-criptomonedas">Regla de los 12 meses</a>
+            <p>Cómo funciona la norma antiaplicación en la práctica</p>
+          </div>
+          <div class="silo-card published">
+            <div class="silo-tag">Hub B · Publicado</div>
+            <a href="/compensar-perdidas-criptomonedas">Compensar pérdidas</a>
+            <p>Mecanismo de compensación: 4 pasos, arrastre 4 ejercicios</p>
+          </div>
+          <div class="silo-card published">
+            <div class="silo-tag">Fundación</div>
+            <a href="/metodo-fifo-criptomonedas">Método FIFO</a>
+            <p>Guía completa del FIFO obligatorio en España</p>
+          </div>
+          <div class="silo-card planned">
+            <div class="silo-tag">Spoke B2 · Próximamente</div>
+            <span style="color:var(--muted);font-weight:600">Tax loss harvesting</span>
+            <p>Estrategia de cosecha de pérdidas fiscales en España</p>
+          </div>
+        </div>
+
+        <!-- LEGAL NOTICE -->
+        <div class="legal-notice">
+          <strong>Aviso legal:</strong> El contenido de esta página es de carácter informativo y ha sido supervisado por Rafael Ramos Martínez, Economista Colegiado nº 4.579 (Colegio de Economistas de Valencia). No constituye asesoramiento fiscal individualizado. La situación normativa sobre la aplicación de la norma antiaplicación a criptomonedas en territorio común es objeto de debate doctrinal activo a junio de 2026. Para decisiones relevantes sobre tu declaración, consulta con un asesor fiscal colegiado.
+        </div>
+
+      </div>
+      <!-- ── FIN CONTENIDO PRINCIPAL ──── -->
+
+      <!-- ══════════════════════════ SIDEBAR ══════════════════════════ -->
+      <aside class="sidebar" aria-label="Recursos adicionales">
+
+        <!-- CTA -->
+        <div class="sidebar-card sidebar-card-premium">
+          <span class="sidebar-badge">Informe fiscal FIFO</span>
+          <div class="sidebar-card-title">Genera tu informe FIFO de criptomonedas</div>
+          <p class="sidebar-card-text">Importa el historial de tus exchanges y descarga un informe fiscal listo para revisar.</p>
+          <ul class="cta-benefits">
+            <li>Método FIFO automático</li>
+            <li>Compatible con varios exchanges</li>
+            <li>Revisión profesional si tu caso es complejo</li>
+          </ul>
+          <a href="/signup/" class="sidebar-cta">Generar informe fiscal</a>
+          <a href="/asesoramiento-fiscal-criptomonedas" class="sidebar-cta-secondary">Hablar con un asesor</a>
+          <p class="sidebar-note">Supervisado por Rafael Ramos Martínez, Economista Colegiado nº&nbsp;4.579.</p>
+        </div>
+
+        <!-- IN-PAGE NAV -->
+        <div class="sidebar-card">
+          <div class="sidebar-card-title">En esta página</div>
+          <nav class="sidebar-links" aria-label="Navegación en página">
+            <a href="#que-son">Qué son los bienes homogéneos</a>
+            <a href="#fifo">Por qué obliga al método FIFO</a>
+            <a href="#pool-global">El pool global</a>
+            <a href="#vs-valores">Bienes vs. valores homogéneos</a>
+            <a href="#norma-antiaplicacion">La norma antiaplicación</a>
+            <a href="#doctrina-foral">Doctrina del TSJPV</a>
+            <a href="#posiciones">Posición conservadora vs. técnica</a>
+            <a href="#ejemplos">Ejemplos numéricos</a>
+            <a href="#faq">Preguntas frecuentes</a>
+          </nav>
+        </div>
+
+        <!-- BASE LEGAL -->
+        <div class="sidebar-card">
+          <div class="sidebar-card-title">Base legal</div>
+          <ul class="legal-sources">
+            <li><a href="https://www.boe.es/buscar/act.php?id=BOE-A-2006-20764" target="_blank" rel="noopener">Art. 37.2 LIRPF — Método FIFO</a></li>
+            <li><a href="https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V0999-18" target="_blank" rel="noopener">DGT V0999-18 — Bienes homogéneos</a></li>
+            <li><a href="https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V0975-22" target="_blank" rel="noopener">DGT V0975-22 — Pool global</a></li>
+            <li><a href="https://petete.tributos.hacienda.gob.es/consultas/?num_consulta=V0525-25" target="_blank" rel="noopener">DGT V0525-25 — No son "valores"</a></li>
+            <li><a href="https://www.iberley.es/jurisprudencia/sentencia-contencioso-administrativo-tribunal-superior-justicia-sala-lo-contencioso-administrativo-seccion-primera-9-1-25-48651389" target="_blank" rel="noopener">STSJ PV 37/2025 (Iberley)</a></li>
+          </ul>
+        </div>
+
+        <!-- SILO LINKS -->
+        <div class="sidebar-card">
+          <div class="sidebar-card-title">Guías relacionadas</div>
+          <nav class="sidebar-links" aria-label="Páginas del silo">
+            <a href="/metodo-fifo-criptomonedas">Método FIFO: guía completa</a>
+            <a href="/permuta-criptomonedas-irpf">Permuta de criptomonedas en el IRPF</a>
+            <a href="/perdidas-patrimoniales-criptomonedas">Pérdidas patrimoniales en el IRPF</a>
+            <a href="/regla-dos-meses-criptomonedas">La norma antiaplicación (12 meses)</a>
+            <a href="/compensar-perdidas-criptomonedas">Compensar pérdidas cripto</a>
+            <a href="/asesoramiento-fiscal-criptomonedas">Asesoramiento fiscal personalizado</a>
+          </nav>
+        </div>
+
+      </aside>
+
+    </div>
+  </div>
+</section>
 
 <!-- ── CTA FINAL (mismo componente que /exchanges/binance) ── -->
 <section class="cta-final">
-  <div style="max-width:1200px;margin:0 auto;padding:0 1.5rem;">
+  <div class="wrap">
     <div class="cta-mid">
       <h3 class="cta-mid-title">Calcula tus impuestos cripto con el método FIFO</h3>
       <p>Genera tu informe FIFO para Hacienda o explora todas las herramientas del silo fiscal.</p>
