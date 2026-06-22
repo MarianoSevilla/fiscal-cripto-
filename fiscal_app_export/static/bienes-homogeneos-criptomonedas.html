@@ -637,11 +637,37 @@ li{margin-bottom:.4rem}
 }
 .sidebar-nav a:last-child{border-bottom:none}
 .sidebar-nav a:hover{color:var(--accent)}
-/* ── SIDEBAR CTA (mismo componente que /exchanges/binance) ── */
+/* ── SIDEBAR CTA PREMIUM (mismo componente que /exchanges/binance) ── */
 .sidebar-card{
   background:#141f32;border:1px solid rgba(255,255,255,.13);
   border-radius:14px;padding:1.5rem;
 }
+.sidebar-card.sidebar-card-premium{
+  background:#141f32;
+  border:1.5px solid rgba(0,200,150,.45);
+  border-radius:16px;
+  padding:1.85rem 1.6rem;
+  box-shadow:0 0 0 1px rgba(0,200,150,.08), 0 12px 32px rgba(0,200,150,.08);
+}
+.sidebar-badge{
+  display:inline-flex;align-items:center;gap:7px;
+  background:rgba(0,200,150,.12);border:1px solid rgba(0,200,150,.25);
+  color:#00C896;border-radius:100px;
+  font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  padding:5px 12px;margin-bottom:1.1rem;
+}
+.sidebar-badge::before{
+  content:'';display:block;width:6px;height:6px;border-radius:50%;
+  background:#00C896;box-shadow:0 0 6px #00C896;
+}
+.sidebar-card-premium .sidebar-card-title{
+  font-family:'Syne',sans-serif;font-size:1.22rem;font-weight:800;
+  letter-spacing:-.02em;line-height:1.2;margin-bottom:.65rem;color:#eef2ff;
+}
+.sidebar-card-premium .sidebar-card-text{
+  font-size:.88rem;color:#7a8aa8;line-height:1.6;margin-bottom:1.1rem;
+}
+.sidebar-card-premium .cta-benefits{margin:0 0 1.4rem}
 .sidebar-cta{
   display:block;width:100%;text-align:center;
   background:#00C896;color:#0a0a0a;
@@ -650,6 +676,12 @@ li{margin-bottom:.4rem}
   text-decoration:none;transition:opacity .15s;
 }
 .sidebar-cta:hover{opacity:.88;text-decoration:none}
+.sidebar-cta-secondary{
+  display:block;width:100%;text-align:center;
+  color:#00C896;font-size:.85rem;font-weight:600;
+  margin-top:.85rem;text-decoration:none;
+}
+.sidebar-cta-secondary:hover{text-decoration:underline}
 .sidebar-note{
   font-size:12px;color:#7a8aa8;text-align:center;
   margin-top:.75rem;line-height:1.5;
@@ -1263,11 +1295,18 @@ li{margin-bottom:.4rem}
     <aside class="sidebar" aria-label="Recursos adicionales">
 
       <!-- CTA -->
-      <div class="sidebar-card">
-        <div class="sidebar-card-title">¿Tienes un caso complejo?</div>
-        <p style="font-size:.85rem;color:#7a8aa8;line-height:1.55;margin-bottom:1.1rem;">Múltiples exchanges, posiciones de staking, varios ejercicios o dudas sobre la norma antiaplicación. Rafael Ramos, Economista Colegiado nº 4.579, te ayuda a calcular correctamente.</p>
-        <a href="/asesoramiento-fiscal-criptomonedas" class="sidebar-cta">Solicitar asesoramiento</a>
-        <p class="sidebar-note">Revisión personalizada de tu caso fiscal cripto.</p>
+      <div class="sidebar-card sidebar-card-premium">
+        <span class="sidebar-badge">Informe fiscal FIFO</span>
+        <div class="sidebar-card-title">Genera tu informe FIFO de criptomonedas</div>
+        <p class="sidebar-card-text">Importa el historial de tus exchanges y descarga un informe fiscal listo para revisar.</p>
+        <ul class="cta-benefits">
+          <li>Método FIFO automático</li>
+          <li>Compatible con varios exchanges</li>
+          <li>Revisión profesional si tu caso es complejo</li>
+        </ul>
+        <a href="/signup/" class="sidebar-cta">Generar informe fiscal</a>
+        <a href="/asesoramiento-fiscal-criptomonedas" class="sidebar-cta-secondary">Hablar con un asesor</a>
+        <p class="sidebar-note">Supervisado por Rafael Ramos Martínez, Economista Colegiado nº&nbsp;4.579.</p>
       </div>
 
       <!-- IN-PAGE NAV -->
