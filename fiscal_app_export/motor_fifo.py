@@ -46,6 +46,8 @@ class ResultadoFIFO:
     tipo_operacion: str            # "venta" o "swap"
     nota: str = ""
     inventario_incompleto: bool = False  # True si faltan lotes previos → coste parcial o nulo
+    activo_recibido: str = ""      # SOLO informativo (swaps): activo recibido en la permuta.
+                                   # Vacío en ventas. No interviene en ningún cálculo FIFO.
 
 @dataclass
 class ResumenActivo:
@@ -166,6 +168,10 @@ class MotorFIFO:
             nota=nota
         )
         if resultado:
+            # Campo SOLO informativo para el detalle de permutas del PDF.
+            # No interviene en el cálculo FIFO ni fiscal (G/P, coste, transmisión
+            # ya están calculados por _consumir_fifo, que no se toca).
+            resultado.activo_recibido = activo_recibido
             self.resultados.append(resultado)
 
         # ── 2) Registrar activo recibido con coste base = valor EUR entregado

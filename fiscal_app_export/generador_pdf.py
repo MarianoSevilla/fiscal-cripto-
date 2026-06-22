@@ -16,6 +16,15 @@ from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
 from datetime import datetime
 import io
 
+# Conjunto de stablecoins reutilizado del motor para clasificar venta vs permuta.
+# Se importa de forma defensiva: si por cualquier motivo no estuviera disponible,
+# se usa un fallback con el mismo contenido (no afecta a ningún cálculo).
+try:
+    from motor_fifo import MotorFIFO as _MotorFIFO
+    _STABLES = set(_MotorFIFO.STABLES) | {"EUR"}
+except Exception:  # pragma: no cover - fallback defensivo
+    _STABLES = {"USDC", "USDT", "BUSD", "FDUSD", "DAI", "EUR"}
+
 
 def _td_safe(text: str, max_chars: int = 300) -> str:
     """
@@ -998,6 +1007,135 @@ def _bloque_modelo_721(posiciones, styles, ejercicio=""):
     return _separador_bloque() + [t]
 
 
+# ── SEPARACIÓN VENTAS / PERMUTAS (presentación para Renta WEB) ────────────────
+# En Renta WEB ventas y permutas se introducen en casillas separadas. Esta capa
+# AGRUPA los ResultadoFIFO ya calculados — NO recalcula nada (ni FIFO, ni G/P,
+# ni coste). El total de Ventas + Permutas coincide siempre con el resultado
+# neto de motor.resumen_fiscal().
+
+def _clasificar_grupo_renta(r) -> str:
+    """Clasifica un ResultadoFIFO en 'venta' o 'permuta' para su presentación.
+
+    Reglas (solo presentación, sin efecto en el cálculo):
+      · tipo_operacion == "venta"  → 'venta' (en el motor una venta es cripto → stable/fiat).
+      · tipo_operacion == "swap":
+          – cripto ↔ cripto                  → 'permuta'
+          – cripto ↔ stablecoin/EUR (uno de  → 'venta'
+            los dos extremos es stable/fiat)
+
+    Retrocompatible: si un ResultadoFIFO antiguo no trae `activo_recibido`
+    (cadena vacía), no podemos confirmar cripto↔cripto, así que se trata como
+    'venta' (criterio conservador, no rompe PDFs ya existentes).
+    """
+    if getattr(r, "tipo_operacion", "") != "swap":
+        return "venta"
+    entregado = (getattr(r, "activo", "") or "").upper()
+    recibido  = (getattr(r, "activo_recibido", "") or "").upper()
+    if entregado not in _STABLES and recibido and recibido not in _STABLES:
+        return "permuta"
+    return "venta"
+
+
+def _totales_grupo(resultados):
+    """(n_ops, Σ transmisión, Σ adquisición, Σ G/P) sobre una lista de
+    ResultadoFIFO. Suma en bruto (sin redondear) para preservar el invariante
+    Ventas + Permutas == Total patrimonial == resultado neto del motor."""
+    n = len(resultados)
+    transm = sum(r.precio_transmision for r in resultados)
+    adq    = sum(r.precio_coste for r in resultados)
+    gp     = sum(r.ganancia_perdida for r in resultados)
+    return n, transm, adq, gp
+
+
+def _particionar_ventas_permutas(resultados):
+    """Devuelve (ventas, permutas) preservando el orden original."""
+    ventas, permutas = [], []
+    for r in resultados:
+        (permutas if _clasificar_grupo_renta(r) == "permuta" else ventas).append(r)
+    return ventas, permutas
+
+
+_RENTA_TABLE_STYLE = TableStyle([
+    ("BACKGROUND",    (0, 0), (-1, 0),  ACCENT_SOFT),
+    ("LINEBELOW",     (0, 0), (-1, 0),  1,   ACCENT),
+    ("BOX",           (0, 0), (-1, -1), 0.5, BORDER),
+    ("INNERGRID",     (0, 0), (-1, -1), 0.3, BORDER),
+    ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+    ("TOPPADDING",    (0, 0), (-1, -1), 6),
+    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+    ("LEFTPADDING",   (0, 0), (-1, -1), 8),
+    ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
+])
+
+
+def _tabla_renta_grupo(titulo_col, n, transm, adq, gp, styles, es_total=False):
+    """Mini-tabla concepto | importe para las Tablas 1, 2 y 3 del resumen Renta."""
+    gp_style = styles["resumen_value_green"] if gp >= 0 else styles["resumen_value_red"]
+    if es_total:
+        rows = [
+            [Paragraph(titulo_col, styles["th"]), Paragraph("IMPORTE (EUR)", styles["th_right"])],
+            [Paragraph("Total valor de transmisión", styles["resumen_label"]),
+             Paragraph(f"{transm:,.2f}", styles["resumen_value"])],
+            [Paragraph("Total valor de adquisición", styles["resumen_label"]),
+             Paragraph(f"{adq:,.2f}", styles["resumen_value"])],
+            [Paragraph("RESULTADO NETO", styles["subsection"]),
+             Paragraph(f"{gp:+,.2f}", gp_style)],
+        ]
+    else:
+        rows = [
+            [Paragraph(titulo_col, styles["th"]), Paragraph("IMPORTE (EUR)", styles["th_right"])],
+            [Paragraph("Nº de operaciones", styles["resumen_label"]),
+             Paragraph(str(n), styles["resumen_value"])],
+            [Paragraph("Valor de transmisión", styles["resumen_label"]),
+             Paragraph(f"{transm:,.2f}", styles["resumen_value"])],
+            [Paragraph("Valor de adquisición", styles["resumen_label"]),
+             Paragraph(f"{adq:,.2f}", styles["resumen_value"])],
+            [Paragraph("Ganancia / pérdida", styles["subsection"]),
+             Paragraph(f"{gp:+,.2f}", gp_style)],
+        ]
+    t = Table(rows, colWidths=[128*mm, 40*mm])
+    t.setStyle(_RENTA_TABLE_STYLE)
+    return t
+
+
+def _bloque_resumen_renta(resultados, styles):
+    """Sección 'Resumen Fiscal para Renta': Tabla 1 (Ventas), Tabla 2 (Permutas)
+    y Tabla 3 (Total patrimonial). Solo presentación; sin recálculo."""
+    ventas, permutas = _particionar_ventas_permutas(resultados)
+    nv, tv, av, gv = _totales_grupo(ventas)
+    np_, tp, ap, gp = _totales_grupo(permutas)
+
+    flow = [PageBreak()]
+    flow.append(Paragraph("Resumen Fiscal para Renta", styles["section"]))
+    flow.append(Paragraph(
+        "En Renta WEB las ventas y las permutas se declaran en apartados separados. "
+        "Esta sección desglosa ambos grupos por separado y su total patrimonial conjunto. "
+        "No altera el cálculo: agrupa las operaciones ya calculadas por el método FIFO.",
+        styles["body_muted"]))
+    flow.append(Spacer(1, 3*mm))
+
+    flow.append(Paragraph("Tabla 1 — Ventas de criptomonedas", styles["subsection"]))
+    flow.append(_tabla_renta_grupo("VENTAS DE CRIPTOMONEDAS", nv, tv, av, gv, styles))
+    flow.append(Spacer(1, 4*mm))
+
+    flow.append(Paragraph("Tabla 2 — Permutas de criptomonedas", styles["subsection"]))
+    flow.append(_tabla_renta_grupo("PERMUTAS DE CRIPTOMONEDAS", np_, tp, ap, gp, styles))
+    flow.append(Spacer(1, 4*mm))
+
+    flow.append(Paragraph("Tabla 3 — Total patrimonial", styles["subsection"]))
+    flow.append(_tabla_renta_grupo(
+        "TOTAL PATRIMONIAL (VENTAS + PERMUTAS)",
+        nv + np_, tv + tp, av + ap, gv + gp, styles, es_total=True))
+    flow.append(Spacer(1, 2*mm))
+
+    flow.append(Paragraph(
+        "Criterio de clasificación: las permutas cripto↔cripto se agrupan en la Tabla 2; "
+        "los intercambios cripto↔stablecoin/EUR se tratan como ventas (Tabla 1). "
+        "El resultado neto de la Tabla 3 coincide con el resultado neto del resumen ejecutivo.",
+        styles["aviso_legal"]))
+    return flow
+
+
 def _tabla_resumen_activos(resultados, styles):
     from collections import defaultdict
     por_activo = defaultdict(lambda: {"ops": 0, "ganancias": 0.0, "perdidas": 0.0})
@@ -1124,6 +1262,73 @@ def _tabla_operaciones(resultados, styles):
         ("TOPPADDING",    (0, 0), (-1, -1), 6),              # body: +2pt (era 4)
         ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
         ("TOPPADDING",    (0, 0), (-1, 0),  8),              # header: +4pt (era 4)
+        ("BOTTOMPADDING", (0, 0), (-1, 0),  8),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 5),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 5),
+        ("ALIGN",         (3, 0), (-1, -1), "RIGHT"),
+    ] + row_bgs + inc_bgs))
+    return t
+
+
+def _tabla_operaciones_permutas(resultados, styles):
+    """Detalle de permutas con columna adicional 'ACTIVO RECIBIDO'.
+
+    Misma información de cálculo que _tabla_operaciones (no recalcula nada),
+    pero adaptada al caso permuta: muestra activo transmitido y activo recibido,
+    y omite la columna TIPO (todas las filas son permutas)."""
+    cabecera = [
+        Paragraph("FECHA",                    styles["th"]),
+        Paragraph("ACTIVO TRANSMITIDO",       styles["th"]),
+        Paragraph("ACTIVO RECIBIDO",          styles["th"]),
+        Paragraph("CANTIDAD",                 styles["th_right"]),
+        Paragraph("VALOR TRANSMISIÓN (EUR)",  styles["th_right"]),
+        Paragraph("COSTE ADQUISICIÓN (EUR)",  styles["th_right"]),
+        Paragraph("GANANCIA/PÉRDIDA (EUR)",   styles["th_right"]),
+        Paragraph("DÍAS",                     styles["th_right"]),
+    ]
+    rows = [cabecera]
+    _filas_incompletas = []
+
+    for i, r in enumerate(resultados):
+        gp = r.ganancia_perdida
+        gp_style = styles["td_green"] if gp >= 0 else styles["td_red"]
+        gp_str   = f"+{gp:,.2f}" if gp >= 0 else f"{gp:,.2f}"
+        _inc = getattr(r, "inventario_incompleto", False)
+
+        if _inc:
+            _filas_incompletas.append(i + 1)
+            coste_cell = Paragraph(f"⚠ {r.precio_coste:,.2f}", styles["td_red"])
+        else:
+            coste_cell = Paragraph(f"{r.precio_coste:,.2f}", styles["td_mono"])
+
+        recibido = getattr(r, "activo_recibido", "") or "—"
+        rows.append([
+            Paragraph(r.fecha.strftime("%d/%m/%Y"), styles["td_muted"]),
+            Paragraph(_td_safe(r.activo, 40), styles["td"]),
+            Paragraph(_td_safe(recibido, 40), styles["td"]),
+            Paragraph(_fmt_cantidad(r.cantidad_vendida),  styles["td_mono"]),
+            Paragraph(f"{r.precio_transmision:,.2f}", styles["td_mono"]),
+            coste_cell,
+            Paragraph(gp_str, gp_style),
+            Paragraph(str(int(r.periodo_dias)), styles["td_muted_right"]),
+        ])
+
+    # Total: 18+22+22+18+24+24+25+15 = 168mm (= A4 − márgenes)
+    col_w = [18*mm, 22*mm, 22*mm, 18*mm, 24*mm, 24*mm, 25*mm, 15*mm]
+    t = Table(rows, colWidths=col_w, repeatRows=1)
+    n = len(rows)
+    row_bgs = [("BACKGROUND", (0, i), (-1, i), BG if i % 2 == 1 else ZEBRA_LIGHT) for i in range(1, n)]
+    inc_bgs = [("BACKGROUND", (0, fi), (-1, fi), colors.HexColor("#FEF2F2"))
+               for fi in _filas_incompletas]
+    t.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, 0),  ACCENT_SOFT),
+        ("LINEBELOW",     (0, 0), (-1, 0),  1,   ACCENT),
+        ("BOX",           (0, 0), (-1, -1), 0.4, BORDER),
+        ("INNERGRID",     (0, 0), (-1, -1), 0.2, GRID_LIGHT),
+        ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING",    (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING",    (0, 0), (-1, 0),  8),
         ("BOTTOMPADDING", (0, 0), (-1, 0),  8),
         ("LEFTPADDING",   (0, 0), (-1, -1), 5),
         ("RIGHTPADDING",  (0, 0), (-1, -1), 5),
@@ -1506,6 +1711,13 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
             story.append(Spacer(1, 4*mm))
         story.append(_tabla_resumen_activos(motor.resultados, styles))
 
+    # 4b. RESUMEN FISCAL PARA RENTA — Ventas / Permutas / Total patrimonial
+    #     Separación exigida porque Renta WEB las declara en casillas distintas.
+    #     Solo agrupa los resultados ya calculados; no recalcula nada.
+    if motor.resultados:
+        for fl in _bloque_resumen_renta(motor.resultados, styles):
+            story.append(fl)
+
     # 5. DETALLE OPERACIONES
     if motor.resultados:
         story.append(PageBreak())
@@ -1535,7 +1747,35 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
             if _n_swaps_sin_fmv > 0:
                 for _fl in _aviso_fmv_estimado(_n_swaps_sin_fmv, styles):
                     story.append(_fl)
-        story.append(_tabla_operaciones(motor.resultados, styles))
+
+        # Detalle separado: ventas y permutas en bloques distintos (casillas
+        # Renta WEB diferentes). _tabla_operaciones se reutiliza intacta para
+        # ventas; las permutas usan la tabla con columna 'Activo recibido'.
+        _ventas_det, _permutas_det = _particionar_ventas_permutas(motor.resultados)
+
+        story.append(Paragraph("Detalle de ventas", styles["subsection"]))
+        if _ventas_det:
+            story.append(Paragraph(
+                f"{len(_ventas_det)} operación{'es' if len(_ventas_det) != 1 else ''} "
+                "de venta de criptomonedas (incluye intercambios cripto↔stablecoin/EUR).",
+                styles["body_muted"]))
+            story.append(Spacer(1, 2*mm))
+            story.append(_tabla_operaciones(_ventas_det, styles))
+        else:
+            story.append(Paragraph("No hay ventas en el período analizado.", styles["body_muted"]))
+        story.append(Spacer(1, 5*mm))
+
+        story.append(Paragraph("Detalle de permutas", styles["subsection"]))
+        if _permutas_det:
+            story.append(Paragraph(
+                f"{len(_permutas_det)} permuta{'s' if len(_permutas_det) != 1 else ''} "
+                "cripto↔cripto. El activo recibido entra en el inventario FIFO con coste "
+                "base igual al valor de transmisión del activo entregado.",
+                styles["body_muted"]))
+            story.append(Spacer(1, 2*mm))
+            story.append(_tabla_operaciones_permutas(_permutas_det, styles))
+        else:
+            story.append(Paragraph("No hay permutas en el período analizado.", styles["body_muted"]))
 
     # 5. POSICION ACTUAL
     if posiciones:
