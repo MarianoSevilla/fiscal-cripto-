@@ -1,0 +1,29 @@
+﻿UID,Account Type,Currency,Side,Amount,Fee,Time(UTC+02:00),Remark,Type
+64476041,mainAccount,EUR,Deposit,99,1,2025-10-08 11:54:21,ee,Fiat Deposit
+64476041,mainAccount,EUR,Deposit,799,1,2025-10-09 14:15:46,ee,Fiat Deposit
+64476041,mainAccount,EUR,Withdrawal,898,0,2025-10-12 09:55:40,Balance,Fiat Transactions
+64476041,mainAccount,USDT,Deposit,1013.642815,0,2025-10-12 09:55:41,Balance,Fiat Transactions
+64476041,mainAccount,USDT,Withdrawal,1013.64281593,0,2025-10-12 09:56:35,Cuenta de trading,Transfer
+64476041,mainAccount,EUR,Deposit,799,1,2025-11-03 15:24:00,ee,Fiat Deposit
+64476041,mainAccount,EUR,Withdrawal,799,0,2025-11-04 22:24:30,Cuenta de trading,Transfer
+64476041,mainAccount,XRP,Deposit,310.744,0,2025-11-04 22:43:47,Cuenta de trading,Transfer
+64476041,mainAccount,XLM,Deposit,1676.82,0,2025-11-04 22:44:10,Cuenta de trading,Transfer
+64476041,mainAccount,XDC,Deposit,6194.0563,0,2025-11-04 22:44:29,Cuenta de trading,Transfer
+64476041,mainAccount,QNT,Deposit,2,0,2025-11-04 22:44:44,Cuenta de trading,Transfer
+64476041,mainAccount,LINEA,Deposit,7767,0,2025-11-04 22:45:04,Cuenta de trading,Transfer
+64476041,mainAccount,HBAR,Deposit,289.1259,0,2025-11-04 22:45:30,Cuenta de trading,Transfer
+64476041,mainAccount,WLFI,Deposit,414.25,0,2025-11-04 22:45:48,Cuenta de trading,Transfer
+64476041,mainAccount,EUR,Deposit,599,1,2025-12-04 12:22:15,ee,Fiat Deposit
+64476041,mainAccount,EUR,Withdrawal,599,0,2025-12-07 21:39:32,Cuenta de trading,Transfer
+64476041,mainAccount,XRP,Deposit,232.3232,0,2025-12-23 21:55:44,Cuenta de trading,Transfer
+64476041,mainAccount,IOTA,Deposit,2229.6255,0,2025-12-23 21:56:30,Cuenta de trading,Transfer
+64476041,mainAccount,EUR,Deposit,599,1,2025-12-24 15:11:36,ee,Fiat Deposit
+64476041,mainAccount,EUR,Withdrawal,599,0,2025-12-26 19:50:39,Cuenta de trading,Transfer
+64476041,mainAccount,XRP,Deposit,190.7562,0,2025-12-26 20:13:44,Cuenta de trading,Transfer
+64476041,mainAccount,XLM,Deposit,827.04,0,2025-12-26 20:13:54,Cuenta de trading,Transfer
+64476041,mainAccount,ZBCN,Deposit,64594,0,2025-12-26 20:14:08,Cuenta de trading,Transfer
+64476041,mainAccount,EUR,Deposit,599,1,2025-12-29 12:56:02,ee,Fiat Deposit
+64476041,mainAccount,EUR,Withdrawal,599,0,2025-12-30 20:26:23,Cuenta de trading,Transfer
+64476041,mainAccount,VELO,Deposit,69009.5248,0,2025-12-30 20:50:37,Cuenta de trading,Transfer
+64476041,mainAccount,XDC,Deposit,2384.3428,0,2025-12-30 20:50:50,Cuenta de trading,Transfer
+64476041,mainAccount,HBAR,Withdrawal,289.1259,0,2025-12-30 20:51:00,Cuenta de trading,Transfer
