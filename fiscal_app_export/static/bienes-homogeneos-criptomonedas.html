@@ -361,6 +361,9 @@ img { max-width: 100%; height: auto; }
   font-size: .72rem; font-weight: 700; text-transform: uppercase;
   letter-spacing: .06em; color: var(--accent); margin-bottom: .4rem;
 }
+/* Versión compacta dentro del hero: highlight editorial, no bloque protagonista */
+.hero .geo-block { padding: .7rem 1.1rem; margin: 1.25rem 0; font-size: .85rem; }
+.hero .geo-label { margin-bottom: .3rem; }
 
 /* ── TABLES ──────────────────────── */
 .table-wrap { overflow-x: auto; margin: 1.2rem 0; border: 1px solid var(--border); border-radius: 14px; }
@@ -462,12 +465,49 @@ details[open] .faq-q::after { transform: rotate(45deg); }
 .cta-benefits { list-style: none; display: flex; flex-direction: column; gap: .45rem; margin: 1rem 0 1.5rem; text-align: left; }
 .cta-benefits li { font-size: .88rem; color: var(--muted); display: flex; align-items: center; gap: 8px; }
 .cta-benefits li::before { content: '✓'; color: var(--accent); font-weight: 700; font-size: 11px; flex-shrink: 0; }
-.hero-cta-badge {
+/* ── CTA "ASISTENCIA" (mismo patrón que /exchanges/binance, dentro del hero) ── */
+.asistencia-badge {
   display: inline-flex; align-items: center;
   font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
   color: var(--muted); border: 1px solid var(--border2);
   border-radius: 100px; padding: 3px 10px; margin-bottom: 0.6rem;
 }
+.asistencia-block {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 12px; padding: 1.1rem 1.25rem;
+  max-width: 680px; margin-top: 1.25rem;
+}
+.asistencia-block p {
+  font-size: 0.88rem; color: var(--muted); line-height: 1.55;
+  margin-bottom: 0.85rem;
+}
+.asistencia-block p strong { color: var(--text); display: block; margin-bottom: 3px; font-size: 0.95rem; }
+.asistencia-bullets {
+  list-style: none; margin: 0 0 1rem;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.asistencia-bullets li {
+  font-size: 0.82rem; color: var(--accent);
+  letter-spacing: 0.01em;
+}
+.btn-asistencia {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  justify-content: center;
+  background: none; color: var(--accent);
+  border: 1.5px solid var(--accent); border-radius: 10px;
+  padding: 13px 24px;
+  font-family: var(--font-display); font-size: 1rem; font-weight: 700;
+  cursor: pointer; transition: background 0.15s;
+  text-decoration: none; letter-spacing: -0.01em;
+}
+.btn-asistencia:hover { background: var(--accent-dim); text-decoration: none; }
+.asistencia-secondary {
+  display: block; width: 100%; text-align: center;
+  color: var(--accent); font-size: 0.85rem; font-weight: 600;
+  margin-top: 0.75rem; text-decoration: none;
+}
+.asistencia-secondary:hover { text-decoration: underline; }
+
 .cta-final { text-align: center; padding: 5rem 0 0; border-top: 1px solid var(--border); }
 .cta-final .cta-mid { text-align: left; }
 .cta-final .cta-mid p:not(.cta-micro) { max-width: none; margin: 0 0 .85rem; font-size: .88rem; }
@@ -573,27 +613,26 @@ details[open] .faq-q::after { transform: rotate(45deg); }
       <p>Las criptomonedas del mismo tipo son <strong>bienes homogéneos</strong>: son fungibles e intercambiables, de modo que una unidad no se distingue de otra del mismo activo. La DGT lo ha confirmado desde 2018. Esa calificación activa dos consecuencias fiscales: el método FIFO obligatorio con pool global (art. 37.2 LIRPF) y la norma antiaplicación de pérdidas en Renta Web.</p>
     </div>
 
+    <!-- CTA PREMIUM (mismo patrón "asistencia" que /exchanges/binance) -->
+    <div class="asistencia-block">
+      <div class="asistencia-badge">Informe fiscal FIFO</div>
+      <p>
+        <strong>Genera tu informe FIFO de criptomonedas</strong>
+        Importa el historial de tus exchanges y descarga un informe fiscal listo para revisar.
+      </p>
+      <ul class="asistencia-bullets">
+        <li>✓ Método FIFO automático</li>
+        <li>✓ Compatible con varios exchanges</li>
+        <li>✓ Revisión profesional si tu caso es complejo</li>
+      </ul>
+      <a href="/signup/" class="btn-asistencia">Generar informe fiscal</a>
+      <a href="/asesoramiento-fiscal-criptomonedas" class="asistencia-secondary">Hablar con un asesor</a>
+    </div>
+
     <div class="hero-trust">
       <span class="hero-trust-item">Por <strong>Rafael Ramos Martínez</strong>, Economista Colegiado nº 4.579</span>
       <span class="hero-trust-item">Actualizado: junio 2026</span>
       <span class="hero-trust-item">Base legal: DGT V0999-18 · V0525-25 · Art. 37.2 LIRPF</span>
-    </div>
-
-    <!-- CTA PREMIUM (mismo patrón que /herramientas, debajo del hero) -->
-    <div class="cta-mid">
-      <span class="hero-cta-badge">Informe fiscal FIFO</span>
-      <h3 class="cta-mid-title">Genera tu informe FIFO de criptomonedas</h3>
-      <p>Importa el historial de tus exchanges y descarga un informe fiscal listo para revisar.</p>
-      <ul class="cta-benefits">
-        <li>Método FIFO automático</li>
-        <li>Compatible con varios exchanges</li>
-        <li>Revisión profesional si tu caso es complejo</li>
-      </ul>
-      <div class="cta-buttons">
-        <a href="/signup/" class="btn-cta">Generar informe fiscal</a>
-        <a href="/asesoramiento-fiscal-criptomonedas" class="btn-outline">Hablar con un asesor</a>
-      </div>
-      <p class="cta-micro">Supervisado por Rafael Ramos Martínez, Economista Colegiado nº&nbsp;4.579.</p>
     </div>
 
   </div>
