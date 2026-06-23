@@ -355,6 +355,19 @@
     align-items: center; gap: 6px;
   }
   .bar-file-selected.visible { display: flex; }
+  .kucoin-summary {
+    margin-top: 8px; padding: 10px 12px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 10px; font-size: 12px;
+    line-height: 1.55; color: var(--muted);
+  }
+  .kucoin-summary .ks-title {
+    font-weight: 600; color: var(--text); margin-bottom: 4px; font-size: 11px;
+    letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .kucoin-summary .ks-row { display: flex; gap: 6px; }
+  .kucoin-summary .ks-ok   { color: var(--accent); }
+  .kucoin-summary .ks-warn { color: #b8860b; }
+  .kucoin-summary .ks-muted{ opacity: 0.7; }
   .bar-error-msg {
     display: none; font-size: 12px; color: var(--red); margin-top: 4px;
   }
@@ -778,10 +791,12 @@
     <!-- Columna izquierda: drop zone + nombre/año -->
     <div class="bar-left">
       <div class="bar-dropzone" id="dropZone">
-        <input type="file" id="csvInput" accept="{% if exchange_id == 'mexc' %}.xlsx,.xls{% elif exchange_id == 'bit2me' and bit2me_excel_enabled %}.csv,.xlsx,.xls{% else %}.csv{% endif %}">
+        <input type="file" id="csvInput" accept="{% if exchange_id == 'mexc' %}.xlsx,.xls{% elif exchange_id == 'bit2me' and bit2me_excel_enabled %}.csv,.xlsx,.xls{% else %}.csv{% endif %}"{% if exchange_id == 'kucoin' %} multiple{% endif %}>
         <span style="font-size:22px;flex-shrink:0;">📂</span>
         {% if exchange_id == 'mexc' %}
         <span class="bar-drop-text" id="dropHint">Arrastra aquí el XLS/XLSX de {{ exchange_name }} o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Solo ficheros .xls / .xlsx</span></span>
+        {% elif exchange_id == 'kucoin' %}
+        <span class="bar-drop-text" id="dropHint">Arrastra aquí <strong>todos los CSV de KuCoin</strong> que tengas o haz clic para seleccionarlos<br><span style="font-size:11px;opacity:0.65;">Cuenta de trading, financiación, órdenes fiat, depósitos cripto · puedes subir varios a la vez · si alguno está vacío, no pasa nada</span></span>
         {% elif exchange_id == 'bit2me' and bit2me_excel_enabled %}
         <span class="bar-drop-text" id="dropHint">Arrastra el <strong>CSV (recomendado)</strong> o el Excel de {{ exchange_name }} o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">.csv, .xlsx o .xls</span></span>
         {% elif exchange_id %}
@@ -790,6 +805,9 @@
         <span class="bar-drop-text" id="dropHint">Arrastra aquí tu CSV o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Solo ficheros .csv</span></span>
         {% endif %}
       </div>
+      {% if exchange_id == 'kucoin' %}
+      <div id="kucoinSummary" class="kucoin-summary" style="display:none;"></div>
+      {% endif %}
       <div class="bar-inputs-row">
         <div class="bar-field bar-field-nombre">
           <label for="nombre">Tu nombre</label>
@@ -1127,8 +1145,21 @@
   const btnDownload  = document.getElementById('btnDownload');
   const btnNuevo     = document.getElementById('btnNuevo');
 
+  // KuCoin: flujo multiarchivo
+  const isKucoinPage  = EXCHANGE_PAGE === 'kucoin';
+  const kucoinSummary = document.getElementById('kucoinSummary');
+  let   selectedFiles = [];   // sólo KuCoin: lista de File
+
   function showFile()    { fileSelected.classList.add('visible'); }
-  function hideFile()    { fileSelected.classList.remove('visible'); }
+  function hideFile()    {
+    fileSelected.classList.remove('visible');
+    // KuCoin: al ocultar el chip de fichero también limpiamos la selección
+    // multiarchivo y su resumen (todos los reseteos pasan por aquí).
+    if (isKucoinPage) {
+      selectedFiles = [];
+      if (kucoinSummary) kucoinSummary.style.display = 'none';
+    }
+  }
   function showDownload(){ btnDownload.classList.add('visible'); }
   function hideDownload(){ btnDownload.classList.remove('visible'); }
   function showNuevo()   { btnNuevo.classList.add('visible'); }
@@ -1342,9 +1373,89 @@
   }
 
   function actualizarBoton() {
-    const archivoOk   = !!selectedFile;
+    const archivoOk   = isKucoinPage ? selectedFiles.length > 0 : !!selectedFile;
     const ejercicioOk = !_fetchingAños && (!detectedYears.length || selectedYears.length > 0);
     btnAnalizar.disabled = !(archivoOk && ejercicioOk);
+  }
+
+  // ── KUCOIN: selección multiarchivo + resumen ───────────────────────────
+  function renderKucoinSummary(resumen, advertencias) {
+    if (!kucoinSummary) return;
+    if (!resumen) { kucoinSummary.style.display = 'none'; return; }
+    const secciones = [
+      ['trading',         'Cuenta de trading'],
+      ['financiacion',    'Cuenta de financiación'],
+      ['deposito_cripto', 'Depósitos cripto'],
+      ['fiat_orders',     'Depósitos fiat'],
+    ];
+    let html = '<div class="ks-title">Archivos KuCoin detectados</div>';
+    secciones.forEach(([key, label]) => {
+      const s = resumen[key] || {};
+      let estado, cls;
+      if (!s.detectado)      { estado = 'no detectado'; cls = 'ks-muted'; }
+      else if (s.vacio)      { estado = 'archivo vacío'; cls = 'ks-warn'; }
+      else                   { estado = (s.registros || 0) + ' movimientos'; cls = 'ks-ok'; }
+      html += `<div class="ks-row"><span>${label}:</span><span class="${cls}">${estado}</span></div>`;
+    });
+    const noRec = (resumen.no_reconocidos || []);
+    if (noRec.length) {
+      html += `<div class="ks-row"><span class="ks-warn">No reconocidos:</span><span>${noRec.join(', ')}</span></div>`;
+    }
+    kucoinSummary.innerHTML = html;
+    kucoinSummary.style.display = 'block';
+  }
+
+  function handleKucoinFiles(fileList) {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    for (const f of files) {
+      if (!f.name.toLowerCase().endsWith('.csv')) {
+        mostrarErrorArchivo('Todos los ficheros de KuCoin deben ser .csv');
+        selectedFiles = []; actualizarBoton(); return;
+      }
+      if (f.size > 10 * 1024 * 1024) {
+        mostrarErrorArchivo('Algún fichero supera el máximo de 10 MB.');
+        selectedFiles = []; actualizarBoton(); return;
+      }
+    }
+    selectedFiles = files;
+    fileName.textContent = files.length === 1 ? files[0].name : `${files.length} ficheros`;
+    showFile();
+
+    // Detección de años + resumen vía backend (multiarchivo).
+    _fetchingAños = true;
+    yearPlaceholderBar.style.display = 'none';
+    yearChipsWrap.style.display      = 'none';
+    yearNodetect.textContent         = 'Analizando archivos…';
+    yearNodetect.style.display       = 'block';
+    actualizarBoton();
+
+    const fd = new FormData();
+    files.forEach(f => fd.append('csv', f));
+    fetch('/api/kucoin/anos', { method: 'POST', body: fd, credentials: 'include' })
+      .then(r => r.json())
+      .then(data => {
+        _fetchingAños = false;
+        yearNodetect.textContent = 'Sin años detectados';
+        if (!data.ok) {
+          mostrarErrorApi(data.error || 'No se pudieron leer los ficheros');
+          showState('error');
+          selectedFiles = []; csvInput.value = ''; hideFile();
+          fileName.textContent = '—';
+          renderKucoinSummary(null);
+          detectedYears = []; renderYearChips([]); actualizarBoton();
+          return;
+        }
+        renderKucoinSummary(data.resumen, data.advertencias);
+        detectedYears = data.anos || [];
+        renderYearChips(detectedYears);
+        actualizarBoton();
+      })
+      .catch(() => {
+        _fetchingAños = false;
+        yearNodetect.textContent = 'Sin años detectados';
+        detectedYears = []; renderYearChips([]); actualizarBoton();
+      });
   }
 
   // ── FILE SELECTION ───────────────────────
@@ -1431,13 +1542,16 @@
     }
   }
 
-  csvInput.addEventListener('change', () => { if (csvInput.files[0]) handleFile(csvInput.files[0]); });
+  csvInput.addEventListener('change', () => {
+    if (isKucoinPage) { if (csvInput.files.length) handleKucoinFiles(csvInput.files); }
+    else if (csvInput.files[0]) handleFile(csvInput.files[0]);
+  });
   dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
   dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
   dropZone.addEventListener('drop', (e) => {
     e.preventDefault(); dropZone.classList.remove('drag-over');
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
+    if (isKucoinPage) { if (e.dataTransfer.files.length) handleKucoinFiles(e.dataTransfer.files); }
+    else { const file = e.dataTransfer.files[0]; if (file) handleFile(file); }
   });
 
   // ── TABS ─────────────────────────────────
@@ -1812,24 +1926,28 @@
 
   // ── SUBMIT ───────────────────────────────
   btnAnalizar.addEventListener('click', async () => {
-    if (!selectedFile) return;
-    const _isMexc = EXCHANGE_PAGE === 'mexc';
-    const _isB2MExcel = EXCHANGE_PAGE === 'bit2me' && BIT2ME_EXCEL_ENABLED;
-    const _ext = selectedFile.name.toLowerCase();
-    const _esExcel = _ext.endsWith('.xlsx') || _ext.endsWith('.xls');
-    if (_isMexc) {
-      if (!_esExcel) {
-        mostrarErrorArchivo('MEXC requiere fichero XLS o XLSX.');
+    if (isKucoinPage) {
+      if (!selectedFiles.length) return;
+    } else {
+      if (!selectedFile) return;
+      const _isMexc = EXCHANGE_PAGE === 'mexc';
+      const _isB2MExcel = EXCHANGE_PAGE === 'bit2me' && BIT2ME_EXCEL_ENABLED;
+      const _ext = selectedFile.name.toLowerCase();
+      const _esExcel = _ext.endsWith('.xlsx') || _ext.endsWith('.xls');
+      if (_isMexc) {
+        if (!_esExcel) {
+          mostrarErrorArchivo('MEXC requiere fichero XLS o XLSX.');
+          return;
+        }
+      } else if (_isB2MExcel) {
+        if (!_esExcel && !_ext.endsWith('.csv')) {
+          mostrarErrorArchivo('Bit2Me admite .csv (recomendado), .xlsx o .xls.');
+          return;
+        }
+      } else if (!_ext.endsWith('.csv')) {
+        mostrarErrorArchivo('El fichero debe ser un .csv. Selecciona el fichero correcto.');
         return;
       }
-    } else if (_isB2MExcel) {
-      if (!_esExcel && !_ext.endsWith('.csv')) {
-        mostrarErrorArchivo('Bit2Me admite .csv (recomendado), .xlsx o .xls.');
-        return;
-      }
-    } else if (!_ext.endsWith('.csv')) {
-      mostrarErrorArchivo('El fichero debe ser un .csv. Selecciona el fichero correcto.');
-      return;
     }
     if (!detectedYears.length || selectedYears.length > 0) {
       // OK: o no se detectaron años (backend procesará todo) o hay selección
@@ -1849,13 +1967,18 @@
     showState('loading');
 
     const formData = new FormData();
-    formData.append('csv', selectedFile);
-    formData.append('exchange', selectedExchange);
     formData.append('nombre', sanitizarTexto(document.getElementById('nombre').value.trim()));
     formData.append('ejercicio', sanitizarTexto(ejercicioVal));
+    const endpoint = isKucoinPage ? '/api/kucoin/analizar' : '/api/analizar';
+    if (isKucoinPage) {
+      selectedFiles.forEach(f => formData.append('csv', f));
+    } else {
+      formData.append('csv', selectedFile);
+      formData.append('exchange', selectedExchange);
+    }
 
     try {
-      const res  = await fetch('/api/analizar', { method: 'POST', body: formData, credentials: 'include' });
+      const res  = await fetch(endpoint, { method: 'POST', body: formData, credentials: 'include' });
       const data = await res.json();
 
       if (res.status === 409) {

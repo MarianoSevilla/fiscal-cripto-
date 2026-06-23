@@ -54,12 +54,19 @@ def _app():
 
 @pytest.fixture(scope="module")
 def admin_user(_app):
-    """Usuario en ADMIN_EMAILS — puede llamar a /api/stats."""
+    """Usuario admin — puede llamar a /api/stats.
+
+    Usa role='admin' (no depende de ADMIN_EMAILS) para ser independiente del
+    orden de import: ADMIN_EMAILS se congela en auth.py al primer import de app,
+    y si otro módulo de test lo importa antes que este, quedaría vacío. El rol en
+    BD lo evalúa _role_is_admin() en cada request. Mismo patrón que
+    test_contactos_admin.py y test_campaign_delete.py.
+    """
     with _app.app_context():
         u = User(
             email="admin_vol_test@example.com",
             full_name="Admin Vol Test",
-            role="user",
+            role="admin",
             email_verified_at=datetime.utcnow(),
         )
         u.set_password("admin-vol-pass-1234")

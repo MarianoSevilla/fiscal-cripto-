@@ -68,6 +68,7 @@ from clasificador_mexc import (
     MexcUnsupportedFormatError, MexcUserError,
 )
 from clasificador_bitget import ClasificadorBitget, detect_bitget_file_type, BITGET_SIGNATURES
+from clasificador_kucoin import ClasificadorKuCoin, KucoinUserError
 from motor_fifo import MotorFIFO
 from generador_pdf import generar_pdf, generar_pdf_bit2me
 from generador_pdf_mexc import generar_pdf_mexc
@@ -645,6 +646,26 @@ EXCHANGE_PAGES = {
             _HOW_TO_STEP2, _HOW_TO_STEP3,
         ],
     },
+    "kucoin": {
+        "exchange_id":      "kucoin",
+        "exchange_name":    "KuCoin",
+        "exchange_logo":    "KC",
+        "page_title":       "Informe FIFO KuCoin para Hacienda | Mariano Sevilla",
+        "page_meta_desc":   "Sube los CSV de KuCoin y calcula tus ganancias y pérdidas patrimoniales con FIFO obligatorio. Informe PDF listo para la declaración de la renta en España.",
+        "page_canonical":   f"{_BASE_URL}/kucoin",
+        "page_og_title":    "Informe fiscal KuCoin para Hacienda — FIFO automático | Mariano Sevilla",
+        "page_og_desc":     "Sube los historiales de KuCoin y calcula las plusvalías crypto con FIFO. Informe PDF para tu gestor.",
+        "page_schema_name": "Informe FIFO KuCoin — Mariano Sevilla",
+        "page_h1":          "Genera tu informe fiscal de KuCoin para Hacienda",
+        "hero_desc":        "KuCoin exporta varios historiales. Sube todos los CSV que tengas (Cuenta de trading, Cuenta de financiación, Órdenes fiat, depósitos cripto) y obtén el informe FIFO con tus ganancias y pérdidas patrimoniales. Si alguno está vacío, no pasa nada.",
+        "how_to": [
+            {"title": "Exporta tus historiales desde KuCoin",
+             "desc":  "En tu cuenta de KuCoin ve a Activos → Historial de la cuenta y exporta la Cuenta de trading y la Cuenta de financiación. Si operaste con fiat, exporta también Órdenes fiat. Selecciona siempre el período completo desde tu primera operación."},
+            {"title": "Sube todos los CSV a la vez",
+             "desc":  "Arrastra todos los ficheros CSV juntos. El sistema detecta automáticamente el tipo de cada uno y te muestra qué ha reconocido. Puedes subir sólo los que tengas; los archivos vacíos no rompen nada."},
+            _HOW_TO_STEP3,
+        ],
+    },
 }
 
 
@@ -785,6 +806,7 @@ def _validar_password(password: str) -> tuple[bool, str]:
 
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
 MAX_CSV_ROWS        = 100_000            # filas máximas permitidas por CSV (≈ 10 MB de datos reales)
+MAX_KUCOIN_FILES    = 8                  # KuCoin es multiarchivo: tope de ficheros por análisis
 AÑO_MIN = 2009
 AÑO_MAX = datetime.now().year + 1
 
@@ -1063,6 +1085,11 @@ def procesar_mexc(filepath: str) -> tuple:
 
 def procesar_bitget(filepath: str) -> tuple:
     return procesar_con_fifo(ClasificadorBitget(filepath).clasificar())
+
+
+def procesar_kucoin(filepaths: list, filenames: list = None) -> tuple:
+    """KuCoin es multiarchivo: recibe una lista de rutas CSV ya guardadas."""
+    return procesar_con_fifo(ClasificadorKuCoin(filepaths, filenames).clasificar())
 
 
 def _motor_desde_csv_721(exchange: str, tmp_path: str) -> MotorFIFO:
@@ -1681,6 +1708,13 @@ def page_bitget():
     return render_template("tool.html", **EXCHANGE_PAGES["bitget"])
 
 
+@app.route("/kucoin")
+@login_required
+@limiter.exempt
+def page_kucoin():
+    return render_template("tool.html", **EXCHANGE_PAGES["kucoin"])
+
+
 @app.route("/api/mexc/anos", methods=["POST"])
 @login_required
 @limiter.limit("30 per minute")
@@ -1780,6 +1814,75 @@ def api_bit2me_anos():
         if tmp_path:
             try:
                 os.unlink(tmp_path)
+            except OSError:
+                pass
+
+
+def _guardar_csvs_kucoin(archivos) -> tuple:
+    """Guarda los CSV subidos de KuCoin en ficheros temporales.
+    Devuelve (tmp_paths, filenames). Valida extensión y número de ficheros.
+    Lanza ValueError con mensaje amigable si algo no encaja."""
+    if not archivos:
+        raise ValueError("No se recibió ningún fichero.")
+    if len(archivos) > MAX_KUCOIN_FILES:
+        raise ValueError(f"Demasiados ficheros. Máximo {MAX_KUCOIN_FILES} CSV por análisis.")
+
+    tmp_paths: list = []
+    filenames: list = []
+    for archivo in archivos:
+        fn = archivo.filename or ""
+        if not fn.lower().endswith(".csv"):
+            # limpiar lo ya guardado antes de abortar
+            for p in tmp_paths:
+                try:
+                    os.unlink(p)
+                except OSError:
+                    pass
+            raise ValueError("Todos los ficheros de KuCoin deben tener extensión .csv")
+        with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as tmp:
+            archivo.save(tmp.name)
+            tmp_paths.append(tmp.name)
+            filenames.append(fn)
+    return tmp_paths, filenames
+
+
+@app.route("/api/kucoin/anos", methods=["POST"])
+@login_required
+@limiter.limit("30 per minute")
+def api_kucoin_anos():
+    """Detecta ejercicios fiscales y resume los ficheros KuCoin subidos (multiarchivo)
+    sin ejecutar el análisis FIFO completo. Patrón /api/mexc/anos extendido a varios CSV."""
+    archivos = request.files.getlist("csv") or request.files.getlist("files")
+    tmp_paths: list = []
+    try:
+        tmp_paths, filenames = _guardar_csvs_kucoin(archivos)
+
+        clasificador = ClasificadorKuCoin(tmp_paths, filenames).clasificar()
+
+        años: set = set()
+        for grupo in (clasificador.compraventas, clasificador.swaps,
+                      clasificador.movimientos, clasificador.rendimientos):
+            for op in grupo:
+                try:
+                    años.add(int(str(op.fecha)[:4]))
+                except (ValueError, TypeError):
+                    pass
+
+        return jsonify({
+            "ok": True,
+            "anos": sorted(años),
+            "resumen": clasificador.resumen_archivos,
+            "advertencias": clasificador.advertencias,
+        })
+
+    except (KucoinUserError, ValueError) as exc:
+        return jsonify({"ok": False, "error": str(exc)})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": _error_amigable(exc)})
+    finally:
+        for p in tmp_paths:
+            try:
+                os.unlink(p)
             except OSError:
                 pass
 
@@ -2148,6 +2251,154 @@ def analizar():
         if tmp_path:
             try:
                 os.unlink(tmp_path)
+            except Exception:
+                pass
+
+
+@app.route("/api/kucoin/analizar", methods=["POST"])
+@login_required
+@limiter.limit("3 per 10 minutes", exempt_when=_is_admin)
+@limiter.limit("6 per hour",       exempt_when=_is_admin)
+@limiter.limit("15 per day",       exempt_when=_is_admin)
+def analizar_kucoin():
+    """Análisis fiscal KuCoin — flujo MULTIARCHIVO con endpoint dedicado.
+
+    Aislado de /api/analizar (single-file) para no añadir superficie de regresión
+    a los exchanges existentes. Reutiliza los helpers comunes (motor, filtros,
+    PDF genérico, token, telemetría) y el bloqueo concurrente por usuario.
+    """
+    uid       = current_user.id
+    tmp_paths: list = []
+
+    with _analisis_lock:
+        if uid in _analisis_en_curso:
+            return jsonify({
+                "error": "Ya tienes un análisis en proceso. "
+                         "Espera a que termine antes de lanzar otro."
+            }), 409
+        _analisis_en_curso.add(uid)
+
+    t_start  = time.time()
+    csv_rows = 0
+    try:
+        archivos  = request.files.getlist("csv") or request.files.getlist("files")
+        nombre    = _sanitizar_texto(request.form.get("nombre", ""))
+        ejercicio = _sanitizar_texto(request.form.get("ejercicio", ""), max_len=40)
+
+        valido_ej, error_ej = _validar_ejercicio(ejercicio)
+        if not valido_ej:
+            return jsonify({"error": error_ej}), 400
+
+        try:
+            tmp_paths, filenames = _guardar_csvs_kucoin(archivos)
+        except ValueError as ve:
+            return jsonify({"error": str(ve)}), 400
+
+        # Límite de filas: suma de todos los ficheros.
+        csv_rows = sum(_contar_csv_rows(p) for p in tmp_paths)
+        if csv_rows > MAX_CSV_ROWS:
+            return jsonify({
+                "error": f"Los ficheros suman demasiadas filas ({csv_rows:,}). "
+                         f"El máximo permitido es {MAX_CSV_ROWS:,} filas."
+            }), 400
+
+        try:
+            motor, rendimientos, clasificador = procesar_kucoin(tmp_paths, filenames)
+            _filtrar_motor_por_ejercicio(motor, ejercicio)
+            rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
+            resumen, posicion, operaciones = _motor_a_json(motor)
+            # Las advertencias fiscales de KuCoin (ambigüedades, productos no cubiertos,
+            # pares USD) viven en el clasificador; las fusionamos con las del motor.
+            advertencias = motor.advertencias + (clasificador.advertencias if clasificador else [])
+            rendimientos_json = _rendimientos_a_json(rendimientos)
+            pdf_bytes = generar_pdf(motor, nombre, ejercicio, "KuCoin", rendimientos)
+
+            processing_ms   = int((time.time() - t_start) * 1000)
+            distinct_assets = len({op["activo"] for op in operaciones}) if operaciones else 0
+            _adv_list  = advertencias if isinstance(advertencias, list) else []
+            _tel_ops   = resumen.get("operaciones_con_resultado", len(operaciones))
+            _tel_swaps = len(clasificador.swaps) if clasificador is not None else 0
+            _tel_mov   = len(clasificador.movimientos) if clasificador is not None else 0
+            _tel_desc  = len(clasificador.desconocidas) if clasificador is not None else 0
+
+            pdf_tmp = _derivar_ruta_pdf(tmp_paths[0])
+            with open(pdf_tmp, "wb") as f:
+                f.write(pdf_bytes)
+
+            report_id = _registrar_informe(
+                exchange          = "kucoin",
+                fiscal_year       = _ejercicio_a_fiscal_year(ejercicio),
+                csv_rows          = csv_rows,
+                distinct_assets   = distinct_assets,
+                processing_ms     = processing_ms,
+                fifo_operations   = _tel_ops,
+                fifo_swaps        = _tel_swaps,
+                fifo_rendimientos = len(rendimientos_json),
+                fifo_movimientos  = _tel_mov,
+                fifo_advertencias = len(_adv_list),
+                fifo_desconocidas = _tel_desc,
+                resultado_neto    = resumen.get("resultado_neto"),
+                ganancias_brutas  = resumen.get("ganancias_brutas"),
+                perdidas_brutas   = resumen.get("perdidas_brutas"),
+                fiscal_years_str  = (ejercicio or "")[:50],
+            )
+            token = os.path.basename(pdf_tmp)
+            _guardar_token_pdf(token, report_id)
+
+            return jsonify({
+                "ok": True,
+                "resumen": resumen,
+                "operaciones": operaciones,
+                "posicion": posicion,
+                "rendimientos": rendimientos_json,
+                "advertencias": advertencias,
+                "resumen_archivos": clasificador.resumen_archivos if clasificador else {},
+                "token": token,
+                "estimacion": False,
+            })
+
+        except Exception as e:
+            _err_category = "parser_error"
+            _err_code     = None
+            if hasattr(e, "category") and hasattr(e, "code"):
+                _err_category = e.category
+                _err_code     = e.code
+            if _err_category == "parser_error":
+                traceback.print_exc()
+
+            _registrar_informe(
+                exchange        = "kucoin",
+                fiscal_year     = _ejercicio_a_fiscal_year(ejercicio),
+                csv_rows        = csv_rows,
+                distinct_assets = 0,
+                processing_ms   = int((time.time() - t_start) * 1000),
+                status          = "failed",
+                error_type      = type(e).__name__,
+                error_category  = _err_category,
+            )
+            try:
+                record_processing_error_safe(
+                    user_id        = current_user.id if current_user.is_authenticated else None,
+                    email          = current_user.email if current_user.is_authenticated else None,
+                    exchange       = "kucoin",
+                    stage          = "processing",
+                    exc            = e,
+                    csv_filename   = ", ".join(filenames) if tmp_paths else "",
+                    csv_size       = None,
+                    parser         = "kucoin",
+                    error_category = _err_category,
+                    error_code     = _err_code,
+                )
+            except Exception:
+                app.logger.exception("[ERROR_TRACKING] unexpected error calling record_processing_error_safe")
+            return jsonify({"error": _error_amigable(e)}), 500
+
+    finally:
+        with _analisis_lock:
+            _analisis_en_curso.discard(uid)
+        for p in tmp_paths:
+            try:
+                os.unlink(p)
             except Exception:
                 pass
 
