@@ -254,18 +254,9 @@ img { max-width: 100%; height: auto; }
   font-weight: 800; line-height: 1.08; letter-spacing: -0.03em;
   color: var(--text); margin-bottom: 1.25rem;
 }
-.hero-trust {
-  display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;
-  margin-top: 1.25rem;
-}
-.hero-trust-item {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 12px; color: var(--muted); font-weight: 500;
-}
-.hero-trust-item strong { color: var(--text); font-weight: 600; }
-
 /* ── CONTENT LAYOUT ──────────────── */
 .section { padding: 5rem 0; }
+.hero + .section { padding-top: 2.5rem; }
 .content-grid { display: grid; grid-template-columns: 1fr 320px; gap: 4rem; align-items: start; }
 .content-main { min-width: 0; }
 
@@ -362,8 +353,11 @@ img { max-width: 100%; height: auto; }
   letter-spacing: .06em; color: var(--accent); margin-bottom: .4rem;
 }
 /* Versión compacta dentro del hero: highlight editorial, no bloque protagonista */
-.hero .geo-block { padding: .7rem 1.1rem; margin: 1.25rem 0; font-size: .85rem; }
-.hero .geo-label { margin-bottom: .3rem; }
+.hero .geo-block {
+  background: none; border: none; border-left: none; border-radius: 0;
+  padding: 0; margin: 0 0 2rem; font-size: .95rem; max-width: 680px;
+}
+.hero .geo-label { margin-bottom: .35rem; }
 
 /* ── TABLES ──────────────────────── */
 .table-wrap { overflow-x: auto; margin: 1.2rem 0; border: 1px solid var(--border); border-radius: 14px; }
@@ -475,7 +469,7 @@ details[open] .faq-q::after { transform: rotate(45deg); }
 .asistencia-block {
   background: var(--surface); border: 1px solid var(--border2);
   border-radius: 12px; padding: 1.1rem 1.25rem;
-  max-width: 680px; margin-top: 1.25rem;
+  max-width: 680px; margin-top: 2rem;
 }
 .asistencia-block p {
   font-size: 0.88rem; color: var(--muted); line-height: 1.55;
@@ -501,12 +495,14 @@ details[open] .faq-q::after { transform: rotate(45deg); }
   text-decoration: none; letter-spacing: -0.01em;
 }
 .btn-asistencia:hover { background: var(--accent-dim); text-decoration: none; }
-.asistencia-secondary {
-  display: block; width: 100%; text-align: center;
-  color: var(--accent); font-size: 0.85rem; font-weight: 600;
-  margin-top: 0.75rem; text-decoration: none;
+.asistencia-meta {
+  margin-top: 1rem; padding-top: .85rem; border-top: 1px solid var(--border2);
+  display: flex; flex-direction: column; gap: .3rem;
 }
-.asistencia-secondary:hover { text-decoration: underline; }
+.asistencia-meta p {
+  font-size: 11px; color: var(--muted); line-height: 1.5; margin: 0;
+}
+.asistencia-meta p strong { color: var(--text); font-weight: 600; display: inline; font-size: inherit; margin-bottom: 0; }
 
 .cta-final { text-align: center; padding: 5rem 0 0; border-top: 1px solid var(--border); }
 .cta-final .cta-mid { text-align: left; }
@@ -626,13 +622,11 @@ details[open] .faq-q::after { transform: rotate(45deg); }
         <li>✓ Revisión profesional si tu caso es complejo</li>
       </ul>
       <a href="/signup/" class="btn-asistencia">Generar informe fiscal</a>
-      <a href="/asesoramiento-fiscal-criptomonedas" class="asistencia-secondary">Hablar con un asesor</a>
-    </div>
-
-    <div class="hero-trust">
-      <span class="hero-trust-item">Por <strong>Rafael Ramos Martínez</strong>, Economista Colegiado nº 4.579</span>
-      <span class="hero-trust-item">Actualizado: junio 2026</span>
-      <span class="hero-trust-item">Base legal: DGT V0999-18 · V0525-25 · Art. 37.2 LIRPF</span>
+      <div class="asistencia-meta">
+        <p>Por <strong>Rafael Ramos Martínez</strong>, Economista Colegiado nº 4.579</p>
+        <p>Actualizado: junio 2026</p>
+        <p>Base legal: DGT V0999-18 · V0525-25 · Art. 37.2 LIRPF</p>
+      </div>
     </div>
 
   </div>
