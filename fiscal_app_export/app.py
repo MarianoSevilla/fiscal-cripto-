@@ -67,7 +67,10 @@ from clasificador_mexc import (
     ClasificadorMEXC, _detectar_tipo_mexc, _contar_filas_xlsx,
     MexcUnsupportedFormatError, MexcUserError,
 )
-from clasificador_bitget import ClasificadorBitget, detect_bitget_file_type, BITGET_SIGNATURES
+from clasificador_bitget import (
+    ClasificadorBitget, ClasificadorBitgetMulti, BitgetUserError,
+    detect_bitget_file_type, BITGET_SIGNATURES,
+)
 from clasificador_kucoin import ClasificadorKuCoin, KucoinUserError
 from motor_fifo import MotorFIFO
 from generador_pdf import generar_pdf, generar_pdf_bit2me
@@ -639,12 +642,21 @@ EXCHANGE_PAGES = {
         "page_og_desc":     "Sube el CSV de Bitget y calcula las plusvalías crypto con FIFO. Informe PDF para tu gestor.",
         "page_schema_name": "Informe FIFO Bitget — Mariano Sevilla",
         "page_h1":          "Genera tu informe fiscal de Bitget para Hacienda",
-        "hero_desc":        "Sube el CSV de detalles de órdenes en spot de Bitget y obtén el informe FIFO con tus ganancias y pérdidas patrimoniales. Listo para la declaración de la renta.",
+        "hero_desc":        "Bitget exporta varios historiales. Sube el «Historial de operaciones en spot» (obligatorio) y, si lo tienes, el «Historial de depósitos y retiros». Obtendrás el informe FIFO con tus ganancias y pérdidas patrimoniales, listo para la declaración de la renta.",
         "how_to": [
-            {"title": "Exporta el CSV de detalles de órdenes en spot desde Bitget",
-             "desc":  "En tu cuenta de Bitget ve a Órdenes → Órdenes en spot → Historial → Exportar. Selecciona 'Detalles de órdenes en spot', elige el período completo desde tu primera operación hasta hoy y descarga el fichero CSV."},
-            _HOW_TO_STEP2, _HOW_TO_STEP3,
+            {"title": "Exporta tu «Historial de operaciones en spot» desde Bitget",
+             "desc":  "Es el fichero principal: contiene todas tus operaciones ejecutadas con su precio y comisión. En Bitget ve a Activos → Registros → Spot y descarga el «Historial de operaciones en spot» (Spot Trading History). Importante: elige el período completo desde tu primera compra hasta hoy; si sólo exportas los últimos meses, faltarán las compras antiguas y el cálculo del coste saldría incompleto."},
+            {"title": "Añade tu «Historial de depósitos y retiros» (opcional, recomendado)",
+             "desc":  "Exporta también el «Historial de depósitos y retiros» (Deposit & Withdrawal History). Sirve para reflejar y conciliar las monedas que enviaste o sacaste de Bitget. Puedes subir varios ficheros a la vez; el sistema detecta automáticamente cada uno."},
+            _HOW_TO_STEP3,
         ],
+        "aviso_extra": (
+            "El fichero «Spot Financial Record» es opcional y sólo se utiliza para "
+            "auditorías y conciliación de saldos. No subas el «Historial de órdenes» "
+            "como fuente principal: puede incluir órdenes canceladas o información no "
+            "adecuada para el cálculo FIFO. El fichero correcto es el historial de "
+            "operaciones ejecutadas."
+        ),
     },
     "kucoin": {
         "exchange_id":      "kucoin",
@@ -807,6 +819,7 @@ def _validar_password(password: str) -> tuple[bool, str]:
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
 MAX_CSV_ROWS        = 100_000            # filas máximas permitidas por CSV (≈ 10 MB de datos reales)
 MAX_KUCOIN_FILES    = 8                  # KuCoin es multiarchivo: tope de ficheros por análisis
+MAX_BITGET_FILES    = 8                  # Bitget es multiarchivo: tope de ficheros por análisis
 AÑO_MIN = 2009
 AÑO_MAX = datetime.now().year + 1
 
@@ -1090,6 +1103,11 @@ def procesar_bitget(filepath: str) -> tuple:
 def procesar_kucoin(filepaths: list, filenames: list = None) -> tuple:
     """KuCoin es multiarchivo: recibe una lista de rutas CSV ya guardadas."""
     return procesar_con_fifo(ClasificadorKuCoin(filepaths, filenames).clasificar())
+
+
+def procesar_bitget_multi(filepaths: list, filenames: list = None) -> tuple:
+    """Bitget multiarchivo: recibe una lista de rutas CSV ya guardadas."""
+    return procesar_con_fifo(ClasificadorBitgetMulti(filepaths, filenames).clasificar())
 
 
 def _motor_desde_csv_721(exchange: str, tmp_path: str) -> MotorFIFO:
@@ -1818,14 +1836,14 @@ def api_bit2me_anos():
                 pass
 
 
-def _guardar_csvs_kucoin(archivos) -> tuple:
-    """Guarda los CSV subidos de KuCoin en ficheros temporales.
+def _guardar_csvs_multi(archivos, max_files: int, label: str) -> tuple:
+    """Guarda varios CSV subidos en ficheros temporales (flujo multiarchivo).
     Devuelve (tmp_paths, filenames). Valida extensión y número de ficheros.
     Lanza ValueError con mensaje amigable si algo no encaja."""
     if not archivos:
         raise ValueError("No se recibió ningún fichero.")
-    if len(archivos) > MAX_KUCOIN_FILES:
-        raise ValueError(f"Demasiados ficheros. Máximo {MAX_KUCOIN_FILES} CSV por análisis.")
+    if len(archivos) > max_files:
+        raise ValueError(f"Demasiados ficheros. Máximo {max_files} CSV por análisis.")
 
     tmp_paths: list = []
     filenames: list = []
@@ -1838,12 +1856,20 @@ def _guardar_csvs_kucoin(archivos) -> tuple:
                     os.unlink(p)
                 except OSError:
                     pass
-            raise ValueError("Todos los ficheros de KuCoin deben tener extensión .csv")
+            raise ValueError(f"Todos los ficheros de {label} deben tener extensión .csv")
         with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as tmp:
             archivo.save(tmp.name)
             tmp_paths.append(tmp.name)
             filenames.append(fn)
     return tmp_paths, filenames
+
+
+def _guardar_csvs_kucoin(archivos) -> tuple:
+    return _guardar_csvs_multi(archivos, MAX_KUCOIN_FILES, "KuCoin")
+
+
+def _guardar_csvs_bitget(archivos) -> tuple:
+    return _guardar_csvs_multi(archivos, MAX_BITGET_FILES, "Bitget")
 
 
 @app.route("/api/kucoin/anos", methods=["POST"])
@@ -1876,6 +1902,47 @@ def api_kucoin_anos():
         })
 
     except (KucoinUserError, ValueError) as exc:
+        return jsonify({"ok": False, "error": str(exc)})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": _error_amigable(exc)})
+    finally:
+        for p in tmp_paths:
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
+
+
+@app.route("/api/bitget/anos", methods=["POST"])
+@login_required
+@limiter.limit("30 per minute")
+def api_bitget_anos():
+    """Detecta ejercicios fiscales y resume los ficheros Bitget subidos (multiarchivo)
+    sin ejecutar el análisis FIFO completo. Mismo patrón que /api/kucoin/anos."""
+    archivos = request.files.getlist("csv") or request.files.getlist("files")
+    tmp_paths: list = []
+    try:
+        tmp_paths, filenames = _guardar_csvs_bitget(archivos)
+
+        clasificador = ClasificadorBitgetMulti(tmp_paths, filenames).clasificar()
+
+        años: set = set()
+        for grupo in (clasificador.compraventas, clasificador.swaps,
+                      clasificador.movimientos, clasificador.rendimientos):
+            for op in grupo:
+                try:
+                    años.add(int(str(op.fecha)[:4]))
+                except (ValueError, TypeError):
+                    pass
+
+        return jsonify({
+            "ok": True,
+            "anos": sorted(años),
+            "resumen": clasificador.resumen_archivos,
+            "advertencias": clasificador.advertencias,
+        })
+
+    except (BitgetUserError, ValueError) as exc:
         return jsonify({"ok": False, "error": str(exc)})
     except Exception as exc:
         return jsonify({"ok": False, "error": _error_amigable(exc)})
@@ -2386,6 +2453,152 @@ def analizar_kucoin():
                     csv_filename   = ", ".join(filenames) if tmp_paths else "",
                     csv_size       = None,
                     parser         = "kucoin",
+                    error_category = _err_category,
+                    error_code     = _err_code,
+                )
+            except Exception:
+                app.logger.exception("[ERROR_TRACKING] unexpected error calling record_processing_error_safe")
+            return jsonify({"error": _error_amigable(e)}), 500
+
+    finally:
+        with _analisis_lock:
+            _analisis_en_curso.discard(uid)
+        for p in tmp_paths:
+            try:
+                os.unlink(p)
+            except Exception:
+                pass
+
+
+@app.route("/api/bitget/analizar", methods=["POST"])
+@login_required
+@limiter.limit("3 per 10 minutes", exempt_when=_is_admin)
+@limiter.limit("6 per hour",       exempt_when=_is_admin)
+@limiter.limit("15 per day",       exempt_when=_is_admin)
+def analizar_bitget():
+    """Análisis fiscal Bitget — flujo MULTIARCHIVO con endpoint dedicado.
+
+    Mismo patrón que /api/kucoin/analizar: aislado de /api/analizar (single-file)
+    para no añadir superficie de regresión. La ruta single-file de /api/analizar
+    con exchange=bitget se mantiene por compatibilidad.
+    """
+    uid       = current_user.id
+    tmp_paths: list = []
+
+    with _analisis_lock:
+        if uid in _analisis_en_curso:
+            return jsonify({
+                "error": "Ya tienes un análisis en proceso. "
+                         "Espera a que termine antes de lanzar otro."
+            }), 409
+        _analisis_en_curso.add(uid)
+
+    t_start  = time.time()
+    csv_rows = 0
+    filenames: list = []
+    try:
+        archivos  = request.files.getlist("csv") or request.files.getlist("files")
+        nombre    = _sanitizar_texto(request.form.get("nombre", ""))
+        ejercicio = _sanitizar_texto(request.form.get("ejercicio", ""), max_len=40)
+
+        valido_ej, error_ej = _validar_ejercicio(ejercicio)
+        if not valido_ej:
+            return jsonify({"error": error_ej}), 400
+
+        try:
+            tmp_paths, filenames = _guardar_csvs_bitget(archivos)
+        except ValueError as ve:
+            return jsonify({"error": str(ve)}), 400
+
+        csv_rows = sum(_contar_csv_rows(p) for p in tmp_paths)
+        if csv_rows > MAX_CSV_ROWS:
+            return jsonify({
+                "error": f"Los ficheros suman demasiadas filas ({csv_rows:,}). "
+                         f"El máximo permitido es {MAX_CSV_ROWS:,} filas."
+            }), 400
+
+        try:
+            motor, rendimientos, clasificador = procesar_bitget_multi(tmp_paths, filenames)
+            _filtrar_motor_por_ejercicio(motor, ejercicio)
+            rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
+            resumen, posicion, operaciones = _motor_a_json(motor)
+            advertencias = motor.advertencias + (clasificador.advertencias if clasificador else [])
+            rendimientos_json = _rendimientos_a_json(rendimientos)
+            pdf_bytes = generar_pdf_bitget(motor, nombre, ejercicio, rendimientos)
+
+            processing_ms   = int((time.time() - t_start) * 1000)
+            distinct_assets = len({op["activo"] for op in operaciones}) if operaciones else 0
+            _adv_list  = advertencias if isinstance(advertencias, list) else []
+            _tel_ops   = resumen.get("operaciones_con_resultado", len(operaciones))
+            _tel_swaps = len(clasificador.swaps) if clasificador is not None else 0
+            _tel_mov   = len(clasificador.movimientos) if clasificador is not None else 0
+            _tel_desc  = len(clasificador.desconocidas) if clasificador is not None else 0
+
+            pdf_tmp = _derivar_ruta_pdf(tmp_paths[0])
+            with open(pdf_tmp, "wb") as f:
+                f.write(pdf_bytes)
+
+            report_id = _registrar_informe(
+                exchange          = "bitget",
+                fiscal_year       = _ejercicio_a_fiscal_year(ejercicio),
+                csv_rows          = csv_rows,
+                distinct_assets   = distinct_assets,
+                processing_ms     = processing_ms,
+                fifo_operations   = _tel_ops,
+                fifo_swaps        = _tel_swaps,
+                fifo_rendimientos = len(rendimientos_json),
+                fifo_movimientos  = _tel_mov,
+                fifo_advertencias = len(_adv_list),
+                fifo_desconocidas = _tel_desc,
+                resultado_neto    = resumen.get("resultado_neto"),
+                ganancias_brutas  = resumen.get("ganancias_brutas"),
+                perdidas_brutas   = resumen.get("perdidas_brutas"),
+                fiscal_years_str  = (ejercicio or "")[:50],
+            )
+            token = os.path.basename(pdf_tmp)
+            _guardar_token_pdf(token, report_id)
+
+            return jsonify({
+                "ok": True,
+                "resumen": resumen,
+                "operaciones": operaciones,
+                "posicion": posicion,
+                "rendimientos": rendimientos_json,
+                "advertencias": advertencias,
+                "resumen_archivos": clasificador.resumen_archivos if clasificador else {},
+                "token": token,
+                "estimacion": False,
+            })
+
+        except Exception as e:
+            _err_category = "parser_error"
+            _err_code     = None
+            if hasattr(e, "category") and hasattr(e, "code"):
+                _err_category = e.category
+                _err_code     = e.code
+            if _err_category == "parser_error":
+                traceback.print_exc()
+
+            _registrar_informe(
+                exchange        = "bitget",
+                fiscal_year     = _ejercicio_a_fiscal_year(ejercicio),
+                csv_rows        = csv_rows,
+                distinct_assets = 0,
+                processing_ms   = int((time.time() - t_start) * 1000),
+                status          = "failed",
+                error_type      = type(e).__name__,
+                error_category  = _err_category,
+            )
+            try:
+                record_processing_error_safe(
+                    user_id        = current_user.id if current_user.is_authenticated else None,
+                    email          = current_user.email if current_user.is_authenticated else None,
+                    exchange       = "bitget",
+                    stage          = "processing",
+                    exc            = e,
+                    csv_filename   = ", ".join(filenames) if tmp_paths else "",
+                    csv_size       = None,
+                    parser         = "bitget",
                     error_category = _err_category,
                     error_code     = _err_code,
                 )

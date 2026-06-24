@@ -60,9 +60,36 @@ BITGET_HISTORIAL_SIGNATURE = {
     "Quote Asset", "Direction", "Price", "Order amount",
     "Executed", "Average Price", "Trading volume", "Status",
 }
+# "Historial de operaciones en spot" (Spot Trading History / Spot Trading Record)
+#   ← FUENTE FIFO RECOMENDADA: contiene TODO el histórico de operaciones ejecutadas
+#     (compras y ventas con par, precio y comisión), incluido el coste de adquisición.
+#   Llega con una fila de TÍTULO previa ("Spot Trading Record") y las fechas como
+#   número de serie Excel (p. ej. 44818.0559). Ambos casos se resuelven en lectura.
+BITGET_SPOT_TRADING_SIGNATURE = {
+    "Order no.", "Trading pair", "Coin", "Action",
+    "Executed price", "Quantity", "Transacted amount", "Fee",
+}
+# "Historial de depósitos y retiros" (Deposit/Withdrawal History)
+#   ← OPCIONAL/RECOMENDADO: depósitos y retiros para conciliación y trazabilidad.
+#   También llega con fila de título previa.
+BITGET_DEPWD_SIGNATURE = {
+    "Coin", "Network", "Quantity", "Amount in USDT", "Type", "Status",
+}
+# "Spot Financial Record" (registro financiero granular)
+#   ← INFORMATIVO: sólo auditoría/conciliación de saldos. NO se usa para FIFO
+#     (sus asientos ORDER_FROZEN/DEALT duplicarían las operaciones del trading history).
+BITGET_FINANCIAL_RECORD_SIGNATURE = {
+    "Order no.", "Coin", "Type", "Action", "Quantity", "Amount (USDT)",
+}
 
-# Firmas textuales para _validar_csv (basta con que aparezca una en las primeras líneas)
-BITGET_SIGNATURES = ["Fee Coin", "Available", "Order Id"]
+# Firmas textuales para _validar_csv (basta con que aparezca una en las primeras líneas).
+# Se amplían para reconocer los nuevos exports y dejar de ser demasiado restrictiva.
+BITGET_SIGNATURES = [
+    "Fee Coin", "Available", "Order Id",          # detalles · transacciones · historial
+    "Spot Trading Record", "Transacted amount",   # spot trading history
+    "Deposit/Withdrawal History", "Amount in USDT",  # deposits & withdrawals
+    "Spot Financial Record",                       # financial record (informativo)
+]
 
 # ── CONSTANTES ────────────────────────────────────────────────────────────────
 
@@ -87,6 +114,9 @@ class OperacionCompraventa:
     importe: float      # total en quote (Total del CSV)
     fee_activo: str
     fee_cantidad: float
+    order_id: str = ""  # identificador nativo de Bitget (Order no.) cuando exista;
+                        # se usa para deduplicar el mismo Spot Trading History subido
+                        # dos veces o con rangos solapados. Vacío en detalles/transacciones.
 
 @dataclass
 class OperacionMovimiento:
@@ -127,19 +157,43 @@ class OperacionDesconocida:
 def _leer_csv(filepath: str) -> tuple:
     """
     Lee CSV UTF-8-SIG (BOM) y devuelve (headers, filas_como_dict).
-    Elimina la columna None generada por trailing comma en DETALLES.
+
+    Robusto frente a las variantes de export de Bitget:
+      · Fila de TÍTULO previa (p. ej. "Deposit/Withdrawal History,,,," o
+        "Spot Trading Record,,,") → se localiza la cabecera real como la primera
+        fila con ≥3 celdas no vacías (las de título tienen una sola).
+      · Trailing comma en DETALLES → la columna de cabecera vacía se descarta.
+      · Filas totalmente vacías → ignoradas.
+    Para los exports clásicos (detalles/transacciones) la cabecera está en la
+    fila 0 y el comportamiento es idéntico al anterior.
     """
     with open(filepath, encoding="utf-8-sig", newline="") as f:
-        reader = csv.DictReader(f)
-        rows = list(reader)
-        headers = list(reader.fieldnames or [])
+        rows = list(csv.reader(f))
 
-    # Eliminar clave None (artefacto de trailing comma); normalizar valor None a ""
-    # csv.DictReader rellena con None las columnas faltantes en filas cortas (restval=None).
-    cleaned = [
-        {k: (v if v is not None else "") for k, v in row.items() if k is not None}
-        for row in rows
-    ]
+    if not rows:
+        return [], []
+
+    # Localizar la fila de cabecera: primera (de las 5 primeras) con ≥3 celdas
+    # no vacías. Las filas de título de Bitget tienen una sola celda con texto.
+    header_idx = 0
+    for i, row in enumerate(rows[:5]):
+        if sum(1 for c in row if (c or "").strip()) >= 3:
+            header_idx = i
+            break
+
+    headers = [(h or "").strip() for h in rows[header_idx]]
+
+    cleaned = []
+    for row in rows[header_idx + 1:]:
+        if not any((c or "").strip() for c in row):
+            continue
+        d = {}
+        for j, key in enumerate(headers):
+            if not key:                      # columna vacía (trailing comma) → descartar
+                continue
+            d[key] = row[j] if j < len(row) and row[j] is not None else ""
+        cleaned.append(d)
+
     return headers, cleaned
 
 
@@ -160,6 +214,13 @@ def detect_bitget_file_type(filepath: str) -> str:
     # falsos positivos (comparte "Trading pair" con DETALLES).
     if BITGET_HISTORIAL_SIGNATURE.issubset(headers_set):
         return "historial"
+    # Exports UID (con fila de título): los más distintivos primero.
+    if BITGET_SPOT_TRADING_SIGNATURE.issubset(headers_set):
+        return "spot_trading"
+    if BITGET_FINANCIAL_RECORD_SIGNATURE.issubset(headers_set):
+        return "financial_record"
+    if BITGET_DEPWD_SIGNATURE.issubset(headers_set):
+        return "deposit_withdrawal"
     if BITGET_DETALLES_SIGNATURE.issubset(headers_set):
         return "detalles"
     if BITGET_TRANSACCIONES_SIGNATURE.issubset(headers_set):
@@ -179,9 +240,35 @@ def _parse_decimal(valor: str) -> Decimal:
         return Decimal("0")
 
 
+# Epoch del número de serie de Excel (los exports UID de Bitget exportan las
+# fechas como serial, p. ej. 44818.0559 → 2022-09-14 01:20). Excel cuenta desde
+# 1899-12-30 por su bug histórico del año bisiesto 1900.
+_EXCEL_EPOCH = datetime(1899, 12, 30)
+
+
+def _excel_serial_a_fecha(valor: str):
+    """Convierte un número de serie Excel a datetime. None si no aplica.
+    Sólo acepta el rango ~2009-2064 para no confundir un número con una fecha."""
+    try:
+        num = float(str(valor).strip())
+    except (ValueError, TypeError):
+        return None
+    if 30000 <= num <= 80000:        # 30000 ≈ 1982, 80000 ≈ 2119: margen amplio y seguro
+        from datetime import timedelta
+        return _EXCEL_EPOCH + timedelta(days=num)
+    return None
+
+
 def _parse_fecha(valor: str) -> str:
-    """Parsea 'YYYY-MM-DD HH:MM:SS' con variantes. Devuelve ISO normalizado."""
+    """Parsea 'YYYY-MM-DD HH:MM:SS' con variantes, o un número de serie Excel.
+    Devuelve ISO normalizado. Nota: los exports UID vienen en UTC+8; se conserva
+    la fecha tal cual (naive), igual que el resto de exports de Bitget."""
     valor = str(valor).strip()
+    if not valor:
+        return valor
+    serial = _excel_serial_a_fecha(valor)
+    if serial is not None:
+        return serial.strftime("%Y-%m-%d %H:%M:%S")
     for fmt in ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"]:
         try:
             return datetime.strptime(valor, fmt).strftime("%Y-%m-%d %H:%M:%S")
@@ -244,20 +331,30 @@ class ClasificadorBitget:
 
         if tipo == "historial":
             raise ValueError(
-                "El archivo de historial de órdenes de Bitget contiene órdenes "
-                "agregadas y canceladas. Para calcular FIFO necesitas subir el "
-                "archivo de detalles de órdenes en spot."
+                "El archivo de «Historial de órdenes» de Bitget contiene órdenes "
+                "agregadas y canceladas, no es adecuado para FIFO. Sube el "
+                "«Historial de operaciones en spot» (operaciones ejecutadas)."
+            )
+        if tipo == "financial_record":
+            raise ValueError(
+                "El «Spot Financial Record» es un fichero de auditoría y "
+                "conciliación de saldos; no se usa para el cálculo FIFO. Sube el "
+                "«Historial de operaciones en spot» (Spot Trading History)."
             )
         if tipo == "detalles":
             self._clasificar_detalles()
+        elif tipo == "spot_trading":
+            self._clasificar_spot_trading()
+        elif tipo == "deposit_withdrawal":
+            self._clasificar_deposit_withdrawal()
         elif tipo == "transacciones":
             self._clasificar_transacciones()
             self._generar_advertencias_transacciones()
         else:
             raise ValueError(
                 "El archivo no se reconoce como un export de Bitget. "
-                "Asegúrate de exportar el CSV de detalles de órdenes en spot "
-                "o el CSV de transacciones desde tu cuenta de Bitget."
+                "Sube el «Historial de operaciones en spot» (recomendado) y, "
+                "si lo tienes, el «Historial de depósitos y retiros»."
             )
 
         if self._tiene_pares_usdt:
@@ -341,6 +438,123 @@ class ClasificadorBitget:
             importe      = float(total),
             fee_activo   = fee_coin if fee_coin else quote,
             fee_cantidad = float(fee),
+        ))
+
+    # ── HISTORIAL DE OPERACIONES EN SPOT (Spot Trading History) ───────────────
+    # Fuente FIFO recomendada: una fila por operación ejecutada, con par, precio,
+    # cantidad y comisión, y con TODO el histórico (incluido el coste de adquisición).
+
+    @staticmethod
+    def _fecha_de_fila(fila: dict, prefiere: str = "creat") -> str:
+        """Devuelve el valor de la columna de fecha de un export UID.
+        La cabecera de estos ficheros trae saltos de línea ("Timestamp(UTC+8)\\n
+        （created）"), así que buscamos por subcadena en vez de por clave exacta.
+        Prioriza la columna de creación; si no, la primera de tipo timestamp/date."""
+        for k, v in fila.items():
+            kl = (k or "").lower()
+            if "timestamp" in kl and prefiere in kl:
+                return v
+        for k, v in fila.items():
+            kl = (k or "").lower()
+            if "timestamp" in kl or kl == "date":
+                return v
+        return fila.get("Date", "")
+
+    def _clasificar_spot_trading(self) -> None:
+        _, rows = _leer_csv(self.filepath)
+        for fila in rows:
+            self._procesar_fila_spot_trading(fila)
+
+    def _procesar_fila_spot_trading(self, fila: dict) -> None:
+        coin   = fila.get("Coin", "").strip().upper()
+        par    = fila.get("Trading pair", "").strip().upper()      # p. ej. BGBUSDT
+        action = fila.get("Action", "").strip().lower()
+        qty    = _parse_decimal(fila.get("Quantity", "0"))
+        total  = _parse_decimal(fila.get("Transacted amount", "0"))
+        fee    = _parse_decimal(fila.get("Fee", "0"))
+        fee_coin = fila.get("Fee deducted in", "").strip().upper()
+        fecha  = _parse_fecha(self._fecha_de_fila(fila))
+        # Order no. nativo de Bitget (con apóstrofo/TAB de antifórmula) para dedup intra-fuente.
+        order_id = fila.get("Order no.", "").strip().lstrip("'").lstrip("\t").strip()
+
+        # quote = par sin la base (BGBUSDT − BGB → USDT). Fallback: stable al final.
+        quote = ""
+        if par.startswith(coin) and len(par) > len(coin):
+            quote = par[len(coin):]
+        if not quote:
+            for st in STABLES_USD:
+                if par.endswith(st):
+                    quote = st
+                    break
+
+        if not coin or not quote or action not in ("buy", "sell"):
+            self.desconocidas.append(OperacionDesconocida(
+                fecha=fecha, subtipo=f"operación spot no reconocida ({action or '—'})",
+                activo=coin or par, cantidad=float(qty), cuenta="Bitget",
+            ))
+            return
+
+        if qty <= 0 or total <= 0:
+            self.desconocidas.append(OperacionDesconocida(
+                fecha=fecha, subtipo=f"cantidad/importe inválido ({action})",
+                activo=coin, cantidad=float(qty), cuenta="Bitget",
+            ))
+            return
+
+        if quote in STABLES_USD:
+            self._tiene_pares_usdt = True
+
+        self.compraventas.append(OperacionCompraventa(
+            fecha        = fecha,
+            tipo         = "COMPRA" if action == "buy" else "VENTA",
+            activo       = coin,
+            cantidad     = float(qty),
+            contraparte  = quote,
+            importe      = float(total),
+            fee_activo   = fee_coin if fee_coin else quote,
+            fee_cantidad = float(fee),
+            order_id     = order_id,
+        ))
+
+    # ── HISTORIAL DE DEPÓSITOS Y RETIROS (Deposit/Withdrawal History) ─────────
+    # Opcional/recomendado: movimientos para conciliación y trazabilidad.
+    # NO generan FIFO (no son transmisiones patrimoniales).
+
+    def _clasificar_deposit_withdrawal(self) -> None:
+        _, rows = _leer_csv(self.filepath)
+        for fila in rows:
+            self._procesar_fila_depwd(fila)
+
+    def _procesar_fila_depwd(self, fila: dict) -> None:
+        coin     = fila.get("Coin", "").strip().upper()
+        tipo_raw = fila.get("Type", "").strip().lower()
+        qty      = abs(_parse_decimal(fila.get("Quantity", "0")))
+        fee      = _parse_decimal(fila.get("fee", "0"))
+        status   = fila.get("Status", "").strip().lower()
+        fecha    = _parse_fecha(self._fecha_de_fila(fila, prefiere="complet"))
+
+        # Sólo movimientos completados; ignorar fallidos/pendientes/cancelados.
+        if status and status not in ("successful", "success", "completed", "finished"):
+            return
+        if not coin or qty <= 0:
+            return
+
+        if tipo_raw == "deposit":
+            subtipo, obs = "Deposit", f"Depósito {coin}"
+        elif tipo_raw in ("withdrawal", "withdraw"):
+            subtipo, obs = "Withdrawal", f"Retiro {coin}"
+        else:
+            return
+
+        red = fila.get("Network", "").strip()
+        if red and red != "-":
+            obs += f" | Red: {red}"
+        if fee and fee != 0:
+            obs += f" | Fee: {float(abs(fee)):.8g} {coin}"
+
+        self.movimientos.append(OperacionMovimiento(
+            fecha=fecha, subtipo=subtipo, activo=coin,
+            cantidad=float(qty), observacion=obs,
         ))
 
     # ── TRANSACCIONES EN SPOT (fase 2) ────────────────────────────────────────
@@ -734,10 +948,341 @@ class ClasificadorBitget:
         }
 
 
+# ── MULTIARCHIVO ──────────────────────────────────────────────────────────────
+
+class BitgetUserError(ValueError):
+    """Error imputable al usuario (ningún fichero reconocido, etc.), no un bug.
+    Mismo contrato que KucoinUserError para que el endpoint lo interprete igual."""
+    def __init__(self, code: str, mensaje_usuario: str):
+        super().__init__(mensaje_usuario)
+        self.code     = code
+        self.category = "user_error"
+
+
+@dataclass
+class _ResumenSeccion:
+    detectado: bool = False
+    vacio: bool = False
+    registros: int = 0
+
+
+# Confianza para la deduplicación: el trading history es la fuente autorizada
+# (histórico completo con coste de adquisición); detalles y transacciones se
+# deduplican contra él. Menor número = mayor prioridad.
+_PRIORIDAD_FUENTE = {"spot_trading": 0, "detalles": 1, "transacciones": 2}
+
+
+def _dedup_key(op: "OperacionCompraventa") -> tuple:
+    """Clave de deduplicación tolerante a zona horaria y redondeo.
+
+    Los exports difieren en la fecha (Detalles usa la hora local del navegador,
+    el Trading History usa UTC+8) y en el redondeo del importe, así que NO se usa
+    la fecha. Cantidad e identidad del activo coinciden exactamente entre exports;
+    el importe se redondea a 2 decimales para absorber el redondeo de Bitget.
+    """
+    return (op.activo, op.tipo, round(op.cantidad, 6), round(op.importe, 2))
+
+
+class ClasificadorBitgetMulti:
+    """
+    Clasificador fiscal MULTIARCHIVO para Bitget (patrón ClasificadorKuCoin).
+
+    El usuario sube uno o varios CSV; el sistema detecta el tipo de cada uno por
+    su cabecera y consolida las operaciones, deduplicando los solapamientos entre
+    «Detalles de órdenes» y «Historial de operaciones en spot».
+
+    Expone el contrato FIFO (compraventas · swaps · movimientos · rendimientos ·
+    desconocidas · advertencias) y `resumen_archivos` para la UI.
+    """
+
+    def __init__(self, filepaths, filenames=None):
+        self.filepaths = list(filepaths)
+        self.filenames = list(filenames) if filenames else [self._basename(p) for p in self.filepaths]
+
+        self.compraventas: list = []
+        self.swaps:        list = []
+        self.movimientos:  list = []
+        self.rendimientos: list = []
+        self.desconocidas: list = []
+        self.advertencias: list = []
+
+        # Buffers de compraventas por fuente (para deduplicar tras leer todo)
+        self._cv_por_fuente = {"spot_trading": [], "detalles": [], "transacciones": []}
+        self._no_reconocidos: list = []
+        self._tiene_pares_usdt = False
+
+        self._sec = {
+            "spot_trading":       _ResumenSeccion(),
+            "deposit_withdrawal": _ResumenSeccion(),
+            "detalles":           _ResumenSeccion(),
+            "transacciones":      _ResumenSeccion(),
+            "financial_record":   _ResumenSeccion(),
+        }
+
+    @staticmethod
+    def _basename(p: str) -> str:
+        import os
+        return os.path.basename(p)
+
+    # ── ENTRADA PÚBLICA ────────────────────────────────────────────────────────
+
+    def clasificar(self) -> "ClasificadorBitgetMulti":
+        if not self.filepaths:
+            raise BitgetUserError("no_files", "No se recibió ningún fichero de Bitget.")
+
+        algun_reconocido = False
+
+        for fp, fname in zip(self.filepaths, self.filenames):
+            try:
+                tipo = detect_bitget_file_type(fp)
+            except Exception as e:                       # pragma: no cover
+                logger.warning("Bitget: no se pudo leer %s: %s", fname, e)
+                self._no_reconocidos.append(fname)
+                continue
+
+            if tipo == "historial":
+                algun_reconocido = True   # es un fichero de Bitget, sólo que no sirve
+                self.advertencias.append(
+                    f"«{fname}» es el Historial de órdenes (incluye órdenes "
+                    "canceladas) y no se usa para el cálculo. Usa el Historial de "
+                    "operaciones en spot. Se ha ignorado."
+                )
+                continue
+
+            if tipo == "financial_record":
+                algun_reconocido = True
+                self._sec["financial_record"].detectado = True
+                self.advertencias.append(
+                    f"«{fname}» es el Spot Financial Record (auditoría/conciliación "
+                    "de saldos). No se usa para FIFO; se ha ignorado para no duplicar "
+                    "operaciones."
+                )
+                continue
+
+            if tipo == "unknown":
+                self._no_reconocidos.append(fname)
+                continue
+
+            # detalles · transacciones · spot_trading · deposit_withdrawal
+            try:
+                c = ClasificadorBitget(fp).clasificar()
+            except ValueError as e:
+                self.advertencias.append(f"«{fname}»: {e}")
+                continue
+
+            algun_reconocido = True
+            self._absorber(tipo, c)
+
+        if not algun_reconocido:
+            raise BitgetUserError(
+                "wrong_file",
+                "Ninguno de los ficheros se reconoce como un export de Bitget. "
+                "Sube el «Historial de operaciones en spot» (recomendado) y, si lo "
+                "tienes, el «Historial de depósitos y retiros».",
+            )
+
+        self._consolidar_compraventas()
+        self._dedup_movimientos()
+        self._construir_advertencias()
+        return self
+
+    # ── ABSORCIÓN POR FICHERO ──────────────────────────────────────────────────
+
+    def _absorber(self, tipo: str, c: "ClasificadorBitget") -> None:
+        """Vuelca las operaciones de un clasificador single-file en los buffers."""
+        if tipo in self._cv_por_fuente:
+            self._cv_por_fuente[tipo].extend(c.compraventas)
+        else:                                            # spot_trading no está en el dict de fuentes CV
+            self._cv_por_fuente.setdefault(tipo, []).extend(c.compraventas)
+
+        self.swaps.extend(c.swaps)
+        self.movimientos.extend(c.movimientos)
+        self.rendimientos.extend(c.rendimientos)
+        self.desconocidas.extend(c.desconocidas)
+        if getattr(c, "_tiene_pares_usdt", False):
+            self._tiene_pares_usdt = True
+
+        sec_key = "deposit_withdrawal" if tipo == "deposit_withdrawal" else tipo
+        sec = self._sec.get(sec_key)
+        if sec is not None:
+            sec.detectado = True
+            n = len(c.movimientos) if tipo == "deposit_withdrawal" else len(c.compraventas)
+            sec.registros += n
+            if n == 0:
+                sec.vacio = True
+
+    # ── DEDUPLICACIÓN ──────────────────────────────────────────────────────────
+
+    def _dedup_intra_spot_trading(self, ops: list) -> list:
+        """Deduplica el Spot Trading History contra sí mismo.
+
+        Protege frente a subir el mismo Trading History dos veces o varios con
+        rangos de fechas solapados. Usa el «Order no.» nativo de Bitget como
+        identidad (único y persistente dentro de este formato); si una fila no lo
+        trae (caso degenerado: en los exports reales siempre está presente), cae
+        a la clave por valor. Conserva la primera aparición de cada identidad.
+        """
+        self._n_dedup_intra = 0
+        vistos = set()
+        unicos = []
+        for op in ops:
+            oid = (getattr(op, "order_id", "") or "").strip()
+            identidad = ("ID", oid) if oid else ("VAL",) + _dedup_key(op)
+            if identidad in vistos:
+                self._n_dedup_intra += 1
+                continue
+            vistos.add(identidad)
+            unicos.append(op)
+        return unicos
+
+    def _consolidar_compraventas(self) -> None:
+        """Funde las compraventas de todas las fuentes deduplicando solapamientos.
+
+        Dos niveles de deduplicación:
+          1. INTRA Spot Trading History (por «Order no.»): mismo fichero subido dos
+             veces o exports con rangos solapados → una sola copia.
+          2. CRUCE Detalles/Transacciones ↔ Spot Trading History (por valor, ya que
+             el Detalles no trae ningún identificador): el Trading History es
+             autoritativo y cada operación absorbe como máximo una equivalente.
+        """
+        from collections import Counter
+
+        prioritarias = self._dedup_intra_spot_trading(
+            self._cv_por_fuente.get("spot_trading", [])
+        )
+        presupuesto = Counter(_dedup_key(op) for op in prioritarias)
+
+        consolidadas = list(prioritarias)
+        self._n_dedup = 0
+
+        otras = []
+        for fuente in sorted(self._cv_por_fuente):
+            if fuente == "spot_trading":
+                continue
+            otras.extend(self._cv_por_fuente[fuente])
+
+        for op in otras:
+            k = _dedup_key(op)
+            if presupuesto.get(k, 0) > 0:
+                presupuesto[k] -= 1
+                self._n_dedup += 1
+            else:
+                consolidadas.append(op)
+
+        self.compraventas = consolidadas
+
+    def _dedup_movimientos(self) -> None:
+        """Deduplica movimientos idénticos (mismo subtipo/activo/cantidad/día) por si
+        se suben dos exports de depósitos/retiros solapados."""
+        vistos = set()
+        unicos = []
+        for m in self.movimientos:
+            k = (m.subtipo, m.activo, round(m.cantidad, 8), (m.fecha or "")[:10])
+            if k in vistos:
+                continue
+            vistos.add(k)
+            unicos.append(m)
+        self.movimientos = unicos
+
+    # ── ADVERTENCIAS Y RESUMEN ─────────────────────────────────────────────────
+
+    def _construir_advertencias(self) -> None:
+        if getattr(self, "_n_dedup_intra", 0) > 0:
+            n = self._n_dedup_intra
+            self.advertencias.insert(0,
+                f"Se {'ha' if n == 1 else 'han'} descartado {n} "
+                f"{'operación repetida' if n == 1 else 'operaciones repetidas'} "
+                "dentro del «Historial de operaciones en spot» (mismo fichero subido "
+                "dos veces o exports con fechas solapadas)."
+            )
+
+        if getattr(self, "_n_dedup", 0) > 0:
+            n = self._n_dedup
+            self.advertencias.insert(0,
+                f"Se {'ha' if n == 1 else 'han'} descartado {n} "
+                f"{'operación duplicada' if n == 1 else 'operaciones duplicadas'} "
+                "entre el «Detalles de órdenes» y el «Historial de operaciones en "
+                "spot» (mismo período). El cálculo usa el historial de operaciones."
+            )
+
+        # Compraventas sólo desde Detalles, sin Trading History: avisar del riesgo
+        # de que falte el coste de adquisición histórico.
+        if (self._sec["detalles"].detectado and self._sec["detalles"].registros > 0
+                and not self._sec["spot_trading"].detectado):
+            self.advertencias.append(
+                "Has subido el «Detalles de órdenes en spot» pero no el «Historial "
+                "de operaciones en spot». Si tus compras más antiguas no están en "
+                "este fichero, el coste de adquisición puede salir incompleto. "
+                "Recomendamos subir el Historial de operaciones en spot."
+            )
+
+        if self._tiene_pares_usdt:
+            self.advertencias.append(
+                "Las operaciones están valoradas en USDT u otra stablecoin. "
+                "Para la declaración del IRPF aplica el tipo de cambio EUR/USD "
+                "vigente en la fecha de cada operación."
+            )
+
+        if self.desconocidas:
+            tipos = sorted({d.subtipo for d in self.desconocidas})
+            self.advertencias.append(
+                f"{len(self.desconocidas)} operación(es) no reconocida(s): "
+                + ", ".join(tipos)
+            )
+
+        if self._no_reconocidos:
+            self.advertencias.append(
+                "Archivos no reconocidos como Bitget: " + ", ".join(self._no_reconocidos)
+            )
+
+    @property
+    def resumen_archivos(self) -> dict:
+        def _sec(s: _ResumenSeccion) -> dict:
+            return {"detectado": s.detectado, "vacio": s.vacio, "registros": s.registros}
+        return {
+            "spot_trading":       _sec(self._sec["spot_trading"]),
+            "deposit_withdrawal": _sec(self._sec["deposit_withdrawal"]),
+            "detalles":           _sec(self._sec["detalles"]),
+            "transacciones":      _sec(self._sec["transacciones"]),
+            "financial_record":   _sec(self._sec["financial_record"]),
+            "no_reconocidos":     list(self._no_reconocidos),
+        }
+
+    def resumen(self) -> dict:
+        return {
+            "compraventas": len(self.compraventas),
+            "movimientos":  len(self.movimientos),
+            "rendimientos": len(self.rendimientos),
+            "swaps":        len(self.swaps),
+            "desconocidas": len(self.desconocidas),
+            "advertencias": len(self.advertencias),
+        }
+
+
 # ── EJECUCIÓN DIRECTA ─────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     import sys
+    if len(sys.argv) > 2:
+        # Varios ficheros → flujo multiarchivo
+        c = ClasificadorBitgetMulti(sys.argv[1:]).clasificar()
+        print("=" * 60)
+        print("RESUMEN Bitget MULTIARCHIVO")
+        print("=" * 60)
+        for k, v in c.resumen().items():
+            print(f"  {k:<20} {v:>6}")
+        print("\n── RESUMEN ARCHIVOS ──")
+        for k, v in c.resumen_archivos.items():
+            print(f"  {k:<20} {v}")
+        print("\n── COMPRAVENTAS ──")
+        for op in c.compraventas:
+            print(f"  {op.fecha[:10]}  {op.tipo:<6}  {op.activo:<8}"
+                  f"  {op.cantidad:>14.8f}  @ {op.importe:.6f} {op.contraparte}")
+        print(f"\n── ADVERTENCIAS ({len(c.advertencias)}) ──")
+        for adv in c.advertencias:
+            print(f"  ⚠  {adv}")
+        sys.exit(0)
+
     ruta = sys.argv[1] if len(sys.argv) > 1 else "bitget.csv"
     print(f"\nProcesando: {ruta}\n")
 

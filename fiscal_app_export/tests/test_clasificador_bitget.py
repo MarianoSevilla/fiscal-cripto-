@@ -859,10 +859,12 @@ class TestHistorialOrdenesError:
             ClasificadorBitget(historial_simple).clasificar()
         assert len(str(exc_info.value)) > 50
 
-    def test_mensaje_indica_detalles(self, historial_simple):
+    def test_mensaje_indica_fichero_correcto(self, historial_simple):
+        # El historial de órdenes redirige ahora al «Historial de operaciones en
+        # spot» (operaciones ejecutadas), que es la fuente FIFO recomendada.
         with pytest.raises(ValueError) as exc_info:
             ClasificadorBitget(historial_simple).clasificar()
-        assert "detalles" in str(exc_info.value).lower()
+        assert "operaciones en spot" in str(exc_info.value).lower()
 
 
 # ── TESTS: ADVERTENCIA USDT ───────────────────────────────────────────────────
@@ -1363,3 +1365,417 @@ class TestNoneValuesRegression:
             pytest.fail(f"Regresión ed927121 en CSV simulado de producción: {e}")
         finally:
             os.unlink(path)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# FASE 2 — MULTIARCHIVO: Spot Trading History + Deposit/Withdrawal + dedup
+# ══════════════════════════════════════════════════════════════════════════════
+
+from fiscal_app_export.clasificador_bitget import (  # noqa: E402
+    ClasificadorBitgetMulti,
+    BitgetUserError,
+    _excel_serial_a_fecha,
+    _parse_fecha,
+)
+
+# Carpeta con los CSV reales del cliente (auditoría Bitget — caso Vicente).
+_VICENTE_DIR = os.path.expanduser("~/Desktop/bidget vicente")
+
+
+def _vicente(nombre_parcial: str) -> str:
+    """Devuelve la ruta del CSV de Vicente cuyo nombre contiene `nombre_parcial`."""
+    import glob
+    for fp in glob.glob(os.path.join(_VICENTE_DIR, "*.csv")):
+        if nombre_parcial.lower() in os.path.basename(fp).lower():
+            return fp
+    return ""
+
+
+_VICENTE_DISPONIBLE = os.path.isdir(_VICENTE_DIR) and bool(_vicente("spot trading history"))
+
+
+# ── HELPERS NUEVOS (siempre se ejecutan, no requieren ficheros) ────────────────
+
+class TestExcelSerialDates:
+
+    def test_serial_2022(self):
+        assert _excel_serial_a_fecha("44818.0559").strftime("%Y-%m-%d") == "2022-09-14"
+
+    def test_serial_2025(self):
+        assert _excel_serial_a_fecha("45887.70955").strftime("%Y-%m-%d") == "2025-08-18"
+
+    def test_fecha_iso_no_es_serial(self):
+        assert _excel_serial_a_fecha("2025-08-18 11:11:12") is None
+
+    def test_numero_fuera_de_rango_no_es_serial(self):
+        assert _excel_serial_a_fecha("4.474") is None      # precio, no fecha
+
+    def test_parse_fecha_convierte_serial(self):
+        assert _parse_fecha("44818.0559").startswith("2022-09-14")
+
+    def test_parse_fecha_iso_sigue_funcionando(self):
+        assert _parse_fecha("2025-08-18 11:11:12") == "2025-08-18 11:11:12"
+
+
+# ── DETECCIÓN DE LOS NUEVOS FORMATOS (con fila de título) ──────────────────────
+
+class TestDeteccionNuevosFormatos:
+
+    def test_spot_trading_con_titulo(self):
+        rows = [
+            ["Spot Trading Record ", "", "", "", "", "", "", "", "", "", "", "", ""],
+            ["Order no.", "UID", "Trading pair", "Coin", "Action", "order type",
+             "Executed price", "Quantity", "Transacted amount", "Fee deducted in",
+             "Fee", "Timestamp(UTC+8)\n（created）", "Timestamp(UTC+8)\n（updated）"],
+            ["'1", "9", "BGBUSDT", "BGB", "buy", "Spot trading", "0.16725",
+             "88.827", "14.85632", "BGB", "0", "44818.0559", "44818.0559"],
+        ]
+        path = _csv_tmp_raw(rows)
+        try:
+            assert detect_bitget_file_type(path) == "spot_trading"
+        finally:
+            os.unlink(path)
+
+    def test_deposit_withdrawal_con_titulo(self):
+        rows = [
+            ["Deposit/Withdrawal History", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+            ["Order no.", "UID", "Transaction hash(txid)", "Coin", "Network",
+             "Quantity", "Amount in USDT", "fee", "fee in USDT", "Type",
+             "Sub category", "From address", "To address", "Status",
+             "Timestamp UTC+8 (Completion)", "", ""],
+            ["'9", "9", "hash", "USDT", "-", "60", "60", "0", "-", "Deposit",
+             "chain", "a", "b", "Successful", "2022-09-14 01:14:30", "", ""],
+        ]
+        path = _csv_tmp_raw(rows)
+        try:
+            assert detect_bitget_file_type(path) == "deposit_withdrawal"
+        finally:
+            os.unlink(path)
+
+    def test_financial_record_con_titulo(self):
+        rows = [
+            ["Spot Financial Record", "", "", "", "", "", ""],
+            ["Order no.", "UID", "Coin", "Type", "Action", "Quantity", "Amount (USDT)"],
+            ["'9", "9", "USDT", "Deposit", "RECHARGE", "60", "60"],
+        ]
+        path = _csv_tmp_raw(rows)
+        try:
+            assert detect_bitget_file_type(path) == "financial_record"
+        finally:
+            os.unlink(path)
+
+    def test_financial_record_single_file_da_error_guia(self):
+        rows = [
+            ["Spot Financial Record", "", "", "", "", "", ""],
+            ["Order no.", "UID", "Coin", "Type", "Action", "Quantity", "Amount (USDT)"],
+            ["'9", "9", "USDT", "Deposit", "RECHARGE", "60", "60"],
+        ]
+        path = _csv_tmp_raw(rows)
+        try:
+            with pytest.raises(ValueError) as exc:
+                ClasificadorBitget(path).clasificar()
+            assert "operaciones en spot" in str(exc.value).lower()
+        finally:
+            os.unlink(path)
+
+
+def _csv_tmp_raw(rows: list) -> str:
+    """Escribe filas crudas (incluida la fila de título) a un CSV temporal."""
+    import csv as _csv
+    fd, path = tempfile.mkstemp(suffix=".csv")
+    with os.fdopen(fd, "w", encoding="utf-8-sig", newline="") as f:
+        w = _csv.writer(f)
+        for r in rows:
+            w.writerow(r)
+    return path
+
+
+# ── PARSER SPOT TRADING HISTORY (single-file) ──────────────────────────────────
+
+class TestSpotTradingParser:
+
+    def _path(self):
+        rows = [
+            ["Spot Trading Record ", "", "", "", "", "", "", "", "", "", "", "", ""],
+            ["Order no.", "UID", "Trading pair", "Coin", "Action", "order type",
+             "Executed price", "Quantity", "Transacted amount", "Fee deducted in",
+             "Fee", "Timestamp(UTC+8)\n（created）", "Timestamp(UTC+8)\n（updated）"],
+            ["'1", "9", "BGBUSDT", "BGB", "buy", "Spot trading", "0.16725",
+             "88.827", "14.85632", "BGB", "0", "44818.0559", "44818.0559"],
+            ["'2", "9", "BGBUSDT", "BGB", "Sell", "Spot trading", "4.474",
+             "45.2552", "202.4718", "USDT", "0.202472", "45887.71611", "45887.71611"],
+        ]
+        return _csv_tmp_raw(rows)
+
+    def test_genera_compra_y_venta(self):
+        path = self._path()
+        try:
+            c = ClasificadorBitget(path).clasificar()
+            assert c.tipo_export == "spot_trading"
+            tipos = sorted(op.tipo for op in c.compraventas)
+            assert tipos == ["COMPRA", "VENTA"]
+        finally:
+            os.unlink(path)
+
+    def test_quote_derivado_del_par(self):
+        path = self._path()
+        try:
+            c = ClasificadorBitget(path).clasificar()
+            assert all(op.contraparte == "USDT" for op in c.compraventas)
+            assert all(op.activo == "BGB" for op in c.compraventas)
+        finally:
+            os.unlink(path)
+
+    def test_fecha_excel_serial_convertida(self):
+        path = self._path()
+        try:
+            c = ClasificadorBitget(path).clasificar()
+            compra = next(op for op in c.compraventas if op.tipo == "COMPRA")
+            assert compra.fecha.startswith("2022-09-14")
+        finally:
+            os.unlink(path)
+
+
+# ── PARSER DEPOSIT/WITHDRAWAL (single-file) ────────────────────────────────────
+
+class TestDepWdParser:
+
+    def _path(self):
+        rows = [
+            ["Deposit/Withdrawal History", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+            ["Order no.", "UID", "Transaction hash(txid)", "Coin", "Network",
+             "Quantity", "Amount in USDT", "fee", "fee in USDT", "Type",
+             "Sub category", "From address", "To address", "Status",
+             "Timestamp UTC+8 (Completion)", "", ""],
+            ["'9", "9", "h", "USDT", "-", "60", "60", "0", "-", "Deposit",
+             "chain", "a", "b", "Successful", "2022-09-14 01:14:30", "", ""],
+            ["'1", "9", "h", "USDC", "BEP20", "702.1093", "701.68", "0.15", "0.15",
+             "withdrawal", "chain", "a", "b", "Successful", "2025-08-18 19:17:52", "", ""],
+            ["'2", "9", "h", "USDC", "BEP20", "5", "5", "0", "0",
+             "withdrawal", "chain", "a", "b", "Failed", "2025-08-18 19:17:52", "", ""],
+        ]
+        return _csv_tmp_raw(rows)
+
+    def test_deposito_y_retiro_como_movimientos(self):
+        path = self._path()
+        try:
+            c = ClasificadorBitget(path).clasificar()
+            assert c.tipo_export == "deposit_withdrawal"
+            subtipos = sorted(m.subtipo for m in c.movimientos)
+            assert subtipos == ["Deposit", "Withdrawal"]   # el "Failed" se ignora
+        finally:
+            os.unlink(path)
+
+    def test_no_genera_fifo(self):
+        path = self._path()
+        try:
+            c = ClasificadorBitget(path).clasificar()
+            assert len(c.compraventas) == 0
+        finally:
+            os.unlink(path)
+
+
+# ── MULTIARCHIVO + DEDUP (sintético) ───────────────────────────────────────────
+
+class TestMultiarchivoDedup:
+
+    def test_sin_ficheros_error(self):
+        with pytest.raises(BitgetUserError):
+            ClasificadorBitgetMulti([]).clasificar()
+
+    def test_dedup_detalles_vs_spot_trading(self):
+        # detalles: 1 venta BGB 45.2552 ; spot_trading: la misma + 1 compra BGB
+        det_rows = [
+            ["Date", "Trading pair", "Base Asset", "Quote Asset", "Direction",
+             "Price", "Amount", "Total", "Fee", "Fee Coin"],
+            ["2025-08-18 11:11:12", "BGB/USDT", "BGB", "USDT", "Sell", "4.474",
+             "45.2552", "202.4717648", "0.2024", "USDT"],
+        ]
+        st_rows = [
+            ["Spot Trading Record ", "", "", "", "", "", "", "", "", "", "", "", ""],
+            ["Order no.", "UID", "Trading pair", "Coin", "Action", "order type",
+             "Executed price", "Quantity", "Transacted amount", "Fee deducted in",
+             "Fee", "Timestamp(UTC+8)\n（created）", "Timestamp(UTC+8)\n（updated）"],
+            ["'1", "9", "BGBUSDT", "BGB", "buy", "Spot trading", "0.16725",
+             "88.827", "14.85632", "BGB", "0", "44818.0559", "44818.0559"],
+            ["'2", "9", "BGBUSDT", "BGB", "Sell", "Spot trading", "4.474",
+             "45.2552", "202.4718", "USDT", "0.202472", "45887.71611", "45887.71611"],
+        ]
+        det = _csv_tmp_raw(det_rows)
+        st  = _csv_tmp_raw(st_rows)
+        try:
+            c = ClasificadorBitgetMulti([det, st]).clasificar()
+            # La venta solapada se deduplica → 2 compraventas (1 compra + 1 venta)
+            assert len(c.compraventas) == 2
+            assert sum(1 for op in c.compraventas if op.tipo == "VENTA") == 1
+            assert any("duplicada" in a.lower() for a in c.advertencias)
+        finally:
+            os.unlink(det); os.unlink(st)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CASO REAL — VICENTE (auditoría Bitget). Requiere ~/Desktop/bidget vicente
+# ══════════════════════════════════════════════════════════════════════════════
+
+@pytest.mark.skipif(not _VICENTE_DISPONIBLE,
+                    reason="CSV reales de Vicente no disponibles en ~/Desktop/bidget vicente")
+class TestCasoVicente:
+
+    def _todos(self):
+        import glob
+        return sorted(glob.glob(os.path.join(_VICENTE_DIR, "*.csv")))
+
+    def test_deteccion_de_cada_fichero(self):
+        tipos = {detect_bitget_file_type(fp) for fp in self._todos()}
+        assert "spot_trading" in tipos
+        assert "deposit_withdrawal" in tipos
+        assert "financial_record" in tipos
+        assert "detalles" in tipos
+        assert "historial" in tipos
+
+    def test_multiarchivo_consolida_9_compraventas(self):
+        c = ClasificadorBitgetMulti(self._todos()).clasificar()
+        # 9 operaciones del trading history (2 compras BGB 2022 + 6 ventas + 1 compra USDC)
+        assert len(c.compraventas) == 9
+
+    def test_incluye_compras_bgb_2022(self):
+        c = ClasificadorBitgetMulti(self._todos()).clasificar()
+        compras_bgb = [op for op in c.compraventas
+                       if op.activo == "BGB" and op.tipo == "COMPRA"]
+        assert len(compras_bgb) == 2
+        assert all(op.fecha.startswith("2022-09-14") for op in compras_bgb)
+
+    def test_dedup_descarta_detalles_solapados(self):
+        c = ClasificadorBitgetMulti(self._todos()).clasificar()
+        assert any("duplicada" in a.lower() for a in c.advertencias)
+
+    def test_movimientos_deposito_y_retiros(self):
+        c = ClasificadorBitgetMulti(self._todos()).clasificar()
+        subtipos = sorted(m.subtipo for m in c.movimientos)
+        assert subtipos.count("Deposit") == 1
+        assert subtipos.count("Withdrawal") == 2
+
+    def test_fifo_coste_bgb_no_es_cero(self):
+        """REGRESIÓN PRINCIPAL: las ventas de BGB ya NO se calculan con coste 0."""
+        from fiscal_app_export.motor_fifo import MotorFIFO
+        c = ClasificadorBitgetMulti(self._todos()).clasificar()
+        motor = MotorFIFO()
+        ops = [("cv", op.fecha, op) for op in c.compraventas]
+        ops.sort(key=lambda x: x[1])
+        for _t, _f, op in ops:
+            fn = motor.registrar_compra if op.tipo == "COMPRA" else motor.registrar_venta
+            fn(fecha=op.fecha, activo=op.activo, cantidad=op.cantidad,
+               importe=op.importe, contraparte=op.contraparte,
+               fee_activo=op.fee_activo, fee_cantidad=op.fee_cantidad)
+        ventas_bgb = [r for r in motor.resultados if r.activo == "BGB"]
+        assert ventas_bgb, "No se registró ninguna venta de BGB"
+        coste_total = sum(r.precio_coste for r in ventas_bgb)
+        assert coste_total > 0, "El coste FIFO de BGB es 0 (regresión de coste cero)"
+        assert not any(r.inventario_incompleto for r in ventas_bgb), \
+            "El inventario de BGB sigue incompleto pese a incluir las compras de 2022"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# HARDENING — DEDUP INTRA Spot Trading History (Order no. + fallback por valor)
+# ══════════════════════════════════════════════════════════════════════════════
+
+_ST_TITLE = ["Spot Trading Record ", "", "", "", "", "", "", "", "", "", "", "", ""]
+_ST_HDR = ["Order no.", "UID", "Trading pair", "Coin", "Action", "order type",
+           "Executed price", "Quantity", "Transacted amount", "Fee deducted in",
+           "Fee", "Timestamp(UTC+8)\n（created）", "Timestamp(UTC+8)\n（updated）"]
+
+
+def _st_row(order_no, coin, action, qty, amt, price="1", fee="0", fee_coin="USDT"):
+    pair = f"{coin}USDT"
+    return [order_no, "9", pair, coin, action, "Spot trading", price,
+            qty, amt, fee_coin, fee, "45887.71", "45887.71"]
+
+
+class TestDedupIntraSpotTrading:
+
+    def test_mismo_trading_history_dos_veces_no_duplica(self):
+        rows = [_ST_TITLE, _ST_HDR,
+                _st_row("'100", "BGB", "buy", "88.827", "14.85"),
+                _st_row("'200", "BGB", "Sell", "45.2552", "202.47", price="4.474")]
+        path = _csv_tmp_raw(rows)
+        try:
+            c = ClasificadorBitgetMulti([path, path]).clasificar()
+            assert len(c.compraventas) == 2          # no 4
+            assert c._n_dedup_intra == 2
+            assert any("repetida" in a.lower() for a in c.advertencias)
+        finally:
+            os.unlink(path)
+
+    def test_dos_trading_history_solape_parcial(self):
+        a = _csv_tmp_raw([_ST_TITLE, _ST_HDR,
+                          _st_row("'100", "BGB", "buy", "88.827", "14.85"),
+                          _st_row("'200", "BGB", "Sell", "45.2552", "202.47", price="4.474")])
+        b = _csv_tmp_raw([_ST_TITLE, _ST_HDR,
+                          _st_row("'200", "BGB", "Sell", "45.2552", "202.47", price="4.474"),
+                          _st_row("'300", "BGB", "Sell", "2.65", "11.85", price="4.474")])
+        try:
+            c = ClasificadorBitgetMulti([a, b]).clasificar()
+            assert len(c.compraventas) == 3          # r100, r200 (una vez), r300
+            assert sorted(op.order_id for op in c.compraventas) == ["100", "200", "300"]
+            assert c._n_dedup_intra == 1
+        finally:
+            os.unlink(a); os.unlink(b)
+
+    def test_fallback_sin_order_no(self):
+        # Filas sin Order no.: dos copias idénticas deben deduplicar por valor.
+        rows = [_ST_TITLE, _ST_HDR,
+                _st_row("", "BGB", "buy", "88.827", "14.85"),
+                _st_row("", "BGB", "Sell", "45.2552", "202.47", price="4.474")]
+        path = _csv_tmp_raw(rows)
+        try:
+            c = ClasificadorBitgetMulti([path, path]).clasificar()
+            assert len(c.compraventas) == 2          # fallback por valor
+        finally:
+            os.unlink(path)
+
+    def test_order_no_distinto_mismo_valor_no_se_pierde(self):
+        # Dos ventas reales DISTINTAS (Order no. distinto) con mismo valor: NO se
+        # deben fusionar; el Order no. las distingue.
+        rows = [_ST_TITLE, _ST_HDR,
+                _st_row("'A1", "XRP", "Sell", "100", "50", price="0.5"),
+                _st_row("'A2", "XRP", "Sell", "100", "50", price="0.5")]
+        path = _csv_tmp_raw(rows)
+        try:
+            c = ClasificadorBitgetMulti([path]).clasificar()
+            assert len(c.compraventas) == 2          # ambas conservadas
+            assert c._n_dedup_intra == 0
+        finally:
+            os.unlink(path)
+
+
+@pytest.mark.skipif(not _VICENTE_DISPONIBLE,
+                    reason="CSV reales de Vicente no disponibles en ~/Desktop/bidget vicente")
+class TestCasoVicenteHardening:
+
+    def _todos(self):
+        import glob
+        return sorted(glob.glob(os.path.join(_VICENTE_DIR, "*.csv")))
+
+    def _trading(self):
+        return _vicente("spot trading history")
+
+    def test_trading_history_duplicado_sigue_9(self):
+        c = ClasificadorBitgetMulti([self._trading(), self._trading()]).clasificar()
+        assert len(c.compraventas) == 9          # no 18
+
+    def test_vicente_completo_con_trading_duplicado_sigue_9(self):
+        c = ClasificadorBitgetMulti(self._todos() + [self._trading()]).clasificar()
+        assert len(c.compraventas) == 9
+
+    def test_coste_bgb_no_cero_con_trading_duplicado(self):
+        from fiscal_app_export.motor_fifo import MotorFIFO
+        c = ClasificadorBitgetMulti(self._todos() + [self._trading()]).clasificar()
+        motor = MotorFIFO()
+        ops = sorted((("cv", op.fecha, op) for op in c.compraventas), key=lambda x: x[1])
+        for _t, _f, op in ops:
+            fn = motor.registrar_compra if op.tipo == "COMPRA" else motor.registrar_venta
+            fn(fecha=op.fecha, activo=op.activo, cantidad=op.cantidad,
+               importe=op.importe, contraparte=op.contraparte,
+               fee_activo=op.fee_activo, fee_cantidad=op.fee_cantidad)
+        coste = sum(r.precio_coste for r in motor.resultados if r.activo == "BGB")
+        assert coste > 0
