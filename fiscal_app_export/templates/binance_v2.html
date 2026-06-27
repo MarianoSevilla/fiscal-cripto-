@@ -571,6 +571,68 @@ td.type-badge { font-family: var(--font-body); font-size: 10px; text-transform: 
   .dz-primary { font-size: 14px; }
   .benefits   { grid-template-columns: 1fr; gap: 1px 0; }
 }
+
+/* ── ESTADO COMPLETADO (post-generación) ── */
+.done-state {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 32px;
+  text-align: center;
+  min-height: 220px;
+}
+.work-zone.done .drop-area,
+.work-zone.done .sep,
+.work-zone.done .config,
+.work-zone.done .benefits { display: none; }
+.work-zone.done .done-state { display: flex; }
+
+.done-icon { color: var(--accent); margin-bottom: 20px; }
+.done-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+.done-sub {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 32px;
+}
+.done-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.done-btn {
+  height: 40px;
+  padding: 0 22px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border-hi);
+  border-radius: var(--r-sm);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.done-btn:hover {
+  background: rgba(255,255,255,0.09);
+  border-color: var(--border-hover);
+}
+.done-link {
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color .15s;
+}
+.done-link:hover { color: var(--text); }
 </style>
 </head>
 <body>
@@ -650,7 +712,7 @@ td.type-badge { font-family: var(--font-body); font-size: 10px; text-transform: 
 
   <!-- ── PANEL PRINCIPAL ── -->
   <div class="zone-wrap">
-  <div class="work-zone">
+  <div class="work-zone" id="workZone">
 
     <!-- DROP AREA -->
     <div class="drop-area">
@@ -740,6 +802,20 @@ td.type-badge { font-family: var(--font-body); font-size: 10px; text-transform: 
       </div>
 
     </div><!-- /benefits -->
+
+    <!-- Estado completado: visible tras generación exitosa -->
+    <div class="done-state" id="doneState">
+      <svg class="done-icon" width="36" height="36" viewBox="0 0 36 36" fill="none">
+        <circle cx="18" cy="18" r="15" stroke="currentColor" stroke-opacity=".2" stroke-width="1.5"/>
+        <path d="M11.5 18.5l5 5 8.5-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <p class="done-title">Tu informe fiscal ya está listo</p>
+      <p class="done-sub">Descarga el PDF y compártelo con tu gestor fiscal.</p>
+      <div class="done-actions">
+        <button class="done-btn" id="doneNuevo">↩ Nuevo análisis</button>
+        <a href="/recursos" class="done-link">Analizar otro exchange →</a>
+      </div>
+    </div>
 
   </div><!-- /work-zone -->
   </div><!-- /zone-wrap -->
@@ -972,10 +1048,12 @@ td.type-badge { font-family: var(--font-body); font-size: 10px; text-transform: 
     yearNodetect.textContent         = 'Sin años detectados';
     yearPlaceholderBar.style.display = 'inline';
     setProgress(0);
+    document.getElementById('workZone').classList.remove('done');
     showState('empty');
   }
 
   btnNuevo.addEventListener('click', resetearFormulario);
+  document.getElementById('doneNuevo').addEventListener('click', resetearFormulario);
 
   // ── ESTADOS UI ────────────────────────────────
   const emptyState     = document.getElementById('emptyState');
@@ -1485,7 +1563,7 @@ td.type-badge { font-family: var(--font-body); font-size: 10px; text-transform: 
       btnDownload.href     = `/api/descargar/${currentToken}?exchange=binance`;
       btnDownload.download = 'informe_fiscal_binance.pdf';
       showDownload();
-      showNuevo();
+      document.getElementById('workZone').classList.add('done');
       document.getElementById('instruccionesPost').style.display = 'block';
 
       selectedFile = null; csvInput.value = ''; hideFile();
