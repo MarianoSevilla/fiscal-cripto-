@@ -778,9 +778,9 @@ def set_security_headers(response):
         "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com; "
-        "img-src 'self' data:; "
+        "img-src 'self' data: https://img.youtube.com; "
         "connect-src 'self' https://challenges.cloudflare.com; "
-        "frame-src https://challenges.cloudflare.com; "
+        "frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com; "
         "frame-ancestors 'none'; "
         "form-action 'self'; "
         "base-uri 'self'; "
@@ -1660,6 +1660,13 @@ def auth_google_callback():
 @limiter.exempt
 def page_binance():
     return render_template("tool.html", **EXCHANGE_PAGES["binance"])
+
+
+@app.route("/binance-v2")
+@login_required
+@limiter.exempt
+def page_binance_v2():
+    return render_template("binance_v2.html")
 
 
 @app.route("/bitvavo")
