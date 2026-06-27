@@ -1,0 +1,1522 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+
+<title>Declara Binance en Hacienda — FIFO automático | Mariano Sevilla</title>
+<meta name="description" content="Sube el CSV de Binance y obtén tu informe FIFO con las casillas 1626 y 1627 calculadas. Listo para tu declaración de la renta.">
+<meta name="author" content="Mariano Sevilla">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+<link rel="icon" href="/static/favicon.ico">
+<link rel="manifest" href="/static/site.webmanifest">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/nav.css">
+<link rel="preload" href="/static/nav.js" as="script">
+
+<style>
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; max-width: 100%; }
+html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; scroll-behavior: smooth; }
+
+/* ── TOKENS ── */
+:root {
+  --bg:          #080c17;
+  --surface:     #0e0e0e;
+  --surface2:    #1a1a1a;
+  --border:      rgba(255,255,255,0.09);
+  --border-hi:   rgba(255,255,255,0.12);
+  --border-hover:rgba(255,255,255,0.18);
+  --text:        #F2EFE9;
+  --sub:         #BFBBB3;
+  --muted:       #969189;
+  --dim:         #67645E;
+  --accent:      #00C896;
+  --accent-dim:  rgba(0,200,150,0.12);
+  --gold:        #F0B90B;
+  --red:         #e24b4a;
+  --red-dim:     rgba(226,75,74,0.1);
+  --radius:      14px;
+  --r-in:        10px;
+  --r-sm:        8px;
+  --w:           1060px;
+  --font-display:'Syne', sans-serif;
+  --font-body:   'DM Sans', sans-serif;
+  --font-mono:   'SF Mono', 'Fira Code', monospace;
+}
+
+/* ── PÁGINA ── */
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse 1400px 560px at 50% -40px, rgba(0,200,150,0.058) 0%, transparent 60%),
+    url("data:image/svg+xml,%3Csvg width='28' height='28' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='1' cy='1' r='0.85' fill='%23ffffff' fill-opacity='.02'/%3E%3C/svg%3E");
+  background-repeat: no-repeat, repeat;
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── CONTENEDOR GLOBAL ── */
+.page {
+  max-width: var(--w);
+  margin: 0 auto;
+  padding: 0 20px 56px;
+}
+
+/* ── HERO ── */
+.hero { padding: 60px 0 32px; }
+
+.page-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 64px;
+  letter-spacing: -0.038em;
+  line-height: 1.05;
+  color: var(--text);
+  margin-bottom: 14px;
+}
+.h-accent { color: var(--accent); }
+
+.hero-sub {
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--sub);
+  margin-bottom: 0;
+}
+
+/* Trust row — primer nivel de comunicación */
+.trust-row {
+  display: flex; align-items: center;
+  gap: 20px; flex-wrap: wrap;
+  margin-top: 20px;
+}
+.tb { display: flex; align-items: center; gap: 7px; }
+.tb-icon { color: var(--accent); opacity: 0.9; flex-shrink: 0; }
+.tb-text { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+
+/* ── NOTA PRE-PANEL ── */
+.pre-note {
+  margin-top: 24px;
+  margin-bottom: 10px;
+  font-size: 12.5px;
+  color: var(--muted);
+  letter-spacing: 0.005em;
+}
+
+/* ── AURA — halo detrás del panel ── */
+.zone-wrap { position: relative; }
+.zone-wrap::before {
+  content: '';
+  position: absolute; inset: -50px -28px;
+  background: radial-gradient(ellipse 880px 340px at 50% 44%, rgba(0,200,150,0.078) 0%, transparent 70%);
+  pointer-events: none; z-index: 0;
+}
+
+/* ── PANEL PRINCIPAL ── */
+.work-zone {
+  position: relative; z-index: 1;
+  background: linear-gradient(180deg, #141414 0%, #0e0e0e 96px, #0e0e0e 100%);
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.07),
+    0 10px 50px rgba(0,0,0,0.58),
+    0 2px 8px rgba(0,0,0,0.52),
+    0 0 0 1px rgba(0,0,0,0.32);
+}
+
+/* ── DROP AREA ── */
+.drop-area { padding: 32px; }
+
+.dz {
+  position: relative;
+  height: 272px;
+  border-radius: var(--r-in);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  cursor: copy;
+  transition: background-color .22s;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Crect width='100%25' height='100%25' fill='none' rx='10' ry='10' stroke='%23ffffff' stroke-opacity='.1' stroke-width='1.5' stroke-dasharray='3 4.5'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg width='24' height='24' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='1' cy='1' r='0.75' fill='%23ffffff' fill-opacity='.02'/%3E%3C/svg%3E");
+  background-repeat: no-repeat, repeat;
+}
+.dz:hover { background-color: rgba(255,255,255,0.013); }
+
+/* Archivo oculto — cubre toda la zona de drop */
+.dz input[type="file"] {
+  position: absolute; inset: 0;
+  opacity: 0; cursor: pointer;
+  width: 100% !important; height: 100%;
+}
+
+/* Estados drag / error */
+.dz.drag-over {
+  background-color: rgba(0,200,150,0.06);
+  outline: 1.5px solid rgba(0,200,150,0.4);
+  outline-offset: -1px;
+}
+.dz.error-zone {
+  background-color: rgba(226,75,74,0.05);
+  outline: 1.5px solid rgba(226,75,74,0.35);
+  outline-offset: -1px;
+}
+
+.dz-icon {
+  color: rgba(255,255,255,0.40);
+  margin-bottom: 18px;
+  transition: transform .22s cubic-bezier(0.2,0,0,1);
+  pointer-events: none;
+}
+.dz:hover .dz-icon { transform: translateY(-4px); }
+
+.dz-primary {
+  font-size: 17px; font-weight: 500;
+  color: var(--text);
+  margin-bottom: 9px;
+  text-align: center; line-height: 1.5;
+  pointer-events: none;
+}
+.dz-hint {
+  font-size: 13.5px; color: var(--sub);
+  text-align: center; margin-bottom: 22px;
+  line-height: 1.5;
+  pointer-events: none;
+}
+.dz-tutorial {
+  font-size: 13px; font-weight: 500;
+  color: var(--accent);
+  text-decoration: none; opacity: 0.92;
+  transition: opacity .15s, text-decoration-color .15s;
+  position: relative; z-index: 1;
+}
+.dz-tutorial:hover {
+  opacity: 1;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(0,200,150,0.45);
+}
+
+/* ── SEPARADORES ── */
+.sep { height: 1px; background: rgba(255,255,255,0.065); }
+
+/* ── CONFIGURACIÓN ── */
+.config {
+  padding: 20px 32px;
+  display: flex; align-items: center; gap: 16px;
+}
+
+.f-name { width: 250px; flex-shrink: 0; }
+.name-input {
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--r-sm);
+  padding: 11px 14px;
+  font-family: var(--font-body); font-size: 14px; color: var(--text);
+  outline: none;
+  transition: border-color .15s, background-color .15s;
+}
+.name-input::placeholder { color: var(--dim); opacity: 0.9; }
+.name-input:hover  { border-color: rgba(255,255,255,0.18); }
+.name-input:focus  { border-color: rgba(0,200,150,0.4); background-color: rgba(255,255,255,0.055); }
+
+.f-year { flex: 1; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+
+.year-placeholder-txt { font-size: 13px; color: var(--dim); opacity: 0.6; }
+.year-none-warn-bar   { font-size: 11px; color: var(--red); margin-top: 3px; }
+.year-nodetect-bar    { font-size: 11px; color: var(--muted); font-style: italic; }
+
+/* Year chips */
+.year-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.year-chip {
+  height: 34px; padding: 0 15px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: transparent;
+  font-family: var(--font-body); font-size: 13px; font-weight: 500;
+  color: var(--muted); cursor: pointer;
+  transition: all .15s; line-height: 1;
+}
+.year-chip:hover { border-color: rgba(255,255,255,0.22); color: var(--text); }
+.year-chip.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+.year-chip.todos.active { background: var(--accent); color: #0a0a0a; border-color: var(--accent); font-weight: 700; }
+.year-chip:focus-visible { outline: 2px solid rgba(0,200,150,0.5); outline-offset: 2px; }
+
+/* CTA — controlado por el atributo disabled */
+.cta {
+  flex-shrink: 0;
+  height: 42px; padding: 0 26px;
+  border-radius: var(--r-sm); border: none;
+  font-family: var(--font-display); font-weight: 700; font-size: 15px;
+  letter-spacing: 0.01em;
+  cursor: pointer; white-space: nowrap;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: all .22s cubic-bezier(0.2,0,0,1);
+}
+.cta:disabled {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(150,145,137,0.38);
+  cursor: not-allowed;
+  box-shadow: none; transform: none;
+}
+.cta:not(:disabled) {
+  background: linear-gradient(135deg, #00D8A7 0%, #00BE8D 100%);
+  color: #03110a;
+  box-shadow:
+    0 0 0 1px rgba(0,200,150,0.25),
+    0 0 30px rgba(0,200,150,0.35),
+    0 0 60px rgba(0,200,150,0.13),
+    0 2px 8px rgba(0,0,0,0.48);
+}
+.cta:not(:disabled):hover {
+  background: linear-gradient(135deg, #00E5B3 0%, #00CB98 100%);
+  box-shadow:
+    0 0 0 1px rgba(0,200,150,0.3),
+    0 0 40px rgba(0,200,150,0.45),
+    0 0 80px rgba(0,200,150,0.18),
+    0 4px 12px rgba(0,0,0,0.48);
+  transform: translateY(-1px);
+}
+.cta:not(:disabled):active { transform: translateY(0) scale(0.985); }
+.cta:not(:disabled):focus-visible { outline: 2px solid rgba(0,200,150,0.7); outline-offset: 3px; }
+
+/* ── BENEFICIOS ── */
+.benefits {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0 1px;
+  background: rgba(255,255,255,0.036);
+  overflow: hidden;
+}
+.benefit {
+  background: rgba(0,0,0,0.20);
+  padding: 16px 20px;
+  display: flex; align-items: flex-start; gap: 11px;
+}
+.benefit-icon { color: var(--accent); opacity: 0.85; flex-shrink: 0; margin-top: 2px; }
+.benefit-title { font-size: 12.5px; font-weight: 600; color: var(--sub); margin-bottom: 3px; line-height: 1.4; }
+.benefit-desc  { font-size: 11.5px; color: #a8a49d; line-height: 1.52; }
+
+/* ── PANEL META (debajo del panel) ── */
+.panel-meta {
+  display: flex; align-items: center; gap: 1rem;
+  margin-top: 0.65rem; flex-wrap: wrap;
+}
+.bar-file-selected {
+  display: none; font-size: 12px; color: var(--accent);
+  align-items: center; gap: 6px;
+}
+.bar-file-selected.visible { display: flex; }
+.bar-btn-nuevo {
+  display: none; padding: 8px 16px;
+  background: transparent; border: 1px solid var(--border);
+  border-radius: var(--r-sm); color: var(--muted);
+  font-size: 13px; font-family: var(--font-body); cursor: pointer;
+  transition: all 0.2s;
+}
+.bar-btn-nuevo:hover { border-color: var(--border-hover); color: var(--text); }
+.bar-btn-nuevo.visible { display: block; }
+
+/* Instrucciones post-análisis */
+.instrucciones-post {
+  margin-top: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-in);
+  padding: 1rem;
+}
+.instrucciones-post-label {
+  font-size: 11px; color: var(--accent); font-weight: 600;
+  letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px;
+}
+.instrucciones-post-body {
+  font-size: 12px; color: var(--muted); line-height: 1.6;
+  display: flex; gap: 2rem; flex-wrap: wrap;
+}
+.instrucciones-post-body p { flex: 1; min-width: 200px; }
+
+.disclaimer-note {
+  margin-top: 0.5rem;
+  font-size: 11px; color: var(--dim);
+}
+
+/* ── RESULTADOS ── */
+.results-wrap { max-width: var(--w); margin: 0 auto; padding: 0 20px 6rem; }
+.results-header-row {
+  display: flex; align-items: center;
+  justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem;
+}
+.results-heading {
+  font-family: var(--font-display);
+  font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+  font-weight: 700; letter-spacing: -0.02em; color: var(--text);
+}
+.empty-state {
+  border: 1px solid var(--border); border-radius: 16px;
+  padding: 4rem 2rem; text-align: center; color: var(--muted);
+}
+.empty-icon { font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.5; }
+.empty-state h3 { font-family: var(--font-display); font-size: 1.2rem; color: var(--text); margin-bottom: 0.5rem; }
+.empty-state p { font-size: 0.9rem; }
+.loading-state {
+  display: none; border: 1px solid var(--border);
+  border-radius: 16px; padding: 3.5rem 2rem; text-align: center;
+}
+.progress-wrap { max-width: 340px; margin: 0 auto; }
+.progress-track { height: 4px; background: var(--surface2); border-radius: 100px; overflow: hidden; margin-bottom: 0.6rem; }
+.progress-fill  { height: 100%; background: var(--accent); border-radius: 100px; width: 0%; transition: width 0.7s ease; }
+.progress-meta  { display: flex; justify-content: space-between; font-size: 11px; font-family: var(--font-mono); }
+.progress-meta #loadingMsg { color: var(--muted); }
+.progress-meta #progressPct { color: var(--accent); }
+.coste-cero-aviso {
+  display: none;
+  background: rgba(240,185,11,0.07); border: 1px solid rgba(240,185,11,0.25);
+  border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1.25rem;
+}
+.coste-cero-title { font-size: 11px; font-weight: 700; color: #F0B90B; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 5px; }
+.coste-cero-body  { font-size: 12px; color: #c8b870; line-height: 1.6; }
+.error-state {
+  display: none; background: var(--red-dim);
+  border: 1px solid rgba(226,75,74,0.25);
+  border-radius: 16px; padding: 2rem; color: #c8a5a4; font-size: 0.9rem;
+}
+.error-header { display: flex; align-items: flex-start; gap: 0.65rem; margin-bottom: 0.65rem; }
+.error-icon   { font-size: 1.35rem; flex-shrink: 0; line-height: 1.25; }
+.error-header strong { color: var(--red); font-size: 1rem; line-height: 1.3; }
+.error-desc   { margin: 0 0 0.8rem 0; line-height: 1.65; }
+.error-pasos  { margin: 0.1rem 0 0.9rem 1.4rem; padding-left: 0; line-height: 1.85; }
+.error-pasos li { font-size: 0.875rem; margin-bottom: 0.15rem; }
+.btn-retry {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.45rem 1.1rem; border: 1px solid rgba(226,75,74,0.4);
+  border-radius: 8px; background: transparent; color: var(--red);
+  font-size: 0.8rem; cursor: pointer; transition: background 0.15s; font-family: inherit;
+}
+.btn-retry:hover { background: rgba(226,75,74,0.12); }
+
+.btn-download-hero {
+  display: none; padding: 13px 28px;
+  color: var(--accent); border: 2px solid var(--accent);
+  background: transparent; border-radius: 10px;
+  font-family: var(--font-display); font-size: 1rem;
+  font-weight: 700; cursor: pointer; transition: background 0.2s;
+  text-decoration: none; align-items: center; gap: 8px; white-space: nowrap;
+}
+.btn-download-hero:hover { background: var(--accent-dim); }
+.btn-download-hero.visible { display: flex; }
+
+.year-bar { display: flex; align-items: center; gap: 0.65rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.year-bar-label { font-size: 11px; font-family: var(--font-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; flex-shrink: 0; }
+.year-pills { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+.year-pill {
+  padding: 0.2rem 0.7rem; border: 1px solid var(--border);
+  border-radius: 100px; background: transparent; color: var(--muted);
+  font-size: 12px; font-family: var(--font-mono); cursor: pointer;
+  transition: all 0.15s; line-height: 1.6;
+}
+.year-pill:hover { border-color: var(--accent); color: var(--accent); }
+.year-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.results-content { display: none; }
+.kpi-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border); border-radius: 12px;
+  overflow: hidden; margin-bottom: 1.5rem;
+}
+.kpi-card   { background: var(--surface); padding: 1.25rem 1rem; text-align: center; }
+.kpi-label  { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 6px; }
+.kpi-value  { font-family: var(--font-display); font-size: clamp(1rem, 2.2vw, 1.4rem); font-weight: 800; letter-spacing: -0.03em; }
+.kpi-value.green { color: var(--accent); }
+.kpi-value.red   { color: var(--red); }
+.tabs { display: flex; gap: 2px; margin-bottom: 1px; }
+.tab-btn {
+  padding: 8px 16px; font-size: 13px; font-weight: 500;
+  background: var(--surface); border: 1px solid var(--border);
+  border-bottom: none; border-radius: 8px 8px 0 0;
+  color: var(--muted); cursor: pointer; transition: all 0.15s;
+}
+.tab-btn.active { background: var(--surface2); color: var(--text); border-color: var(--border-hover); }
+.tab-content { background: var(--surface2); border: 1px solid var(--border); border-radius: 0 8px 8px 8px; overflow: visible; }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+.tbl-wrap { overflow-x: auto; max-height: 420px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 12px; }
+thead th {
+  background: var(--surface); padding: 10px 12px;
+  text-align: left; font-size: 10px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--muted); white-space: nowrap;
+  position: sticky; top: 0; z-index: 1;
+  border-bottom: 1px solid var(--accent);
+}
+tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+tbody tr:hover { background: rgba(255,255,255,0.03); }
+tbody td { padding: 9px 12px; color: var(--text); white-space: nowrap; font-family: var(--font-mono); }
+td.gain { color: var(--accent); font-weight: 600; }
+td.loss { color: var(--red);    font-weight: 600; }
+td.type-badge { font-family: var(--font-body); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+.warnings-list { padding: 1.25rem; display: flex; flex-direction: column; gap: 8px; }
+.warning-item {
+  background: rgba(226,75,74,0.06); border: 1px solid rgba(226,75,74,0.15);
+  border-radius: 8px; padding: 10px 14px;
+  font-size: 12px; color: #c8a5a4; line-height: 1.5; font-family: var(--font-mono);
+}
+.no-warnings { padding: 2rem; text-align: center; color: var(--accent); font-size: 0.9rem; }
+.badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; padding: 2px 7px; border-radius: 100px; font-family: var(--font-body); font-weight: 500; text-transform: uppercase; }
+.badge-swap  { background: rgba(0,200,150,0.1);  color: var(--accent); }
+.badge-venta { background: rgba(226,75,74,0.1);  color: var(--red); }
+
+/* ── FOOTER ── */
+.site-footer {
+  background: #06091a;
+  border-top: 1px solid var(--border);
+  padding: 22px 0;
+}
+.footer-inner {
+  max-width: var(--w); margin: 0 auto;
+  padding: 0 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+}
+.footer-copy { font-size: 12.5px; color: var(--muted); }
+.footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
+.footer-links a {
+  font-size: 12.5px; color: var(--muted);
+  text-decoration: none; transition: color .15s;
+}
+.footer-links a:hover { color: var(--text); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 960px) {
+  .page-title { font-size: 52px; }
+  .hero-sub   { font-size: 15px; }
+}
+
+@media (max-width: 768px) {
+  :root { --radius: 12px; --r-in: 8px; }
+
+  .page       { padding: 0 16px 44px; }
+  .results-wrap { padding: 0 16px 4rem; }
+
+  .hero       { padding: 48px 0 28px; }
+  .page-title { font-size: 42px; letter-spacing: -0.03em; }
+  .hero-sub   { font-size: 15px; }
+  .trust-row  { gap: 14px; }
+  .pre-note   { margin-top: 26px; }
+
+  .drop-area  { padding: 24px; }
+  .dz         { height: 240px; }
+  .dz-primary { font-size: 16px; }
+
+  .config   { padding: 18px 24px; flex-wrap: wrap; gap: 12px; }
+  .f-name   { width: 100%; }
+  .f-year   { flex: 1; }
+  .cta      { flex-shrink: 0; }
+
+  .benefits { grid-template-columns: repeat(2, 1fr); gap: 1px; }
+  .benefit  { padding: 14px 16px; }
+  .benefit-title { font-size: 12px; }
+  .benefit-desc  { font-size: 11px; }
+
+  .results-header-row { flex-direction: column; align-items: flex-start; }
+  .btn-download-hero  { width: 100%; justify-content: center; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .footer-inner { flex-direction: column; align-items: flex-start; gap: 10px; }
+}
+
+@media (max-width: 540px) {
+  .hero       { padding: 38px 0 22px; }
+  .page-title { font-size: 36px; letter-spacing: -0.028em; line-height: 1.06; }
+  .hero-sub   { font-size: 14px; line-height: 1.6; }
+  .trust-row  { flex-direction: column; align-items: flex-start; gap: 9px; margin-top: 16px; }
+  .tb-text    { white-space: normal; font-size: 12px; }
+  .pre-note   { margin-top: 22px; margin-bottom: 8px; font-size: 12px; }
+
+  .drop-area  { padding: 18px; }
+  .dz         { height: auto; min-height: 212px; padding: 24px 16px; }
+  .dz-primary { font-size: 15px; }
+  .dz-hint    { font-size: 13px; margin-bottom: 18px; }
+  .dz-tutorial{ font-size: 12.5px; }
+  .dz-icon    { margin-bottom: 14px; }
+
+  .config  { padding: 16px 18px; flex-direction: column; gap: 10px; }
+  .f-name  { width: 100%; }
+  .f-year  { width: 100%; }
+  .year-chips { flex-wrap: wrap; }
+  .cta     { width: 100%; height: 44px; }
+
+  .benefits { grid-template-columns: repeat(2, 1fr); gap: 1px; background: rgba(255,255,255,0.036); }
+  .benefit  { padding: 13px 14px; }
+}
+
+@media (max-width: 380px) {
+  .page-title { font-size: 30px; }
+  .hero-sub   { font-size: 13.5px; }
+  .dz-primary { font-size: 14px; }
+  .benefits   { grid-template-columns: 1fr; gap: 1px 0; }
+}
+</style>
+</head>
+<body>
+
+<nav id="site-nav">
+  <div class="snav-inner">
+    <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
+    <ul class="snav-links">
+      <li><a href="/como-funciona">Cómo funciona</a></li>
+      <li><a href="/recursos">Recursos</a></li>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/contacto">Contacto</a></li>
+    </ul>
+    <div class="snav-right">
+      <div class="snav-skeleton" aria-hidden="true"></div>
+    </div>
+  </div>
+</nav>
+<script src="/static/nav.js"></script>
+
+<main class="page">
+
+  <!-- ── HERO ── -->
+  <div class="hero">
+
+    <h1 class="page-title">
+      Genera tu informe<br>fiscal de <span class="h-accent">Binance</span><br>para Hacienda
+    </h1>
+
+    <p class="hero-sub">
+      Sube tu CSV de Binance y obtén el informe FIFO en formato PDF
+      con las casillas 1626 y 1627, listo para tu declaración de la renta.
+    </p>
+
+    <!-- Primer nivel de comunicación: 4 beneficios rápidos -->
+    <div class="trust-row">
+
+      <div class="tb">
+        <svg class="tb-icon" width="13" height="13" viewBox="0 0 13 13" fill="none">
+          <circle cx="6.5" cy="6.5" r="5.5" stroke="currentColor" stroke-width="1.25"/>
+          <path d="M4 6.5l2 2 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="tb-text">Compatible con el CSV oficial de Binance</span>
+      </div>
+
+      <div class="tb">
+        <svg class="tb-icon" width="13" height="13" viewBox="0 0 13 13" fill="none">
+          <path d="M2.5 1.5h5l2.5 2.5V11a.5.5 0 01-.5.5h-7a.5.5 0 01-.5-.5V2a.5.5 0 01.5-.5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+          <path d="M7.5 1.5V4h2.5" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+          <path d="M4 6.5h5M4 8.5h3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+        </svg>
+        <span class="tb-text">Informe FIFO en PDF</span>
+      </div>
+
+      <div class="tb">
+        <svg class="tb-icon" width="13" height="13" viewBox="0 0 13 13" fill="none">
+          <rect x="2" y="1.5" width="9" height="10" rx="1.2" stroke="currentColor" stroke-width="1.25"/>
+          <path d="M4 4.5h5M4 6.5h5M4 8.5h3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+        </svg>
+        <span class="tb-text">Método FIFO conforme al Art. 37.2 LIRPF</span>
+      </div>
+
+      <div class="tb">
+        <svg class="tb-icon" width="13" height="13" viewBox="0 0 13 13" fill="none">
+          <path d="M6.5 1L2 3.2v3.4C2 9.4 4.2 11.6 6.5 12.2c2.3-.6 4.5-2.8 4.5-5.6V3.2L6.5 1z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
+          <path d="M4.5 6.5l1.5 1.5 2.5-2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="tb-text">El archivo nunca se almacena</span>
+      </div>
+
+    </div>
+
+  </div><!-- /hero -->
+
+  <!-- Nota pre-panel -->
+  <p class="pre-note">Solo necesitas un archivo &nbsp;·&nbsp; El proceso tarda menos de un minuto</p>
+
+  <!-- ── PANEL PRINCIPAL ── -->
+  <div class="zone-wrap">
+  <div class="work-zone">
+
+    <!-- DROP AREA -->
+    <div class="drop-area">
+      <div class="dz" id="dropZone">
+        <input type="file" id="csvInput" accept=".csv">
+
+        <svg class="dz-icon" width="40" height="40" viewBox="0 0 24 24" fill="none">
+          <path d="M12 16V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M7.5 8.5l4.5-4.5 4.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M3.5 18.5v.8A1.7 1.7 0 005.2 21h13.6a1.7 1.7 0 001.7-1.7v-.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+
+        <p class="dz-primary" id="dropHint">Arrastra aquí tu CSV de Binance</p>
+        <p class="dz-hint">Historial completo desde tu primera operación</p>
+        <a href="#" class="dz-tutorial" id="dzTutorial">▶ Ver vídeo para descargar el CSV (2 min)</a>
+      </div>
+    </div><!-- /drop-area -->
+
+    <div class="sep"></div>
+
+    <!-- CONFIGURACIÓN -->
+    <div class="config">
+      <div class="f-name">
+        <input type="text" id="nombre" class="name-input" placeholder="Tu nombre" autocomplete="off">
+      </div>
+      <div class="f-year" id="ejercicio-section">
+        <span id="year-placeholder-bar" class="year-placeholder-txt">— Ejercicio fiscal</span>
+        <div id="year-chips-wrap" style="display:none">
+          <div id="year-chips" class="year-chips"></div>
+          <p id="year-none-warn" class="year-none-warn-bar" style="display:none">Selecciona al menos un ejercicio</p>
+        </div>
+        <span id="year-nodetect" class="year-nodetect-bar" style="display:none">Sin años detectados</span>
+      </div>
+      <button class="cta" id="btnAnalizar" disabled>
+        <span id="btnText">Generar informe →</span>
+      </button>
+    </div>
+
+    <div class="sep"></div>
+
+    <!-- BENEFICIOS — segundo nivel de comunicación -->
+    <div class="benefits">
+
+      <div class="benefit">
+        <svg class="benefit-icon" width="15" height="15" viewBox="0 0 15 15" fill="none">
+          <circle cx="7.5" cy="7.5" r="5.5" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M5 7.5l2 2 3.5-3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div>
+          <div class="benefit-title">CSV oficial de Binance</div>
+          <div class="benefit-desc">Compatible con el historial de transacciones exportado desde Binance.</div>
+        </div>
+      </div>
+
+      <div class="benefit">
+        <svg class="benefit-icon" width="15" height="15" viewBox="0 0 15 15" fill="none">
+          <rect x="2" y="1.5" width="11" height="12" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M4.5 5.5h6M4.5 7.8h6M4.5 10h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+        <div>
+          <div class="benefit-title">Método FIFO legal</div>
+          <div class="benefit-desc">Cálculo conforme al Art. 37.2 LIRPF.</div>
+        </div>
+      </div>
+
+      <div class="benefit">
+        <svg class="benefit-icon" width="15" height="15" viewBox="0 0 15 15" fill="none">
+          <path d="M3 2.5h6l3 3V13a.5.5 0 01-.5.5h-8A.5.5 0 013 13V2.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+          <path d="M9 2.5V5.5h3" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+          <path d="M5 8h5M5 10.5h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+        <div>
+          <div class="benefit-title">PDF listo para Hacienda</div>
+          <div class="benefit-desc">Casillas 1626 y 1627 calculadas y desglosadas.</div>
+        </div>
+      </div>
+
+      <div class="benefit">
+        <svg class="benefit-icon" width="15" height="15" viewBox="0 0 15 15" fill="none">
+          <path d="M7.5 1.5L2.5 4v4C2.5 11 4.5 13.5 7.5 14c3-.5 5-3 5-6V4L7.5 1.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+          <path d="M5.5 7.5l1.5 1.5 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div>
+          <div class="benefit-title">El archivo nunca se almacena</div>
+          <div class="benefit-desc">Procesado en memoria. Cumplimiento RGPD.</div>
+        </div>
+      </div>
+
+    </div><!-- /benefits -->
+
+  </div><!-- /work-zone -->
+  </div><!-- /zone-wrap -->
+
+  <!-- Meta del panel: indicador de archivo y botones de acción -->
+  <div class="panel-meta">
+    <div class="bar-file-selected" id="fileSelected">
+      <span>📄</span><span id="fileName">—</span>
+    </div>
+    <button class="bar-btn-nuevo" id="btnNuevo">↩ Nuevo análisis</button>
+  </div>
+
+  <!-- Instrucciones post-análisis -->
+  <div id="instruccionesPost" style="display:none;" class="instrucciones-post">
+    <div class="instrucciones-post-label">¿Y ahora qué?</div>
+    <div class="instrucciones-post-body">
+      <p>1. Descarga el PDF y envíaselo a tu gestor junto con el Transaction History oficial de Binance.</p>
+      <p>2. Las <strong style="color:var(--text);">ganancias y pérdidas patrimoniales</strong> van en la <strong style="color:var(--text);">casilla 1626</strong> de la declaración de la renta.</p>
+      <p>3. Los <strong style="color:var(--text);">rendimientos por staking</strong> van en la <strong style="color:var(--text);">casilla 0033</strong> como rendimientos del capital mobiliario.</p>
+    </div>
+  </div>
+
+  <p class="disclaimer-note">No asesoramiento fiscal ni legal. Consulta siempre con un gestor autorizado.</p>
+
+</main><!-- /page -->
+
+
+<!-- ── RESULTADOS ── -->
+<div class="results-wrap">
+
+  <div class="results-header-row">
+    <h2 class="results-heading">Resultado del análisis</h2>
+    <a class="btn-download-hero" id="btnDownload" href="#" download="informe_fiscal_binance.pdf">
+      ⬇ Descargar PDF
+    </a>
+  </div>
+
+  <div class="empty-state" id="emptyState">
+    <div class="empty-icon">📊</div>
+    <h3>Aún no hay resultados</h3>
+    <p>Sube el Transaction History de Binance en el formulario de arriba y en unos segundos verás aquí el resumen fiscal completo.</p>
+  </div>
+
+  <div class="loading-state" id="loadingState">
+    <div class="progress-wrap">
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="progress-meta">
+        <span id="loadingMsg">Leyendo CSV…</span>
+        <span id="progressPct">0%</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="error-state" id="errorState">
+    <div class="error-header">
+      <span class="error-icon" id="errorIcon">✕</span>
+      <strong id="errorTitulo">Error al procesar el fichero</strong>
+    </div>
+    <p class="error-desc" id="errorDesc"></p>
+    <ol class="error-pasos" id="errorPasos"></ol>
+    <button class="btn-retry" id="btnRetry">← Volver a intentarlo</button>
+  </div>
+
+  <div class="results-content" id="resultsContent">
+
+    <div class="year-bar" id="yearBar" style="display:none">
+      <span class="year-bar-label">Ejercicio:</span>
+      <div class="year-pills" id="yearPills"></div>
+    </div>
+
+    <div class="coste-cero-aviso" id="costeCeroAviso">
+      <div class="coste-cero-title">⚠ Coste de adquisición desconocido</div>
+      <div class="coste-cero-body" id="costeCeroMsg"></div>
+    </div>
+
+    <div class="kpi-grid" id="kpiGrid">
+      <div class="kpi-card"><div class="kpi-label">Operaciones</div><div class="kpi-value" id="kpiOps">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Ganancias brutas</div><div class="kpi-value green" id="kpiGain">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Pérdidas brutas</div><div class="kpi-value red" id="kpiLoss">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Resultado neto</div><div class="kpi-value" id="kpiNeto">—</div></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="operaciones">Operaciones</button>
+      <button class="tab-btn" data-tab="activos">Por activo</button>
+      <button class="tab-btn" data-tab="posicion">Posición actual</button>
+      <button class="tab-btn" data-tab="rendimientos">Rendimientos <span id="rendBadge"></span></button>
+      <button class="tab-btn" data-tab="advertencias">Advertencias <span id="warnBadge"></span></button>
+    </div>
+    <div class="tab-content">
+
+      <div class="tab-pane active" id="tab-operaciones">
+        <div class="tbl-wrap">
+          <table id="tblOps">
+            <thead><tr><th>Fecha</th><th>Tipo</th><th>Activo</th><th>Cantidad</th><th>P. transmisión</th><th>Coste FIFO</th><th>G/P (EUR)</th><th>Días</th></tr></thead>
+            <tbody id="tbodyOps"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-pane" id="tab-activos">
+        <div class="tbl-wrap">
+          <table id="tblActivos">
+            <thead><tr><th>Activo</th><th>Ops</th><th>Ganancias (EUR)</th><th>Pérdidas (EUR)</th><th>Neto (EUR)</th></tr></thead>
+            <tbody id="tbodyActivos"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-pane" id="tab-posicion">
+        <div class="tbl-wrap">
+          <table id="tblPos">
+            <thead><tr><th>Activo</th><th>Cantidad</th><th>Precio medio</th><th>Coste total</th></tr></thead>
+            <tbody id="tbodyPos"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-pane" id="tab-rendimientos">
+        <div class="tbl-wrap">
+          <table id="tblRend">
+            <thead><tr><th>Tipo</th><th>Activo</th><th>Nº operaciones</th><th>Cantidad total</th><th>Valor aprox. (EUR)</th></tr></thead>
+            <tbody id="tbodyRend"></tbody>
+          </table>
+          <div id="noRendimientos" style="display:none; padding:2rem; text-align:center; color:var(--muted); font-size:0.9rem;">
+            No se han detectado rendimientos (staking, rebates, etc.) en este archivo.
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane" id="tab-advertencias">
+        <div id="warnContainer"></div>
+      </div>
+
+    </div>
+  </div>
+</div><!-- /results-wrap -->
+
+
+<!-- ── FOOTER ── -->
+<footer class="site-footer">
+  <div class="footer-inner">
+    <span class="footer-copy">© 2025 marianosevilla.com — Contenido educativo. No constituye asesoramiento financiero ni fiscal.</span>
+    <div class="footer-links">
+      <a href="/privacidad">Privacidad</a>
+      <a href="/terminos">Términos</a>
+      <a href="/aviso-legal">Aviso legal</a>
+      <a href="/recursos">Recursos</a>
+    </div>
+  </div>
+</footer>
+
+
+<script>
+  // ── CONSTANTES ───────────────────────────────
+  const EXCHANGE_PAGE = 'binance';
+
+  // ── DOM ──────────────────────────────────────
+  const csvInput     = document.getElementById('csvInput');
+  const dropZone     = document.getElementById('dropZone');
+  const fileSelected = document.getElementById('fileSelected');
+  const fileName     = document.getElementById('fileName');
+  const btnAnalizar  = document.getElementById('btnAnalizar');
+  const btnText      = document.getElementById('btnText');
+  const btnNuevo     = document.getElementById('btnNuevo');
+  const btnDownload  = document.getElementById('btnDownload');
+
+  function showFile()    { fileSelected.classList.add('visible'); }
+  function hideFile()    { fileSelected.classList.remove('visible'); }
+  function showDownload(){ btnDownload.classList.add('visible'); }
+  function hideDownload(){ btnDownload.classList.remove('visible'); }
+  function showNuevo()   { btnNuevo.classList.add('visible'); }
+  function hideNuevo()   { btnNuevo.classList.remove('visible'); }
+
+  // ── PROGRESO ─────────────────────────────────
+  const progressFill  = document.getElementById('progressFill');
+  const progressPctEl = document.getElementById('progressPct');
+  let intervaloProgreso = null;
+
+  function setProgress(p) {
+    progressFill.style.width = p + '%';
+    progressPctEl.textContent = p + '%';
+  }
+
+  const mensajesProgreso = [
+    'Leyendo CSV…', 'Clasificando operaciones…',
+    'Aplicando FIFO…', 'Calculando resultados…', 'Generando informe…',
+  ];
+
+  function iniciarProgreso() {
+    setProgress(5);
+    let i = 0;
+    const el = document.getElementById('loadingMsg');
+    if (el) el.textContent = mensajesProgreso[0];
+    intervaloProgreso = setInterval(() => {
+      i = Math.min(i + 1, mensajesProgreso.length - 1);
+      if (el) el.textContent = mensajesProgreso[i];
+      setProgress(Math.round((i + 1) / mensajesProgreso.length * 85));
+    }, 2500);
+  }
+
+  function detenerProgreso() {
+    if (intervaloProgreso) { clearInterval(intervaloProgreso); intervaloProgreso = null; }
+    setProgress(100);
+  }
+
+  // ── RESETEAR FORMULARIO ───────────────────────
+  function resetearFormulario() {
+    selectedFile = null;
+    csvInput.value = '';
+    hideFile();
+    fileName.textContent = '—';
+    btnAnalizar.disabled = true;
+    hideDownload();
+    hideNuevo();
+    document.getElementById('instruccionesPost').style.display = 'none';
+    document.getElementById('costeCeroAviso').style.display = 'none';
+    document.getElementById('yearBar').style.display = 'none';
+    document.getElementById('yearPills').innerHTML = '';
+    allData = null;
+    añoActivo = 'todos';
+    _fetchingAños = false;
+    detectedYears = [];
+    selectedYears = [];
+    document.getElementById('year-chips').innerHTML = '';
+    yearChipsWrap.style.display      = 'none';
+    yearNodetect.style.display       = 'none';
+    yearNodetect.textContent         = 'Sin años detectados';
+    yearPlaceholderBar.style.display = 'inline';
+    setProgress(0);
+    showState('empty');
+  }
+
+  btnNuevo.addEventListener('click', resetearFormulario);
+
+  // ── ESTADOS UI ────────────────────────────────
+  const emptyState     = document.getElementById('emptyState');
+  const loadingState   = document.getElementById('loadingState');
+  const errorState     = document.getElementById('errorState');
+  const resultsContent = document.getElementById('resultsContent');
+
+  document.getElementById('btnRetry').addEventListener('click', resetearFormulario);
+
+  function showState(state) {
+    emptyState.style.display     = state === 'empty'   ? 'block' : 'none';
+    loadingState.style.display   = state === 'loading' ? 'block' : 'none';
+    errorState.style.display     = state === 'error'   ? 'block' : 'none';
+    resultsContent.style.display = state === 'results' ? 'block' : 'none';
+  }
+  showState('empty');
+
+  let selectedFile  = null;
+  let currentToken  = null;
+  let allData       = null;
+  let añoActivo     = 'todos';
+  let _fetchingAños = false;
+
+  // ── SELECTOR DE EJERCICIO (chips) ────────────
+  let detectedYears = [];
+  let selectedYears = [];
+
+  const yearPlaceholderBar = document.getElementById('year-placeholder-bar');
+  const yearChipsWrap      = document.getElementById('year-chips-wrap');
+  const yearNoneWarn       = document.getElementById('year-none-warn');
+  const yearNodetect       = document.getElementById('year-nodetect');
+
+  async function extractYearsFromCSV(file) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target.result || '';
+        const years = new Set();
+        const currentYear = new Date().getFullYear();
+        (text.match(/\b(20(?:0[9]|[12][0-9]|3[0-9]))-\d{2}-\d{2}\b/g) || []).forEach(m => {
+          const yr = Number(m.substring(0, 4));
+          if (yr >= 2009 && yr <= currentYear) years.add(yr);
+        });
+        (text.match(/\b(\d{2})-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/g) || []).forEach(match => {
+          const yy = parseInt(match.substring(0, 2), 10);
+          const yr = 2000 + yy;
+          if (yr >= 2009 && yr <= currentYear) years.add(yr);
+        });
+        resolve([...years].sort((a, b) => a - b));
+      };
+      reader.onerror = () => resolve([]);
+      reader.readAsText(file.slice(0, 1024 * 1024), 'utf-8');
+    });
+  }
+
+  yearChipsWrap.addEventListener('click', (e) => {
+    const chip = e.target.closest('.year-chip');
+    if (!chip) return;
+    const val = chip.dataset.year;
+    const container = document.getElementById('year-chips');
+    if (val === 'all') {
+      selectedYears = [...detectedYears];
+      container.querySelectorAll('.year-chip').forEach(c => c.classList.add('active'));
+    } else {
+      const yr  = parseInt(val, 10);
+      const idx = selectedYears.indexOf(yr);
+      if (idx === -1) { selectedYears.push(yr); chip.classList.add('active'); }
+      else            { selectedYears.splice(idx, 1); chip.classList.remove('active'); }
+      const todosChip = container.querySelector('.year-chip[data-year="all"]');
+      if (selectedYears.length === detectedYears.length) todosChip.classList.add('active');
+      else todosChip.classList.remove('active');
+    }
+    yearNoneWarn.style.display = selectedYears.length === 0 ? 'block' : 'none';
+    actualizarBoton();
+  });
+
+  function renderYearChips(years) {
+    const container = document.getElementById('year-chips');
+    container.innerHTML = '';
+    if (!years || years.length === 0) {
+      yearChipsWrap.style.display      = 'none';
+      yearPlaceholderBar.style.display = 'none';
+      yearNodetect.style.display       = 'inline';
+      selectedYears = [];
+      actualizarBoton();
+      return;
+    }
+    yearPlaceholderBar.style.display = 'none';
+    yearNodetect.style.display       = 'none';
+    yearChipsWrap.style.display      = 'block';
+
+    const todoChip = document.createElement('button');
+    todoChip.type = 'button';
+    todoChip.className    = 'year-chip todos';
+    todoChip.dataset.year = 'all';
+    todoChip.textContent  = 'Todos';
+    container.appendChild(todoChip);
+
+    years.forEach(yr => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className    = 'year-chip';
+      chip.dataset.year = String(yr);
+      chip.textContent  = String(yr);
+      container.appendChild(chip);
+    });
+
+    const lastYear = years[years.length - 1];
+    selectedYears = [lastYear];
+    container.querySelector(`.year-chip[data-year="${lastYear}"]`).classList.add('active');
+    yearNoneWarn.style.display = 'none';
+  }
+
+  function getEjercicioValue() {
+    if (!detectedYears.length) return '';
+    if (!selectedYears.length) return '';
+    if (selectedYears.length === detectedYears.length) return 'all';
+    return [...selectedYears].sort((a, b) => a - b).join(',');
+  }
+
+  function actualizarBoton() {
+    const ejercicioOk = !_fetchingAños && (!detectedYears.length || selectedYears.length > 0);
+    btnAnalizar.disabled = !(!!selectedFile && ejercicioOk);
+  }
+
+  // ── VALIDACIÓN ARCHIVO ────────────────────────
+  function mostrarErrorArchivo(msg) {
+    const zona = document.getElementById('dropZone');
+    zona.classList.add('error-zone');
+    const hint = document.getElementById('dropHint');
+    hint.textContent = msg;
+    hint.style.color = 'var(--red)';
+    setTimeout(() => {
+      zona.classList.remove('error-zone');
+      hint.style.color = '';
+      hint.textContent = 'Arrastra aquí tu CSV de Binance';
+    }, 4000);
+  }
+
+  function sanitizarTexto(str) {
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML.substring(0, 100);
+  }
+
+  function handleFile(file) {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      mostrarErrorArchivo('Solo se aceptan ficheros .csv — selecciona el Transaction History de Binance');
+      selectedFile = null; actualizarBoton(); return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      mostrarErrorArchivo('El fichero es demasiado grande. Máximo 10 MB.');
+      selectedFile = null; actualizarBoton(); return;
+    }
+    if (file.size === 0) {
+      mostrarErrorArchivo('El fichero está vacío.');
+      selectedFile = null; actualizarBoton(); return;
+    }
+    selectedFile = file;
+    fileName.textContent = file.name;
+    showFile();
+    extractYearsFromCSV(file).then(years => {
+      detectedYears = years;
+      renderYearChips(years);
+      actualizarBoton();
+    });
+  }
+
+  csvInput.addEventListener('change', () => { if (csvInput.files[0]) handleFile(csvInput.files[0]); });
+  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault(); dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0]; if (file) handleFile(file);
+  });
+
+  // Tutorial link: abre vídeo de YouTube en nueva pestaña
+  document.getElementById('dzTutorial').addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    window.open('https://www.youtube.com/watch?v=VabS6OsZ-1E', '_blank', 'noopener');
+  });
+
+  // ── TABS ─────────────────────────────────────
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ── FORMATEO ─────────────────────────────────
+  function fmt(n, dec = 4) {
+    return Number(n).toLocaleString('es-ES', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  }
+  function fmtFecha(iso) {
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y}`;
+  }
+
+  // ── RENDER RESULTADOS ─────────────────────────
+  function renderKpis(ops) {
+    const ganancias = ops.reduce((s, op) => s + (op.ganancia_perdida > 0 ? Number(op.ganancia_perdida) : 0), 0);
+    const perdidas  = ops.reduce((s, op) => s + (op.ganancia_perdida < 0 ? Number(op.ganancia_perdida) : 0), 0);
+    const neto = ganancias + perdidas;
+    document.getElementById('kpiOps').textContent  = ops.length;
+    document.getElementById('kpiGain').textContent = '+' + fmt(ganancias, 2);
+    document.getElementById('kpiLoss').textContent = fmt(perdidas, 2);
+    const netoEl = document.getElementById('kpiNeto');
+    netoEl.className   = 'kpi-value ' + (neto >= 0 ? 'green' : 'red');
+    netoEl.textContent = (neto >= 0 ? '+' : '') + fmt(neto, 2);
+  }
+
+  function renderTablaOps(ops) {
+    const tbodyOps = document.getElementById('tbodyOps');
+    tbodyOps.innerHTML = '';
+    ops.forEach(op => {
+      const gp = op.ganancia_perdida;
+      const tr = document.createElement('tr');
+      [
+        { text: fmtFecha(op.fecha),              cls: '' },
+        { text: op.tipo,                         cls: 'type-badge', badge: true },
+        { text: op.activo,                       cls: '' },
+        { text: fmt(op.cantidad, 6),             cls: '' },
+        { text: fmt(op.transmision),             cls: '' },
+        { text: fmt(op.coste_fifo),              cls: '' },
+        { text: (gp >= 0 ? '+' : '') + fmt(gp), cls: gp >= 0 ? 'gain' : 'loss' },
+        { text: String(op.periodo_dias),         cls: '' },
+      ].forEach(c => {
+        const td = document.createElement('td');
+        td.className = c.cls;
+        if (c.badge) {
+          const span = document.createElement('span');
+          span.className = 'badge ' + (op.tipo === 'swap' ? 'badge-swap' : 'badge-venta');
+          span.textContent = c.text;
+          td.appendChild(span);
+        } else {
+          td.textContent = c.text;
+        }
+        tr.appendChild(td);
+      });
+      tbodyOps.appendChild(tr);
+    });
+  }
+
+  function renderTablaActivos(ops) {
+    const por = {};
+    ops.forEach(op => {
+      if (!por[op.activo]) por[op.activo] = { ops: 0, ganancias: 0, perdidas: 0 };
+      por[op.activo].ops++;
+      const gp = Number(op.ganancia_perdida);
+      if (gp >= 0) por[op.activo].ganancias += gp;
+      else         por[op.activo].perdidas  += gp;
+    });
+    const tbody = document.getElementById('tbodyActivos');
+    tbody.innerHTML = '';
+    Object.keys(por).sort().forEach(activo => {
+      const d    = por[activo];
+      const neto = d.ganancias + d.perdidas;
+      const tr   = document.createElement('tr');
+      [
+        { text: activo,                                       cls: '',     strong: true },
+        { text: String(d.ops),                               cls: '' },
+        { text: d.ganancias ? '+' + fmt(d.ganancias) : '—', cls: d.ganancias ? 'gain' : '' },
+        { text: d.perdidas  ? fmt(d.perdidas)        : '—', cls: d.perdidas  ? 'loss' : '' },
+        { text: (neto >= 0 ? '+' : '') + fmt(neto),         cls: neto >= 0 ? 'gain' : 'loss' },
+      ].forEach(c => {
+        const td = document.createElement('td');
+        td.className = c.cls;
+        if (c.strong) { const s = document.createElement('strong'); s.textContent = c.text; td.appendChild(s); }
+        else td.textContent = c.text;
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  }
+
+  function actualizarAvisoCosteCero(ops) {
+    const opsSinCoste = ops.filter(op =>
+      (op.tipo === 'venta' || op.tipo === 'swap') &&
+      Number(op.coste_fifo) < 0.001 && Number(op.transmision) > 0
+    );
+    const avisoCero = document.getElementById('costeCeroAviso');
+    if (opsSinCoste.length > 0) {
+      const totalEur = opsSinCoste.reduce((s, op) => s + Number(op.transmision), 0);
+      const n = opsSinCoste.length;
+      document.getElementById('costeCeroMsg').textContent =
+        `${n} operación${n > 1 ? 'es' : ''} con coste de adquisición cero `
+        + `(valor de transmisión: ${fmt(totalEur, 2)} EUR). `
+        + `Es probable que esos activos fueran comprados en otro exchange o wallet externo. `
+        + `El FIFO se ha calculado con coste cero — la ganancia declarada es la máxima posible.`;
+      avisoCero.style.display = 'block';
+    } else {
+      avisoCero.style.display = 'none';
+    }
+  }
+
+  function aplicarFiltroAño() {
+    const ops = añoActivo === 'todos'
+      ? allData.operaciones
+      : allData.operaciones.filter(op => op.fecha.startsWith(añoActivo));
+    renderKpis(ops);
+    renderTablaOps(ops);
+    renderTablaActivos(ops);
+    actualizarAvisoCosteCero(ops);
+  }
+
+  function renderResultados(data) {
+    allData   = data;
+    añoActivo = 'todos';
+
+    const años      = [...new Set(data.operaciones.map(op => op.fecha.slice(0, 4)))].sort();
+    const yearBar   = document.getElementById('yearBar');
+    const yearPills = document.getElementById('yearPills');
+    yearPills.innerHTML = '';
+    if (años.length > 1) {
+      ['todos', ...años].forEach(a => {
+        const btn = document.createElement('button');
+        btn.className   = 'year-pill' + (a === 'todos' ? ' active' : '');
+        btn.textContent = a === 'todos' ? 'Todos' : a;
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.year-pill').forEach(p => p.classList.remove('active'));
+          btn.classList.add('active');
+          añoActivo = a;
+          aplicarFiltroAño();
+        });
+        yearPills.appendChild(btn);
+      });
+      yearBar.style.display = '';
+    } else {
+      yearBar.style.display = 'none';
+    }
+
+    renderKpis(data.operaciones);
+    renderTablaOps(data.operaciones);
+    renderTablaActivos(data.operaciones);
+
+    const tbodyPos = document.getElementById('tbodyPos');
+    tbodyPos.innerHTML = '';
+    data.posicion.forEach(p => {
+      const tr = document.createElement('tr');
+      [p.activo, fmt(p.cantidad, 6), fmt(p.precio_medio), fmt(p.coste_total)].forEach((val, i) => {
+        const td = document.createElement('td');
+        if (i === 0) { const s = document.createElement('strong'); s.textContent = val; td.appendChild(s); }
+        else td.textContent = val;
+        tr.appendChild(td);
+      });
+      tbodyPos.appendChild(tr);
+    });
+
+    const rends     = data.rendimientos || [];
+    const tbodyRend = document.getElementById('tbodyRend');
+    const noRend    = document.getElementById('noRendimientos');
+    document.getElementById('rendBadge').textContent = rends.length ? `(${rends.length})` : '';
+    tbodyRend.innerHTML = '';
+    noRend.style.display = rends.length === 0 ? 'block' : 'none';
+    rends.forEach(rend => {
+      const tr = document.createElement('tr');
+      const hayEur = rend.valor_eur && rend.valor_eur > 0;
+      [
+        rend.subtipo.replace(/_/g, ' '),
+        rend.activo,
+        rend.operaciones.toString(),
+        fmt(rend.cantidad, 6),
+        hayEur ? fmt(rend.valor_eur, 4) + ' EUR' : '—',
+      ].forEach((val, i) => {
+        const td = document.createElement('td');
+        td.textContent = val;
+        if (i === 0) td.style.textTransform = 'capitalize';
+        if (i === 4 && hayEur) td.className = 'gain';
+        tr.appendChild(td);
+      });
+      tbodyRend.appendChild(tr);
+    });
+
+    const warns = data.advertencias || [];
+    document.getElementById('warnBadge').textContent = warns.length ? `(${warns.length})` : '';
+    const warnContainer = document.getElementById('warnContainer');
+    warnContainer.innerHTML = '';
+    if (warns.length === 0) {
+      const div = document.createElement('div');
+      div.className = 'no-warnings';
+      div.textContent = '✓ Sin advertencias — todas las operaciones procesadas correctamente';
+      warnContainer.appendChild(div);
+    } else {
+      const list = document.createElement('div');
+      list.className = 'warnings-list';
+      warns.forEach(w => {
+        const item = document.createElement('div');
+        item.className = 'warning-item';
+        item.textContent = '⚠ ' + w;
+        list.appendChild(item);
+      });
+      warnContainer.appendChild(list);
+    }
+
+    actualizarAvisoCosteCero(data.operaciones);
+    showState('results');
+
+    if ((data.operaciones || []).length === 0 && warns.length > 0) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      document.querySelector('[data-tab="advertencias"]').classList.add('active');
+      document.getElementById('tab-advertencias').classList.add('active');
+    }
+  }
+
+  // ── MENSAJES DE ERROR ─────────────────────────
+  function mostrarErrorApi(errorRaw) {
+    const e = errorRaw || '';
+    let icono = '✕', titulo = 'Error al procesar el fichero', desc = '', pasos = [];
+
+    if (e === '__servidor__') {
+      titulo = 'Error de conexión';
+      desc = 'No se pudo conectar con el servidor. Comprueba tu conexión a internet y vuelve a intentarlo.';
+    } else if (e.includes('límite de análisis') || e.includes('429') || e.includes('espera')) {
+      icono = '⏱'; titulo = 'Límite de análisis alcanzado';
+      desc = 'Has realizado demasiados análisis seguidos. <strong>Espera 10 minutos</strong> y vuelve a intentarlo.';
+    } else if (e.includes('CSV incorrecto') || e.includes('Historial de Transacciones') || e.includes('Buy Crypto With Fiat') || e.includes('Historial de Operaciones Spot')) {
+      icono = '📄'; titulo = 'CSV de Binance incorrecto';
+      desc = 'Has exportado el <strong>Historial de Transacciones</strong>, que no incluye el precio en euros y no es válido para el cálculo FIFO. Necesitas el <strong>Historial de Operaciones Spot</strong>:';
+      pasos = [
+        'Inicia sesión en Binance.',
+        'Ve a <strong>Órdenes → Historial de operaciones spot</strong>.',
+        'Haz clic en <strong>Exportar</strong>, selecciona el rango de fechas completo y descarga el fichero.',
+      ];
+    } else if (e.includes('no parece ser un CSV de')) {
+      icono = '🔀'; titulo = 'Fichero de exchange incorrecto';
+      desc = e.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    } else if (e.includes('grande') || e.includes('10 MB')) {
+      icono = '📦'; titulo = 'Fichero demasiado grande';
+      desc = 'El fichero supera el límite de <strong>10 MB</strong>. Exporta el CSV con un rango de fechas más reducido e inténtalo de nuevo.';
+    } else if (e.includes('vacío')) {
+      icono = '📭'; titulo = 'Fichero vacío';
+      desc = 'El CSV está vacío. Asegúrate de exportar el historial desde tu cuenta de Binance y de que el fichero contiene datos.';
+    } else if (e.includes('ejercicio') || e.includes('dígitos') || e.includes('anterior a') || e.includes('posterior a')) {
+      icono = '📅'; titulo = 'Año fiscal inválido';
+      desc = e.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    document.getElementById('errorIcon').textContent   = icono;
+    document.getElementById('errorTitulo').textContent = titulo;
+    const descEl  = document.getElementById('errorDesc');
+    const pasosEl = document.getElementById('errorPasos');
+    descEl.innerHTML     = desc || '';
+    descEl.style.display = desc ? '' : 'none';
+    if (pasos.length) {
+      pasosEl.innerHTML     = pasos.map(p => `<li>${p}</li>`).join('');
+      pasosEl.style.display = '';
+    } else {
+      pasosEl.innerHTML     = '';
+      pasosEl.style.display = 'none';
+    }
+  }
+
+  // ── SUBMIT ────────────────────────────────────
+  btnAnalizar.addEventListener('click', async () => {
+    if (!selectedFile) return;
+    if (!selectedFile.name.toLowerCase().endsWith('.csv')) {
+      mostrarErrorArchivo('El fichero debe ser un .csv. Selecciona el Transaction History de Binance.');
+      return;
+    }
+    if (detectedYears.length > 0 && selectedYears.length === 0) {
+      yearNoneWarn.style.display = 'block';
+      return;
+    }
+
+    const ejercicioVal = getEjercicioValue();
+
+    btnAnalizar.disabled = true;
+    btnText.textContent  = 'Procesando…';
+    hideDownload();
+    hideNuevo();
+    iniciarProgreso();
+    showState('loading');
+
+    const formData = new FormData();
+    formData.append('nombre',    sanitizarTexto(document.getElementById('nombre').value.trim()));
+    formData.append('ejercicio', sanitizarTexto(ejercicioVal));
+    formData.append('csv',       selectedFile);
+    formData.append('exchange',  'binance');
+
+    try {
+      const res  = await fetch('/api/analizar', { method: 'POST', body: formData, credentials: 'include' });
+      const data = await res.json();
+
+      if (res.status === 409) {
+        mostrarErrorApi(data.error);
+        showState('error');
+        btnAnalizar.disabled = false;
+        return;
+      }
+
+      if (!res.ok || !data.ok) {
+        mostrarErrorApi(data.error);
+        showState('error');
+        selectedFile = null; csvInput.value = ''; hideFile();
+        fileName.textContent = '—'; btnAnalizar.disabled = true;
+        return;
+      }
+
+      currentToken = data.token;
+      renderResultados(data);
+      btnDownload.href     = `/api/descargar/${currentToken}?exchange=binance`;
+      btnDownload.download = 'informe_fiscal_binance.pdf';
+      showDownload();
+      showNuevo();
+      document.getElementById('instruccionesPost').style.display = 'block';
+
+      selectedFile = null; csvInput.value = ''; hideFile();
+      fileName.textContent = '—'; btnAnalizar.disabled = true;
+
+    } catch (err) {
+      mostrarErrorApi('__servidor__');
+      showState('error');
+      selectedFile = null; csvInput.value = ''; hideFile();
+      fileName.textContent = '—'; btnAnalizar.disabled = true;
+    } finally {
+      detenerProgreso();
+      btnText.textContent = 'Generar informe →';
+    }
+  });
+
+  // ── AUTH: guard + pre-relleno nombre ─────────
+  (async () => {
+    try {
+      const r = await fetch('/api/me', { credentials: 'include' });
+      const d = await r.json();
+      if (!d.user) { window.location.replace('/login/'); return; }
+      const u = d.user;
+      if (u.full_name) {
+        const nombreInput = document.getElementById('nombre');
+        if (nombreInput && !nombreInput.value) nombreInput.value = u.full_name;
+      }
+    } catch {
+      window.location.replace('/login/');
+    }
+  })();
+</script>
+</body>
+</html>

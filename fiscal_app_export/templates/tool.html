@@ -731,6 +731,11 @@
     </div>
     {% endfor %}
   </div>
+  {% if aviso_extra %}
+  <p class="how-to-aviso" style="margin-top:16px;padding:12px 14px;border-left:3px solid #b8860b;background:rgba(184,134,11,0.06);font-size:13px;line-height:1.5;border-radius:4px;">
+    <strong>⚠ Importante:</strong> {{ aviso_extra }}
+  </p>
+  {% endif %}
 </div>
 {% endif %}
 
@@ -791,12 +796,14 @@
     <!-- Columna izquierda: drop zone + nombre/año -->
     <div class="bar-left">
       <div class="bar-dropzone" id="dropZone">
-        <input type="file" id="csvInput" accept="{% if exchange_id == 'mexc' %}.xlsx,.xls{% elif exchange_id == 'bit2me' and bit2me_excel_enabled %}.csv,.xlsx,.xls{% else %}.csv{% endif %}"{% if exchange_id == 'kucoin' %} multiple{% endif %}>
+        <input type="file" id="csvInput" accept="{% if exchange_id == 'mexc' %}.xlsx,.xls{% elif exchange_id == 'bit2me' and bit2me_excel_enabled %}.csv,.xlsx,.xls{% else %}.csv{% endif %}"{% if exchange_id in ['kucoin', 'bitget'] %} multiple{% endif %}>
         <span style="font-size:22px;flex-shrink:0;">📂</span>
         {% if exchange_id == 'mexc' %}
         <span class="bar-drop-text" id="dropHint">Arrastra aquí el XLS/XLSX de {{ exchange_name }} o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Solo ficheros .xls / .xlsx</span></span>
         {% elif exchange_id == 'kucoin' %}
         <span class="bar-drop-text" id="dropHint">Arrastra aquí <strong>todos los CSV de KuCoin</strong> que tengas o haz clic para seleccionarlos<br><span style="font-size:11px;opacity:0.65;">Cuenta de trading, financiación, órdenes fiat, depósitos cripto · puedes subir varios a la vez · si alguno está vacío, no pasa nada</span></span>
+        {% elif exchange_id == 'bitget' %}
+        <span class="bar-drop-text" id="dropHint">Arrastra aquí <strong>los CSV de Bitget</strong> que tengas o haz clic para seleccionarlos<br><span style="font-size:11px;opacity:0.65;">Historial de operaciones en spot (recomendado) + depósitos y retiros · puedes subir varios a la vez</span></span>
         {% elif exchange_id == 'bit2me' and bit2me_excel_enabled %}
         <span class="bar-drop-text" id="dropHint">Arrastra el <strong>CSV (recomendado)</strong> o el Excel de {{ exchange_name }} o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">.csv, .xlsx o .xls</span></span>
         {% elif exchange_id %}
@@ -805,7 +812,7 @@
         <span class="bar-drop-text" id="dropHint">Arrastra aquí tu CSV o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Solo ficheros .csv</span></span>
         {% endif %}
       </div>
-      {% if exchange_id == 'kucoin' %}
+      {% if exchange_id in ['kucoin', 'bitget'] %}
       <div id="kucoinSummary" class="kucoin-summary" style="display:none;"></div>
       {% endif %}
       <div class="bar-inputs-row">
@@ -815,7 +822,7 @@
         </div>
         <div class="bar-field bar-field-year" id="ejercicio-section">
           <label>Ejercicio fiscal</label>
-          <div id="year-placeholder-bar" class="year-placeholder-bar">Sube el {% if exchange_id == 'mexc' %}archivo Excel{% else %}CSV{% endif %} para detectar</div>
+          <div id="year-placeholder-bar" class="year-placeholder-bar">Sube {% if exchange_id == 'mexc' %}el archivo Excel{% elif exchange_id in ['kucoin', 'bitget'] %}los CSV{% else %}el CSV{% endif %} para detectar</div>
           <div id="year-chips-wrap" style="display:none">
             <div id="year-chips" class="year-chips"></div>
             <p id="year-none-warn" class="year-none-warn-bar" style="display:none">Selecciona al menos un ejercicio</p>
@@ -844,7 +851,7 @@
   <!-- Meta: warning + estado fichero + botones post-análisis -->
   <div class="bar-meta">
     <div class="bar-warning">
-      <strong>⚠ Importante:</strong> {% if exchange_id == 'mexc' %}El archivo Excel debe incluir todo el historial desde tu primera operación, no solo el año que quieres declarar.{% else %}El CSV debe incluir todo el historial desde tu primera operación, no solo el año que quieres declarar.{% endif %}
+      <strong>⚠ Importante:</strong> {% if exchange_id == 'mexc' %}El archivo Excel debe incluir todo el historial desde tu primera operación, no solo el año que quieres declarar.{% elif exchange_id in ['kucoin', 'bitget'] %}Los CSV deben incluir todo el historial desde tu primera operación, no solo el año que quieres declarar.{% else %}El CSV debe incluir todo el historial desde tu primera operación, no solo el año que quieres declarar.{% endif %}
     </div>
     <div class="bar-file-selected" id="fileSelected">
       <span>📄</span><span id="fileName">—</span>
@@ -882,7 +889,7 @@
   <div class="empty-state" id="emptyState">
     <div class="empty-icon">📊</div>
     <h3>Aún no hay resultados</h3>
-    <p>Sube tu {% if exchange_id == 'mexc' %}archivo Excel{% else %}CSV{% endif %} en el formulario de arriba y en unos segundos verás aquí el resumen fiscal completo.</p>
+    <p>Sube {% if exchange_id == 'mexc' %}tu archivo Excel{% elif exchange_id in ['kucoin', 'bitget'] %}tus CSV{% else %}tu CSV{% endif %} en el formulario de arriba y en unos segundos verás aquí el resumen fiscal completo.</p>
   </div>
 
   <!-- LOADING -->
@@ -1115,7 +1122,7 @@
       hint: 'Arrastra aquí el XLS/XLSX de MEXC o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Trade Records · solo ficheros .xls / .xlsx</span>',
     },
     bitget: {
-      hint: 'Arrastra aquí el CSV de Bitget o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Detalles de órdenes en spot · solo ficheros .csv</span>',
+      hint: 'Arrastra aquí <strong>los CSV de Bitget</strong> que tengas o haz clic para seleccionarlos<br><span style="font-size:11px;opacity:0.65;">Historial de operaciones en spot (recomendado) + depósitos y retiros · puedes subir varios a la vez</span>',
     },
   };
 
@@ -1145,17 +1152,19 @@
   const btnDownload  = document.getElementById('btnDownload');
   const btnNuevo     = document.getElementById('btnNuevo');
 
-  // KuCoin: flujo multiarchivo
-  const isKucoinPage  = EXCHANGE_PAGE === 'kucoin';
+  // Flujo MULTIARCHIVO (KuCoin y Bitget comparten el mismo patrón)
+  const MULTI_PAGES   = ['kucoin', 'bitget'];
+  const isMultiPage   = MULTI_PAGES.includes(EXCHANGE_PAGE);
+  const isKucoinPage  = isMultiPage;   // alias retrocompatible dentro de este script
   const kucoinSummary = document.getElementById('kucoinSummary');
-  let   selectedFiles = [];   // sólo KuCoin: lista de File
+  let   selectedFiles = [];   // multiarchivo: lista de File
 
   function showFile()    { fileSelected.classList.add('visible'); }
   function hideFile()    {
     fileSelected.classList.remove('visible');
-    // KuCoin: al ocultar el chip de fichero también limpiamos la selección
-    // multiarchivo y su resumen (todos los reseteos pasan por aquí).
-    if (isKucoinPage) {
+    // Multiarchivo: al ocultar el chip de fichero también limpiamos la selección
+    // y su resumen (todos los reseteos pasan por aquí).
+    if (isMultiPage) {
       selectedFiles = [];
       if (kucoinSummary) kucoinSummary.style.display = 'none';
     }
@@ -1378,23 +1387,38 @@
     btnAnalizar.disabled = !(archivoOk && ejercicioOk);
   }
 
-  // ── KUCOIN: selección multiarchivo + resumen ───────────────────────────
-  function renderKucoinSummary(resumen, advertencias) {
-    if (!kucoinSummary) return;
-    if (!resumen) { kucoinSummary.style.display = 'none'; return; }
-    const secciones = [
+  // ── MULTIARCHIVO: selección + resumen ──────────────────────────────────
+  const MULTI_SUMMARY_SECTIONS = {
+    kucoin: [
       ['trading',         'Cuenta de trading'],
       ['financiacion',    'Cuenta de financiación'],
       ['deposito_cripto', 'Depósitos cripto'],
       ['fiat_orders',     'Depósitos fiat'],
-    ];
-    let html = '<div class="ks-title">Archivos KuCoin detectados</div>';
+    ],
+    bitget: [
+      ['spot_trading',       'Operaciones en spot'],
+      ['deposit_withdrawal', 'Depósitos y retiros'],
+      ['detalles',           'Detalles de órdenes'],
+      ['financial_record',   'Financial Record (auditoría)'],
+    ],
+  };
+  const MULTI_SUMMARY_TITLE = {
+    kucoin: 'Archivos KuCoin detectados',
+    bitget: 'Archivos Bitget detectados',
+  };
+
+  function renderKucoinSummary(resumen, advertencias) {
+    if (!kucoinSummary) return;
+    if (!resumen) { kucoinSummary.style.display = 'none'; return; }
+    const secciones = MULTI_SUMMARY_SECTIONS[EXCHANGE_PAGE] || MULTI_SUMMARY_SECTIONS.kucoin;
+    let html = `<div class="ks-title">${MULTI_SUMMARY_TITLE[EXCHANGE_PAGE] || 'Archivos detectados'}</div>`;
     secciones.forEach(([key, label]) => {
       const s = resumen[key] || {};
       let estado, cls;
-      if (!s.detectado)      { estado = 'no detectado'; cls = 'ks-muted'; }
-      else if (s.vacio)      { estado = 'archivo vacío'; cls = 'ks-warn'; }
-      else                   { estado = (s.registros || 0) + ' movimientos'; cls = 'ks-ok'; }
+      if (!s.detectado)               { estado = 'no detectado'; cls = 'ks-muted'; }
+      else if (key === 'financial_record') { estado = 'sólo auditoría'; cls = 'ks-muted'; }
+      else if (s.vacio)               { estado = 'archivo vacío'; cls = 'ks-warn'; }
+      else                            { estado = (s.registros || 0) + ' registros'; cls = 'ks-ok'; }
       html += `<div class="ks-row"><span>${label}:</span><span class="${cls}">${estado}</span></div>`;
     });
     const noRec = (resumen.no_reconocidos || []);
@@ -1410,7 +1434,7 @@
     if (!files.length) return;
     for (const f of files) {
       if (!f.name.toLowerCase().endsWith('.csv')) {
-        mostrarErrorArchivo('Todos los ficheros de KuCoin deben ser .csv');
+        mostrarErrorArchivo('Todos los ficheros deben ser .csv');
         selectedFiles = []; actualizarBoton(); return;
       }
       if (f.size > 10 * 1024 * 1024) {
@@ -1432,7 +1456,7 @@
 
     const fd = new FormData();
     files.forEach(f => fd.append('csv', f));
-    fetch('/api/kucoin/anos', { method: 'POST', body: fd, credentials: 'include' })
+    fetch('/api/' + EXCHANGE_PAGE + '/anos', { method: 'POST', body: fd, credentials: 'include' })
       .then(r => r.json())
       .then(data => {
         _fetchingAños = false;
@@ -1969,8 +1993,8 @@
     const formData = new FormData();
     formData.append('nombre', sanitizarTexto(document.getElementById('nombre').value.trim()));
     formData.append('ejercicio', sanitizarTexto(ejercicioVal));
-    const endpoint = isKucoinPage ? '/api/kucoin/analizar' : '/api/analizar';
-    if (isKucoinPage) {
+    const endpoint = isMultiPage ? ('/api/' + EXCHANGE_PAGE + '/analizar') : '/api/analizar';
+    if (isMultiPage) {
       selectedFiles.forEach(f => formData.append('csv', f));
     } else {
       formData.append('csv', selectedFile);
