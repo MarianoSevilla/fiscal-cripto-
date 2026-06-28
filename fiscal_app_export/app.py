@@ -1659,7 +1659,7 @@ def auth_google_callback():
 @login_required
 @limiter.exempt
 def page_binance():
-    return render_template("tool.html", **EXCHANGE_PAGES["binance"])
+    return render_template("binance_v2.html")
 
 
 @app.route("/binance-v2")
