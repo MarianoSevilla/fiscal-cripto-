@@ -116,6 +116,53 @@ class ProcessingError(db.Model):
         return f"<ProcessingError id={self.id} exchange={self.exchange} type={self.error_type}>"
 
 
+class Incident(db.Model):
+    """Causa raíz única, agrupada por fingerprint. Sprint 2 de Observabilidad.
+
+    Relacionada con ProcessingError via fingerprint (sin FK explícita en Sprint 2).
+    Un Incident agrupa N ProcessingError que comparten la misma causa raíz.
+    """
+
+    __tablename__ = "incidents"
+
+    id               = db.Column(db.Integer,     primary_key=True)
+    fingerprint      = db.Column(db.String(16),  unique=True, nullable=False, index=True)
+
+    # Metadatos del primer evento — nunca se editan manualmente
+    exchange         = db.Column(db.String(50),  nullable=True)
+    stage            = db.Column(db.String(50),  nullable=True)
+    error_type       = db.Column(db.String(100), nullable=True)
+    error_category   = db.Column(db.String(50),  nullable=True)
+    error_code       = db.Column(db.String(50),  nullable=True)
+
+    # Ciclo de vida
+    # nueva | investigando | solucion_conocida | en_desarrollo | corregida
+    # monitorizando | regresion | cerrada | descartada
+    status           = db.Column(db.String(30),  nullable=False, default="nueva", index=True)
+    title            = db.Column(db.String(200), nullable=True)  # editable — nombre descriptivo
+    notes            = db.Column(db.Text,        nullable=True)  # editable — notas internas
+
+    # Telemetría — actualizados automáticamente por el sistema, nunca a mano
+    first_seen_at    = db.Column(db.DateTime,    nullable=False)
+    last_seen_at     = db.Column(db.DateTime,    nullable=False, index=True)
+    event_count      = db.Column(db.Integer,     nullable=False, default=1)
+    regression_count = db.Column(db.Integer,     nullable=False, default=0)
+
+    created_at       = db.Column(db.DateTime,    default=datetime.utcnow, nullable=False)
+    resolved_at      = db.Column(db.DateTime,    nullable=True)
+
+    @property
+    def inc_id(self) -> str:
+        """Identificador funcional legible: INC-0001, INC-0042, etc."""
+        return f"INC-{self.id:04d}"
+
+    def __repr__(self) -> str:
+        return (
+            f"<Incident {self.inc_id} fp={self.fingerprint} "
+            f"status={self.status} events={self.event_count}>"
+        )
+
+
 class Contacto(db.Model):
     """Mensaje recibido a través del formulario de contacto."""
 

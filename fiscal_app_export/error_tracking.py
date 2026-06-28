@@ -316,6 +316,144 @@ def send_processing_error_email(
     return True
 
 
+# ── INCIDENT MANAGEMENT ───────────────────────────────────────────────────────
+
+# Status values that trigger a regression when a new event arrives
+_REGRESSION_TRIGGER_STATUSES = frozenset({"corregida", "monitorizando", "cerrada"})
+
+
+def _upsert_incident(
+    db_session,
+    *,
+    fingerprint: str,
+    exchange: str,
+    stage: str,
+    error_type: str,
+    error_category: str,
+    error_code: str,
+    event_created_at,
+) -> None:
+    """
+    Create or update the Incident for this fingerprint.
+
+    Best-effort: any failure is logged and swallowed. The ProcessingError
+    is always already committed before this is called.
+    """
+    from models import Incident
+
+    try:
+        incident = (
+            db_session.query(Incident)
+            .filter_by(fingerprint=fingerprint)
+            .with_for_update()
+            .first()
+        )
+
+        if incident is None:
+            incident = Incident(
+                fingerprint      = fingerprint,
+                exchange         = exchange,
+                stage            = stage,
+                error_type       = error_type,
+                error_category   = error_category,
+                error_code       = error_code,
+                status           = "nueva",
+                first_seen_at    = event_created_at,
+                last_seen_at     = event_created_at,
+                event_count      = 1,
+                regression_count = 0,
+            )
+            db_session.add(incident)
+            db_session.flush()
+            logger.info(
+                "[INCIDENT] created %s fingerprint=%s exchange=%s",
+                incident.inc_id, fingerprint, exchange,
+            )
+        else:
+            incident.last_seen_at  = event_created_at
+            incident.event_count  += 1
+
+            if incident.status in _REGRESSION_TRIGGER_STATUSES:
+                incident.regression_count += 1
+                incident.status            = "regresion"
+                logger.info(
+                    "[INCIDENT] regression %s fp=%s regression_count=%d",
+                    incident.inc_id, fingerprint, incident.regression_count,
+                )
+            else:
+                logger.info(
+                    "[INCIDENT] updated %s event_count=%d",
+                    incident.inc_id, incident.event_count,
+                )
+
+        db_session.commit()
+
+    except Exception as exc:
+        logger.error("[INCIDENT] upsert failed fingerprint=%s: %s", fingerprint, exc)
+        try:
+            db_session.rollback()
+        except Exception:
+            pass
+
+
+def backfill_incidents_from_processing_errors() -> tuple:
+    """
+    Idempotent one-time backfill: creates Incidents for all existing fingerprints.
+
+    Groups ProcessingError records by fingerprint (ordered by created_at ascending
+    so the first event's metadata is used for each group).
+    Skips fingerprints that already have an Incident row.
+    Safe to call multiple times — never creates duplicates.
+
+    Returns (inserted, skipped) counts.
+    """
+    from models import db, ProcessingError, Incident
+
+    events = (
+        db.session.query(ProcessingError)
+        .filter(ProcessingError.fingerprint.isnot(None))
+        .order_by(ProcessingError.created_at.asc())
+        .all()
+    )
+
+    # Python-side grouping: first event per fingerprint sets the metadata
+    groups: dict = {}
+    for e in events:
+        fp = e.fingerprint
+        if fp not in groups:
+            groups[fp] = {
+                "exchange":       e.exchange,
+                "stage":          e.stage,
+                "error_type":     e.error_type,
+                "error_category": e.error_category,
+                "error_code":     e.error_code,
+                "first_seen_at":  e.created_at,
+                "last_seen_at":   e.created_at,
+                "event_count":    1,
+            }
+        else:
+            groups[fp]["last_seen_at"]  = e.created_at
+            groups[fp]["event_count"]  += 1
+
+    inserted = skipped = 0
+    for fp, data in groups.items():
+        if db.session.query(Incident).filter_by(fingerprint=fp).first():
+            skipped += 1
+            continue
+
+        db.session.add(Incident(
+            fingerprint      = fp,
+            status           = "nueva",
+            regression_count = 0,
+            **data,
+        ))
+        inserted += 1
+
+    db.session.commit()
+    logger.info("[INCIDENT] backfill complete: inserted=%d skipped=%d", inserted, skipped)
+    return inserted, skipped
+
+
 # ── INTERNAL IMPLEMENTATION ───────────────────────────────────────────────────
 
 def _do_record(
@@ -374,6 +512,21 @@ def _do_record(
         db.session.rollback()
         logger.error("[ERROR_TRACKING] DB save failed: %s", db_exc)
         return  # Can't save → don't attempt email
+
+    # ── Upsert incident — groups this event under its root cause ─────────────
+    try:
+        _upsert_incident(
+            db_session     = db.session,
+            fingerprint    = fingerprint,
+            exchange       = exchange,
+            stage          = stage,
+            error_type     = error_type,
+            error_category = error_category,
+            error_code     = error_code,
+            event_created_at = record.created_at or datetime.utcnow(),
+        )
+    except Exception:
+        logger.exception("[INCIDENT] unexpected error calling _upsert_incident — ignoring")
 
     # ── Feature flag check ────────────────────────────────────────────────────
     if os.environ.get("PROCESSING_ERROR_EMAILS_ENABLED", "false").lower() != "true":
