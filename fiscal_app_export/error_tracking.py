@@ -330,6 +330,7 @@ def _do_record(
     parser,
     error_category: str = None,
     error_code: str = None,
+    csv_context: str = None,
 ) -> None:
     from models import db, ProcessingError
 
@@ -358,6 +359,7 @@ def _do_record(
         fingerprint     = fingerprint,
         csv_filename    = safe_filename,
         csv_size        = csv_size,
+        csv_context     = csv_context,
         auto_email_sent = False,
     )
 
@@ -440,6 +442,7 @@ def record_processing_error_safe(
     parser=None,
     error_category: str = None,
     error_code: str = None,
+    csv_context: str = None,
 ) -> None:
     """
     Record a CSV processing error in the DB and optionally send an auto-email.
@@ -449,6 +452,7 @@ def record_processing_error_safe(
 
     error_category: "parser_error" | "unsupported_format" | "user_error" | None
     error_code:     exchange-specific code, e.g. "futures", "staking", "wrong_file"
+    csv_context:    JSON string with file evidence (encoding, headers, sha256, etc.)
     """
     try:
         _do_record(
@@ -462,6 +466,7 @@ def record_processing_error_safe(
             parser=parser,
             error_category=error_category,
             error_code=error_code,
+            csv_context=csv_context,
         )
     except Exception:
         logger.exception("[ERROR_TRACKING] unexpected failure in record_processing_error_safe — ignoring")

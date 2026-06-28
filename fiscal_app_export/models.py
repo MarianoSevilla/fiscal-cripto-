@@ -107,6 +107,7 @@ class ProcessingError(db.Model):
     auto_email_sent    = db.Column(db.Boolean,     default=False, nullable=False)
     auto_email_sent_at = db.Column(db.DateTime,    nullable=True)
     email_send_error   = db.Column(db.String(500), nullable=True)
+    csv_context        = db.Column(db.Text,        nullable=True)   # JSON — Evidencia técnica del CSV (Sprint 1)
     user_replied       = db.Column(db.Boolean,     default=False, nullable=False)
     resolved           = db.Column(db.Boolean,     default=False, nullable=False, index=True)
     resolved_at        = db.Column(db.DateTime,    nullable=True)

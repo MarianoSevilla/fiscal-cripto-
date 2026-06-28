@@ -327,6 +327,10 @@ try:
                 _conn.execute(text(
                     "ALTER TABLE processing_errors ADD COLUMN IF NOT EXISTS error_code VARCHAR(50)"
                 ))
+                # Evidencia técnica del CSV (migration Sprint 1)
+                _conn.execute(text(
+                    "ALTER TABLE processing_errors ADD COLUMN IF NOT EXISTS csv_context TEXT"
+                ))
                 _conn.commit()
         except Exception:
             pass  # columnas ya existen o DB no disponible — no es crítico en arranque
@@ -372,6 +376,78 @@ def _contar_csv_rows(filepath: str) -> int:
             return max(0, sum(1 for _ in f) - 1)
     except Exception:
         return 0
+
+
+# Mapa exchange → nombre real de la clase clasificadora (para csv_context / observabilidad)
+_PARSER_CLASS_MAP = {
+    "bitvavo":   "ClasificadorBitvavo",
+    "kraken":    "ClasificadorKraken",
+    "coinbase":  "ClasificadorCoinbase",
+    "nexo":      "ClasificadorNexo",
+    "cryptocom": "ClasificadorCryptoCom",
+    "uphold":    "ClasificadorUphold",
+    "mexc":      "ClasificadorMEXC",
+    "bit2me":    "ClasificadorBit2Me",
+    "bitget":    "ClasificadorBitget",
+}
+
+
+def _capturar_evidencia(filepath: str, *, exchange: str = None, is_xlsx: bool = False) -> dict:
+    """Captura contexto técnico del archivo para diagnóstico posterior.
+
+    Best-effort: nunca lanza excepciones. Devuelve dict vacío si falla todo.
+    El llamador serializa a JSON y pasa como csv_context a record_processing_error_safe().
+    """
+    import csv as _csv
+    ctx: dict = {}
+    try:
+        # SHA256 del archivo completo (máx. 10 MB garantizado por validación previa)
+        with open(filepath, "rb") as f:
+            ctx["sha256"] = hashlib.sha256(f.read()).hexdigest()
+
+        if is_xlsx:
+            ctx["file_type"] = "xlsx"
+            return ctx
+
+        ctx["file_type"] = "csv"
+
+        # Detección de encoding: UTF-8 estricto primero, latin-1 como fallback
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                f.read(8192)
+            ctx["encoding"] = "utf-8"
+        except UnicodeDecodeError:
+            ctx["encoding"] = "latin-1"
+        except Exception:
+            pass
+
+        # Cabeceras y separador
+        enc = ctx.get("encoding", "utf-8")
+        try:
+            with open(filepath, "r", encoding=enc, errors="replace") as f:
+                first_line = f.readline().strip()
+            if first_line:
+                for sep in (",", ";", "\t", "|"):
+                    cols = next(_csv.reader([first_line], delimiter=sep), [])
+                    if len(cols) > 1:
+                        ctx["separator"] = sep
+                        ctx["headers"]   = cols[:50]   # máx. 50 columnas en evidencia
+                        ctx["n_columns"] = len(cols)
+                        break
+        except Exception:
+            pass
+
+        # Variante de formato Binance (detectada aquí para evitar doble lectura)
+        if exchange == "binance":
+            try:
+                ctx["exchange_format_variant"] = _detectar_formato_binance(filepath)
+            except Exception:
+                pass
+
+    except Exception:
+        pass
+
+    return ctx
 
 
 def _derivar_ruta_pdf(tmp_path: str) -> str:
@@ -2037,6 +2113,20 @@ def analizar():
             }), 400
         # ─────────────────────────────────────────────────────────────────────
 
+        # ── Evidencia técnica del archivo (best-effort, para observabilidad) ─
+        _is_xlsx      = (exchange == "mexc" or _bit2me_excel)
+        _ev_ctx       = _capturar_evidencia(tmp_path, exchange=exchange, is_xlsx=_is_xlsx)
+        _evidencia_json = json.dumps(_ev_ctx) if _ev_ctx else None
+        # Clase parser real: para Binance depende del formato detectado en _ev_ctx
+        _binance_fmt  = _ev_ctx.get("exchange_format_variant") if exchange == "binance" else None
+        _parser_class = (
+            "ClasificadorBinanceTx"    if _binance_fmt == "tx"
+            else "ClasificadorBinance" if exchange == "binance"
+            else "ClasificadorBit2MeExcel" if _bit2me_excel
+            else _PARSER_CLASS_MAP.get(exchange, exchange)
+        )
+        # ─────────────────────────────────────────────────────────────────────
+
         try:
             # MEXC y Bit2Me-Excel no son CSV de texto: validación propia, no _validar_csv
             if exchange == "mexc":
@@ -2305,13 +2395,14 @@ def analizar():
                     user_id        = current_user.id if current_user.is_authenticated else None,
                     email          = current_user.email if current_user.is_authenticated else None,
                     exchange       = exchange,
-                    stage          = "processing",
+                    stage          = "classify",
                     exc            = e,
                     csv_filename   = filename,
                     csv_size       = _csv_size,
-                    parser         = exchange,
+                    parser         = _parser_class,
                     error_category = _err_category,
                     error_code     = _err_code,
+                    csv_context    = _evidencia_json,
                 )
             except Exception:
                 app.logger.exception("[ERROR_TRACKING] unexpected error calling record_processing_error_safe")
@@ -2375,6 +2466,11 @@ def analizar_kucoin():
                 "error": f"Los ficheros suman demasiadas filas ({csv_rows:,}). "
                          f"El máximo permitido es {MAX_CSV_ROWS:,} filas."
             }), 400
+
+        # ── Evidencia técnica de los archivos (best-effort, para observabilidad) ─
+        _ev_list        = [_capturar_evidencia(p, exchange="kucoin") for p in tmp_paths]
+        _evidencia_json = json.dumps(_ev_list) if _ev_list else None
+        # ─────────────────────────────────────────────────────────────────────────
 
         try:
             motor, rendimientos, clasificador = procesar_kucoin(tmp_paths, filenames)
@@ -2455,13 +2551,14 @@ def analizar_kucoin():
                     user_id        = current_user.id if current_user.is_authenticated else None,
                     email          = current_user.email if current_user.is_authenticated else None,
                     exchange       = "kucoin",
-                    stage          = "processing",
+                    stage          = "classify",
                     exc            = e,
                     csv_filename   = ", ".join(filenames) if tmp_paths else "",
                     csv_size       = None,
-                    parser         = "kucoin",
+                    parser         = "ClasificadorKuCoin",
                     error_category = _err_category,
                     error_code     = _err_code,
+                    csv_context    = _evidencia_json,
                 )
             except Exception:
                 app.logger.exception("[ERROR_TRACKING] unexpected error calling record_processing_error_safe")
@@ -2523,6 +2620,11 @@ def analizar_bitget():
                 "error": f"Los ficheros suman demasiadas filas ({csv_rows:,}). "
                          f"El máximo permitido es {MAX_CSV_ROWS:,} filas."
             }), 400
+
+        # ── Evidencia técnica de los archivos (best-effort, para observabilidad) ─
+        _ev_list        = [_capturar_evidencia(p, exchange="bitget") for p in tmp_paths]
+        _evidencia_json = json.dumps(_ev_list) if _ev_list else None
+        # ─────────────────────────────────────────────────────────────────────────
 
         try:
             motor, rendimientos, clasificador = procesar_bitget_multi(tmp_paths, filenames)
@@ -2601,13 +2703,14 @@ def analizar_bitget():
                     user_id        = current_user.id if current_user.is_authenticated else None,
                     email          = current_user.email if current_user.is_authenticated else None,
                     exchange       = "bitget",
-                    stage          = "processing",
+                    stage          = "classify",
                     exc            = e,
                     csv_filename   = ", ".join(filenames) if tmp_paths else "",
                     csv_size       = None,
-                    parser         = "bitget",
+                    parser         = "ClasificadorBitgetMulti",
                     error_category = _err_category,
                     error_code     = _err_code,
+                    csv_context    = _evidencia_json,
                 )
             except Exception:
                 app.logger.exception("[ERROR_TRACKING] unexpected error calling record_processing_error_safe")
