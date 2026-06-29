@@ -4,7 +4,8 @@ Mariano Sevilla — marianosevilla.com
 
 Soporta el formato exportado desde:
   Binance → Órdenes → Historial de transacciones
-  (columnas: ID de usuario, Tiempo, Cuenta, Operación, Moneda, Cambio, Observación)
+  Cabeceras en español: ID de usuario, Tiempo, Cuenta, Operación, Moneda, Cambio, Observación
+  Cabeceras en inglés:  User ID, Time, Account, Operation, Coin, Change, Remark
 
 Operaciones reconocidas:
   Buy Crypto With Fiat  → COMPRA (par EUR) o RENDIMIENTO (bono "Ref" sin par EUR)
@@ -76,6 +77,18 @@ def _parse_tiempo(series: pd.Series) -> pd.Series:
 
 _WALLET_RE = re.compile(r"Wallet/(\w+)")
 
+# Mapeo de cabeceras en inglés a español para normalizar antes de procesar.
+# Si el CSV ya viene en español, rename() es un no-op.
+_COLS_EN_ES = {
+    "User ID":   "ID de usuario",
+    "Time":      "Tiempo",
+    "Account":   "Cuenta",
+    "Operation": "Operación",
+    "Coin":      "Moneda",
+    "Change":    "Cambio",
+    "Remark":    "Observación",
+}
+
 
 def _safe_text(value) -> str:
     """Convierte un valor de celda pandas a str, devolviendo "" para NaN/None."""
@@ -143,6 +156,7 @@ class ClasificadorBinanceTx:
     def __init__(self, filepath: str):
         self.df = pd.read_csv(filepath)
         self.df.columns = [c.strip() for c in self.df.columns]
+        self.df.rename(columns=_COLS_EN_ES, inplace=True)
         self.df["Tiempo"] = _parse_tiempo(self.df["Tiempo"])
         self.df = self.df.sort_values("Tiempo").reset_index(drop=True)
         self.df["Cambio"] = pd.to_numeric(self.df["Cambio"], errors="coerce").fillna(0.0)

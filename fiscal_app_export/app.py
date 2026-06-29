@@ -909,7 +909,8 @@ _721_EXCHANGES_CON_MOTOR = frozenset({
 # Exchanges españoles: no sujetos al 721 (entidad custodio en España).
 _721_EXCHANGES_ES = frozenset({"bit2me"})
 
-BINANCE_SIGNATURES   = ["Tiempo", "Operación", "Moneda", "Cambio", "Cuenta"]
+BINANCE_SIGNATURES   = ["Tiempo", "Operación", "Moneda", "Cambio", "Cuenta",  # ES
+                         "Operation", "Coin", "Change", "Account"]              # EN
 BIT2ME_SIGNATURES    = ["Bit", "2Me", "Informe Fiscal", "Estimado"]
 BITVAVO_SIGNATURES   = ["Timezone", "Date", "Time", "Type", "Currency", "Amount"]
 KRAKEN_SIGNATURES    = ["txid", "refid", "time", "type", "asset", "amount", "fee"]
@@ -1129,7 +1130,8 @@ def _detectar_formato_binance(filepath: str) -> str:
     try:
         with open(filepath, encoding="utf-8", errors="replace") as f:
             muestra = "".join(f.readline() for _ in range(20))
-        if "Buy Crypto With Fiat" in muestra or "Sell Crypto To Fiat" in muestra or "ID de usuario" in muestra:
+        if ("Buy Crypto With Fiat" in muestra or "Sell Crypto To Fiat" in muestra
+                or "ID de usuario" in muestra or "User ID" in muestra):
             return "tx"
     except Exception:
         pass

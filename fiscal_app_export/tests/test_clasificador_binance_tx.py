@@ -7,6 +7,10 @@ Cubre los casos auditados el 2026-05-14:
   - Pool Distribution en LTC (cantidad cripto)
   - Transaction Buy/Spend emparejado (USDC→XRP y EUR→XRP, incluido grupo multi-fila)
   - Small Assets Exchange BNB (positive + negative = MOVIMIENTO, sin afectar FIFO)
+
+Añadido 2026-06-29:
+  - Cabeceras en inglés (User ID, Time, Account, Operation, Coin, Change, Remark)
+    producen exactamente el mismo resultado que las cabeceras en español.
 """
 
 import io
@@ -30,7 +34,8 @@ def _csv_to_tmpfile(csv_text: str, tmp_path):
     return str(p)
 
 
-HEADER = "ID de usuario,Tiempo,Cuenta,Operación,Moneda,Cambio,Observación\n"
+HEADER    = "ID de usuario,Tiempo,Cuenta,Operación,Moneda,Cambio,Observación\n"
+HEADER_EN = "User ID,Time,Account,Operation,Coin,Change,Remark\n"
 
 
 # ── Test 1: Commission Rebate en EUR ───────────────────────────────────────────
@@ -423,3 +428,99 @@ def test_fecha_parse_tiempo_directo_formatos():
         assert ts.year  == año_esp,  f"Año incorrecto para {valor!r}: {ts.year} != {año_esp}"
         assert ts.month == mes_esp,  f"Mes incorrecto para {valor!r}: {ts.month} != {mes_esp}"
         assert ts.day   == dia_esp,  f"Día incorrecto para {valor!r}: {ts.day} != {dia_esp}"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Tests de cabeceras en inglés (User ID, Time, Account, Operation, Coin, Change, Remark)
+# Cada test es el equivalente exacto de su par en español, con HEADER_EN.
+# ══════════════════════════════════════════════════════════════════════════════
+
+def test_en_commission_rebate_eur(tmp_path):
+    """Cabeceras en inglés: Commission Rebate EUR → RENDIMIENTO."""
+    csv = HEADER_EN + "123,24-06-15 10:00:00,Spot,Commission Rebate,EUR,0.50,\n"
+    c = ClasificadorBinanceTx(_csv_to_tmpfile(csv, tmp_path)).clasificar()
+
+    assert len(c.rendimientos) == 1
+    r = c.rendimientos[0]
+    assert r.activo   == "EUR"
+    assert r.cantidad == pytest.approx(0.50)
+    assert r.subtipo  == "Commission Rebate"
+    assert len(c.desconocidas) == 0
+
+
+def test_en_pool_distribution_ltc(tmp_path):
+    """Cabeceras en inglés: Pool Distribution LTC → RENDIMIENTO."""
+    csv = HEADER_EN + "123,24-05-01 03:18:34,Pool,Pool Distribution,LTC,0.0000038,Binance Pool\n"
+    c = ClasificadorBinanceTx(_csv_to_tmpfile(csv, tmp_path)).clasificar()
+
+    assert len(c.rendimientos) == 1
+    r = c.rendimientos[0]
+    assert r.activo   == "LTC"
+    assert r.cantidad == pytest.approx(0.0000038)
+    assert r.subtipo  == "Pool Distribution"
+    assert len(c.desconocidas) == 0
+
+
+def test_en_transaction_buy_spend_swap(tmp_path):
+    """Cabeceras en inglés: Transaction Spend USDC + Transaction Buy XRP → SWAP."""
+    csv = HEADER_EN + (
+        "123,24-12-11 22:51:06,Spot,Transaction Spend,USDC,-148.0714,\n"
+        "123,24-12-11 22:51:06,Spot,Transaction Buy,XRP,61.0,\n"
+        "123,24-12-11 22:51:06,Spot,Transaction Fee,BNB,-0.000149,\n"
+    )
+    c = ClasificadorBinanceTx(_csv_to_tmpfile(csv, tmp_path)).clasificar()
+
+    assert len(c.swaps) == 1
+    s = c.swaps[0]
+    assert s.activo_entregado   == "USDC"
+    assert s.cantidad_entregada == pytest.approx(148.0714)
+    assert s.activo_recibido    == "XRP"
+    assert s.cantidad_recibida  == pytest.approx(61.0)
+    assert len(c.desconocidas) == 0
+
+
+def test_en_small_assets_exchange_bnb(tmp_path):
+    """Cabeceras en inglés: Small Assets Exchange BNB → 4 MOVIMIENTO, sin compraventas."""
+    csv = HEADER_EN + (
+        "123,24-05-01 09:32:03,Spot,Small Assets Exchange BNB,FET,-0.035342,FET to BNB\n"
+        "123,24-05-01 09:32:03,Spot,Small Assets Exchange BNB,PEPE,-3057.06,PEPE to BNB\n"
+        "123,24-05-01 09:32:03,Spot,Small Assets Exchange BNB,BNB,0.000034,PEPE to BNB\n"
+        "123,24-05-01 09:32:03,Spot,Small Assets Exchange BNB,BNB,0.000063,FET to BNB\n"
+    )
+    c = ClasificadorBinanceTx(_csv_to_tmpfile(csv, tmp_path)).clasificar()
+
+    assert len(c.compraventas) == 0
+    assert len(c.rendimientos) == 0
+    assert len(c.movimientos)  == 4
+    assert len(c.desconocidas) == 0
+
+
+def test_en_resultado_identico_al_espanol(tmp_path):
+    """
+    El mismo conjunto de operaciones en español e inglés produce resultados idénticos.
+    Verifica que la normalización de cabeceras no altera el procesamiento FIFO.
+    """
+    datos = (
+        "{h}"
+        "123,24-06-15 10:00:00,Spot,Commission Rebate,EUR,0.50,\n"
+        "123,24-12-11 22:51:06,Spot,Transaction Spend,USDC,-148.0714,\n"
+        "123,24-12-11 22:51:06,Spot,Transaction Buy,XRP,61.0,\n"
+        "123,24-05-01 03:18:34,Pool,Pool Distribution,LTC,0.0000038,Binance Pool\n"
+    )
+    c_es = ClasificadorBinanceTx(_csv_to_tmpfile(datos.format(h=HEADER),    tmp_path)).clasificar()
+    # Necesitamos un fichero distinto para el CSV en inglés en el mismo tmp_path
+    p_en = tmp_path / "binance_en.csv"
+    p_en.write_text(datos.format(h=HEADER_EN), encoding="utf-8")
+    c_en = ClasificadorBinanceTx(str(p_en)).clasificar()
+
+    assert len(c_es.rendimientos) == len(c_en.rendimientos)
+    assert len(c_es.swaps)        == len(c_en.swaps)
+    assert len(c_es.compraventas) == len(c_en.compraventas)
+    assert len(c_es.movimientos)  == len(c_en.movimientos)
+    assert len(c_es.desconocidas) == len(c_en.desconocidas)
+
+    # Verificar valores concretos en el CSV en inglés
+    r_eur = next(r for r in c_en.rendimientos if r.activo == "EUR")
+    assert r_eur.cantidad == pytest.approx(0.50)
+    assert c_en.swaps[0].activo_entregado  == "USDC"
+    assert c_en.swaps[0].activo_recibido   == "XRP"
