@@ -1748,6 +1748,511 @@ class TestDedupIntraSpotTrading:
             os.unlink(path)
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# NUEVOS FORMATOS — Withdrawal Records · Futures Order History
+# ══════════════════════════════════════════════════════════════════════════════
+
+from fiscal_app_export.clasificador_bitget import (   # noqa: E402
+    BITGET_WITHDRAWAL_RECORDS_SIGNATURE,
+    BITGET_FUTURES_ORDERS_SIGNATURE,
+)
+
+# ── Rutas a archivos reales del Desktop ──────────────────────────────────────
+
+_WR_REAL    = os.path.expanduser(
+    "~/Desktop/Bitget csv withdrawal records-2026-06-26 06_30_30.781.csv"
+)
+_FUT_REAL   = os.path.expanduser(
+    "~/Desktop/Bitget csv Futures order history-2026-06-26 06_27_30.780.csv"
+)
+_SPOT_OH_REAL = os.path.expanduser(
+    "~/Desktop/Bitget csv spot order history-2026-06-26 06_24_27.803.csv"
+)
+_DESKTOP_DISPONIBLE = (
+    os.path.exists(_WR_REAL)
+    and os.path.exists(_FUT_REAL)
+    and os.path.exists(_SPOT_OH_REAL)
+)
+
+# ── Headers sintéticos ────────────────────────────────────────────────────────
+
+WITHDRAWAL_RECORDS_HEADERS = [
+    "Date", "Type", "Funding account", "Coin", "Quantity", "Address", "TxID", "Status",
+]
+FUTURES_HEADERS = [
+    "Date", "Order ID", "Direction", "Coin", "Futures", "order source",
+    "Transaction type", "Price", "Average Price", "Order amount", "Executed",
+    "Trading volume", "Realized P/L", "NetProfits", "Status",
+]
+
+
+def _wr_path(rows):
+    """Crea un CSV temporal con cabecera de Withdrawal Records."""
+    return _csv_tmp(WITHDRAWAL_RECORDS_HEADERS, rows, bom=True)
+
+
+def _fut_path(rows):
+    """Crea un CSV temporal con cabecera de Futures Order History."""
+    return _csv_tmp(FUTURES_HEADERS, rows, bom=False)
+
+
+# ── DETECCIÓN ─────────────────────────────────────────────────────────────────
+
+class TestDeteccionNuevosFormatos2:
+    """Detección de Withdrawal Records y Futures Order History."""
+
+    def test_withdrawal_records_detectado(self):
+        path = _wr_path([
+            ["2025-12-17 01:09:03", "Withdraw", "Spot account", "USDT",
+             "251.5", "On-chain address", "abc123", "Successful"],
+        ])
+        try:
+            assert detect_bitget_file_type(path) == "withdrawal_records"
+        finally:
+            os.unlink(path)
+
+    def test_futures_orders_detectado(self):
+        path = _fut_path([
+            ["2026-01-01 00:01:02", "1390380494", "Open short", "USDT",
+             "HYPEUSDT", "GTC", "Limit", "25.582", "25.592", "0.96",
+             "0.96", "24.56832", "0", "0", "fully executed"],
+        ])
+        try:
+            assert detect_bitget_file_type(path) == "futures_orders"
+        finally:
+            os.unlink(path)
+
+    def test_withdrawal_records_no_confundido_con_depwd(self):
+        """El formato withdrawal_records no tiene Network ni Amount in USDT → no es deposit_withdrawal."""
+        path = _wr_path([
+            ["2025-12-17 01:09:03", "Deposit", "Spot account", "USDT",
+             "280.9", "Internal address", "123456", "Successful"],
+        ])
+        try:
+            tipo = detect_bitget_file_type(path)
+            assert tipo == "withdrawal_records"
+            assert tipo != "deposit_withdrawal"
+        finally:
+            os.unlink(path)
+
+    def test_firmas_constantes_correctas(self):
+        """Las constantes de firma tienen los campos esperados."""
+        assert "Funding account" in BITGET_WITHDRAWAL_RECORDS_SIGNATURE
+        assert "TxID" in BITGET_WITHDRAWAL_RECORDS_SIGNATURE
+        assert "Realized P/L" in BITGET_FUTURES_ORDERS_SIGNATURE
+        assert "Futures" in BITGET_FUTURES_ORDERS_SIGNATURE
+
+
+# ── CLASIFICACIÓN: Withdrawal Records ────────────────────────────────────────
+
+class TestClasificacionWithdrawalRecords:
+    """El parser de withdrawal_records genera movimientos correctos."""
+
+    def _path_mixto(self):
+        return _wr_path([
+            ["2025-12-17 01:09:03", "Withdraw", "Spot account", "USDT",
+             "251.5", "On-chain address", "abc123def456", "Successful"],
+            ["2025-12-17 01:02:46", "Deposit", "Spot account", "USDT",
+             "280.9962", "Internal address", "\t1384960154482651136", "Successful"],
+            ["2025-10-08 08:29:28", "Deposit", "Spot account", "USDT",
+             "565.8207", "Internal address", "\t1359705416287776768", "Failed"],
+        ])
+
+    def test_tipo_export_correcto(self):
+        path = self._path_mixto()
+        try:
+            c = ClasificadorBitget(path).clasificar()
+            assert c.tipo_export == "withdrawal_records"
+        finally:
+            os.unlink(path)
+
+    def test_genera_movimientos_no_compraventas(self):
+        path = self._path_mixto()
+        try:
+            c = ClasificadorBitget(path).clasificar()
+            assert len(c.compraventas) == 0
+            assert len(c.movimientos) == 2    # el Failed se ignora
+        finally:
+            os.unlink(path)
+
+    def test_deposit_subtipo_correcto(self):
+        path = self._path_mixto()
+        try:
+            c = ClasificadorBitget(path).clasificar()
+            deps = [m for m in c.movimientos if m.subtipo == "Deposit"]
+            assert len(deps) == 1
+            assert deps[0].activo == "USDT"
+            assert abs(deps[0].cantidad - 280.9962) < 1e-4
+        finally:
+            os.unlink(path)
+
+    def test_withdrawal_subtipo_correcto(self):
+        path = self._path_mixto()
+        try:
+            c = ClasificadorBitget(path).clasificar()
+            rets = [m for m in c.movimientos if m.subtipo == "Withdrawal"]
+            assert len(rets) == 1
+            assert rets[0].activo == "USDT"
+            assert abs(rets[0].cantidad - 251.5) < 1e-4
+        finally:
+            os.unlink(path)
+
+    def test_failed_ignorado(self):
+        """Movimientos con Status != Successful se ignoran."""
+        path = self._path_mixto()
+        try:
+            c = ClasificadorBitget(path).clasificar()
+            # El CSV tiene 3 filas: 1 Withdraw Successful, 1 Deposit Successful, 1 Deposit Failed
+            assert len(c.movimientos) == 2
+        finally:
+            os.unlink(path)
+
+    def test_observacion_incluye_cuenta(self):
+        path = self._path_mixto()
+        try:
+            c = ClasificadorBitget(path).clasificar()
+            assert all("Cuenta: Spot account" in m.observacion for m in c.movimientos)
+        finally:
+            os.unlink(path)
+
+    def test_observacion_incluye_tipo_address(self):
+        path = self._path_mixto()
+        try:
+            c = ClasificadorBitget(path).clasificar()
+            ret = next(m for m in c.movimientos if m.subtipo == "Withdrawal")
+            dep = next(m for m in c.movimientos if m.subtipo == "Deposit")
+            assert "On-chain address" in ret.observacion
+            assert "Internal address" in dep.observacion
+        finally:
+            os.unlink(path)
+
+    def test_fecha_parseada(self):
+        path = self._path_mixto()
+        try:
+            c = ClasificadorBitget(path).clasificar()
+            ret = next(m for m in c.movimientos if m.subtipo == "Withdrawal")
+            assert ret.fecha == "2025-12-17 01:09:03"
+        finally:
+            os.unlink(path)
+
+    def test_tab_en_txid_no_rompe(self):
+        """TxID con TAB de antifórmula no genera crash ni aparece en desconocidas."""
+        path = _wr_path([
+            ["2025-12-17 01:02:46", "Deposit", "Spot account", "USDT",
+             "280.9962", "Internal address", "\t1384960154482651136", "Successful"],
+        ])
+        try:
+            c = ClasificadorBitget(path).clasificar()
+            assert len(c.movimientos) == 1
+            assert len(c.desconocidas) == 0
+        finally:
+            os.unlink(path)
+
+    def test_tipo_desconocido_ignorado_silenciosamente(self):
+        """Tipo de fila no reconocido (ni Deposit ni Withdraw) se ignora."""
+        path = _wr_path([
+            ["2025-12-17 01:09:03", "Freeze", "Spot account", "USDT",
+             "100", "Internal address", "xyz", "Successful"],
+        ])
+        try:
+            c = ClasificadorBitget(path).clasificar()
+            assert len(c.movimientos) == 0
+            assert len(c.desconocidas) == 0
+        finally:
+            os.unlink(path)
+
+    def test_no_genera_rendimientos_ni_swaps(self):
+        path = self._path_mixto()
+        try:
+            c = ClasificadorBitget(path).clasificar()
+            assert len(c.rendimientos) == 0
+            assert len(c.swaps) == 0
+        finally:
+            os.unlink(path)
+
+
+# ── CLASIFICACIÓN: Futures Order History ─────────────────────────────────────
+
+class TestClasificacionFutures:
+    """Los futuros se detectan y rechazan con mensaje claro."""
+
+    def _path(self):
+        return _fut_path([
+            ["2026-01-01 00:01:02", "1390380494", "Open short", "USDT",
+             "HYPEUSDT", "GTC", "Limit", "25.582", "25.592",
+             "0.96", "0.96", "24.56832", "0", "0", "fully executed"],
+        ])
+
+    def test_futures_lanza_valueerror(self):
+        path = self._path()
+        try:
+            with pytest.raises(ValueError) as exc:
+                ClasificadorBitget(path).clasificar()
+        finally:
+            os.unlink(path)
+        assert "futuros" in str(exc.value).lower()
+
+    def test_mensaje_menciona_no_soportado(self):
+        path = self._path()
+        try:
+            with pytest.raises(ValueError) as exc:
+                ClasificadorBitget(path).clasificar()
+        finally:
+            os.unlink(path)
+        msg = str(exc.value).lower()
+        assert "no están soportados" in msg or "no soportado" in msg
+
+    def test_mensaje_menciona_revision_fiscal(self):
+        path = self._path()
+        try:
+            with pytest.raises(ValueError) as exc:
+                ClasificadorBitget(path).clasificar()
+        finally:
+            os.unlink(path)
+        assert "revisión fiscal" in str(exc.value).lower()
+
+    def test_tipo_detectado_correcto(self):
+        path = self._path()
+        try:
+            assert detect_bitget_file_type(path) == "futures_orders"
+        finally:
+            os.unlink(path)
+
+
+# ── MENSAJE HISTORIAL ACTUALIZADO ─────────────────────────────────────────────
+
+class TestHistorialMensajeActualizado:
+    """El mensaje del historial de órdenes indica que hay que descargar Spot Trading History."""
+
+    def test_historial_mensaje_menciona_spot_trading_history(self, historial_simple):
+        with pytest.raises(ValueError) as exc:
+            ClasificadorBitget(historial_simple).clasificar()
+        msg = str(exc.value).lower()
+        assert "spot trading history" in msg or "historial de operaciones en spot" in msg
+
+    def test_historial_mensaje_menciona_canceladas(self, historial_simple):
+        with pytest.raises(ValueError) as exc:
+            ClasificadorBitget(historial_simple).clasificar()
+        assert "canceladas" in str(exc.value).lower()
+
+    def test_historial_mensaje_descarga(self, historial_simple):
+        with pytest.raises(ValueError) as exc:
+            ClasificadorBitget(historial_simple).clasificar()
+        msg = str(exc.value).lower()
+        assert "descarga" in msg or "sube" in msg
+
+
+# ── COMPATIBILIDAD CON FORMATOS EXISTENTES ────────────────────────────────────
+
+class TestCompatibilidadFormatos:
+    """Los formatos anteriores siguen funcionando igual tras añadir withdrawal_records y futures."""
+
+    def test_detalles_sigue_funcionando(self, detalles_xrp_buy):
+        c = ClasificadorBitget(detalles_xrp_buy).clasificar()
+        assert c.tipo_export == "detalles"
+        assert len(c.compraventas) == 1
+        assert c.compraventas[0].tipo == "COMPRA"
+
+    def test_transacciones_sigue_funcionando(self, transacciones_compra_simple):
+        c = ClasificadorBitget(transacciones_compra_simple).clasificar()
+        assert c.tipo_export == "transacciones"
+        assert len(c.compraventas) == 1
+
+    def test_deposit_withdrawal_uid_sigue_funcionando(self):
+        rows = [
+            ["Deposit/Withdrawal History", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+            ["Order no.", "UID", "Transaction hash(txid)", "Coin", "Network",
+             "Quantity", "Amount in USDT", "fee", "fee in USDT", "Type",
+             "Sub category", "From address", "To address", "Status",
+             "Timestamp UTC+8 (Completion)", "", ""],
+            ["'9", "9", "h", "USDT", "-", "60", "60", "0", "-", "Deposit",
+             "chain", "a", "b", "Successful", "2022-09-14 01:14:30", "", ""],
+        ]
+        path = _csv_tmp_raw(rows)
+        try:
+            c = ClasificadorBitget(path).clasificar()
+            assert c.tipo_export == "deposit_withdrawal"
+            assert len(c.movimientos) == 1
+            assert c.movimientos[0].subtipo == "Deposit"
+        finally:
+            os.unlink(path)
+
+    def test_spot_trading_sigue_funcionando(self):
+        rows = [
+            ["Spot Trading Record ", "", "", "", "", "", "", "", "", "", "", "", ""],
+            ["Order no.", "UID", "Trading pair", "Coin", "Action", "order type",
+             "Executed price", "Quantity", "Transacted amount", "Fee deducted in",
+             "Fee", "Timestamp(UTC+8)\n（created）", "Timestamp(UTC+8)\n（updated）"],
+            ["'1", "9", "BGBUSDT", "BGB", "buy", "Spot trading", "0.16725",
+             "88.827", "14.85632", "BGB", "0", "44818.0559", "44818.0559"],
+        ]
+        path = _csv_tmp_raw(rows)
+        try:
+            c = ClasificadorBitget(path).clasificar()
+            assert c.tipo_export == "spot_trading"
+            assert len(c.compraventas) == 1
+        finally:
+            os.unlink(path)
+
+    def test_historial_sigue_rechazado(self, historial_simple):
+        with pytest.raises(ValueError):
+            ClasificadorBitget(historial_simple).clasificar()
+
+    def test_unknown_sigue_siendo_unknown(self):
+        path = _csv_tmp(["foo", "bar"], [["a", "b"]])
+        try:
+            with pytest.raises(ValueError):
+                ClasificadorBitget(path).clasificar()
+        finally:
+            os.unlink(path)
+
+
+# ── MULTIARCHIVO CON withdrawal_records ──────────────────────────────────────
+
+class TestMultiarchivoWithdrawalRecords:
+    """withdrawal_records se consolida en la sección deposit_withdrawal del multiarchivo."""
+
+    def _wr_simple(self):
+        return _wr_path([
+            ["2025-12-17 01:09:03", "Withdraw", "Spot account", "USDT",
+             "251.5", "On-chain address", "abc", "Successful"],
+            ["2025-12-17 01:02:46", "Deposit", "Spot account", "USDT",
+             "280.9962", "Internal address", "\t1384960154", "Successful"],
+        ])
+
+    def test_seccion_deposit_withdrawal_detectada(self):
+        path = self._wr_simple()
+        try:
+            c = ClasificadorBitgetMulti([path]).clasificar()
+            assert c.resumen_archivos["deposit_withdrawal"]["detectado"] is True
+            assert c.resumen_archivos["deposit_withdrawal"]["registros"] == 2
+        finally:
+            os.unlink(path)
+
+    def test_movimientos_consolidados(self):
+        path = self._wr_simple()
+        try:
+            c = ClasificadorBitgetMulti([path]).clasificar()
+            assert len(c.movimientos) == 2
+            subtipos = sorted(m.subtipo for m in c.movimientos)
+            assert subtipos == ["Deposit", "Withdrawal"]
+        finally:
+            os.unlink(path)
+
+    def test_no_genera_compraventas(self):
+        path = self._wr_simple()
+        try:
+            c = ClasificadorBitgetMulti([path]).clasificar()
+            assert len(c.compraventas) == 0
+        finally:
+            os.unlink(path)
+
+    def test_futures_genera_advertencia_no_no_reconocido(self):
+        """El archivo de futuros genera advertencia específica, NO aparece en no_reconocidos."""
+        wr = self._wr_simple()
+        fut = _fut_path([
+            ["2026-01-01", "1234", "Open short", "USDT",
+             "HYPEUSDT", "GTC", "Limit", "25", "25", "1", "1", "25", "0", "0", "fully executed"],
+        ])
+        try:
+            c = ClasificadorBitgetMulti([wr, fut], ["wr.csv", "fut.csv"]).clasificar()
+            assert "fut.csv" not in c.resumen_archivos["no_reconocidos"]
+            assert any("futuros" in a.lower() for a in c.advertencias)
+        finally:
+            os.unlink(wr); os.unlink(fut)
+
+    def test_dedup_withdrawal_records_mismo_archivo_dos_veces(self):
+        """Si se sube el mismo withdrawal_records dos veces, los movimientos se deduplican."""
+        path = self._wr_simple()
+        try:
+            c = ClasificadorBitgetMulti([path, path]).clasificar()
+            assert len(c.movimientos) == 2   # no 4
+        finally:
+            os.unlink(path)
+
+
+# ── TESTS CON ARCHIVOS REALES DEL DESKTOP ─────────────────────────────────────
+
+@pytest.mark.skipif(not _DESKTOP_DISPONIBLE,
+                    reason="Archivos CSV del Desktop no disponibles (withdrawal_records, futures, spot_order_history)")
+class TestArchivosRealesDesktop:
+    """Tests con los CSV reales del cliente ubicados en ~/Desktop/."""
+
+    def test_withdrawal_records_detectado(self):
+        assert detect_bitget_file_type(_WR_REAL) == "withdrawal_records"
+
+    def test_withdrawal_records_no_crash(self):
+        c = ClasificadorBitget(_WR_REAL).clasificar()
+        assert c.tipo_export == "withdrawal_records"
+
+    def test_withdrawal_records_genera_movimientos(self):
+        c = ClasificadorBitget(_WR_REAL).clasificar()
+        assert len(c.movimientos) > 0
+
+    def test_withdrawal_records_tiene_depositos_y_retiros(self):
+        c = ClasificadorBitget(_WR_REAL).clasificar()
+        subtipos = {m.subtipo for m in c.movimientos}
+        assert "Deposit" in subtipos
+        assert "Withdrawal" in subtipos
+
+    def test_withdrawal_records_sin_compraventas(self):
+        c = ClasificadorBitget(_WR_REAL).clasificar()
+        assert len(c.compraventas) == 0
+
+    def test_withdrawal_records_sin_desconocidas(self):
+        c = ClasificadorBitget(_WR_REAL).clasificar()
+        assert len(c.desconocidas) == 0
+
+    def test_withdrawal_records_19_movimientos(self):
+        """El CSV real tiene 19 filas todas Successful."""
+        c = ClasificadorBitget(_WR_REAL).clasificar()
+        assert len(c.movimientos) == 19
+
+    def test_withdrawal_records_13_depositos_6_retiros(self):
+        c = ClasificadorBitget(_WR_REAL).clasificar()
+        deps = [m for m in c.movimientos if m.subtipo == "Deposit"]
+        rets = [m for m in c.movimientos if m.subtipo == "Withdrawal"]
+        assert len(deps) == 13
+        assert len(rets) == 6
+
+    def test_futures_detectado(self):
+        assert detect_bitget_file_type(_FUT_REAL) == "futures_orders"
+
+    def test_futures_lanza_valueerror_con_mensaje_correcto(self):
+        with pytest.raises(ValueError) as exc:
+            ClasificadorBitget(_FUT_REAL).clasificar()
+        msg = str(exc.value)
+        assert "futuros" in msg.lower()
+        assert "no están soportados" in msg.lower() or "no soportado" in msg.lower()
+
+    def test_spot_order_history_detectado_como_historial(self):
+        assert detect_bitget_file_type(_SPOT_OH_REAL) == "historial"
+
+    def test_spot_order_history_mensaje_actualizado(self):
+        with pytest.raises(ValueError) as exc:
+            ClasificadorBitget(_SPOT_OH_REAL).clasificar()
+        msg = str(exc.value)
+        assert "canceladas" in msg.lower()
+        assert "spot trading history" in msg.lower() or "historial de operaciones en spot" in msg.lower()
+
+    def test_multiarchivo_tres_archivos_desktop(self):
+        """Los 3 archivos del desktop procesados juntos: WR reconocido, los otros con advertencia."""
+        c = ClasificadorBitgetMulti(
+            [_WR_REAL, _FUT_REAL, _SPOT_OH_REAL],
+            ["withdrawal_records.csv", "futures.csv", "spot_order_history.csv"],
+        ).clasificar()
+        assert c.resumen_archivos["deposit_withdrawal"]["detectado"] is True
+        assert c.resumen_archivos["deposit_withdrawal"]["registros"] == 19
+        assert len(c.resumen_archivos["no_reconocidos"]) == 0
+        assert any("futuros" in a.lower() for a in c.advertencias)
+        assert any("canceladas" in a.lower() for a in c.advertencias)
+
+    def test_multiarchivo_compraventas_cero(self):
+        """Ninguno de los 3 archivos del desktop genera compraventas."""
+        c = ClasificadorBitgetMulti([_WR_REAL, _FUT_REAL, _SPOT_OH_REAL]).clasificar()
+        assert len(c.compraventas) == 0
+
+
 @pytest.mark.skipif(not _VICENTE_DISPONIBLE,
                     reason="CSV reales de Vicente no disponibles en ~/Desktop/bidget vicente")
 class TestCasoVicenteHardening:

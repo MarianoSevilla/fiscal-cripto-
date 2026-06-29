@@ -23,6 +23,11 @@ Soporta los exports CSV de Bitget spot:
       Transaction fee deduct           → ignorado (importe mínimo)
   · Historial de órdenes en spot ← solo detección; lanza ValueError descriptivo
     Headers: Date, Type, Order Id, Trading pair, …
+  · Withdrawal Records           ← variante alternativa de depósitos/retiros
+    Headers: Date, Type, Funding account, Coin, Quantity, Address, TxID, Status
+    Se procesa igual que Deposit/Withdrawal History en cuanto a movimientos.
+  · Futures order history        ← detectado; no soportado (requiere criterio fiscal específico)
+    Headers: Date, Order ID, Direction, Coin, Futures, …, Realized P/L, NetProfits, Status
 
 Riesgos gestionados:
   - UTF-8-SIG (BOM) en los 3 archivos → encoding='utf-8-sig'
@@ -75,6 +80,18 @@ BITGET_SPOT_TRADING_SIGNATURE = {
 BITGET_DEPWD_SIGNATURE = {
     "Coin", "Network", "Quantity", "Amount in USDT", "Type", "Status",
 }
+# "Withdrawal Records" (variante alternativa de depósitos/retiros)
+#   ← Ruta de exportación distinta a Deposit/Withdrawal History. Sin fila de título.
+#   Sin columna Network ni Amount in USDT; usa Funding account, Address y TxID.
+BITGET_WITHDRAWAL_RECORDS_SIGNATURE = {
+    "Date", "Type", "Funding account", "Coin", "Quantity", "Address", "TxID", "Status",
+}
+# "Futures Order History" (historial de órdenes de futuros)
+#   ← NO soportado: requiere revisión fiscal específica. Solo se detecta para
+#     mostrar un mensaje descriptivo en lugar de "archivo no reconocido".
+BITGET_FUTURES_ORDERS_SIGNATURE = {
+    "Futures", "Realized P/L", "Order ID",
+}
 # "Spot Financial Record" (registro financiero granular)
 #   ← INFORMATIVO: sólo auditoría/conciliación de saldos. NO se usa para FIFO
 #     (sus asientos ORDER_FROZEN/DEALT duplicarían las operaciones del trading history).
@@ -87,8 +104,10 @@ BITGET_FINANCIAL_RECORD_SIGNATURE = {
 BITGET_SIGNATURES = [
     "Fee Coin", "Available", "Order Id",          # detalles · transacciones · historial
     "Spot Trading Record", "Transacted amount",   # spot trading history
-    "Deposit/Withdrawal History", "Amount in USDT",  # deposits & withdrawals
+    "Deposit/Withdrawal History", "Amount in USDT",  # deposits & withdrawals (UID)
     "Spot Financial Record",                       # financial record (informativo)
+    "Funding account",                             # withdrawal records (variante)
+    "Realized P/L",                               # futures order history (no soportado)
 ]
 
 # ── CONSTANTES ────────────────────────────────────────────────────────────────
@@ -200,7 +219,17 @@ def _leer_csv(filepath: str) -> tuple:
 def detect_bitget_file_type(filepath: str) -> str:
     """
     Inspecciona las cabeceras del CSV y devuelve el tipo de export de Bitget.
-    Retorna: "detalles" | "transacciones" | "historial" | "unknown"
+
+    Retorna:
+        "detalles"           – Detalles de órdenes en spot
+        "transacciones"      – Transacciones en spot (ledger)
+        "historial"          – Historial de órdenes en spot (incluye canceladas; rechazado)
+        "spot_trading"       – Spot Trading History / Historial de operaciones en spot
+        "deposit_withdrawal" – Deposit/Withdrawal History (export UID con título)
+        "withdrawal_records" – Withdrawal Records (variante sin título, columnas distintas)
+        "financial_record"   – Spot Financial Record (auditoría; rechazado)
+        "futures_orders"     – Futures Order History (no soportado; requiere criterio fiscal)
+        "unknown"            – No reconocido como export de Bitget
     """
     try:
         headers, _ = _leer_csv(filepath)
@@ -210,17 +239,24 @@ def detect_bitget_file_type(filepath: str) -> str:
 
     headers_set = {h.strip() for h in headers if h}
 
-    # El historial tiene la firma más amplia; comprobar primero para evitar
-    # falsos positivos (comparte "Trading pair" con DETALLES).
+    # Futuros: firma distintiva (Futures + Realized P/L + Order ID). Comprobar antes
+    # que historial para evitar coincidencias parciales en archivos futuros/spot mixtos.
+    if BITGET_FUTURES_ORDERS_SIGNATURE.issubset(headers_set):
+        return "futures_orders"
+    # El historial de órdenes spot tiene la firma más amplia; comprobar antes de
+    # detalles para evitar falsos positivos (comparte "Trading pair" y más columnas).
     if BITGET_HISTORIAL_SIGNATURE.issubset(headers_set):
         return "historial"
-    # Exports UID (con fila de título): los más distintivos primero.
+    # Exports UID (con fila de título previa): los más distintivos primero.
     if BITGET_SPOT_TRADING_SIGNATURE.issubset(headers_set):
         return "spot_trading"
     if BITGET_FINANCIAL_RECORD_SIGNATURE.issubset(headers_set):
         return "financial_record"
     if BITGET_DEPWD_SIGNATURE.issubset(headers_set):
         return "deposit_withdrawal"
+    # Variante alternativa de depósitos/retiros (sin fila de título, columnas distintas).
+    if BITGET_WITHDRAWAL_RECORDS_SIGNATURE.issubset(headers_set):
+        return "withdrawal_records"
     if BITGET_DETALLES_SIGNATURE.issubset(headers_set):
         return "detalles"
     if BITGET_TRANSACCIONES_SIGNATURE.issubset(headers_set):
@@ -331,9 +367,14 @@ class ClasificadorBitget:
 
         if tipo == "historial":
             raise ValueError(
-                "El archivo de «Historial de órdenes» de Bitget contiene órdenes "
-                "agregadas y canceladas, no es adecuado para FIFO. Sube el "
-                "«Historial de operaciones en spot» (operaciones ejecutadas)."
+                "Este archivo contiene órdenes, incluidas órdenes canceladas, y no "
+                "sirve para calcular FIFO. Descarga Spot Trading History / "
+                "Historial de operaciones en spot."
+            )
+        if tipo == "futures_orders":
+            raise ValueError(
+                "Los futuros de Bitget no están soportados todavía. "
+                "Requieren revisión fiscal específica."
             )
         if tipo == "financial_record":
             raise ValueError(
@@ -347,6 +388,8 @@ class ClasificadorBitget:
             self._clasificar_spot_trading()
         elif tipo == "deposit_withdrawal":
             self._clasificar_deposit_withdrawal()
+        elif tipo == "withdrawal_records":
+            self._clasificar_withdrawal_records()
         elif tipo == "transacciones":
             self._clasificar_transacciones()
             self._generar_advertencias_transacciones()
@@ -551,6 +594,48 @@ class ClasificadorBitget:
             obs += f" | Red: {red}"
         if fee and fee != 0:
             obs += f" | Fee: {float(abs(fee)):.8g} {coin}"
+
+        self.movimientos.append(OperacionMovimiento(
+            fecha=fecha, subtipo=subtipo, activo=coin,
+            cantidad=float(qty), observacion=obs,
+        ))
+
+    # ── WITHDRAWAL RECORDS (variante alternativa de depósitos/retiros) ───────────
+    # Ruta de exportación distinta a Deposit/Withdrawal History. Sin fila de título.
+    # Columnas: Date, Type, Funding account, Coin, Quantity, Address, TxID, Status.
+    # TxID lleva TAB de antifórmula en transferencias internas → se limpia con strip.
+
+    def _clasificar_withdrawal_records(self) -> None:
+        _, rows = _leer_csv(self.filepath)
+        for fila in rows:
+            self._procesar_fila_withdrawal_records(fila)
+
+    def _procesar_fila_withdrawal_records(self, fila: dict) -> None:
+        coin     = fila.get("Coin", "").strip().upper()
+        tipo_raw = fila.get("Type", "").strip().lower()
+        qty      = abs(_parse_decimal(fila.get("Quantity", "0")))
+        status   = fila.get("Status", "").strip().lower()
+        fecha    = _parse_fecha(fila.get("Date", "").strip())
+
+        if status and status not in ("successful", "success", "completed", "finished"):
+            return
+        if not coin or qty <= 0:
+            return
+
+        if tipo_raw == "deposit":
+            subtipo, obs = "Deposit", f"Depósito {coin}"
+        elif tipo_raw in ("withdrawal", "withdraw"):
+            subtipo, obs = "Withdrawal", f"Retiro {coin}"
+        else:
+            return
+
+        cuenta = fila.get("Funding account", "").strip()
+        if cuenta and cuenta != "-":
+            obs += f" | Cuenta: {cuenta}"
+
+        address_type = fila.get("Address", "").strip()
+        if address_type and address_type != "-":
+            obs += f" | {address_type}"
 
         self.movimientos.append(OperacionMovimiento(
             fecha=fecha, subtipo=subtipo, activo=coin,
@@ -1043,9 +1128,17 @@ class ClasificadorBitgetMulti:
             if tipo == "historial":
                 algun_reconocido = True   # es un fichero de Bitget, sólo que no sirve
                 self.advertencias.append(
-                    f"«{fname}» es el Historial de órdenes (incluye órdenes "
-                    "canceladas) y no se usa para el cálculo. Usa el Historial de "
-                    "operaciones en spot. Se ha ignorado."
+                    f"«{fname}» contiene órdenes, incluidas órdenes canceladas, y no "
+                    "sirve para calcular FIFO. Descarga el Spot Trading History / "
+                    "Historial de operaciones en spot. Se ha ignorado."
+                )
+                continue
+
+            if tipo == "futures_orders":
+                algun_reconocido = True   # es un fichero de Bitget, pero futuros no soportados
+                self.advertencias.append(
+                    f"«{fname}»: Los futuros de Bitget no están soportados todavía. "
+                    "Requieren revisión fiscal específica. Se ha ignorado."
                 )
                 continue
 
@@ -1102,11 +1195,12 @@ class ClasificadorBitgetMulti:
         if getattr(c, "_tiene_pares_usdt", False):
             self._tiene_pares_usdt = True
 
-        sec_key = "deposit_withdrawal" if tipo == "deposit_withdrawal" else tipo
+        _es_depositos = tipo in ("deposit_withdrawal", "withdrawal_records")
+        sec_key = "deposit_withdrawal" if _es_depositos else tipo
         sec = self._sec.get(sec_key)
         if sec is not None:
             sec.detectado = True
-            n = len(c.movimientos) if tipo == "deposit_withdrawal" else len(c.compraventas)
+            n = len(c.movimientos) if _es_depositos else len(c.compraventas)
             sec.registros += n
             if n == 0:
                 sec.vacio = True
