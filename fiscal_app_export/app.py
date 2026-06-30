@@ -919,6 +919,14 @@ NEXO_SIGNATURES      = ["Transaction", "Type", "Input Currency", "Output Currenc
 CRYPTOCOM_SIGNATURES = ["Timestamp (UTC)", "Transaction Description", "Transaction Kind"]
 
 
+class BinanceUserError(ValueError):
+    """CSV de Binance con tipo incompatible con FIFO o archivo alterado. Error imputable al usuario."""
+    def __init__(self, code: str, mensaje_usuario: str):
+        super().__init__(mensaje_usuario)
+        self.code     = code
+        self.category = "user_error"
+
+
 def _sanitizar_texto(texto: str, max_len: int = 100) -> str:
     if not texto:
         return ""
@@ -1126,13 +1134,30 @@ def procesar_con_fifo(clasificador) -> tuple:
 
 
 def _detectar_formato_binance(filepath: str) -> str:
-    """Devuelve 'tx' para Historial de Transacciones o 'spot' para Historial de Operaciones Spot."""
+    """
+    Detecta el subtipo de CSV de Binance.
+
+    'tx'           — Historial de Transacciones (válido para FIFO)
+    'fiat_deposit' — Historial de depósitos fiat (incompatible con FIFO)
+    'spot_orders'  — Historial de órdenes de spot (incompatible con FIFO)
+    'altered_csv'  — Metadata de web o separador no estándar (archivo alterado)
+    'spot'         — Fallback (Historial de Operaciones Spot)
+    """
     try:
         with open(filepath, encoding="utf-8", errors="replace") as f:
-            muestra = "".join(f.readline() for _ in range(20))
+            primera = f.readline()
+            muestra = primera + "".join(f.readline() for _ in range(19))
+        if "www.binance.com" in primera:
+            return "altered_csv"
+        if primera.count(";") > primera.count(","):
+            return "altered_csv"
         if ("Buy Crypto With Fiat" in muestra or "Sell Crypto To Fiat" in muestra
                 or "ID de usuario" in muestra or "User ID" in muestra):
             return "tx"
+        if "Importe de depósito" in muestra or "Recibir cantidad" in muestra:
+            return "fiat_deposit"
+        if "Número de pedido" in muestra or "Total de trading" in muestra:
+            return "spot_orders"
     except Exception:
         pass
     return "spot"
@@ -1198,7 +1223,29 @@ def _motor_desde_csv_721(exchange: str, tmp_path: str) -> MotorFIFO:
     correcto a 31/12 del ejercicio declarado. Filtrar aquí rompería el FIFO.
     """
     if exchange == "binance":
-        if _detectar_formato_binance(tmp_path) == "tx":
+        _fmt_721 = _detectar_formato_binance(tmp_path)
+        if _fmt_721 == "altered_csv":
+            raise BinanceUserError(
+                "altered_csv",
+                "El archivo parece haber sido modificado o guardado con un programa externo "
+                "(Excel, LibreOffice). Descarga el historial de transacciones directamente "
+                "desde Binance sin abrirlo antes: Wallet → Historial de transacciones → Exportar.",
+            )
+        if _fmt_721 == "fiat_deposit":
+            raise BinanceUserError(
+                "fiat_deposit_history",
+                "Este archivo es el historial de depósitos fiat de Binance, no el historial de "
+                "transacciones. Para el cálculo FIFO necesitas el historial completo: en Binance "
+                "ve a Wallet → Historial de transacciones → Exportar.",
+            )
+        if _fmt_721 == "spot_orders":
+            raise BinanceUserError(
+                "spot_orders_history",
+                "Este archivo es el historial de órdenes de spot de Binance, no el historial de "
+                "transacciones. Para el cálculo FIFO necesitas el historial completo: en Binance "
+                "ve a Wallet → Historial de transacciones → Exportar.",
+            )
+        if _fmt_721 == "tx":
             motor, _, _ = procesar_binance_tx(tmp_path)
         else:
             motor, _, _ = procesar_binance(tmp_path)
@@ -2260,7 +2307,30 @@ def analizar():
                 pdf_bytes = generar_pdf_bitget(motor, nombre, ejercicio, rendimientos)
 
             else:  # binance — auto-detectar formato
-                if _detectar_formato_binance(tmp_path) == "tx":
+                # Sprint B: rechazar CSV alterados (metadata web o separador no estándar)
+                if _binance_fmt == "altered_csv" or (_ev_ctx or {}).get("separator") == ";":
+                    raise BinanceUserError(
+                        "altered_csv",
+                        "El archivo parece haber sido modificado o guardado con un programa externo "
+                        "(Excel, LibreOffice). Descarga el historial de transacciones directamente "
+                        "desde Binance sin abrirlo antes: Wallet → Historial de transacciones → Exportar.",
+                    )
+                # Sprint A: rechazar formatos Binance incompatibles con el cálculo FIFO
+                if _binance_fmt == "fiat_deposit":
+                    raise BinanceUserError(
+                        "fiat_deposit_history",
+                        "Este archivo es el historial de depósitos fiat de Binance, no el historial de "
+                        "transacciones. Para el cálculo FIFO necesitas el historial completo: en Binance "
+                        "ve a Wallet → Historial de transacciones → Exportar.",
+                    )
+                if _binance_fmt == "spot_orders":
+                    raise BinanceUserError(
+                        "spot_orders_history",
+                        "Este archivo es el historial de órdenes de spot de Binance, no el historial de "
+                        "transacciones. Para el cálculo FIFO necesitas el historial completo: en Binance "
+                        "ve a Wallet → Historial de transacciones → Exportar.",
+                    )
+                if _binance_fmt == "tx":
                     _clasificador_binance = ClasificadorBinanceTx(tmp_path).clasificar()
                     _clasificador_stats   = _clasificador_binance.resumen()
                     motor, rendimientos, clasificador = procesar_con_fifo(_clasificador_binance)
