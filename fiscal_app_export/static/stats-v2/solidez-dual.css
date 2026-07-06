@@ -1,0 +1,87 @@
+/*
+ * SolidezDual — construcción física de E1 v0.4 (11 §5.1, CONGELADO).
+ *
+ * El signo: palabra en versalitas (--fs-micro, --fuente-interfaz, tracking
+ * 0.06em, --tinta-2 — constituyente del símbolo, no metadato) con subrayado
+ * de materia (grosor 0.32em, separado 0.18em, ancho exacto de la palabra).
+ *
+ * Los cuatro niveles son SOLO materia — el color no participa:
+ *   frágil          contorno 1px discontinuo, sin relleno
+ *   en construcción contorno 1px continuo, sin relleno
+ *   consistente     contorno 1px + relleno a media tinta (--tinta al 38%)
+ *   sólida          relleno a tinta plena
+ *
+ * Regla de expresión geométrica (11 §2): sin contacto, solape ni
+ * desplazamiento entre los dos signos, en ninguna forma.
+ */
+
+.sd-signo {
+  display: inline-block;
+  font-family: var(--fuente-interfaz);
+  font-size: var(--fs-micro);
+}
+
+.sd-palabra {
+  display: block;
+  font-size: 1em;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta-2);
+}
+
+.sd-materia {
+  display: block;
+  box-sizing: border-box;
+  height: 0.32em;
+  margin-top: 0.18em;
+  width: 100%;              /* el ancho lo fija la palabra, jamás el nivel */
+}
+
+/* ── Niveles: peso de trazo y relleno, solo tinta ── */
+.sd-nivel-fragil > .sd-materia {
+  border: 1px dashed var(--tinta);
+}
+
+.sd-nivel-en-construccion > .sd-materia {
+  border: 1px solid var(--tinta);
+}
+
+.sd-nivel-consistente > .sd-materia {
+  border: 1px solid var(--tinta);
+  background: rgba(32, 29, 24, 0.38);                       /* --tinta #201D18 al 38% */
+  background: color-mix(in srgb, var(--tinta) 38%, transparent);
+}
+
+.sd-nivel-solida > .sd-materia {
+  background: var(--tinta);
+}
+
+/* ── Forma compacta: una línea, misma línea base, separación 1.25em ── */
+.solidez-dual {
+  display: flex;
+  column-gap: 1.25em;
+  align-items: baseline;
+}
+
+/* ── Forma expandida: signos a 1.5×, apilados a ras del mismo margen
+     (sin sangría — regla de §2), palabra de nivel alineada a una vertical
+     común a --esp-3 del signo más ancho ── */
+.solidez-dual-expandida {
+  display: grid;
+  grid-template-columns: max-content auto;
+  column-gap: var(--esp-3);
+  row-gap: var(--esp-2);
+  align-items: baseline;
+}
+
+.solidez-dual-expandida .sd-signo {
+  font-size: calc(var(--fs-micro) * 1.5);
+}
+
+.sd-palabra-nivel {
+  font-family: var(--fuente-prosa);
+  font-style: italic;
+  font-size: var(--fs-meta);
+  color: var(--tinta-2);
+}

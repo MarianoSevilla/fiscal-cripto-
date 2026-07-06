@@ -1,0 +1,44 @@
+/*
+ * /stats-v2 — Tokens del Design System (11-design-system.md v0.4, Entrega 1).
+ * T1 (§5.3): tipografía, escala, medida, ritmo. T3 (§5.4): paleta.
+ * Este archivo transcribe valores congelados: no se ajustan aquí — se
+ * modifican en el documento y se vuelven a transcribir.
+ *
+ * RESERVA E3 (T3): la familia ámbar/ocre está prohibida en todo el producto
+ * hasta que E3 defina el tratamiento de coste del Escalar.
+ * Prohibiciones de paleta: no existe verde de éxito ni rojo de veredicto.
+ */
+:root {
+  /* T3 — paleta */
+  --papel:            #FBF9F5;
+  --papel-2:          #F3F0E9;
+  --tinta:            #201D18;
+  --tinta-2:          #5D574E;
+  --tinta-3:          #948D7E;
+  --filete:           #E6E1D5;
+  --acento-novedad:   #2F55A4;  /* uso semántico único definido: marca de novedad/origen (I7) */
+  --aplazar:          #4A6072;
+  --aplazar-fondo:    #EDF1F3;
+  --descartar:        #7A6A55;
+  --descartar-fondo:  #F2EDE4;
+
+  /* T1 — familias */
+  --fuente-prosa:     "Source Serif 4", Georgia, serif;
+  --fuente-interfaz:  system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* T1 — escala (seis escalones; sin cuerpo display) */
+  --fs-micro:         0.6875rem;   /* versalitas de marca; tracking 0.06em */
+  --fs-meta:          0.8125rem;
+  --fs-ui:            0.875rem;    /* reservado: actos (Entrega 2) */
+  --fs-prosa:         1.0625rem;   /* interlineado 1.65 */
+  --fs-implicacion:   1.1875rem;   /* interlineado 1.45; peso 500 */
+  --fs-declaracion:   1.375rem;    /* reservado: declaración conjunta (T2, hito 2) */
+
+  /* T1 — medida y ritmo */
+  --medida:           72ch;
+  --esp-1: 0.25rem;
+  --esp-2: 0.5rem;
+  --esp-3: 1rem;
+  --esp-4: 2rem;
+  --esp-5: 3rem;
+}

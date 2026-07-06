@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>/stats-v2</title>
+
+<link rel="icon" href="/static/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400..600;1,8..60,400..600&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="/static/stats-v2/tokens.css">
+<link rel="stylesheet" href="/static/stats-v2/pagina.css">
+<link rel="stylesheet" href="/static/stats-v2/solidez-dual.css">
+<link rel="stylesheet" href="/static/stats-v2/entrada-linea.css">
+<link rel="stylesheet" href="/static/stats-v2/linea-expandida.css">
+<link rel="stylesheet" href="/static/stats-v2/fila-actos.css">
+<link rel="stylesheet" href="/static/stats-v2/panel-acto.css">
+<link rel="stylesheet" href="/static/stats-v2/banda-linea.css">
+<link rel="stylesheet" href="/static/stats-v2/control-descartar.css">
+<link rel="stylesheet" href="/static/stats-v2/historia-linea.css">
+</head>
+<body>
+<!-- I1: la página renderiza directamente la Apertura — sin nav del sitio,
+     sin splash, sin menú. I3: columna única + dos bandas del marco. -->
+
+<header id="ancla" class="banda">
+  <p id="ancla-texto"></p>
+</header>
+
+<main id="columna">
+  <!-- I4: cinco regiones en orden fijo -->
+  <section id="cabecera-encuentro" class="cabecera-encuentro">
+    <p id="convocatoria"></p>
+    <p id="continuidad"></p>
+  </section>
+
+  <section id="bloque-apertura">
+    <p id="declaracion-conjunta"></p>
+    <ol id="entradas"></ol>
+  </section>
+
+  <section id="region-llegadas" hidden></section>
+
+  <section id="periferia" hidden></section>
+
+  <section id="region-pausa">
+    <p id="pausa-texto"></p>
+  </section>
+</main>
+
+<footer id="consulta" class="banda">
+  <p>Consultar un área…</p>
+</footer>
+
+<script src="/static/stats-v2/solidez-dual.js"></script>
+<script src="/static/stats-v2/actos.js"></script>
+<script src="/static/stats-v2/consumar.js"></script>
+<script src="/static/stats-v2/gesto-linea.js"></script>
+<script src="/static/stats-v2/banda-linea.js"></script>
+<script src="/static/stats-v2/panel-acto.js"></script>
+<script src="/static/stats-v2/fila-actos.js"></script>
+<script src="/static/stats-v2/control-descartar.js"></script>
+<script src="/static/stats-v2/historia-linea.js"></script>
+<script src="/static/stats-v2/linea-expandida.js"></script>
+<script src="/static/stats-v2/entrada-linea.js"></script>
+<script src="/static/stats-v2/encuentro.js"></script>
+</body>
+</html>

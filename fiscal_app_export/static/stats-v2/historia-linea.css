@@ -1,0 +1,89 @@
+/*
+ * HistoriaLinea — construcción del estrato al alcance (I18).
+ *
+ * La historia vive dentro de la línea: sin borde, sin fondo, sin sombra —
+ * el registro es prosa con su evidencia subordinada. La revelación es un
+ * control textual sobrio, no un botón con forma de control.
+ */
+
+.historia-linea {
+  margin-top: var(--esp-3);
+}
+
+/* La única revelación: «Historia de esta línea» */
+.historia-revelacion {
+  all: unset;
+  display: block;
+  cursor: pointer;
+  font-family: var(--fuente-interfaz);
+  font-size: var(--fs-meta);
+  color: var(--tinta-2);
+}
+
+.historia-revelacion:hover,
+.historia-revelacion:focus-visible {
+  text-decoration: underline;
+  text-decoration-color: var(--tinta-3);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+/* Lo revelado permanece: el gesto ya se consumió; el rótulo queda como
+   cabecera del registro. La indicación de foco (teclado) se conserva. */
+.historia-revelada .historia-revelacion {
+  cursor: default;
+}
+
+.historia-revelada .historia-revelacion:hover {
+  text-decoration: none;
+}
+
+.historia-revelada .historia-revelacion:focus-visible {
+  text-decoration: underline;
+}
+
+/* El registro, desde el origen */
+.historia-registro {
+  list-style: none;
+  margin-top: var(--esp-3);
+}
+
+.registro-entrada + .registro-entrada {
+  margin-top: var(--esp-3);
+}
+
+.registro-cuando {
+  font-family: var(--fuente-interfaz);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta-3);
+}
+
+.registro-texto {
+  font-family: var(--fuente-prosa);
+  font-size: var(--fs-prosa);
+  line-height: 1.65;
+  color: var(--tinta);
+  margin-top: var(--esp-1);
+}
+
+/* Evidencia subordinada a su entrada — el único gráfico del producto */
+.registro-evidencia {
+  margin-top: var(--esp-2);
+}
+
+.registro-evidencia svg {
+  display: block;
+  width: min(100%, 32ch);
+  height: 48px;
+  color: var(--tinta-2);
+}
+
+.registro-evidencia figcaption {
+  margin-top: var(--esp-1);
+  font-family: var(--fuente-interfaz);
+  font-size: var(--fs-meta);
+  color: var(--tinta-3);
+  max-width: 60ch;
+}

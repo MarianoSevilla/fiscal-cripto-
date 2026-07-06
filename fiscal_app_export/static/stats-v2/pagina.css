@@ -1,0 +1,97 @@
+/*
+ * /stats-v2 — Esqueleto de la página-encuentro (Fase 2 del Hito 1).
+ *
+ * Estructura decidida por 10: I1 (la página es la Apertura: sin nav, sin
+ * splash), I3 (columna única de ~72ch flanqueada por dos bandas persistentes
+ * del marco, indiferentes al scroll — D6/D9), I4 (cinco regiones en orden
+ * fijo; llegadas y periferia solo si existen).
+ *
+ * Provisional, pendiente del Design System:
+ *  - T4 (Entrega 3): espaciados definitivos ENTRE regiones — aquí ritmo
+ *    genérico --esp-5.
+ *  - T5 (Entrega 3): construcción definitiva de las dos bandas — aquí
+ *    presencia estructural mínima con tokens.
+ *  - T2 (Entrega 3): saliencia — la declaración conjunta se renderiza a
+ *    cuerpo de prosa hasta que T2 decida sus mecanismos.
+ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { height: 100%; }
+
+body {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: var(--fuente-prosa);
+  font-size: var(--fs-prosa);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Las dos bandas del marco (I3; construcción definitiva en T5) ── */
+.banda {
+  position: sticky;
+  z-index: 1;
+  background: var(--papel-2);
+  padding: var(--esp-3) var(--esp-4);
+}
+
+#ancla {
+  top: 0;
+  border-bottom: 1px solid var(--filete);
+}
+
+#consulta {
+  bottom: 0;
+  margin-top: auto;               /* la banda cierra el marco aunque la columna sea corta */
+  border-top: 1px solid var(--filete);
+}
+
+/* Ancla satisfecha (I14b): declara y pierde saliencia — tratamiento
+   provisional hasta T5 (hito 2) */
+#ancla.ancla-satisfecha p {
+  color: var(--tinta-3);
+}
+
+/* ── La columna (I3) ── */
+#columna {
+  width: 100%;
+  max-width: var(--medida);
+  margin-inline: auto;
+  padding: var(--esp-5) var(--esp-3);
+}
+
+/* Regiones en orden fijo (I4); separación provisional hasta T4 */
+#columna > section + section {
+  margin-top: var(--esp-5);
+}
+
+[hidden] { display: none !important; }
+
+/* ── Contenido provisional de fase 2 ── */
+.cabecera-encuentro p + p {
+  margin-top: var(--esp-2);
+  color: var(--tinta-2);
+}
+
+#declaracion-conjunta {
+  margin-top: var(--esp-4);
+}
+
+/* Lista de entradas — la anatomía de cada entrada vive en el componente
+   EntradaLinea (entrada-linea.css/js, E2/I15). */
+#entradas {
+  list-style: none;
+  margin-top: var(--esp-4);
+}
+
+#entradas li + li {
+  margin-top: var(--esp-4);       /* separación entre entradas: E2 fija --esp-4, sin filete */
+}
+
+#region-pausa p {
+  color: var(--tinta-2);
+}

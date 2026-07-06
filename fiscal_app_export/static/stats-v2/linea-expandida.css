@@ -1,0 +1,46 @@
+/*
+ * LineaExpandida — construcción del segundo estrato (D11, I16–I18).
+ *
+ * La expansión NO es una ficha: sin borde, sin fondo, sin sombra, sin
+ * ancho propio — prosa que continúa dentro de la misma columna, bajo la
+ * entrada que permanece visible. La separación interna (--esp-3) es menor
+ * que la separación entre entradas (--esp-4): la expansión se lee como
+ * parte de su línea, no como pieza independiente.
+ *
+ * Provisional: la construcción definitiva de las bandas de inmediatez
+ * pertenece a T12 (Entrega 2 del DS); las transiciones pertenecen a T9
+ * (Entrega 5) — hasta entonces la expansión aparece sin animación.
+ */
+
+.linea-expandida {
+  margin-top: var(--esp-3);
+}
+
+/* Las bandas de cabecera se construyen en banda-linea.css (T12). */
+
+/* La posición tripartita — rótulos de segmento según T1: --fs-meta,
+   peso 600, versalitas, --tinta-2. */
+.segmento-rotulo {
+  font-family: var(--fuente-interfaz);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta-2);
+  margin-top: var(--esp-3);
+}
+
+.segmento-prosa {
+  font-family: var(--fuente-prosa);
+  font-size: var(--fs-prosa);
+  line-height: 1.65;
+  color: var(--tinta);
+  margin-top: var(--esp-1);
+}
+
+/* SolidezDual con sus palabras, tras la posición. */
+.linea-expandida .solidez-dual-expandida {
+  margin-top: var(--esp-3);
+}
+
+/* La Historia (I18) vive al pie: su construcción, en historia-linea.css. */

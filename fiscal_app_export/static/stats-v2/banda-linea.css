@@ -1,0 +1,43 @@
+/*
+ * BandaLinea — construcción física de T12 (11 §6.3, CONGELADO).
+ *
+ * Superficie leve, padding --esp-2 × --esp-3, sin borde, sin radio, sin
+ * icono, sin filete lateral. --fuente-interfaz --fs-meta peso 500.
+ * Familias de T3: Aplazar fría, Descartar sepia, neutra el resto.
+ * Apilado: --esp-1 entre bandas; --esp-3 de la última banda a la posición.
+ * El tratamiento de coste queda fuera: reservado a E3 — ninguna banda usa
+ * la familia ámbar/ocre.
+ */
+
+.banda-linea {
+  padding: var(--esp-2) var(--esp-3);
+  background: var(--papel-2);
+  font-family: var(--fuente-interfaz);
+  font-size: var(--fs-meta);
+  font-weight: 500;
+  color: var(--tinta-2);
+}
+
+.banda-linea + .banda-linea {
+  margin-top: var(--esp-1);
+}
+
+.banda-linea.familia-aplazar {
+  background: var(--aplazar-fondo);
+  color: var(--aplazar);
+}
+
+.banda-linea.familia-descartar {
+  background: var(--descartar-fondo);
+  color: var(--descartar);
+}
+
+/* La condición declarada: segunda frase de la banda que porta la razón */
+.banda-segunda {
+  margin-top: var(--esp-1);
+  font-weight: 400;
+}
+
+.expansion-bandas {
+  margin-bottom: var(--esp-3);   /* de la última banda a la posición */
+}

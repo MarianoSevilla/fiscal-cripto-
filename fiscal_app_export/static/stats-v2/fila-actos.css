@@ -1,0 +1,50 @@
+/*
+ * FilaDeActos — construcción física de T6 (11 §6.1, CONGELADO).
+ *
+ * Gestos tipográficos: nombre literal, --fs-ui peso 500, contorno 1px,
+ * fondo papel, sin radio, sin iconos, sin separadores dibujados.
+ * Las tres zonas se perciben SOLO por distancia (--esp-4 entre zonas,
+ * --esp-2 dentro). El relleno a tinta plena está RESERVADO a Activar en
+ * todo el producto. No existen estados deshabilitados (D12).
+ */
+
+.fila-actos {
+  display: flex;
+  align-items: center;
+  column-gap: var(--esp-4);      /* zonas por distancia, sin separadores */
+  row-gap: var(--esp-2);
+  flex-wrap: wrap;               /* comportamiento definitivo en T10 (Entrega 5) */
+  margin-top: var(--esp-3);
+}
+
+.fila-zona {
+  display: flex;
+  column-gap: var(--esp-2);
+}
+
+.acto {
+  font-family: var(--fuente-interfaz);
+  font-size: var(--fs-ui);
+  font-weight: 500;
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--tinta-2);
+  border-radius: 0;
+  padding: var(--esp-2) var(--esp-3);
+  cursor: pointer;
+}
+
+.acto:hover,
+.acto:focus-visible {
+  border-color: var(--tinta);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+/* Prominencia por materia (T6): el único control relleno del producto */
+.acto-relleno {
+  background: var(--tinta);
+  color: var(--papel);
+  border-color: var(--tinta);
+}

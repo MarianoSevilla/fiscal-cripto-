@@ -1,0 +1,82 @@
+/*
+ * EntradaLinea — construcción física de E2 (11 §5.2, CONGELADO).
+ *
+ * La entrada no es tarjeta (I2): este archivo no contiene borde, fondo ni
+ * sombra. Todo alineado a la única vertical izquierda de la columna, sin
+ * sangrías por elemento, sin iconos. Separación entre entradas: --esp-4 sin
+ * filete (regla en pagina.css, a nivel de lista).
+ */
+
+/* El punto de acceso es un botón desnudo: toda la entrada es superficie
+   del gesto de abordar (I13). `all: unset` lo despoja de cualquier
+   apariencia de control — la entrada sigue siendo prosa, no tarjeta. */
+.entrada-acceso {
+  all: unset;
+  display: block;
+  width: 100%;
+  cursor: pointer;
+}
+
+/* ① marca de novedad y origen — versalitas con el acento (I7): textual
+   además de cromática; encabeza la entrada con el rango del juicio */
+.entrada-marca {
+  display: block;
+  font-family: var(--fuente-interfaz);
+  font-size: var(--fs-micro);
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--acento-novedad);
+  margin-bottom: var(--esp-1);
+}
+
+/* ② implicación — el único texto de la entrada a cuerpo mayor que la prosa */
+.entrada-implicacion {
+  display: block;
+  font-family: var(--fuente-prosa);
+  font-size: var(--fs-implicacion);
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--tinta);
+}
+
+/* ③ bloque de juicio: entre implicación y solidez solo hay --esp-1 —
+   nunca una regla, un fondo distinto ni un espacio mayor */
+.entrada-linea .solidez-dual {
+  margin-top: var(--esp-1);
+}
+
+/* ④+⑤ metadatos al pie: estado-como-acto · pertenencia — no alimentan
+   el juicio */
+.entrada-metadatos {
+  display: block;
+  margin-top: var(--esp-2);
+  font-family: var(--fuente-interfaz);
+  font-size: var(--fs-meta);
+  color: var(--tinta-3);
+}
+
+/* Indicación de gesto (E2): en hover/foco la implicación se subraya con
+   --tinta-3 — filete fino de interacción, distinto del subrayado de materia
+   de SolidezDual (nota de convivencia, 11 §5.1) */
+.entrada-acceso:hover .entrada-implicacion,
+.entrada-acceso:focus-visible .entrada-implicacion {
+  text-decoration: underline;
+  text-decoration-color: var(--tinta-3);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+/* La línea abordada permanece: el gesto ya se consumió — sin affordance
+   de repetirlo. La indicación de foco (teclado) se conserva. */
+.entrada-abordada .entrada-acceso {
+  cursor: default;
+}
+
+.entrada-abordada .entrada-acceso:hover .entrada-implicacion {
+  text-decoration: none;
+}
+
+.entrada-abordada .entrada-acceso:focus-visible .entrada-implicacion {
+  text-decoration: underline;
+}

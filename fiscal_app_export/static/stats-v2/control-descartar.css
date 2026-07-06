@@ -1,0 +1,28 @@
+/*
+ * ControlDescartar — construcción física de T6 (11 §6.1, CONGELADO).
+ *
+ * Control de texto puro en la familia sepia (--descartar): archivar, no
+ * eliminar ([05·VII]) — sin contorno, sin relleno, sin radio, sin
+ * semántica de peligro. Separado de la historia por --esp-4. Jamás
+ * comparte fila, contorno o relleno con acto alguno ([06·C6]).
+ */
+
+.control-descartar-contenedor {
+  margin-top: var(--esp-4);
+}
+
+.control-descartar {
+  all: unset;
+  display: inline-block;
+  cursor: pointer;
+  font-family: var(--fuente-interfaz);
+  font-size: var(--fs-meta);
+  color: var(--descartar);
+}
+
+.control-descartar:hover,
+.control-descartar:focus-visible {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}

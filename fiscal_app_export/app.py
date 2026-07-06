@@ -3699,6 +3699,25 @@ def delete_account():
 def stats_page():
     return send_from_directory("static", "stats.html")
 
+
+# ── /stats-v2 — Product Intelligence (Hito 1, fase 2) ────────────────────────
+# Página-encuentro (docs/stats-v2/10-interface-design.md). Admin-only,
+# noindex, fuera del sitemap. Fase 2: renderiza el contrato de datos con el
+# fixture del escenario 02 — sin backend de razonamiento.
+
+@app.route("/stats-v2")
+@require_admin_page
+def stats_v2_page():
+    return render_template("stats_v2.html")
+
+
+@app.route("/api/stats-v2/encuentro")
+@require_admin
+def api_stats_v2_encuentro():
+    from stats_v2_fixture import ENCUENTRO_FIXTURE
+    return jsonify(ENCUENTRO_FIXTURE)
+
+
 @app.route("/home2")
 def home2_page():
     return redirect("/", 301)

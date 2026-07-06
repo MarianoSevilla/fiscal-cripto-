@@ -1,0 +1,123 @@
+/*
+ * PanelActo — construcción física de T7 (11 §6.2, CONGELADO).
+ *
+ * Superficie leve --papel-2 (reserva de T3 para paneles): distingue el
+ * espacio-de-gesto del espacio-de-prosa sin borde ni sombra. Sin radio.
+ * Anatomía fija: consecuencia → selector (consecuencia por opción siempre
+ * visible; selección marcada solo por materia de contorno) → carga con
+ * etiqueta visible (filete inferior, nada con forma de chat) →
+ * confirmación con el nombre literal del acto.
+ */
+
+.panel-acto {
+  background: var(--papel-2);
+  padding: var(--esp-3);
+  margin-top: var(--esp-2);
+}
+
+/* 1 · La consecuencia encabeza el panel */
+.panel-consecuencia {
+  font-family: var(--fuente-prosa);
+  font-size: var(--fs-prosa);
+  line-height: 1.65;
+  color: var(--tinta);
+}
+
+/* 2 · El selector: opciones como bloques radio; selección por contorno */
+.panel-selector {
+  margin-top: var(--esp-3);
+  display: grid;
+  gap: var(--esp-2);
+}
+
+.panel-opcion {
+  display: block;
+  position: relative;
+  border: 1px solid var(--filete);
+  padding: var(--esp-2) var(--esp-3);
+  cursor: pointer;
+}
+
+.panel-opcion input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.panel-opcion.opcion-elegida,
+.panel-opcion:has(input:checked) {
+  border-color: var(--tinta);
+}
+
+.panel-opcion:focus-within {
+  border-color: var(--tinta);
+}
+
+.opcion-nombre {
+  display: block;
+  font-family: var(--fuente-interfaz);
+  font-size: var(--fs-ui);
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+.opcion-consecuencia {
+  display: block;
+  margin-top: var(--esp-1);
+  font-family: var(--fuente-interfaz);
+  font-size: var(--fs-meta);
+  color: var(--tinta-2);
+}
+
+/* 3 · La carga libre: etiqueta visible, filete inferior — nada de chat */
+.panel-carga {
+  display: block;
+  margin-top: var(--esp-3);
+}
+
+.carga-etiqueta {
+  display: block;
+  font-family: var(--fuente-interfaz);
+  font-size: var(--fs-meta);
+  color: var(--tinta-2);
+}
+
+.panel-carga textarea {
+  display: block;
+  width: 100%;
+  margin-top: var(--esp-1);
+  padding: var(--esp-1) 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--tinta-3);
+  border-radius: 0;
+  font-family: var(--fuente-prosa);
+  font-size: var(--fs-prosa);
+  line-height: 1.65;
+  color: var(--tinta);
+  resize: vertical;
+  min-height: 2.6em;
+  outline: none;
+}
+
+.panel-carga textarea:focus {
+  border-bottom-color: var(--tinta);
+}
+
+/* 4 · La confirmación (construcción de .acto en fila-actos.css);
+   gesto incompleto: inerte y atenuada — el paso pendiente sigue visible */
+.panel-confirmacion {
+  margin-top: var(--esp-3);
+}
+
+.panel-confirmacion[aria-disabled="true"] {
+  color: var(--tinta-3);
+  border-color: var(--filete);
+  cursor: default;
+  text-decoration: none;
+}
+
+.acto-relleno.panel-confirmacion[aria-disabled="true"] {
+  background: var(--tinta-3);
+  color: var(--papel);
+}
