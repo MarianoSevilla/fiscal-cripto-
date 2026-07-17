@@ -8,6 +8,99 @@ import pandas as pd
 from dataclasses import dataclass
 from datetime import timedelta
 
+from csv_schema import (
+    CsvUserError, normalizar_cabeceras, columnas_ausentes, leer_csv_texto,
+)
+
+
+# ──────────────────────────────────────────────
+# ESQUEMA DEL CSV DE BINANCE
+# ──────────────────────────────────────────────
+
+# Columnas sin las cuales no se puede clasificar ni calcular FIFO.
+COLS_OBLIGATORIAS_BINANCE = ["Tiempo", "Operación", "Moneda", "Cambio", "Cuenta"]
+
+# Traducción de cada columna a lenguaje de usuario para mensajes de error.
+_NOMBRE_HUMANO_COLUMNA = {
+    "Tiempo":    "la fecha de las operaciones (columna «Tiempo»)",
+    "Operación": "el tipo de operación (columna «Operación»)",
+    "Moneda":    "la moneda (columna «Moneda»)",
+    "Cambio":    "la cantidad (columna «Cambio»)",
+    "Cuenta":    "la cuenta de origen (columna «Cuenta»)",
+}
+
+_GUIA_DESCARGA_BINANCE = (
+    "Descarga el «Historial de transacciones» completo: en Binance ve a "
+    "Wallet → Historial de transacciones → Exportar, selecciona «All Transactions» "
+    "y elige el rango completo desde tu primera operación."
+)
+
+
+class BinanceArchivoVacioError(CsvUserError):
+    """El CSV no contiene ninguna operación (archivo vacío o solo cabecera)."""
+
+    def __init__(self):
+        super().__init__(
+            "archivo_vacio",
+            "El archivo no contiene operaciones. Comprueba el periodo seleccionado "
+            "en Binance y descarga el historial completo desde tu primera operación.",
+        )
+
+
+class BinanceColumnasAusentesError(CsvUserError):
+    """Faltan columnas obligatorias tras normalizar cabeceras. Bloquea el informe.
+
+    category="parser_error" cuando el archivo parece un historial de
+    transacciones genuino (posible formato nuevo de Binance → accionable);
+    "user_error" cuando lo más probable es que sea otro tipo de descarga.
+    """
+
+    def __init__(self, ausentes: list, category: str = "user_error"):
+        humanas = [_NOMBRE_HUMANO_COLUMNA.get(c, f"la columna «{c}»") for c in ausentes]
+        super().__init__(
+            "columnas_obligatorias_ausentes",
+            "El archivo de Binance no contiene toda la información necesaria: "
+            "no encontramos " + ", ".join(humanas) + ". "
+            "Esto puede ocurrir si Binance ha cambiado el formato de exportación "
+            "o si has descargado otro tipo de historial. " + _GUIA_DESCARGA_BINANCE +
+            " Si el problema continúa después de descargarlo de nuevo, escríbenos "
+            "y lo revisaremos.",
+            category=category,
+        )
+        self.columnas = ausentes
+
+
+class BinanceFechaInvalidaError(CsvUserError):
+    """La columna de fecha no coincide con ningún formato conocido. Bloquea el informe."""
+
+    def __init__(self):
+        super().__init__(
+            "fecha_invalida",
+            "No hemos podido interpretar el formato de fecha del archivo de Binance, "
+            "así que no hemos realizado ningún cálculo para evitar un informe "
+            "incorrecto. Esto puede ocurrir si Binance ha cambiado el formato de "
+            "exportación. " + _GUIA_DESCARGA_BINANCE +
+            " Si el problema continúa, escríbenos y lo revisaremos.",
+            category="parser_error",
+        )
+
+
+def validar_esquema_binance(df, category_si_ausentes: str):
+    """Validación común de esquema para ambos clasificadores de Binance.
+
+    Espera un DataFrame con cabeceras ya normalizadas (y, en el caso del
+    clasificador TX, ya renombradas de inglés a español). Garantiza que ningún
+    acceso a columna obligatoria pueda producir KeyError durante la
+    clasificación (incidente 6b73e4de).
+    """
+    if df is None:
+        raise BinanceArchivoVacioError()
+    ausentes = columnas_ausentes(df, COLS_OBLIGATORIAS_BINANCE)
+    if ausentes:
+        raise BinanceColumnasAusentesError(ausentes, category=category_si_ausentes)
+    if len(df) == 0:
+        raise BinanceArchivoVacioError()
+
 
 # ──────────────────────────────────────────────
 # REGLAS DE CLASIFICACIÓN
@@ -99,8 +192,17 @@ class OperacionDesconocida:
 class ClasificadorBinance:
 
     def __init__(self, filepath: str):
-        self.df = pd.read_csv(filepath, encoding='utf-8-sig')
-        self.df["Tiempo"] = pd.to_datetime(self.df["Tiempo"], format="mixed", dayfirst=False)
+        df = leer_csv_texto(filepath, encoding='utf-8-sig')
+        if df is not None:
+            df.columns = normalizar_cabeceras(df.columns)
+        # Este clasificador solo soporta el export en español; si faltan
+        # columnas lo más probable es otro tipo de descarga → user_error.
+        validar_esquema_binance(df, category_si_ausentes="user_error")
+        self.df = df
+        try:
+            self.df["Tiempo"] = pd.to_datetime(self.df["Tiempo"], format="mixed", dayfirst=False)
+        except (ValueError, TypeError) as exc:
+            raise BinanceFechaInvalidaError() from exc
         self.df = self.df.sort_values("Tiempo").reset_index(drop=True)
 
         self.compraventas:  list[OperacionCompraventa] = []

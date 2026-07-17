@@ -1137,11 +1137,12 @@ def _detectar_formato_binance(filepath: str) -> str:
     """
     Detecta el subtipo de CSV de Binance.
 
-    'tx'           — Historial de Transacciones (válido para FIFO)
-    'fiat_deposit' — Historial de depósitos fiat (incompatible con FIFO)
-    'spot_orders'  — Historial de órdenes de spot (incompatible con FIFO)
-    'altered_csv'  — Metadata de web o separador no estándar (archivo alterado)
-    'spot'         — Fallback (Historial de Operaciones Spot)
+    'tx'              — Historial de Transacciones (válido para FIFO)
+    'fiat_deposit'    — Historial de depósitos fiat (incompatible con FIFO)
+    'spot_orders'     — Historial de órdenes de spot (incompatible con FIFO)
+    'crypto_deposits' — Historial de depósitos/retiros de cripto (incompatible con FIFO)
+    'altered_csv'     — Metadata de web o separador no estándar (archivo alterado)
+    'spot'            — Fallback (Historial de Operaciones Spot)
     """
     try:
         with open(filepath, encoding="utf-8", errors="replace") as f:
@@ -1158,6 +1159,10 @@ def _detectar_formato_binance(filepath: str) -> str:
             return "fiat_deposit"
         if "Número de pedido" in muestra or "Total de trading" in muestra:
             return "spot_orders"
+        # Cabecera observada en producción (incidente 6b73e4de, evento 42):
+        # Time,Coin,Network,Amount,Address,TXID,Status
+        if "TXID" in primera and ("Network" in primera or "Address" in primera):
+            return "crypto_deposits"
     except Exception:
         pass
     return "spot"
@@ -1244,6 +1249,15 @@ def _motor_desde_csv_721(exchange: str, tmp_path: str) -> MotorFIFO:
                 "Este archivo es el historial de órdenes de spot de Binance, no el historial de "
                 "transacciones. Para el cálculo FIFO necesitas el historial completo: en Binance "
                 "ve a Wallet → Historial de transacciones → Exportar.",
+            )
+        if _fmt_721 == "crypto_deposits":
+            raise BinanceUserError(
+                "crypto_deposits_history",
+                "Este archivo es el historial de depósitos y retiros de cripto de Binance, no el "
+                "«Historial de transacciones» que necesita la herramienta. Para el cálculo FIFO "
+                "necesitas el historial completo: en Binance ve a Wallet → Historial de "
+                "transacciones → Exportar y descarga todas las transacciones desde tu primera "
+                "operación.",
             )
         if _fmt_721 == "tx":
             motor, _, _ = procesar_binance_tx(tmp_path)
@@ -2329,6 +2343,15 @@ def analizar():
                         "Este archivo es el historial de órdenes de spot de Binance, no el historial de "
                         "transacciones. Para el cálculo FIFO necesitas el historial completo: en Binance "
                         "ve a Wallet → Historial de transacciones → Exportar.",
+                    )
+                if _binance_fmt == "crypto_deposits":
+                    raise BinanceUserError(
+                        "crypto_deposits_history",
+                        "Este archivo es el historial de depósitos y retiros de cripto de Binance, no el "
+                        "«Historial de transacciones» que necesita la herramienta. Para el cálculo FIFO "
+                        "necesitas el historial completo: en Binance ve a Wallet → Historial de "
+                        "transacciones → Exportar y descarga todas las transacciones desde tu primera "
+                        "operación.",
                     )
                 if _binance_fmt == "tx":
                     _clasificador_binance = ClasificadorBinanceTx(tmp_path).clasificar()

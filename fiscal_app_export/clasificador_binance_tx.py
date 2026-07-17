@@ -24,7 +24,9 @@ from clasificador import (
     OperacionCompraventa, OperacionSwap,
     OperacionRendimiento, OperacionMovimiento,
     OperacionDesconocida, STABLES,
+    BinanceFechaInvalidaError, validar_esquema_binance,
 )
+from csv_schema import normalizar_cabeceras, leer_csv_texto
 
 logger = logging.getLogger(__name__)
 
@@ -67,12 +69,9 @@ def _parse_tiempo(series: pd.Series) -> pd.Series:
     try:
         return pd.to_datetime(series, format="mixed", dayfirst=False)
     except Exception as exc:
-        ejemplo = series.dropna().iloc[0] if len(series.dropna()) > 0 else "?"
-        raise ValueError(
-            f"Columna 'Tiempo' del CSV Binance no reconocida. "
-            f"Valor ejemplo: {ejemplo!r}. "
-            f"Formatos soportados: {_TIEMPO_FORMATOS}"
-        ) from exc
+        # El valor problemático y los formatos soportados van al log (arriba);
+        # al usuario solo le llega el mensaje limpio de la excepción tipificada.
+        raise BinanceFechaInvalidaError() from exc
 
 
 _WALLET_RE = re.compile(r"Wallet/(\w+)")
@@ -154,9 +153,14 @@ class ClasificadorBinanceTx:
     """
 
     def __init__(self, filepath: str):
-        self.df = pd.read_csv(filepath)
-        self.df.columns = [c.strip() for c in self.df.columns]
-        self.df.rename(columns=_COLS_EN_ES, inplace=True)
+        df = leer_csv_texto(filepath)
+        if df is not None:
+            df.columns = normalizar_cabeceras(df.columns)
+            df.rename(columns=_COLS_EN_ES, inplace=True)
+        # El archivo pasó la detección de Historial de Transacciones: si aun
+        # así faltan columnas, puede ser un formato nuevo de Binance → accionable.
+        validar_esquema_binance(df, category_si_ausentes="parser_error")
+        self.df = df
         self.df["Tiempo"] = _parse_tiempo(self.df["Tiempo"])
         self.df = self.df.sort_values("Tiempo").reset_index(drop=True)
         self.df["Cambio"] = pd.to_numeric(self.df["Cambio"], errors="coerce").fillna(0.0)
