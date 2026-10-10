@@ -143,6 +143,9 @@
   .nav-dd-item.danger { color: #e55; }
   .nav-dd-item.danger:hover { background: rgba(220,60,60,.1); }
 
+  .compatible-inner { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; }
+  .compatible-inner > * { min-width: 0; overflow-wrap: anywhere; }
+
   /* ── HERO ────────────────────────────────── */
   .hero-wrap {
     max-width: var(--max-w); margin: 0 auto;
@@ -294,7 +297,7 @@
   }
   .device-glow {
     position: absolute;
-    width: 480px; height: 480px;
+    width: min(480px, 100%); height: auto; aspect-ratio: 1;
     background: radial-gradient(circle, rgba(0,200,150,0.12) 0%, transparent 65%);
     top: 50%; left: 50%; transform: translate(-50%,-50%);
     pointer-events: none;
@@ -319,17 +322,17 @@
     flex: 1; background: var(--bg2); border-radius: 6px; padding: 4px 10px;
     font-size: 11px; color: var(--muted); margin-left: 6px;
   }
-  .device-body { padding: 1.25rem; }
+  .device-body { padding: 1.25rem; min-width: 0; max-width: 100%; overflow: hidden; }
   .mock-kpis {
-    display: grid; grid-template-columns: repeat(4, 1fr);
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px; margin-bottom: 1rem;
   }
   .mock-kpi {
     background: var(--bg2); border: 1px solid var(--border);
-    border-radius: 8px; padding: 10px 8px; text-align: center;
+    border-radius: 8px; padding: 10px 8px; text-align: center; min-width: 0;
   }
   .mock-kpi-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
-  .mock-kpi-value { font-family: var(--font-display); font-size: 1.05rem; font-weight: 800; }
+  .mock-kpi-value { font-family: var(--font-display); font-size: .85rem; font-weight: 800; white-space: nowrap; }
   .mock-kpi-value.green { color: var(--accent); }
   .mock-kpi-value.red   { color: #e24b4a; }
   .mock-table-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
@@ -360,7 +363,7 @@
     display: flex; align-items: center; justify-content: space-between;
     gap: 2rem; flex-wrap: wrap;
   }
-  .legal-bar-links { display: flex; gap: 1.25rem; flex-shrink: 0; }
+  .legal-bar-links { display: flex; flex-wrap: wrap; gap: .6rem 1rem; min-width: 0; }
   .legal-bar-links a { font-size: 12px; color: var(--muted); text-decoration: none; transition: color 0.15s; }
   .legal-bar-links a:hover { color: var(--text); }
 
@@ -399,6 +402,7 @@
 
   /* ── RESPONSIVE ──────────────────────────── */
   @media (max-width: 1100px) {
+    .mock-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     :root { --pad-x: 2rem; }
     .hero-body { grid-template-columns: 1fr 400px; gap: 3rem; }
     h1 { font-size: 3rem; }
@@ -417,7 +421,32 @@
     .faq-grid { grid-template-columns: 1fr !important; }
   }
   @media (max-width: 480px) {
-    h1 { font-size: 2rem; letter-spacing: -0.02em; }
+    .hero-wrap, .hero-header, .hero-left, .hero-right, .device-frame,
+    .author-card > div, .footer-step-body { min-width: 0; }
+    .hero-body { grid-template-columns: minmax(0, 1fr); }
+    /* Con Syne real, ajustar el tamaño antes que partir palabras clave. */
+    h1 { font-size: clamp(1.35rem, 6vw, 1.8rem); letter-spacing: -0.02em; overflow-wrap: normal; }
+    section h2 {
+      font-size: clamp(1.25rem, 5.5vw, 1.6rem) !important;
+      overflow-wrap: normal;
+    }
+    .hero-checks li, .cta-micro { min-width: 0; overflow-wrap: anywhere; }
+    .authors { grid-template-columns: minmax(0, 1fr); }
+    .btn-asistencia { flex-wrap: wrap; text-align: center; overflow-wrap: anywhere; }
+    .mock-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .mock-kpi-value { font-size: .85rem; }
+    /* Mockup decorativo: tres columnas legibles, sin desbordar la pantalla. */
+    .mock-table-head, .mock-table-row {
+      min-width: 0;
+      grid-template-columns: minmax(0, 1.25fr) minmax(0, .7fr) minmax(0, .95fr);
+    }
+    .mock-table-head > :nth-child(3), .mock-table-head > :nth-child(4),
+    .mock-table-row > :nth-child(3), .mock-table-row > :nth-child(4) {
+      display: none;
+    }
+  }
+  @media (max-width: 350px) {
+    .mock-kpi-value { font-size: .75rem; }
   }
 
   /* ── AUTH MODAL ──────────────────────────── */
@@ -660,9 +689,9 @@
 
 <!-- ── COMPATIBLE CON ─────────────────────── -->
 <div style="border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
-  <div style="max-width:var(--max-w);margin:0 auto;padding:1rem var(--pad-x);">
+  <div class="compatible-inner" style="max-width:var(--max-w);margin:0 auto;padding:1rem var(--pad-x);">
     <span style="font-size:13px;color:var(--muted);">Calculadora de impuestos de criptomonedas compatible con Bitvavo, Nexo, Binance, Coinbase, Crypto.com y Bit2Me</span>
-    <a href="/exchanges" style="font-size:13px;color:var(--accent);text-decoration:none;margin-left:1rem;white-space:nowrap;">Ver todos los exchanges compatibles →</a>
+    <a href="/exchanges" style="font-size:13px;color:var(--accent);text-decoration:none;">Ver todos los exchanges compatibles →</a>
   </div>
 </div>
 

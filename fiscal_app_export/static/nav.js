@@ -121,6 +121,121 @@
     });
   }
 
+
+  // Mobile navigation reuses the per-page links and current auth state.
+  let refreshMobileMenu = function () {};
+
+  function initMobileMenu() {
+    const nav = document.getElementById('site-nav');
+    const inner = nav && nav.querySelector('.snav-inner');
+    if (!nav || !inner || document.getElementById('snavMenuToggle')) return;
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.id = 'snavMenuToggle';
+    toggle.className = 'snav-menu-toggle';
+    toggle.setAttribute('aria-controls', 'snavMobileMenu');
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.setAttribute('aria-label', 'Abrir menú');
+    const icon = document.createElement('span');
+    icon.className = 'snav-menu-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    toggle.appendChild(icon);
+    inner.appendChild(toggle);
+
+    const menu = document.createElement('div');
+    menu.id = 'snavMobileMenu';
+    menu.className = 'snav-mobile-menu';
+    menu.setAttribute('role', 'navigation');
+    menu.setAttribute('aria-label', 'Navegación móvil');
+    menu.hidden = true;
+    nav.appendChild(menu);
+
+    function closeMenu(returnFocus) {
+      if (menu.hidden) return;
+      menu.hidden = true;
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.setAttribute('aria-label', 'Abrir menú');
+      if (returnFocus) toggle.focus();
+    }
+
+    function addLink(label, href, isPrimary, isActive) {
+      const link = document.createElement('a');
+      link.href = href;
+      link.textContent = label;
+      link.className = 'snav-mobile-link' +
+        (isPrimary ? ' snav-mobile-link-primary' : '') +
+        (isActive ? ' active' : '');
+      menu.appendChild(link);
+    }
+
+    function addSeparator() {
+      const sep = document.createElement('div');
+      sep.className = 'snav-mobile-separator';
+      sep.setAttribute('aria-hidden', 'true');
+      menu.appendChild(sep);
+    }
+
+    refreshMobileMenu = function () {
+      menu.replaceChildren();
+      nav.querySelectorAll('.snav-links a').forEach(function (link) {
+        addLink(link.textContent.trim(), link.getAttribute('href'), false,
+          link.classList.contains('active'));
+      });
+      addSeparator();
+
+      const userPanel = document.getElementById('snavAvatarWrap');
+      const authenticated = userPanel && !userPanel.classList.contains('snav-hidden');
+
+      if (authenticated) {
+        const drop = document.getElementById('snavDropdown');
+        if (!drop) return;
+        drop.querySelectorAll('.snav-dd-item').forEach(function (item) {
+          if (item.classList.contains('snav-hidden')) return;
+          if (item.tagName === 'A') {
+            addLink(item.textContent.trim(), item.getAttribute('href'), false,
+              item.classList.contains('active'));
+          } else if (item.id === 'snavBtnLogout') {
+            const logout = document.createElement('button');
+            logout.type = 'button';
+            logout.className = 'snav-mobile-link';
+            logout.textContent = item.textContent.trim();
+            logout.addEventListener('click', function () { item.click(); });
+            menu.appendChild(logout);
+          }
+        });
+      } else {
+        const login = document.getElementById('snavBtnLogin');
+        const signup = document.getElementById('snavBtnSignup');
+        if (login && !login.classList.contains('snav-hidden'))
+          addLink(login.textContent.trim(), login.getAttribute('href'), false, false);
+        if (signup && !signup.classList.contains('snav-hidden'))
+          addLink(signup.textContent.trim(), signup.getAttribute('href'), true, false);
+      }
+    };
+
+    toggle.addEventListener('click', function () {
+      const opening = menu.hidden;
+      if (opening) refreshMobileMenu();
+      menu.hidden = !opening;
+      toggle.setAttribute('aria-expanded', String(opening));
+      toggle.setAttribute('aria-label', opening ? 'Cerrar menú' : 'Abrir menú');
+    });
+    menu.addEventListener('click', function (event) {
+      if (event.target.closest('a,button')) closeMenu(false);
+    });
+    document.addEventListener('click', function (event) {
+      if (!nav.contains(event.target)) closeMenu(false);
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') closeMenu(true);
+    });
+    window.addEventListener('resize', function () {
+      if (window.innerWidth > 1200) closeMenu(false);
+    });
+    refreshMobileMenu();
+  }
+
   // ── Logout ────────────────────────────────────────────────────────────────
   function initLogout() {
     const btn = document.getElementById('snavBtnLogout');
@@ -193,6 +308,7 @@
         if (btnLogin)  btnLogin.classList.remove('snav-hidden');
         if (btnSignup) btnSignup.classList.remove('snav-hidden');
       }
+      refreshMobileMenu();
     }
   }
 
@@ -215,6 +331,7 @@
     markActive();
     initDropdown();
     initLogout();
+    initMobileMenu();
     updateAuthState();
   }
 
