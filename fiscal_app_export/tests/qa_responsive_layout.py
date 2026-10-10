@@ -5,6 +5,7 @@ No precisa Flask, acceso a Railway, credenciales ni CSV reales.
 """
 import json
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from playwright.sync_api import sync_playwright
 from qa_responsive_nav import server
@@ -59,7 +60,15 @@ def main():
         try:
             for width in WIDTHS:
                 page = browser.new_page(viewport={"width":width, "height":812}, device_scale_factor=1)
-                page.route("https://**/*", lambda route:route.abort())
+                # Permitir únicamente los dos hosts de las fuentes reales del diseño.
+                # Todos los demás recursos externos siguen bloqueados.
+                def font_only(route):
+                    host = urlsplit(route.request.url).hostname
+                    if host in ("fonts.googleapis.com", "fonts.gstatic.com"):
+                        route.continue_()
+                    else:
+                        route.abort()
+                page.route("https://**/*", font_only)
                 page.route("**/api/me", lambda route:route.fulfill(
                     status=200, content_type="application/json",
                     body=json.dumps({"user":None}),
@@ -67,6 +76,17 @@ def main():
                 try:
                     page.goto(origin + "/", wait_until="domcontentloaded", timeout=20000)
                     page.locator("#snavBtnSignup:not(.snav-hidden)").wait_for(state="attached", timeout=15000)
+                    font_status = page.evaluate("""async () => {
+                      await document.fonts.ready;
+                      const loaded = [...document.fonts].filter(f => f.status === 'loaded')
+                        .map(f => f.family.replace(/['"]/g,''));
+                      return {syne: loaded.includes('Syne'), dm: loaded.includes('DM Sans'),
+                              loadedFonts:loaded};
+                    }""")
+                    if not font_status["syne"] or not font_status["dm"]:
+                        all_failures.append(
+                            f"{width}px: no se cargaron fuentes reales: {font_status}"
+                        )
                     page.screenshot(path=str(ARTIFACTS / f"home_{width}px.png"),
                                     full_page=True, animations="disabled")
                     issues = audit_page(page, width)
