@@ -180,7 +180,7 @@ def check_browsers(app, identities, origin):
                         r = page.goto(origin + "/dashboard" if role != "visitante" else origin,
                                       wait_until="domcontentloaded")
                         assert r and r.status == 200, (role,width,r.status if r else None)
-                        page.locator("#snavSkeleton.snav-hidden").wait_for()
+                        page.locator("#snavSkeleton.snav-hidden").wait_for(state="attached")
                         payload = page.evaluate("""async () => {
                           const r=await fetch('/api/me',{credentials:'include'});
                           return r.json();
@@ -240,7 +240,7 @@ def check_browsers(app, identities, origin):
                         try:
                             resp = page.goto(origin + path,wait_until="domcontentloaded")
                             assert resp and resp.status == 200, (role,path)
-                            page.locator("#snavSkeleton.snav-hidden").wait_for()
+                            page.locator("#snavSkeleton.snav-hidden").wait_for(state="attached")
                             assert page.locator("#snavMenuToggle").is_visible(), (
                                 role,path,"falta menú"
                             )
