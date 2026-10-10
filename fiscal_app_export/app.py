@@ -131,6 +131,12 @@ _is_fiscal_advisor = _role_is_fiscal_advisor
 _db_url = os.environ.get("DATABASE_URL", f"sqlite:///{os.path.join(_BASE_DIR, 'fiscal_users.db')}")
 if _db_url.startswith("postgres://"):
     _db_url = _db_url.replace("postgres://", "postgresql://", 1)
+# SQLAlchemy >=2.1 defaults to psycopg (v3) for plain postgresql://,
+# while this application intentionally installs psycopg2-binary.
+# Make the existing driver explicit. URLs that already declare a
+# driver (e.g. postgresql+psycopg2://) are not modified.
+if _db_url.startswith("postgresql://"):
+    _db_url = _db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
 app.config["SQLALCHEMY_DATABASE_URI"] = _db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 _engine_opts: dict = {
