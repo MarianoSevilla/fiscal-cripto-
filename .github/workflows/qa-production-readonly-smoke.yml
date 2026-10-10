@@ -56,7 +56,7 @@ jobs:
 
           status, headers, payload = get("/stats")
           assert status in (302, 303), ("/stats", status)
-          location = headers.get("Location", "")
+          location = next((v for k, v in headers.items() if k.lower() == "location"), "")
           assert "/login" in location, ("/stats redirect", location[:200])
           print("PASS GET /stats authentication required", status)
 
