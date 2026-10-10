@@ -69,6 +69,21 @@ def audit_page(page, width):
     if metrics["root"] > width + 1 or metrics["body"] > width + 1:
         failures.append(f"desbordamiento global: {metrics}")
 
+    # Comprobar que los valores de la maqueta no se cortan en las tarjetas.
+    for i, item in enumerate(page.locator(".mock-kpi").all()):
+        sizing = item.evaluate("""el => ({
+          content:el.scrollWidth, available:el.clientWidth
+        })""")
+        if sizing["content"] > sizing["available"] + 1:
+            failures.append(f"KPI {i+1} desborda su tarjeta: {sizing}")
+
+    # 'criptomonedas' debe conservarse completa, sin partirse entre líneas.
+    title_fragment = page.locator("h1 em").first
+    if title_fragment.count():
+        lines = title_fragment.evaluate("el => el.getClientRects().length")
+        if lines > 1:
+            failures.append(f"palabra principal del titular dividida en {lines} líneas")
+
     nav = page.locator("#snavMenuToggle")
     if width <= 1200 and not nav.is_visible():
         failures.append("menú móvil no visible")
