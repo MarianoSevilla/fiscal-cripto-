@@ -66,7 +66,7 @@ def main():
                 ))
                 try:
                     page.goto(origin + "/", wait_until="domcontentloaded", timeout=20000)
-                    page.locator("#snavBtnSignup:not(.snav-hidden)").wait_for(timeout=15000)
+                    page.locator("#snavBtnSignup:not(.snav-hidden)").wait_for(state="attached", timeout=15000)
                     page.screenshot(path=str(ARTIFACTS / f"home_{width}px.png"),
                                     full_page=True, animations="disabled")
                     issues = audit_page(page, width)
