@@ -9,6 +9,7 @@ on:
       - "fiscal_app_export/static/nav.js"
       - "fiscal_app_export/static/landing.html"
       - "fiscal_app_export/tests/qa_responsive_nav.py"
+      - "fiscal_app_export/tests/qa_responsive_layout.py"
       - ".github/workflows/qa-responsive.yml"
   workflow_dispatch:
 
@@ -45,6 +46,18 @@ jobs:
 
       - name: Prueba real de navegación con archivos de la rama y datos ficticios
         run: python fiscal_app_export/tests/qa_responsive_nav.py
+
+      - name: Geometría real de Home y capturas visuales
+        run: python fiscal_app_export/tests/qa_responsive_layout.py
+
+      - name: Conservar capturas de la Home (revisión manual)
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: capturas-home-responsive
+          path: qa-artifacts/home_*.png
+          retention-days: 7
+          if-no-files-found: ignore
 
   backend-regression:
     if: github.ref == 'refs/heads/fix/mobile-navigation-home-20261010'
