@@ -68,7 +68,7 @@ jobs:
 
       - name: Dependencias en runner efimero (no modifica produccion)
         run: |
-          python -m pip install -r fiscal_app_export/requirements.txt "pytest==9.0.2"
+          python -m pip install -r fiscal_app_export/requirements.txt "pytest==9.0.2" "pdfplumber==0.11.7"
 
       - name: Suite Python existente (sin credenciales externas)
         run: python -m pytest -q --disable-warnings --maxfail=1 fiscal_app_export/tests tests
