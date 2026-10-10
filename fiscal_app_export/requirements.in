@@ -1,0 +1,24 @@
+# Direct runtime dependencies for fiscal-cripto.
+# Keep this list limited to dependencies intentionally imported by the application.
+# Versions resolved from the last known working Railway build are pinned in requirements.txt.
+# To upgrade, regenerate the full lock under Python 3.13 / Linux x86_64 and rerun PG18 + pytest QA.
+flask
+flask-login
+flask-sqlalchemy
+flask-bcrypt
+flask-limiter
+flask-cors
+flask-compress
+flask-migrate
+authlib
+requests
+resend
+psycopg2-binary
+reportlab
+matplotlib
+pandas
+openpyxl
+xlrd
+gunicorn
+stripe
+xmlschema

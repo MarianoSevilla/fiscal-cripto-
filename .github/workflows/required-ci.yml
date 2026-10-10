@@ -41,6 +41,42 @@ jobs:
           python -m pip install -r fiscal_app_export/requirements.txt "pytest==9.0.2" "pdfplumber==0.11.7"
           python -m pip check
 
+      - name: Verify direct and transitive runtime pins
+        run: |
+          python - <<'PY'
+          from importlib.metadata import version
+          from pathlib import Path
+          from packaging.requirements import Requirement
+          from packaging.utils import canonicalize_name
+          import sys
+
+          assert sys.version_info[:2] == (3, 13), sys.version
+          root = Path("fiscal_app_export")
+          direct = [
+              canonicalize_name(line.strip())
+              for line in (root / "requirements.in").read_text().splitlines()
+              if line.strip() and not line.lstrip().startswith("#")
+          ]
+          pins = {}
+          for line in (root / "requirements.txt").read_text().splitlines():
+              line = line.strip()
+              if not line or line.startswith("#"):
+                  continue
+              requirement = Requirement(line)
+              key = canonicalize_name(requirement.name)
+              assert key not in pins, ("duplicate package", key)
+              assert len(requirement.specifier) == 1, ("unlocked specifier", line)
+              spec = next(iter(requirement.specifier))
+              assert spec.operator == "==" and not spec.version.endswith(".*"), ("unlocked requirement", line)
+              assert not requirement.marker and not requirement.extras and not requirement.url, ("unexpected requirement", line)
+              pins[key] = spec.version
+              assert version(requirement.name) == spec.version, ("pin drift", key, spec.version, version(requirement.name))
+          assert len(direct) == 20, ("direct manifest drift", len(direct))
+          assert len(pins) == 57, ("lock manifest drift", len(pins))
+          assert set(direct).issubset(pins), ("missing direct deps", set(direct) - set(pins))
+          print(f"LOCK_VERIFIED: {len(direct)} direct / {len(pins)} pinned runtime dependencies")
+          PY
+
       - name: Full Python regression
         run: python -m pytest -q --import-mode=importlib --disable-warnings --maxfail=1 fiscal_app_export/tests tests
 
