@@ -64,6 +64,8 @@ def main():
                 try:
                     response = page.goto(target + "/", wait_until="domcontentloaded")
                     assert response and response.status == 200
+                    # La sesión se hidrata con /api/me después del DOMContentLoaded.
+                    page.locator("#snavSkeleton.snav-hidden").wait_for(state="attached")
                     toggle = page.locator("#snavMenuToggle")
                     assert toggle.is_visible() == (width <= 1200), width
                     if width <= 1200:
