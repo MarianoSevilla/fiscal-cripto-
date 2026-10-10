@@ -7,8 +7,6 @@ on:
   push:
     branches:
       - main
-      # Temporary test branch for this isolated rollout. Remove before merge.
-      - hardening/required-ci-gates-20261011
   workflow_dispatch:
 
 permissions:
