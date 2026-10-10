@@ -157,6 +157,52 @@ def main():
                     total += 1
                 finally:
                     page.close()
+            # Matriz independiente de permisos visibles en el menú móvil.
+            profiles = (
+                ("usuario", {"user":{"email":"user@example.invalid",
+                    "full_name":"Usuario ficticio","is_admin":False,
+                    "is_fiscal_advisor":False}},
+                 False, False),
+                ("asesor", {"user":{"email":"asesor@example.invalid",
+                    "full_name":"Asesor ficticio","is_admin":False,
+                    "is_fiscal_advisor":True}},
+                 True, False),
+                ("administrador", admin, True, True),
+            )
+            for role, payload, has_advisory, has_stats in profiles:
+                for width in (320, 390, 768, 1200):
+                    page = browser.new_page(viewport={"width":width,"height":812})
+                    page.set_default_timeout(5000)
+                    page.route("https://**/*", lambda r: r.abort())
+                    page.route("**/api/me", lambda r, body=payload: r.fulfill(
+                        status=200, content_type="application/json",
+                        body=json.dumps(body),
+                    ))
+                    errors = []
+                    page.on("pageerror", lambda error: errors.append(str(error)))
+                    try:
+                        page.goto(origin,wait_until="domcontentloaded")
+                        page.locator("#snavAvatarWrap:not(.snav-hidden)").wait_for(state="attached")
+                        toggle = page.locator("#snavMenuToggle")
+                        toggle.click()
+                        menu = page.locator("#snavMobileMenu")
+                        assert menu.is_visible(), (role,width)
+                        assert menu.locator('a[href="/account"]').is_visible()
+                        assert menu.locator('a[href="/dashboard"]').is_visible()
+                        assert menu.locator('a[href="/admin/asesoramiento"]').count() == int(has_advisory)
+                        assert menu.locator('a[href="/stats"]').count() == int(has_stats)
+                        assert menu.locator('a[href="/signup/"]').count() == 0
+                        assert not errors, (role,width,errors)
+                        page.keyboard.press("Tab")
+                        assert page.evaluate("document.activeElement.closest('#snavMobileMenu') !== null"), (
+                            role,width,"El foco no ha entrado en el menú abierto")
+                        page.keyboard.press("Escape")
+                        assert toggle.get_attribute("aria-expanded") == "false"
+                        assert toggle.evaluate("(e) => document.activeElement === e"), (
+                            role,width,"Escape no devuelve el foco al botón")
+                        total += 1
+                    finally:
+                        page.close()
         finally:
             browser.close()
     print(f"QA responsive navegación: {total} casos PASS (datos simulados)")
