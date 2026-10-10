@@ -44,6 +44,31 @@ def audit_page(page, width):
         if selector in TEXT_ELEMENTS and result["scrollWidth"] > result["clientWidth"] + 1:
             failures.append(f"{selector}: texto desbordado {result}")
 
+    # El overflow-x:hidden del body puede ocultar un ancho incorrecto:
+    # inspeccionar todo el documento, no sólo el Hero.
+    metrics = page.evaluate("""() => {
+      const vw = document.documentElement.clientWidth;
+      const root = document.documentElement.scrollWidth;
+      const body = document.body.scrollWidth;
+      const offenders = [...document.body.querySelectorAll('*')]
+        .filter(el => {
+          const st = getComputedStyle(el);
+          if (st.display === 'none' || st.visibility === 'hidden') return false;
+          const r = el.getBoundingClientRect();
+          return r.width > 0 && (r.right > vw + 1 || r.left < -1);
+        })
+        .map(el => {
+          const r = el.getBoundingClientRect();
+          return {tag:el.tagName.toLowerCase(), id:el.id || '',
+                  cls:String(el.className || '').slice(0,65),
+                  left:Math.round(r.left),right:Math.round(r.right)};
+        })
+        .sort((a,b)=>b.right-a.right).slice(0,16);
+      return {vw,root,body,offenders};
+    }""")
+    if metrics["root"] > width + 1 or metrics["body"] > width + 1:
+        failures.append(f"desbordamiento global: {metrics}")
+
     nav = page.locator("#snavMenuToggle")
     if width <= 1200 and not nav.is_visible():
         failures.append("menú móvil no visible")
@@ -87,9 +112,16 @@ def main():
                         all_failures.append(
                             f"{width}px: no se cargaron fuentes reales: {font_status}"
                         )
-                    page.screenshot(path=str(ARTIFACTS / f"home_{width}px.png"),
+                    image_path = ARTIFACTS / f"home_{width}px.png"
+                    page.screenshot(path=str(image_path),
                                     full_page=True, animations="disabled")
+                    # Leer el ancho del propio PNG evita falsos negativos por CSS clip.
+                    with image_path.open("rb") as image_file:
+                        image_file.seek(16)
+                        png_width = int.from_bytes(image_file.read(4), "big")
                     issues = audit_page(page, width)
+                    if png_width != width:
+                        issues.append(f"captura PNG mide {png_width}px, viewport {width}px")
                     all_failures.extend(f"{width}px: {issue}" for issue in issues)
                     print(f"Home {width}px: {'PASS' if not issues else 'FAIL'} ({len(issues)} incidencias)")
                 finally:
