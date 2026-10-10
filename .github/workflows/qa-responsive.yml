@@ -67,7 +67,7 @@ jobs:
           if-no-files-found: ignore
 
   backend-regression:
-    if: github.ref == 'refs/heads/fix/mobile-navigation-home-20261010' || github.ref == 'refs/heads/integration/staging-responsive-db-bootstrap-20261010'
+    if: github.ref == 'refs/heads/fix/mobile-navigation-home-20261010' || github.ref == 'refs/heads/integration/staging-responsive-db-bootstrap-20261010' || github.ref == 'refs/heads/release/2026-10-10-responsive-postgres'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
