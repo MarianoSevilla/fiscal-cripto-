@@ -67,6 +67,30 @@ def audit_page(page, width):
       return {vw,root,body,offenders};
     }""")
     if metrics["root"] > width + 1 or metrics["body"] > width + 1:
+        # Aislamiento experimental: ocultar una región, medir y restaurarla.
+        # No modifica archivos; se ejecuta en el DOM efímero del navegador.
+        metrics["isolation"] = page.evaluate("""() => {
+          const selectors = [
+            '.hero-wrap','.hero-header','.hero-left','.hero-right',
+            '.device-frame','.device-body','.mock-kpis','.mock-table-wrap',
+            '.legal-bar','.legal-bar-links','.footer-inner','.faq-grid',
+            'footer','.auth-dialog','#site-nav'
+          ];
+          const original = document.documentElement.scrollWidth;
+          return selectors.map(sel => {
+            const el = document.querySelector(sel);
+            if (!el) return {selector:sel, absent:true};
+            const previous = el.getAttribute('style');
+            el.style.setProperty('display','none','important');
+            void document.body.offsetWidth;
+            const reduced = document.documentElement.scrollWidth;
+            if (previous === null) el.removeAttribute('style');
+            else el.setAttribute('style',previous);
+            void document.body.offsetWidth;
+            return {selector:sel, afterHide:reduced,
+                    reduction:original-reduced};
+          });
+        }""")
         failures.append(f"desbordamiento global: {metrics}")
 
     # Comprobar que los valores de la maqueta no se cortan en las tarjetas.
