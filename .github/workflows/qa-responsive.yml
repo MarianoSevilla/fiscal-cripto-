@@ -10,6 +10,7 @@ on:
       - "fiscal_app_export/static/landing.html"
       - "fiscal_app_export/tests/qa_responsive_nav.py"
       - "fiscal_app_export/tests/qa_responsive_layout.py"
+      - "fiscal_app_export/tests/qa_flask_navigation.py"
       - ".github/workflows/qa-responsive.yml"
   workflow_dispatch:
 
@@ -85,3 +86,11 @@ jobs:
 
       - name: Suite Python existente (sin credenciales externas)
         run: python -m pytest -q --import-mode=importlib --disable-warnings --maxfail=1 fiscal_app_export/tests tests
+
+      - name: Playwright/Chromium para Flask real
+        run: |
+          python -m pip install "playwright==1.57.0"
+          python -m playwright install --with-deps chromium
+
+      - name: Navegación y permisos contra Flask real con SQLite temporal
+        run: python fiscal_app_export/tests/qa_flask_navigation.py
