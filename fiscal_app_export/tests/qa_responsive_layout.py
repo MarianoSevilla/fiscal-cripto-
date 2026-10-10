@@ -91,6 +91,32 @@ def audit_page(page, width):
                     reduction:original-reduced};
           });
         }""")
+        metrics["bodyChildren"] = page.evaluate("""() => {
+          const children = [...document.body.children];
+          const saved = children.map(el => el.getAttribute('style'));
+          for (const el of children) el.style.setProperty('display','none','important');
+          void document.body.offsetWidth;
+          const allHiddenWidth = document.documentElement.scrollWidth;
+          const contributions = [];
+          for (let i=0;i<children.length;i++){
+            const el=children[i];
+            const old=saved[i];
+            if (old===null)el.removeAttribute('style'); else el.setAttribute('style',old);
+            void document.body.offsetWidth;
+            const width=document.documentElement.scrollWidth;
+            contributions.push({
+              el:el.tagName.toLowerCase(),id:el.id||'',
+              cls:String(el.className||'').slice(0,45),
+              onlyThisWidth:width});
+            el.style.setProperty('display','none','important');
+          }
+          for(let i=0;i<children.length;i++){
+            if(saved[i]===null)children[i].removeAttribute('style');
+            else children[i].setAttribute('style',saved[i]);
+          }
+          void document.body.offsetWidth;
+          return {allHiddenWidth, contributions};
+        }""")
         failures.append(f"desbordamiento global: {metrics}")
 
     # Comprobar que los valores de la maqueta no se cortan en las tarjetas.
