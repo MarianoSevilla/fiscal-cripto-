@@ -6,6 +6,7 @@ on:
       - fix/fresh-postgres-alembic-bootstrap-20261010
       - integration/staging-responsive-db-bootstrap-20261010
       - release/2026-10-10-responsive-postgres
+      - hotfix/psycopg2-explicit-dialect-20261011
   workflow_dispatch:
 
 permissions:
@@ -13,7 +14,7 @@ permissions:
 
 jobs:
   postgres-bootstrap:
-    if: github.ref == 'refs/heads/fix/fresh-postgres-alembic-bootstrap-20261010' || github.ref == 'refs/heads/integration/staging-responsive-db-bootstrap-20261010' || github.ref == 'refs/heads/release/2026-10-10-responsive-postgres'
+    if: github.ref == 'refs/heads/fix/fresh-postgres-alembic-bootstrap-20261010' || github.ref == 'refs/heads/integration/staging-responsive-db-bootstrap-20261010' || github.ref == 'refs/heads/release/2026-10-10-responsive-postgres' || github.ref == 'refs/heads/hotfix/psycopg2-explicit-dialect-20261011'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
 
