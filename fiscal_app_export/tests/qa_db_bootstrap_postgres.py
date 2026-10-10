@@ -22,12 +22,15 @@ HEAD = "v5w6x7y8z9a0"
 
 
 def _create_db(name: str) -> str:
-    with psycopg2.connect(
+    conn = psycopg2.connect(
         host=HOST, port=PORT, user=USER, password=PASSWORD, dbname="postgres"
-    ) as conn:
+    )
+    try:
         conn.autocommit = True
         with conn.cursor() as cur:
             cur.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(name)))
+    finally:
+        conn.close()
     return name
 
 
