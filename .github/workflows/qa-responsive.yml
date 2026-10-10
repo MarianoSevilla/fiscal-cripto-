@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - fix/mobile-navigation-home-20261010
+      - integration/staging-responsive-db-bootstrap-20261010
     paths:
       - "fiscal_app_export/static/nav.css"
       - "fiscal_app_export/static/nav.js"
@@ -11,6 +12,9 @@ on:
       - "fiscal_app_export/tests/qa_responsive_nav.py"
       - "fiscal_app_export/tests/qa_responsive_layout.py"
       - "fiscal_app_export/tests/qa_flask_navigation.py"
+      - "fiscal_app_export/bootstrap_db.py"
+      - "fiscal_app_export/Procfile"
+      - "fiscal_app_export/tests/qa_db_bootstrap_postgres.py"
       - ".github/workflows/qa-responsive.yml"
   workflow_dispatch:
 
@@ -23,7 +27,7 @@ concurrency:
 
 jobs:
   browser-qa:
-    if: github.ref == 'refs/heads/fix/mobile-navigation-home-20261010'
+    if: github.ref == 'refs/heads/fix/mobile-navigation-home-20261010' || github.ref == 'refs/heads/integration/staging-responsive-db-bootstrap-20261010'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
@@ -61,7 +65,7 @@ jobs:
           if-no-files-found: ignore
 
   backend-regression:
-    if: github.ref == 'refs/heads/fix/mobile-navigation-home-20261010'
+    if: github.ref == 'refs/heads/fix/mobile-navigation-home-20261010' || github.ref == 'refs/heads/integration/staging-responsive-db-bootstrap-20261010'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
