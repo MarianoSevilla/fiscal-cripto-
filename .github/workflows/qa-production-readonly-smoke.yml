@@ -1,0 +1,64 @@
+name: Production HTTPS smoke (read-only)
+
+on:
+  push:
+    branches:
+      - qa/live-production-smoke-20261011
+    paths:
+      - ".github/workflows/qa-production-readonly-smoke.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: HTTP GET against production only (no credentials or writes)
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from urllib.request import build_opener, HTTPRedirectHandler, Request
+          from urllib.error import HTTPError
+          from urllib.parse import urlsplit
+          import json
+
+          ROOT = "https://marianosevilla.com"
+
+          class NoRedirect(HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, url):
+                  return None
+
+          opener = build_opener(NoRedirect)
+
+          def get(path):
+              url = ROOT + path
+              assert urlsplit(url).netloc == "marianosevilla.com", url
+              req = Request(url, headers={"User-Agent": "fiscal-cripto-production-smoke/1"}, method="GET")
+              try:
+                  with opener.open(req, timeout=25) as resp:
+                      return resp.status, dict(resp.headers), resp.read(400000)
+              except HTTPError as e:
+                  return e.code, dict(e.headers), e.read(400000)
+
+          for path in ("/", "/como-funciona", "/faq", "/static/nav.js", "/static/nav.css"):
+              status, headers, payload = get(path)
+              assert status == 200, (path, status)
+              assert payload, ("empty response", path)
+              print("PASS GET", path, status)
+
+          status, headers, payload = get("/api/me")
+          assert status == 200, ("/api/me", status)
+          body = json.loads(payload)
+          assert body.get("user") is None, "Anonymous API disclosed user"
+          print("PASS GET /api/me anonymous", status)
+
+          status, headers, payload = get("/stats")
+          assert status in (302, 303), ("/stats", status)
+          location = headers.get("Location", "")
+          assert "/login" in location, ("/stats redirect", location[:200])
+          print("PASS GET /stats authentication required", status)
+
+          print("PRODUCTION_READ_ONLY_HTTPS_SMOKE_PASS")
+          PY
