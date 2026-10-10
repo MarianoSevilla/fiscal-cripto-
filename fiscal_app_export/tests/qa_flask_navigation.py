@@ -61,12 +61,15 @@ def real_flask():
         os.environ["ENABLE_ADVISORY_UPLOADS"] = "false"
         os.environ["ENABLE_ADVISORY_STATUS_EMAILS"] = "false"
         sys.path.insert(0, str(APP_DIR))
-        from app import app as flask_app, db
+        from app import app as flask_app, db, limiter
         from models import User
 
         assert flask_app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite:///")
         assert not flask_app.config["SESSION_COOKIE_SECURE"]
         flask_app.config.update(TESTING=True, RATELIMIT_ENABLED=False)
+        # Flask-Limiter ya se inicializó durante la importación del módulo:
+        # deshabilitar sólo el objeto de esta instancia temporal de CI.
+        limiter.enabled = False
 
         identities = {}
         with flask_app.app_context():
