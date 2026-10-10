@@ -16,6 +16,7 @@ on:
       - "fiscal_app_export/bootstrap_db.py"
       - "fiscal_app_export/Procfile"
       - "fiscal_app_export/tests/qa_db_bootstrap_postgres.py"
+      - "docs/releases/2026-10-10-responsive-bootstrap-plan.md"
       - ".github/workflows/qa-responsive.yml"
   workflow_dispatch:
 
