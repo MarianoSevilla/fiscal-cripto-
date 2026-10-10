@@ -143,6 +143,9 @@
   .nav-dd-item.danger { color: #e55; }
   .nav-dd-item.danger:hover { background: rgba(220,60,60,.1); }
 
+  .compatible-inner { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; }
+  .compatible-inner > * { min-width: 0; overflow-wrap: anywhere; }
+
   /* ── HERO ────────────────────────────────── */
   .hero-wrap {
     max-width: var(--max-w); margin: 0 auto;
@@ -417,7 +420,20 @@
     .faq-grid { grid-template-columns: 1fr !important; }
   }
   @media (max-width: 480px) {
-    h1 { font-size: 2rem; letter-spacing: -0.02em; }
+    .hero-wrap, .hero-header, .hero-left, .hero-right, .device-frame,
+    .author-card > div, .footer-step-body { min-width: 0; }
+    .hero-body { grid-template-columns: minmax(0, 1fr); }
+    h1 { font-size: clamp(1.7rem, 7vw, 2rem); letter-spacing: -0.02em; overflow-wrap: anywhere; }
+    .hero-checks li, .cta-micro { min-width: 0; overflow-wrap: anywhere; }
+    .authors { grid-template-columns: minmax(0, 1fr); }
+    .btn-asistencia { flex-wrap: wrap; text-align: center; overflow-wrap: anywhere; }
+    .device-glow { width: min(480px, 100%); height: auto; aspect-ratio: 1; }
+    .mock-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .mock-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .mock-table-head, .mock-table-row { min-width: 390px; }
+  }
+  @media (max-width: 350px) {
+    h1 { font-size: 1.65rem; }
   }
 
   /* ── AUTH MODAL ──────────────────────────── */
@@ -660,9 +676,9 @@
 
 <!-- ── COMPATIBLE CON ─────────────────────── -->
 <div style="border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
-  <div style="max-width:var(--max-w);margin:0 auto;padding:1rem var(--pad-x);">
+  <div class="compatible-inner" style="max-width:var(--max-w);margin:0 auto;padding:1rem var(--pad-x);">
     <span style="font-size:13px;color:var(--muted);">Calculadora de impuestos de criptomonedas compatible con Bitvavo, Nexo, Binance, Coinbase, Crypto.com y Bit2Me</span>
-    <a href="/exchanges" style="font-size:13px;color:var(--accent);text-decoration:none;margin-left:1rem;white-space:nowrap;">Ver todos los exchanges compatibles →</a>
+    <a href="/exchanges" style="font-size:13px;color:var(--accent);text-decoration:none;">Ver todos los exchanges compatibles →</a>
   </div>
 </div>
 
