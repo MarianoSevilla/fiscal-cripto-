@@ -231,7 +231,7 @@
       if (event.key === 'Escape') closeMenu(true);
     });
     window.addEventListener('resize', function () {
-      if (window.innerWidth > 900) closeMenu(false);
+      if (window.innerWidth > 1200) closeMenu(false);
     });
     refreshMobileMenu();
   }
