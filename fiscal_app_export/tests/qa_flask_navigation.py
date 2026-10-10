@@ -202,20 +202,20 @@ def check_browsers(app, identities, origin):
                                 page.locator("#snavAvatar").click()
                                 menu = page.locator("#snavDropdown")
                         assert menu.is_visible(), (role,width)
-                        assert (menu.locator('a[href="/dashboard"]').count() > 0) == (
+                        assert (menu.locator('a[href="/dashboard"]:visible').count() > 0) == (
                             role != "visitante"
                         ), (role,width,"dashboard")
-                        assert (menu.locator('a[href="/admin/asesoramiento"]').count() > 0) == (
+                        assert (menu.locator('a[href="/admin/asesoramiento"]:visible').count() > 0) == (
                             role in ("asesor","administrador")
                         ), (role,width,"advisor")
-                        assert (menu.locator('a[href="/stats"]').count() > 0) == (
+                        assert (menu.locator('a[href="/stats"]:visible').count() > 0) == (
                             role == "administrador"
                         ), (role,width,"stats")
-                        assert (menu.locator('a[href="/mis-solicitudes-fiscales"]').count() > 0) == (
+                        assert (menu.locator('a[href="/mis-solicitudes-fiscales"]:visible').count() > 0) == (
                             role == "administrador"
                         ), (role,width,"requests")
                         if role == "visitante":
-                            assert menu.locator('a[href="/signup/"]').count() == 1
+                            assert menu.locator('a[href="/signup/"]:visible').count() == 1
                         total += 1
                     finally:
                         context.close()
