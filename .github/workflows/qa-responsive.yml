@@ -45,3 +45,30 @@ jobs:
 
       - name: Prueba real de navegación con archivos de la rama y datos ficticios
         run: python fiscal_app_export/tests/qa_responsive_nav.py
+
+  backend-regression:
+    if: github.ref == 'refs/heads/fix/mobile-navigation-home-20261010'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      FLASK_ENV: testing
+      PYTHONDONTWRITEBYTECODE: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      # No DATABASE_URL, API keys, Railway credentials or production secrets.
+    steps:
+      - name: Checkout (solo lectura)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Python del proyecto
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version-file: fiscal_app_export/.python-version
+
+      - name: Dependencias en runner efimero (no modifica produccion)
+        run: |
+          python -m pip install -r fiscal_app_export/requirements.txt "pytest==9.0.2"
+
+      - name: Suite Python existente (sin credenciales externas)
+        run: python -m pytest -q --disable-warnings --maxfail=1 fiscal_app_export/tests tests
