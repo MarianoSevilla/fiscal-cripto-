@@ -46,7 +46,7 @@ def _env(name: str) -> dict[str, str]:
         "FLASK_ENV": "production",
         "SECRET_KEY": "CI-TEST-ONLY-DO-NOT-USE-IN-PRODUCTION-123",
         "DATABASE_URL": (
-            f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{name}"
+            f"postgresql://{USER}:{PASSWORD}@{HOST}:{PORT}/{name}"
         ),
         "RESEND_API_KEY": "",
         "GOOGLE_CLIENT_ID": "",
