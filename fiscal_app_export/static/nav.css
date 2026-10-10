@@ -261,7 +261,7 @@
 .snav-mobile-menu,
 .snav-mobile-menu[hidden] { display: none; }
 
-@media (max-width: 900px) {
+@media (max-width: 1200px) {
   .snav-links { display: none; }
   .snav-inner { padding: 0 1.5rem; }
   .snav-menu-toggle { display: inline-flex; }
