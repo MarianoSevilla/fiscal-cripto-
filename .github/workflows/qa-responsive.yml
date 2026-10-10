@@ -1,0 +1,47 @@
+name: QA responsive (rama aislada)
+
+on:
+  push:
+    branches:
+      - fix/mobile-navigation-home-20261010
+    paths:
+      - "fiscal_app_export/static/nav.css"
+      - "fiscal_app_export/static/nav.js"
+      - "fiscal_app_export/static/landing.html"
+      - "fiscal_app_export/tests/qa_responsive_nav.py"
+      - ".github/workflows/qa-responsive.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-responsive-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-qa:
+    if: github.ref == 'refs/heads/fix/mobile-navigation-home-20261010'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    steps:
+      - name: Checkout (solo lectura)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Python del proyecto
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version-file: fiscal_app_export/.python-version
+
+      - name: Playwright version fijada
+        run: |
+          python -m pip install "playwright==1.57.0"
+          python -m playwright install --with-deps chromium
+
+      - name: Prueba real de navegación con archivos de la rama y datos ficticios
+        run: python fiscal_app_export/tests/qa_responsive_nav.py
