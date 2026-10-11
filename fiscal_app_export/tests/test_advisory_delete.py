@@ -1,17 +1,4 @@
-"""
-Tests para DELETE /api/admin/asesoramiento/solicitudes/<id>
-
-Casos cubiertos:
-  1. Admin puede borrar solicitud sin pago → 200.
-  2. Admin puede borrar solicitud cancelada sin importe → 200.
-  3. Usuario normal no puede borrar → 403.
-  4. Fiscal_advisor no puede borrar → 403.
-  5. Admin SÍ puede borrar solicitud con pago registrado → 200 (comportamiento admin).
-  6. Al borrar se eliminan notas internas asociadas (cascade).
-  7. Endpoint devuelve 404 si la solicitud no existe.
-  8. La solicitud desaparece de la lista admin tras borrar.
-  9. Se registra entrada en advisory_audit_log al borrar.
-"""
+"""PREFREEZE keeps authorization, requests, notes and audit evidence intact."""
 
 import sys
 import os
@@ -146,39 +133,35 @@ def _login(client, email, password):
 
 # ── Tests ────────────────────────────────────────────────────────────────────
 
-def test_admin_puede_borrar_sin_pago(client, admin_user, _app):
-    """Admin borra solicitud sin pago → 200 {"ok": True}."""
+def test_admin_no_borra_sin_pago(client, admin_user, _app):
     adv_id = _make_advisory(_app, admin_user)
     _login(client, "admin_adv_test@example.com", "admin-pass-test-1234")
     r = client.delete(f"/api/admin/asesoramiento/solicitudes/{adv_id}")
-    assert r.status_code == 200, r.get_json()
-    assert r.get_json().get("ok") is True
+    assert r.status_code == 503, r.get_json()
+    assert r.get_json()["code"] == "advisory_financial_suspended"
     with _app.app_context():
-        assert FiscalAdvisoryRequest.query.get(adv_id) is None
+        assert FiscalAdvisoryRequest.query.get(adv_id) is not None
 
 
-def test_admin_puede_borrar_cancelada_sin_importe(client, admin_user, _app):
-    """Admin borra solicitud cancelada (amount_paid=None) → 200."""
+def test_admin_no_borra_cancelada(client, admin_user, _app):
     adv_id = _make_advisory(_app, admin_user, amount_paid=None, status="cancelled")
     _login(client, "admin_adv_test@example.com", "admin-pass-test-1234")
     r = client.delete(f"/api/admin/asesoramiento/solicitudes/{adv_id}")
-    assert r.status_code == 200, r.get_json()
-    assert r.get_json().get("ok") is True
+    assert r.status_code == 503, r.get_json()
+    assert r.get_json()["code"] == "advisory_financial_suspended"
 
 
-def test_admin_puede_borrar_con_pago(client, admin_user, _app):
-    """Admin puede borrar solicitudes con pago registrado → 200 (restricción eliminada)."""
+def test_admin_no_borra_con_pago(client, admin_user, _app):
     adv_id = _make_advisory(_app, admin_user, amount_paid=4900, status="paid_received")
     _login(client, "admin_adv_test@example.com", "admin-pass-test-1234")
     r = client.delete(f"/api/admin/asesoramiento/solicitudes/{adv_id}")
-    assert r.status_code == 200, r.get_json()
-    assert r.get_json().get("ok") is True
+    assert r.status_code == 503, r.get_json()
+    assert r.get_json()["code"] == "advisory_financial_suspended"
     with _app.app_context():
-        assert FiscalAdvisoryRequest.query.get(adv_id) is None
+        assert FiscalAdvisoryRequest.query.get(adv_id) is not None
 
 
 def test_usuario_normal_no_puede_borrar(client, normal_user, admin_user, _app):
-    """Usuario sin privilegios recibe 403."""
     adv_id = _make_advisory(_app, admin_user)
     _login(client, "normal_adv_test@example.com", "normal-pass-test-1234")
     r = client.delete(f"/api/admin/asesoramiento/solicitudes/{adv_id}")
@@ -189,7 +172,6 @@ def test_usuario_normal_no_puede_borrar(client, normal_user, admin_user, _app):
 
 
 def test_fiscal_advisor_no_puede_borrar(client, advisor_user, admin_user, _app):
-    """fiscal_advisor recibe 403 al intentar borrar."""
     adv_id = _make_advisory(_app, admin_user)
     _login(client, "advisor_adv_test@example.com", "advisor-pass-test-1234")
     r = client.delete(f"/api/admin/asesoramiento/solicitudes/{adv_id}")
@@ -201,8 +183,7 @@ def test_fiscal_advisor_no_puede_borrar(client, advisor_user, admin_user, _app):
         db.session.commit()
 
 
-def test_borrar_elimina_notas_internas(client, admin_user, _app):
-    """Al borrar la solicitud, las notas internas desaparecen (cascade)."""
+def test_bloqueo_conserva_notas_internas(client, admin_user, _app):
     adv_id = _make_advisory(_app, admin_user)
     with _app.app_context():
         nota = AdvisoryInternalNote(
@@ -217,21 +198,19 @@ def test_borrar_elimina_notas_internas(client, admin_user, _app):
 
     _login(client, "admin_adv_test@example.com", "admin-pass-test-1234")
     r = client.delete(f"/api/admin/asesoramiento/solicitudes/{adv_id}")
-    assert r.status_code == 200, r.get_json()
+    assert r.status_code == 503, r.get_json()
     with _app.app_context():
-        assert FiscalAdvisoryRequest.query.get(adv_id) is None
-        assert AdvisoryInternalNote.query.get(nota_id) is None
+        assert FiscalAdvisoryRequest.query.get(adv_id) is not None
+        assert AdvisoryInternalNote.query.get(nota_id) is not None
 
 
-def test_no_existe_devuelve_404(client, admin_user, _app):
-    """Solicitud inexistente devuelve 404."""
+def test_bloqueo_no_consulta_solicitud_inexistente(client, admin_user, _app):
     _login(client, "admin_adv_test@example.com", "admin-pass-test-1234")
     r = client.delete("/api/admin/asesoramiento/solicitudes/99999")
-    assert r.status_code == 404
+    assert r.status_code == 503
 
 
-def test_lista_admin_no_incluye_borrada(client, admin_user, _app):
-    """Tras borrar, la solicitud ya no aparece en la lista admin."""
+def test_lista_admin_conserva_solicitud(client, admin_user, _app):
     adv_id = _make_advisory(_app, admin_user)
     _login(client, "admin_adv_test@example.com", "admin-pass-test-1234")
 
@@ -243,19 +222,17 @@ def test_lista_admin_no_incluye_borrada(client, admin_user, _app):
 
     r_despues = client.get("/api/admin/asesoramiento/solicitudes")
     ids_despues = [item["id"] for item in r_despues.get_json()]
-    assert adv_id not in ids_despues
+    assert adv_id in ids_despues
 
 
-def test_audit_log_creado_al_borrar(client, admin_user, _app):
-    """Al borrar, se crea una entrada en advisory_audit_log."""
+def test_bloqueo_no_fabrica_auditoria_de_borrado(client, admin_user, _app):
     adv_id = _make_advisory(_app, admin_user, amount_paid=7900, status="completed")
     _login(client, "admin_adv_test@example.com", "admin-pass-test-1234")
     r = client.delete(f"/api/admin/asesoramiento/solicitudes/{adv_id}")
-    assert r.status_code == 200
+    assert r.status_code == 503
     with _app.app_context():
         log = AdvisoryAuditLog.query.filter_by(
             request_id=adv_id,
             action=AdvisoryAuditLog.ACTION_DELETED,
         ).first()
-        assert log is not None
-        assert log.admin_id == admin_user
+        assert log is None
