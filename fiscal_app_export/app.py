@@ -92,6 +92,7 @@ from auth import (
     require_admin_page,
     require_fiscal_advisor_page,
 )
+from security_config import build_security_config
 
 app = Flask(__name__, static_folder="static")
 
@@ -105,20 +106,10 @@ Compress(app)
 # ── CONFIGURACIÓN ─────────────────────────────
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# SECRET_KEY obligatoria. En desarrollo se usa un valor por defecto con aviso.
-_secret = os.environ.get("SECRET_KEY")
-if not _secret:
-    if os.environ.get("FLASK_ENV") == "production":
-        raise RuntimeError("SECRET_KEY no está configurada. Define la variable de entorno antes de arrancar.")
-    import warnings
-    warnings.warn("SECRET_KEY no definida — usando clave de desarrollo. NO uses esto en producción.", stacklevel=1)
-    _secret = "dev-only-insecure-key-change-me"
-
-app.config["SECRET_KEY"] = _secret
-
-# Modo de ejecución: siempre desactivados en producción
-app.config["DEBUG"]   = False
-app.config["TESTING"] = False
+# Valida secretos, modo y cookies ANTES de inicializar DB o ejecutar su bootstrap.
+# Por defecto exige clave real y HTTPS; sólo development/testing locales explícitos
+# permiten una excepción. No altera la clave suministrada ni las firmas existentes.
+app.config.update(build_security_config(os.environ))
 
 # ADMIN_EMAILS y FISCAL_ADVISOR_EMAILS se importan desde auth.py.
 # _is_admin / _is_fiscal_advisor son aliases de las funciones centralizadas
@@ -156,19 +147,6 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = _engine_opts
 # Los CSV válidos son <10 MB; los ficheros de asesoramiento tienen su propio check a 10 MB.
 # Flask devuelve 413 automáticamente si se supera este límite.
 app.config["MAX_CONTENT_LENGTH"] = 15 * 1024 * 1024  # 15 MB
-
-# Cookies de sesión seguras
-# SESSION_COOKIE_SECURE: True en producción (FLASK_ENV=production en Railway).
-# En desarrollo local (http://127.0.0.1:5050) Flask lo ignora automáticamente
-# para localhost — si usas otro host de dev, quita la condición temporalmente.
-_prod = os.environ.get("FLASK_ENV") == "production"
-app.config["SESSION_COOKIE_SECURE"]   = _prod
-app.config["SESSION_COOKIE_HTTPONLY"] = True
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-# Flask-Login "remember me" cookie — misma política que la cookie de sesión
-app.config["REMEMBER_COOKIE_SECURE"]   = _prod
-app.config["REMEMBER_COOKIE_HTTPONLY"] = True
-app.config["REMEMBER_COOKIE_SAMESITE"] = "Lax"
 
 # Sesión NO persistente: session.permanent no se activa en ningún login.
 # La cookie de sesión es ephemeral (sin Max-Age) → el navegador la destruye al cerrar.
