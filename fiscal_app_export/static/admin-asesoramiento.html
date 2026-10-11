@@ -320,8 +320,12 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
 <script src="/static/nav.js"></script>
 <script>
 async function u04Action(ident, action, advisoryId) {
-  if (!/^[0-9a-f-]{36}$/.test(ident) || !['consultar','cerrar-sin-captura','cerrar-terminal-verificada'].includes(action)) return;
+  if (!/^[0-9a-f-]{36}$/.test(ident) || !['consultar','cerrar-sin-captura','cerrar-terminal-verificada','resolver-completada'].includes(action)) return;
   let body;
+  if (action === 'resolver-completada') {
+    if (!confirm('He revisado que la generación y el importe corresponden al presupuesto del expediente. La aplicación consultará PayPal y exigirá la captura COMPLETED de la misma orden; esta acción no vuelve a cobrar.')) return;
+    body = JSON.stringify({quote_generation_verified:true});
+  }
   if (action === 'cerrar-terminal-verificada') {
     const reference = prompt('Referencia interna de la confirmación específica de PayPal:');
     if (!reference || !confirm('He verificado que PayPal acredita ausencia de cobro, procesamiento pendiente y posibilidad de cobro tardío de esta orden. Una orden APPROVED o la ausencia de captura no bastan.')) return;
@@ -590,6 +594,7 @@ async function openDetail(id, el) {
         '<br>Última comprobación: ' + escHtml(a.last_observed_at ? new Date(a.last_observed_at).toLocaleString('es-ES') : 'Sin consulta') +
         '<br>Notificaciones: cliente ' + escHtml(a.customer_notification_state) + ' · administración ' + escHtml(a.owner_notification_state) + '</p>' +
         (a.paypal_order_id ? '<button class="action-btn" data-attempt="' + a.id + '" onclick="u04Action(this.dataset.attempt,\'consultar\',' + id + ')">Consultar en PayPal</button>' : '') +
+        (_currentUser?.is_admin && a.origin === 'managed' && a.state === 'REVIEW_REQUIRED' ? '<button class="action-btn" data-attempt="' + a.id + '" onclick="u04Action(this.dataset.attempt,\'resolver-completada\',' + id + ')">Verificar captura completada</button>' : '') +
         (canClose ? '<button class="action-btn" data-attempt="' + a.id + '" onclick="u04Action(this.dataset.attempt,\'cerrar-sin-captura\',' + id + ')">Cerrar orden nunca capturada</button>' : '') +
         (_currentUser?.is_admin && a.capture_started_at && !a.paypal_capture_id && ['UNCERTAIN','REVIEW_REQUIRED'].includes(a.state) ? '<button class="action-btn" data-attempt="' + a.id + '" onclick="u04Action(this.dataset.attempt,\'cerrar-terminal-verificada\',' + id + ')">Verificar cierre con evidencia PayPal</button>' : '') +
         '<details><summary>Evidencia operativa</summary><ul>' + events + '</ul></details></div>';

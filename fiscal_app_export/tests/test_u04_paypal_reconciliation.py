@@ -251,7 +251,7 @@ def test_webhook_before_order_saved_preserves_quarantine_and_blocks_capture(case
             'supplementary_data':{'related_ids':{'order_id':body['id']}}}})
         return body
     fake.create=early
-    service.start('u04-synthetic','https://app.example.invalid')
+    with pytest.raises(PaymentConflict):service.start('u04-synthetic','https://app.example.invalid')
     original_event=Event.query.filter_by(provider_event_id='WH-EARLY').one()
     assert original_event.attempt_id is None and original_event.kind=='quarantine'
     assert Event.query.filter_by(kind='quarantine_correlated',correlation_event_id=original_event.id).count()==1
@@ -425,3 +425,87 @@ def test_signed_late_capture_on_closed_order_reactivates_hold(case):
     db.session.rollback()
     with pytest.raises(PaymentConflict):service.start('u04-synthetic','https://app.example.invalid')
     assert fake.creates==1 and fake.posts==0
+
+
+@pytest.mark.parametrize('mutation',['optional_related_absent','contradictory_custom','missing_amount'])
+def test_capture_get_uses_same_economic_contract(case,mutation):
+    service,fake,_,aid=prepared(case);fake.timeout=True
+    with pytest.raises(TimeoutError):service.capture(aid,'ORDER04TEST')
+    original=fake.get_capture
+    def changed(cid):
+        detail=original(cid)
+        if mutation=='optional_related_absent':detail.pop('supplementary_data')
+        if mutation=='contradictory_custom':detail['custom_id']='another-advisory'
+        if mutation=='missing_amount':detail.pop('amount')
+        return detail
+    fake.get_capture=changed
+    assert service.recover(aid)==('RECONCILED' if mutation=='optional_related_absent' else 'REVIEW_REQUIRED')
+    assert fake.posts==1
+    assert (Advisory.query.one().paid_at is not None)==(mutation=='optional_related_absent')
+
+
+def test_create_response_with_unexpected_capture_never_offers_approval(case):
+    service,fake,_=case;original=fake.create
+    def already_captured(*args):
+        body=original(*args)
+        body['status']='COMPLETED'
+        body['purchase_units'][0]['payments']={'captures':[{'id':'UNEXPECTEDCAP','status':'COMPLETED',
+            'amount':{'value':'100.01','currency_code':'EUR'}}]}
+        fake.body=body
+        return body
+    fake.create=already_captured
+    with pytest.raises(PaymentConflict):service.start('u04-synthetic','https://app.example.invalid')
+    assert Attempt.query.one().state=='REVIEW_REQUIRED' and Advisory.query.one().paid_at is None
+    assert fake.creates==1 and fake.posts==0
+
+
+def test_create_crash_after_order_id_commit_recovers_same_order_by_get(case,monkeypatch):
+    import paypal_payments as module
+    service,fake,_=case
+    def crash(*args):raise SystemExit('synthetic process death after durable order ID')
+    with monkeypatch.context() as m:
+        m.setattr(module,'approval_url',crash)
+        with pytest.raises(SystemExit):service.start('u04-synthetic','https://app.example.invalid')
+    a=Attempt.query.one();aid=a.id
+    assert a.state=='ORDER_CREATING' and a.paypal_order_id=='ORDER04TEST'
+    db.session.rollback()
+    assert Payments(fake,'sandbox',writes_enabled=True).recover(aid)=='ORDER_CREATED'
+    assert fake.creates==1 and fake.posts==0
+
+
+def test_signed_webhook_missing_order_uses_only_known_capture_identity(case):
+    service,fake,_,aid=prepared(case);fake.pending=True
+    assert service.capture(aid,'ORDER04TEST')=='PROVIDER_PENDING'
+    fake.body['purchase_units'][0]['payments']['captures'][0]['status']='COMPLETED'
+    resource=fake.get_capture('CAPTURE04TEST');resource.pop('supplementary_data')
+    assert service.webhook({'id':'WH-KNOWN-CAPTURE','resource':resource})==aid
+    assert service.read(aid)['state']=='RECONCILED' and fake.posts==1
+
+
+def test_malformed_signed_related_data_is_preserved_in_quarantine(case):
+    service,fake,_=case
+    assert service.webhook({'id':'WH-MALFORMED-REL','resource':{'id':'PRESERVEDCAP','supplementary_data':None}}) is None
+    event=Event.query.one()
+    assert event.kind=='quarantine' and event.paypal_capture_id=='PRESERVEDCAP' and event.attempt_id is None
+    assert fake.creates==fake.posts==0
+
+
+def test_manual_review_requires_provider_completed_and_same_generation(case):
+    from models import User
+    service,fake,ident,aid=prepared(case)
+    # A provider-side completed payment outside the local capture claim is
+    # synthetic; the app's create/capture POST counters must remain unchanged.
+    fake.body['status']='COMPLETED'
+    fake.body['purchase_units'][0]['payments']={'captures':[{'id':'CAPTURE04TEST','status':'COMPLETED',
+        'amount':{'value':'100.01','currency_code':'EUR'}}]}
+    assert service.recover(aid)=='REVIEW_REQUIRED'
+    assert Advisory.query.one().paid_at is None
+    owner=User(email='review-owner@example.invalid',role='admin');db.session.add(owner);db.session.commit();actor=owner.id;db.session.rollback()
+    fake.body['purchase_units'][0]['payments']['captures'][0]['amount']['value']='100.00'
+    assert service.recover(aid,actor=actor,manual_completion=True)=='REVIEW_REQUIRED'
+    assert Advisory.query.one().paid_at is None
+    db.session.rollback();fake.body['purchase_units'][0]['payments']['captures'][0]['amount']['value']='100.01'
+    assert service.recover(aid,actor=actor,manual_completion=True)=='RECONCILED'
+    a=Attempt.query.one();assert a.capture_request_id is None and a.capture_started_at is None
+    assert a.resolution_reason=='owner_verified_completed'
+    assert fake.posts==0 and fake.creates==1 and Advisory.query.one().amount_paid==10001

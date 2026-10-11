@@ -79,6 +79,26 @@ def register(app, factory, sender):
             db.session.rollback()
             current_app.logger.error("paypal_admin_close_failed error_category=resolution_pending")
             return jsonify({"error": "No se ha liberado la operación."}), 502
+    @bp.route("/api/admin/paypal/attempts/<uuid:ident>/resolver-completada", methods=["POST"])
+    @require_roles("admin")
+    def complete_reviewed(ident):
+        try:
+            csrf()
+            if (request.get_json(silent=True) or {}).get("quote_generation_verified") is not True:
+                raise PaymentConflict("quote_review_required")
+            service=factory()
+            state=service.recover(str(ident), actor=current_user.id, manual_completion=True)
+            if state != "RECONCILED":
+                raise PaymentConflict("completed_evidence_required")
+            service.notify(str(ident),sender)
+            return jsonify({"state":state})
+        except (PaymentConflict, ValueError):
+            db.session.rollback()
+            return jsonify({"error":"No hay evidencia completa de captura y presupuesto. Se conserva el bloqueo."}),409
+        except Exception:
+            db.session.rollback()
+            current_app.logger.error("paypal_review_completion_failed error_category=resolution_pending")
+            return jsonify({"error":"No se pudo acreditar el cobro. Se conserva el bloqueo."}),502
     @bp.route("/api/admin/asesoramiento/solicitudes/<int:ident>/paypal/adoptar-completada", methods=["POST"])
     @require_roles("admin")
     def adopt(ident):

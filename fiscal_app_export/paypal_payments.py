@@ -77,6 +77,27 @@ def approval_url(body, environment):
                 return value
     raise InvalidEvidence("missing_approval")
 
+def amount_contract(obj, snap):
+    if not isinstance(obj, dict) or obj.get("currency_code") != "EUR" or money(obj.get("value")) != snap["quoted_amount_cents"]:
+        raise InvalidEvidence("amount_contract")
+
+def checked_capture(cap, snap):
+    if not isinstance(cap, dict):
+        raise InvalidEvidence("capture_structure")
+    cid = capture_id(cap.get("id"))
+    if snap["paypal_capture_id"] and cid != snap["paypal_capture_id"]:
+        raise InvalidEvidence("capture_identity")
+    if "custom_id" in cap and cap["custom_id"] != snap["expected_custom_id"]:
+        raise InvalidEvidence("custom_id")
+    supplementary = cap.get("supplementary_data", {})
+    if not isinstance(supplementary, dict) or not isinstance(supplementary.get("related_ids", {}), dict):
+        raise InvalidEvidence("related_order_structure")
+    related = supplementary.get("related_ids", {})
+    if "order_id" in related and related["order_id"] != snap["paypal_order_id"]:
+        raise InvalidEvidence("related_order")
+    amount_contract(cap.get("amount"), snap)
+    return cap
+
 def contract(body, snap, *, completed=False):
     if not isinstance(body, dict) or body.get("id") != snap["paypal_order_id"] or body.get("intent") != "CAPTURE":
         raise InvalidEvidence("order_contract")
@@ -88,10 +109,7 @@ def contract(body, snap, *, completed=False):
     unit = units[0]
     if "custom_id" in unit and unit["custom_id"] != snap["expected_custom_id"]:
         raise InvalidEvidence("custom_id")
-    def amount(obj):
-        if not isinstance(obj, dict) or obj.get("currency_code") != "EUR" or money(obj.get("value")) != snap["quoted_amount_cents"]:
-            raise InvalidEvidence("amount_contract")
-    amount(unit.get("amount"))
+    amount_contract(unit.get("amount"), snap)
     payments = unit.get("payments", {})
     if not isinstance(payments, dict) or payments.get("authorizations") or payments.get("refunds"):
         raise InvalidEvidence("payment_structure")
@@ -102,21 +120,20 @@ def contract(body, snap, *, completed=False):
         if completed:
             raise InvalidEvidence("missing_capture")
         return None
-    cap = captures[0]
-    if not isinstance(cap, dict):
-        raise InvalidEvidence("capture_structure")
-    cid = capture_id(cap.get("id"))
-    if snap["paypal_capture_id"] and cid != snap["paypal_capture_id"]:
-        raise InvalidEvidence("capture_identity")
-    if "custom_id" in cap and cap["custom_id"] != snap["expected_custom_id"]:
-        raise InvalidEvidence("custom_id")
-    related = cap.get("supplementary_data", {}).get("related_ids", {})
-    if related.get("order_id") and related["order_id"] != snap["paypal_order_id"]:
-        raise InvalidEvidence("related_order")
-    amount(cap.get("amount"))
+    cap = checked_capture(captures[0], snap)
     if completed and (body.get("status") != "COMPLETED" or cap.get("status") != "COMPLETED"):
         raise InvalidEvidence("capture_not_completed")
     return cap
+
+def capture_readback(detail, cap, snap):
+    """Same contract for GET capture; order inclusion already proves linkage.
+
+    An optional related order/custom ID may corroborate, never contradict. GET
+    amount formatting can differ while representing exactly the same cents.
+    """
+    if not isinstance(detail, dict) or detail.get("id") != cap["id"] or detail.get("status") != cap.get("status"):
+        raise InvalidEvidence("capture_get_identity")
+    checked_capture(detail, snap)
 
 
 class PayPalClient:
@@ -253,7 +270,12 @@ class Payments:
                 raise PaymentConflict("financial_hold")
             self._scope(snap)
             body = self.client.get_order(snap["paypal_order_id"])
-            if contract(body, snap):
+            try:
+                cap = contract(body, snap)
+            except InvalidEvidence:
+                self.uncertain(snap["id"], review=True)
+                raise PaymentConflict("financial_hold")
+            if cap:
                 self.observe(snap["id"], body)
                 raise PaymentConflict("financial_hold")
             return approval_url(body, self.environment)
@@ -289,10 +311,13 @@ class Payments:
             db.session.commit()
             snap = self.read(aid)
             try:
-                contract(body, snap)
+                cap = contract(body, snap)
             except InvalidEvidence:
                 body = self.client.get_order(oid)
-                contract(body, snap)
+                cap = contract(body, snap)
+            if cap:
+                self.uncertain(aid, review=True)
+                raise PaymentConflict("unexpected_create_payment")
             url = approval_url(body, self.environment)
             self._parent(snap["advisory_id"])
             a = self._attempt(aid)
@@ -300,6 +325,8 @@ class Payments:
             self._event(a, "order_created", "get_order", authenticated=True, valid=True, body=body)
             db.session.commit()  # TC2 completes before delivering the approval URL.
             self.correlate(aid)
+            if self.read(aid)["state"] != "ORDER_CREATED":
+                raise PaymentConflict("financial_hold")
             return url
         except Exception:
             db.session.rollback()
@@ -317,7 +344,11 @@ class Payments:
         if snap["state"] not in ("ORDER_CREATED", "READY_TO_CAPTURE") or snap["capture_started_at"]:
             return self.recover(ident)
         body = self.client.get_order(expected_order)
-        cap = contract(body, snap)
+        try:
+            cap = contract(body, snap)
+        except InvalidEvidence:
+            self.uncertain(ident, review=True)
+            raise PaymentConflict("financial_hold")
         if cap:
             return self.observe(ident, body)
         if body.get("status") != "APPROVED":
@@ -353,7 +384,7 @@ class Payments:
             except Exception:
                 db.session.rollback()
             raise
-    def recover(self, ident, *, actor=None):
+    def recover(self, ident, *, actor=None, manual_completion=False):
         snap = self.read(ident)
         if not snap["paypal_order_id"]:
             raise PaymentConflict("financial_hold")
@@ -363,10 +394,8 @@ class Payments:
             cap = contract(body, snap)
             if cap:
                 detail = self.client.get_capture(cap["id"])
-                related = detail.get("supplementary_data", {}).get("related_ids", {})
-                if detail.get("id") != cap["id"] or related.get("order_id") != snap["paypal_order_id"] or detail.get("amount") != cap.get("amount") or detail.get("status") != cap.get("status"):
-                    raise InvalidEvidence("capture_get_identity")
-            return self.observe(ident, body, actor=actor)
+                capture_readback(detail, cap, snap)
+            return self.observe(ident, body, actor=actor, manual_completion=manual_completion)
         except InvalidEvidence:
             self.uncertain(ident, review=True)
             return "REVIEW_REQUIRED"
@@ -377,7 +406,7 @@ class Payments:
             except Exception:
                 db.session.rollback()
             raise
-    def observe(self, ident, body, *, actor=None):
+    def observe(self, ident, body, *, actor=None, manual_completion=False):
         snap = self.read(ident)
         try:
             cap = contract(body, snap)
@@ -395,11 +424,12 @@ class Payments:
         a.last_observed_at = now()
         if a.version != snap["version"]:
             db.session.rollback()
-            return self.recover(ident, actor=actor)
+            return self.recover(ident, actor=actor, manual_completion=manual_completion)
         a.version += 1
         if cap and cap.get("status") == "COMPLETED" and body.get("status") == "COMPLETED":
             contract(body, snap, completed=True)
-            if not a.capture_started_at or a.origin != "managed" or a.quote_generation != parent.paypal_quote_generation or a.quoted_amount_cents != parent.quoted_amount or parent.paypal_review_hold:
+            owner_verified = manual_completion and actor is not None and a.state == "REVIEW_REQUIRED"
+            if (not a.capture_started_at or parent.paypal_review_hold) and not owner_verified or a.origin != "managed" or a.quote_generation != parent.paypal_quote_generation or a.quoted_amount_cents != parent.quoted_amount:
                 self._move(a, "REVIEW_REQUIRED")
                 self._event(a, "quote_review", "get_order", authenticated=True, body=body, actor=actor)
             else:
@@ -407,7 +437,7 @@ class Payments:
                 db.session.flush([evidence])
                 a.paypal_capture_id = cap["id"]
                 self._move(a, "RECONCILED")
-                a.resolved_at, a.resolution_reason, a.resolution_event_id = now(), "verified_completed", evidence.id
+                a.resolved_at, a.resolution_reason, a.resolution_event_id = now(), "owner_verified_completed" if owner_verified else "verified_completed", evidence.id
                 db.session.flush()
                 parent.status, parent.amount_paid, parent.currency = "paid_received", a.quoted_amount_cents, "eur"
                 parent.payment_provider, parent.paid_at = "paypal", datetime.utcnow()
@@ -426,7 +456,7 @@ class Payments:
                 self._move(a, "UNCERTAIN")
                 a.uncertainty_phase, a.uncertain_at = "CAPTURE", now()
             self._event(a, "no_conclusive_capture", "get_order", authenticated=True, body=body, actor=actor)
-        elif a.state == "UNCERTAIN" and a.uncertainty_phase == "CREATE":
+        elif a.state == "ORDER_CREATING" or a.state == "UNCERTAIN" and a.uncertainty_phase == "CREATE":
             self._move(a, "ORDER_CREATED")
             self._event(a, "create_recovered", "get_order", authenticated=True, valid=True, body=body, actor=actor)
         state = a.state
@@ -437,17 +467,25 @@ class Payments:
         resource = event.get("resource")
         if not isinstance(resource, dict):
             resource = {}
-        related = resource.get("supplementary_data", {}).get("related_ids", {})
+        supplementary = resource.get("supplementary_data", {})
+        related = supplementary.get("related_ids", {}) if isinstance(supplementary, dict) else {}
+        if not isinstance(related, dict):
+            related = {}
         try:
             oid = order_id(related.get("order_id"))
+        except (ValueError, TypeError, AttributeError):
+            oid = None
+        try:
             cid = capture_id(resource.get("id"))
         except (ValueError, TypeError, AttributeError):
-            oid, cid = None, None
+            cid = None
         event_id = event.get("id")
         if not isinstance(event_id, str) or not 1 <= len(event_id) <= 100:
             event_id = None
         db.session.rollback()
         attempt = Attempt.query.filter_by(provider_account_scope=self.scope, environment=self.environment, paypal_order_id=oid).first() if oid else None
+        if not attempt and cid and "order_id" not in related:
+            attempt = Attempt.query.filter_by(provider_account_scope=self.scope, environment=self.environment, paypal_capture_id=cid).first()
         aid = attempt.id if attempt else None
         if aid:
             parent = self._parent(attempt.advisory_id)
@@ -538,8 +576,7 @@ class Payments:
         body = self.client.get_order(oid)
         cap = contract(body, snap, completed=True)
         detail = self.client.get_capture(cap["id"])
-        if detail.get("id") != cap["id"] or detail.get("status") != "COMPLETED" or detail.get("amount") != cap["amount"] or detail.get("supplementary_data", {}).get("related_ids", {}).get("order_id") != oid:
-            raise InvalidEvidence("legacy_capture_relationship")
+        capture_readback(detail, cap, snap)
         parent = self._parent(advisory_id)
         if parent.paypal_order_id != oid or parent.quoted_amount != cents or parent.quote_sent_at != sent or parent.amount_paid is not None or parent.paid_at or not parent.paypal_review_hold or parent.paypal_quote_generation:
             raise PaymentConflict("legacy_changed")

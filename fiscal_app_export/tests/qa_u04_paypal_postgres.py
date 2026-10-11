@@ -182,6 +182,7 @@ def main():
         snap=service.read(ident)
         with db.engine.begin() as conn:
             conn.execute(text("SELECT id FROM fiscal_advisory_requests WHERE id=:id FOR UPDATE NOWAIT"),{"id":snap["advisory_id"]})
+            verifier_pid=conn.execute(text("SELECT pg_backend_pid()")).scalar_one()
         parent=service._parent(snap["advisory_id"])
         try: service.guard_quote(parent);raise AssertionError("requote authorized")
         except PaymentConflict: db.session.rollback()
@@ -189,7 +190,7 @@ def main():
         assert joined(second)[1]=="UNCERTAIN"
         Provider.release.set();assert joined(first)[1]=="RECONCILED";Provider.pause=False
         assert sum(path.endswith("/"+snap["paypal_order_id"]+"/capture") for path,key in Provider.posts)==1
-        print("PG real: two workers, one POST; SQL lock released during HTTP; requote blocked PASS")
+        print(f"PG real: worker PIDs {first.pid}/{second.pid}, verifier connection {verifier_pid}; two workers, one POST; SQL lock released during HTTP; requote blocked PASS")
         # Kill after TP1 but before POST; restart another process, only GET.
         ident=prepare("u04-kill-before")
         entered,release=ctx.Event(),ctx.Event()
@@ -286,6 +287,18 @@ def main():
         except Exception:pass
         assert len(Provider.posts)==count
         print("PG real: verified legacy closure, retained order, no POST, stale evidence cannot clear a new hold PASS")
+        # Provider truth is required even in the explicit owner review path.
+        manual=prepare("u04-manual-provider-truth")
+        msnap=service.read(manual)
+        body=Provider.orders[msnap["paypal_order_id"]]
+        body["status"]="COMPLETED"
+        body["purchase_units"][0]["payments"]={"captures":[{"id":"U04MANUALCAP", "status":"COMPLETED",
+            "amount":{"value":"100.01","currency_code":"EUR"}}]}
+        count=len(Provider.posts)
+        assert service.recover(manual)=="REVIEW_REQUIRED"
+        assert service.recover(manual,actor=actor,manual_completion=True)=="RECONCILED"
+        assert service.read(manual)["capture_request_id"] is None and len(Provider.posts)==count
+        print("PG real: owner review requires full GET contract, preserves absent historical capture key, zero POST PASS")
         # Real DDL guards resist incorrect SQL and rollback leaves evidence intact.
         failures=[
             ("UPDATE paypal_payment_attempt SET quoted_amount_cents=1 WHERE id=:id",{"id":ident}),
@@ -304,15 +317,35 @@ def main():
             except AssertionError: raise
             except Exception: pass
         assert service.read(ident)["state"]=="RECONCILED"
+        rollback_ready=prepare("u04-rollback-ready")
+        pending_before=service.read(ambiguous)
         service.writes_enabled=False
+        count=len(Provider.posts)
+        assert service.recover(ambiguous)=="UNCERTAIN"
+        assert service.read(ambiguous)["capture_request_id"]==pending_before["capture_request_id"]
+        for token in ("u04-commit-ack-lost","u04-rollback-ready"):
+            try:service.start(token,"https://app.example.invalid");raise AssertionError("rollback create authorized")
+            except PaymentConflict:db.session.rollback()
+        try:service.capture(rollback_ready,service.read(rollback_ready)["paypal_order_id"]);raise AssertionError("rollback capture authorized")
+        except PaymentConflict:db.session.rollback()
+        parent=service._parent(pending_before["advisory_id"])
+        try:service.guard_quote(parent);raise AssertionError("rollback requote authorized")
+        except PaymentConflict:db.session.rollback()
         assert service.recover(ident)=="RECONCILED"
         preserved=service.read(ident)
         assert preserved["paypal_order_id"]==snap["paypal_order_id"]
+        assert len(Provider.posts)==count
         print("PG real: immutable SQL, append-only evidence, protected deletion and compatible rollback PASS")
         # Destructive downgrade must fail while preserving all rows.
-        from qa_db_bootstrap_postgres import _run
+        from qa_db_bootstrap_postgres import _run, _assert_version
+        with db.engine.connect() as conn:
+            before_counts=tuple(conn.execute(text("SELECT (SELECT COUNT(*) FROM paypal_payment_attempt),(SELECT COUNT(*) FROM paypal_payment_event)")).one())
         failed=_run(name,"from app import app\nfrom flask_migrate import downgrade\nwith app.app_context(): downgrade()",success=False)
         assert "destructive downgrade prohibited" in failed.stdout
+        _assert_version(name)
+        with db.engine.connect() as conn:
+            after_counts=tuple(conn.execute(text("SELECT (SELECT COUNT(*) FROM paypal_payment_attempt),(SELECT COUNT(*) FROM paypal_payment_event)")).one())
+        assert after_counts==before_counts
         print("PG real: downgrade refused, financial records preserved PASS")
         db.session.remove()
     server.shutdown();server.server_close()
