@@ -145,6 +145,7 @@ class PayPalClient:
         body = {"intent": "CAPTURE", "purchase_units": [{"custom_id": snap["expected_custom_id"],
                 "amount": {"currency_code": "EUR", "value": formatted(snap["quoted_amount_cents"])}}],
                 "application_context": {"brand_name": "Mariano Sevilla", "user_action": "PAY_NOW",
+                                        "locale": "es-ES", "landing_page": "NO_PREFERENCE",
                                         "return_url": return_url, "cancel_url": cancel_url}}
         return self._call("POST", "/v2/checkout/orders", body, snap["create_request_id"])
     def capture(self, snap):
@@ -354,7 +355,7 @@ class Payments:
             raise
     def recover(self, ident, *, actor=None):
         snap = self.read(ident)
-        if not snap["paypal_order_id"] or snap["state"] == "CLOSED_NO_CHARGE":
+        if not snap["paypal_order_id"]:
             raise PaymentConflict("financial_hold")
         try:
             body = self.client.get_order(snap["paypal_order_id"])
@@ -449,7 +450,7 @@ class Payments:
         attempt = Attempt.query.filter_by(provider_account_scope=self.scope, environment=self.environment, paypal_order_id=oid).first() if oid else None
         aid = attempt.id if attempt else None
         if aid:
-            self._parent(attempt.advisory_id)
+            parent = self._parent(attempt.advisory_id)
             attempt = self._attempt(aid)
         else:
             # A signed hint can retain a candidate, never establish a payment.
@@ -464,6 +465,11 @@ class Payments:
                             authenticated=True, provider_event_id=event_id)
             e.paypal_order_id, e.paypal_capture_id = oid, cid
             e.evidence_hash = digest({"order": oid, "capture": cid, "event": event_id})
+        if aid and attempt.state == "CLOSED_NO_CHARGE":
+            parent.paypal_review_hold = True
+            self._event(attempt, "closed_order_webhook", "webhook", authenticated=True)
+            db.session.commit()
+            return aid
         if aid and (not cid or attempt.paypal_capture_id and cid != attempt.paypal_capture_id or
                     "custom_id" in resource and resource["custom_id"] != attempt.expected_custom_id):
             self._move(attempt, "REVIEW_REQUIRED") if attempt.state not in ("RECONCILED", "CLOSED_NO_CHARGE") else None
@@ -535,7 +541,7 @@ class Payments:
         if detail.get("id") != cap["id"] or detail.get("status") != "COMPLETED" or detail.get("amount") != cap["amount"] or detail.get("supplementary_data", {}).get("related_ids", {}).get("order_id") != oid:
             raise InvalidEvidence("legacy_capture_relationship")
         parent = self._parent(advisory_id)
-        if parent.paypal_order_id != oid or parent.quoted_amount != cents or parent.quote_sent_at != sent or parent.amount_paid is not None or parent.paypal_quote_generation:
+        if parent.paypal_order_id != oid or parent.quoted_amount != cents or parent.quote_sent_at != sent or parent.amount_paid is not None or parent.paid_at or not parent.paypal_review_hold or parent.paypal_quote_generation:
             raise PaymentConflict("legacy_changed")
         if Attempt.query.filter(Attempt.advisory_id == advisory_id, Attempt.state != "CLOSED_NO_CHARGE").first():
             raise PaymentConflict("preserved_attempt")
@@ -564,6 +570,53 @@ class Payments:
         db.session.commit()
         self.correlate(ident)
         return ident
+    def adopt_current_closed(self, advisory_id, quote_reference, provider_reference, *, actor):
+        """Owner-reviewed complete legacy scope; known order must be VOIDED.
+
+        The provider reference must cover all previous operations and in-flight
+        requests for this advisory, including replaced order identifiers. Missing
+        scope evidence cannot be inferred from GET and must keep the hold.
+        """
+        for ref in (quote_reference, provider_reference):
+            if not isinstance(ref, str) or not re.fullmatch(r"[A-Za-z0-9._-]{1,100}", ref):
+                raise PaymentConflict("legacy_scope_evidence_required")
+        if actor is None:
+            raise PaymentConflict("owner_evidence_required")
+        db.session.rollback()
+        parent = db.session.get(Advisory, advisory_id)
+        if not parent or not parent.paypal_review_hold or parent.paypal_quote_generation or parent.amount_paid is not None or parent.paid_at or parent.paypal_capture_id or not parent.paypal_order_id or not parent.quoted_amount:
+            raise PaymentConflict("legacy_review_required")
+        oid, cents, sent = parent.paypal_order_id, parent.quoted_amount, parent.quote_sent_at
+        snap = {"paypal_order_id": oid, "paypal_capture_id": None, "expected_custom_id": str(advisory_id), "quoted_amount_cents": cents}
+        db.session.rollback()
+        body = self.client.get_order(oid)
+        if contract(body, snap) or body.get("status") != "VOIDED":
+            raise PaymentConflict("terminal_evidence_required")
+        parent = self._parent(advisory_id)
+        if parent.paypal_order_id != oid or parent.quoted_amount != cents or parent.quote_sent_at != sent or not parent.paypal_review_hold or parent.paypal_quote_generation or parent.paypal_capture_id or parent.amount_paid is not None or parent.paid_at:
+            raise PaymentConflict("legacy_changed")
+        if Attempt.query.filter(Attempt.advisory_id == advisory_id, Attempt.state != "CLOSED_NO_CHARGE").first():
+            raise PaymentConflict("preserved_attempt")
+        a = Attempt(id=uid(), advisory_id=advisory_id, origin="legacy_verified", quote_generation=None,
+                    quote_evidence_ref=quote_reference, quoted_amount_cents=cents, currency="EUR",
+                    expected_custom_id=str(advisory_id), provider_account_scope=self.scope, environment=self.environment,
+                    create_request_id=uid(), paypal_order_id=oid, state="REVIEW_REQUIRED",
+                    quote_sent_at=parent.quote_sent_at, quote_expires_at=parent.quote_expires_at,
+                    request_contract_hash=digest({"legacy_order": oid, "quote_reference": quote_reference, "cents": cents}))
+        db.session.add(a)
+        db.session.flush()
+        evidence = self._event(a, "terminal_no_charge", "manual", authenticated=True, valid=True, body=body, actor=actor)
+        evidence.operational_reference = provider_reference
+        db.session.flush([evidence])
+        self._move(a, "CLOSED_NO_CHARGE")
+        a.resolved_at, a.resolution_reason, a.resolution_event_id = now(), "legacy_scope_verified_no_charge", evidence.id
+        db.session.flush()
+        scope = self._event(a, "legacy_scope_no_charge", "manual", authenticated=True, valid=True, body=body, actor=actor)
+        scope.operational_reference = provider_reference
+        db.session.flush([scope])
+        parent.paypal_review_hold = False
+        db.session.commit()
+        return a.id
     def close_terminal_verified(self, ident, provider_reference, *, actor):
         """Owner verifies referenced provider confirmation that no POST is in flight.
 

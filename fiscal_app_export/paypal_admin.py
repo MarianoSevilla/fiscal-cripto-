@@ -10,6 +10,14 @@ from paypal_payments import PaymentConflict
 
 def register(app, factory, sender):
     bp = Blueprint("paypal_u04", __name__)
+    @bp.route("/api/admin/paypal/cuarentena")
+    @require_fiscal_advisor
+    def quarantine():
+        events = Event.query.filter_by(kind="quarantine", attempt_id=None).order_by(Event.created_at.desc()).limit(100).all()
+        links = {e.correlation_event_id for e in Event.query.filter(Event.correlation_event_id.in_([e.id for e in events])).all()} if events else set()
+        return jsonify([{"id": e.id, "provider_event_id": e.provider_event_id,
+                         "paypal_order_id": e.paypal_order_id, "paypal_capture_id": e.paypal_capture_id,
+                         "created_at": e.created_at, "correlated": e.id in links} for e in events])
     @bp.route("/api/admin/asesoramiento/solicitudes/<int:ident>/paypal")
     @require_fiscal_advisor
     def detail(ident):
@@ -107,4 +115,21 @@ def register(app, factory, sender):
             db.session.rollback()
             current_app.logger.error("paypal_terminal_close_failed error_category=resolution_pending")
             return jsonify({"error": "No se pudo verificar el cierre. Se conserva el bloqueo."}), 502
+    @bp.route("/api/admin/asesoramiento/solicitudes/<int:ident>/paypal/cerrar-historica-verificada", methods=["POST"])
+    @require_roles("admin")
+    def legacy_close(ident):
+        try:
+            csrf()
+            data = request.get_json(silent=True) or {}
+            if data.get("quote_evidence_verified") is not True or data.get("complete_legacy_scope_no_charge_verified") is not True:
+                raise PaymentConflict("legacy_scope_evidence_required")
+            factory().adopt_current_closed(ident, data.get("quote_reference"), data.get("provider_reference"), actor=current_user.id)
+            return jsonify({"state": "CLOSED_NO_CHARGE"})
+        except (PaymentConflict, ValueError):
+            db.session.rollback()
+            return jsonify({"error": "No se ha acreditado el cierre completo del histórico. Se conserva la retención."}), 409
+        except Exception:
+            db.session.rollback()
+            current_app.logger.error("paypal_legacy_close_failed error_category=resolution_pending")
+            return jsonify({"error": "No se pudo verificar el cierre histórico. Se conserva la retención."}), 502
     app.register_blueprint(bp)

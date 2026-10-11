@@ -336,6 +336,18 @@ async function u04Action(ident, action, advisoryId) {
     await openDetail(advisoryId);
   } catch (error) { alert(error.message); }
 }
+async function u04Quarantine() {
+  const panel = document.getElementById('detailPanel');
+  try {
+    const r = await fetch('/api/admin/paypal/cuarentena', {credentials:'include'});
+    if (!r.ok) throw new Error('No se pudieron consultar los eventos pendientes.');
+    const items = await r.json();
+    panel.innerHTML = '<div style="padding:24px;overflow-wrap:anywhere"><h2>Eventos sin expediente acreditado</h2><p>Últimos 100 eventos. Una coincidencia no confirma el pago de un presupuesto.</p>' +
+      (items.map(e => '<p>Orden: ' + escHtml(e.paypal_order_id || 'No identificada') + '<br>Captura: ' + escHtml(e.paypal_capture_id || 'No identificada') +
+        '<br>Evento: ' + escHtml(e.provider_event_id || e.id) + '<br>' + escHtml(new Date(e.created_at).toLocaleString('es-ES')) +
+        ' · ' + (e.correlated ? 'Correlación posterior documentada' : 'Revisión pendiente') + '</p>').join('') || '<p>No hay eventos.</p>') + '</div>';
+  } catch (error) { panel.textContent = error.message; }
+}
 async function u04Adopt(advisoryId) {
   const reference = prompt('Referencia interna del presupuesto original verificado para esta orden:');
   if (!reference || !confirm('He verificado documentalmente que la orden actual corresponde a ese presupuesto y expediente, con el mismo importe y EUR. La aplicación comprobará además la captura COMPLETED directamente en PayPal.')) return;
@@ -343,6 +355,21 @@ async function u04Adopt(advisoryId) {
     const r = await fetch('/api/admin/asesoramiento/solicitudes/' + advisoryId + '/paypal/adoptar-completada', {
       method:'POST', credentials:'include', headers:{'X-U04-CSRF':window.u04Csrf || '', 'Content-Type':'application/json'},
       body:JSON.stringify({quote_reference:reference, quote_evidence_verified:true})
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'La retención permanece.');
+    await openDetail(advisoryId);
+  } catch (error) { alert(error.message); }
+}
+async function u04CloseLegacy(advisoryId) {
+  const quoteReference = prompt('Referencia interna del presupuesto original verificado:');
+  const providerReference = quoteReference && prompt('Referencia de la confirmación PayPal que cubre TODAS las operaciones anteriores del expediente:');
+  if (!providerReference || !confirm('He verificado que todas las órdenes anteriores, incluidas las sustituidas, están acreditadas y cerradas sin cobro, procesamiento pendiente ni posibilidad de cobro tardío. Si falta algún identificador o prueba, debo mantener la retención.')) return;
+  try {
+    const r = await fetch('/api/admin/asesoramiento/solicitudes/' + advisoryId + '/paypal/cerrar-historica-verificada', {
+      method:'POST', credentials:'include', headers:{'X-U04-CSRF':window.u04Csrf || '', 'Content-Type':'application/json'},
+      body:JSON.stringify({quote_reference:quoteReference,provider_reference:providerReference,
+        quote_evidence_verified:true,complete_legacy_scope_no_charge_verified:true})
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'La retención permanece.');
@@ -357,6 +384,7 @@ async function u04Adopt(advisoryId) {
     <div class="sidebar-filters">
       <input type="search" id="searchInput" class="sidebar-search" placeholder="Buscar por nombre o email…" oninput="filterList()">
       <label style="display:block;font-size:13px;margin:8px 0"><input id="filterFinancial" type="checkbox" onchange="loadList()"> Conciliación o clasificación pendiente</label>
+      <button class="action-btn" onclick="u04Quarantine()">Eventos sin expediente acreditado</button>
       <div class="sidebar-filter-row">
         <select id="filterStatus" onchange="loadList()">
           <option value="">Todos los estados</option>
@@ -553,7 +581,12 @@ async function openDetail(id, el) {
         '<strong>' + escHtml(a.state) + '</strong> · ' + escHtml((a.quoted_amount_cents/100).toFixed(2)) + ' EUR' +
         '<p>Orden: ' + escHtml(a.paypal_order_id || 'No identificada') + '<br>Captura: ' + escHtml(a.paypal_capture_id || 'No identificada') +
         '<br>Generación: ' + escHtml(a.quote_generation || 'Histórica acreditada') +
+        '<br>Referencia de presupuesto: ' + escHtml(a.quote_evidence_ref || 'Generación gestionada') +
+        '<br>' + (a.origin === 'legacy_verified' ? 'Clave local de adopción (no enviada a PayPal): ' : 'Solicitud de creación: ') + escHtml(a.create_request_id || 'No conocida') +
+        '<br>Solicitud de captura: ' + escHtml(a.capture_request_id || 'Nunca reservada') +
         '<br>Inicio: ' + escHtml(new Date(a.created_at).toLocaleString('es-ES')) +
+        '<br>Incertidumbre: ' + escHtml(a.uncertain_at ? new Date(a.uncertain_at).toLocaleString('es-ES') : 'Sin marca') +
+        '<br>Resolución: ' + escHtml(a.resolved_at ? new Date(a.resolved_at).toLocaleString('es-ES') : 'Pendiente') + ' · ' + escHtml(a.resolution_reason || 'Sin resolución') +
         '<br>Última comprobación: ' + escHtml(a.last_observed_at ? new Date(a.last_observed_at).toLocaleString('es-ES') : 'Sin consulta') +
         '<br>Notificaciones: cliente ' + escHtml(a.customer_notification_state) + ' · administración ' + escHtml(a.owner_notification_state) + '</p>' +
         (a.paypal_order_id ? '<button class="action-btn" data-attempt="' + a.id + '" onclick="u04Action(this.dataset.attempt,\'consultar\',' + id + ')">Consultar en PayPal</button>' : '') +
@@ -563,6 +596,7 @@ async function openDetail(id, el) {
     }).join('') || '<p>Sin intentos gestionados. Las órdenes históricas requieren clasificación acreditada.</p>';
     if (_currentUser?.is_admin && financial.hold && financial.legacy_current_order && !financial.attempts.length) {
       financialHtml += '<p>Orden histórica actual: ' + escHtml(financial.legacy_current_order) + '</p><button class="action-btn" onclick="u04Adopt(' + id + ')">Conciliar orden histórica con presupuesto verificado</button>';
+      financialHtml += '<button class="action-btn" onclick="u04CloseLegacy(' + id + ')">Verificar cierre sin cobro de todo el histórico</button>';
     }
 
     const opTypes  = (d.operation_types  || []).join(', ') || '—';

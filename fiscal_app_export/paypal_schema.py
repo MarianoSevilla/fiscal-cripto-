@@ -214,7 +214,16 @@ BEGIN
      NEW.payment_link_token IS DISTINCT FROM OLD.payment_link_token OR (NEW.status='quote_sent' AND OLD.status <> 'quote_sent')) THEN
   RAISE EXCEPTION 'U04 quote is financially protected';
  END IF;
- IF OLD.paypal_review_hold AND NOT NEW.paypal_review_hold THEN RAISE EXCEPTION 'U04 hold requires operational evidence'; END IF;
+ IF OLD.paypal_review_hold AND NOT NEW.paypal_review_hold AND NOT EXISTS(
+   SELECT 1 FROM paypal_payment_attempt a JOIN paypal_payment_event e ON e.attempt_id=a.id
+   WHERE a.advisory_id=OLD.id AND a.origin='legacy_verified' AND a.state='CLOSED_NO_CHARGE' AND
+     a.resolution_reason='legacy_scope_verified_no_charge' AND a.paypal_order_id=OLD.paypal_order_id AND
+     a.quoted_amount_cents=OLD.quoted_amount AND a.quote_evidence_ref IS NOT NULL AND
+     e.kind='legacy_scope_no_charge' AND e.source='manual' AND e.authenticated AND e.contract_valid AND
+     e.xmin=pg_current_xact_id()::xid AND
+     e.actor_user_id IS NOT NULL AND e.operational_reference IS NOT NULL AND e.order_status='VOIDED' AND
+     NOT blocked AND OLD.amount_paid IS NULL AND OLD.paid_at IS NULL AND OLD.paypal_capture_id IS NULL
+ ) THEN RAISE EXCEPTION 'U04 hold requires operational evidence'; END IF;
  IF blocked AND NEW.status='paid_received' AND NEW.status IS DISTINCT FROM OLD.status AND
     NOT EXISTS(SELECT 1 FROM paypal_payment_attempt WHERE advisory_id=OLD.id AND state='RECONCILED') THEN
   RAISE EXCEPTION 'U04 completion must be reconciled';

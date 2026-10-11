@@ -19,7 +19,7 @@ from flask import Flask
 from sqlalchemy import text
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from models import db, FiscalAdvisoryRequest as Advisory, FiscalAdvisoryStatusHistory as History
+from models import db, User, FiscalAdvisoryRequest as Advisory, FiscalAdvisoryStatusHistory as History
 from paypal_models import PayPalPaymentAttempt as Attempt, PayPalPaymentEvent as Event, uid
 from paypal_payments import Payments, PayPalClient, PaymentConflict
 from paypal_schema import verify_structure
@@ -263,6 +263,29 @@ def main():
         assert service.recover(broken)=="RECONCILED"
         assert len(Provider.posts)==count
         print("PG real: lost COMMIT ACK prevents POST; lost SQL connection after charge recovers via GET PASS")
+        # Restricted human evidence plus authenticated GET, not a force flag.
+        owner=User(email="u04-owner@example.invalid",role="admin")
+        db.session.add(owner);db.session.commit();actor=owner.id
+        legacy=Advisory(full_name="Synthetic",email="legacy@example.invalid",tax_residence_country="Synthetic",
+            tax_year=2026,service_type="revision_basica",case_description="Synthetic only",status="quote_sent",
+            paypal_review_hold=True,quoted_amount=10001,paypal_order_id="LEGACYVOID04")
+        db.session.add(legacy);db.session.commit();legacy_id=legacy.id;db.session.rollback()
+        Provider.orders["LEGACYVOID04"]={"id":"LEGACYVOID04","intent":"CAPTURE","status":"VOIDED",
+            "purchase_units":[{"custom_id":str(legacy_id),"amount":{"value":"100.01","currency_code":"EUR"}}]}
+        count=len(Provider.posts)
+        closed=service.adopt_current_closed(legacy_id,"quote-reviewed-04","provider-all-operations-04",actor=actor)
+        assert service.read(closed)["state"]=="CLOSED_NO_CHARGE"
+        assert not db.session.get(Advisory,legacy_id).paypal_review_hold
+        db.session.rollback()
+        # A later hold cannot be released by replaying stale resolution evidence.
+        with db.engine.begin() as conn:conn.execute(text("UPDATE fiscal_advisory_requests SET paypal_review_hold=TRUE WHERE id=:id"),{"id":legacy_id})
+        try:
+            with db.engine.begin() as conn:conn.execute(text("UPDATE fiscal_advisory_requests SET paypal_review_hold=FALSE WHERE id=:id"),{"id":legacy_id})
+            raise AssertionError("stale evidence released a new hold")
+        except AssertionError:raise
+        except Exception:pass
+        assert len(Provider.posts)==count
+        print("PG real: verified legacy closure, retained order, no POST, stale evidence cannot clear a new hold PASS")
         # Real DDL guards resist incorrect SQL and rollback leaves evidence intact.
         failures=[
             ("UPDATE paypal_payment_attempt SET quoted_amount_cents=1 WHERE id=:id",{"id":ident}),

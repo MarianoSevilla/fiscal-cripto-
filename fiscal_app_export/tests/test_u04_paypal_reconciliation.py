@@ -237,7 +237,7 @@ def test_close_never_reserved_only(case):
     service.close_uncaptured(aid,actor=None)
     assert Attempt.query.one().state=="CLOSED_NO_CHARGE"
     db.session.rollback()
-    with pytest.raises(PaymentConflict): service.capture(aid,"ORDER04TEST")
+    assert service.capture(aid,"ORDER04TEST")=="CLOSED_NO_CHARGE"
     assert fake.posts==0
 
 
@@ -384,3 +384,44 @@ def test_financial_panel_roles_csrf_and_no_capture_actions(case,role):
         close=client.post(f'/api/admin/paypal/attempts/{aid}/cerrar-sin-captura',headers={'X-U04-CSRF':csrf})
         assert close.status_code==(200 if role=='admin' else 403)
     assert fake.posts==0 and fake.creates==1
+
+
+def test_legacy_closed_scope_keeps_unknown_unapproved_operations_blocked(case):
+    from models import User
+    service,fake,ident=case
+    owner=User(email='scope-owner@example.invalid',role='admin');db.session.add(owner);db.session.commit();actor=owner.id
+    parent=db.session.get(Advisory,ident);parent.paypal_quote_generation=None;parent.paypal_review_hold=True
+    parent.paypal_order_id='ORDER04TEST';db.session.commit()
+    fake.body={'id':'ORDER04TEST','status':'APPROVED','intent':'CAPTURE','purchase_units':[{
+        'custom_id':str(ident),'amount':{'value':'100.01','currency_code':'EUR'}}]}
+    with pytest.raises(PaymentConflict):service.adopt_current_closed(ident,'quote-proof','provider-scope-proof',actor=actor)
+    assert Advisory.query.one().paypal_review_hold and Attempt.query.count()==0
+    db.session.rollback();fake.body['status']='VOIDED'
+    aid=service.adopt_current_closed(ident,'quote-proof','provider-scope-proof',actor=actor)
+    a=Attempt.query.one();parent=Advisory.query.one()
+    assert a.id==aid and a.state=='CLOSED_NO_CHARGE' and a.quote_generation is None
+    assert not parent.paypal_review_hold and parent.paypal_order_id=='ORDER04TEST' and parent.paid_at is None
+    assert Event.query.filter_by(kind='legacy_scope_no_charge',actor_user_id=actor).count()==1
+    assert fake.creates==fake.posts==0
+
+
+def test_terminal_voided_without_provider_reference_stays_uncertain(case):
+    service,fake,_,aid=prepared(case);fake.timeout=True;fake.complete_on_timeout=False
+    with pytest.raises(TimeoutError):service.capture(aid,'ORDER04TEST')
+    fake.body['status']='VOIDED'
+    with pytest.raises(PaymentConflict):service.close_terminal_verified(aid,None,actor=1)
+    assert service.read(aid)['state']=='UNCERTAIN' and fake.posts==1
+
+
+def test_signed_late_capture_on_closed_order_reactivates_hold(case):
+    service,fake,ident,aid=prepared(case)
+    service.close_uncaptured(aid,actor=None)
+    resource={'id':'LATECAPTURE04','status':'COMPLETED','amount':{'value':'100.01','currency_code':'EUR'},
+        'supplementary_data':{'related_ids':{'order_id':'ORDER04TEST'}}}
+    service.webhook({'id':'WH-CLOSED-LATE','resource':resource})
+    parent=db.session.get(Advisory,ident)
+    assert parent.paypal_review_hold and parent.paid_at is None
+    assert Attempt.query.one().state=='CLOSED_NO_CHARGE'
+    db.session.rollback()
+    with pytest.raises(PaymentConflict):service.start('u04-synthetic','https://app.example.invalid')
+    assert fake.creates==1 and fake.posts==0
