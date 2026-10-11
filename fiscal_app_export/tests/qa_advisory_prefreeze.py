@@ -47,6 +47,9 @@ def setup():
         db.session.add_all([User(id=i, email=f'fixture{i}@example.invalid', role=role,
                                 is_active=True, email_verified_at=datetime(2025, 1, 1))
                             for i, role in enumerate(['admin', 'fiscal_advisor', 'user'], 1)])
+        # The models have scalar FKs, not a relationship coordinating INSERTs.
+        # PostgreSQL enforces these immediately: persist parents before child.
+        db.session.flush()
         db.session.add(FiscalAdvisoryRequest(id=1, user_id=3, full_name='Synthetic Client',
             email='client@example.invalid', tax_residence_country='España', tax_year=2025,
             service_type='revision_basica', case_description='Synthetic case description',
