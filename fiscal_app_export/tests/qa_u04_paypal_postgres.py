@@ -103,7 +103,7 @@ class LoopbackClient(PayPalClient):
 def app_for(uri):
     assert uri.startswith("postgresql://postgres:ci-only-test-password@127.0.0.1:5432/u04_")
     app=Flask("u04-postgres-synthetic")
-    app.config.update(SQLALCHEMY_DATABASE_URI=uri)
+    app.config.update(SQLALCHEMY_DATABASE_URI=uri.replace("postgresql://", "postgresql+psycopg2://", 1))
     db.init_app(app)
     return app
 

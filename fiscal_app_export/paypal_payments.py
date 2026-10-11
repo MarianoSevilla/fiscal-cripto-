@@ -80,6 +80,8 @@ def approval_url(body, environment):
 def contract(body, snap, *, completed=False):
     if not isinstance(body, dict) or body.get("id") != snap["paypal_order_id"] or body.get("intent") != "CAPTURE":
         raise InvalidEvidence("order_contract")
+    if body.get("status") not in ("CREATED", "SAVED", "APPROVED", "VOIDED", "COMPLETED", "PAYER_ACTION_REQUIRED"):
+        raise InvalidEvidence("order_status")
     units = body.get("purchase_units")
     if not isinstance(units, list) or len(units) != 1 or not isinstance(units[0], dict):
         raise InvalidEvidence("purchase_units")
@@ -184,6 +186,10 @@ class Payments:
                       source=source, kind=kind, authenticated=authenticated, contract_valid=valid,
                       provider_event_id=provider_event_id, actor_user_id=actor,
                       correlation_event_id=correlation, evidence_hash=digest(data),
+                      from_state=getattr(attempt, "_u04_previous_state", None) if attempt else None,
+                      to_state=attempt.state if attempt else None,
+                      endpoint={"get_order": "orders_get", "create_response": "orders_create",
+                                "capture_response": "orders_capture"}.get(source),
                       observed_at=now(), paypal_order_id=data["order_id"], paypal_capture_id=data["capture_id"],
                       order_status=data["order_status"], capture_status=data["capture_status"],
                       amount_cents=data["amount_cents"], currency="EUR" if valid else None)
@@ -196,6 +202,7 @@ class Payments:
             raise PaymentConflict("forbidden_transition")
         if attempt.state == "UNCERTAIN" and state == "ORDER_CREATED" and attempt.capture_started_at:
             raise PaymentConflict("capture_not_replayable")
+        attempt._u04_previous_state = attempt.state
         attempt.state, attempt.version = state, attempt.version + 1
     def _eligible(self, parent, *, quote=False):
         if not self.writes_enabled or parent.paypal_review_hold or parent.amount_paid is not None or parent.paid_at or parent.status not in (("submitted", "quote_sent") if quote else ("quote_sent",)):
@@ -444,6 +451,13 @@ class Payments:
         if aid:
             self._parent(attempt.advisory_id)
             attempt = self._attempt(aid)
+        else:
+            # A signed hint can retain a candidate, never establish a payment.
+            hint = resource.get("custom_id")
+            if isinstance(hint, str) and re.fullmatch(r"[1-9][0-9]{0,9}", hint):
+                candidate = Advisory.query.filter_by(id=int(hint)).with_for_update().first()
+                if candidate:
+                    candidate.paypal_review_hold = True
         existing = Event.query.filter_by(provider_account_scope=self.scope, environment=self.environment, provider_event_id=event_id).first() if event_id else None
         if not existing:
             e = self._event(attempt, "webhook_observed" if aid else "quarantine", "webhook",
@@ -478,6 +492,8 @@ class Payments:
         for e in events:
             if not Event.query.filter_by(attempt_id=ident, correlation_event_id=e.id).first():
                 self._event(a, "quarantine_correlated", correlation=e.id, authenticated=True)
+            if e.paypal_capture_id and not a.capture_started_at and a.state not in ("RECONCILED", "CLOSED_NO_CHARGE", "REVIEW_REQUIRED"):
+                self._move(a, "REVIEW_REQUIRED")
         db.session.commit()
         if events:
             self.recover(ident)
@@ -548,6 +564,30 @@ class Payments:
         db.session.commit()
         self.correlate(ident)
         return ident
+    def close_terminal_verified(self, ident, provider_reference, *, actor):
+        """Owner verifies referenced provider confirmation that no POST is in flight.
+
+        GET must additionally show this same order VOIDED without any capture.
+        APPROVED/absence/time alone cannot call this path. No financial POST.
+        """
+        if actor is None or not isinstance(provider_reference, str) or not re.fullmatch(r"[A-Za-z0-9._-]{1,100}", provider_reference):
+            raise PaymentConflict("provider_evidence_required")
+        snap = self.read(ident)
+        if snap["origin"] != "managed" or not snap["capture_started_at"] or snap["paypal_capture_id"] or snap["state"] not in ("UNCERTAIN", "REVIEW_REQUIRED"):
+            raise PaymentConflict("terminal_evidence_required")
+        body = self.client.get_order(snap["paypal_order_id"])
+        if contract(body, snap) or body.get("status") != "VOIDED":
+            raise PaymentConflict("terminal_evidence_required")
+        self._parent(snap["advisory_id"])
+        a = self._attempt(ident)
+        if a.version != snap["version"] or a.state not in ("UNCERTAIN", "REVIEW_REQUIRED") or a.paypal_capture_id:
+            raise PaymentConflict("concurrent_observation")
+        evidence = self._event(a, "terminal_no_charge", "manual", authenticated=True, valid=True, body=body, actor=actor)
+        evidence.operational_reference = provider_reference
+        db.session.flush([evidence])
+        self._move(a, "CLOSED_NO_CHARGE")
+        a.resolved_at, a.resolution_reason, a.resolution_event_id = now(), "provider_verified_terminal", evidence.id
+        db.session.commit()
     def notify(self, ident, sender):
         for who in ("customer", "owner"):
             snap = self.read(ident)

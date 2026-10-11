@@ -239,3 +239,116 @@ def test_close_never_reserved_only(case):
     db.session.rollback()
     with pytest.raises(PaymentConflict): service.capture(aid,"ORDER04TEST")
     assert fake.posts==0
+
+
+def test_webhook_before_order_saved_preserves_quarantine_and_blocks_capture(case):
+    service,fake,ident=case
+    original=fake.create
+    def early(*args):
+        body=original(*args)
+        service.webhook({'id':'WH-EARLY','resource':{'id':'EARLYCAP','status':'COMPLETED',
+            'amount':{'value':'100.01','currency_code':'EUR'},
+            'supplementary_data':{'related_ids':{'order_id':body['id']}}}})
+        return body
+    fake.create=early
+    service.start('u04-synthetic','https://app.example.invalid')
+    original_event=Event.query.filter_by(provider_event_id='WH-EARLY').one()
+    assert original_event.attempt_id is None and original_event.kind=='quarantine'
+    assert Event.query.filter_by(kind='quarantine_correlated',correlation_event_id=original_event.id).count()==1
+    a=Attempt.query.one();assert a.state=='REVIEW_REQUIRED'
+    aid=a.id;db.session.rollback()
+    service.capture(aid,'ORDER04TEST')
+    assert fake.posts==0 and Advisory.query.one().paid_at is None
+
+
+def test_minimal_capture_response_requires_get(case):
+    service,fake,_,aid=prepared(case)
+    original=fake.capture
+    def minimal(snap):
+        body=original(snap)
+        return {'id':body['id'],'status':'COMPLETED','links':[]}
+    fake.capture=minimal
+    assert service.capture(aid,'ORDER04TEST')=='RECONCILED'
+    assert fake.posts==1 and Advisory.query.one().amount_paid==10001
+
+
+def test_get_failure_after_timeout_keeps_same_order(case):
+    service,fake,_,aid=prepared(case);fake.timeout=True;fake.complete_on_timeout=False
+    with pytest.raises(TimeoutError): service.capture(aid,'ORDER04TEST')
+    fake.get_order=Mock(side_effect=TimeoutError('synthetic GET unavailable'))
+    with pytest.raises(TimeoutError): service.recover(aid)
+    a=Attempt.query.one()
+    assert a.state=='UNCERTAIN' and a.paypal_order_id=='ORDER04TEST'
+    assert fake.posts==fake.creates==1
+
+
+def test_capture_commit_ack_lost_never_posts(case,monkeypatch):
+    service,fake,_,aid=prepared(case)
+    original=db.session.commit
+    def ack_lost():
+        original()
+        raise RuntimeError('synthetic commit succeeded but ACK lost')
+    monkeypatch.setattr(db.session,'commit',ack_lost)
+    with pytest.raises(RuntimeError): service.capture(aid,'ORDER04TEST')
+    monkeypatch.setattr(db.session,'commit',original)
+    assert service.read(aid)['state']=='CAPTURE_STARTED'
+    assert fake.posts==0
+    assert service.recover(aid)=='UNCERTAIN' and fake.posts==0
+
+
+def test_creation_id_commit_failure_never_recreates(case,monkeypatch):
+    service,fake,_=case
+    original=db.session.commit;calls=0
+    def fail_second():
+        nonlocal calls
+        calls+=1
+        if calls==2: raise RuntimeError('synthetic TC2 failure')
+        original()
+    monkeypatch.setattr(db.session,'commit',fail_second)
+    with pytest.raises(RuntimeError): service.start('u04-synthetic','https://app.example.invalid')
+    monkeypatch.setattr(db.session,'commit',original)
+    assert fake.creates==1
+    with pytest.raises(PaymentConflict): service.start('u04-synthetic','https://app.example.invalid')
+    assert fake.creates==1 and Attempt.query.one().state=='UNCERTAIN'
+
+
+def test_expired_quote_keeps_reserved_payment(case):
+    service,fake,ident,aid=prepared(case);fake.timeout=True;fake.complete_on_timeout=False
+    with pytest.raises(TimeoutError): service.capture(aid,'ORDER04TEST')
+    parent=db.session.get(Advisory,ident);parent.quote_expires_at=datetime.utcnow()-timedelta(days=1);db.session.commit()
+    assert service.capture(aid,'ORDER04TEST')=='UNCERTAIN'
+    assert fake.posts==1
+
+
+def test_legacy_adoption_requires_verified_get_and_keeps_hold(case):
+    service,fake,ident=case
+    parent=db.session.get(Advisory,ident)
+    parent.paypal_quote_generation=None;parent.paypal_review_hold=True;parent.paypal_order_id='ORDER04TEST'
+    db.session.commit()
+    # Synthetic provider operation predates the protocol; no application POST.
+    fake.body={'id':'ORDER04TEST','status':'COMPLETED','intent':'CAPTURE','purchase_units':[{
+        'custom_id':str(ident),'amount':{'value':'100.01','currency_code':'EUR'},'payments':{'captures':[{
+        'id':'CAPTURE04TEST','status':'COMPLETED','amount':{'value':'100.01','currency_code':'EUR'}}]}}]}
+    aid=service.adopt_current_completed(ident,'quote-evidence-04',actor=None)
+    a=Attempt.query.one();parent=db.session.get(Advisory,ident)
+    assert a.id==aid and a.origin=='legacy_verified' and a.quote_generation is None
+    assert a.capture_request_id is None and a.capture_started_at is None
+    assert a.state=='RECONCILED' and parent.paypal_review_hold and parent.amount_paid==10001
+    assert fake.creates==fake.posts==0
+
+
+def test_legacy_reference_alone_never_confirms(case):
+    service,fake,ident=case
+    parent=db.session.get(Advisory,ident);parent.paypal_quote_generation=None
+    parent.paypal_review_hold=True;parent.paypal_order_id='ORDER04TEST';db.session.commit()
+    fake.body={'id':'ORDER04TEST','status':'COMPLETED'}
+    with pytest.raises(InvalidEvidence): service.adopt_current_completed(ident,'quote-evidence-04',actor=None)
+    assert Attempt.query.count()==0 and Advisory.query.one().paid_at is None
+    assert fake.creates==fake.posts==0
+
+
+def test_terminal_reference_and_approved_get_do_not_release(case):
+    service,fake,_,aid=prepared(case);fake.timeout=True;fake.complete_on_timeout=False
+    with pytest.raises(TimeoutError): service.capture(aid,'ORDER04TEST')
+    with pytest.raises(PaymentConflict): service.close_terminal_verified(aid,'paypal-confirmation-04',actor=123)
+    assert service.read(aid)['state']=='UNCERTAIN' and fake.posts==1

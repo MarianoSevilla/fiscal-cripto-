@@ -19,6 +19,8 @@ def verify_structure(connection, *, triggers=True):
         columns = {c["name"]: c for c in inspector.get_columns(table.name)}
         if set(columns) != set(c.name for c in table.columns):
             raise RuntimeError("U04 incompatible columns: " + table.name)
+        if inspector.get_pk_constraint(table.name)["constrained_columns"] != [c.name for c in table.primary_key.columns]:
+            raise RuntimeError("U04 incompatible primary key: " + table.name)
         for c in table.columns:
             actual = columns[c.name]
             expected_type = c.type.compile(dialect=connection.dialect)
@@ -40,7 +42,7 @@ def verify_structure(connection, *, triggers=True):
                           and f["referred_columns"] == [e.column.name for e in fk.elements]]
             if not candidates or str(candidates[0]["options"].get("ondelete", "")).upper() != str(fk.ondelete).upper():
                 raise RuntimeError("U04 incompatible foreign key: " + table.name)
-            if fk.deferrable and not candidates[0]["options"].get("deferrable"):
+            if fk.deferrable and (not candidates[0]["options"].get("deferrable") or candidates[0]["options"].get("initially", "").upper() != "DEFERRED"):
                 raise RuntimeError("U04 resolution FK must be deferred")
         indexes = {i["name"]: i for i in inspector.get_indexes(table.name)}
         for index in table.indexes:
@@ -79,6 +81,19 @@ def verify_structure(connection, *, triggers=True):
                 "'fiscal_advisory_requests'::regclass)")).scalars())
             if not set(TRIGGERS).issubset(present):
                 raise RuntimeError("U04 financial triggers missing or disabled")
+            bindings = {r[0]: tuple(r[1:]) for r in connection.execute(text(
+                "SELECT tgname,tgrelid::regclass::text,tgfoid::regproc::text,tgtype,tgnargs,tgqual IS NULL "
+                "FROM pg_trigger WHERE NOT tgisinternal AND tgname LIKE 'u04_%'"))}
+            expected_bindings = {
+                "u04_attempt_guard": ("paypal_payment_attempt", "u04_attempt_guard_fn", 23, 0, True),
+                "u04_attempt_delete": ("paypal_payment_attempt", "u04_no_delete_fn", 11, 0, True),
+                "u04_event_append": ("paypal_payment_event", "u04_event_append_fn", 27, 0, True),
+                "u04_advisory_guard": ("fiscal_advisory_requests", "u04_advisory_guard_fn", 27, 0, True),
+                "u04_event_truncate": ("paypal_payment_event", "u04_no_delete_fn", 34, 0, True),
+                "u04_attempt_truncate": ("paypal_payment_attempt", "u04_no_delete_fn", 34, 0, True),
+            }
+            if any(bindings.get(k) != v for k, v in expected_bindings.items()):
+                raise RuntimeError("U04 incompatible financial trigger binding")
             class Collector:
                 def __init__(self): self.statements = []
                 def execute(self, stmt): self.statements.append(str(stmt))
@@ -140,11 +155,18 @@ BEGIN
   IF NOT FOUND OR evidence.attempt_id IS DISTINCT FROM NEW.id OR NOT evidence.authenticated OR NOT evidence.contract_valid THEN
    RAISE EXCEPTION 'U04 verified resolution event required';
   END IF;
-  IF NEW.state='RECONCILED' AND (evidence.kind <> 'completed_contract' OR evidence.capture_status <> 'COMPLETED' OR
-    evidence.order_status <> 'COMPLETED' OR evidence.amount_cents IS DISTINCT FROM NEW.quoted_amount_cents OR
-    evidence.currency <> 'EUR' OR evidence.paypal_capture_id IS DISTINCT FROM NEW.paypal_capture_id OR
-    evidence.paypal_order_id IS DISTINCT FROM NEW.paypal_order_id) THEN RAISE EXCEPTION 'U04 invalid completion evidence'; END IF;
-  IF NEW.state='CLOSED_NO_CHARGE' AND (evidence.kind <> 'closed_without_capture' OR NEW.capture_started_at IS NOT NULL) THEN
+  IF NEW.state='RECONCILED' AND (
+    evidence.kind='completed_contract' AND evidence.capture_status='COMPLETED' AND evidence.order_status='COMPLETED' AND
+    evidence.amount_cents IS NOT DISTINCT FROM NEW.quoted_amount_cents AND evidence.currency='EUR' AND
+    evidence.paypal_capture_id IS NOT DISTINCT FROM NEW.paypal_capture_id AND
+    evidence.paypal_order_id IS NOT DISTINCT FROM NEW.paypal_order_id
+  ) IS NOT TRUE THEN RAISE EXCEPTION 'U04 invalid completion evidence'; END IF;
+  IF NEW.state='CLOSED_NO_CHARGE' AND (
+    (evidence.kind='closed_without_capture' AND NEW.capture_started_at IS NULL) OR
+    (evidence.kind='terminal_no_charge' AND evidence.source='manual' AND evidence.actor_user_id IS NOT NULL AND
+     evidence.operational_reference IS NOT NULL AND evidence.order_status='VOIDED' AND
+     evidence.paypal_order_id IS NOT DISTINCT FROM NEW.paypal_order_id AND NEW.paypal_capture_id IS NULL)
+  ) IS NOT TRUE THEN
    RAISE EXCEPTION 'U04 insufficient negative evidence';
   END IF;
  END IF;
@@ -177,6 +199,10 @@ BEGIN
   RAISE EXCEPTION 'U04 quote is financially protected';
  END IF;
  IF OLD.paypal_review_hold AND NOT NEW.paypal_review_hold THEN RAISE EXCEPTION 'U04 hold requires operational evidence'; END IF;
+ IF blocked AND NEW.status='paid_received' AND NEW.status IS DISTINCT FROM OLD.status AND
+    NOT EXISTS(SELECT 1 FROM paypal_payment_attempt WHERE advisory_id=OLD.id AND state='RECONCILED') THEN
+  RAISE EXCEPTION 'U04 completion must be reconciled';
+ END IF;
  IF blocked AND (NEW.amount_paid IS DISTINCT FROM OLD.amount_paid OR NEW.currency IS DISTINCT FROM OLD.currency OR
    NEW.paid_at IS DISTINCT FROM OLD.paid_at OR NEW.payment_provider IS DISTINCT FROM OLD.payment_provider OR
    NEW.paypal_order_id IS DISTINCT FROM OLD.paypal_order_id OR NEW.paypal_capture_id IS DISTINCT FROM OLD.paypal_capture_id) THEN

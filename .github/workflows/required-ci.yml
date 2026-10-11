@@ -125,7 +125,7 @@ jobs:
         run: python fiscal_app_export/tests/qa_u04_paypal_postgres.py
 
       - name: Preserve U03 OIDC identity isolation
-        run: python fiscal_app_export/tests/qa_google_oauth_identity.py
+        run: python -m pytest -q fiscal_app_export/tests/test_google_oauth_callback.py
 
   browser-navigation:
     name: browser-navigation

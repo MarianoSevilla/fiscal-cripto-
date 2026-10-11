@@ -32,6 +32,7 @@ def register(app, factory, sender):
             items.append(d)
         return jsonify({"hold": parent.paypal_review_hold, "generation": parent.paypal_quote_generation,
                         "attempts": items, "csrf_token": session["u04_csrf"],
+                        "legacy_current_order": parent.paypal_order_id if not parent.paypal_quote_generation and not parent.paid_at else None,
                         "writes_enabled": app.config["PAYPAL_FINANCIAL_WRITES_ENABLED"]})
     def csrf():
         expected = session.get("u04_csrf", "")
@@ -70,4 +71,40 @@ def register(app, factory, sender):
             db.session.rollback()
             current_app.logger.error("paypal_admin_close_failed error_category=resolution_pending")
             return jsonify({"error": "No se ha liberado la operación."}), 502
+    @bp.route("/api/admin/asesoramiento/solicitudes/<int:ident>/paypal/adoptar-completada", methods=["POST"])
+    @require_roles("admin")
+    def adopt(ident):
+        try:
+            csrf()
+            data = request.get_json(silent=True) or {}
+            if data.get("quote_evidence_verified") is not True:
+                raise PaymentConflict("quote_evidence_required")
+            service = factory()
+            attempt = service.adopt_current_completed(ident, data.get("quote_reference"), actor=current_user.id)
+            service.notify(attempt, sender)
+            return jsonify({"state": "RECONCILED"})
+        except (PaymentConflict, ValueError):
+            db.session.rollback()
+            return jsonify({"error": "Presupuesto u operación sin evidencia suficiente. Se conserva la retención."}), 409
+        except Exception:
+            db.session.rollback()
+            current_app.logger.error("paypal_legacy_adoption_failed error_category=resolution_pending")
+            return jsonify({"error": "No se pudo completar la comprobación. Se conserva la retención."}), 502
+    @bp.route("/api/admin/paypal/attempts/<uuid:ident>/cerrar-terminal-verificada", methods=["POST"])
+    @require_roles("admin")
+    def terminal_close(ident):
+        try:
+            csrf()
+            data = request.get_json(silent=True) or {}
+            if data.get("provider_no_charge_and_no_inflight_verified") is not True:
+                raise PaymentConflict("provider_evidence_required")
+            factory().close_terminal_verified(str(ident), data.get("provider_reference"), actor=current_user.id)
+            return jsonify({"state": "CLOSED_NO_CHARGE"})
+        except (PaymentConflict, ValueError):
+            db.session.rollback()
+            return jsonify({"error": "La consulta y la evidencia del proveedor no permiten liberar esta orden."}), 409
+        except Exception:
+            db.session.rollback()
+            current_app.logger.error("paypal_terminal_close_failed error_category=resolution_pending")
+            return jsonify({"error": "No se pudo verificar el cierre. Se conserva el bloqueo."}), 502
     app.register_blueprint(bp)
