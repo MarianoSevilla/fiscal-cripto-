@@ -224,6 +224,8 @@ class FiscalAdvisoryRequest(db.Model):
     stripe_payment_intent_id   = db.Column(db.String(255), nullable=True)
     paypal_order_id            = db.Column(db.String(64),  nullable=True, index=True)
     paypal_capture_id          = db.Column(db.String(64),  nullable=True)
+    paypal_quote_generation    = db.Column(db.Uuid(as_uuid=False), nullable=True)
+    paypal_review_hold         = db.Column(db.Boolean, nullable=False, server_default=db.true(), default=True)
     payment_provider           = db.Column(db.String(16),  nullable=True)   # 'paypal' | 'stripe'
     amount_paid                = db.Column(db.Integer, nullable=True)   # céntimos — lo que el cliente pagó realmente
     currency                   = db.Column(db.String(3), nullable=True, default="eur")

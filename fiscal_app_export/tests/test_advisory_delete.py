@@ -133,6 +133,7 @@ def _make_advisory(_app, user_id, amount_paid=None, status="paid_received"):
             case_description      = "Descripción de prueba para test.",
             status                = status,
             amount_paid           = amount_paid,
+            paypal_review_hold    = False,  # Managed synthetic record without protected payment attempts.
         )
         db.session.add(adv)
         db.session.commit()
@@ -259,3 +260,16 @@ def test_audit_log_creado_al_borrar(client, admin_user, _app):
         ).first()
         assert log is not None
         assert log.admin_id == admin_user
+
+
+def test_admin_no_borra_expediente_con_retencion_legacy(client, admin_user, _app):
+    with _app.app_context():
+        adv=FiscalAdvisoryRequest(user_id=admin_user,full_name='Synthetic retained',
+            email='retained@example.invalid',tax_residence_country='Synthetic',tax_year=2026,
+            service_type='revision_basica',case_description='Synthetic only',status='submitted')
+        db.session.add(adv);db.session.commit();ident=adv.id
+        assert adv.paypal_review_hold is True
+    _login(client,'admin_adv_test@example.com','admin-pass-test-1234')
+    response=client.delete(f'/api/admin/asesoramiento/solicitudes/{ident}')
+    assert response.status_code==409
+    with _app.app_context():assert db.session.get(FiscalAdvisoryRequest,ident) is not None

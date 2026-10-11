@@ -172,7 +172,7 @@ p.body-text { font-size: 15px; color: var(--sub); line-height: 1.7; margin-botto
     <!-- Pending: mostrar presupuesto y botón de pago -->
     <div class="state" id="statePending">
       <div id="cancelledNotice" class="cancelled-notice" style="display:none">
-        Has cancelado el pago en PayPal. Puedes intentarlo de nuevo cuando quieras.
+        Has cancelado el pago en PayPal. Comprueba el estado de tu solicitud antes de continuar.
       </div>
       <p style="font-size:13px;color:var(--muted);margin-bottom:6px;">Presupuesto de asesoramiento fiscal</p>
       <h1 id="clientName"></h1>
@@ -197,6 +197,12 @@ p.body-text { font-size: 15px; color: var(--sub); line-height: 1.7; margin-botto
     </div>
 
     <!-- Already paid -->
+    <div class="state" id="stateReconciliation">
+      <div class="state-icon">⏳</div>
+      <h2>Comprobación del pago</h2>
+      <p id="reconciliationMessage">Estamos comprobando el resultado de tu pago con PayPal. No realices otro pago. Conservamos tu solicitud y te informaremos cuando la comprobación termine.</p>
+      <a href="/contacto" class="btn-back">Contactar</a>
+    </div>
     <div class="state" id="stateAlreadyPaid">
       <div class="state-icon">✅</div>
       <h1>Pago ya confirmado</h1>
@@ -255,6 +261,10 @@ async function cargarPresupuesto() {
     }
 
     if (data.state === 'already_paid') { showState('stateAlreadyPaid'); return; }
+    if (data.state === 'reconciliation_pending') {
+      document.getElementById('reconciliationMessage').textContent = data.message;
+      showState('stateReconciliation'); return;
+    }
     if (data.state === 'expired')      { showState('stateExpired');     return; }
 
     // state === 'pending'
@@ -299,8 +309,8 @@ async function iniciarPago() {
   } catch (err) {
     errorEl.textContent   = err.message;
     errorEl.style.display = 'block';
-    btn.disabled = false;
-    btn.innerHTML = '<span class="paypal-logo-text">PayPal</span><span>Pagar con PayPal</span>';
+    showState('stateReconciliation');
+    await cargarPresupuesto();
   }
 }
 

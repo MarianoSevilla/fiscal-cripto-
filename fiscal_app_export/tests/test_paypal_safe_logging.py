@@ -14,6 +14,9 @@ import unittest
 from unittest.mock import Mock, patch
 
 from flask import Flask, jsonify, request
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from paypal_payments import PaymentConflict, PENDING_MESSAGE
 
 
 SYNTHETIC_TOKEN = "u01-fictitious-payment-token-never-production"
@@ -54,6 +57,8 @@ class PayPalSafeLoggingTests(unittest.TestCase):
             "datetime": datetime,
             "jsonify": jsonify,
             "request": request,
+            "PaymentConflict": PaymentConflict,
+            "PENDING_MESSAGE": PENDING_MESSAGE,
         }
         source = Path(__file__).resolve().parents[1] / "app.py"
         tree = ast.parse(source.read_text(encoding="utf-8"))
@@ -167,12 +172,14 @@ class PayPalSafeLoggingTests(unittest.TestCase):
             "order_id": "U01-SYNTHETIC-ORDER",
             "approval_url": "https://provider.example.invalid/approve",
         }
-        self.db_session.commit.side_effect = RuntimeError(SENSITIVE_MESSAGE)
+        # U04 moved the durable commit inside the protocol helper. A failure
+        # there still exercises the same U01 HTTP/log confidentiality contract.
+        self.create_order.side_effect = RuntimeError(SENSITIVE_MESSAGE)
         with self.assertLogs(self.flask_app.logger, level="ERROR") as logs:
             response = self._post()
         self.assertEqual(response.status_code, 502)
         self.assertEqual(response.get_json(), {"error": GENERIC_ERROR})
-        self.db_session.commit.assert_called_once_with()
+        self.db_session.commit.assert_not_called()
         self.db_session.rollback.assert_called_once_with()
         self.assertEqual(
             logs.records[0].getMessage(),
@@ -197,16 +204,15 @@ class PayPalSafeLoggingTests(unittest.TestCase):
         self.assertEqual(
             response.get_json(), {"ok": True, "redirect_url": approval_url}
         )
-        self.assertEqual(self.advisory.paypal_order_id, "U01-SYNTHETIC-ORDER")
-        self.assertIsNotNone(self.advisory.quote_accepted_at)
-        self.assertEqual(self.advisory.quote_acceptance_user_agent,
-                         "U01 synthetic client")
+        # Handler delegates persistence to the U04 helper; it cannot overwrite
+        # an order or perform another commit after that helper returns.
+        self.assertIsNone(self.advisory.paypal_order_id)
         self.query.filter_by.assert_called_once_with(
             payment_link_token=SYNTHETIC_TOKEN
         )
-        self.query.with_for_update.assert_called_once_with()
+        self.query.with_for_update.assert_not_called()
         self.create_order.assert_called_once_with(self.advisory)
-        self.db_session.commit.assert_called_once_with()
+        self.db_session.commit.assert_not_called()
         self.db_session.rollback.assert_not_called()
         log_error.assert_not_called()
 

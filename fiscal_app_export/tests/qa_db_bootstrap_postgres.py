@@ -18,7 +18,7 @@ HOST = "127.0.0.1"
 PORT = 5432
 USER = "postgres"
 PASSWORD = "ci-only-test-password"
-HEAD = "v5w6x7y8z9a0"
+HEAD = "w6x7y8z9a0b1"
 
 
 def _create_db(name: str) -> str:
@@ -41,7 +41,7 @@ def _db_conn(name: str):
 
 
 def _env(name: str) -> dict[str, str]:
-    result = os.environ.copy()
+    result = {k: os.environ[k] for k in ("PATH", "PYTHONPATH", "SYSTEMROOT", "TMPDIR") if k in os.environ}
     result.update({
         "FLASK_ENV": "production",
         "SECRET_KEY": "CI-TEST-ONLY-DO-NOT-USE-IN-PRODUCTION-123",
@@ -88,6 +88,7 @@ def main() -> None:
     fresh = _create_db("bootstrap_fresh_ci")
     _bootstrap(fresh)
     _assert_version(fresh)
+    _run(fresh,"from app import app; assert app.config['U04_FINANCIAL_SCHEMA_READY'] is True")
     with _db_conn(fresh) as conn, conn.cursor() as cur:
         cur.execute(
             "SELECT headline FROM resources WHERE slug = 'experimento-bitcoin'"
@@ -142,10 +143,62 @@ with app.app_context():
         cur.execute("CREATE TABLE users (id SERIAL PRIMARY KEY, email VARCHAR(254))")
     failed = _bootstrap(incomplete, success=False)
     assert "schema differs" in failed.stdout or "complete application schema" in failed.stdout
+    # 5. Exact previous-head shape, with synthetic financial history. Build it
+    # before importing app so import-time create_all exercises the real hazard.
+    old = _create_db("bootstrap_previous_head_ci")
+    _run(old, """
+import sqlalchemy as sa
+from models import db
+import os
+engine=sa.create_engine(os.environ['DATABASE_URL'].replace('postgresql://','postgresql+psycopg2://',1))
+meta=sa.MetaData()
+for name,table in db.metadata.tables.items():
+    if name not in ('paypal_payment_attempt','paypal_payment_event'):
+        table.to_metadata(meta)
+parent=meta.tables['fiscal_advisory_requests']
+for name in ('paypal_quote_generation','paypal_review_hold'):
+    parent._columns.remove(parent.c[name])
+meta.create_all(engine)
+with engine.begin() as c:
+    c.execute(sa.text('CREATE TABLE alembic_version (version_num VARCHAR(32) PRIMARY KEY)'))
+    c.execute(sa.text("INSERT INTO alembic_version VALUES ('v5w6x7y8z9a0')"))
+    c.execute(sa.text("INSERT INTO fiscal_advisory_requests (full_name,email,tax_residence_country,tax_year,service_type,case_description,status,amount_paid,currency,payment_provider,paid_at,created_at,updated_at,is_test) VALUES ('Synthetic','old@example.invalid','Synthetic',2026,'revision_basica','Synthetic','paid_received',10001,'eur','paypal',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,FALSE)"))
+""")
+    _bootstrap(old)
+    _assert_version(old)
+    with _db_conn(old) as conn, conn.cursor() as cur:
+        cur.execute("SELECT amount_paid,currency,payment_provider,status,paypal_quote_generation,paypal_review_hold FROM fiscal_advisory_requests WHERE email='old@example.invalid'")
+        assert cur.fetchone()==(10001,'eur','paypal','paid_received',None,True)
+        cur.execute("SELECT COUNT(*) FROM paypal_payment_attempt")
+        assert cur.fetchone()[0]==0, "Historical attempts must not be invented"
+    # 6. A versioned partial schema must not be silently completed on import.
+    partial = _create_db("bootstrap_partial_u04_ci")
+    _bootstrap(partial)
+    with _db_conn(partial) as conn, conn.cursor() as cur:
+        cur.execute("DROP TABLE paypal_payment_event CASCADE")
+    failed=_bootstrap(partial,success=False)
+    with _db_conn(partial) as conn, conn.cursor() as cur:
+        cur.execute("SELECT to_regclass('public.paypal_payment_event')")
+        assert cur.fetchone()[0] is None, "Import must not repair a partial financial schema"
+    # 7. Defaults, CHECK meaning, trigger body/binding and index predicate matter.
+    for suffix, statement in (
+        ('default',"ALTER TABLE fiscal_advisory_requests ALTER COLUMN paypal_review_hold SET DEFAULT FALSE"),
+        ('check',"ALTER TABLE paypal_payment_attempt DROP CONSTRAINT ck_paypal_money; ALTER TABLE paypal_payment_attempt ADD CONSTRAINT ck_paypal_money CHECK (quoted_amount_cents >= 0)"),
+        ('trigger',"ALTER TABLE paypal_payment_attempt DISABLE TRIGGER u04_attempt_guard"),
+        ('function',"CREATE OR REPLACE FUNCTION u04_attempt_guard_fn() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NEW; END $$"),
+        ('index',"DROP INDEX uq_paypal_blocking_advisory; CREATE UNIQUE INDEX uq_paypal_blocking_advisory ON paypal_payment_attempt(advisory_id) WHERE state='UNCERTAIN'"),
+    ):
+        broken=_create_db('bootstrap_tamper_'+suffix+'_ci')
+        _bootstrap(broken)
+        with _db_conn(broken) as conn, conn.cursor() as cur: cur.execute(statement)
+        failed=_bootstrap(broken,success=False)
+        assert 'U04' in failed.stdout, suffix
+        _run(broken,"from app import app, _paypal_payments\nfrom paypal_payments import PaymentConflict\nassert app.config['U04_FINANCIAL_SCHEMA_READY'] is False\nwith app.app_context():\n try:\n  _paypal_payments()\n except PaymentConflict:\n  pass\n else:\n  raise AssertionError('incompatible schema authorized payment service')")
     print(
         "PostgreSQL bootstrap: fresh schema + seed PASS; repeated existing "
         "database PASS; populated unversioned FAIL-CLOSED PASS; "
-        "incomplete schema FAIL-CLOSED PASS"
+        "incomplete schema FAIL-CLOSED PASS; previous head with paid history PASS; "
+        "partial financial schema FAIL-CLOSED PASS; five structural tampering checks PASS"
     )
 
 
