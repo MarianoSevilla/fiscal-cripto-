@@ -34,6 +34,7 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from flask_migrate import Migrate
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from authlib.integrations.flask_client import OAuth
+from authlib.oidc.core import UserInfo
 import resend
 from sqlalchemy import func, extract, text, or_
 from models import db, bcrypt, User, FifoReport, Contacto, ProcessingError, CommunicationCampaign, CommunicationDelivery
@@ -1729,54 +1730,85 @@ def auth_google_callback():
     if not _google_oauth_enabled:
         return redirect("/login/?error=google_not_configured")
     try:
-        token     = google_oauth.authorize_access_token()
-        user_info = token.get("userinfo") or {}
-    except Exception as exc:
-        app.logger.exception("Google OAuth callback failed: %s", exc)
+        # Authlib 1.8 validates state, signature/JWKS, issuer, audience, expiry
+        # and nonce, then replaces token['userinfo'] with a UserInfo instance.
+        # A JSON userinfo dictionary from an unvalidated token response is NOT
+        # sufficient. No second JWT validator or userinfo endpoint is used.
+        token = google_oauth.authorize_access_token()
+    except Exception:
+        # Provider exceptions can contain tokens/claims; do not log their text.
+        app.logger.warning("Google OAuth validation failed")
         return redirect("/login/?error=oauth_failed")
 
-    email = (user_info.get("email") or "").strip().lower()
-    if not email:
-        return redirect("/login/?error=no_email")
+    user_info = token.get("userinfo") if isinstance(token, dict) else None
+    if (
+        not isinstance(user_info, UserInfo)
+        or not isinstance(token.get("id_token"), str)
+        or not token["id_token"]
+        or not isinstance(user_info.get("nonce"), str)
+        or not user_info["nonce"]
+        # Authlib supports a provider-specific nonce opt-out. Google must not
+        # bypass nonce validation through that extension.
+        or user_info.get("nonce_supported") is False
+    ):
+        return redirect("/login/?error=oauth_failed")
 
-    google_id = user_info.get("sub", "")
-    user      = User.query.filter_by(email=email).first()
+    google_id = user_info.get("sub")
+    raw_email = user_info.get("email")
+    if (
+        not isinstance(google_id, str)
+        or not google_id.strip()
+        or google_id != google_id.strip()
+        or len(google_id) > User.google_id.type.length
+        or not isinstance(raw_email, str)
+        or user_info.get("email_verified") is not True
+    ):
+        return redirect("/login/?error=oauth_failed")
+    email = raw_email.strip().lower()
+    if not _validar_email(email)[0]:
+        return redirect("/login/?error=oauth_failed")
 
-    # Obtener nombre desde perfil de Google
-    given_name  = (user_info.get("given_name") or "").strip()
-    family_name = (user_info.get("family_name") or "").strip()
-    google_name = (given_name + " " + family_name).strip() or (user_info.get("name") or "").strip()
-    google_full_name = _title_case(google_name) if google_name else None
+    try:
+        # Identity is the exact validated sub; email only detects conflicts.
+        user = User.query.filter_by(google_id=google_id).first()
+        email_user = User.query.filter_by(email=email).first()
+        if email_user is not None and (user is None or email_user.id != user.id):
+            return redirect("/login/?error=identity_conflict")
 
-    if not user:
-        user = User(
-            email=email,
-            google_id=google_id,
-            email_verified_at=datetime.utcnow(),
-            full_name=google_full_name,
-            # Explícito: el default=True de la columna solo se aplica en el
-            # INSERT, y el chequeo is_active de abajo corre antes del commit.
-            is_active=True,
-        )
-        db.session.add(user)
-    else:
-        if not user.google_id:
-            user.google_id = google_id
-        # Google garantiza que el email es válido
-        if not user.email_verified_at:
-            user.email_verified_at = datetime.utcnow()
-        # Actualizar nombre solo si el usuario no tenía uno guardado
-        if not user.full_name and google_full_name:
-            user.full_name = google_full_name
+        if user is not None:
+            if not user.is_active:
+                return redirect("/login/?error=account_disabled")
+            # A provider email change never edits the saved contact, identity,
+            # verification, name, password, plan or role of a linked account.
+        else:
+            def profile_text(key):
+                value = user_info.get(key)
+                return value.strip() if isinstance(value, str) else ""
 
-    if not user.is_active:
-        return redirect("/login/?error=account_disabled")
+            google_name = (profile_text("given_name") + " " + profile_text("family_name")).strip()
+            google_name = google_name or profile_text("name")
+            user = User(
+                email=email,
+                google_id=google_id,
+                email_verified_at=datetime.utcnow(),
+                full_name=_title_case(google_name)[:150] if google_name else None,
+                # Column defaults only run at INSERT: preserve the historical
+                # fix for new Google accounts, without reactivating old ones.
+                is_active=True,
+            )
+            db.session.add(user)
 
-    user.last_login = datetime.utcnow()
-    db.session.commit()
+        user.last_login = datetime.utcnow()
+        # Unique email/google_id indexes arbitrate races. A loser must retry a
+        # new OAuth flow; it is never logged in by an email-based fallback.
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        app.logger.warning("Google OAuth persistence failed")
+        return redirect("/login/?error=oauth_failed")
+
     login_user(user, remember=False)
     return redirect("/dashboard")
-
 
 @app.route("/binance")
 @login_required

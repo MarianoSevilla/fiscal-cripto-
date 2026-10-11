@@ -281,7 +281,9 @@ html, body {
   const err = new URLSearchParams(location.search).get('error');
   if (err) {
     const el = document.getElementById('regError');
-    el.textContent = 'Error al crear cuenta con Google. Prueba con email y contraseña.';
+    el.textContent = err === 'identity_conflict'
+      ? 'No se puede completar el acceso con Google. Inicia sesión con tu método habitual; si usabas contraseña, puedes recuperarla.'
+      : 'No se ha podido iniciar sesión con Google. Vuelve a intentarlo o utiliza tu método habitual.';
     el.hidden = false;
   }
 })();
