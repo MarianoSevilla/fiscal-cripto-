@@ -18,7 +18,7 @@ HOST = "127.0.0.1"
 PORT = 5432
 USER = "postgres"
 PASSWORD = "ci-only-test-password"
-HEAD = "v5w6x7y8z9a0"
+HEAD = "w6x7y8z9a0b1"
 
 
 def _create_db(name: str) -> str:
@@ -41,7 +41,7 @@ def _db_conn(name: str):
 
 
 def _env(name: str) -> dict[str, str]:
-    result = os.environ.copy()
+    result = {k: os.environ[k] for k in ("PATH", "PYTHONPATH", "SYSTEMROOT", "TMPDIR") if k in os.environ}
     result.update({
         "FLASK_ENV": "production",
         "SECRET_KEY": "CI-TEST-ONLY-DO-NOT-USE-IN-PRODUCTION-123",

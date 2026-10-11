@@ -119,6 +119,14 @@ jobs:
       - name: Exercise PostgreSQL 18 startup and defensive Alembic bootstrap
         run: python fiscal_app_export/tests/qa_db_bootstrap_postgres.py
 
+      - name: U04 real PostgreSQL claims, crash recovery and compatible rollback
+        env:
+          U04_EPHEMERAL_POSTGRES: "1"
+        run: python fiscal_app_export/tests/qa_u04_paypal_postgres.py
+
+      - name: Preserve U03 OIDC identity isolation
+        run: python fiscal_app_export/tests/qa_google_oauth_identity.py
+
   browser-navigation:
     name: browser-navigation
     runs-on: ubuntu-24.04

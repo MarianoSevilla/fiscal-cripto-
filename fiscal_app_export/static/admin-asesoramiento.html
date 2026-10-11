@@ -317,7 +317,18 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
     </div>
   </div>
 </nav>
-<script src="/static/nav.js"></script>
+<script src="/static/nav.js">async function u04Action(ident, action, advisoryId) {
+  if (!/^[0-9a-f-]{36}$/.test(ident) || !['consultar','cerrar-sin-captura'].includes(action)) return;
+  try {
+    const r = await fetch('/api/admin/paypal/attempts/' + ident + '/' + action, {
+      method:'POST', credentials:'include', headers:{'X-U04-CSRF':window.u04Csrf || ''}
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'La operación permanece bloqueada.');
+    await openDetail(advisoryId);
+  } catch (error) { alert(error.message); }
+}
+</script>
 
 <div class="layout">
   <!-- SIDEBAR -->
@@ -506,6 +517,26 @@ async function openDetail(id, el) {
   try {
     const r = await fetch(`/api/admin/asesoramiento/solicitudes/${id}`, { credentials: 'include' });
     const d = await r.json();
+    const financialResponse = await fetch('/api/admin/asesoramiento/solicitudes/' + id + '/paypal', {credentials:'include'});
+    if (!financialResponse.ok) throw new Error('No se pudo consultar el estado financiero.');
+    const financial = await financialResponse.json();
+    window.u04Csrf = financial.csrf_token;
+    const financialHtml = financial.attempts.map(a => {
+      const events = a.events.map(e => '<li>' + escHtml(e.kind) + ' · ' + escHtml(e.source) + ' · ' +
+        escHtml(new Date(e.created_at).toLocaleString('es-ES')) + '</li>').join('');
+      const canClose = !a.capture_started_at && a.origin === 'managed' &&
+        ['ORDER_CREATED','READY_TO_CAPTURE'].includes(a.state) && _currentUser?.is_admin;
+      return '<div style="padding:12px 0;border-bottom:1px solid var(--border);overflow-wrap:anywhere">' +
+        '<strong>' + escHtml(a.state) + '</strong> · ' + escHtml((a.quoted_amount_cents/100).toFixed(2)) + ' EUR' +
+        '<p>Orden: ' + escHtml(a.paypal_order_id || 'No identificada') + '<br>Captura: ' + escHtml(a.paypal_capture_id || 'No identificada') +
+        '<br>Generación: ' + escHtml(a.quote_generation || 'Histórica acreditada') +
+        '<br>Inicio: ' + escHtml(new Date(a.created_at).toLocaleString('es-ES')) +
+        '<br>Última comprobación: ' + escHtml(a.last_observed_at ? new Date(a.last_observed_at).toLocaleString('es-ES') : 'Sin consulta') +
+        '<br>Notificaciones: cliente ' + escHtml(a.customer_notification_state) + ' · administración ' + escHtml(a.owner_notification_state) + '</p>' +
+        (a.paypal_order_id ? '<button class="action-btn" data-attempt="' + a.id + '" onclick="u04Action(this.dataset.attempt,\'consultar\',' + id + ')">Consultar en PayPal</button>' : '') +
+        (canClose ? '<button class="action-btn" data-attempt="' + a.id + '" onclick="u04Action(this.dataset.attempt,\'cerrar-sin-captura\',' + id + ')">Cerrar orden nunca capturada</button>' : '') +
+        '<details><summary>Evidencia operativa</summary><ul>' + events + '</ul></details></div>';
+    }).join('') || '<p>Sin intentos gestionados. Las órdenes históricas requieren clasificación acreditada.</p>';
 
     const opTypes  = (d.operation_types  || []).join(', ') || '—';
     const curSit   = (d.current_situation || []).join(', ') || '—';
@@ -555,13 +586,11 @@ async function openDetail(id, el) {
       submitted:         'Solicitud recibida',
       pendiente_info:    'Pendiente de información',
       quote_sent:        'Presupuesto enviado',
-      paid_received:     'Pago confirmado',
       under_review:      'En revisión',
       waiting_user_info: 'Esperando información',
       in_progress:       'En curso',
       completed:         'Finalizado',
       cancelled:         'Cancelado',
-      refunded:          'Reembolsado',
       archived:          'Archivada',
     };
     let statusOpts = '';
@@ -602,6 +631,12 @@ async function openDetail(id, el) {
         </div>
       </div>
 
+      <section style="padding:16px;margin:16px 0;border:1px solid var(--border);border-radius:10px">
+        <h3>Estado financiero PayPal</h3>
+        <p>${financial.hold ? 'Retención financiera: revisión necesaria.' : 'Expediente gestionado.'}
+        ${financial.writes_enabled ? '' : 'Nuevos cobros pausados.'}</p>
+        ${financialHtml}
+      </section>
       <div class="detail-grid">
         <div class="detail-field"><div class="detail-field-label">Email</div><div class="detail-field-value">${escHtml(d.email)}</div></div>
         <div class="detail-field"><div class="detail-field-label">Teléfono</div><div class="detail-field-value">${escHtml(d.phone||'—')}</div></div>
@@ -780,8 +815,8 @@ async function enviarRespuesta(id) {
   }
 
   if (isQuote) {
-    const amount = parseFloat((document.getElementById('replyAmount')?.value || '').replace(',', '.'));
-    if (!amount || amount < 1) {
+    const amount = (document.getElementById('replyAmount')?.value || '').replace(',', '.');
+    if (!/^[0-9]+(?:\.[0-9]{1,2})?$/.test(amount) || Number(amount) < 1) {
       errEl.textContent = 'Introduce un importe válido (mínimo 1 €).';
       errEl.style.display = 'block';
       return;
@@ -795,7 +830,7 @@ async function enviarRespuesta(id) {
     let r, data;
 
     if (isQuote) {
-      const amount = parseFloat((document.getElementById('replyAmount')?.value || '').replace(',', '.'));
+      const amount = (document.getElementById('replyAmount')?.value || '').replace(',', '.');
       r    = await fetch(`/api/admin/asesoramiento/solicitudes/${id}/enviar-presupuesto`, {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

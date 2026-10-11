@@ -87,6 +87,9 @@ def main() -> None:
         current = _revision(db.engine)
         if current is not None:
             upgrade()
+            from paypal_schema import verify_structure
+            with db.engine.begin() as connection:
+                verify_structure(connection)
             print("DB bootstrap: existing Alembic history upgraded", flush=True)
             return
 
@@ -98,6 +101,9 @@ def main() -> None:
         )
         stamp(revision=FRESH_SCHEMA_BASELINE)
         upgrade()
+        from paypal_schema import verify_structure
+        with db.engine.begin() as connection:
+            verify_structure(connection)
         print("DB bootstrap: fresh schema at Alembic head", flush=True)
 
 

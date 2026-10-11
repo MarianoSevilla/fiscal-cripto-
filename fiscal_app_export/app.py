@@ -94,6 +94,8 @@ from auth import (
     require_fiscal_advisor_page,
 )
 from security_config import build_security_config
+from paypal_models import PayPalPaymentAttempt, PayPalPaymentEvent
+from paypal_payments import Payments, PayPalClient, PaymentConflict, InvalidEvidence, money as paypal_money, formatted as paypal_formatted, uid as paypal_uid, PENDING_MESSAGE
 
 app = Flask(__name__, static_folder="static")
 
@@ -199,6 +201,11 @@ _PAYPAL_BASE_URL       = (
     else "https://api-m.paypal.com"
 )
 _PAYPAL_ENABLED        = bool(_PAYPAL_CLIENT_ID and _PAYPAL_CLIENT_SECRET)
+# Deliberately fail closed for initial rollout and compatible rollback.
+_paypal_write_setting = os.environ.get("PAYPAL_FINANCIAL_WRITES_ENABLED", "false").strip().lower()
+if _paypal_write_setting not in ("true", "false"):
+    raise RuntimeError("PAYPAL_FINANCIAL_WRITES_ENABLED must be true or false")
+app.config["PAYPAL_FINANCIAL_WRITES_ENABLED"] = _paypal_write_setting == "true"
 _ADVISORY_NOTIFY_EMAILS = [
     e.strip() for e in os.environ.get("FISCAL_ADVISORY_NOTIFY_EMAILS", "").split(",") if e.strip()
 ]
@@ -280,6 +287,11 @@ if _google_oauth_enabled:
 # Está protegido contra cuelgues gracias a connect_timeout en SQLALCHEMY_ENGINE_OPTIONS.
 try:
     with app.app_context():
+        from sqlalchemy import inspect as _inspect_u04
+        _financial_tables = {"paypal_payment_attempt", "paypal_payment_event"}
+        _existing_financial = _financial_tables.intersection(_inspect_u04(db.engine).get_table_names())
+        if _existing_financial and _existing_financial != _financial_tables:
+            raise RuntimeError("U04 partial financial schema; bootstrap refused")
         db.create_all()
         try:
             from sqlalchemy import text
@@ -4848,6 +4860,7 @@ def advisory_solicitar():
         current_situation     = _json.dumps(cur_situation),
         case_description      = case_description,
         status                = "submitted",
+        paypal_review_hold    = False,  # Only this new, authenticated managed lifecycle.
         billing_nif           = billing_nif,
         billing_address       = billing_address,
         billing_city          = billing_city,
@@ -4886,66 +4899,17 @@ def _paypal_get_access_token() -> str:
     return resp.json()["access_token"]
 
 
-def _paypal_create_order(advisory: "FiscalAdvisoryRequest") -> dict:
-    """Crea una orden PayPal usando quoted_amount y devuelve {order_id, approval_url}.
-    Se llama on-demand cuando el cliente visita /pagar/<token> y pulsa Pagar.
-    """
-    import requests as _req
-    if not advisory.quoted_amount:
-        raise ValueError("La solicitud no tiene un importe presupuestado")
-    token  = _paypal_get_access_token()
-    euros  = f"{advisory.quoted_amount / 100:.2f}"
-    base   = _APP_BASE_URL.rstrip("/")
-    token_ = advisory.payment_link_token
-    payload = {
-        "intent": "CAPTURE",
-        "purchase_units": [{
-            "custom_id":   str(advisory.id),
-            "description": advisory.service_label()[:127],
-            "amount": {
-                "currency_code": "EUR",
-                "value": euros,
-            },
-        }],
-        "application_context": {
-            "brand_name":   "Mariano Sevilla",
-            "locale":       "es-ES",
-            "landing_page": "NO_PREFERENCE",
-            "user_action":  "PAY_NOW",
-            "return_url":   f"{base}/api/pago/paypal/capture?request_id={advisory.id}",
-            "cancel_url":   f"{base}/pagar/{token_}?cancelado=1",
-        },
-    }
-    resp = _req.post(
-        f"{_PAYPAL_BASE_URL}/v2/checkout/orders",
-        json=payload,
-        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-        timeout=15,
+def _paypal_create_order(advisory):
+    url = _paypal_payments().start(
+        advisory.payment_link_token, _APP_BASE_URL.rstrip("/"),
+        acceptance=((request.remote_addr or "")[:45], (request.user_agent.string or "")[:512]),
     )
-    resp.raise_for_status()
-    data         = resp.json()
-    order_id     = data["id"]
-    approval_url = next(
-        (lnk["href"] for lnk in data.get("links", []) if lnk.get("rel") == "approve"),
-        None,
-    )
-    if not approval_url:
-        raise ValueError("PayPal no devolvió approval_url")
-    return {"order_id": order_id, "approval_url": approval_url}
+    return {"approval_url": url}
 
 
-def _paypal_capture_order(order_id: str) -> dict:
-    """Ejecuta el capture de una orden PayPal aprobada. Devuelve el JSON de PayPal."""
-    import requests as _req
-    token = _paypal_get_access_token()
-    resp  = _req.post(
-        f"{_PAYPAL_BASE_URL}/v2/checkout/orders/{order_id}/capture",
-        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-        json={},
-        timeout=15,
-    )
-    resp.raise_for_status()
-    return resp.json()
+def _paypal_payments():
+    return Payments(PayPalClient(_PAYPAL_BASE_URL, _paypal_get_access_token), _PAYPAL_ENV,
+                    writes_enabled=bool(app.config["PAYPAL_FINANCIAL_WRITES_ENABLED"]))
 
 
 def _on_payment_completed(
@@ -4985,20 +4949,30 @@ def _on_payment_completed(
 def advisory_enviar_presupuesto(req_id):
     """Rafa introduce el precio y el sistema envía el link de pago al cliente."""
 
-    advisory = FiscalAdvisoryRequest.query.get_or_404(req_id)
+    advisory = FiscalAdvisoryRequest.query.filter_by(id=req_id).populate_existing().with_for_update().first_or_404()
 
     if advisory.status not in ("submitted", "quote_sent"):
         return jsonify({"error": f"No se puede enviar presupuesto en estado '{advisory.status}'."}), 409
 
     data = request.get_json(silent=True) or {}
 
-    # Importe
+    # Exact Decimal; preserve the existing minimum of 1 EUR.
     try:
-        amount_euros = float(str(data.get("amount_euros", "")).replace(",", "."))
-        assert amount_euros >= 1
-    except Exception:
-        return jsonify({"error": "Importe inválido. Debe ser un número >= 1."}), 400
-    amount_cents = int(round(amount_euros * 100))
+        value = data.get("amount_euros")
+        if not isinstance(value, str):
+            raise InvalidEvidence("text_required")
+        amount_cents = paypal_money(value.replace(",", "."))
+        if amount_cents < 100:
+            raise InvalidEvidence("minimum_quote")
+        amount_euros = paypal_formatted(amount_cents)
+    except ValueError:
+        return jsonify({"error": "Importe inválido. Mínimo 1 EUR y máximo dos decimales, sin redondeo."}), 400
+
+    try:
+        _paypal_payments().guard_quote(advisory)
+    except PaymentConflict:
+        db.session.rollback()
+        return jsonify({"error": PENDING_MESSAGE}), 409
 
     quote_message = (data.get("message") or "").strip()[:2000] or None
 
@@ -5013,13 +4987,10 @@ def advisory_enviar_presupuesto(req_id):
     advisory.quote_expires_at    = now + timedelta(days=30)
     advisory.payment_link_token  = _secrets.token_urlsafe(32)
     advisory.status              = "quote_sent"
-    # Invalidar cualquier orden de PayPal anterior: el capture endpoint rechaza
-    # órdenes cuyo ID no coincida con el almacenado, así que limpiar aquí
-    # hace que los links antiguos ya no puedan completar un pago.
-    advisory.paypal_order_id     = None
-    advisory.paypal_capture_id   = None
+    advisory.paypal_quote_generation = paypal_uid()
+    # Existing financial records/projections are never cleared to allow payment.
 
-    history_note = f"Presupuesto enviado: €{amount_euros:.2f} a {advisory.email}"
+    history_note = f"Presupuesto enviado: €{amount_euros} a {advisory.email}"
     if quote_message:
         history_note += ". Mensaje incluido."
     db.session.add(FiscalAdvisoryStatusHistory(
@@ -5032,7 +5003,7 @@ def advisory_enviar_presupuesto(req_id):
         request_id = advisory.id,
         admin_id   = current_user.id,
         action     = AdvisoryAuditLog.ACTION_QUOTE_SENT,
-        detail     = f"Importe: {amount_euros:.2f} € a {advisory.email}",
+        detail     = f"Importe: {amount_euros} € a {advisory.email}",
     ))
     db.session.commit()
 
@@ -5137,6 +5108,15 @@ def pago_info(token):
     if not advisory:
         return jsonify({"error": "Enlace no válido o expirado."}), 404
 
+    financial = PayPalPaymentAttempt.query.filter(
+        PayPalPaymentAttempt.advisory_id == advisory.id,
+        PayPalPaymentAttempt.state != "CLOSED_NO_CHARGE").first()
+    if financial and financial.state == "RECONCILED" or advisory.paid_at and advisory.amount_paid:
+        return jsonify({"state": "already_paid"})
+    if advisory.paypal_review_hold or not app.config["PAYPAL_FINANCIAL_WRITES_ENABLED"] or (
+        financial and (financial.state not in ("ORDER_CREATED", "READY_TO_CAPTURE") or financial.capture_started_at)):
+        return jsonify({"state": "reconciliation_pending", "message": PENDING_MESSAGE})
+
     now = datetime.utcnow()
 
     if advisory.status == "paid_received":
@@ -5165,67 +5145,30 @@ def pago_info(token):
 @app.route("/api/pago/iniciar/<token>", methods=["POST"])
 @limiter.limit("10 per hour")
 def pago_iniciar(token):
-    """El cliente acepta el presupuesto y solicita el link de PayPal.
-    Registra la aceptación antes de crear la orden PayPal.
-    """
     if not _PAYPAL_ENABLED:
         return jsonify({"error": "El sistema de pago no está disponible. Inténtalo más tarde."}), 503
-
-    # FOR UPDATE: bloquea la fila durante toda la transacción para evitar
-    # que dos requests concurrentes creen dos órdenes de PayPal.
-    advisory = (FiscalAdvisoryRequest.query
-                .filter_by(payment_link_token=token)
-                .with_for_update()
-                .first())
+    advisory = FiscalAdvisoryRequest.query.filter_by(payment_link_token=token).first()
     if not advisory:
         return jsonify({"error": "Enlace no válido o expirado."}), 404
-
-    if advisory.status == "paid_received":
-        return jsonify({"error": "Este presupuesto ya ha sido pagado."}), 409
-
-    if advisory.status != "quote_sent":
-        return jsonify({"error": "Este presupuesto ya no está disponible."}), 410
-
-    now = datetime.utcnow()
-    if advisory.quote_expires_at and now > advisory.quote_expires_at:
-        return jsonify({"error": "El presupuesto ha caducado. Contacta con nosotros para renovarlo."}), 410
-
-    # Registrar aceptación del presupuesto
-    client_ip = (
-        request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
-        or request.remote_addr
-        or ""
-    )
-    advisory.quote_accepted_at           = now
-    advisory.quote_acceptance_ip         = client_ip[:45]
-    advisory.quote_acceptance_user_agent = (request.user_agent.string or "")[:512]
-
-    # El rollback puede expirar la fila; el log no debe volver a consultar BD.
     advisory_id = advisory.id
     try:
-        paypal_data          = _paypal_create_order(advisory)
-        advisory.paypal_order_id = paypal_data["order_id"]
-        db.session.commit()
+        paypal_data = _paypal_create_order(advisory)
+        approval = paypal_data["approval_url"]
+    except PaymentConflict:
+        db.session.rollback()
+        return jsonify({"error": PENDING_MESSAGE, "state": "reconciliation_pending"}), 409
     except Exception as exc:
         db.session.rollback()
         error_category = {
-            "Timeout": "timeout",
-            "ConnectTimeout": "timeout",
-            "ReadTimeout": "timeout",
-            "TimeoutError": "timeout",
-            "ConnectionError": "connection_error",
-            "HTTPError": "http_error",
-            "KeyError": "invalid_response",
-            "TypeError": "invalid_response",
-            "ValueError": "invalid_response",
+            "Timeout": "timeout", "ConnectTimeout": "timeout", "ReadTimeout": "timeout",
+            "TimeoutError": "timeout", "ConnectionError": "connection_error",
+            "HTTPError": "http_error", "KeyError": "invalid_response",
+            "TypeError": "invalid_response", "ValueError": "invalid_response",
         }.get(type(exc).__name__, "unexpected_error")
-        app.logger.error(
-            "paypal_create_order_failed advisory_id=%s error_category=%s",
-            advisory_id, error_category,
-        )
+        app.logger.error("paypal_create_order_failed advisory_id=%s error_category=%s",
+                         advisory_id, error_category)
         return jsonify({"error": "No se pudo conectar con PayPal. Inténtalo de nuevo."}), 502
-
-    return jsonify({"ok": True, "redirect_url": paypal_data["approval_url"]})
+    return jsonify({"ok": True, "redirect_url": approval})
 
 
 # ── PAYPAL CAPTURE (return URL — pública, no requiere login) ──────────────────
@@ -5233,81 +5176,27 @@ def pago_iniciar(token):
 @app.route("/api/pago/paypal/capture", methods=["GET"])
 @limiter.limit("30 per minute")
 def pago_paypal_capture():
-    """PayPal redirige aquí tras el pago. Ejecuta el capture y actualiza el expediente."""
-    request_id   = request.args.get("request_id", "")
-    paypal_token = request.args.get("token", "")   # PayPal añade ?token=ORDER_ID
-
     try:
-        request_id = int(request_id)
-    except (ValueError, TypeError):
-        return redirect("/asesoramiento-fiscal-cancelado")
-
-    # FOR UPDATE: garantiza que si el webhook corre en paralelo,
-    # solo uno de los dos procesará el pago (el segundo verá status != 'quote_sent').
-    advisory = (FiscalAdvisoryRequest.query
-                .filter_by(id=request_id)
-                .with_for_update()
-                .first())
-    if not advisory:
-        return redirect("/asesoramiento-fiscal-cancelado")
-
-    # Idempotente
-    if advisory.status == "paid_received":
-        return redirect("/asesoramiento-fiscal-confirmado")
-
-    if advisory.status != "quote_sent":
-        return redirect("/asesoramiento-fiscal-cancelado")
-
-    # paypal_order_id debe existir y coincidir con el token que PayPal envía.
-    # Si es NULL el cliente nunca completó pago_iniciar — rechazar siempre.
-    if not advisory.paypal_order_id or advisory.paypal_order_id != paypal_token:
-        app.logger.warning("PayPal token mismatch/null request_id=%s stored=%s received=%s",
-                           request_id, advisory.paypal_order_id, paypal_token)
-        return redirect("/asesoramiento-fiscal-cancelado")
-
-    try:
-        capture_data = _paypal_capture_order(paypal_token)
-    except Exception as exc:
-        app.logger.error("PayPal capture error request_id=%s: %s", request_id, exc)
-        token_link = advisory.payment_link_token or ""
-        return redirect(f"/pagar/{token_link}?error=capture")
-
-    capture_status = capture_data.get("status", "")
-    if capture_status != "COMPLETED":
-        app.logger.warning("PayPal capture status inesperado: %s", capture_status)
-        token_link = advisory.payment_link_token or ""
-        return redirect(f"/pagar/{token_link}?error=status")
-
-    purchase_units = capture_data.get("purchase_units", [{}])
-    captures       = purchase_units[0].get("payments", {}).get("captures", [{}])
-    capture_obj    = captures[0] if captures else {}
-    capture_id     = capture_obj.get("id", "")
-    amount_value   = capture_obj.get("amount", {}).get("value", "0")
-    currency_code  = capture_obj.get("amount", {}).get("currency_code", "EUR")
-
-    try:
-        amount_cents = int(float(amount_value) * 100)
-    except ValueError:
-        amount_cents = advisory.quoted_amount or 0
-
-    advisory.paypal_order_id   = paypal_token
-    advisory.paypal_capture_id = capture_id
-
-    try:
-        _on_payment_completed(
-            advisory,
-            amount_cents = amount_cents,
-            currency     = currency_code,
-            provider     = "paypal",
-            capture_note = f"Pago confirmado por PayPal. Capture ID: {capture_id}",
-        )
-    except Exception as exc:
+        req_id = int(request.args.get("request_id", ""))
+        oid = request.args.get("token", "")
+        attempt = PayPalPaymentAttempt.query.filter_by(advisory_id=req_id, paypal_order_id=oid).first()
+        parent = db.session.get(FiscalAdvisoryRequest, req_id)
+        if not parent:
+            return redirect("/asesoramiento-fiscal-cancelado")
+        token = parent.payment_link_token
+        if not attempt:
+            # Legacy callbacks cannot invoke capture or infer financial identity.
+            return redirect("/pagar/" + token + "?conciliacion=1") if token else redirect("/asesoramiento-fiscal-cancelado")
+        ident = attempt.id
+        state = _paypal_payments().capture(ident, oid)
+        if state == "RECONCILED":
+            _paypal_payments().notify(ident, _send_paypal_notice)
+            return redirect("/asesoramiento-fiscal-confirmado")
+        return redirect("/pagar/" + token + "?conciliacion=1")
+    except Exception:
         db.session.rollback()
-        app.logger.error("PayPal _on_payment_completed error: %s", exc)
-        token_link = advisory.payment_link_token or ""
-        return redirect(f"/pagar/{token_link}?error=db")
-
-    return redirect("/asesoramiento-fiscal-confirmado")
+        app.logger.error("paypal_capture_pending error_category=financial_uncertainty")
+        return redirect("/pagar/" + token + "?conciliacion=1") if locals().get("token") else redirect("/asesoramiento-fiscal-cancelado")
 
 
 # ── PAYPAL WEBHOOK ────────────────────────────────────────────────────────────
@@ -5363,55 +5252,14 @@ def paypal_webhook():
     event_type = event.get("event_type", "")
 
     if event_type == "PAYMENT.CAPTURE.COMPLETED":
-        resource    = event.get("resource", {})
-        capture_id  = resource.get("id", "")
-        custom_id   = resource.get("custom_id") or (
-            resource.get("purchase_units", [{}])[0].get("custom_id", "")
-            if resource.get("purchase_units") else ""
-        )
-        # custom_id puede venir también en supplementary_data
-        if not custom_id:
-            supp = resource.get("supplementary_data", {})
-            custom_id = supp.get("related_ids", {}).get("order_id", "")
-
-        # Buscar por paypal_capture_id (ya procesado vía return URL) o por custom_id.
-        # FOR UPDATE: previene doble procesado si capture y webhook llegan a la vez.
-        advisory = None
-        if capture_id:
-            advisory = (FiscalAdvisoryRequest.query
-                        .filter_by(paypal_capture_id=capture_id)
-                        .with_for_update()
-                        .first())
-        if not advisory and custom_id:
-            try:
-                advisory = (FiscalAdvisoryRequest.query
-                            .filter_by(id=int(custom_id))
-                            .with_for_update()
-                            .first())
-            except (ValueError, TypeError):
-                pass
-
-        if advisory and advisory.status == "quote_sent":
-            amount_value  = resource.get("amount", {}).get("value", "0")
-            currency_code = resource.get("amount", {}).get("currency_code", "EUR")
-            try:
-                amount_cents = int(float(amount_value) * 100)
-            except ValueError:
-                amount_cents = advisory.amount_paid or 0
-
-            advisory.paypal_capture_id = capture_id
-            try:
-                _on_payment_completed(
-                    advisory,
-                    amount_cents = amount_cents,
-                    currency     = currency_code,
-                    provider     = "paypal",
-                    capture_note = f"Pago confirmado por webhook PayPal. Capture ID: {capture_id}",
-                )
-            except Exception as exc:
-                db.session.rollback()
-                app.logger.error("PayPal webhook _on_payment_completed error: %s", exc)
-                return "", 500
+        try:
+            ident = _paypal_payments().webhook(event)
+            if ident:
+                _paypal_payments().notify(ident, _send_paypal_notice)
+        except Exception:
+            db.session.rollback()
+            app.logger.error("paypal_webhook_reconciliation_failed error_category=financial_uncertainty")
+            return "", 500
 
     elif event_type == "PAYMENT.CAPTURE.REFUNDED":
         resource   = event.get("resource", {})
@@ -5605,6 +5453,25 @@ def _send_advisory_quote_email(advisory: "FiscalAdvisoryRequest", payment_url: s
         return False
 
 
+def _send_paypal_notice(advisory_id, who):
+    advisory = db.session.get(FiscalAdvisoryRequest, advisory_id)
+    if who == "customer":
+        html, mail_text = advisory_payment_confirmed_email(advisory)
+        recipients, subject = [advisory.email], "Pago confirmado — comenzamos a trabajar en tu caso"
+    else:
+        html, mail_text = advisory_payment_internal_email(advisory)
+        recipients = list(_ADVISORY_NOTIFY_EMAILS)
+        subject = "Pago PayPal confirmado — expediente " + str(advisory.id)
+    # Materialize recipient/template before ending SQL; ACK means acceptance,
+    # never delivery. Exceptions are handled by the persistent notice protocol.
+    db.session.rollback()
+    if not resend.api_key or not recipients:
+        return False
+    response = resend.Emails.send({"from": _RESEND_FROM_DISPLAY, "to": recipients,
+                                  "subject": subject, "html": html, "text": mail_text})
+    return isinstance(response, dict) and bool(response.get("id"))
+
+
 def _send_advisory_payment_confirmed_email(advisory: "FiscalAdvisoryRequest"):
     """Email al cliente confirmando su pago."""
     if not resend.api_key:
@@ -5782,6 +5649,11 @@ def admin_advisory_list():
     status_filter  = request.args.get("status", "")
     service_filter = request.args.get("service_type", "")
     q = FiscalAdvisoryRequest.query
+    if request.args.get("financial_pending") == "1":
+        q = q.filter(or_(
+            FiscalAdvisoryRequest.paypal_review_hold.is_(True),
+            FiscalAdvisoryRequest.id.in_(db.session.query(PayPalPaymentAttempt.advisory_id).filter(
+                PayPalPaymentAttempt.state.notin_(("RECONCILED", "CLOSED_NO_CHARGE"))))))
     if status_filter:
         q = q.filter_by(status=status_filter)
     if service_filter:
@@ -5816,13 +5688,21 @@ def admin_advisory_detail(request_id):
 @app.route("/api/admin/asesoramiento/solicitudes/<int:request_id>/estado", methods=["POST"])
 @require_fiscal_advisor
 def admin_advisory_change_status(request_id):
-    advisory    = FiscalAdvisoryRequest.query.get_or_404(request_id)
+    advisory    = FiscalAdvisoryRequest.query.filter_by(id=request_id).populate_existing().with_for_update().first_or_404()
     data        = request.get_json(silent=True) or {}
     new_status  = (data.get("status") or "").strip()
     note        = (data.get("note") or "").strip()[:1000]
     valid_statuses = list(FiscalAdvisoryRequest.STATUS_LABELS.keys())
     if new_status not in valid_statuses:
         return jsonify({"error": "Estado inválido."}), 400
+    if new_status in ("paid_received", "refunded"):
+        return jsonify({"error": "La resolución financiera exige evidencia verificada de PayPal."}), 409
+    if new_status == "quote_sent":
+        try:
+            _paypal_payments().guard_quote(advisory)
+        except PaymentConflict:
+            db.session.rollback()
+            return jsonify({"error": PENDING_MESSAGE}), 409
     old_status      = advisory.status
     advisory.status = new_status
     history = FiscalAdvisoryStatusHistory(
@@ -5893,7 +5773,11 @@ def admin_advisory_delete(request_id):
     Los asesores fiscales reciben 403.
     El cascade de SQLAlchemy elimina automáticamente notas, historial y archivos.
     """
-    advisory = FiscalAdvisoryRequest.query.get_or_404(request_id)
+    advisory = FiscalAdvisoryRequest.query.filter_by(id=request_id).populate_existing().with_for_update().first_or_404()
+
+    if advisory.paypal_review_hold or PayPalPaymentAttempt.query.filter_by(advisory_id=request_id).first():
+        db.session.rollback()
+        return jsonify({"error": "El expediente conserva registros financieros protegidos; no puede eliminarse físicamente."}), 409
 
     # Registrar en auditoría antes de borrar (el id ya no existirá después)
     detail_parts = [f"Solicitud de {advisory.full_name} <{advisory.email}>"]
@@ -6193,6 +6077,9 @@ def admin_contactos_patch(contacto_id):
         "archived_at": c.archived_at.strftime("%Y-%m-%d %H:%M") if c.archived_at else None,
     })
 
+
+from paypal_admin import register as _register_paypal_admin
+_register_paypal_admin(app, _paypal_payments, _send_paypal_notice)
 
 if __name__ == "__main__":
     os.makedirs("static", exist_ok=True)

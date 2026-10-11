@@ -133,6 +133,7 @@ def _make_advisory(_app, user_id, amount_paid=None, status="paid_received"):
             case_description      = "Descripción de prueba para test.",
             status                = status,
             amount_paid           = amount_paid,
+            paypal_review_hold    = False,  # Managed synthetic record without protected payment attempts.
         )
         db.session.add(adv)
         db.session.commit()
