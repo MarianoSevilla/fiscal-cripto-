@@ -509,3 +509,42 @@ def test_manual_review_requires_provider_completed_and_same_generation(case):
     a=Attempt.query.one();assert a.capture_request_id is None and a.capture_started_at is None
     assert a.resolution_reason=='owner_verified_completed'
     assert fake.posts==0 and fake.creates==1 and Advisory.query.one().amount_paid==10001
+
+
+def test_real_webhook_body_requires_verifier_then_shared_finalizer(case,monkeypatch):
+    import ast
+    from pathlib import Path
+    import requests
+    from flask import current_app, request, jsonify
+    service,fake,ident,aid=prepared(case);fake.timeout=True
+    with pytest.raises(TimeoutError):service.capture(aid,'ORDER04TEST')
+    application=current_app._get_current_object()
+    notices=[]
+    def notify(advisory,who):
+        assert not db.session().in_transaction()
+        notices.append((advisory,who));return True
+    # Execute the actual route body without importing production configuration.
+    # The unchanged verification boundary is mocked; no real PayPal credentials.
+    source=Path(__file__).resolve().parents[1]/'app.py'
+    function=next(n for n in ast.parse(source.read_text()).body
+                  if isinstance(n,ast.FunctionDef) and n.name=='paypal_webhook')
+    function.decorator_list=[]
+    namespace={'_PAYPAL_ENABLED':True,'_PAYPAL_WEBHOOK_ID':'synthetic-webhook-id',
+               '_PAYPAL_BASE_URL':'https://api-m.sandbox.paypal.com',
+               '_paypal_get_access_token':lambda:'synthetic-only',
+               '_paypal_payments':lambda:service,'_send_paypal_notice':notify,
+               'app':application,'request':request,'jsonify':jsonify,'db':db}
+    exec(compile(ast.Module(body=[function],type_ignores=[]),str(source),'exec'),namespace)
+    application.add_url_rule('/u04-webhook',view_func=namespace['paypal_webhook'],methods=['POST'])
+    verifier=Mock();verifier.json.return_value={'verification_status':'FAILURE'}
+    transport=Mock(return_value=verifier);monkeypatch.setattr(requests,'post',transport)
+    event={'id':'WH-REAL-ROUTE-04','event_type':'PAYMENT.CAPTURE.COMPLETED','resource':fake.get_capture('CAPTURE04TEST')}
+    client=application.test_client()
+    assert client.post('/u04-webhook',json=event).status_code==400
+    assert Advisory.query.one().paid_at is None and not notices
+    db.session.rollback();verifier.json.return_value={'verification_status':'SUCCESS'}
+    assert client.post('/u04-webhook',json=event).status_code==200
+    assert client.post('/u04-webhook',json=event).status_code==200
+    assert History.query.filter_by(status='paid_received').count()==1
+    assert notices==[(ident,'customer'),(ident,'owner')]
+    assert fake.posts==1 and transport.call_count==3

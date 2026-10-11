@@ -193,7 +193,7 @@ with engine.begin() as c:
         with _db_conn(broken) as conn, conn.cursor() as cur: cur.execute(statement)
         failed=_bootstrap(broken,success=False)
         assert 'U04' in failed.stdout, suffix
-        _run(broken,"from app import app, _paypal_payments\nfrom paypal_payments import PaymentConflict\nassert app.config['U04_FINANCIAL_SCHEMA_READY'] is False\ntry:\n _paypal_payments()\nexcept PaymentConflict:\n pass\nelse:\n raise AssertionError('incompatible schema authorized payment service')")
+        _run(broken,"from app import app, _paypal_payments\nfrom paypal_payments import PaymentConflict\nassert app.config['U04_FINANCIAL_SCHEMA_READY'] is False\nwith app.app_context():\n try:\n  _paypal_payments()\n except PaymentConflict:\n  pass\n else:\n  raise AssertionError('incompatible schema authorized payment service')")
     print(
         "PostgreSQL bootstrap: fresh schema + seed PASS; repeated existing "
         "database PASS; populated unversioned FAIL-CLOSED PASS; "
