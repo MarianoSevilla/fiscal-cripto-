@@ -88,6 +88,7 @@ def main() -> None:
     fresh = _create_db("bootstrap_fresh_ci")
     _bootstrap(fresh)
     _assert_version(fresh)
+    _run(fresh,"from app import app; assert app.config['U04_FINANCIAL_SCHEMA_READY'] is True")
     with _db_conn(fresh) as conn, conn.cursor() as cur:
         cur.execute(
             "SELECT headline FROM resources WHERE slug = 'experimento-bitcoin'"
@@ -192,6 +193,7 @@ with engine.begin() as c:
         with _db_conn(broken) as conn, conn.cursor() as cur: cur.execute(statement)
         failed=_bootstrap(broken,success=False)
         assert 'U04' in failed.stdout, suffix
+        _run(broken,"from app import app, _paypal_payments\nfrom paypal_payments import PaymentConflict\nassert app.config['U04_FINANCIAL_SCHEMA_READY'] is False\ntry:\n _paypal_payments()\nexcept PaymentConflict:\n pass\nelse:\n raise AssertionError('incompatible schema authorized payment service')")
     print(
         "PostgreSQL bootstrap: fresh schema + seed PASS; repeated existing "
         "database PASS; populated unversioned FAIL-CLOSED PASS; "

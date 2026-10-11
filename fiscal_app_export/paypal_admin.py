@@ -41,7 +41,8 @@ def register(app, factory, sender):
         return jsonify({"hold": parent.paypal_review_hold, "generation": parent.paypal_quote_generation,
                         "attempts": items, "csrf_token": session["u04_csrf"],
                         "legacy_current_order": parent.paypal_order_id if not parent.paypal_quote_generation and not parent.paid_at else None,
-                        "writes_enabled": app.config["PAYPAL_FINANCIAL_WRITES_ENABLED"]})
+                        "schema_ready": bool(app.config.get("U04_FINANCIAL_SCHEMA_READY")),
+                        "writes_enabled": bool(app.config["PAYPAL_FINANCIAL_WRITES_ENABLED"] and app.config.get("U04_FINANCIAL_SCHEMA_READY"))})
     def csrf():
         expected = session.get("u04_csrf", "")
         received = request.headers.get("X-U04-CSRF", "")

@@ -334,6 +334,19 @@ try:
 except Exception:
     pass  # si DB no está lista aún, flask db upgrade (Procfile) lo gestiona
 
+# Model-created tables alone cannot authorize financial operation. This runs
+# again in the serving process after Procfile's successful Alembic bootstrap.
+app.config["U04_FINANCIAL_SCHEMA_READY"] = False
+try:
+    with app.app_context():
+        if db.engine.dialect.name == "postgresql":
+            from paypal_schema import verify_structure as _verify_u04_structure
+            with db.engine.begin() as _schema_connection:
+                _verify_u04_structure(_schema_connection)
+            app.config["U04_FINANCIAL_SCHEMA_READY"] = True
+except Exception:
+    app.logger.warning("paypal_schema_not_ready error_category=financial_schema_pending")
+
 
 # ── PDF TOKEN STORE (Row-Level Security) ───────
 # El token se guarda en la sesión Flask (cookie firmada), que viaja con el
@@ -4908,8 +4921,11 @@ def _paypal_create_order(advisory):
 
 
 def _paypal_payments():
+    if db.engine.dialect.name == "postgresql" and not app.config["U04_FINANCIAL_SCHEMA_READY"]:
+        raise PaymentConflict("financial_schema_pending")
     return Payments(PayPalClient(_PAYPAL_BASE_URL, _paypal_get_access_token), _PAYPAL_ENV,
-                    writes_enabled=bool(app.config["PAYPAL_FINANCIAL_WRITES_ENABLED"]))
+                    writes_enabled=bool(app.config["PAYPAL_FINANCIAL_WRITES_ENABLED"] and
+                                        app.config["U04_FINANCIAL_SCHEMA_READY"]))
 
 
 def _on_payment_completed(
@@ -5113,7 +5129,7 @@ def pago_info(token):
         PayPalPaymentAttempt.state != "CLOSED_NO_CHARGE").first()
     if financial and financial.state == "RECONCILED" or advisory.paid_at and advisory.amount_paid:
         return jsonify({"state": "already_paid"})
-    if advisory.paypal_review_hold or not app.config["PAYPAL_FINANCIAL_WRITES_ENABLED"] or (
+    if advisory.paypal_review_hold or not app.config["PAYPAL_FINANCIAL_WRITES_ENABLED"] or not app.config["U04_FINANCIAL_SCHEMA_READY"] or (
         financial and (financial.state not in ("ORDER_CREATED", "READY_TO_CAPTURE") or financial.capture_started_at)):
         return jsonify({"state": "reconciliation_pending", "message": PENDING_MESSAGE})
 
