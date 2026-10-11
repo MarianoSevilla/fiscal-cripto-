@@ -161,7 +161,7 @@ meta.create_all(engine)
 with engine.begin() as c:
     c.execute(sa.text('CREATE TABLE alembic_version (version_num VARCHAR(32) PRIMARY KEY)'))
     c.execute(sa.text("INSERT INTO alembic_version VALUES ('v5w6x7y8z9a0')"))
-    c.execute(sa.text("INSERT INTO fiscal_advisory_requests (full_name,email,tax_residence_country,tax_year,service_type,case_description,status,amount_paid,currency,payment_provider,paid_at,created_at,updated_at) VALUES ('Synthetic','old@example.invalid','Synthetic',2026,'revision_basica','Synthetic','paid_received',10001,'eur','paypal',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)"))
+    c.execute(sa.text("INSERT INTO fiscal_advisory_requests (full_name,email,tax_residence_country,tax_year,service_type,case_description,status,amount_paid,currency,payment_provider,paid_at,created_at,updated_at,is_test) VALUES ('Synthetic','old@example.invalid','Synthetic',2026,'revision_basica','Synthetic','paid_received',10001,'eur','paypal',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,FALSE)"))
 """)
     _bootstrap(old)
     _assert_version(old)

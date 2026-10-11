@@ -352,3 +352,35 @@ def test_terminal_reference_and_approved_get_do_not_release(case):
     with pytest.raises(TimeoutError): service.capture(aid,'ORDER04TEST')
     with pytest.raises(PaymentConflict): service.close_terminal_verified(aid,'paypal-confirmation-04',actor=123)
     assert service.read(aid)['state']=='UNCERTAIN' and fake.posts==1
+
+
+@pytest.mark.parametrize('role',['user','fiscal_advisor','admin'])
+def test_financial_panel_roles_csrf_and_no_capture_actions(case,role):
+    from flask import current_app
+    from flask_login import LoginManager
+    from models import User
+    from paypal_admin import register
+    service,fake,ident,aid=prepared(case)
+    app=current_app._get_current_object()
+    app.config.update(SECRET_KEY='synthetic-csrf-session',PAYPAL_FINANCIAL_WRITES_ENABLED=True)
+    login=LoginManager(app)
+    login.user_loader(lambda ident:db.session.get(User,int(ident)))
+    user=User(email=role+'@example.invalid',role=role)
+    db.session.add(user);db.session.commit();user_id=user.id;db.session.rollback()
+    register(app,lambda:service,lambda *args:True)
+    client=app.test_client()
+    with client.session_transaction() as session:session['_user_id']=str(user_id);session['_fresh']=True
+    detail=client.get(f'/api/admin/asesoramiento/solicitudes/{ident}/paypal')
+    if role=='user':
+        assert detail.status_code==403
+        assert client.post(f'/api/admin/paypal/attempts/{aid}/consultar').status_code==403
+    else:
+        assert detail.status_code==200
+        assert client.post(f'/api/admin/paypal/attempts/{aid}/consultar').status_code==409
+        csrf=detail.json['csrf_token']
+        assert client.post(f'/api/admin/paypal/attempts/{aid}/consultar',headers={'X-U04-CSRF':csrf,'Origin':'https://attacker.invalid'}).status_code==409
+        response=client.post(f'/api/admin/paypal/attempts/{aid}/consultar',headers={'X-U04-CSRF':csrf})
+        assert response.status_code==200 and response.json['state']=='ORDER_CREATED'
+        close=client.post(f'/api/admin/paypal/attempts/{aid}/cerrar-sin-captura',headers={'X-U04-CSRF':csrf})
+        assert close.status_code==(200 if role=='admin' else 403)
+    assert fake.posts==0 and fake.creates==1

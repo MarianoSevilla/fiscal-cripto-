@@ -26,6 +26,9 @@ def verify_structure(connection, *, triggers=True):
             expected_type = c.type.compile(dialect=connection.dialect)
             if _norm(actual["type"].compile(dialect=connection.dialect)) != _norm(expected_type) or actual["nullable"] != c.nullable:
                 raise RuntimeError("U04 incompatible column type/nullability: " + table.name + "." + c.name)
+            expected_default = c.server_default.arg if c.server_default else None
+            if _norm(actual.get("default")) != _norm(expected_default):
+                raise RuntimeError("U04 incompatible column default: " + table.name + "." + c.name)
         expected_checks = {c.name for c in table.constraints if c.__class__.__name__ == "CheckConstraint"}
         checks = {c["name"]: c for c in inspector.get_check_constraints(table.name)}
         if not expected_checks.issubset(checks):
@@ -56,6 +59,9 @@ def verify_structure(connection, *, triggers=True):
     parent = {c["name"]: c for c in inspector.get_columns("fiscal_advisory_requests")}
     if parent["paypal_review_hold"]["nullable"] or _norm(parent["paypal_review_hold"].get("default")) not in ("true", "1"):
         raise RuntimeError("U04 unsafe legacy hold default")
+    if not parent["paypal_quote_generation"]["nullable"] or parent["paypal_quote_generation"].get("default") is not None or _norm(parent["paypal_quote_generation"]["type"]) != "uuid":
+        if connection.dialect.name == "postgresql":
+            raise RuntimeError("U04 incompatible quote generation")
     if connection.dialect.name == "postgresql":
         # Compare CHECK definitions after PostgreSQL itself canonicalizes the model
         # expressions on temporary probe tables. Names alone cannot prove semantics.
@@ -122,7 +128,7 @@ def install_guards(connection):
                  "request_contract_hash")
     checks = " OR ".join("NEW." + c + " IS DISTINCT FROM OLD." + c for c in immutable)
     write_once = " OR ".join("(OLD." + c + " IS NOT NULL AND NEW." + c + " IS DISTINCT FROM OLD." + c + ")"
-                            for c in ("paypal_order_id", "paypal_capture_id", "capture_request_id", "claim_id", "capture_started_at", "resolved_at", "resolution_event_id", "resolution_reason"))
+                            for c in ("paypal_order_id", "paypal_capture_id", "capture_request_id", "claim_id", "capture_started_at", "resolved_at", "resolution_event_id", "resolution_reason", "customer_notification_claimed_at", "owner_notification_claimed_at"))
     connection.execute(text("""
 CREATE OR REPLACE FUNCTION u04_attempt_guard_fn() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE p fiscal_advisory_requests%ROWTYPE; evidence paypal_payment_event%ROWTYPE;
@@ -138,6 +144,16 @@ BEGIN
  ELSE
   IF """ + checks + " OR " + write_once + """ THEN RAISE EXCEPTION 'U04 immutable financial identity'; END IF;
   IF NEW.version <= OLD.version THEN RAISE EXCEPTION 'U04 version must advance'; END IF;
+  IF NEW.customer_notification_state IS DISTINCT FROM OLD.customer_notification_state AND NOT (
+     (OLD.customer_notification_state='UNCLAIMED' AND NEW.customer_notification_state IN ('CLAIMED','SKIPPED')) OR
+     (OLD.customer_notification_state='CLAIMED' AND NEW.customer_notification_state IN ('ACKNOWLEDGED','UNKNOWN'))) THEN
+   RAISE EXCEPTION 'U04 notification cannot be replayed';
+  END IF;
+  IF NEW.owner_notification_state IS DISTINCT FROM OLD.owner_notification_state AND NOT (
+     (OLD.owner_notification_state='UNCLAIMED' AND NEW.owner_notification_state IN ('CLAIMED','SKIPPED')) OR
+     (OLD.owner_notification_state='CLAIMED' AND NEW.owner_notification_state IN ('ACKNOWLEDGED','UNKNOWN'))) THEN
+   RAISE EXCEPTION 'U04 notification cannot be replayed';
+  END IF;
   IF NEW.state <> OLD.state AND NOT (""" + transitions + """) THEN RAISE EXCEPTION 'U04 forbidden transition'; END IF;
   IF OLD.state='UNCERTAIN' AND NEW.state='ORDER_CREATED' AND OLD.capture_started_at IS NOT NULL THEN
    RAISE EXCEPTION 'U04 no capture replay';

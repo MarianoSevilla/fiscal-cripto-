@@ -116,6 +116,9 @@ def worker(uri,url,operation,ident,queue,before=None,after=None,release=None,bar
             if operation=="capture":
                 snap=service.read(ident)
                 state=service.capture(ident,snap["paypal_order_id"])
+            elif operation=="start":
+                try: state=service.start(ident,"https://app.example.invalid")
+                except PaymentConflict: state="CONFLICT_BLOCKED"
             elif operation=="recover": state=service.recover(ident)
             elif operation=="webhook":
                 snap=service.read(ident)
@@ -152,14 +155,25 @@ def main():
     with app.app_context():
         with db.engine.begin() as conn: verify_structure(conn)
         service=Payments(LoopbackClient(url),"sandbox",writes_enabled=True)
-        def prepare(label):
+        def prepare(label, start=True):
             parent=Advisory(full_name="Synthetic",email="u04@example.invalid",tax_residence_country="Synthetic",
                 tax_year=2026,service_type="revision_basica",case_description="Synthetic only",status="quote_sent",
                 paypal_review_hold=False,paypal_quote_generation=uid(),quoted_amount=10001,
                 payment_link_token=label,quote_sent_at=datetime.utcnow(),quote_expires_at=datetime.utcnow()+timedelta(days=1))
             db.session.add(parent);db.session.commit()
+            if not start:
+                db.session.rollback();return label
             service.start(label,"https://app.example.invalid")
             a=Attempt.query.filter_by(advisory_id=parent.id).one();ident=a.id;db.session.rollback();return ident
+        # Two creation contenders with no attempt; parent lock and index serialize.
+        label=prepare("u04-dual-start",start=False)
+        barrier=ctx.Barrier(2);count=len(Provider.posts)
+        a=launch("start",label,barrier=barrier);b=launch("start",label,barrier=barrier)
+        joined(a);joined(b)
+        assert len(Provider.posts)==count+1
+        assert Attempt.query.filter_by(advisory_id=Advisory.query.filter_by(payment_link_token=label).one().id).count()==1
+        db.session.rollback()
+        print("PG real: simultaneous creation, one durable attempt and one POST PASS")
         # Two independent processes; first blocks in HTTP after its durable commit.
         ident=prepare("u04-race")
         Provider.pause=True;Provider.entered.clear();Provider.release.clear()
@@ -186,6 +200,12 @@ def main():
         assert joined(launch("recover",ident))[1]=="UNCERTAIN"
         assert len(Provider.posts)==count
         print("PG real: SIGKILL before POST, durable claim, restarted GET-only recovery PASS")
+        # Fresh bootstrap and a new process must preserve this pending reservation.
+        _bootstrap(name)
+        assert service.read(ident)["capture_request_id"]==snap["capture_request_id"]
+        assert joined(launch("recover",ident))[1]=="UNCERTAIN"
+        assert len(Provider.posts)==count
+        print("PG real: repeated bootstrap with pending claim preserves identity PASS")
         # Kill after actual POST completion but before TF.
         ident=prepare("u04-kill-after")
         entered,release=ctx.Event(),ctx.Event()
@@ -205,6 +225,44 @@ def main():
         joined(a);joined(b)
         assert len([x for x in Provider.notices if x["advisory"]==snap["advisory_id"]])==2
         print("PG real: SIGKILL after POST, concurrent GET/webhook, one history, two notification slots PASS")
+        # Ambiguous COMMIT acknowledgment after the actual PostgreSQL commit.
+        ambiguous=prepare("u04-commit-ack-lost")
+        original_commit=db.session.commit
+        lost=False
+        def ambiguous_commit():
+            nonlocal lost
+            original_commit()
+            if not lost:
+                lost=True
+                raise RuntimeError("synthetic committed reservation with lost ACK")
+        count=len(Provider.posts)
+        with patch.object(db.session,"commit",side_effect=ambiguous_commit):
+            try: service.capture(ambiguous,service.read(ambiguous)["paypal_order_id"]);raise AssertionError("missing commit failure")
+            except RuntimeError: pass
+        assert service.read(ambiguous)["state"]=="CAPTURE_STARTED"
+        assert len(Provider.posts)==count
+        assert service.recover(ambiguous)=="UNCERTAIN"
+        assert len(Provider.posts)==count
+        # Lose the actual SQL connection after external capture, before TF.
+        broken=prepare("u04-connection-loss-after-charge")
+        disconnected=False
+        def disconnect_confirmation():
+            nonlocal disconnected
+            if not disconnected and any(isinstance(x,History) for x in db.session.new):
+                disconnected=True
+                db.session.connection().invalidate()
+            original_commit()
+        try:
+            with patch.object(db.session,"commit",side_effect=disconnect_confirmation):
+                service.capture(broken,service.read(broken)["paypal_order_id"])
+            raise AssertionError("missing connection failure")
+        except AssertionError: raise
+        except Exception: db.session.rollback()
+        assert disconnected and service.read(broken)["state"] in ("CAPTURE_STARTED","UNCERTAIN")
+        count=len(Provider.posts)
+        assert service.recover(broken)=="RECONCILED"
+        assert len(Provider.posts)==count
+        print("PG real: lost COMMIT ACK prevents POST; lost SQL connection after charge recovers via GET PASS")
         # Real DDL guards resist incorrect SQL and rollback leaves evidence intact.
         failures=[
             ("UPDATE paypal_payment_attempt SET quoted_amount_cents=1 WHERE id=:id",{"id":ident}),
@@ -214,6 +272,7 @@ def main():
             ("DELETE FROM fiscal_advisory_requests WHERE id=:id",{"id":snap["advisory_id"]}),
             ("UPDATE fiscal_advisory_requests SET quoted_amount=1 WHERE id=:id",{"id":snap["advisory_id"]}),
             ("TRUNCATE paypal_payment_event CASCADE",{}),
+            ("UPDATE paypal_payment_attempt SET customer_notification_state='UNCLAIMED',version=version+1 WHERE id=:id",{"id":ident}),
         ]
         for statement,args in failures:
             try:

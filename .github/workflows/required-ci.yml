@@ -161,6 +161,9 @@ jobs:
       - name: Flask navigation and access checks with synthetic SQLite data
         run: python fiscal_app_export/tests/qa_flask_navigation.py
 
+      - name: U04 pending payment and financial panel in Chromium
+        run: python fiscal_app_export/tests/qa_u04_paypal_ui.py
+
       - name: Keep non-sensitive responsive screenshots for review
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6 (node24)
