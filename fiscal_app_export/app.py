@@ -5190,13 +5190,29 @@ def pago_iniciar(token):
     advisory.quote_acceptance_ip         = client_ip[:45]
     advisory.quote_acceptance_user_agent = (request.user_agent.string or "")[:512]
 
+    # El rollback puede expirar la fila; el log no debe volver a consultar BD.
+    advisory_id = advisory.id
     try:
         paypal_data          = _paypal_create_order(advisory)
         advisory.paypal_order_id = paypal_data["order_id"]
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
-        app.logger.error("PayPal create_order error (token=%s): %s", token, exc)
+        error_category = {
+            "Timeout": "timeout",
+            "ConnectTimeout": "timeout",
+            "ReadTimeout": "timeout",
+            "TimeoutError": "timeout",
+            "ConnectionError": "connection_error",
+            "HTTPError": "http_error",
+            "KeyError": "invalid_response",
+            "TypeError": "invalid_response",
+            "ValueError": "invalid_response",
+        }.get(type(exc).__name__, "unexpected_error")
+        app.logger.error(
+            "paypal_create_order_failed advisory_id=%s error_category=%s",
+            advisory_id, error_category,
+        )
         return jsonify({"error": "No se pudo conectar con PayPal. Inténtalo de nuevo."}), 502
 
     return jsonify({"ok": True, "redirect_url": paypal_data["approval_url"]})
