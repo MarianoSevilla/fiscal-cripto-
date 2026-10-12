@@ -17,11 +17,16 @@ import stripe
 from models import (
     db, FiscalAdvisoryRequest, FiscalAdvisoryStatusHistory,
     S01StripeCheckoutAttempt, S01StripeEventReceipt,
+    S01StripeNotificationOutbox,
 )
 
 
 class S01EventRejected(ValueError):
     """Evidencia ausente o incompatible: no confirmar ni acusar como procesado."""
+
+
+class S01EventSignatureRejected(S01EventRejected):
+    """Cabecera o firma no verificada: la interfaz HTTP responde 400."""
 
 
 class S01EventStorageError(RuntimeError):
@@ -55,15 +60,15 @@ def _event_signed(*, payload: bytes, signature: str, secret: str) -> dict:
     if (not isinstance(payload, bytes) or not payload or len(payload) > 65536
             or not isinstance(signature, str) or not signature.strip()
             or len(signature) > 4096):
-        raise S01EventRejected("Firma o carga de evento inválida")
+        raise S01EventSignatureRejected("Firma o carga de evento inválida")
     try:
         event = stripe.Webhook.construct_event(payload, signature, secret)
         doc = _mapping(event)
     except (ValueError, stripe.error.SignatureVerificationError, S01EventRejected):
-        raise S01EventRejected("Firma Stripe inválida") from None
+        raise S01EventSignatureRejected("Firma Stripe inválida") from None
     except Exception:
         # No se hace ACK si la verificación fallase de forma inesperada.
-        raise S01EventRejected("No se pudo verificar Stripe") from None
+        raise S01EventSignatureRejected("No se pudo verificar Stripe") from None
     if doc.get("livemode") is not False:
         raise S01EventRejected("Evento Live prohibido")
     eid = doc.get("id")
@@ -222,6 +227,15 @@ def process_signed_s01_test_webhook(*, payload: bytes, signature: str,
             changed_by=None,
             note="Stripe Checkout TEST confirmado mediante evento firmado.",
         ))
+        # Los dos avisos pendientes se guardan con el cobro de manera
+        # atómica; reenvíos no producen nuevas notificaciones.
+        for kind in ("customer_payment_confirmed", "advisor_payment_confirmed"):
+            db.session.add(S01StripeNotificationOutbox(
+                attempt_id=attempt.id,
+                kind=kind,
+                delivery_key=f"s01-notice-v1-{attempt.id}-{kind}",
+                status="pending",
+            ))
         db.session.commit()
         return "paid"
     except S01EventRejected:

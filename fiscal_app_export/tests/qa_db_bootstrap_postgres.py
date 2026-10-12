@@ -18,7 +18,7 @@ HOST = "127.0.0.1"
 PORT = 5432
 USER = "postgres"
 PASSWORD = "ci-only-test-password"
-HEAD = "y8z9a0b1c2d3"  # S01 TEST Checkout attempt schema (dependent on PR #33)
+HEAD = "z9a0b1c2d3e4"  # S01 TEST outbox schema (dependent on PR #39)
 
 
 def _create_db(name: str) -> str:

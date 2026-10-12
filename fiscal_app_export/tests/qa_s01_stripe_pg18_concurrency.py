@@ -27,6 +27,7 @@ sys.path.insert(0, str(APP_DIR))
 from models import (  # noqa: E402
     db, FiscalAdvisoryRequest, FiscalAdvisoryStatusHistory,
     S01StripeCheckoutAttempt, S01StripeEventReceipt,
+    S01StripeNotificationOutbox,
 )
 
 DB_NAME = "s01_concurrency_pg18_ci"
@@ -258,6 +259,12 @@ def _verify(fixture, *, receipts: int, status: str, allowed_pi=None):
         db.session.query(FiscalAdvisoryStatusHistory)
         .filter_by(request_id=advisory.id, status="paid_received").count()
     ) == (1 if status == "paid_received" else 0)
+    rows = db.session.query(S01StripeNotificationOutbox).filter_by(
+        attempt_id=attempt.id,
+    ).all()
+    assert len(rows) == (2 if status == "paid_received" else 0)
+    assert len({row.kind for row in rows}) == len(rows)
+    assert all(row.status == "pending" and row.sent_at is None for row in rows)
     if status == "paid_received":
         expected = allowed_pi if allowed_pi is not None else {fixture["pi"]}
         assert advisory.payment_provider == "stripe"
@@ -309,6 +316,9 @@ def _rollback_probe():
     ).count() == 0
     assert db.session.query(FiscalAdvisoryStatusHistory).filter_by(
         request_id=advisory.id, status="paid_received"
+    ).count() == 0
+    assert db.session.query(S01StripeNotificationOutbox).filter_by(
+        attempt_id=attempt.id
     ).count() == 0
     db.session.remove()
     assert process_signed_s01_test_webhook(**signed) == "paid"

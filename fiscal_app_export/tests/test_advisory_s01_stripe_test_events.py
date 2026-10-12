@@ -21,6 +21,7 @@ from advisory_s01_stripe_test_events import (
 from models import (
     db, FiscalAdvisoryRequest, FiscalAdvisoryStatusHistory,
     S01StripeCheckoutAttempt, S01StripeEventReceipt,
+    S01StripeNotificationOutbox,
 )
 
 SECRET = "whsec_s01_synthetic_fake_secret"
@@ -116,6 +117,9 @@ def stats(advisory_id, attempt_id):
         "provider": advisory.payment_provider, "paid_at": advisory.paid_at,
         "attempt_status": attempt.status, "attempt_pi": attempt.payment_intent_id,
         "events": S01StripeEventReceipt.query.count(),
+        "outbox": S01StripeNotificationOutbox.query.filter_by(
+            attempt_id=attempt_id
+        ).count(),
         "hist": FiscalAdvisoryStatusHistory.query.filter_by(
             request_id=advisory_id, status="paid_received"
         ).count(),
@@ -133,7 +137,15 @@ def test_genuine_signed_event_commits_all_four_records(populated):
     assert state["attempt_pi"] == PI
     assert state["attempt_status"] == "paid"
     assert state["paid_at"] is not None
-    assert (state["events"], state["hist"]) == (1, 1)
+    assert (state["events"], state["hist"], state["outbox"]) == (1, 1, 2)
+    rows = S01StripeNotificationOutbox.query.filter_by(
+        attempt_id=attempt_id
+    ).all()
+    assert {row.kind for row in rows} == {
+        "customer_payment_confirmed", "advisor_payment_confirmed",
+    }
+    assert all(row.status == "pending" and row.sent_at is None for row in rows)
+    assert len({row.delivery_key for row in rows}) == 2
 
 
 def test_exact_replay_and_second_event_are_idempotent(populated):
@@ -143,7 +155,7 @@ def test_exact_replay_and_second_event_are_idempotent(populated):
     assert consume(populated, event_id="evt_s01synthetic124") == "already_paid"
     assert consume(populated, event_id="evt_s01synthetic124") == "duplicate"
     state = stats(advisory_id, attempt_id)
-    assert (state["events"], state["hist"]) == (2, 1)
+    assert (state["events"], state["hist"], state["outbox"]) == (2, 1, 2)
 
 
 @pytest.mark.parametrize("updates", [
@@ -160,7 +172,7 @@ def test_bad_checkout_is_rejected_without_financial_mutation(populated, updates)
     state = stats(*populated)
     assert state["status"] == "quote_sent"
     assert state["paid"] is None
-    assert (state["events"], state["hist"]) == (0, 0)
+    assert (state["events"], state["hist"], state["outbox"]) == (0, 0, 0)
 
 
 @pytest.mark.parametrize("envelope", [
@@ -251,7 +263,7 @@ def test_transaction_error_rolls_back_history_receipt_and_status(populated):
         sa_event.remove(db.session.session_factory.class_, "before_flush", no_history)
     assert stats(*populated)["status"] == "quote_sent"
     assert stats(*populated)["attempt_status"] == "ready"
-    assert (stats(*populated)["events"], stats(*populated)["hist"]) == (0, 0)
+    assert (stats(*populated)["events"], stats(*populated)["hist"], stats(*populated)["outbox"]) == (0, 0, 0)
 
 
 def test_conflicting_payment_intent_when_already_persisted_is_rejected(populated):
@@ -275,3 +287,43 @@ def test_existing_paid_by_other_provider_is_never_overwritten(populated):
         consume(populated)
     assert stats(*populated)["provider"] == "paypal"
     assert stats(*populated)["events"] == 0
+
+def test_outbox_uniqueness_is_enforced_by_database(populated):
+    from sqlalchemy.exc import IntegrityError
+
+    assert consume(populated) == "paid"
+    existing = S01StripeNotificationOutbox.query.filter_by(
+        attempt_id=populated[1], kind="customer_payment_confirmed",
+    ).one()
+    db.session.add(S01StripeNotificationOutbox(
+        attempt_id=populated[1],
+        kind=existing.kind,
+        delivery_key="s01-notice-duplicated-should-not-exist",
+        status="pending",
+    ))
+    with pytest.raises(IntegrityError):
+        db.session.commit()
+    db.session.rollback()
+    assert stats(*populated)["outbox"] == 2
+    assert stats(*populated)["hist"] == 1
+
+
+def test_rollback_if_outbox_insert_fails(populated):
+    def fail_outbox_insert(conn, cursor, statement, parameters, context, many):
+        if "insert into s01_stripe_notification_outbox" in statement.lower():
+            raise RuntimeError("synthetic outbox insert failure")
+
+    sa_event.listen(db.engine, "before_cursor_execute", fail_outbox_insert)
+    try:
+        with pytest.raises(S01EventStorageError):
+            consume(populated)
+    finally:
+        sa_event.remove(db.engine, "before_cursor_execute", fail_outbox_insert)
+
+    state = stats(*populated)
+    assert state["status"] == "quote_sent"
+    assert state["attempt_status"] == "ready"
+    assert (state["events"], state["hist"], state["outbox"]) == (0, 0, 0)
+    assert consume(populated) == "paid"
+    assert stats(*populated)["outbox"] == 2
+

@@ -358,6 +358,35 @@ class S01StripeEventReceipt(db.Model):
     received_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
 
+# ── S01: notificaciones persistidas dentro del COMMIT del pago (sin enviar) ──
+class S01StripeNotificationOutbox(db.Model):
+    __tablename__ = "s01_stripe_notification_outbox"
+    __table_args__ = (
+        db.UniqueConstraint("attempt_id", "kind", name="uq_s01_outbox_attempt_kind"),
+        db.CheckConstraint(
+            "kind IN ('customer_payment_confirmed','advisor_payment_confirmed')",
+            name="ck_s01_outbox_kind",
+        ),
+        db.CheckConstraint(
+            "status IN ('pending','sent','suppressed')",
+            name="ck_s01_outbox_status",
+        ),
+        db.Index("ix_s01_outbox_status", "status"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    attempt_id = db.Column(
+        db.String(36),
+        db.ForeignKey("s01_stripe_checkout_attempts.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    kind = db.Column(db.String(40), nullable=False)
+    delivery_key = db.Column(db.String(128), nullable=False, unique=True)
+    status = db.Column(db.String(16), nullable=False, default="pending")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    sent_at = db.Column(db.DateTime, nullable=True)
+
+
 class FiscalAdvisoryFile(db.Model):
     __tablename__ = "fiscal_advisory_files"
 
