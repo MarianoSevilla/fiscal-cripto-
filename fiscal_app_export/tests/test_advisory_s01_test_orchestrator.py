@@ -245,3 +245,68 @@ def test_no_provider_or_reservation_without_valid_id(synthetic_store):
         launch(0, provider)
     assert provider.calls == []
     assert S01StripeCheckoutAttempt.query.count() == 0
+
+
+def test_sdk16_stripeobject_checkout_response_is_supported(synthetic_store):
+    """Stripe SDK v16 devuelve StripeObject, no siempre dict."""
+    import stripe
+
+    class StripeObjectProvider(FakeProvider):
+        def create_session(self, *, params, idempotency_key):
+            response = super().create_session(
+                params=params, idempotency_key=idempotency_key
+            )
+            return stripe.StripeObject.construct_from(
+                response, api_key="sk_test_synthetic-only"
+            )
+
+    provider = StripeObjectProvider()
+    result = launch(synthetic_store, provider)
+    assert result.session_id == "cs_test_synthetic_session"
+    assert result.url.startswith("https://checkout.stripe.com/c/pay/")
+    assert len(provider.calls) == 1
+    a = S01StripeCheckoutAttempt.query.one()
+    assert a.status == "ready"
+    assert a.checkout_session_id == result.session_id
+    assert db.session.get(FiscalAdvisoryRequest, synthetic_store).stripe_checkout_session_id == result.session_id
+
+
+def test_invalid_sdk16_stripeobject_keeps_reservation_uncertain(synthetic_store):
+    import stripe
+
+    class InvalidStripeObjectProvider(FakeProvider):
+        def create_session(self, *, params, idempotency_key):
+            response = super().create_session(
+                params=params, idempotency_key=idempotency_key
+            )
+            response["amount_total"] = 100
+            return stripe.StripeObject.construct_from(
+                response, api_key="sk_test_synthetic-only"
+            )
+
+    provider = InvalidStripeObjectProvider()
+    with pytest.raises(S01CheckoutBlocked, match="incierto"):
+        launch(synthetic_store, provider)
+    assert len(provider.calls) == 1
+    a = S01StripeCheckoutAttempt.query.one()
+    assert a.status == "uncertain"
+    assert a.checkout_session_id is None
+    assert db.session.get(FiscalAdvisoryRequest, synthetic_store).stripe_checkout_session_id is None
+
+
+def test_sdk_conversion_exception_fails_closed(synthetic_store):
+    class UnparseableSDKResponse:
+        def to_dict(self):
+            raise ValueError("Synthetic SDK conversion failure")
+
+    class InvalidProvider(FakeProvider):
+        def create_session(self, *, params, idempotency_key):
+            super().create_session(params=params, idempotency_key=idempotency_key)
+            return UnparseableSDKResponse()
+
+    provider = InvalidProvider()
+    with pytest.raises(S01CheckoutBlocked, match="incierto"):
+        launch(synthetic_store, provider)
+    assert len(provider.calls) == 1
+    assert S01StripeCheckoutAttempt.query.one().status == "uncertain"
+    assert db.session.get(FiscalAdvisoryRequest, synthetic_store).stripe_checkout_session_id is None

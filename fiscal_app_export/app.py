@@ -47,7 +47,7 @@ try:
 except ImportError:
     _stripe_available = False
     _stripe_module = None
-from models import FiscalAdvisoryRequest, FiscalAdvisoryFile, FiscalAdvisoryStatusHistory, AdvisoryInternalNote, AdvisoryAuditLog
+from models import FiscalAdvisoryRequest, FiscalAdvisoryFile, FiscalAdvisoryStatusHistory, AdvisoryInternalNote, AdvisoryAuditLog, S01StripeCheckoutAttempt
 from advisory_s01_pricing import calculate_s01_quote, QuotePricingError, COMMISSION_RATE_BPS
 from models import Resource, ResourceRequest
 from error_tracking import record_processing_error_safe, is_actionable_processing_error
@@ -4904,11 +4904,6 @@ def _on_payment_completed(
 def advisory_enviar_presupuesto(req_id):
     """Rafa introduce el precio y el sistema envía el link de pago al cliente."""
 
-    advisory = FiscalAdvisoryRequest.query.get_or_404(req_id)
-
-    if advisory.status not in ("submitted", "quote_sent"):
-        return jsonify({"error": f"No se puede enviar presupuesto en estado '{advisory.status}'."}), 409
-
     data = request.get_json(silent=True) or {}
 
     # S01: el importe introducido es el honorario de Rafa, NO el precio final.
@@ -4918,6 +4913,34 @@ def advisory_enviar_presupuesto(req_id):
     except QuotePricingError as exc:
         return jsonify({"error": f"Importe inválido: {exc}"}), 400
     amount_cents = s01_quote.total_cents
+
+    # El mismo bloqueo de fila que utiliza la reserva Checkout S01.
+    # Nunca sobrescribir snapshots o limpiar evidencia cuando existan
+    # órdenes, pagos, aceptaciones o intentos (también inciertos).
+    advisory = (
+        FiscalAdvisoryRequest.query.filter_by(id=req_id)
+        .with_for_update().first_or_404()
+    )
+    if advisory.status not in ("submitted", "quote_sent"):
+        db.session.rollback()
+        return jsonify({"error": f"No se puede enviar presupuesto en estado '{advisory.status}'."}), 409
+
+    if (
+        advisory.paypal_order_id is not None
+        or advisory.paypal_capture_id is not None
+        or advisory.stripe_checkout_session_id is not None
+        or advisory.stripe_payment_intent_id is not None
+        or advisory.payment_provider is not None
+        or advisory.amount_paid is not None
+        or advisory.paid_at is not None
+        or advisory.quote_accepted_at is not None
+        or S01StripeCheckoutAttempt.query.filter_by(advisory_id=req_id).first() is not None
+    ):
+        db.session.rollback()
+        return jsonify({
+            "error": "Existe actividad financiera o un presupuesto aceptado. "
+                     "No se puede sustituir: requiere conciliación previa."
+        }), 409
 
     quote_message = (data.get("message") or "").strip()[:2000] or None
 
@@ -4935,12 +4958,6 @@ def advisory_enviar_presupuesto(req_id):
     advisory.quote_expires_at    = now + timedelta(days=30)
     advisory.payment_link_token  = _secrets.token_urlsafe(32)
     advisory.status              = "quote_sent"
-    # Invalidar cualquier orden de PayPal anterior: el capture endpoint rechaza
-    # órdenes cuyo ID no coincida con el almacenado, así que limpiar aquí
-    # hace que los links antiguos ya no puedan completar un pago.
-    advisory.paypal_order_id     = None
-    advisory.paypal_capture_id   = None
-
     history_note = f"Presupuesto enviado: €{amount_cents / 100:.2f} a {advisory.email}"
     if quote_message:
         history_note += ". Mensaje incluido."

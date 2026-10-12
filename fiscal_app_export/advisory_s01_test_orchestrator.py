@@ -132,11 +132,18 @@ def _reserve(*, advisory_id: int, token: str, now_ts: int,
 def _session_mapping(raw: object) -> dict:
     if isinstance(raw, dict):
         return dict(raw)
-    converter = getattr(raw, "to_dict_recursive", None)
-    if callable(converter):
-        converted = converter()
-        if isinstance(converted, dict):
-            return converted
+    # stripe-python 16 puede entregar StripeObject con to_dict().
+    # to_dict_recursive es un fallback para implementaciones anteriores.
+    # Si la conversión falla, nunca se acepta ni se reintenta la sesión.
+    for method in ("to_dict", "to_dict_recursive"):
+        converter = getattr(raw, method, None)
+        if callable(converter):
+            try:
+                converted = converter()
+            except Exception:
+                raise S01CheckoutBlocked("Respuesta Stripe no verificable") from None
+            if isinstance(converted, dict):
+                return dict(converted)
     raise S01CheckoutBlocked("Respuesta Stripe no verificable")
 
 
