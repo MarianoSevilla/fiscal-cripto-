@@ -347,8 +347,12 @@ def main():
     finally:
         for sig, handler in old_handlers.items():
             signal.signal(sig, handler)
-        stopped = not started
-        if started:
+        # pg_ctl can start the server and then fail/timed out before the
+        # start command returns. Never remove PGDATA while a postmaster may
+        # still exist, even if our local started flag remained false.
+        needs_stop = started or (data / "postmaster.pid").exists()
+        stopped = not needs_stop
+        if needs_stop:
             try:
                 run_step("Detención PostgreSQL",
                          [tools["pg_ctl"], "-D", str(data), "-m", "fast", "-w", "stop"],
