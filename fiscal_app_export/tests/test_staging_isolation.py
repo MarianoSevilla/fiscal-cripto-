@@ -107,9 +107,55 @@ def test_staging_rejects_sensitive_and_all_mutation_paths(path, method):
     assert result[0] == 503
 
 
-@pytest.mark.parametrize("path", ["/", "/healthz", "/como-funciona", "/static/landing.html"])
-def test_safe_reads_pass(path):
+@pytest.mark.parametrize("path", [
+    "/", "/healthz", "/como-funciona", "/contacto", "/faq",
+    "/exchanges/bitvavo", "/metodo-fifo-criptomonedas",
+    "/asesoramiento-fiscal-criptomonedas", "/robots.txt",
+])
+@pytest.mark.parametrize("method", ["GET", "HEAD", "OPTIONS"])
+def test_only_reviewed_public_pages_are_reachable(path, method):
+    assert staging_request_denial(host=STAGING_HOST, path=path, method=method) is None
+
+
+@pytest.mark.parametrize("path", [
+    "/static/css/landing.css", "/static/js/app.js", "/static/js/app.mjs",
+    "/static/img/logo.svg", "/static/img/logo.png", "/static/img/photo.webp",
+    "/static/img/photo.avif", "/static/fonts/body.woff2", "/static/favicon.ico",
+])
+def test_safe_public_assets_are_reachable(path):
     assert staging_request_denial(host=STAGING_HOST, path=path, method="GET") is None
+
+
+@pytest.mark.parametrize("path", [
+    "/verify-email", "/verify-email-result", "/reset-password/signed-token",
+    "/dashboard", "/account", "/fiscal", "/modelo721",
+    "/login/", "/signup/", "/recursos", "/recursos/experimento-bitcoin",
+    "/stats", "/stats-v2", "/pedir-asesoramiento",
+    "/mis-solicitudes-fiscales", "/auth/google/callback",
+    "/api/me", "/api/pago/paypal/capture", "/api/webhooks/paypal",
+    "/api/webhooks/stripe", "/api", "/admin", "/pagar/test-token",
+    "/static/pagar.html", "/static/signup.html", "/static/login.html",
+    "/static/landing.html", "/static/report.pdf", "/static/report.csv",
+    "/static/config.json", "/static/config.xml",
+    "/static/../verify.js", "/static/dir//main.js",
+    "/brand-new-unaudited-get", "/como-funciona/",
+])
+@pytest.mark.parametrize("method", ["GET", "HEAD", "OPTIONS"])
+def test_all_unreviewed_read_paths_fail_closed(path, method):
+    result = staging_request_denial(host=STAGING_HOST, path=path, method=method)
+    assert result is not None
+    assert result[0] == 503
+
+
+@pytest.mark.parametrize("method", ["POST", "PUT", "PATCH", "DELETE"])
+@pytest.mark.parametrize("path", ["/", "/healthz", "/como-funciona", "/static/css/landing.css"])
+def test_mutation_methods_are_blocked_even_on_allowlisted_paths(path, method):
+    assert staging_request_denial(host=STAGING_HOST, path=path, method=method)[0] == 503
+
+
+def test_email_verification_get_that_commits_to_db_is_not_public():
+    # Regression: app.py /verify-email is GET but writes user.email_verified_at.
+    assert staging_request_denial(host=STAGING_HOST, path="/verify-email", method="GET")[0] == 503
 
 
 def test_cross_host_and_cross_origin_rejected():
