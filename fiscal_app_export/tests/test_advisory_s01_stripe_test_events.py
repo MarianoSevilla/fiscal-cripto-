@@ -214,7 +214,7 @@ def test_advisory_mutation_fails_closed(populated, column, value):
 
 @pytest.mark.parametrize("column,value", [
     ("status", "uncertain"), ("status", "creating"),
-    ("expected_amount_cents", 25000), ("currency", "usd"),
+    ("expected_amount_cents", 25000),
     ("checkout_session_id", "cs_test_other123"),
     ("quote_fingerprint", "0" * 64), ("idempotency_key", "random-key"),
 ])
@@ -226,6 +226,17 @@ def test_attempt_mutation_fails_closed(populated, column, value):
         consume(populated)
     assert stats(*populated)["events"] == 0
     assert stats(*populated)["paid"] is None
+
+
+def test_database_rejects_invalid_attempt_currency(populated):
+    from sqlalchemy.exc import IntegrityError
+    attempt = db.session.get(S01StripeCheckoutAttempt, populated[1])
+    attempt.currency = "usd"
+    with pytest.raises(IntegrityError):
+        db.session.commit()
+    db.session.rollback()
+    assert db.session.get(S01StripeCheckoutAttempt, populated[1]).currency == "eur"
+    assert stats(*populated)["events"] == 0
 
 
 def test_transaction_error_rolls_back_history_receipt_and_status(populated):
