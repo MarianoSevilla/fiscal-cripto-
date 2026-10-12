@@ -263,14 +263,14 @@ def test_sdk16_stripeobject_conversion_contract():
         "metadata": {"s01_attempt_id": "synthetic", "s01_quote_sha256": "a" * 64},
         "url": "https://checkout.stripe.com/c/pay/cs_test_sdk16probe",
     }
-    raw = stripe.StripeObject(**expected)
+    raw = stripe.checkout.Session(**expected)
     assert hasattr(raw, "to_dict")
     result = _session_mapping(raw)
     assert result == expected, {"actual": result, "expected": expected}
 
 
 def test_sdk16_stripeobject_checkout_response_is_supported(synthetic_store):
-    """Stripe SDK v16 devuelve StripeObject, no siempre dict."""
+    """Checkout devuelve Session (subclase StripeObject), no siempre dict."""
     import stripe
 
     class StripeObjectProvider(FakeProvider):
@@ -278,7 +278,7 @@ def test_sdk16_stripeobject_checkout_response_is_supported(synthetic_store):
             response = super().create_session(
                 params=params, idempotency_key=idempotency_key
             )
-            return stripe.StripeObject(**response)
+            return stripe.checkout.Session(**response)
 
     provider = StripeObjectProvider()
     result = launch(synthetic_store, provider)
@@ -300,7 +300,7 @@ def test_invalid_sdk16_stripeobject_keeps_reservation_uncertain(synthetic_store)
                 params=params, idempotency_key=idempotency_key
             )
             response["amount_total"] = 100
-            return stripe.StripeObject(**response)
+            return stripe.checkout.Session(**response)
 
     provider = InvalidStripeObjectProvider()
     with pytest.raises(S01CheckoutBlocked, match="incierto"):
