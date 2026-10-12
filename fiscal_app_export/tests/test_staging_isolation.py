@@ -8,7 +8,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from staging_isolation import (
     STAGING_BASE_URL, STAGING_DB_HOST, STAGING_ENVIRONMENT_ID,
-    STAGING_HOST, STAGING_PROJECT_ID, STAGING_SERVICE_ID,
+    STAGING_HOST, STAGING_PROJECT_ID, STAGING_SERVICE_ID, RAILWAY_HEALTHCHECK_HOST,
     DISABLED_STAGING_CREDENTIALS, install_staging_email_barrier,
     is_staging_candidate, staging_request_denial, validate_staging_isolation,
 )
@@ -162,6 +162,59 @@ def test_cross_host_and_cross_origin_rejected():
     assert staging_request_denial(host="marianosevilla.com", path="/", method="GET")[0] == 421
     assert staging_request_denial(host=STAGING_HOST, origin="https://www.marianosevilla.com", path="/", method="GET")[0] == 403
     assert staging_request_denial(host=STAGING_HOST, origin=STAGING_BASE_URL, path="/", method="GET") is None
+
+
+@pytest.mark.parametrize("method", ["GET", "HEAD"])
+def test_railway_internal_healthcheck_is_only_allowed_for_read_methods(method):
+    # Regression: Railway uses this Host header when probing /healthz.
+    assert staging_request_denial(
+        host=RAILWAY_HEALTHCHECK_HOST, path="/healthz", method=method
+    ) is None
+
+
+@pytest.mark.parametrize("method", ["POST", "PUT", "PATCH", "DELETE", "OPTIONS", "TRACE"])
+def test_railway_internal_healthcheck_rejects_all_other_methods(method):
+    result = staging_request_denial(
+        host=RAILWAY_HEALTHCHECK_HOST, path="/healthz", method=method
+    )
+    assert result is not None
+    assert result[0] == 421
+
+
+@pytest.mark.parametrize("path", [
+    "/", "/healthz/", "/healthz/suffix", "/verify-email", "/como-funciona",
+    "/static/css/app.css", "/api/me", "/api/pago/paypal/capture",
+    "/api/webhooks/paypal", "/api/webhooks/stripe", "/auth/google/callback",
+])
+@pytest.mark.parametrize("method", ["GET", "HEAD", "POST"])
+def test_railway_internal_healthcheck_host_never_grants_other_routes(path, method):
+    assert staging_request_denial(
+        host=RAILWAY_HEALTHCHECK_HOST, path=path, method=method
+    )[0] == 421
+
+
+@pytest.mark.parametrize("origin", [STAGING_BASE_URL, "https://www.marianosevilla.com", "null", ""])
+def test_railway_internal_healthcheck_must_have_no_origin(origin):
+    assert staging_request_denial(
+        host=RAILWAY_HEALTHCHECK_HOST, path="/healthz", method="GET", origin=origin
+    )[0] == 421
+
+
+@pytest.mark.parametrize("host", [
+    "healthcheck.railway.app.evil.test", "nothealthcheck.railway.app",
+    "healthcheck.railway.app:8080", "healthcheck.railway.app:443",
+])
+def test_railway_internal_healthcheck_host_requires_exact_match(host):
+    assert staging_request_denial(
+        host=host, path="/healthz", method="GET"
+    )[0] == 421
+
+
+def test_normal_staging_domain_remains_unaffected_by_healthcheck_exception():
+    assert staging_request_denial(host=STAGING_HOST, path="/healthz", method="GET") is None
+    assert staging_request_denial(host=STAGING_HOST, path="/healthz", method="OPTIONS") is None
+    assert staging_request_denial(host=STAGING_HOST, path="/verify-email", method="GET")[0] == 503
+    assert staging_request_denial(host=STAGING_HOST, path="/healthz", method="POST")[0] == 503
 
 
 def test_resend_api_is_blocked_in_background_code_too():
