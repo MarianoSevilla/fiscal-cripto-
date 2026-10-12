@@ -4998,7 +4998,7 @@ def advisory_enviar_presupuesto(req_id):
     try:
         s01_quote = calculate_s01_quote(data.get("amount_euros"))
     except QuotePricingError as exc:
-        return jsonify({"error": str(exc)}), 400
+        return jsonify({"error": f"Importe inválido: {exc}"}), 400
     amount_cents = s01_quote.total_cents
 
     quote_message = (data.get("message") or "").strip()[:2000] or None
