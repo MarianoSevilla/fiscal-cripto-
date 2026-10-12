@@ -3,6 +3,8 @@ import hashlib
 import importlib.util
 import os
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
@@ -119,6 +121,67 @@ def test_no_network_guard_does_not_depend_on_prod_secrets(tmp_path):
     assert "socket.AF_UNIX" in source
     assert "blocks all IP networking" in source
     assert "blocks DNS" in source
+    assert "class _LocalSocket(_orig_socket)" in source
+
+
+def test_restricted_socket_imports_asyncio_ssl_in_fresh_python(tmp_path):
+    """Regression: Python 3.13 SSL subclasses socket.socket on import."""
+    rehearsal.deny_tcp_python_network(tmp_path)
+    guard = tmp_path / "python_guard" / "sitecustomize.py"
+    probe = """
+import runpy, sys
+runpy.run_path(sys.argv[1])
+import asyncio
+import ssl
+import socket
+assert isinstance(socket.socket, type)
+try:
+    socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+except OSError as exc:
+    assert 'blocks all IP networking' in str(exc)
+else:
+    raise AssertionError('IP socket was permitted')
+with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM):
+    pass
+try:
+    socket.getaddrinfo('example.invalid', 443)
+except OSError as exc:
+    assert 'blocks DNS' in str(exc)
+else:
+    raise AssertionError('DNS lookup was permitted')
+"""
+    result = subprocess.run(
+        [sys.executable, "-I", "-S", "-c", probe, str(guard)],
+        env=rehearsal.clean_environment(),
+        capture_output=True,
+        text=True,
+        timeout=20,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr[-1200:]
+
+
+def test_restricted_socket_allows_sqlalchemy_import(tmp_path):
+    """The precise import path previously raised TypeError in SQLAlchemy 2.1."""
+    rehearsal.deny_tcp_python_network(tmp_path)
+    guard = tmp_path / "python_guard" / "sitecustomize.py"
+    probe = """
+import runpy, sys
+runpy.run_path(sys.argv[1])
+from sqlalchemy import inspect, text
+from flask_migrate import upgrade
+import asyncio, ssl, socket
+assert isinstance(socket.socket, type)
+"""
+    result = subprocess.run(
+        [sys.executable, "-I", "-c", probe, str(guard)],
+        env=rehearsal.clean_environment(),
+        capture_output=True,
+        text=True,
+        timeout=25,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr[-1200:]
 
 
 def test_main_refuses_execution_in_ci(tmp_path, monkeypatch):
