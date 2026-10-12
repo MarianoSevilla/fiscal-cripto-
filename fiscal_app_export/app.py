@@ -94,6 +94,12 @@ from auth import (
     require_fiscal_advisor_page,
 )
 from security_config import build_security_config
+from staging_isolation import (
+    STAGING_BASE_URL,
+    validate_staging_isolation,
+    staging_request_denial,
+    install_staging_email_barrier,
+)
 
 app = Flask(__name__, static_folder="static")
 
@@ -111,6 +117,27 @@ _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Por defecto exige clave real y HTTPS; sólo development/testing locales explícitos
 # permiten una excepción. No altera la clave suministrada ni las firmas existentes.
 app.config.update(build_security_config(os.environ))
+
+# STG-LOCK-001: identity/DB/provider preflight must precede DB setup,
+# bootstrap DDL and any financial route. No effect in production.
+_STAGING_ISOLATED = validate_staging_isolation(os.environ)
+if _STAGING_ISOLATED:
+    install_staging_email_barrier(resend)
+
+    @app.before_request
+    def _staging_preflight_lockdown():
+        denial = staging_request_denial(
+            host=request.host,
+            path=request.path,
+            method=request.method,
+            origin=request.headers.get("Origin"),
+        )
+        if denial is not None:
+            status, message = denial
+            headers = {"Cache-Control": "no-store"}
+            if status == 503:
+                headers["Retry-After"] = "300"
+            return jsonify({"error": message}), status, headers
 
 # ADMIN_EMAILS y FISCAL_ADVISOR_EMAILS se importan desde auth.py.
 # _is_admin / _is_fiscal_advisor son aliases de las funciones centralizadas
@@ -743,11 +770,11 @@ EXCHANGE_PAGES = {
 
 
 # ── CORS ──────────────────────────────────────
-ALLOWED_ORIGINS = [
+ALLOWED_ORIGINS = ([STAGING_BASE_URL] if _STAGING_ISOLATED else [
     "https://marianosevilla.com",
     "https://www.marianosevilla.com",
     "https://fiscal.marianosevilla.com",
-]
+])
 CORS(
     app,
     origins=ALLOWED_ORIGINS,
