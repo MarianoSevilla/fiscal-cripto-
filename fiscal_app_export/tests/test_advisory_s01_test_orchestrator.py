@@ -245,3 +245,94 @@ def test_no_provider_or_reservation_without_valid_id(synthetic_store):
         launch(0, provider)
     assert provider.calls == []
     assert S01StripeCheckoutAttempt.query.count() == 0
+
+
+def test_sdk16_stripeobject_conversion_contract():
+    import stripe
+    from advisory_s01_test_orchestrator import _session_mapping
+
+    expected = {
+        "id": "cs_test_sdk16probe",
+        "livemode": False,
+        "mode": "payment",
+        "status": "open",
+        "payment_status": "unpaid",
+        "amount_total": 26000,
+        "currency": "eur",
+        "client_reference_id": "1",
+        "metadata": {"s01_attempt_id": "synthetic", "s01_quote_sha256": "a" * 64},
+        "url": "https://checkout.stripe.com/c/pay/cs_test_sdk16probe",
+    }
+    raw = stripe.checkout.Session(id=expected["id"])
+    for field, value in expected.items():
+        raw[field] = value
+    assert hasattr(raw, "to_dict")
+    result = _session_mapping(raw)
+    assert result == expected, {"actual": result, "expected": expected}
+
+
+def test_sdk16_stripeobject_checkout_response_is_supported(synthetic_store):
+    """Checkout devuelve Session (subclase StripeObject), no siempre dict."""
+    import stripe
+
+    class StripeObjectProvider(FakeProvider):
+        def create_session(self, *, params, idempotency_key):
+            response = super().create_session(
+                params=params, idempotency_key=idempotency_key
+            )
+            sdk_session = stripe.checkout.Session(id=response["id"])
+            for field, value in response.items():
+                sdk_session[field] = value
+            return sdk_session
+
+    provider = StripeObjectProvider()
+    result = launch(synthetic_store, provider)
+    assert result.session_id == "cs_test_synthetic_session"
+    assert result.url.startswith("https://checkout.stripe.com/c/pay/")
+    assert len(provider.calls) == 1
+    a = S01StripeCheckoutAttempt.query.one()
+    assert a.status == "ready"
+    assert a.checkout_session_id == result.session_id
+    assert db.session.get(FiscalAdvisoryRequest, synthetic_store).stripe_checkout_session_id == result.session_id
+
+
+def test_invalid_sdk16_stripeobject_keeps_reservation_uncertain(synthetic_store):
+    import stripe
+
+    class InvalidStripeObjectProvider(FakeProvider):
+        def create_session(self, *, params, idempotency_key):
+            response = super().create_session(
+                params=params, idempotency_key=idempotency_key
+            )
+            response["amount_total"] = 100
+            sdk_session = stripe.checkout.Session(id=response["id"])
+            for field, value in response.items():
+                sdk_session[field] = value
+            return sdk_session
+
+    provider = InvalidStripeObjectProvider()
+    with pytest.raises(S01CheckoutBlocked, match="incierto"):
+        launch(synthetic_store, provider)
+    assert len(provider.calls) == 1
+    a = S01StripeCheckoutAttempt.query.one()
+    assert a.status == "uncertain"
+    assert a.checkout_session_id is None
+    assert db.session.get(FiscalAdvisoryRequest, synthetic_store).stripe_checkout_session_id is None
+
+
+def test_sdk_conversion_exception_fails_closed(synthetic_store):
+    class UnparseableSDKResponse:
+        def to_dict(self):
+            raise ValueError("Synthetic SDK conversion failure")
+
+    class InvalidProvider(FakeProvider):
+        def create_session(self, *, params, idempotency_key):
+            super().create_session(params=params, idempotency_key=idempotency_key)
+            return UnparseableSDKResponse()
+
+    provider = InvalidProvider()
+    with pytest.raises(S01CheckoutBlocked, match="incierto"):
+        launch(synthetic_store, provider)
+    assert len(provider.calls) == 1
+    assert S01StripeCheckoutAttempt.query.one().status == "uncertain"
+    assert db.session.get(FiscalAdvisoryRequest, synthetic_store).stripe_checkout_session_id is None
