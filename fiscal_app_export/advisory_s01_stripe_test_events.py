@@ -38,11 +38,14 @@ def _require_test_environment(secret: str) -> None:
 def _mapping(obj: Any) -> dict:
     if isinstance(obj, dict):
         return obj
-    f = getattr(obj, "to_dict_recursive", None)
-    if callable(f):
-        o = f()
-        if isinstance(o, dict):
-            return o
+    # stripe-python 16 expone to_dict() en StripeObject, también para Event.
+    # Evitar depender del método to_dict_recursive de versiones antiguas.
+    for method in ("to_dict", "to_dict_recursive"):
+        f = getattr(obj, method, None)
+        if callable(f):
+            o = f()
+            if isinstance(o, dict):
+                return o
     raise S01EventRejected("Objeto Stripe no reconocible")
 
 
