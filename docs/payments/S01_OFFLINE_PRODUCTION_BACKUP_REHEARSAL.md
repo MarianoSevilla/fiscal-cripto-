@@ -41,7 +41,7 @@ Si el checksum original tiene otro nombre, usar su ruta verdadera. Si no existe 
 3. Restauración completa con pg_restore --exit-on-error --single-transaction, revisión Alembic inicial v5w6x7y8z9a0.
 4. Recuento y huella de las columnas históricas de todas las tablas originales. No se exportan ni imprimen datos ni huellas.
 5. Ejecución del **bootstrap_db.py real**, dos veces consecutivas para comprobar idempotencia. Se inyectan claves sintéticas y guardia Python contra sockets IP y DNS; ninguna llamada a Stripe, Resend o PayPal.
-6. Revisión final z9a0b1c2d3e4; las tres tablas S01 quedan vacías, el desglose histórico de honorarios y comisiones queda NULL y cada registro histórico (incluidas referencias PayPal) conserva su huella.
+6. Revisión final z9a0b1c2d3e4; las tres tablas S01 quedan vacías, con constraints e índices obligatorios, sin tablas añadidas inesperadamente; el desglose histórico de honorarios y comisiones queda NULL y cada registro histórico (incluidas referencias PayPal) conserva su huella.
 7. Se detiene PG temporal con pg_ctl y se destruye únicamente el directorio temporal creado por el script, nunca la copia original. Si fallase la detención, los archivos privados se conservan para revisión manual y se advierte la ruta local.
 
 ## Límites y dictamen
