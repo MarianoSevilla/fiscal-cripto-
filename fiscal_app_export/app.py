@@ -5464,6 +5464,10 @@ def stripe_webhook():
 
     if event["type"] == "checkout.session.completed":
         session_obj = event["data"]["object"]
+        # stripe-python returns StripeObject after verified parsing; its
+        # .get() is not supported. Convert without bypassing signature checks.
+        if not isinstance(session_obj, dict):
+            session_obj = session_obj.to_dict()
         cs_id        = session_obj.get("id")
         pi_id        = session_obj.get("payment_intent")
         amount_total = session_obj.get("amount_total")
