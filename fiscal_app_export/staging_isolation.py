@@ -81,11 +81,53 @@ def validate_staging_isolation(env: Mapping[str, str]) -> bool:
     return True
 
 
-def staging_request_denial(*, host: str, path: str, method: str, origin: str | None = None) -> tuple[int, str] | None:
-    """Restrict the preflight runtime before any endpoint or provider is reached.
+# Only reviewed, fixed public pages may be accessed in staging.
+# GET does not imply read-only: /verify-email commits to the database.
+_STAGING_PUBLIC_READ_PATHS = frozenset({
+    "/", "/healthz", "/about", "/privacidad", "/terminos", "/aviso-legal",
+    "/seguridad", "/cookies", "/preferencias",
+    "/robots.txt", "/llms.txt", "/sitemap.xml",
+    "/exchanges", "/exchanges/binance", "/exchanges/bitvavo",
+    "/exchanges/kraken", "/exchanges/coinbase", "/exchanges/nexo",
+    "/exchanges/cryptocom", "/exchanges/bit2me",
+    "/bienes-homogeneos-criptomonedas",
+    "/perdidas-patrimoniales-criptomonedas",
+    "/compensar-perdidas-criptomonedas",
+    "/metodo-fifo-criptomonedas",
+    "/regla-dos-meses-criptomonedas",
+    "/permuta-criptomonedas-irpf",
+    "/staking-criptomonedas-irpf",
+    "/como-funciona", "/modelo-721-criptomonedas", "/herramientas",
+    "/faq", "/contacto", "/asesoramiento-fiscal-criptomonedas",
+})
 
-    All state-changing requests are disabled until staging data is certified.
-    No PayPal return URL (GET) or signed webhook is processed in this phase.
+# Necessary public assets only: never serve HTML, PDF, CSV, JSON or XML via
+# /static/ while in lockdown; dynamic and unreviewed pages must stay closed.
+_STAGING_PUBLIC_ASSET_EXTENSIONS = frozenset({
+    ".css", ".js", ".mjs", ".png", ".jpg", ".jpeg", ".gif",
+    ".webp", ".avif", ".svg", ".ico", ".woff", ".woff2",
+    ".ttf", ".otf", ".eot",
+})
+
+
+def _is_reviewed_staging_read(path: str) -> bool:
+    if path in _STAGING_PUBLIC_READ_PATHS:
+        return True
+    if not path.startswith("/static/"):
+        return False
+    components = path.split("/")[2:]
+    if not components or any(component in ("", ".", "..") for component in components):
+        return False
+    filename = components[-1]
+    suffix = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    return suffix in _STAGING_PUBLIC_ASSET_EXTENSIONS
+
+
+def staging_request_denial(*, host: str, path: str, method: str, origin: str | None = None) -> tuple[int, str] | None:
+    """Fail closed for all unreviewed routes, including state-changing GET.
+
+    Payment/provider callbacks, authenticated pages, API, and new endpoints
+    remain blocked until explicitly reviewed in a separate change.
     """
     if host.lower().split(":", 1)[0] != STAGING_HOST:
         return 421, "Staging host not authorized"
@@ -93,14 +135,9 @@ def staging_request_denial(*, host: str, path: str, method: str, origin: str | N
         return 403, "Staging origin not authorized"
     if method.upper() not in ("GET", "HEAD", "OPTIONS"):
         return 503, "Staging changes temporarily disabled"
-    # Read-only API paths may still disclose data, consume single-use tokens,
-    # call third parties or change DB state. Dataset provenance is not yet
-    # certified: only public static pages and /healthz stay reachable.
-    if (path.startswith(("/api/", "/admin/", "/auth/google", "/pagar/", "/mis-solicitudes-fiscales"))
-            or path in ("/api", "/admin", "/pagar", "/static/pagar.html")):
-        return 503, "Staging API or sensitive route disabled"
+    if not _is_reviewed_staging_read(path):
+        return 503, "Staging route not explicitly permitted"
     return None
-
 
 def install_staging_email_barrier(resend_module) -> None:
     """Additional process-wide belt-and-braces block, including threads.
