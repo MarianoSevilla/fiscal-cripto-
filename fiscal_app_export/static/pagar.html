@@ -150,12 +150,6 @@ p.body-text { font-size: 15px; color: var(--sub); line-height: 1.7; margin-botto
 </head>
 <body>
 
-<div class="paypal-overlay" id="paypalOverlay">
-  <div class="overlay-spinner"></div>
-  <span class="overlay-logo">PayPal</span>
-  <p class="overlay-text">Redirigiendo a PayPal…</p>
-</div>
-
 <nav>
   <a href="/" class="nav-logo"><span>Mariano</span><span>Sevilla</span></a>
 </nav>
@@ -163,149 +157,13 @@ p.body-text { font-size: 15px; color: var(--sub); line-height: 1.7; margin-botto
 <main>
   <div class="card">
 
-    <!-- Loading -->
-    <div class="state active" id="stateLoading">
-      <div class="loading-spinner"></div>
-      <p class="loading-text">Cargando presupuesto…</p>
-    </div>
-
-    <!-- Pending: mostrar presupuesto y botón de pago -->
-    <div class="state" id="statePending">
-      <div id="cancelledNotice" class="cancelled-notice" style="display:none">
-        Has cancelado el pago en PayPal. Puedes intentarlo de nuevo cuando quieras.
-      </div>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:6px;">Presupuesto de asesoramiento fiscal</p>
-      <h1 id="clientName"></h1>
-      <div class="amount-block">
-        <div class="amount-label">Importe</div>
-        <div class="amount-value" id="amountDisplay"></div>
-        <div class="amount-service" id="serviceDisplay"></div>
-      </div>
-      <div class="rafa-message" id="rafaMessageBlock" style="display:none">
-        <div class="rafa-message-label">Mensaje de Rafa</div>
-        <div id="rafaMessage"></div>
-      </div>
-      <p class="expiry" id="expiryLine" style="display:none">
-        Este presupuesto es válido hasta el <strong id="expiryDate"></strong>.
-      </p>
-      <button class="paypal-btn" id="payBtn" onclick="iniciarPago()">
-        <span class="paypal-logo-text">PayPal</span>
-        <span>Pagar con PayPal</span>
-      </button>
-      <p class="pay-hint">Pago seguro procesado por PayPal · Sin cargos adicionales</p>
-      <div class="msg-error" id="payError"></div>
-    </div>
-
-    <!-- Already paid -->
-    <div class="state" id="stateAlreadyPaid">
-      <div class="state-icon">✅</div>
-      <h1>Pago ya confirmado</h1>
-      <p class="body-text">Este presupuesto ya ha sido pagado. Rafa está trabajando en tu caso y recibirás novedades por email.</p>
+    <section id="financialSuspension" role="status" aria-labelledby="maintenanceTitle">
+      <h1 id="maintenanceTitle">Pagos temporalmente suspendidos</h1>
+      <p class="body-text">Los pagos de asesoramiento están temporalmente suspendidos por mantenimiento. Si ya has autorizado un pago en PayPal, no vuelvas a realizarlo. Estamos verificando las operaciones pendientes.</p>
       <a href="/" class="btn-back">Ir al inicio</a>
-    </div>
-
-    <!-- Expired -->
-    <div class="state" id="stateExpired">
-      <div class="state-icon">⏰</div>
-      <h1>Presupuesto caducado</h1>
-      <p class="body-text">Este presupuesto ha expirado. Responde al email que recibiste para solicitar uno nuevo.</p>
-      <a href="/contacto" class="btn-back">Contactar</a>
-    </div>
-
-    <!-- Error / invalid -->
-    <div class="state" id="stateError">
-      <div class="state-icon">✕</div>
-      <h1>Enlace no válido</h1>
-      <p class="body-text">Este enlace de pago no es válido o ya no está disponible. Si crees que es un error, responde al email que recibiste.</p>
-      <a href="/contacto" class="btn-back">Contactar</a>
-    </div>
-
+    </section>
   </div>
 </main>
-
-<script>
-const token   = location.pathname.split('/pagar/')[1] || '';
-const params  = new URLSearchParams(location.search);
-const cancelled = params.get('cancelado') === '1';
-const payError  = params.get('error');
-
-function showState(id) {
-  document.querySelectorAll('.state').forEach(el => el.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
-
-function formatDate(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-
-function formatAmount(cents) {
-  return (cents / 100).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
-}
-
-async function cargarPresupuesto() {
-  try {
-    const res  = await fetch(`/api/pago/info/${token}`);
-    const data = await res.json();
-
-    if (!res.ok || data.error) {
-      showState('stateError');
-      return;
-    }
-
-    if (data.state === 'already_paid') { showState('stateAlreadyPaid'); return; }
-    if (data.state === 'expired')      { showState('stateExpired');     return; }
-
-    // state === 'pending'
-    document.getElementById('clientName').textContent   = data.full_name || '';
-    document.getElementById('amountDisplay').textContent = formatAmount(data.quoted_amount || 0);
-    document.getElementById('serviceDisplay').textContent =
-      `${data.service_label} · Ejercicio ${data.tax_year}`;
-
-    if (data.quote_message) {
-      document.getElementById('rafaMessage').textContent = data.quote_message;
-      document.getElementById('rafaMessageBlock').style.display = 'block';
-    }
-    if (data.quote_expires_at) {
-      document.getElementById('expiryDate').textContent = formatDate(data.quote_expires_at);
-      document.getElementById('expiryLine').style.display = 'block';
-    }
-    if (cancelled) {
-      document.getElementById('cancelledNotice').style.display = 'block';
-    }
-
-    showState('statePending');
-  } catch {
-    showState('stateError');
-  }
-}
-
-async function iniciarPago() {
-  const btn     = document.getElementById('payBtn');
-  const errorEl = document.getElementById('payError');
-  errorEl.style.display = 'none';
-  btn.disabled  = true;
-  btn.innerHTML = '<span style="opacity:.7">Conectando con PayPal…</span>';
-
-  try {
-    const res  = await fetch(`/api/pago/iniciar/${token}`, { method: 'POST' });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'No se pudo iniciar el pago.');
-
-    document.getElementById('paypalOverlay').classList.add('active');
-    window.location.href = data.redirect_url;
-
-  } catch (err) {
-    errorEl.textContent   = err.message;
-    errorEl.style.display = 'block';
-    btn.disabled = false;
-    btn.innerHTML = '<span class="paypal-logo-text">PayPal</span><span>Pagar con PayPal</span>';
-  }
-}
-
-cargarPresupuesto();
-</script>
 
 <!-- ── FOOTER ───────────────────── -->
 <footer class="page-footer">

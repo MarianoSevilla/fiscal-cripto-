@@ -609,7 +609,7 @@ async function openDetail(id, el) {
         <div class="detail-field"><div class="detail-field-label">Ejercicio fiscal</div><div class="detail-field-value">${d.tax_year||'—'}</div></div>
         <div class="detail-field"><div class="detail-field-label">Exchanges</div><div class="detail-field-value">${escHtml(d.exchanges||'—')}</div></div>
         <div class="detail-field"><div class="detail-field-label">Volumen</div><div class="detail-field-value">${escHtml(d.operation_volume||'—')}</div></div>
-        <div class="detail-field"><div class="detail-field-label">Importe presupuestado</div><div class="detail-field-value" style="color:#fbbf24;font-weight:600">${d.quoted_amount ? (d.quoted_amount/100).toLocaleString('es-ES',{minimumFractionDigits:2}) + ' €' : '—'}</div></div>
+        <div class="detail-field"><div class="detail-field-label">Total presupuestado al cliente</div><div class="detail-field-value" style="color:#fbbf24;font-weight:600">${d.quoted_amount ? (d.quoted_amount/100).toLocaleString('es-ES',{minimumFractionDigits:2}) + ' €' : '—'}</div></div>
         <div class="detail-field"><div class="detail-field-label">Importe cobrado</div><div class="detail-field-value" style="color:var(--accent);font-weight:600">${amount}</div></div>
         <div class="detail-field"><div class="detail-field-label">Fecha de pago</div><div class="detail-field-value">${d.paid_at ? new Date(d.paid_at).toLocaleDateString('es-ES') : '—'}</div></div>
         <div class="detail-field"><div class="detail-field-label">Proveedor de pago</div><div class="detail-field-value">${escHtml((d.payment_provider||'').toUpperCase()||'—')}</div></div>
@@ -653,8 +653,8 @@ async function openDetail(id, el) {
           </label>
           <div class="reply-amount-wrap ${['submitted','quote_sent','pendiente_info'].includes(d.status) && d.status === 'quote_sent' ? 'visible' : ''}" id="replyAmountWrap">
             <div class="reply-field" style="margin-bottom:0">
-              <label>Importe (€) *</label>
-              <input type="number" id="replyAmount" min="1" step="0.01" placeholder="79.00" value="${d.quoted_amount ? (d.quoted_amount/100).toFixed(2) : ''}">
+              <label>Honorarios de Rafa (€) *</label>
+              <input type="number" id="replyAmount" min="1" step="0.01" placeholder="79.00" value="${d.rafa_fee_cents != null ? (d.rafa_fee_cents/100).toFixed(2) : ''}">
             </div>
           </div>
           <div class="reply-pendiente-wrap ${d.status === 'quote_sent' ? 'hidden' : ''}" id="replyPendienteWrap" style="margin-top:10px;">
@@ -782,7 +782,7 @@ async function enviarRespuesta(id) {
   if (isQuote) {
     const amount = parseFloat((document.getElementById('replyAmount')?.value || '').replace(',', '.'));
     if (!amount || amount < 1) {
-      errEl.textContent = 'Introduce un importe válido (mínimo 1 €).';
+      errEl.textContent = 'Introduce los honorarios de Rafa (mínimo 1 €).';
       errEl.style.display = 'block';
       return;
     }
