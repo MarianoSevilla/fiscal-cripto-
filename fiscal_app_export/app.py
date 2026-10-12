@@ -47,6 +47,7 @@ except ImportError:
     _stripe_available = False
     _stripe_module = None
 from models import FiscalAdvisoryRequest, FiscalAdvisoryFile, FiscalAdvisoryStatusHistory, AdvisoryInternalNote, AdvisoryAuditLog
+from advisory_s01_pricing import calculate_s01_quote, QuotePricingError, COMMISSION_RATE_BPS
 from models import Resource, ResourceRequest
 from error_tracking import record_processing_error_safe, is_actionable_processing_error
 
@@ -4992,13 +4993,13 @@ def advisory_enviar_presupuesto(req_id):
 
     data = request.get_json(silent=True) or {}
 
-    # Importe
+    # S01: el importe introducido es el honorario de Rafa, NO el precio final.
+    # Se calcula en céntimos exactos; el 30 % queda registrado por separado.
     try:
-        amount_euros = float(str(data.get("amount_euros", "")).replace(",", "."))
-        assert amount_euros >= 1
-    except Exception:
-        return jsonify({"error": "Importe inválido. Debe ser un número >= 1."}), 400
-    amount_cents = int(round(amount_euros * 100))
+        s01_quote = calculate_s01_quote(data.get("amount_euros"))
+    except QuotePricingError as exc:
+        return jsonify({"error": str(exc)}), 400
+    amount_cents = s01_quote.total_cents
 
     quote_message = (data.get("message") or "").strip()[:2000] or None
 
@@ -5007,6 +5008,9 @@ def advisory_enviar_presupuesto(req_id):
 
     now                          = datetime.utcnow()
     advisory.quoted_amount       = amount_cents
+    advisory.rafa_fee_cents      = s01_quote.rafa_fee_cents
+    advisory.commission_cents    = s01_quote.commission_cents
+    advisory.commission_rate_bps = COMMISSION_RATE_BPS
     advisory.quoted_by_user_id   = current_user.id
     advisory.quote_message       = quote_message
     advisory.quote_sent_at       = now
@@ -5019,7 +5023,7 @@ def advisory_enviar_presupuesto(req_id):
     advisory.paypal_order_id     = None
     advisory.paypal_capture_id   = None
 
-    history_note = f"Presupuesto enviado: €{amount_euros:.2f} a {advisory.email}"
+    history_note = f"Presupuesto enviado: €{amount_cents / 100:.2f} a {advisory.email}"
     if quote_message:
         history_note += ". Mensaje incluido."
     db.session.add(FiscalAdvisoryStatusHistory(
@@ -5032,7 +5036,9 @@ def advisory_enviar_presupuesto(req_id):
         request_id = advisory.id,
         admin_id   = current_user.id,
         action     = AdvisoryAuditLog.ACTION_QUOTE_SENT,
-        detail     = f"Importe: {amount_euros:.2f} € a {advisory.email}",
+        detail     = (f"Rafa: {s01_quote.rafa_fee_cents / 100:.2f} €; "
+                      f"comisión: {s01_quote.commission_cents / 100:.2f} €; "
+                      f"total: {amount_cents / 100:.2f} € a {advisory.email}"),
     ))
     db.session.commit()
 
@@ -5042,6 +5048,9 @@ def advisory_enviar_presupuesto(req_id):
     return jsonify({
         "ok":           True,
         "payment_url":  payment_url,
+        "rafa_fee_cents": s01_quote.rafa_fee_cents,
+        "commission_cents": s01_quote.commission_cents,
+        "total_cents": amount_cents,
         "email_sent":   email_ok,
         "email_to":     advisory.email,
         # Si email_sent es False el expediente ya está guardado; el admin puede reenviar.

@@ -235,7 +235,10 @@ class FiscalAdvisoryRequest(db.Model):
     billing_postal_code        = db.Column(db.String(20),  nullable=True)
     billing_company_name       = db.Column(db.String(255), nullable=True)
     # ── Presupuesto ──────────────────────────────────────────────────────────
-    quoted_amount              = db.Column(db.Integer,     nullable=True)   # céntimos — precio fijado por Rafa
+    quoted_amount              = db.Column(db.Integer,     nullable=True)   # céntimos — total presupuestado al cliente
+    rafa_fee_cents             = db.Column(db.Integer,     nullable=True)   # base de honorarios de Rafa
+    commission_cents           = db.Column(db.Integer,     nullable=True)   # suplemento propio
+    commission_rate_bps        = db.Column(db.Integer,     nullable=True)   # snapshot de 3000 bps (30 %)
     quoted_by_user_id          = db.Column(db.Integer,     db.ForeignKey("users.id"), nullable=True)
     quote_message              = db.Column(db.Text,        nullable=True)   # mensaje personalizado al cliente
     quote_sent_at              = db.Column(db.DateTime,    nullable=True)
@@ -303,6 +306,9 @@ class FiscalAdvisoryRequest(db.Model):
                 "billing_postal_code": self.billing_postal_code,
                 "billing_company_name": self.billing_company_name,
                 "quoted_amount": self.quoted_amount,
+                "rafa_fee_cents": self.rafa_fee_cents,
+                "commission_cents": self.commission_cents,
+                "commission_rate_bps": self.commission_rate_bps,
                 "quoted_by_user_id": self.quoted_by_user_id,
                 "quote_message": self.quote_message,
                 "quote_sent_at": self.quote_sent_at.isoformat() if self.quote_sent_at else None,
