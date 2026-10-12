@@ -121,6 +121,9 @@ jobs:
           python fiscal_app_export/tests/qa_db_bootstrap_postgres.py
           python fiscal_app_export/tests/qa_advisory_prefreeze_postgres.py
 
+      - name: S01 signed Stripe events under two PostgreSQL 18 processes
+        run: python fiscal_app_export/tests/qa_s01_pg18_multiprocess.py
+
   browser-navigation:
     name: browser-navigation
     runs-on: ubuntu-24.04
