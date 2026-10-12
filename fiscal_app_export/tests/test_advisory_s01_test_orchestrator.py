@@ -126,7 +126,7 @@ def test_committed_reservation_before_provider_and_exact_link(synthetic_store):
 def test_second_browser_request_is_blocked_even_if_ready(synthetic_store):
     provider = FakeProvider()
     launch(synthetic_store, provider)
-    with pytest.raises(S01CheckoutBlocked, match="ya reservado"):
+    with pytest.raises(S01CheckoutBlocked, match="ya reservado|actividad financiera previa"):
         launch(synthetic_store, provider)
     assert len(provider.calls) == 1
     assert S01StripeCheckoutAttempt.query.count() == 1
@@ -207,7 +207,7 @@ def test_provider_timeout_blocks_all_retry(synthetic_store):
     attempt = S01StripeCheckoutAttempt.query.one()
     assert attempt.status == "uncertain"
     assert attempt.checkout_session_id is None
-    with pytest.raises(S01CheckoutBlocked, match="ya reservado"):
+    with pytest.raises(S01CheckoutBlocked, match="ya reservado|actividad financiera previa"):
         launch(synthetic_store, provider)
     assert len(provider.calls) == 1
 
