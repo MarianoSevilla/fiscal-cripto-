@@ -14,7 +14,7 @@ El controlador `POST /api/webhooks/stripe` de `fiscal_app_export/app.py` aceptab
 2. Exigir cabecera `Stripe-Signature`. Si está ausente, responder **400**, sin acceso a expedientes.
 3. Validar la autenticidad y antigüedad de la firma utilizando `stripe.Webhook.construct_event(payload, signature, secret)` con los **bytes originales** del cuerpo. Si la firma o el JSON no son válidos, responder **400**; nunca aceptar `json.loads` sin firma.
 4. No registrar cuerpos, firmas, excepciones de verificación ni datos financieros en logs.
-5. Solo después de verificar la firma aplicar la lógica existente de eventos `checkout.session.completed`. No cambiar estados ni modelos, conciliación, pagos reales o comportamiento de PayPal.
+5. Solo después de verificar la firma convertir el `StripeObject` del SDK en diccionario mediante `to_dict()` antes de reutilizar la lógica de eventos `checkout.session.completed`. El controlador anterior invocaba `.get()` sobre el objeto firmado, método que Stripe SDK 16 no admite. No cambiar estados ni modelos, conciliación, pagos reales o comportamiento de PayPal.
 6. Los errores inesperados se propagan como errores del servidor (sin confirmación HTTP 2xx). Los errores durante la confirmación de pago conservan el rollback y el HTTP 500 existentes.
 
 ## Pruebas
