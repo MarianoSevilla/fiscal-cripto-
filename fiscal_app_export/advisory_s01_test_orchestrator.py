@@ -229,8 +229,15 @@ def create_synthetic_checkout(*, advisory_id: int, token: str,
             .filter_by(id=advisory_id).with_for_update().first()
         )
         if (advisory is None or advisory.status != "quote_sent" or
+                advisory.is_test is not True or
                 advisory.payment_link_token != token or
-                advisory.quoted_amount != reservation.total_cents):
+                advisory.quoted_amount != reservation.total_cents or
+                advisory.rafa_fee_cents != reservation.rafa_fee_cents or
+                advisory.commission_cents != reservation.commission_cents or
+                advisory.commission_rate_bps != 3000 or
+                advisory.paypal_order_id or advisory.paypal_capture_id or
+                advisory.stripe_payment_intent_id or advisory.paid_at or
+                advisory.stripe_checkout_session_id):
             raise S01CheckoutBlocked("El presupuesto cambió antes de registrar Checkout")
         advisory.stripe_checkout_session_id = link.session_id
         db.session.commit()
