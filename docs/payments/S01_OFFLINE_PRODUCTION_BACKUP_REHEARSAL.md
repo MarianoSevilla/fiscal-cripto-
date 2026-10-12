@@ -51,3 +51,11 @@ El SHA-256 no certifica por sí solo la autenticidad del origen del backup. Las 
 Este control no concilia PayPal contra registros del proveedor, no realiza pagos Stripe ni integra endpoints de producción, notificaciones reales, reembolsos, disputas, MERU ni facturación. La facturación la lleva Rafa.
 
 La CI de esta PR puede probar **solo las barreras con archivos inventados**; no puede acceder a la copia real del Mac. El control de restauración continuará PENDIENTE / NO-GO hasta que el propietario ejecute preflight y ensayo local y reporte únicamente PASS/FAIL, sin contenido ni datos personales.
+
+## Ensayo real local — primer intento (13/10/2026): NO-GO
+
+El propietario ejecutó el preflight y la restauración del respaldo original con SHA-256 válido. La copia PostgreSQL 18 se restauró con revisión inicial correcta. La primera invocación real de `bootstrap_db.py` falló con `TypeError` antes de Alembic. Una extracción de traceback sin datos sensibles situó el problema en `sqlalchemy/util/concurrency.py:13` (importación de `asyncio`).
+
+**Causa reproducida sin datos reales:** el `sitecustomize.py` del runner sustituía `socket.socket` por una función para bloquear conexiones IP; durante la importación de `ssl`, Python 3.13 hereda de `socket.socket` y requiere que sea una clase. Esto falla con `TypeError`. La corrección de esta PR conserva una subclase de socket, mantiene el rechazo de AF_INET/AF_INET6 y DNS y permite sockets AF_UNIX. Añadidas pruebas de subprocess Python aislado para `asyncio`, `ssl` y SQLAlchemy bajo el guard.
+
+**No ejecutar cobros, migraciones en producción ni realizar una tercera restauración local hasta que la CI de este fix sea satisfactoria.** El NO-GO histórico no debe editarse retrospectivamente: será necesario volver a ejecutar el ensayo entero y obtener PASS en el Mac. El primer intento no demuestra una deficiencia del esquema ni que las migraciones estén aprobadas.
