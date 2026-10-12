@@ -1,12 +1,18 @@
 # STG-LOCK-001 — Preflight estricto de Railway staging
 
-Estado: **propuesta code-only, PR en borrador**. Base: `main` `56882073295faae3bd1bc3632288a970acb330da` (12/10/2026). **NO autoriza merge, despliegue, variables, credenciales, webhooks ni pagos.** PR #29 U04 y #30 PREFREEZE intactas.
+Estado: **PR en borrador, corrección del healthcheck code-only, sin autorización de nuevo despliegue**. Base: `main` `56882073295faae3bd1bc3632288a970acb330da` (12/10/2026). **NO autoriza merge, despliegue, variables, credenciales, webhooks ni pagos.** PR #29 U04 y #30 PREFREEZE intactas.
 
 ## Por qué se necesita
 
 La auditoría de 12/10/2026 encontró que staging ejecuta `cc1da441f1f07c640a88d3bcd1eb7fef4258daaf`, siete commits detrás de `main`, aunque dispone de un PostgreSQL propio (`Postgres-zZky`). PayPal está en `sandbox`, sin Client ID/Secret. Falta `APP_BASE_URL` y su fallback apunta a producción. Existen variables para Resend, Google OAuth y Stripe cuyos **valores no se conocen**. El webhook Stripe test activo apunta a producción. No se ha acreditado que el dataset staging sea exclusivamente sintético.
 
 Esta PR añade un **lockdown de preflight**, **no** un motor PayPal Sandbox ni una implementación Stripe. El objetivo es evitar accesos transaccionales, contactos con proveedores y exposición de APIs mientras se certifica el entorno.
+
+## Incidencia detectada en el primer despliegue de staging (12/10/2026)
+
+El despliegue Railway `1d9e66db-1a92-4095-91ef-57056965759d` del commit `b5eab9801d99305351642a4721f4c4c4d6b6e2fb` terminó en **FAILED**. El proceso arrancó, `bootstrap_db.py` comunicó `DB bootstrap: existing Alembic history upgraded` y Gunicorn escuchó en el puerto `8080`; la versión anterior permaneció activa. La documentación oficial de Railway indica que sus comprobaciones HTTP usan `Host: healthcheck.railway.app`. El bloqueo previo rechazaba cualquier Host distinto del dominio público de staging con HTTP `421`, por lo que el healthcheck no podía alcanzar un `2xx`. Esta es una causa compatible con la evidencia, no una lectura directa del código HTTP interno de Railway.
+
+La corrección permite exclusivamente `GET/HEAD /healthz` cuando el Host sea exactamente `healthcheck.railway.app` y **no exista Origin**. Cualquier otro acceso desde ese Host devuelve `421`; la política de rutas del dominio público no se modifica. Se añaden pruebas de regresión y se requiere aprobación separada para cambiar el SHA fijado y volver a desplegar. No se desactiva el healthcheck.
 
 ## Archivos y comportamiento
 
@@ -21,7 +27,7 @@ Esta PR añade un **lockdown de preflight**, **no** un motor PayPal Sandbox ni u
 2. Requiere `FLASK_ENV=staging`, IDs Railway actuales de proyecto/entorno/servicio, `RAILWAY_ENVIRONMENT_NAME=staging`, `APP_BASE_URL=https://fiscal-cripto-staging-staging.up.railway.app` exacta, sin barra final, y `PAYPAL_ENVIRONMENT=sandbox`.
 3. Exige `DATABASE_URL` con driver `postgresql+psycopg2`, hostname privado `postgres-zzky.railway.internal`, puerto `5432`, base `railway`, usuario y contraseña presentes, sin query/options ni fragmento que pudiera redirigir la conexión. **Esto no certifica los datos ni la conexión en vivo.**
 4. Durante este preflight las siguientes variables deben estar ausentes o **vacías**: `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`. Si alguna contiene valor, **no arranca**. No introducir credenciales Sandbox con este código: exige otro diseño/PR.
-5. La `SECRET_KEY` y cookies seguras se validan con `security_config.py` de `main`. Para staging, HTTP rechaza cualquier Host distinto (`421`) y un Origin distinto (`403`).
+5. La `SECRET_KEY` y cookies seguras se validan con `security_config.py` de `main`. Para staging, HTTP rechaza cualquier Host distinto (`421`) y un Origin distinto (`403`), con una **única excepción técnica**: `Host: healthcheck.railway.app`, exclusivamente `GET` o `HEAD` sobre la ruta exacta `/healthz`, y **sin cabecera `Origin`**. No se admite ese Host en otras rutas, métodos, puertos ni prefijos/sufijos de hostname. La excepción es necesaria porque Railway utiliza ese hostname para su healthcheck previo a activar un despliegue.
 6. **Denegación HTTP por defecto**: todo método distinto de GET/HEAD/OPTIONS devuelve `503`. Incluso GET/HEAD/OPTIONS devuelve `503` salvo rutas públicas expresamente enumeradas en `_STAGING_PUBLIC_READ_PATHS` (Home, `/healthz`, páginas legales, informativas y SEO revisadas) o recursos bajo `/static/` con extensiones de imagen, estilo, script o fuente expresamente permitidas. HTML, PDF, CSV, JSON y XML quedan bloqueados como archivos estáticos directos. Se bloquean rutas dinámicas, autenticadas, APIs, administrador, OAuth y pagos, así como cualquier ruta futura no revisada. En particular, **`GET /verify-email` modifica la BD y debe devolver `503`**. Los rechazos incluyen `Cache-Control: no-store`; los 503 incluyen `Retry-After`. Esta suspensión de staging es intencionada y temporal.
 7. Se impide `resend.Emails.send` incluso si una ruta auxiliar/campaña de fondo intentase enviarlo. La política de producción se mantiene igual cuando ninguna identidad indica staging.
 
@@ -30,7 +36,7 @@ Esta PR añade un **lockdown de preflight**, **no** un motor PayPal Sandbox ni u
 - No certifica contenido exclusivamente sintético en la BD, ausencia de credenciales de terceros fuera de las enumeradas, rutas externas incrustadas en HTML o identidad de todos los procesos. Se necesita evidencia operativa adicional antes de ensayos.
 - No cambia el webhook Stripe test actualmente dirigido a producción; no se permite crear, activar, desactivar ni reenviar webhooks sin autorización individual.
 - No resuelve la conciliación PayPal Live ni la retirada de U03; PREFREEZE de producción sigue siendo prioritario.
-- No mover la rama Railway staging, fusionar este PR ni desplegarlo de forma automática. Staging hoy apunta a `hardening/locked-runtime-ci-20261011`; un PR en borrador contra `main` **no activa el código en staging**.
+- No fusionar esta PR ni ejecutar un nuevo despliegue sin autorización específica. Tras el primer intento fallido, la configuración de origen del servicio staging quedó fijada al commit `b5eab9801d99305351642a4721f4c4c4d6b6e2fb` de la rama `security/staging-preflight-isolation-20261012`, pero Railway mantuvo **online el despliegue anterior** `cc1da441f1f07c640a88d3bcd1eb7fef4258daaf`. Los commits nuevos de esta PR no se aplican automáticamente mientras el servicio permanezca fijado al SHA antiguo.
 - No se permite habilitar PayPal Sandbox, Stripe Test, Resend, OAuth ni UI financiera con esta versión de preflight; requerirán integración de S00/S01 y pruebas aprobadas.
 - El repositorio contiene enlaces públicos hardcodeados a `marianosevilla.com`; la PR bloquea emails y APIs, pero no pretende reescribir todos los enlaces editoriales. Revisar antes de abrir flujos transaccionales.
 
