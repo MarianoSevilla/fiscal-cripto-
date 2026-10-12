@@ -155,12 +155,15 @@ def deny_tcp_python_network(work: Path) -> None:
     (guard / "sitecustomize.py").write_text(
         "import socket\n"
         "_orig_socket = socket.socket\n"
-        "def _local_socket(family=socket.AF_INET, type=socket.SOCK_STREAM, "
-        "proto=0, fileno=None):\n"
-        "    if family != socket.AF_UNIX:\n"
-        "        raise OSError('S01 rehearsal blocks all IP networking')\n"
-        "    return _orig_socket(family, type, proto, fileno)\n"
-        "socket.socket = _local_socket\n"
+        # SSL subclasses socket.socket during import. The guard must remain
+        # a class; replacing socket.socket with a function crashes asyncio.
+        "class _LocalSocket(_orig_socket):\n"
+        "    def __init__(self, family=socket.AF_INET, "
+        "type=socket.SOCK_STREAM, proto=0, fileno=None):\n"
+        "        if family != socket.AF_UNIX:\n"
+        "            raise OSError('S01 rehearsal blocks all IP networking')\n"
+        "        super().__init__(family, type, proto, fileno)\n"
+        "socket.socket = _LocalSocket\n"
         "def _blocked_getaddrinfo(*args, **kwargs):\n"
         "    raise OSError('S01 rehearsal blocks DNS')\n"
         "socket.getaddrinfo = _blocked_getaddrinfo\n",
