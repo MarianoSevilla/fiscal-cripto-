@@ -121,6 +121,9 @@ jobs:
           python fiscal_app_export/tests/qa_db_bootstrap_postgres.py
           python fiscal_app_export/tests/qa_advisory_prefreeze_postgres.py
 
+      - name: S01 signed Stripe webhook races against isolated PostgreSQL 18
+        run: python fiscal_app_export/tests/qa_s01_stripe_pg18_concurrency.py
+
   browser-navigation:
     name: browser-navigation
     runs-on: ubuntu-24.04
