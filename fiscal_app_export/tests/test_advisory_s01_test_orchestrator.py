@@ -242,6 +242,6 @@ def test_no_facturas_emails_or_charge_confirmed(synthetic_store):
 def test_no_provider_or_reservation_without_valid_id(synthetic_store):
     provider = FakeProvider()
     with pytest.raises(S01CheckoutBlocked):
-        launch(synthetic_store, provider, advisory_id=0)
+        launch(0, provider)
     assert provider.calls == []
     assert S01StripeCheckoutAttempt.query.count() == 0
