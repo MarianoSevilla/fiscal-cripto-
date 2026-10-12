@@ -379,6 +379,18 @@ def main():
         print("S01 RESTORE: copia restaurada y revisión inicial OK", flush=True)
         deny_tcp_python_network(root)
         app_env = pg_environment(sock, root, app=True)
+        # Import isolation smoke-test: Python's ssl module subclasses
+        # socket.socket. Confirm that our restrictive sitecustomize is
+        # compatible with asyncio/SQLAlchemy before invoking application code.
+        run_step(
+            "Importación Python/asyncio/SQLAlchemy con sockets IP bloqueados",
+            [sys.executable, "-c",
+             "import asyncio, ssl, socket; from sqlalchemy import inspect; "
+             "from flask_migrate import upgrade; "
+             "assert isinstance(socket.socket, type); "
+             "assert issubclass(socket.socket, socket.SocketType)"],
+            env=app_env, cwd=BASE, timeout=30,
+        )
         for repetition in (1, 2):
             run_step(
                 f"bootstrap_db.py pasada {repetition}",
