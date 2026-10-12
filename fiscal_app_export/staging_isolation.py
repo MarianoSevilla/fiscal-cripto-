@@ -12,6 +12,7 @@ from urllib.parse import urlsplit
 
 STAGING_BASE_URL = "https://fiscal-cripto-staging-staging.up.railway.app"
 STAGING_HOST = "fiscal-cripto-staging-staging.up.railway.app"
+RAILWAY_HEALTHCHECK_HOST = "healthcheck.railway.app"
 STAGING_DB_HOST = "postgres-zzky.railway.internal"
 STAGING_PROJECT_ID = "e04f04a8-3aae-4aed-9073-638601f8ca30"
 STAGING_ENVIRONMENT_ID = "b2937140-78f7-4347-a9bc-c96333e03b9b"
@@ -129,6 +130,12 @@ def staging_request_denial(*, host: str, path: str, method: str, origin: str | N
     Payment/provider callbacks, authenticated pages, API, and new endpoints
     remain blocked until explicitly reviewed in a separate change.
     """
+    # Railway probes /healthz with Host: healthcheck.railway.app. Never treat
+    # that internal probe hostname as an alternate public staging origin.
+    if host.lower() == RAILWAY_HEALTHCHECK_HOST:
+        if path == "/healthz" and method.upper() in ("GET", "HEAD") and origin is None:
+            return None
+        return 421, "Staging host not authorized"
     if host.lower().split(":", 1)[0] != STAGING_HOST:
         return 421, "Staging host not authorized"
     if origin and origin != STAGING_BASE_URL:
