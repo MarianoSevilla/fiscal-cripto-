@@ -78,7 +78,7 @@ jobs:
           PY
 
       - name: Full Python regression
-        run: python -m pytest -q --import-mode=importlib --disable-warnings --maxfail=1 fiscal_app_export/tests tests
+        run: python -m pytest -q -rs --import-mode=importlib --disable-warnings --maxfail=1 fiscal_app_export/tests tests
 
   postgres-bootstrap:
     name: postgres-bootstrap
@@ -117,7 +117,9 @@ jobs:
           python -m pip check
 
       - name: Exercise PostgreSQL 18 startup and defensive Alembic bootstrap
-        run: python fiscal_app_export/tests/qa_db_bootstrap_postgres.py
+        run: |
+          python fiscal_app_export/tests/qa_db_bootstrap_postgres.py
+          python fiscal_app_export/tests/qa_advisory_prefreeze_postgres.py
 
   browser-navigation:
     name: browser-navigation
@@ -152,6 +154,9 @@ jobs:
 
       - name: Flask navigation and access checks with synthetic SQLite data
         run: python fiscal_app_export/tests/qa_flask_navigation.py
+
+      - name: Advisory prefreeze mobile and desktop without provider calls
+        run: python fiscal_app_export/tests/qa_advisory_prefreeze_browser.py
 
       - name: Keep non-sensitive responsive screenshots for review
         if: always()

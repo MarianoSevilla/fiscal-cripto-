@@ -1,22 +1,4 @@
-"""
-Tests para el endpoint POST /api/admin/asesoramiento/solicitudes/<id>/mensaje
-
-Casos cubiertos:
-  1. Advisor puede enviar mensaje sin importe.
-  2. Admin puede enviar mensaje sin importe.
-  3. Usuario normal recibe 403.
-  4. Anónimo recibe 401/403.
-  5. Email se envía (mock).
-  6. No se crea presupuesto (quoted_amount = None).
-  7. No se genera payment_link_token.
-  8. Estado cambia a pendiente_info cuando set_pendiente_info=True.
-  9. Estado se mantiene cuando set_pendiente_info=False.
-  10. Mensaje vacío devuelve 400.
-  11. Flujo de presupuesto existente no se rompe (enviar-presupuesto sigue requiriendo importe).
-  12. Nota interna registrada en advisory_internal_notes.
-  13. Historial de estado registrado.
-  14. No se puede enviar mensaje en estado paid_received (409).
-"""
+"""PREFREEZE denies messages and indirect state changes, preserving authorization."""
 
 import sys
 import os
@@ -135,8 +117,7 @@ def _create_advisory(_app, status="submitted"):
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
-def test_advisor_puede_enviar_mensaje(client, _app, advisor_id):
-    """Test 1: Advisor envía mensaje sin importe — 200 OK."""
+def test_advisor_mensaje_suspendido(client, _app, advisor_id):
     aid = _create_advisory(_app)
     _login(client, "advisor_msg@example.com")
     with patch("app._send_advisory_message_email", return_value=True):
@@ -145,14 +126,12 @@ def test_advisor_puede_enviar_mensaje(client, _app, advisor_id):
             json={"mensaje": "Necesitamos los CSVs de Bit2Me.", "set_pendiente_info": True},
             content_type="application/json",
         )
-    assert r.status_code == 200
+    assert r.status_code == 503
     data = r.get_json()
-    assert data["ok"] is True
-    assert data["email_sent"] is True
+    assert data["code"] == "advisory_financial_suspended"
 
 
-def test_admin_puede_enviar_mensaje(client, _app, admin_id):
-    """Test 2: Admin (role=admin) envía mensaje — 200 OK."""
+def test_admin_mensaje_suspendido(client, _app, admin_id):
     aid = _create_advisory(_app)
     _login(client, "admin_msg@example.com")
     with patch("app._send_advisory_message_email", return_value=True):
@@ -161,11 +140,10 @@ def test_admin_puede_enviar_mensaje(client, _app, admin_id):
             json={"mensaje": "Mensaje del admin.", "set_pendiente_info": False},
             content_type="application/json",
         )
-    assert r.status_code == 200
+    assert r.status_code == 503
 
 
 def test_usuario_normal_no_puede(client, _app, normal_id):
-    """Test 3: Usuario normal recibe 403."""
     aid = _create_advisory(_app)
     _login(client, "normal_msg@example.com")
     r = client.post(
@@ -177,7 +155,6 @@ def test_usuario_normal_no_puede(client, _app, normal_id):
 
 
 def test_anonimo_no_puede(client, _app):
-    """Test 4: Anónimo recibe 401 o 403."""
     aid = _create_advisory(_app)
     r = client.post(
         f"/api/admin/asesoramiento/solicitudes/{aid}/mensaje",
@@ -187,8 +164,7 @@ def test_anonimo_no_puede(client, _app):
     assert r.status_code in (401, 403, 404)
 
 
-def test_email_se_envia(client, _app, advisor_id):
-    """Test 5: _send_advisory_message_email se llama con los argumentos correctos."""
+def test_email_no_se_envia(client, _app, advisor_id):
     aid = _create_advisory(_app)
     _login(client, "advisor_msg@example.com")
     with patch("app._send_advisory_message_email", return_value=True) as mock_send:
@@ -197,14 +173,10 @@ def test_email_se_envia(client, _app, advisor_id):
             json={"mensaje": "Por favor envíanos los archivos.", "set_pendiente_info": False},
             content_type="application/json",
         )
-    mock_send.assert_called_once()
-    advisory_arg, mensaje_arg = mock_send.call_args[0]
-    assert advisory_arg.id == aid
-    assert "archivos" in mensaje_arg
+    mock_send.assert_not_called()
 
 
 def test_no_se_crea_presupuesto(client, _app, advisor_id):
-    """Test 6: quoted_amount permanece None tras enviar mensaje."""
     aid = _create_advisory(_app)
     _login(client, "advisor_msg@example.com")
     with patch("app._send_advisory_message_email", return_value=True):
@@ -220,7 +192,6 @@ def test_no_se_crea_presupuesto(client, _app, advisor_id):
 
 
 def test_no_se_genera_payment_token(client, _app, advisor_id):
-    """Test 7: payment_link_token permanece None tras enviar mensaje."""
     aid = _create_advisory(_app)
     _login(client, "advisor_msg@example.com")
     with patch("app._send_advisory_message_email", return_value=True):
@@ -235,8 +206,7 @@ def test_no_se_genera_payment_token(client, _app, advisor_id):
         db.session.remove()
 
 
-def test_estado_cambia_a_pendiente_info(client, _app, advisor_id):
-    """Test 8: set_pendiente_info=True cambia estado a pendiente_info."""
+def test_estado_no_cambia_con_flag(client, _app, advisor_id):
     aid = _create_advisory(_app, status="submitted")
     _login(client, "advisor_msg@example.com")
     with patch("app._send_advisory_message_email", return_value=True):
@@ -245,16 +215,15 @@ def test_estado_cambia_a_pendiente_info(client, _app, advisor_id):
             json={"mensaje": "Necesitamos más información.", "set_pendiente_info": True},
             content_type="application/json",
         )
-    assert r.status_code == 200
-    assert r.get_json()["new_status"] == "pendiente_info"
+    assert r.status_code == 503
+    assert r.get_json()["state"] == "reconciliation_pending"
     with _app.app_context():
         adv = FiscalAdvisoryRequest.query.get(aid)
-        assert adv.status == "pendiente_info"
+        assert adv.status == "submitted"
         db.session.remove()
 
 
 def test_estado_no_cambia_sin_flag(client, _app, advisor_id):
-    """Test 9: set_pendiente_info=False mantiene el estado original."""
     aid = _create_advisory(_app, status="submitted")
     _login(client, "advisor_msg@example.com")
     with patch("app._send_advisory_message_email", return_value=True):
@@ -263,16 +232,15 @@ def test_estado_no_cambia_sin_flag(client, _app, advisor_id):
             json={"mensaje": "Solo un aviso.", "set_pendiente_info": False},
             content_type="application/json",
         )
-    assert r.status_code == 200
-    assert r.get_json()["new_status"] == "submitted"
+    assert r.status_code == 503
+    assert r.get_json()["state"] == "reconciliation_pending"
     with _app.app_context():
         adv = FiscalAdvisoryRequest.query.get(aid)
         assert adv.status == "submitted"
         db.session.remove()
 
 
-def test_mensaje_vacio_devuelve_400(client, _app, advisor_id):
-    """Test 10: Mensaje vacío devuelve 400."""
+def test_mensaje_vacio_tambien_suspendido(client, _app, advisor_id):
     aid = _create_advisory(_app)
     _login(client, "advisor_msg@example.com")
     r = client.post(
@@ -280,11 +248,10 @@ def test_mensaje_vacio_devuelve_400(client, _app, advisor_id):
         json={"mensaje": "   ", "set_pendiente_info": False},
         content_type="application/json",
     )
-    assert r.status_code == 400
+    assert r.status_code == 503
 
 
-def test_enviar_presupuesto_sigue_requiriendo_importe(client, _app, advisor_id):
-    """Test 11: El flujo de presupuesto existente exige importe >= 1 €."""
+def test_presupuesto_sin_importe_tambien_suspendido(client, _app, advisor_id):
     aid = _create_advisory(_app)
     _login(client, "advisor_msg@example.com")
     r = client.post(
@@ -292,12 +259,11 @@ def test_enviar_presupuesto_sigue_requiriendo_importe(client, _app, advisor_id):
         json={"message": "Presupuesto sin importe."},
         content_type="application/json",
     )
-    assert r.status_code == 400
-    assert "Importe" in (r.get_json() or {}).get("error", "")
+    assert r.status_code == 503
+    assert r.get_json()["code"] == "advisory_financial_suspended"
 
 
-def test_nota_interna_registrada(client, _app, advisor_id):
-    """Test 12: El mensaje se registra en advisory_internal_notes."""
+def test_nota_interna_no_registrada(client, _app, advisor_id):
     aid = _create_advisory(_app)
     _login(client, "advisor_msg@example.com")
     texto = "Revisando los exchanges indicados en tu solicitud."
@@ -309,13 +275,11 @@ def test_nota_interna_registrada(client, _app, advisor_id):
         )
     with _app.app_context():
         nota = AdvisoryInternalNote.query.filter_by(request_id=aid).first()
-        assert nota is not None
-        assert texto in nota.text
+        assert nota is None
         db.session.remove()
 
 
-def test_historial_registrado(client, _app, advisor_id):
-    """Test 13: Se crea una entrada en fiscal_advisory_status_history."""
+def test_historial_no_registrado(client, _app, advisor_id):
     aid = _create_advisory(_app)
     _login(client, "advisor_msg@example.com")
     with patch("app._send_advisory_message_email", return_value=True):
@@ -326,14 +290,11 @@ def test_historial_registrado(client, _app, advisor_id):
         )
     with _app.app_context():
         historial = FiscalAdvisoryStatusHistory.query.filter_by(request_id=aid).all()
-        assert len(historial) >= 1
-        notas = [h.note for h in historial if h.note]
-        assert any("mensaje" in (n or "").lower() for n in notas)
+        assert historial == []
         db.session.remove()
 
 
 def test_no_mensaje_en_estado_terminal(client, _app, advisor_id):
-    """Test 14: Estado paid_received bloquea el envío de mensaje (409)."""
     aid = _create_advisory(_app, status="paid_received")
     _login(client, "advisor_msg@example.com")
     with patch("app._send_advisory_message_email", return_value=True):
@@ -342,4 +303,4 @@ def test_no_mensaje_en_estado_terminal(client, _app, advisor_id):
             json={"mensaje": "No debería enviarse.", "set_pendiente_info": False},
             content_type="application/json",
         )
-    assert r.status_code == 409
+    assert r.status_code == 503

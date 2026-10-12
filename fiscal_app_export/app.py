@@ -35,6 +35,7 @@ from flask_migrate import Migrate
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from authlib.integrations.flask_client import OAuth
 from authlib.oidc.core import UserInfo
+from advisory_prefreeze import advisory_financial_prefreeze, refuse_advisory_financial_operation
 import resend
 from sqlalchemy import func, extract, text, or_
 from models import db, bcrypt, User, FifoReport, Contacto, ProcessingError, CommunicationCampaign, CommunicationDelivery
@@ -4876,6 +4877,7 @@ def advisory_solicitar():
 
 def _paypal_get_access_token() -> str:
     """Obtiene un Bearer token OAuth2 de PayPal (válido ~9h, sin caché intencional)."""
+    refuse_advisory_financial_operation()
     import requests as _req
     resp = _req.post(
         f"{_PAYPAL_BASE_URL}/v1/oauth2/token",
@@ -4891,6 +4893,7 @@ def _paypal_create_order(advisory: "FiscalAdvisoryRequest") -> dict:
     """Crea una orden PayPal usando quoted_amount y devuelve {order_id, approval_url}.
     Se llama on-demand cuando el cliente visita /pagar/<token> y pulsa Pagar.
     """
+    refuse_advisory_financial_operation()
     import requests as _req
     if not advisory.quoted_amount:
         raise ValueError("La solicitud no tiene un importe presupuestado")
@@ -4937,6 +4940,7 @@ def _paypal_create_order(advisory: "FiscalAdvisoryRequest") -> dict:
 
 def _paypal_capture_order(order_id: str) -> dict:
     """Ejecuta el capture de una orden PayPal aprobada. Devuelve el JSON de PayPal."""
+    refuse_advisory_financial_operation()
     import requests as _req
     token = _paypal_get_access_token()
     resp  = _req.post(
@@ -4960,6 +4964,7 @@ def _on_payment_completed(
     Actualiza el expediente, crea historial y envía notificaciones.
     El caller debe verificar advisory.status == 'quote_sent' antes de llamar.
     """
+    refuse_advisory_financial_operation()
     now = datetime.utcnow()
     advisory.status           = "paid_received"
     advisory.amount_paid      = amount_cents
@@ -4983,6 +4988,7 @@ def _on_payment_completed(
 
 @app.route("/api/admin/asesoramiento/solicitudes/<int:req_id>/enviar-presupuesto", methods=["POST"])
 @require_fiscal_advisor
+@advisory_financial_prefreeze()
 def advisory_enviar_presupuesto(req_id):
     """Rafa introduce el precio y el sistema envía el link de pago al cliente."""
 
@@ -5065,6 +5071,7 @@ def advisory_enviar_presupuesto(req_id):
 
 @app.route("/api/admin/asesoramiento/solicitudes/<int:req_id>/mensaje", methods=["POST"])
 @require_fiscal_advisor
+@advisory_financial_prefreeze()
 def advisory_enviar_mensaje(req_id):
     """Envía un mensaje al cliente sin generar presupuesto ni link de pago.
 
@@ -5133,13 +5140,16 @@ def advisory_enviar_mensaje(req_id):
 @app.route("/pagar/<token>")
 def pago_page(token):
     """Página pública de pago para el cliente. No requiere login."""
-    return send_from_directory("static", "pagar.html")
+    response = send_from_directory("static", "pagar.html")
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 # ── API: INFO DEL PRESUPUESTO (para la página /pagar/<token>) ────────────────
 
 @app.route("/api/pago/info/<token>", methods=["GET"])
 @limiter.limit("30 per minute")
+@advisory_financial_prefreeze()
 def pago_info(token):
     """Devuelve los datos públicos del presupuesto para mostrar en la página de pago."""
     advisory = FiscalAdvisoryRequest.query.filter_by(payment_link_token=token).first()
@@ -5173,6 +5183,7 @@ def pago_info(token):
 
 @app.route("/api/pago/iniciar/<token>", methods=["POST"])
 @limiter.limit("10 per hour")
+@advisory_financial_prefreeze()
 def pago_iniciar(token):
     """El cliente acepta el presupuesto y solicita el link de PayPal.
     Registra la aceptación antes de crear la orden PayPal.
@@ -5241,6 +5252,7 @@ def pago_iniciar(token):
 
 @app.route("/api/pago/paypal/capture", methods=["GET"])
 @limiter.limit("30 per minute")
+@advisory_financial_prefreeze(html=True)
 def pago_paypal_capture():
     """PayPal redirige aquí tras el pago. Ejecuta el capture y actualiza el expediente."""
     request_id   = request.args.get("request_id", "")
@@ -5323,6 +5335,7 @@ def pago_paypal_capture():
 
 @app.route("/api/webhooks/paypal", methods=["POST"])
 @limiter.limit("120 per minute")
+@advisory_financial_prefreeze()
 def paypal_webhook():
     """Red de seguridad: PayPal notifica el pago aunque el usuario cierre la pestaña."""
     if not _PAYPAL_ENABLED:
@@ -5446,27 +5459,38 @@ def paypal_webhook():
 
 @app.route("/api/webhooks/stripe", methods=["POST"])
 @limiter.limit("60 per minute")
+@advisory_financial_prefreeze()
 def stripe_webhook():
     """Webhook de Stripe — solo este endpoint puede marcar un pago como confirmado."""
-    if not _stripe_available or not _STRIPE_SECRET_KEY:
-        return "", 200
+    # Fail closed: neither missing SDK/credentials nor an unsigned payload can
+    # acknowledge or process a financial event. Never fall back to json.loads.
+    if (not _stripe_available or not (_STRIPE_SECRET_KEY or "").strip()
+            or not (_STRIPE_WEBHOOK_SECRET or "").strip()):
+        app.logger.error("stripe_webhook_unavailable provider_configuration_incomplete")
+        return jsonify({"error": "Webhook unavailable."}), 503
 
     payload    = request.get_data()
     sig_header = request.headers.get("Stripe-Signature", "")
+    if not sig_header:
+        app.logger.warning("stripe_webhook_signature_missing")
+        return jsonify({"error": "Invalid request."}), 400
 
     try:
         _stripe_module.api_key = _STRIPE_SECRET_KEY
-        if _STRIPE_WEBHOOK_SECRET:
-            event = _stripe_module.Webhook.construct_event(payload, sig_header, _STRIPE_WEBHOOK_SECRET)
-        else:
-            import json as _json
-            event = _json.loads(payload)
-    except Exception as exc:
-        app.logger.warning("Stripe webhook error: %s", exc)   # solo a logs
+        event = _stripe_module.Webhook.construct_event(
+            payload, sig_header, _STRIPE_WEBHOOK_SECRET
+        )
+    except (ValueError, _stripe_module.error.SignatureVerificationError):
+        # Do not log exception strings: SDK messages may include payload data.
+        app.logger.warning("stripe_webhook_signature_invalid")
         return jsonify({"error": "Invalid request."}), 400
 
     if event["type"] == "checkout.session.completed":
         session_obj = event["data"]["object"]
+        # stripe-python returns StripeObject after verified parsing; its
+        # .get() is not supported. Convert without bypassing signature checks.
+        if not isinstance(session_obj, dict):
+            session_obj = session_obj.to_dict()
         cs_id        = session_obj.get("id")
         pi_id        = session_obj.get("payment_intent")
         amount_total = session_obj.get("amount_total")
@@ -5707,6 +5731,7 @@ def _send_advisory_status_update_email(advisory: "FiscalAdvisoryRequest", note: 
 @app.route("/api/asesoramiento/files/<int:request_id>", methods=["POST"])
 @login_required
 @limiter.limit("10 per hour")
+@advisory_financial_prefreeze()
 def advisory_upload_file(request_id):
     """Sube un fichero asociado a una solicitud (solo el propietario)."""
     if not _ADVISORY_UPLOADS_ENABLED:
@@ -5824,6 +5849,7 @@ def admin_advisory_detail(request_id):
 
 @app.route("/api/admin/asesoramiento/solicitudes/<int:request_id>/estado", methods=["POST"])
 @require_fiscal_advisor
+@advisory_financial_prefreeze()
 def admin_advisory_change_status(request_id):
     advisory    = FiscalAdvisoryRequest.query.get_or_404(request_id)
     data        = request.get_json(silent=True) or {}
@@ -5863,6 +5889,7 @@ def admin_advisory_change_status(request_id):
 
 @app.route("/api/admin/asesoramiento/solicitudes/<int:request_id>/is-test", methods=["POST"])
 @require_roles("admin")
+@advisory_financial_prefreeze()
 def admin_advisory_set_is_test(request_id):
     """Marca o desmarca una solicitud como 'prueba'. Solo admins."""
     advisory      = FiscalAdvisoryRequest.query.get_or_404(request_id)
@@ -5874,6 +5901,7 @@ def admin_advisory_set_is_test(request_id):
 
 @app.route("/api/admin/asesoramiento/solicitudes/<int:request_id>/nota", methods=["POST"])
 @require_fiscal_advisor
+@advisory_financial_prefreeze()
 def admin_advisory_add_note(request_id):
     advisory = FiscalAdvisoryRequest.query.get_or_404(request_id)
     data     = request.get_json(silent=True) or {}
@@ -5897,6 +5925,7 @@ def admin_advisory_add_note(request_id):
 
 @app.route("/api/admin/asesoramiento/solicitudes/<int:request_id>", methods=["DELETE"])
 @require_roles("admin")
+@advisory_financial_prefreeze()
 def admin_advisory_delete(request_id):
     """Elimina una solicitud. Solo accesible para administradores.
     Los asesores fiscales reciben 403.
