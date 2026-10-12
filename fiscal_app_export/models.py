@@ -319,6 +319,45 @@ class FiscalAdvisoryRequest(db.Model):
         return d
 
 
+# ── S01: Stripe Checkout reservas/eventos (declarativo; rutas desactivadas) ──
+class S01StripeCheckoutAttempt(db.Model):
+    __tablename__ = "s01_stripe_checkout_attempts"
+    __table_args__ = (
+        db.CheckConstraint("status IN ('reserved','creating','ready','uncertain','paid','closed')", name="ck_s01_checkout_status"),
+        db.CheckConstraint("expected_amount_cents >= 100 AND expected_amount_cents <= 99999999", name="ck_s01_attempt_amount"),
+        db.CheckConstraint("currency = 'eur'", name="ck_s01_attempt_currency"),
+        db.UniqueConstraint("advisory_id", name="uq_s01_attempt_advisory"),
+        db.Index("ix_s01_attempt_status", "status"),
+    )
+
+    id = db.Column(db.String(36), primary_key=True)  # UUIDv4 explícito
+    advisory_id = db.Column(
+        db.Integer, db.ForeignKey("fiscal_advisory_requests.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    quote_fingerprint = db.Column(db.String(64), nullable=False)
+    idempotency_key = db.Column(db.String(100), unique=True, nullable=False)
+    expected_amount_cents = db.Column(db.Integer, nullable=False)
+    currency = db.Column(db.String(3), nullable=False, default="eur")
+    status = db.Column(db.String(24), nullable=False, default="reserved")
+    checkout_session_id = db.Column(db.String(255), unique=True, nullable=True)
+    payment_intent_id = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+
+class S01StripeEventReceipt(db.Model):
+    __tablename__ = "s01_stripe_event_receipts"
+
+    stripe_event_id = db.Column(db.String(255), primary_key=True)
+    attempt_id = db.Column(
+        db.String(36), db.ForeignKey("s01_stripe_checkout_attempts.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    event_type = db.Column(db.String(100), nullable=False)
+    received_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
 class FiscalAdvisoryFile(db.Model):
     __tablename__ = "fiscal_advisory_files"
 
