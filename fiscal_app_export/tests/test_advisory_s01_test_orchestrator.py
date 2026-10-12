@@ -256,9 +256,7 @@ def test_sdk16_stripeobject_checkout_response_is_supported(synthetic_store):
             response = super().create_session(
                 params=params, idempotency_key=idempotency_key
             )
-            return stripe.StripeObject.construct_from(
-                response, api_key="sk_test_synthetic-only"
-            )
+            return stripe.StripeObject(**response)
 
     provider = StripeObjectProvider()
     result = launch(synthetic_store, provider)
@@ -280,9 +278,7 @@ def test_invalid_sdk16_stripeobject_keeps_reservation_uncertain(synthetic_store)
                 params=params, idempotency_key=idempotency_key
             )
             response["amount_total"] = 100
-            return stripe.StripeObject.construct_from(
-                response, api_key="sk_test_synthetic-only"
-            )
+            return stripe.StripeObject(**response)
 
     provider = InvalidStripeObjectProvider()
     with pytest.raises(S01CheckoutBlocked, match="incierto"):
