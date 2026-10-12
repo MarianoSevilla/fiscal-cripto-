@@ -151,7 +151,7 @@ def test_exact_replay_and_second_event_are_idempotent(populated):
     {"currency": "usd"}, {"status": "open"},
     {"payment_status": "unpaid"}, {"mode": "subscription"},
     {"livemode": True}, {"id": "cs_test_wrong"},
-    {"payment_intent": None}, {"payment_intent": "pi_other"},
+    {"payment_intent": None},
     {"client_reference_id": "9876543"}, {"metadata": {}},
 ])
 def test_bad_checkout_is_rejected_without_financial_mutation(populated, updates):
@@ -241,6 +241,16 @@ def test_transaction_error_rolls_back_history_receipt_and_status(populated):
     assert stats(*populated)["status"] == "quote_sent"
     assert stats(*populated)["attempt_status"] == "ready"
     assert (stats(*populated)["events"], stats(*populated)["hist"]) == (0, 0)
+
+
+def test_conflicting_payment_intent_when_already_persisted_is_rejected(populated):
+    attempt = db.session.get(S01StripeCheckoutAttempt, populated[1])
+    attempt.payment_intent_id = PI
+    db.session.commit()
+    with pytest.raises(S01EventRejected):
+        consume(populated, updates={"payment_intent": "pi_other"})
+    assert stats(*populated)["events"] == 0
+    assert stats(*populated)["status"] == "quote_sent"
 
 
 def test_existing_paid_by_other_provider_is_never_overwritten(populated):
