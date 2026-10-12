@@ -124,6 +124,9 @@ jobs:
       - name: S01 signed Stripe webhook races against isolated PostgreSQL 18
         run: python fiscal_app_export/tests/qa_s01_stripe_pg18_concurrency.py
 
+      - name: S01 legacy PayPal evidence and linear Alembic history gate
+        run: python fiscal_app_export/tests/qa_s01_paypal_retirement_pg18.py
+
   browser-navigation:
     name: browser-navigation
     runs-on: ubuntu-24.04
