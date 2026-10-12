@@ -267,6 +267,49 @@ def verify_migration(conn, before):
         if cursor.fetchone()[0]:
             raise RehearsalError("La migración inventó comisiones históricas")
 
+        # CREATE TABLE IF NOT EXISTS alone cannot certify schema equivalence:
+        # app.py runs db.create_all() on import before Alembic upgrades.
+        expected_constraints = {
+            "s01_stripe_checkout_attempts": {
+                "s01_stripe_checkout_attempts_pkey",
+                "uq_s01_attempt_advisory", "ck_s01_checkout_status",
+                "ck_s01_attempt_amount", "ck_s01_attempt_currency",
+            },
+            "s01_stripe_event_receipts": {
+                "s01_stripe_event_receipts_pkey",
+            },
+            "s01_stripe_notification_outbox": {
+                "s01_stripe_notification_outbox_pkey",
+                "uq_s01_outbox_attempt_kind", "ck_s01_outbox_kind",
+                "ck_s01_outbox_status",
+            },
+        }
+        for table, required in expected_constraints.items():
+            cursor.execute(
+                "SELECT conname FROM pg_constraint WHERE conrelid = %s::regclass",
+                ("public." + table,),
+            )
+            actual = {name for (name,) in cursor.fetchall()}
+            if not required.issubset(actual):
+                raise RehearsalError("Faltan constraints de integridad S01")
+        cursor.execute(
+            "SELECT indexname FROM pg_indexes WHERE schemaname = 'public' "
+            "AND tablename IN %s",
+            (NEW_TABLES,),
+        )
+        indexes = {name for (name,) in cursor.fetchall()}
+        if not {"ix_s01_attempt_status", "ix_s01_outbox_status"}.issubset(indexes):
+            raise RehearsalError("Faltan índices obligatorios S01")
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT tablename FROM pg_tables WHERE schemaname='public' "
+            "AND tablename <> 'alembic_version'"
+        )
+        actual_tables = {row[0] for row in cursor.fetchall()}
+        expected_tables = set(before) | set(NEW_TABLES)
+        if actual_tables != expected_tables:
+            raise RehearsalError("Tablas inesperadas o desaparecidas tras el upgrade")
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
