@@ -38,3 +38,7 @@ Pruebas que construyen un `stripe.StripeObject` mediante **el SDK instalado por 
 1. **Required CI** de este commit: backend-tests, postgres-bootstrap PG18 y browser-navigation.
 2. Revisar expresamente los nuevos tests SDK + evidencia histórica; ninguna afirmación de CI verde antes de terminar.
 3. PR **encadenada** sobre #41 y pendiente de revisión independiente; incluso con CI verde continúa el veredicto global **NO-GO** de la PR #42 por migración desde restauración íntegra, conciliación externa PayPal, receptor Stripe real y notificaciones.
+
+## Control de integración
+
+La rama de trabajo sigue encadenada directamente sobre PR #41. La PR #43 se dirige temporalmente a main **solo para disparar Required CI sobre este mismo árbol**, y debe volver a la base de #41 tras finalizar las pruebas. No hay autorización de merge ni deploy.
