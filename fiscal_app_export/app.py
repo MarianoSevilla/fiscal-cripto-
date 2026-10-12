@@ -5439,25 +5439,35 @@ def paypal_webhook():
 @limiter.limit("60 per minute")
 def stripe_webhook():
     """Webhook de Stripe — solo este endpoint puede marcar un pago como confirmado."""
-    if not _stripe_available or not _STRIPE_SECRET_KEY:
-        return "", 200
+    # Fail closed: neither missing SDK/credentials nor an unsigned payload can
+    # acknowledge or process a financial event. Never fall back to json.loads.
+    if (not _stripe_available or not (_STRIPE_SECRET_KEY or "").strip()
+            or not (_STRIPE_WEBHOOK_SECRET or "").strip()):
+        app.logger.error("stripe_webhook_unavailable provider_configuration_incomplete")
+        return jsonify({"error": "Webhook unavailable."}), 503
 
     payload    = request.get_data()
     sig_header = request.headers.get("Stripe-Signature", "")
+    if not sig_header:
+        app.logger.warning("stripe_webhook_signature_missing")
+        return jsonify({"error": "Invalid request."}), 400
 
     try:
         _stripe_module.api_key = _STRIPE_SECRET_KEY
-        if _STRIPE_WEBHOOK_SECRET:
-            event = _stripe_module.Webhook.construct_event(payload, sig_header, _STRIPE_WEBHOOK_SECRET)
-        else:
-            import json as _json
-            event = _json.loads(payload)
-    except Exception as exc:
-        app.logger.warning("Stripe webhook error: %s", exc)   # solo a logs
+        event = _stripe_module.Webhook.construct_event(
+            payload, sig_header, _STRIPE_WEBHOOK_SECRET
+        )
+    except (ValueError, _stripe_module.error.SignatureVerificationError):
+        # Do not log exception strings: SDK messages may include payload data.
+        app.logger.warning("stripe_webhook_signature_invalid")
         return jsonify({"error": "Invalid request."}), 400
 
     if event["type"] == "checkout.session.completed":
         session_obj = event["data"]["object"]
+        # stripe-python returns StripeObject after verified parsing; its
+        # .get() is not supported. Convert without bypassing signature checks.
+        if not isinstance(session_obj, dict):
+            session_obj = session_obj.to_dict()
         cs_id        = session_obj.get("id")
         pi_id        = session_obj.get("payment_intent")
         amount_total = session_obj.get("amount_total")
