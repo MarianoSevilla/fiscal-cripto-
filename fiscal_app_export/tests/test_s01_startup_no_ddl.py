@@ -52,3 +52,17 @@ def test_explicit_bootstrap_only_initializes_truly_empty_postgres():
     assert "db.create_all()" in src
     assert "_assert_pristine_current_schema(db.engine)" in src
     assert "stamp(revision=FRESH_SCHEMA_BASELINE)" in src
+
+
+def test_offline_backup_rehearsal_proves_import_and_startup_gate():
+    source = (ROOT / "tools" / "s01_rehearse_restored_backup.py").read_text(
+        encoding="utf-8"
+    )
+    app_import = source.index('"Importación Flask sin DDL"')
+    first_bootstrap = source.index('f"bootstrap_db.py pasada {repetition}"')
+    startup = source.index('f"Gate de arranque READ ONLY pasada {repetition}"')
+    assert app_import < first_bootstrap < startup
+    assert "snapshot(conn) != before" in source
+    assert "str(BASE / \"startup_schema_gate.py\")" in source
+    assert "S01 G04 IMPORT: sin cambios en esquema ni historial OK" in source
+    assert "S01 G04 STARTUP {repetition}: gate READ ONLY OK" in source
