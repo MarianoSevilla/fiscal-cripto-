@@ -128,8 +128,12 @@ with app.app_context():
                                   content_type='application/json')
                 assert result.status_code == 503, (url, result.status_code)
                 assert result.headers['Cache-Control'] == 'no-store'
-                assert SUSPENSION_MESSAGE in result.get_data(as_text=True)
-                assert result.get_json()['code'] == 'advisory_financial_suspended'
+                if '/capture' in url:
+                    assert SUSPENSION_MESSAGE in result.get_data(as_text=True)
+                    assert result.mimetype == 'text/html'
+                else:
+                    assert result.get_json()['error'] == SUSPENSION_MESSAGE
+                    assert result.get_json()['code'] == 'advisory_financial_suspended'
             with cli.session_transaction() as session:
                 session['_user_id'] = '1'
                 session['_fresh'] = True
