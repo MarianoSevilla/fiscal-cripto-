@@ -379,6 +379,20 @@ def main():
         print("S01 RESTORE: copia restaurada y revisión inicial OK", flush=True)
         deny_tcp_python_network(root)
         app_env = pg_environment(sock, root, app=True)
+        # G04: importing the actual Flask app must not repair the restored
+        # database before the explicit Alembic migration. Snapshot every
+        # original row/table again; no private data may leave the Mac.
+        run_step(
+            "Importación Flask sin DDL",
+            [sys.executable, "-c", "import app"],
+            env=app_env, cwd=BASE, timeout=90,
+        )
+        with connect_local(sock) as conn:
+            if version(conn) != PRE_REV or snapshot(conn) != before:
+                raise RehearsalError(
+                    "G04: la importación de Flask modificó el backup restaurado"
+                )
+        print("S01 G04 IMPORT: sin cambios en esquema ni historial OK", flush=True)
         # Import isolation smoke-test: Python's ssl module subclasses
         # socket.socket. Confirm that our restrictive sitecustomize is
         # compatible with asyncio/SQLAlchemy before invoking application code.
@@ -397,10 +411,19 @@ def main():
                 [sys.executable, str(BASE / "bootstrap_db.py")],
                 env=app_env, cwd=BASE, timeout=600,
             )
+            # G04: the exact web startup gate must now pass READ ONLY.
+            # It must fail against the pre-migration version and succeed
+            # only after the authorized, explicit bootstrap above.
+            run_step(
+                f"Gate de arranque READ ONLY pasada {repetition}",
+                [sys.executable, str(BASE / "startup_schema_gate.py")],
+                env=app_env, cwd=BASE, timeout=90,
+            )
             with connect_local(sock) as conn:
                 verify_migration(conn, before)
             print(f"S01 UPGRADE {repetition}: Alembic, datos históricos y comisión OK",
                   flush=True)
+            print(f"S01 G04 STARTUP {repetition}: gate READ ONLY OK", flush=True)
         print("S01 REHEARSAL: PASS (local-only, sin datos expuestos)", flush=True)
     finally:
         for sig, handler in old_handlers.items():
