@@ -267,6 +267,14 @@ def test_h4_autenticado_email_propio_en_body_es_idempotente(client, normal_user,
 def test_usuario_autenticado_crea_solicitud(client, normal_user, _app):
     """Usuario autenticado crea solicitud → user_id correcto, estado submitted."""
     _login_normal(client)
+    # Regression isolation: the module-scoped Flask app context reuses the
+    # SQLAlchemy scoped session across prior requests. Explicitly clear its
+    # identity map BEFORE another request creates/flushed an Advisory.
+    # Otherwise SQLAlchemy 2 / Python 3.13 may refresh expired ORM state
+    # whose weak-referenced entity was already garbage-collected.
+    # Flask test-client cookies remain intact; no production code changes.
+    with _app.app_context():
+        db.session.remove()
     r = _post_solicitud(client)
     assert r.status_code == 200, r.get_json()
     data = r.get_json()
