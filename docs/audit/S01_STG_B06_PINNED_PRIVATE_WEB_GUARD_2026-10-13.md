@@ -51,6 +51,10 @@ No se ha creado dominio público, proxy TCP ni ejecutor de tests. Un ambiente o 
 - `staging_isolation.py` original **no se altera**; debe comprobarse su blob contra PR #61. `startup_schema_gate.py` sigue exigiendo Alembic exacto `z9a0b1c2d3e4`. La BD real del lab (0 tablas) no supera ese gate: un despliegue inmediato **fallaría**. `bootstrap_db.py` no se llama desde el Procfile.
 - La nueva configuración en código no se ha probado en la red real, solo en CI sin conectividad. Los tests originales de PostgreSQL18, Chromium y regresión Python deben continuar aprobados.
 
+### Prueba operativa pendiente
+
+El servicio web vacío aún no expone variables efectivas, porque no tiene ningún despliegue. Antes de autorizar la conexión GitHub deberán compararse con valores reales de Railway los tres identificadores de servicio/entorno/proyecto y comprobarse por inventario que **el DNS del servicio y la resolución PostgreSQL son del proyecto nuevo**, sin dominios públicos, TCP proxies ni referencias de grupos compartidos. El `PORT=8080` es una condición futura explícita, no evidencia de una configuración aplicada. El resultado esperado de la CI B06 es únicamente una simulación sintética sin sockets/DB.
+
 ## 5. Límites y pasos posteriores (sin autorización actual)
 
 1. Revisar el resultado exacto de CI y el inventario de cambios; mantener PR DRAFT apilada y `main` inalterada.
