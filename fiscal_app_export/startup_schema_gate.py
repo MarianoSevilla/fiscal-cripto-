@@ -131,13 +131,33 @@ def verify_schema_readonly() -> None:
                 transaction.rollback()
 
 
+# Explicit fixed taxonomy; never print arbitrary exceptions from SQLAlchemy
+# because DBAPI errors can contain connection strings and client data.
+_SAFE_FAILURE_CODES = {
+    "migration graph is not the approved S01 single head": "GRAPH",
+    "PostgreSQL is required for this startup gate": "DATABASE",
+    "database inspection is not read-only": "READONLY",
+    "required application tables are absent": "TABLES",
+    "database revision does not match approved S01 head": "REVISION",
+    "model columns are missing from PostgreSQL": "COLUMNS",
+    "required advisory breakdown columns missing": "ADVISORY_COLUMNS",
+    "S01 financial integrity constraints missing": "CONSTRAINTS",
+    "S01 financial integrity indexes missing": "INDEXES",
+}
+
+
 def main() -> None:
     try:
         verify_schema_readonly()
+    except StartupSchemaError as exc:
+        code = _SAFE_FAILURE_CODES.get(str(exc), "CHECK")
+        print("S01 G04 STARTUP: NO-GO (" + code + "; details protected)",
+              file=sys.stderr, flush=True)
+        raise SystemExit(1) from None
     except Exception:
         # SQLAlchemy exceptions can contain DSNs, passwords or source data.
-        # Keep the startup failure uniformly redacted, never dump tracebacks.
-        print("S01 G04 STARTUP: NO-GO (schema/revision verification failed; details protected)",
+        # Keep failures uniformly redacted, never dump tracebacks.
+        print("S01 G04 STARTUP: NO-GO (INTERNAL; details protected)",
               file=sys.stderr, flush=True)
         raise SystemExit(1) from None
     print("S01 G04 STARTUP: PASS (PostgreSQL schema/Alembic checked READ ONLY)",
