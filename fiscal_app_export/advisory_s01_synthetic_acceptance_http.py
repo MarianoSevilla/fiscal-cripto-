@@ -8,6 +8,7 @@ The real customer route /pagar/<token> stays PREFREEZE (503).
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from hashlib import sha256
 import hmac
 import os
