@@ -14,6 +14,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 
 FAKE_LAB = r'''
+import os
 import socket
 def fail(*_args, **_kwargs):
     raise AssertionError("STG-B04 forbids any network/DB/provider I/O")
