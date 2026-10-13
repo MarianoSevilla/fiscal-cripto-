@@ -1,0 +1,31 @@
+name: QA S01 STG-B10A preflight privado offline
+
+on:
+  pull_request:
+    branches:
+      - security/s01-stg-b06-pin-private-web
+    paths:
+      - fiscal_app_export/private_maintenance_preflight.py
+      - fiscal_app_export/tests/test_s01_private_maintenance_preflight.py
+      - .github/workflows/qa-s01-stg-b10a-private-maintenance.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-readonly:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.13'
+
+      - name: Pure Python synthetic gate tests (no pip, no Railway, no sockets)
+        working-directory: fiscal_app_export
+        run: python -m unittest discover -s tests -p test_s01_private_maintenance_preflight.py -v
