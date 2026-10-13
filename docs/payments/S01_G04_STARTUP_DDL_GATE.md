@@ -69,3 +69,42 @@ PASS histórico.
 - Cualquier fallo, estructura parcial, constraint ausente, head diverso, falta de pruebas o incapacidad de plan de rollback: **NO-GO**.
 
 **La PR no modifica cuentas, variables, credenciales, PayPal, Stripe, MERU, Railway, datos reales, facturas ni pagos.** Rafa seguirá encargándose de la facturación fuera de la aplicación.
+
+
+## Evidencia del Mac — primer G04 real: NO-GO en gate tras upgrade (13/10/2026)
+
+El propietario ejecutó el ensayo sobre el respaldo PGDMP original de 10/10
+usando SHA `7a718659d47be24536ddfb8cb5a62e30b87fa612` y obtuvo:
+
+```text
+S01 G04: commit validado
+S01 PRECHECK: backup privado, formato custom, SHA-256 y PG18 OK
+S01 RESTORE: copia restaurada y revisión inicial OK
+S01 G04 IMPORT: sin cambios en esquema ni historial OK
+S01 REHEARSAL: NO-GO: Gate de arranque READ ONLY pasada 1: fallo (código 1)
+```
+
+El gate mostró únicamente un error genérico, de modo que el diagnóstico
+concreto **no quedó confirmado por el Mac**. Revisión del código detectó una
+**incompatibilidad objetiva, causa probable**: el gate requiere los nombres
+`ck_s01_attempt_amount` y `ck_s01_attempt_currency`, mientras que la
+migración S01 anterior definía esas dos restricciones CHECK sin nombre. Las
+pruebas anteriores creaban la tabla vía ORM `create_all()`, que sí nombraba
+esas constraints. El cambio G04 elimina ese DDL, de forma que sobre una
+restauración histórica el Alembic ejecuta el `CREATE TABLE` directamente.
+
+**Remediación propuesta en esta misma PR**:
+- Nombrar expresamente ambas CHECK en
+  `y8z9a0b1c2d3_s01_checkout_attempts.py`, sin relajar el gate.
+- Añadir regresión SQL sobre PG18 y tabla legacy sintética sin importar Flask
+  que consulte `pg_constraint` y exija esos tres CHECK con sus nombres.
+- En un nuevo fallo del gate, permitir que el ensayo local imprima **solo una
+  etiqueta fija** `S01 G04 CAUSA: GRAPH|TABLES|REVISION|COLUMNS|
+  ADVISORY_COLUMNS|CONSTRAINTS|INDEXES|READONLY|DATABASE|CHECK|INTERNAL`.
+  No extraer trazas, DSN, datos, filas, archivos o contenido del respaldo.
+
+**Resultado G04 real anterior: NO-GO, no se reinterpreta como PASS.**
+Tras CI sobre el commit corregido se requiere un **nuevo ensayo local completo**
+que acredite `S01 G04 STARTUP 1/2` y `S01 REHEARSAL: PASS`. Ante otro
+NO-GO, detener y revisar el código seguro antes de proceder a producción.
+
