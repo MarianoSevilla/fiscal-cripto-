@@ -66,3 +66,30 @@ def test_offline_backup_rehearsal_proves_import_and_startup_gate():
     assert "str(BASE / \"startup_schema_gate.py\")" in source
     assert "S01 G04 IMPORT: sin cambios en esquema ni historial OK" in source
     assert "S01 G04 STARTUP {repetition}: gate READ ONLY OK" in source
+
+
+def test_checkout_migration_defines_named_checks_without_orm_creation():
+    sql = (
+        ROOT / "migrations" / "versions"
+        / "y8z9a0b1c2d3_s01_checkout_attempts.py"
+    ).read_text(encoding="utf-8")
+    assert "CONSTRAINT ck_s01_attempt_amount" in sql
+    assert "CONSTRAINT ck_s01_attempt_currency" in sql
+    assert "CONSTRAINT ck_s01_checkout_status" in sql
+    # The actual PG18 constraint catalog is also verified by
+    # qa_s01_paypal_retirement_pg18.py without importing the Flask app.
+
+
+def test_gate_failure_reports_only_fixed_schema_categories():
+    source = GATE.read_text(encoding="utf-8")
+    rehearsal = (
+        ROOT / "tools" / "s01_rehearse_restored_backup.py"
+    ).read_text(encoding="utf-8")
+    for code in ("GRAPH", "DATABASE", "READONLY", "TABLES", "REVISION",
+                 "COLUMNS", "ADVISORY_COLUMNS", "CONSTRAINTS", "INDEXES",
+                 "CHECK", "INTERNAL"):
+        assert code in rehearsal
+    assert "_SAFE_FAILURE_CODES" in source
+    assert "S01 G04 CAUSA:" in rehearsal
+    assert "result.stdout" in rehearsal
+    assert "print(result.stdout)" not in rehearsal
