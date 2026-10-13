@@ -42,22 +42,29 @@ EXPECTED_COUNTS = (6, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0)
 
 
 def make_database() -> None:
-    with _admin() as conn:
-        # CREATE DATABASE requires autocommit and an explicit, local only target.
+    # psycopg2 connection context manager starts a transaction even when
+    # autocommit=True. Manage the administrative connection explicitly.
+    conn = _admin()
+    try:
         conn.autocommit = True
         with conn.cursor() as cur:
             cur.execute("SHOW server_version_num")
             n = int(cur.fetchone()[0])
             assert 180000 <= n < 190000, "Expected ephemeral PostgreSQL 18"
             cur.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(DB)))
+    finally:
+        conn.close()
 
 
 def remove_database() -> None:
-    with _admin() as conn:
+    conn = _admin()
+    try:
         conn.autocommit = True
         with conn.cursor() as cur:
             cur.execute(sql.SQL("DROP DATABASE IF EXISTS {} WITH (FORCE)").format(
                 sql.Identifier(DB)))
+    finally:
+        conn.close()
 
 
 def aggregates(conn):
