@@ -162,6 +162,24 @@ def main():
             ):
                 assert name in tables, f"Falta tabla S01 {name}"
 
+            # G04 regression from Mac backup: with Flask import DDL
+            # eliminated, these two named CHECKs MUST be created directly by
+            # Alembic, not by SQLAlchemy db.create_all().
+            required_check_names = {
+                "ck_s01_attempt_amount",
+                "ck_s01_attempt_currency",
+                "ck_s01_checkout_status",
+            }
+            actual_checks = set(conn.execute(text(
+                "SELECT conname FROM pg_constraint "
+                "WHERE conrelid = 'public.s01_stripe_checkout_attempts'::regclass "
+                "AND contype = 'c'"
+            )).scalars().all())
+            assert required_check_names.issubset(actual_checks), (
+                "S01 migration omitted named financial CHECK constraints "
+                "required by the no-DDL startup gate"
+            )
+
             assert conn.execute(text(
                 "SELECT count(*) FROM s01_stripe_checkout_attempts"
             )).scalar_one() == 0
@@ -186,7 +204,7 @@ def main():
             "S01 migration gate: single linear Alembic head PASS; "
             "U04 PayPal parallel revision absent PASS; legacy order/capture "
             "retained PASS; no fabricated quote backfill PASS; "
-            "synthetic PG18 DDL replay PASS",
+            "synthetic PG18 DDL replay PASS; named S01 CHECKs PASS",
             flush=True,
         )
     finally:
