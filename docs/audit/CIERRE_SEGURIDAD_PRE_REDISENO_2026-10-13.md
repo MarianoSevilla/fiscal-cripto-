@@ -136,3 +136,27 @@ La representación anterior recoge relaciones de ascendencia y trabajo sucesivo;
 ### Resumen operativo
 
 **No falta trabajo técnico por defecto: falta elegir, consolidar, certificar e integrar el código ya escrito.** No cerrar PR en masa ni desplegar #49 directamente. La primera decisión de seguridad es si suspender temporalmente las operaciones S01 hasta que Stripe Connect esté auditado, y si retirar PayPal ejecutable de la nueva línea. Es preferible una consolidación por dos releases controlados que una mezcla de todas las PR y la reforma UX.
+
+
+## 7. C1 — DECISIÓN CONFIRMADA: RETIRAR PAYPAL DE ASESORAMIENTO S01
+
+**Decisión expresa del propietario, 13/10/2026:** retirar PayPal como método de cobro de asesoramiento fiscal de marianosevilla.com. El medio de cobro proyectado para S01 es Stripe Connect, con **cargo directo en la cuenta del profesional Rafa**, remuneración de Mariano del **30 % de los honorarios de Rafa** y distribución de los gastos de procesamiento **30 % Mariano / 70 % Rafa**. Stripe Connect sigue siendo futuro y no está autorizado para pagos reales.
+
+### Selección de rama e historial
+
+1. **Elegir conceptualmente la retirada ejecutable tipo PR #41** frente a implantar el nuevo motor de cobros PayPal de PR #29. La #41 ya incluye funciones PayPal inertes, denegación de endpoints antiguos y conservación de los campos históricos. **Su CI #51 PASS, pero esta rama no está integrada ni puede fusionarse directamente sin consolidar la seguridad y el esquema**.
+2. **PR #29 pasa a ALTERNATIVA FUNCIONAL SUPERADA**, manteniéndose intactos su código, el historial y las evidencias. No cerrar ni borrar rama/PR automáticamente. No fusionar las migraciones U04 `w6x7y8z9a0b1` y Stripe-only `x7y8z9a0b1c2` en paralelo. Revalidar el head real de producción antes de toda migración.
+3. **Conservar sin modificar** `paypal_order_id`, `paypal_capture_id`, `payment_provider`, `paid_at` y otros registros existentes. La retirada de PayPal como proveedor futuro **no autoriza el borrado de datos, informes, notificaciones ni evidencias históricas**. El propietario ha indicado que nunca cobró vía PayPal desde la web, pero debe completarse G05 con **conteos actuales agregados de solo lectura**, y revisar cualquier anomalía si apareciese.
+4. **No migrar, fusionar ni desplegar** con esta decisión comercial. El código que ejecuta Railway production continúa en `56882073295faae3bd1bc3632288a970acb330da` hasta autorización expresa posterior.
+5. **No reenviar en producción nuevos enlaces de PayPal** cuando llegue la retirada. Los enlaces y órdenes históricos inciertos, si existieran, se tratarán mediante procedimiento excepcional de conciliación, jamás mediante un segundo cargo.
+
+### Cuestión C1 todavía abierta — alcance de la suspensión temporal
+
+La respuesta del propietario confirma **retirar PayPal**; **NO** confirma expresamente suspender también la creación y envío de presupuestos mientras se implanta Stripe Connect. Estas actuaciones son diferentes:
+
+- **Opción A — retirada PayPal + presupuestos informativos**: mantener contacto y valoración de Rafa, permitir **enviar presupuesto sin enlace de pago**, con aceptación y estado pendiente; no crear enlaces PayPal, Stripe ni marcar pagos. Exige diseñar y probar un flujo provisional nuevo y seguro, incluidos emails y panel.
+- **Opción B — PREFREEZE financiero estricto**: mantener nuevas solicitudes, pero bloquear transitoriamente envío/reemisión de presupuestos y las demás escrituras financieras existentes, como en PR #30 y #41. Impacto funcional explícito en panel de Rafa, aunque FIFO y otras funciones sigan disponibles.
+
+**No implementar por suposición la opción A ni desplegar la B**. Presentar esta decisión concreta al propietario, recomendar la alternativa más segura durante la consolidación y obtener permiso explícito antes de integrar. En ambos casos Stripe Live y Stripe Test externo permanecen NO-GO.
+
+**C1 parcialmente cerrado: estrategia PayPal = RETIRADA APROBADA; alcance PREFREEZE = DECISIÓN PENDIENTE; autorización de merge, migración y deploy = NO CONCEDIDA.**
