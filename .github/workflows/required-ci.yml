@@ -83,6 +83,9 @@ jobs:
       - name: STG-B01 real Flask firewall and CI-only synthetic lab
         run: python fiscal_app_export/tests/qa_stg_b01_app_isolation.py
 
+      - name: STG-B04 isolated Railway lab guard with fake identity and no network
+        run: python fiscal_app_export/tests/qa_stg_b04_lab_app_isolation.py
+
   postgres-bootstrap:
     name: postgres-bootstrap
     runs-on: ubuntu-24.04
