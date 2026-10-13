@@ -195,3 +195,18 @@ Evitar una única PR gigantesca: separar tokens/diseño base, páginas públicas
 - **Operación:** autorización independiente y limitada para contraste de configuración real y para cualquier prueba Stripe Test externa. Sin cambiar pagos reales ni producción.
 
 **Resultado de esta actualización: S01 variables y reglas económicas documentadas, custodia documental y rediseño UX posicionados, hipótesis S02 de particulares/profesionales identificada. Quedan pendientes análisis de datos y contrato jurídico. No hay GO para merge/deploy/cobros.**
+
+
+## 10. Decisión confirmada: devolución total al cliente — S01
+
+**Aprobada por el propietario el 13/10/2026. Prioritaria sobre preguntas abiertas anteriores.**
+
+**Regla funcional:** cuando Rafa, como prestador y responsable de reclamaciones, **autorice y ejecute una devolución completa al cliente** de una operación S01, **Mariano devolverá el 100 % de su comisión de intermediación correspondiente a ese cobro**. El cliente debe recuperar el **100 % del importe abonado**. No retener una parte de la comisión por el mero hecho de haber generado el contacto o facilitado el cobro.
+
+**Ejemplo económico previo a impuestos:** honorarios Rafa 200 € + comisión bruta Mariano 60 € = cobro 260 €. Si procede devolución integral: cliente 260 €; la comisión bruta de Mariano sobre esa operación queda íntegramente revertida (60 €), **teniendo en cuenta los ajustes de la comisión de aplicación ya realizados**. No se debe devolver 60 € adicionales si una parte de la misma comisión ya se reembolsó a la cuenta de Rafa por el reparto de costes de procesamiento.
+
+**Seguridad de implementación futura — NO ACTIVADA:** vincular toda devolución al `connected_account_id`, identificador del cargo/pago, expediente y `application_fee_id`; conciliar pagos y ajustes existentes, verificar importe total y estado, registrar evento/refund de cliente **por separado** de la devolución de la comisión de aplicación, establecer unicidad, idempotencia y bloqueo ante resultados inciertos, y conciliar con Stripe antes de repetir cualquier operación. Las compensaciones económicas deben garantizar que cliente recupere el importe acordado y Mariano no conserve la comisión bruta de una venta anulada. No emitir facturas desde la app.
+
+**No resuelto:** Stripe puede no reintegrar gastos de procesamiento del pago inicial, y puede cobrar gastos adicionales según el caso. El acuerdo general de asignación del procesamiento S01 **30 % Mariano / 70 % Rafa** permanece vigente para cobros normales, pero **debe definirse explícitamente** si se aplica a costes no recuperables cuando se revierte por completo una operación y a comisiones adicionales de disputa/reembolso. Tampoco se ha pactado aún el criterio para **devoluciones parciales**. Estas cuestiones no se presumen resueltas ni se convierten en automatismos.
+
+**Estado:** decisión comercial sobre **reversión total de comisión: CONFIRMADA**; política de costes residuales y devoluciones parciales: **PENDIENTE**; desarrollo/Stripe Connect operativo: **NO-GO**. Esta aclaración no da permiso para ejecutar devoluciones reales, transferir fondos, conectar proveedores, migrar, desplegar ni fusionar PR.
