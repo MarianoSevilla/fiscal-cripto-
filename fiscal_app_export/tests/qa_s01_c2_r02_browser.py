@@ -90,10 +90,11 @@ def guarded_fetch(page, uri, *, method="POST", payload=None, headers=None):
 
 
 def main():
-    from models import FiscalAdvisoryRequest, AdvisoryInternalNote, AdvisoryAuditLog
-
     cases = 0
     with real_flask() as (flask_app, identities, origin):
+        # Import model classes only AFTER the isolated Flask harness has
+        # installed its SQLite-only config and app module search path.
+        from models import FiscalAdvisoryRequest, AdvisoryInternalNote, AdvisoryAuditLog
         # The harness refuses inherited DATABASE_URL and creates a private SQLite
         # temp file. Assert it independently before any browser or DB operation.
         assert flask_app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite:///")
