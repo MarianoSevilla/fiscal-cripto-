@@ -37,6 +37,30 @@
 - Un fallo de gate **deja el servicio no disponible** en vez de reparar esquema: esto es la protección deliberada.
 - **El gate apunta al head S01 de este árbol**; cuando un cambio autorizado añada una revisión deberá actualizar el head exigido y sus tests. Nunca intentar stamp para silenciar discrepancias.
 
+## Ensayo local ampliado desde backup previo — pendiente de ejecución
+
+La herramienta heredada de PR #45 `tools/s01_rehearse_restored_backup.py` se amplía
+**solo en esta rama** para que, tras restaurar una copia PGDMP privada en PostgreSQL
+18 aislado por Unix socket:
+
+1. Importe la aplicación Flask bajo el guard de red y vuelva a comparar
+   recuentos y huellas de **todas las tablas/columnas históricas** con el
+   estado anterior al import. Exija que `alembic_version` siga en el head viejo.
+2. Ejecute `bootstrap_db.py` **explícitamente**, nunca por `Procfile`, sobre
+   el clon local; valide las migraciones S01.
+3. Ejecute `startup_schema_gate.py` de modo READ ONLY tras la primera
+   migración y nuevamente tras la segunda ejecución idempotente; cada vez
+   verifique conservación de filas y constraints.
+4. Informe solo contadores técnicos `S01 G04 IMPORT` y
+   `S01 G04 STARTUP 1/2`, **sin mostrar datos, hashes, logs ni DSN**.
+   Ningún archivo original debe modificarse, subirse ni utilizarse para
+   conexiones externas.
+
+Esta ampliación exige una **nueva ejecución local** en el Mac antes de
+declarar superado G04 sobre copia restaurada. La evidencia R01/S01 anterior
+solo cubría el bootstrap antiguo; no puede certificarse G04 mediante su
+PASS histórico.
+
 ## Criterio de aceptación de esta PR
 
 - CI: backend, PostgreSQL 18 y browser, **sobre SHA final exacto**; nuevas pruebas fail-closed sin saltos.
