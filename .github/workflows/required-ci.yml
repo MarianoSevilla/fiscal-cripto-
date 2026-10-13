@@ -133,6 +133,9 @@ jobs:
       - name: G04 six-case legacy fingerprint migration on isolated PG18
         run: python fiscal_app_export/tests/qa_s01_g04_six_legacy_pg18.py
 
+      - name: G04-R02 safe recovery startup and frozen HTTP on isolated PG18
+        run: python fiscal_app_export/tests/qa_s01_recovery_gate_pg18.py
+
       - name: C2-R01 row lock and partial financial evidence on isolated PG18
         run: python fiscal_app_export/tests/qa_s01_c2_management_pg18.py
 
