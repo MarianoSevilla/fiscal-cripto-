@@ -10,13 +10,11 @@ bootstrap. Never import this as an app endpoint or run against Railway.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import os
 import runpy
 
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
-import psycopg2
 from psycopg2 import sql
 from sqlalchemy import create_engine, inspect, text
 
@@ -48,7 +46,7 @@ def make_database() -> None:
         # CREATE DATABASE requires autocommit and an explicit, local only target.
         conn.autocommit = True
         with conn.cursor() as cur:
-            v = cur.execute("SHOW server_version_num")
+            cur.execute("SHOW server_version_num")
             n = int(cur.fetchone()[0])
             assert 180000 <= n < 190000, "Expected ephemeral PostgreSQL 18"
             cur.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(DB)))
