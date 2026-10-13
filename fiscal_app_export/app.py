@@ -36,6 +36,10 @@ from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from authlib.integrations.flask_client import OAuth
 from authlib.oidc.core import UserInfo
 from advisory_prefreeze import advisory_financial_prefreeze, refuse_advisory_financial_operation
+from advisory_s01_c2_management import (
+    C2_TARGET_STATES, c2_can_change_state, c2_change_internal_state,
+    C2ProtectedState,
+)
 import resend
 from sqlalchemy import func, extract, text, or_
 from models import db, bcrypt, User, FifoReport, Contacto, ProcessingError, CommunicationCampaign, CommunicationDelivery
@@ -4727,11 +4731,14 @@ def admin_advisory_page():
 
 @app.route("/api/asesoramiento/precios")
 def advisory_prices():
-    """Devuelve los precios públicos del servicio."""
-    return jsonify({
-        k: {"label": _ADVISORY_PRICE_LABELS[k], "amount_cents": v, "amount_eur": v / 100}
-        for k, v in _ADVISORY_PRICES.items()
+    """C2: no presentar importes heredados como ofertas S01 mientras está congelado."""
+    response = jsonify({
+        "code": "s01_quotes_suspended",
+        "message": "Los presupuestos y pagos de asesoramiento están suspendidos.",
     })
+    response.status_code = 503
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.route("/api/asesoramiento/solicitar", methods=["POST"])
@@ -4959,9 +4966,6 @@ def advisory_enviar_presupuesto(req_id):
 # Las rutas heredadas /enviar-presupuesto, /mensaje, /estado, /nota, /is-test
 # y DELETE continúan bajo PREFREEZE. C1 sólo habilita nuevas rutas limitadas;
 # jamás emite presupuestos, enlaces, mensajes al cliente ni llamadas a Stripe.
-_C1_SAFE_STATES = frozenset({
-    "submitted", "pendiente_info", "under_review", "waiting_user_info",
-})
 _C1_SESSION_KEY = "_s01_c1_admin_csrf"
 
 
@@ -4986,24 +4990,6 @@ def _c1_csrf_ok():
         and isinstance(supplied, str)
         and compare_digest(record["token"], supplied)
     )
-
-
-def _c1_safe_to_change_state(advisory):
-    if advisory.status not in _C1_SAFE_STATES:
-        return False
-    financial_fields = (
-        "quoted_amount", "rafa_fee_cents", "commission_cents",
-        "quote_sent_at", "quote_accepted_at", "payment_link_token",
-        "paypal_order_id", "paypal_capture_id", "payment_provider",
-        "stripe_checkout_session_id", "stripe_payment_intent_id",
-        "amount_paid", "paid_at",
-    )
-    if any(getattr(advisory, field, None) is not None
-           for field in financial_fields):
-        return False
-    return S01StripeCheckoutAttempt.query.filter_by(
-        advisory_id=advisory.id
-    ).first() is None
 
 
 @app.route("/api/admin/asesoramiento/gestion-token", methods=["GET"])
@@ -5055,34 +5041,25 @@ def admin_c1_change_nonfinancial_state(request_id):
     if not isinstance(data, dict) or not isinstance(data.get("status"), str):
         return _c1_response({"error": "Estado inválido."}, 400)
     new_status = data["status"]
-    if new_status not in _C1_SAFE_STATES:
-        return _c1_response({"error": "Cambio financiero suspendido."}, 503)
+    if new_status not in C2_TARGET_STATES:
+        return _c1_response({"error": "Solo se permiten estados internos sin aviso al cliente."}, 503)
     if not isinstance(data.get("note", ""), str):
         return _c1_response({"error": "Nota inválida."}, 400)
     note = data.get("note", "").strip()[:1000]
-    advisory = (FiscalAdvisoryRequest.query.filter_by(id=request_id)
-                .with_for_update().first_or_404())
-    if not _c1_safe_to_change_state(advisory):
-        db.session.rollback()
-        return _c1_response({"error": "Expediente con evidencia financiera: estado protegido."}, 409)
-    if advisory.status == new_status:
-        db.session.rollback()
-        return _c1_response({"ok": True, "status": new_status, "unchanged": True})
-    old_status = advisory.status
-    advisory.status = new_status
-    db.session.add(FiscalAdvisoryStatusHistory(
-        request_id=advisory.id, status=new_status,
-        changed_by=current_user.id, note=note or None,
-    ))
-    db.session.add(AdvisoryAuditLog(
-        request_id=advisory.id, admin_id=current_user.id,
-        action=AdvisoryAuditLog.ACTION_STATUS_CHANGED,
-        detail=f"C1: {old_status} → {new_status}" + (f" · {note}" if note else ""),
-    ))
-    db.session.commit()
-    # C1 no envía emails ni toca PayPal, Stripe, facturas o cobros.
+    try:
+        status, unchanged = c2_change_internal_state(
+            request_id=request_id,
+            new_status=new_status,
+            actor_id=current_user.id,
+            note=note,
+        )
+    except C2ProtectedState:
+        return _c1_response({"error": "Expediente protegido por historial financiero o estado previo."}, 409)
+    # Sin correos, pagos, facturas o proveedores. La API legacy sigue bajo freeze.
     return _c1_response({
-        "ok": True, "status": new_status, "status_label": advisory.status_label(),
+        "ok": True, "status": status,
+        "status_label": FiscalAdvisoryRequest.STATUS_LABELS[status],
+        "unchanged": unchanged,
     })
 
 
@@ -5598,6 +5575,9 @@ def admin_advisory_list():
 def admin_advisory_detail(request_id):
     advisory = FiscalAdvisoryRequest.query.get_or_404(request_id)
     d = advisory.to_dict(full=True)
+    # One backend source of truth for financial evidence, including legacy.
+    # UI is advisory only; every POST recalculates under row lock.
+    d["c1_state_editable"] = c2_can_change_state(advisory)
     d["files"] = [
         {"id": f.id, "file_name": f.file_name, "file_size": f.file_size,
          "file_type": f.file_type, "uploaded_at": f.uploaded_at.isoformat()}

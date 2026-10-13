@@ -564,11 +564,11 @@ async function openDetail(id, el) {
       refunded:          'Reembolsado',
       archived:          'Archivada',
     };
-    const c1Editable = ['submitted','pendiente_info','under_review','waiting_user_info'].includes(d.status);
-    let statusOpts = c1Editable ? '' : '<option value="" selected>Estado financiero conservado (solo lectura)</option>';
+    const c1Editable = d.c1_state_editable === true;
+    let statusOpts = c1Editable ? '' : '<option value="" selected>Expediente protegido (solo lectura)</option>';
     if (c1Editable) {
       Object.entries(statusOptions).forEach(([k,v]) => {
-        if (['submitted','pendiente_info','under_review','waiting_user_info'].includes(k)) {
+        if (['submitted','under_review'].includes(k)) {
           statusOpts += `<option value="${k}" ${d.status === k ? 'selected' : ''}>${escHtml(v)}</option>`;
         }
       });
@@ -577,11 +577,11 @@ async function openDetail(id, el) {
     // Próximo paso recomendado
     const NEXT_STEPS = {
       submitted:         'Revisar internamente: presupuestos y pagos suspendidos.',
-      pendiente_info:    'Esperar respuesta del cliente al mensaje enviado.',
+      pendiente_info:    'Revisión interna pendiente: comunicación al cliente suspendida.',
       quote_sent:        'No reenviar enlaces: expediente protegido durante la suspensión.',
       paid_received:     'Comenzar a trabajar en el caso del cliente.',
-      under_review:      'Valorar complejidad y preparar propuesta o confirmación.',
-      waiting_user_info: 'Esperar respuesta del cliente al email enviado.',
+      under_review:      'Revisar internamente sin generar presupuestos ni mensajes.',
+      waiting_user_info: 'Revisión interna: no se enviarán peticiones al cliente en C1.',
       in_progress:       'Continuar el trabajo con el cliente.',
       completed:         'Sin acción requerida.',
       cancelled:         'Sin acción requerida.',
