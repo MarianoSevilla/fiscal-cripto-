@@ -170,6 +170,9 @@ jobs:
       - name: Advisory prefreeze mobile and desktop without provider calls
         run: python fiscal_app_export/tests/qa_advisory_prefreeze_browser.py
 
+      - name: C2-R02 real Flask and Chromium advisory intake/management E2E
+        run: python fiscal_app_export/tests/qa_s01_c2_r02_browser.py
+
       - name: Keep non-sensitive responsive screenshots for review
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6 (node24)
