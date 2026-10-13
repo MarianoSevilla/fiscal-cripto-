@@ -4707,9 +4707,8 @@ def advisory_request_page():
 @limiter.exempt
 def advisory_confirmed():
     """Legacy URL: never assert a paid/confirmed S01 request during C1."""
-    response = make_response(
-        send_from_directory("static", "asesoramiento-confirmado.html"), 503
-    )
+    response = send_from_directory("static", "asesoramiento-confirmado.html")
+    response.status_code = 503
     response.headers["Cache-Control"] = "no-store"
     return response
 
