@@ -46,6 +46,11 @@ def synthetic_store(tmp_path, monkeypatch):
             commission_cents=6000,
             commission_rate_bps=3000,
             is_test=True,
+            # Legacy tests call the orchestration service directly; the
+            # synthetic quote is ALREADY accepted before Checkout is reserved.
+            # HTTP tests cover acceptance+reservation in one new COMMIT.
+            quote_accepted_at=datetime.fromtimestamp(NOW - 60, tz=timezone.utc)
+                .replace(tzinfo=None),
             quote_expires_at=datetime.fromtimestamp(NOW + 5 * 86400, tz=timezone.utc)
                 .replace(tzinfo=None),
         )
