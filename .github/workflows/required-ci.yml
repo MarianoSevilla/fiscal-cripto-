@@ -130,6 +130,9 @@ jobs:
       - name: S01 legacy PayPal evidence and linear Alembic history gate
         run: python fiscal_app_export/tests/qa_s01_paypal_retirement_pg18.py
 
+      - name: S01-R01 aggregated PayPal inventory on isolated PostgreSQL 18
+        run: python fiscal_app_export/tests/qa_s01_paypal_inventory_pg18.py
+
   browser-navigation:
     name: browser-navigation
     runs-on: ubuntu-24.04
