@@ -270,54 +270,12 @@ if _google_oauth_enabled:
         client_kwargs={"scope": "openid email profile"},
     )
 
-# ── BOOTSTRAP DB (columnas de emergencia) ─────────────────────────────────────
-# Nota: las migraciones formales van en el Procfile via `flask db upgrade`.
-# Este bloque añade columnas que pueden faltar en instancias antiguas.
-# Está protegido contra cuelgues gracias a connect_timeout en SQLALCHEMY_ENGINE_OPTIONS.
-try:
-    with app.app_context():
-        db.create_all()
-        try:
-            from sqlalchemy import text
-            with db.engine.connect() as _conn:
-                _conn.execute(text(
-                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP"
-                ))
-                _conn.execute(text(
-                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(150)"
-                ))
-                _conn.execute(text(
-                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'user' NOT NULL"
-                ))
-                _conn.execute(text(
-                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS nif VARCHAR(20)"
-                ))
-                _conn.execute(text(
-                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token_hash VARCHAR(64)"
-                ))
-                _conn.execute(text(
-                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires_at TIMESTAMP"
-                ))
-                # Error taxonomy columns (migration k4l5m6n7o8p9)
-                _conn.execute(text(
-                    "ALTER TABLE fifo_reports ADD COLUMN IF NOT EXISTS error_category VARCHAR(50)"
-                ))
-                _conn.execute(text(
-                    "ALTER TABLE processing_errors ADD COLUMN IF NOT EXISTS error_category VARCHAR(50)"
-                ))
-                _conn.execute(text(
-                    "ALTER TABLE processing_errors ADD COLUMN IF NOT EXISTS error_code VARCHAR(50)"
-                ))
-                # Evidencia técnica del CSV (migration Sprint 1)
-                _conn.execute(text(
-                    "ALTER TABLE processing_errors ADD COLUMN IF NOT EXISTS csv_context TEXT"
-                ))
-                _conn.commit()
-        except Exception:
-            pass  # columnas ya existen o DB no disponible — no es crítico en arranque
-except Exception:
-    pass  # si DB no está lista aún, flask db upgrade (Procfile) lo gestiona
-
+# ── DB SCHEMA: NO DDL DURING APP IMPORT ──────────────────────────────────────
+# Importing app.py also happens in Gunicorn workers and in Alembic.
+# Never create/alter tables here: schema changes require a separately
+# authorized, explicit bootstrap/migration command. The Procfile's
+# startup_schema_gate.py rejects stale/incomplete databases READ ONLY before
+# Gunicorn starts. Legacy emergency ALTERs are owned by Alembic migrations.
 
 # ── PDF TOKEN STORE (Row-Level Security) ───────
 # El token se guarda en la sesión Flask (cookie firmada), que viaja con el

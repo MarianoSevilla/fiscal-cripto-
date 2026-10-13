@@ -209,6 +209,9 @@ assert not app.debug and not app.testing
 assert app.config['SQLALCHEMY_DATABASE_URI'].startswith('sqlite:///')
 limiter.enabled = False
 with app.app_context():
+    # G04: import must NEVER create the fixture's tables. Test fixtures
+    # explicitly initialize their ephemeral SQLite database themselves.
+    db.create_all()
     user = User(email='u02@example.invalid', full_name='Fictitious U02',
                 email_verified_at=datetime.utcnow())
     user.set_password('FictitiousPassword123!')
