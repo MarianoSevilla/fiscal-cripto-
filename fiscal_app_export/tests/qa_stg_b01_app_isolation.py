@@ -133,6 +133,24 @@ def main() -> None:
         check=True, text=True, timeout=60,
     )
 
+    # Verify that the real Flask import fails before DB/HTTP can initialize
+    # when the staging runtime points at production, has provider keys or
+    # falsely labels itself as production. Do not echo any variable values.
+    for variable, bad_value in (
+        ("DATABASE_URL", "postgresql+psycopg2://ci:invalid@postgres.railway.internal:5432/railway"),
+        ("STRIPE_SECRET_KEY", "ci-only-inert-stripe-secret"),
+        ("FLASK_ENV", "production"),
+    ):
+        invalid = env.copy()
+        invalid[variable] = bad_value
+        failed = subprocess.run(
+            [sys.executable, "-c", "import app"], cwd=ROOT, env=invalid,
+            capture_output=True, text=True, timeout=60,
+        )
+        assert failed.returncode != 0, ("invalid staging identity unexpectedly launched", variable)
+        assert ("Staging isolation:" in failed.stderr
+                and variable in failed.stderr), ("missing fail-closed evidence", variable)
+
     import tempfile
     with tempfile.TemporaryDirectory(prefix="s01-stg-b01-fixtures-") as directory:
         lab_env = root_env.copy()
