@@ -130,6 +130,9 @@ jobs:
       - name: S01 legacy PayPal evidence and linear Alembic history gate
         run: python fiscal_app_export/tests/qa_s01_paypal_retirement_pg18.py
 
+      - name: G04 six-case legacy fingerprint migration on isolated PG18
+        run: python fiscal_app_export/tests/qa_s01_g04_six_legacy_pg18.py
+
       - name: C2-R01 row lock and partial financial evidence on isolated PG18
         run: python fiscal_app_export/tests/qa_s01_c2_management_pg18.py
 
