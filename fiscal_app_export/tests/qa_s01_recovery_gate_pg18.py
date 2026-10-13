@@ -87,77 +87,80 @@ app.config.update(TESTING=True, RATELIMIT_ENABLED=False,
                   SESSION_COOKIE_SECURE=False)
 with app.app_context():
     engine = db.engine
-    denied = []
-    def financial_writes(conn, cursor, statement, parameters, context, executemany):
-        normalized = statement.lstrip().upper()
-        if normalized.startswith(('INSERT', 'UPDATE', 'DELETE')):
-            if any(table in normalized for table in (
-                'FISCAL_ADVISORY_REQUESTS', 'S01_STRIPE_',
-                'ADVISORY_AUDIT_LOG', 'FISCAL_ADVISORY_STATUS_HISTORY')):
-                denied.append(normalized.split()[0])
-                raise AssertionError('Unexpected financial write during PREFREEZE')
-    event.listen(engine, 'before_cursor_execute', financial_writes)
-    def external_forbidden(*args, **kwargs):
-        raise AssertionError('External provider/email I/O in recovery probe')
-    try:
-        with patch('requests.sessions.Session.request', external_forbidden), \
-             patch('resend.Emails.send', external_forbidden), \
-             patch.object(mod, '_paypal_get_access_token', external_forbidden), \
-             patch.object(mod, '_paypal_create_order', external_forbidden), \
-             patch.object(mod, '_paypal_capture_order', external_forbidden), \
-             patch.object(mod, '_send_advisory_quote_email', external_forbidden), \
-             patch.object(mod, '_PAYPAL_ENABLED', True), \
-             patch.object(mod, '_stripe_available', True), \
-             patch.object(mod, '_STRIPE_SECRET_KEY', 'sk_test_inert_ci'), \
-             patch.object(mod, '_STRIPE_WEBHOOK_SECRET', 'whsec_inert_ci'):
-            # Even simulated configured providers cannot bypass PREFREEZE.
-            cli = app.test_client()
-            health = cli.get('/healthz')
-            assert health.status_code == 200
-            assert health.get_json()['ok'] is True
+denied = []
+def financial_writes(conn, cursor, statement, parameters, context, executemany):
+    normalized = statement.lstrip().upper()
+    if normalized.startswith(('INSERT', 'UPDATE', 'DELETE')):
+        if any(table in normalized for table in (
+            'FISCAL_ADVISORY_REQUESTS', 'S01_STRIPE_',
+            'ADVISORY_AUDIT_LOG', 'FISCAL_ADVISORY_STATUS_HISTORY')):
+            denied.append(normalized.split()[0])
+            raise AssertionError('Unexpected financial write during PREFREEZE')
+event.listen(engine, 'before_cursor_execute', financial_writes)
+def external_forbidden(*args, **kwargs):
+    raise AssertionError('External provider/email I/O in recovery probe')
+try:
+    with patch('requests.sessions.Session.request', external_forbidden), \
+         patch('resend.Emails.send', external_forbidden), \
+         patch.object(mod, '_paypal_get_access_token', external_forbidden), \
+         patch.object(mod, '_paypal_create_order', external_forbidden), \
+         patch.object(mod, '_paypal_capture_order', external_forbidden), \
+         patch.object(mod, '_send_advisory_quote_email', external_forbidden), \
+         patch.object(mod, '_PAYPAL_ENABLED', True), \
+         patch.object(mod, '_stripe_available', True), \
+         patch.object(mod, '_STRIPE_SECRET_KEY', 'sk_test_inert_ci'), \
+         patch.object(mod, '_STRIPE_WEBHOOK_SECRET', 'whsec_inert_ci'):
+        # Even simulated configured providers cannot bypass PREFREEZE.
+        cli = app.test_client()
+        health = cli.get('/healthz')
+        assert health.status_code == 200
+        assert health.get_json()['ok'] is True
 
-            public = (
-                ('GET', '/api/pago/info/CI_EXPIRED_SYNTHETIC_TOKEN'),
-                ('POST', '/api/pago/iniciar/CI_EXPIRED_SYNTHETIC_TOKEN'),
-                ('GET', '/api/pago/paypal/capture?request_id=6&token=fictional'),
-                ('POST', '/api/webhooks/paypal'),
-                ('POST', '/api/webhooks/stripe'),
-            )
-            for method, url in public:
-                result = cli.open(url, method=method,
-                                  data=b'{}' if method == 'POST' else None,
-                                  content_type='application/json')
-                assert result.status_code == 503, (url, result.status_code)
-                assert result.headers['Cache-Control'] == 'no-store'
-                if '/capture' in url:
-                    assert SUSPENSION_MESSAGE in result.get_data(as_text=True)
-                    assert result.mimetype == 'text/html'
-                else:
-                    assert result.get_json()['error'] == SUSPENSION_MESSAGE
-                    assert result.get_json()['code'] == 'advisory_financial_suspended'
+        public = (
+            ('GET', '/api/pago/info/CI_EXPIRED_SYNTHETIC_TOKEN'),
+            ('POST', '/api/pago/iniciar/CI_EXPIRED_SYNTHETIC_TOKEN'),
+            ('GET', '/api/pago/paypal/capture?request_id=6&token=fictional'),
+            ('POST', '/api/webhooks/paypal'),
+            ('POST', '/api/webhooks/stripe'),
+        )
+        for method, url in public:
+            result = cli.open(url, method=method,
+                              data=b'{}' if method == 'POST' else None,
+                              content_type='application/json')
+            assert result.status_code == 503, (url, result.status_code)
+            assert result.headers['Cache-Control'] == 'no-store'
+            if '/capture' in url:
+                assert SUSPENSION_MESSAGE in result.get_data(as_text=True)
+                assert result.mimetype == 'text/html'
+            else:
+                assert result.get_json()['error'] == SUSPENSION_MESSAGE
+                assert result.get_json()['code'] == 'advisory_financial_suspended'
+        with app.app_context():
             advisor = User.query.filter_by(email='advisor@ci.invalid').one()
             assert advisor.role == 'fiscal_advisor'
-            with cli.session_transaction() as session:
-                session['_user_id'] = str(advisor.id)
-                session['_fresh'] = True
-            for path in (
-                '/api/admin/asesoramiento/solicitudes/6/enviar-presupuesto',
-                '/api/admin/asesoramiento/solicitudes/6/mensaje',
-            ):
-                result = cli.post(path, json={'amount_euros': 200})
-                assert result.status_code == 503, (path, result.status_code)
-                assert result.headers['Cache-Control'] == 'no-store'
-            static = cli.get('/pagar/CI_EXPIRED_SYNTHETIC_TOKEN')
-            assert static.status_code == 200
-            assert SUSPENSION_MESSAGE in static.get_data(as_text=True)
-            assert 'iniciarPago' not in static.get_data(as_text=True)
-            legacy = cli.get('/asesoramiento-fiscal-confirmado')
-            assert legacy.status_code == 503
-            assert legacy.headers['Cache-Control'] == 'no-store'
-            assert 'no acredita' in legacy.get_data(as_text=True)
-    finally:
-        event.remove(engine, 'before_cursor_execute', financial_writes)
-    assert not denied
+            advisor_id = advisor.id
+        with cli.session_transaction() as session:
+            session['_user_id'] = str(advisor_id)
+            session['_fresh'] = True
+        assert cli.get('/api/me').status_code == 200, 'Advisor session not authenticated'
+        for path in (
+            '/api/admin/asesoramiento/solicitudes/6/enviar-presupuesto',
+            '/api/admin/asesoramiento/solicitudes/6/mensaje',
+        ):
+            result = cli.post(path, json={'amount_euros': 200})
+            assert result.status_code == 503, (path, result.status_code)
+            assert result.headers['Cache-Control'] == 'no-store'
+        static = cli.get('/pagar/CI_EXPIRED_SYNTHETIC_TOKEN')
+        assert static.status_code == 200
+        assert SUSPENSION_MESSAGE in static.get_data(as_text=True)
+        assert 'iniciarPago' not in static.get_data(as_text=True)
+        legacy = cli.get('/asesoramiento-fiscal-confirmado')
+        assert legacy.status_code == 503
+        assert legacy.headers['Cache-Control'] == 'no-store'
+        assert 'no acredita' in legacy.get_data(as_text=True)
+finally:
+    event.remove(engine, 'before_cursor_execute', financial_writes)
+assert not denied
 print('S01 G04-R02 runtime PG18: HTTP health PASS; 7 financial endpoints fail closed; legacy and page neutral PASS; no DML/provider PASS')
 """
 
