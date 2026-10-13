@@ -78,6 +78,7 @@ from unittest.mock import patch
 from sqlalchemy import event
 import app as mod
 from app import app, db
+from models import User
 from advisory_prefreeze import SUSPENSION_MESSAGE
 
 assert mod._PAYPAL_ENABLED is False
@@ -134,8 +135,10 @@ with app.app_context():
                 else:
                     assert result.get_json()['error'] == SUSPENSION_MESSAGE
                     assert result.get_json()['code'] == 'advisory_financial_suspended'
+            advisor = User.query.filter_by(email='advisor@ci.invalid').one()
+            assert advisor.role == 'fiscal_advisor'
             with cli.session_transaction() as session:
-                session['_user_id'] = '1'
+                session['_user_id'] = str(advisor.id)
                 session['_fresh'] = True
             for path in (
                 '/api/admin/asesoramiento/solicitudes/6/enviar-presupuesto',
