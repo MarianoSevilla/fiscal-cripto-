@@ -4954,6 +4954,138 @@ def advisory_enviar_presupuesto(req_id):
     })
 
 
+
+# ── S01 C1: GESTIÓN INTERNA SIN OPERACIONES FINANCIERAS ─────────────────────
+# Las rutas heredadas /enviar-presupuesto, /mensaje, /estado, /nota, /is-test
+# y DELETE continúan bajo PREFREEZE. C1 sólo habilita nuevas rutas limitadas;
+# jamás emite presupuestos, enlaces, mensajes al cliente ni llamadas a Stripe.
+_C1_SAFE_STATES = frozenset({
+    "submitted", "pendiente_info", "under_review", "waiting_user_info",
+})
+_C1_SESSION_KEY = "_s01_c1_admin_csrf"
+
+
+def _c1_response(payload, status=200):
+    response = jsonify(payload)
+    response.status_code = status
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+def _c1_csrf_ok():
+    from hmac import compare_digest
+    record = session.get(_C1_SESSION_KEY)
+    supplied = request.headers.get("X-S01-C1-CSRF")
+    origin = request.headers.get("Origin")
+    if origin is not None and origin != request.host_url.rstrip("/"):
+        return False
+    return (
+        isinstance(record, dict)
+        and record.get("user_id") == current_user.id
+        and isinstance(record.get("token"), str)
+        and isinstance(supplied, str)
+        and compare_digest(record["token"], supplied)
+    )
+
+
+def _c1_safe_to_change_state(advisory):
+    if advisory.status not in _C1_SAFE_STATES:
+        return False
+    financial_fields = (
+        "quoted_amount", "rafa_fee_cents", "commission_cents",
+        "quote_sent_at", "quote_accepted_at", "payment_link_token",
+        "paypal_order_id", "paypal_capture_id", "payment_provider",
+        "stripe_checkout_session_id", "stripe_payment_intent_id",
+        "amount_paid", "paid_at",
+    )
+    if any(getattr(advisory, field, None) is not None
+           for field in financial_fields):
+        return False
+    return S01StripeCheckoutAttempt.query.filter_by(
+        advisory_id=advisory.id
+    ).first() is None
+
+
+@app.route("/api/admin/asesoramiento/gestion-token", methods=["GET"])
+@require_fiscal_advisor
+@limiter.limit("30 per minute")
+def admin_c1_management_token():
+    existing = session.get(_C1_SESSION_KEY)
+    if not isinstance(existing, dict) or existing.get("user_id") != current_user.id:
+        session[_C1_SESSION_KEY] = {
+            "user_id": current_user.id,
+            "token": secrets.token_urlsafe(32),
+        }
+    return _c1_response({"csrf_token": session[_C1_SESSION_KEY]["token"]})
+
+
+@app.route("/api/admin/asesoramiento/solicitudes/<int:request_id>/gestion/nota", methods=["POST"])
+@require_fiscal_advisor
+@limiter.limit("30 per minute")
+def admin_c1_add_internal_note(request_id):
+    if not _c1_csrf_ok():
+        return _c1_response({"error": "Solicitud no autorizada."}, 403)
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or not isinstance(data.get("nota"), str):
+        return _c1_response({"error": "Nota inválida."}, 400)
+    note_text = data["nota"].strip()[:2000]
+    if not note_text:
+        return _c1_response({"error": "La nota no puede estar vacía."}, 400)
+    advisory = FiscalAdvisoryRequest.query.get_or_404(request_id)
+    author = (current_user.full_name or current_user.email or "Asesor").strip()
+    note = AdvisoryInternalNote(
+        request_id=advisory.id,
+        author_id=current_user.id,
+        author_name=author,
+        text=note_text,
+    )
+    db.session.add(note)
+    advisory.updated_at = datetime.utcnow()
+    db.session.commit()
+    return _c1_response({"ok": True, "note": note.to_dict()})
+
+
+@app.route("/api/admin/asesoramiento/solicitudes/<int:request_id>/gestion/estado", methods=["POST"])
+@require_fiscal_advisor
+@limiter.limit("30 per minute")
+def admin_c1_change_nonfinancial_state(request_id):
+    if not _c1_csrf_ok():
+        return _c1_response({"error": "Solicitud no autorizada."}, 403)
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or not isinstance(data.get("status"), str):
+        return _c1_response({"error": "Estado inválido."}, 400)
+    new_status = data["status"]
+    if new_status not in _C1_SAFE_STATES:
+        return _c1_response({"error": "Cambio financiero suspendido."}, 503)
+    if not isinstance(data.get("note", ""), str):
+        return _c1_response({"error": "Nota inválida."}, 400)
+    note = data.get("note", "").strip()[:1000]
+    advisory = (FiscalAdvisoryRequest.query.filter_by(id=request_id)
+                .with_for_update().first_or_404())
+    if not _c1_safe_to_change_state(advisory):
+        db.session.rollback()
+        return _c1_response({"error": "Expediente con evidencia financiera: estado protegido."}, 409)
+    if advisory.status == new_status:
+        db.session.rollback()
+        return _c1_response({"ok": True, "status": new_status, "unchanged": True})
+    old_status = advisory.status
+    advisory.status = new_status
+    db.session.add(FiscalAdvisoryStatusHistory(
+        request_id=advisory.id, status=new_status,
+        changed_by=current_user.id, note=note or None,
+    ))
+    db.session.add(AdvisoryAuditLog(
+        request_id=advisory.id, admin_id=current_user.id,
+        action=AdvisoryAuditLog.ACTION_STATUS_CHANGED,
+        detail=f"C1: {old_status} → {new_status}" + (f" · {note}" if note else ""),
+    ))
+    db.session.commit()
+    # C1 no envía emails ni toca PayPal, Stripe, facturas o cobros.
+    return _c1_response({
+        "ok": True, "status": new_status, "status_label": advisory.status_label(),
+    })
+
+
 # ── ENVIAR MENSAJE SIN PRESUPUESTO ───────────────────────────────────────────
 
 @app.route("/api/admin/asesoramiento/solicitudes/<int:req_id>/mensaje", methods=["POST"])
