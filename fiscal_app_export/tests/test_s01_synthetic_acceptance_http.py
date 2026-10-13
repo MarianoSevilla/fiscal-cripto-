@@ -280,3 +280,75 @@ def test_replay_does_not_double_reserve(test_app):
                              headers=headers, base_url=SYNTHETIC_ORIGIN)
         assert second.status_code == 403
         assert snapshot(ident)["attempt_count"] == 1
+
+
+def test_precommit_validation_failure_rolls_back_consent_and_retry_is_possible(
+    test_app, monkeypatch,
+):
+    import advisory_s01_test_orchestrator as orchestrator
+    from advisory_s01_checkout import S01CheckoutBlocked
+
+    app, ident = test_app
+    with app.app_context():
+        original_builder = orchestrator.build_test_checkout_request
+
+        def reject_before_persist(**_kwargs):
+            raise S01CheckoutBlocked("synthetic quote not ready, before INSERT")
+
+        with monkeypatch.context() as patch:
+            patch.setattr(
+                orchestrator, "build_test_checkout_request", reject_before_persist,
+            )
+            res = preview_and_accept(app, ident)
+            assert res.status_code == 409
+            assert snapshot(ident)["accepted"] is False
+            assert snapshot(ident)["attempt_count"] == 0
+            assert snapshot(ident)["paid"] is None
+
+        assert orchestrator.build_test_checkout_request is original_builder
+        # Fresh GET and explicit reconfirmation are safe BEFORE any attempt
+        # was created; no status reset or payment reissue is performed.
+        assert preview_and_accept(app, ident).status_code == 202
+        assert snapshot(ident)["accepted"] is True
+        assert snapshot(ident)["attempt_count"] == 1
+
+
+def test_commit_exception_rolls_back_both_consent_and_attempt(test_app, monkeypatch):
+    app, ident = test_app
+    with app.app_context():
+        def fail_first_commit():
+            raise RuntimeError("synthetic commit failure, no provider calls")
+
+        with monkeypatch.context() as patch:
+            patch.setattr(db.session, "commit", fail_first_commit)
+            res = preview_and_accept(app, ident)
+            assert res.status_code == 409
+
+        assert snapshot(ident)["accepted"] is False
+        assert snapshot(ident)["attempt_count"] == 0
+        assert snapshot(ident)["paid"] is None
+
+
+def test_service_denies_forged_price_before_durable_acceptance(test_app):
+    from advisory_s01_test_orchestrator import (
+        S01AcceptanceIntent, create_synthetic_checkout,
+    )
+    from advisory_s01_checkout import S01CheckoutBlocked
+    from advisory_s01_synthetic_acceptance_http import (
+        _InProcessFakeStripeProvider,
+    )
+
+    app, ident = test_app
+    with app.app_context():
+        with pytest.raises(S01CheckoutBlocked, match="Consentimiento"):
+            create_synthetic_checkout(
+                advisory_id=ident, token=TOKEN, now_ts=NOW,
+                base_url=SYNTHETIC_ORIGIN,
+                stripe_test_key="sk_test_s01_in_process_no_network",
+                provider=_InProcessFakeStripeProvider(),
+                acceptance=S01AcceptanceIntent(
+                    total_cents=26001, accepted_at_ts=NOW,
+                ),
+            )
+        assert snapshot(ident)["accepted"] is False
+        assert snapshot(ident)["attempt_count"] == 0
