@@ -105,6 +105,11 @@ from staging_isolation import (
     staging_request_denial,
     install_staging_email_barrier,
 )
+from lab_isolation import (
+    validate_lab_isolation,
+    lab_request_denial,
+    install_lab_email_barrier,
+)
 
 app = Flask(__name__, static_folder="static")
 
@@ -128,7 +133,29 @@ app.config.update(build_security_config(os.environ))
 # of provider credentials BEFORE db.init_app() or any migration/financial route.
 # Deliberately no lab-mode override in deployed staging: synthetic E2E runs
 # only with FLASK_ENV=testing and an ephemeral, fixture-only CI database.
-_STAGING_ISOLATED = validate_staging_isolation(os.environ)
+# STG-B04: resolve identities BEFORE database initialization.
+# An unpinned lab web service must fail closed; no boolean LAB_MODE bypass.
+# The original staging firewall is not weakened by this mutually exclusive path.
+_LAB_ISOLATED = validate_lab_isolation(os.environ)
+_STAGING_ISOLATED = False if _LAB_ISOLATED else validate_staging_isolation(os.environ)
+if _LAB_ISOLATED:
+    install_lab_email_barrier(resend)
+
+    @app.before_request
+    def _lab_preflight_lockdown():
+        denial = lab_request_denial(
+            host=request.host,
+            path=request.path,
+            method=request.method,
+            origin=request.headers.get("Origin"),
+        )
+        if denial is not None:
+            status, message = denial
+            headers = {"Cache-Control": "no-store"}
+            if status == 503:
+                headers["Retry-After"] = "300"
+            return jsonify({"error": message}), status, headers
+
 if _STAGING_ISOLATED:
     install_staging_email_barrier(resend)
 
