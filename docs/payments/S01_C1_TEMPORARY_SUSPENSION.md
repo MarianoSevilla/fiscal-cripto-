@@ -6,7 +6,7 @@
 
 - Mantener formulario de solicitud, recepción y consulta de expedientes.
 - Conservar consulta/listado, notas internas y cambios **no financieros** entre estados
-  \`submitted\`, \`pendiente_info\`, \`under_review\` y \`waiting_user_info\`.
+  `submitted`, `pendiente_info`, `under_review` y `waiting_user_info`.
 - Suspender envío y reemisión de presupuestos, mensajes externos, aceptación con
   efectos de cobro, enlaces de pago, inicio/captura de PayPal y webhook financiero.
 - Conservar el historial PayPal/Stripe y bloquear cualquier cambio de estado de
@@ -16,8 +16,8 @@
 ## Diseño de mínimos: rutas nuevas, no deshielo de las anteriores
 
 Las rutas históricas de presupuesto, mensaje, nota, estado, is-test y borrado
-continúan bajo PREFREEZE. Las nuevas rutas \`/gestion/nota\`,
-\`/gestion/estado\` y \`/gestion-token\` son exclusivas de asesor fiscal/admin,
+continúan bajo PREFREEZE. Las nuevas rutas `/gestion/nota`,
+`/gestion/estado` y `/gestion-token` son exclusivas de asesor fiscal/admin,
 con CSRF ligado al usuario/sesión, misma procedencia cuando se declara Origin,
 límite de tasa y sin llamadas a email/proveedores.
 
@@ -34,7 +34,7 @@ de solo lectura en cuanto al estado.
 
 ## Gates y límites
 
-Esta rama se basa en **PR #53** SHA \`4b02ebfc0cfe7a7bb20214567db06cb08fa20571\`;
+Esta rama se basa en **PR #53** SHA `4b02ebfc0cfe7a7bb20214567db06cb08fa20571`;
 contiene dependencias apiladas PR #41–#53 y excluye PR #54 50/50 obsoleta.
 La prueba de regresión debe confirmar bloqueo antiguo, permisos, CSRF,
 gestión y conservación financiera, además de PG18 y navegación.
