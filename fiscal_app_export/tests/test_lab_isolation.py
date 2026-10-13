@@ -20,7 +20,7 @@ from staging_isolation import (
 CI_PINS = replace(
     LAB_IDENTITY,
     web_service_id="ci-only-fictional-web-service",
-    base_url="https://s01-lab-ci.invalid",
+    base_url="http://s01-lab-ci.railway.internal:8080",
 )
 
 
@@ -32,6 +32,8 @@ def lab_env():
         "RAILWAY_ENVIRONMENT_ID": CI_PINS.environment_id,
         "RAILWAY_SERVICE_ID": CI_PINS.web_service_id,
         "APP_BASE_URL": CI_PINS.base_url,
+        "RAILWAY_PRIVATE_DOMAIN": "s01-lab-ci.railway.internal",
+        "PORT": "8080",
         "PAYPAL_ENVIRONMENT": "sandbox",
         "DATABASE_URL": (
             f"postgresql+psycopg2://fictional:inert-ci-only"
@@ -54,9 +56,21 @@ def staging_env():
     }
 
 
-def test_actual_lab_runtime_intentionally_refuses_without_web_pins():
-    with pytest.raises(RuntimeError, match="not pinned"):
-        validate_lab_isolation(lab_env())
+def test_real_lab_web_identity_is_pinned_without_deploying():
+    assert LAB_IDENTITY.web_service_id == "212f4f52-b349-4387-a046-9f6b08237d2e"
+    assert LAB_IDENTITY.base_url == "http://s01-lab-web.railway.internal:8080"
+    assert LAB_IDENTITY.db_hostname == "postgres.railway.internal"
+
+
+def test_actual_lab_requires_real_web_id_private_origin_and_port():
+    env = lab_env()
+    env["RAILWAY_SERVICE_ID"] = LAB_IDENTITY.web_service_id
+    env["APP_BASE_URL"] = LAB_IDENTITY.base_url
+    env["RAILWAY_PRIVATE_DOMAIN"] = "s01-lab-web.railway.internal"
+    assert validate_lab_isolation(env) is True
+    del env["PORT"]
+    with pytest.raises(RuntimeError, match="PORT"):
+        validate_lab_isolation(env)
 
 
 def test_synthetic_identity_allows_validation_without_io():
@@ -83,7 +97,7 @@ def test_unrelated_production_and_local_inert():
 @pytest.mark.parametrize("variable", [
     "FLASK_ENV", "RAILWAY_PROJECT_ID", "RAILWAY_ENVIRONMENT_ID",
     "RAILWAY_SERVICE_ID", "RAILWAY_ENVIRONMENT_NAME", "APP_BASE_URL",
-    "PAYPAL_ENVIRONMENT",
+    "RAILWAY_PRIVATE_DOMAIN", "PORT", "PAYPAL_ENVIRONMENT",
 ])
 def test_any_wrong_lab_identity_fails_closed(variable):
     env = lab_env()
@@ -105,7 +119,7 @@ def test_any_single_lab_marker_cannot_downgrade_to_production(key):
 
 @pytest.mark.parametrize("url", [
     "", "sqlite:///ci.sqlite",
-    "postgresql://ci:pw@postgres.railway.internal:5432/railway",
+    "postgresql://ci:pw@postgres-zzky.railway.internal:5432/railway",
     "postgresql+psycopg2://ci:pw@postgres-zzky.railway.internal:5432/railway",
     "postgresql+psycopg2://ci:pw@postgres.railway.internal:5432/prod",
     "postgresql+psycopg2://ci:pw@postgres.railway.internal:5433/railway",
@@ -167,14 +181,14 @@ def test_original_staging_identifiers_cannot_be_used_as_lab(key, value):
 ])
 def test_only_healthcheck_accessible(path, method):
     assert lab_request_denial(
-        host="s01-lab-ci.invalid", path=path, method=method, identity=CI_PINS
+        host="s01-lab-ci.railway.internal:8080", path=path, method=method, identity=CI_PINS
     )[0] == 503
 
 
 @pytest.mark.parametrize("method", ["GET", "HEAD"])
 def test_lab_healthcheck_on_canonical_host_only(method):
     assert lab_request_denial(
-        host="s01-lab-ci.invalid", path="/healthz", method=method, identity=CI_PINS
+        host="s01-lab-ci.railway.internal:8080", path="/healthz", method=method, identity=CI_PINS
     ) is None
     assert lab_request_denial(
         host=RAILWAY_HEALTHCHECK_HOST, path="/healthz", method=method, identity=CI_PINS
@@ -184,7 +198,7 @@ def test_lab_healthcheck_on_canonical_host_only(method):
 @pytest.mark.parametrize("path,method,origin", [
     ("/", "GET", None),
     ("/healthz", "POST", None),
-    ("/healthz", "GET", "https://s01-lab-ci.invalid"),
+    ("/healthz", "GET", "http://s01-lab-ci.railway.internal:8080"),
     ("/api/webhooks/stripe", "POST", None),
 ])
 def test_healthcheck_host_cannot_open_any_other_access(path, method, origin):
@@ -207,13 +221,15 @@ def test_bad_hosts_rejected(host):
 
 def test_cross_origin_blocked():
     assert lab_request_denial(
-        host="s01-lab-ci.invalid", path="/healthz", method="GET",
+        host="s01-lab-ci.railway.internal:8080", path="/healthz", method="GET",
         origin="https://www.marianosevilla.com", identity=CI_PINS,
     )[0] == 403
 
 
-def test_unauthorized_deployment_inertia_even_for_healthcheck():
-    assert lab_request_denial(host="healthcheck.railway.app", path="/healthz", method="GET")[0] == 503
+def test_unapproved_public_host_denied_even_for_healthcheck():
+    assert lab_request_denial(
+        host="fake-lab.up.railway.app", path="/healthz", method="GET",
+    )[0] == 421
 
 
 def test_resend_barrier_prevents_background_email():
@@ -221,3 +237,58 @@ def test_resend_barrier_prevents_background_email():
     install_lab_email_barrier(mock)
     with pytest.raises(RuntimeError, match="outbound email disabled"):
         mock.Emails.send(to=["test@example.invalid"])
+
+
+
+def test_railway_postgres_reference_plain_scheme_is_accepted():
+    env = lab_env()
+    env["DATABASE_URL"] = "postgresql://ci:inert-ci-only@postgres.railway.internal:5432/railway"
+    assert validate_lab_isolation(env, identity=CI_PINS) is True
+
+
+@pytest.mark.parametrize("key", ["RAILWAY_PUBLIC_DOMAIN", "RAILWAY_STATIC_URL"])
+def test_public_domain_marker_prevents_startup(key):
+    env = lab_env()
+    env[key] = "untrusted.up.railway.app"
+    with pytest.raises(RuntimeError, match=key):
+        validate_lab_isolation(env, identity=CI_PINS)
+
+
+@pytest.mark.parametrize("field", ["PORT", "RAILWAY_PRIVATE_DOMAIN"])
+def test_missing_private_network_runtime_configuration_prevents_startup(field):
+    env = lab_env()
+    del env[field]
+    with pytest.raises(RuntimeError, match=field):
+        validate_lab_isolation(env, identity=CI_PINS)
+
+
+@pytest.mark.parametrize("origin", [
+    "https://s01-lab-ci.railway.internal:8080",
+    "http://s01-lab-ci.railway.internal",
+    "http://s01-lab-ci.railway.internal:8081",
+    "https://marianosevilla.com",
+])
+def test_foreign_scheme_or_port_origin_rejected(origin):
+    assert lab_request_denial(
+        host="s01-lab-ci.railway.internal:8080",
+        path="/healthz",
+        method="GET",
+        origin=origin,
+        identity=CI_PINS,
+    )[0] == 403
+
+
+@pytest.mark.parametrize("new_url", [
+    "https://s01-lab-ci.railway.internal:8080",
+    "http://s01-lab-ci.railway.internal",
+    "http://s01-lab-ci.railway.internal:8081",
+    "http://s01-lab-ci.railway.internal:8080/extra",
+    "http://user:pw@s01-lab-ci.railway.internal:8080",
+    "http://www.marianosevilla.com:8080",
+])
+def test_private_origin_cannot_be_replaced_by_arbitrary_url(new_url):
+    pins = replace(CI_PINS, base_url=new_url)
+    env = lab_env()
+    env["APP_BASE_URL"] = new_url
+    with pytest.raises(RuntimeError, match="private web origin"):
+        validate_lab_isolation(env, identity=pins)

@@ -133,8 +133,9 @@ app.config.update(build_security_config(os.environ))
 # of provider credentials BEFORE db.init_app() or any migration/financial route.
 # Deliberately no lab-mode override in deployed staging: synthetic E2E runs
 # only with FLASK_ENV=testing and an ephemeral, fixture-only CI database.
-# STG-B04: resolve identities BEFORE database initialization.
-# An unpinned lab web service must fail closed; no boolean LAB_MODE bypass.
+# STG-B04/B06: resolve identities BEFORE database initialization.
+# Real lab service and private HTTP origin are pinned, but every runtime marker
+# must match; no boolean LAB_MODE bypass and no network/DB I/O in this gate.
 # The original staging firewall is not weakened by this mutually exclusive path.
 _LAB_ISOLATED = validate_lab_isolation(os.environ)
 _STAGING_ISOLATED = False if _LAB_ISOLATED else validate_staging_isolation(os.environ)
