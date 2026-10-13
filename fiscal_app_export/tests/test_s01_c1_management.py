@@ -268,3 +268,48 @@ def test_c2_source_of_truth_ui(ctx):
     assert "d.c1_state_editable === true" in html
     assert "['submitted','under_review'].includes(k)" in html
     assert "comunicación al cliente suspendida" in html
+
+
+def test_c2_intake_continues_without_quotes_or_provider(ctx):
+    c = _client(ctx, "c1-client@example.invalid")
+    payload = {
+        "full_name": "Persona ficticia de prueba",
+        "case_description": "Solicitud completamente ficticia para validar la recepción S01.",
+        "tax_year": 2025,
+        "service_type": "presupuesto_personalizado",
+        "tax_residence_country": "España",
+        "operation_types": [],
+        "current_situation": [],
+    }
+    with patch("app._send_advisory_confirmation_email") as confirmation, \
+         patch("app._send_advisory_internal_notification") as internal, \
+         patch("app._send_advisory_quote_email") as quote, \
+         patch("app._paypal_create_order") as paypal:
+        res = c.post("/api/asesoramiento/solicitar", json=payload)
+    assert res.status_code == 200, res.get_json()
+    confirmation.assert_called_once()
+    internal.assert_called_once()
+    quote.assert_not_called()
+    paypal.assert_not_called()
+    with ctx.app_context():
+        item = db.session.get(FiscalAdvisoryRequest, res.get_json()["advisory_id"])
+        assert item.status == "submitted"
+        assert item.payment_link_token is None
+        assert item.quoted_amount is None
+        assert item.quote_accepted_at is None
+
+
+def test_c2_protected_record_details_never_show_state_write(ctx):
+    aid = _create(ctx)
+    with ctx.app_context():
+        item = db.session.get(FiscalAdvisoryRequest, aid)
+        item.quote_acceptance_user_agent = "synthetic-historical-acceptance"
+        db.session.commit()
+    c = _client(ctx)
+    detail = c.get(f"/api/admin/asesoramiento/solicitudes/{aid}")
+    assert detail.status_code == 200
+    assert detail.get_json()["c1_state_editable"] is False
+    headers = _token(c)
+    res = c.post(f"/api/admin/asesoramiento/solicitudes/{aid}/gestion/estado",
+                 headers=headers, json={"status": "under_review"})
+    assert res.status_code == 409
