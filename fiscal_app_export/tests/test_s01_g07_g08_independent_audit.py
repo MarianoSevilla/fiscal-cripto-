@@ -89,10 +89,6 @@ class OfflineProvider:
         }
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="G07-AUD-001: existing reusable orchestrator does not require accepted quote",
-)
 def test_aud001_checkout_requires_persisted_quote_acceptance(audit_store):
     """Secure contract: direct reserve without acceptance must fail before IO."""
     _, advisory_id = audit_store
@@ -112,10 +108,6 @@ def test_aud001_checkout_requires_persisted_quote_acceptance(audit_store):
     ).count() == 0
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="G07-AUD-002: prior acceptance COMMIT survives failure before reservation",
-)
 def test_aud002_no_orphan_accepted_quote_after_pre_reservation_failure(
     audit_store, monkeypatch,
 ):

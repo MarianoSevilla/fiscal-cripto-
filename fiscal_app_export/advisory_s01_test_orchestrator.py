@@ -29,6 +29,16 @@ class TestCheckoutLink:
     url: str
 
 
+@dataclass(frozen=True)
+class S01AcceptanceIntent:
+    """Trusted synthetic HTTP handler has validated CSRF + exact-price consent.
+
+    Does not itself establish customer identity or terms (G06/G07 pending).
+    """
+    total_cents: int
+    accepted_at_ts: int
+
+
 def _test_only(*, key: str) -> None:
     # TESTING de Flask no es una barrera: dependemos del entorno de arranque,
     # la clave sk_test_ y una reserva de expediente sintético (is_test=True).
@@ -61,7 +71,8 @@ def _test_origin(url: str) -> None:
 
 
 def _reserve(*, advisory_id: int, token: str, now_ts: int,
-             base_url: str) -> tuple[S01Reservation, dict]:
+             base_url: str, acceptance: S01AcceptanceIntent | None = None
+             ) -> tuple[S01Reservation, dict]:
     """Reserva bajo bloqueo SQL, COMMIT antes de cualquier salida a Stripe."""
     if type(advisory_id) is not int or advisory_id <= 0:
         raise S01CheckoutBlocked("ID de expediente inválido")
@@ -81,8 +92,19 @@ def _reserve(*, advisory_id: int, token: str, now_ts: int,
         if advisory is None or advisory.status != "quote_sent" or advisory.is_test is not True:
             raise S01CheckoutBlocked("Expediente no apto para Checkout TEST")
         if (advisory.stripe_checkout_session_id or advisory.stripe_payment_intent_id or
-                advisory.paypal_order_id or advisory.paypal_capture_id or advisory.paid_at):
+                advisory.paypal_order_id or advisory.paypal_capture_id or advisory.paid_at or
+                advisory.payment_provider is not None or advisory.amount_paid is not None):
             raise S01CheckoutBlocked("Hay actividad financiera previa: requiere conciliación")
+        if advisory.quote_accepted_at is None and acceptance is None:
+            raise S01CheckoutBlocked("El presupuesto no está aceptado: consentimiento obligatorio")
+        if acceptance is not None:
+            if (type(acceptance) is not S01AcceptanceIntent
+                    or advisory.quote_accepted_at is not None
+                    or type(acceptance.total_cents) is not int
+                    or type(acceptance.accepted_at_ts) is not int
+                    or acceptance.accepted_at_ts != now_ts
+                    or acceptance.total_cents != advisory.quoted_amount):
+                raise S01CheckoutBlocked("Consentimiento o importe no verificables")
         if S01StripeCheckoutAttempt.query.filter_by(advisory_id=advisory_id).first():
             raise S01CheckoutBlocked("Intento ya reservado: nunca crear un segundo Checkout")
         if any(type(v) is not int for v in (
@@ -104,6 +126,14 @@ def _reserve(*, advisory_id: int, token: str, now_ts: int,
         params = build_test_checkout_request(
             reservation=reservation, base_url=base_url, now_ts=now_ts
         )
+        # G07 atomicity: only after all validations have succeeded, record
+        # acceptance AND insert the durable Checkout reservation in ONE commit.
+        # A preparatory failure rolls back both, never leaving an orphan.
+        if acceptance is not None:
+            advisory.quote_accepted_at = datetime.fromtimestamp(
+                acceptance.accepted_at_ts, timezone.utc
+            ).replace(tzinfo=None)
+            advisory.quote_acceptance_user_agent = "S01 OFFLINE SYNTHETIC TEST"
         attempt = S01StripeCheckoutAttempt(
             id=reservation.attempt_id,
             advisory_id=advisory.id,
@@ -198,7 +228,9 @@ def _mark_uncertain(attempt_id: str) -> None:
 
 def create_synthetic_checkout(*, advisory_id: int, token: str,
                               now_ts: int, base_url: str, stripe_test_key: str,
-                              provider: object) -> TestCheckoutLink:
+                              provider: object,
+                              acceptance: S01AcceptanceIntent | None = None
+                              ) -> TestCheckoutLink:
     """TEST ONLY. El proveedor expone create_session(params=..., idempotency_key=...).
 
     El proveedor se invoca UNA VEZ, DESPUÉS de persistir la reserva. Tras un
@@ -210,7 +242,8 @@ def create_synthetic_checkout(*, advisory_id: int, token: str,
         raise S01CheckoutBlocked("Adaptador de pruebas ausente")
 
     reservation, params = _reserve(
-        advisory_id=advisory_id, token=token, now_ts=now_ts, base_url=base_url
+        advisory_id=advisory_id, token=token, now_ts=now_ts, base_url=base_url,
+        acceptance=acceptance,
     )
     try:
         raw = provider.create_session(

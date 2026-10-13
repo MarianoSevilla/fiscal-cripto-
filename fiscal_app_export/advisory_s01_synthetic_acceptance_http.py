@@ -19,7 +19,10 @@ import time
 from flask import Blueprint, current_app, jsonify, request, session
 
 from advisory_s01_checkout import S01CheckoutBlocked
-from advisory_s01_test_orchestrator import create_synthetic_checkout
+from advisory_s01_test_orchestrator import (
+    S01AcceptanceIntent,
+    create_synthetic_checkout,
+)
 from models import FiscalAdvisoryRequest, S01StripeCheckoutAttempt, db
 
 SYNTHETIC_ORIGIN = "https://checkout-test.example.invalid"
@@ -201,26 +204,10 @@ def build_s01_synthetic_acceptance_blueprint(*, clock=None) -> Blueprint:
         # One-use, BEFORE database/provider activity, also when validation fails.
         session.pop(_CSRF_SESSION_KEY, None)
         now_ts = int(_clock())
-        try:
-            # Same lock ordering as checkout reservation and quote reissue.
-            item = FiscalAdvisoryRequest.query.filter_by(
-                id=advisory_id, payment_link_token=token
-            ).with_for_update().first()
-            if (item is None or not _eligible(item=item, now_ts=now_ts)
-                    or item.quoted_amount != data["total_cents"]):
-                db.session.rollback()
-                return _no_cache({"error": "quote_changed_or_unavailable"}, 409)
-            # Historical/auditable fact: synthetic user explicitly accepted this
-            # exact quote BEFORE any Stripe attempt; never write paid_at here.
-            item.quote_accepted_at = datetime.fromtimestamp(
-                now_ts, timezone.utc
-            ).replace(tzinfo=None)
-            item.quote_acceptance_user_agent = "S01 OFFLINE SYNTHETIC TEST"
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-            return _no_cache({"error": "storage_unavailable"}, 503)
-
+        # The orchestrator now owns BOTH acceptance and the first durable
+        # creating attempt under one locked SQL transaction. No prior COMMIT
+        # and no HTTP-only acceptance invariant: a crash before reservation
+        # leaves neither consent nor attempt; after COMMIT it blocks retries.
         try:
             created = create_synthetic_checkout(
                 advisory_id=advisory_id,
@@ -229,6 +216,10 @@ def build_s01_synthetic_acceptance_blueprint(*, clock=None) -> Blueprint:
                 base_url=SYNTHETIC_ORIGIN,
                 stripe_test_key=SYNTHETIC_TEST_KEY,
                 provider=_InProcessFakeStripeProvider(),
+                acceptance=S01AcceptanceIntent(
+                    total_cents=data["total_cents"],
+                    accepted_at_ts=now_ts,
+                ),
             )
         except S01CheckoutBlocked:
             return _no_cache({"error": "requires_reconciliation"}, 409)

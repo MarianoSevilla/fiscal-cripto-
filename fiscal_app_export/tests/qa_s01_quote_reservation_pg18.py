@@ -30,7 +30,7 @@ from advisory_s01_checkout import S01CheckoutBlocked  # noqa: E402
 from advisory_s01_pricing import (  # noqa: E402
     calculate_s01_quote, QuotePricingError, COMMISSION_RATE_BPS,
 )
-from advisory_s01_test_orchestrator import _reserve  # noqa: E402
+from advisory_s01_test_orchestrator import _reserve, S01AcceptanceIntent  # noqa: E402
 from models import (  # noqa: E402
     db, User, FiscalAdvisoryRequest, FiscalAdvisoryStatusHistory,
     AdvisoryAuditLog, S01StripeCheckoutAttempt,
@@ -205,9 +205,14 @@ def _worker(role, advisory_id, token, holding,
                               len(mail_calls))
                 else:
                     try:
+                        now_ts = int(time.time())
                         reservation, _params = _reserve(
                             advisory_id=advisory_id, token=token,
-                            now_ts=int(time.time()), base_url=BASE_URL,
+                            now_ts=now_ts, base_url=BASE_URL,
+                            acceptance=S01AcceptanceIntent(
+                                total_cents=ORIGINAL_AMOUNT,
+                                accepted_at_ts=now_ts,
+                            ),
                         )
                         result = ("reserved", reservation.attempt_id)
                     except S01CheckoutBlocked:
@@ -222,7 +227,7 @@ def _worker(role, advisory_id, token, holding,
         output.put(("error", role, type(exc).__name__, str(exc)[:220]))
 
 
-def _race(first_role, advisory_id, token):
+def _race(first_role, advisory_id, token, second_role=None):
     ctx = mp.get_context("spawn")
     acquired_first = ctx.Event()
     entered_first = ctx.Event()
@@ -235,7 +240,7 @@ def _race(first_role, advisory_id, token):
         args=(first_role, advisory_id, token, True, entered_first,
               acquired_first, release, result_queue),
     )
-    second_role = "reserve" if first_role == "quote" else "quote"
+    second_role = second_role or ("reserve" if first_role == "quote" else "quote")
     second = ctx.Process(
         target=_worker,
         args=(second_role, advisory_id, token, False, entered_second,
@@ -295,6 +300,7 @@ def _verify(advisory_id, token, first_role, outcomes):
         assert advisory.quoted_amount == UPDATED_AMOUNT
         assert (advisory.rafa_fee_cents, advisory.commission_cents) == (23000, 6900)
         assert not attempts and history == 1 and audit == 1
+        assert advisory.quote_accepted_at is None
     else:
         assert sorted(x[0] for x in outcomes) == ["quote", "reserved"], outcomes
         assert ("quote", 409, 0) in outcomes, outcomes
@@ -304,6 +310,7 @@ def _verify(advisory_id, token, first_role, outcomes):
         assert len(attempts) == 1 and attempts[0].status == "creating"
         assert attempts[0].expected_amount_cents == ORIGINAL_AMOUNT
         assert history == 0 and audit == 0
+        assert advisory.quote_accepted_at is not None
     db.session.remove()
 
 
@@ -325,10 +332,26 @@ def main():
                     advisory_id, token = _seed()
                     observed = _race(first_role, advisory_id, token)
                     _verify(advisory_id, token, first_role, observed)
+            # G07 atomicity: TWO separate reservation/acceptance processes
+            # compete on the same quote row. Exactly one gets consent+attempt.
+            for _ in range(2):
+                advisory_id, token = _seed()
+                observed = _race("reserve", advisory_id, token, second_role="reserve")
+                assert sorted(x[0] for x in observed) == ["blocked", "reserved"], observed
+                db.session.remove()
+                adv = db.session.get(FiscalAdvisoryRequest, advisory_id)
+                assert adv.quote_accepted_at is not None
+                assert adv.paid_at is None and adv.payment_provider is None
+                attempts = S01StripeCheckoutAttempt.query.filter_by(
+                    advisory_id=advisory_id
+                ).all()
+                assert len(attempts) == 1 and attempts[0].status == "creating"
+                db.session.remove()
             db.session.remove()
             db.engine.dispose()
         print(
-            "S01 AUD-001 PG18: quote-first old-token Checkout blocked PASS; "
+            "S01 AUD-001 PG18: two-process atomic consent/reservation PASS; "
+            "quote-first old-token Checkout blocked PASS; "
             "reserve-first quote 409 PASS; committed attempt/evidence PASS; "
             "two-process row locking and synthetic mail PASS",
             flush=True,
