@@ -34,7 +34,7 @@ def fictitious_offer(**changes):
         tax_treatment="Hipótesis fiscal solo para test, no aplicable a clientes ni facturas",
         general_terms_version="G06-SYNTH-VERSION-001",
         general_terms_text="Condiciones generales simuladas exclusivamente para comprobar integridad de pruebas.",
-        withdrawal_information_text="Explicación de desistimiento simulada: pendiente de revisión jurídica real no afirmada.",
+        withdrawal_information_text="Información de desistimiento simulada exclusivamente para comprobar integridad; no tiene eficacia legal.",
         cancellations_refunds_text="Normas de cancelación simuladas que no representan una política comercial real.",
         legal_approval_reference="G06-LEGAL-FAKE-001",
         business_approval_reference="G06-BUSINESS-FAKE-001",
