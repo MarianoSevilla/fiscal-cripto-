@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 
 from qa_db_bootstrap_postgres import (
-    _create_db, _db_conn, _env, _run, _bootstrap, _startup, HEAD,
+    _create_db, _db_conn, _run, _bootstrap, _startup, HEAD,
 )
 
 DB = "s01_recovery_runtime_ci"
@@ -104,7 +104,12 @@ with app.app_context():
              patch.object(mod, '_paypal_get_access_token', external_forbidden), \
              patch.object(mod, '_paypal_create_order', external_forbidden), \
              patch.object(mod, '_paypal_capture_order', external_forbidden), \
-             patch.object(mod, '_send_advisory_quote_email', external_forbidden):
+             patch.object(mod, '_send_advisory_quote_email', external_forbidden), \
+             patch.object(mod, '_PAYPAL_ENABLED', True), \
+             patch.object(mod, '_stripe_available', True), \
+             patch.object(mod, '_STRIPE_SECRET_KEY', 'sk_test_inert_ci'), \
+             patch.object(mod, '_STRIPE_WEBHOOK_SECRET', 'whsec_inert_ci'):
+            # Even simulated configured providers cannot bypass PREFREEZE.
             cli = app.test_client()
             health = cli.get('/healthz')
             assert health.status_code == 200
