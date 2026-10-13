@@ -101,3 +101,27 @@ Esa lectura no demuestra por sí sola la identidad del proyecto: cotejar en Rail
 | GO global para inicializar PostgreSQL Railway | **NO-GO** |
 
 **Entrega de B09:** auditoría estática y de la infraestructura y revisión de pruebas existentes, con bloqueo identificado. Ningún cambio de BD, servicio, variable de entorno, deploy ni merge. `main` / Railway producción y staging originales siguen pendientes de integración S01, NO cambiarlos.
+
+
+## H. Resultado aportado por el propietario — lectura SQL de cierre
+
+El propietario ejecutó la consulta de metadatos de solo lectura desde el editor SQL del PostgreSQL del proyecto **`fiscal-cripto-s01-lab`** y devolvió estos resultados:
+
+| base_datos | version_pg | tablas | vistas | secuencias | indices |
+|---|---|---:|---:|---:|---:|
+| `railway` | `180006` (PostgreSQL 18.6) | **0** | **0** | **0** | **0** |
+
+**Gate B09 de lectura del esquema inicial: PASS.** El esquema `public` no contiene tablas, vistas, secuencias ni índices; no hay nada que limpiar o reconstruir. El resultado fue ejecutado **manualmente por el propietario**, no por el asistente. No certifica otros esquemas o almacenes externos ni autoriza escritura. Volver a revisar inmediatamente antes de un DDL futuro.
+
+**NO-GO general para bootstrap permanece:** aún no existe ejecutor administrativo probado en la red privada del laboratorio con identidad legítima ni plan autorizado de recuperación, y el propietario no ha autorizado DDL.
+
+## I. Propuesta preliminar STG-B10 — ejecutor administrativo propio (SIN EJECUTAR)
+
+1. **Autorización de infraestructura independiente:** crear `s01-lab-maintenance` como servicio Railway privado **vacío**, en el nuevo proyecto y entorno `lab`, sin fuente, variables compartidas, dominio público, proxy TCP, cron o ejecución automática. Obtener el verdadero ID y comprobar que no se ha desplegado nada. Revisar costes y plazo de retirada.
+2. **Autorización de código independiente:** preparar PR DRAFT apilada sobre #63 con un guard administrativo exclusivo del verdadero `RAILWAY_SERVICE_ID` del nuevo mantenimiento, proyecto, entorno y DB. El `bootstrap_db.py` actual **importa `app.py`**, cuyo bloqueo reconoce solo el ID del web. No falsificar el ID web ni usar un `LAB_MODE` genérico para atravesar el guard. Ningún otro servicio/entorno debe obtener permisos de mantenimiento por accidente.
+3. **Comando administrativo sin servidor:** preparar y probar en CI PG18 efímero un entrypoint único que ejecuta bootstrap tras comprobación exacta de identidad y esquema vacío, termina y no expone HTTP. Sin `preDeployCommand` del web, sin Gunicorn, sin cron y sin reinicio automático. El web debe conservar su propio arranque de solo lectura. No ejecutar este entrypoint durante B10 de diseño.
+4. **Identidad, red y secretos:** referencia DB únicamente a `Postgres.DATABASE_URL` del proyecto lab, comprobación de resolución exacta sin imprimir DSN; credenciales financieras, email, OAuth, webhooks y cargas completamente ausentes; clave exclusiva sellada si la necesita el servicio de mantenimiento. No copiar la `SECRET_KEY` sellada del web. Verificar antes del primer arranque la identidad efectiva, incluso `RAILWAY_PRIVATE_DOMAIN`, puerto y host DB; estos no se han probado aún dentro de una instancia de la web.
+5. **Recuperación:** autorizar y probar un backup o reconstrucción de la BD **descartable**. Si `db.create_all()`/stamp/upgrade se interrumpe, puede quedar un esquema parcial; nunca continuar con `alembic stamp head`, `downgrade` o borrado/restauración no autorizado. Railway ofrece backups de volumen (véase https://docs.railway.com/cli/postgres); documentar costes.
+6. **Secuencia de autorizaciones pendientes:** alta de servicio vacío → código/CI → variables/secretos → respaldo y plan de contingencia → autorización puntual DDL → validación Alembic `z9a0b1c2d3e4` y tablas → despliegue web separado. **Ninguna está concedida** por este informe.
+
+**STG-B09 queda cerrada en auditoría y lectura de esquema; STG-B10 permanece propuesta de diseño. Producción, staging y la BD del laboratorio no se modifican.**
