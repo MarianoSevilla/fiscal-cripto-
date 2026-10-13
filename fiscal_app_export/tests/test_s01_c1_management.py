@@ -14,7 +14,7 @@ os.environ.setdefault("DATABASE_URL", "sqlite:///" + tempfile.NamedTemporaryFile
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app import app, db  # noqa: E402
-from models import User, FiscalAdvisoryRequest, AdvisoryInternalNote  # noqa: E402
+from models import User, FiscalAdvisoryRequest, AdvisoryInternalNote, FiscalAdvisoryStatusHistory, AdvisoryAuditLog  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -167,3 +167,149 @@ def test_c1_admin_ui_contains_no_payment_actions():
     assert "getC1ManagementToken" in html
     assert "/gestion/nota" in html
     assert "/gestion/estado" in html
+
+
+
+@pytest.mark.parametrize("field,value", [
+    ("commission_rate_bps", 3000),
+    ("quoted_by_user_id", 1),
+    ("quote_message", "Presupuesto ficticio"),
+    ("quote_expires_at", datetime(2027, 1, 1)),
+    ("quote_acceptance_ip", "192.0.2.8"),
+    ("quote_acceptance_user_agent", "Synthetic browser"),
+])
+def test_c2_partial_financial_trace_blocks_state_but_keeps_evidence(ctx, field, value):
+    aid = _create(ctx)
+    with ctx.app_context():
+        adv = db.session.get(FiscalAdvisoryRequest, aid)
+        setattr(adv, field, value)
+        db.session.commit()
+    c = _client(ctx)
+    headers = _token(c)
+    detail = c.get(f"/api/admin/asesoramiento/solicitudes/{aid}").get_json()
+    assert detail["c1_state_editable"] is False
+    res = c.post(f"/api/admin/asesoramiento/solicitudes/{aid}/gestion/estado",
+                 json={"status": "under_review"}, headers=headers)
+    assert res.status_code == 409
+    with ctx.app_context():
+        adv = db.session.get(FiscalAdvisoryRequest, aid)
+        assert adv.status == "submitted"
+        assert getattr(adv, field) == value
+        assert AdvisoryAuditLog.query.filter_by(request_id=aid).count() == 0
+
+
+@pytest.mark.parametrize("evidence_type", ("status_history", "audit_log"))
+def test_c2_historical_financial_evidence_blocks_even_without_columns(ctx, evidence_type):
+    aid = _create(ctx)
+    with ctx.app_context():
+        if evidence_type == "status_history":
+            db.session.add(FiscalAdvisoryStatusHistory(request_id=aid, status="quote_sent"))
+        else:
+            db.session.add(AdvisoryAuditLog(
+                request_id=aid, admin_id=None,
+                action=AdvisoryAuditLog.ACTION_QUOTE_SENT,
+                detail="Synthetic former quotation",
+            ))
+        db.session.commit()
+    c = _client(ctx)
+    headers = _token(c)
+    assert c.get(f"/api/admin/asesoramiento/solicitudes/{aid}").get_json()["c1_state_editable"] is False
+    res = c.post(f"/api/admin/asesoramiento/solicitudes/{aid}/gestion/estado",
+                 json={"status": "under_review"}, headers=headers)
+    assert res.status_code == 409
+    with ctx.app_context():
+        assert db.session.get(FiscalAdvisoryRequest, aid).status == "submitted"
+
+
+@pytest.mark.parametrize("target", ("pendiente_info", "waiting_user_info"))
+def test_c2_cannot_claim_user_contact_without_message(ctx, target):
+    aid = _create(ctx)
+    c = _client(ctx)
+    headers = _token(c)
+    with patch("app._send_advisory_message_email") as email:
+        res = c.post(f"/api/admin/asesoramiento/solicitudes/{aid}/gestion/estado",
+                     json={"status": target}, headers=headers)
+    assert res.status_code == 503
+    email.assert_not_called()
+    with ctx.app_context():
+        assert db.session.get(FiscalAdvisoryRequest, aid).status == "submitted"
+
+
+def test_c2_old_pending_state_can_return_to_internal_review(ctx):
+    aid = _create(ctx)
+    with ctx.app_context():
+        db.session.get(FiscalAdvisoryRequest, aid).status = "waiting_user_info"
+        db.session.commit()
+    c = _client(ctx)
+    headers = _token(c)
+    assert c.get(f"/api/admin/asesoramiento/solicitudes/{aid}").get_json()["c1_state_editable"] is True
+    assert c.post(f"/api/admin/asesoramiento/solicitudes/{aid}/gestion/estado",
+                  json={"status": "under_review"}, headers=headers).status_code == 200
+
+
+def test_c2_legacy_price_api_does_not_leak_amounts(ctx):
+    c = ctx.test_client()
+    res = c.get("/api/asesoramiento/precios")
+    assert res.status_code == 503
+    assert res.headers["Cache-Control"] == "no-store"
+    data = res.get_json()
+    assert data["code"] == "s01_quotes_suspended"
+    assert "amount_cents" not in res.get_data(as_text=True)
+    html = (Path(__file__).resolve().parents[1] /
+            "static" / "asesoramiento-fiscal.html").read_text(encoding="utf-8")
+    assert "Presupuestos suspendidos" in html
+    assert "Cargando..." not in html
+    assert "fetch('/api/asesoramiento/precios')" not in html
+
+
+def test_c2_source_of_truth_ui(ctx):
+    html = (Path(__file__).resolve().parents[1] /
+            "static" / "admin-asesoramiento.html").read_text(encoding="utf-8")
+    assert "d.c1_state_editable === true" in html
+    assert "['submitted','under_review'].includes(k)" in html
+    assert "comunicación al cliente suspendida" in html
+
+
+def test_c2_intake_continues_without_quotes_or_provider(ctx):
+    c = _client(ctx, "c1-client@example.invalid")
+    payload = {
+        "full_name": "Persona ficticia de prueba",
+        "case_description": "Solicitud completamente ficticia para validar la recepción S01.",
+        "tax_year": 2025,
+        "service_type": "presupuesto_personalizado",
+        "tax_residence_country": "España",
+        "operation_types": [],
+        "current_situation": [],
+    }
+    with patch("app._send_advisory_confirmation_email") as confirmation, \
+         patch("app._send_advisory_internal_notification") as internal, \
+         patch("app._send_advisory_quote_email") as quote, \
+         patch("app._paypal_create_order") as paypal:
+        res = c.post("/api/asesoramiento/solicitar", json=payload)
+    assert res.status_code == 200, res.get_json()
+    confirmation.assert_called_once()
+    internal.assert_called_once()
+    quote.assert_not_called()
+    paypal.assert_not_called()
+    with ctx.app_context():
+        item = db.session.get(FiscalAdvisoryRequest, res.get_json()["advisory_id"])
+        assert item.status == "submitted"
+        assert item.payment_link_token is None
+        assert item.quoted_amount is None
+        assert item.quote_accepted_at is None
+
+
+def test_c2_protected_record_details_never_show_state_write(ctx):
+    aid = _create(ctx)
+    with ctx.app_context():
+        item = db.session.get(FiscalAdvisoryRequest, aid)
+        item.quote_acceptance_user_agent = "synthetic-historical-acceptance"
+        db.session.commit()
+    c = _client(ctx)
+    detail = c.get(f"/api/admin/asesoramiento/solicitudes/{aid}")
+    assert detail.status_code == 200
+    assert detail.get_json()["c1_state_editable"] is False
+    headers = _token(c)
+    res = c.post(f"/api/admin/asesoramiento/solicitudes/{aid}/gestion/estado",
+                 headers=headers, json={"status": "under_review"})
+    assert res.status_code == 409
