@@ -33,3 +33,6 @@
 - Test traffic beyond healthcheck, financial flows, rollback/restoration and teardown each require their own scoped gate.
 
 **NO-GO** means that green CI proves synthetic guards; it does not demonstrate that the live lab web functions (none deployed) or database schema has been initialized (0 tables).
+
+**Independent verification required:** the `public` schema count is a read-only snapshot reported by the owner, not an ongoing guarantee; before any DDL inspect current lab service identity, DB connection reference, PostgreSQL version, and current table inventory again. GitHub CI must never connect to this live lab.
+
