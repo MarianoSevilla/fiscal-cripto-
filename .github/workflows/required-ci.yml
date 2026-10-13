@@ -80,6 +80,9 @@ jobs:
       - name: Full Python regression
         run: python -m pytest -q -rs --import-mode=importlib --disable-warnings --maxfail=1 fiscal_app_export/tests tests
 
+      - name: STG-B01 real Flask firewall and CI-only synthetic lab
+        run: python fiscal_app_export/tests/qa_stg_b01_app_isolation.py
+
   postgres-bootstrap:
     name: postgres-bootstrap
     runs-on: ubuntu-24.04
