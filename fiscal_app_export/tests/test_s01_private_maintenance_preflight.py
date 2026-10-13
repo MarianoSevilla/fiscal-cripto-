@@ -78,10 +78,20 @@ class MaintenanceTest(unittest.TestCase):
             guard.validate_identity(env, identity=identity)
         self.assertEqual(ctx.exception.code, expected)
 
-    def test_real_id_unpinned_is_first_fail_closed_gate(self):
-        self.assertIsNone(guard.PINNED_IDENTITY.service_id)
-        self.assert_denied(valid_env(), "SERVICE_UNPINNED",
+    def test_real_id_pinned_and_synthetic_service_denied(self):
+        self.assertEqual(
+            guard.PINNED_IDENTITY.service_id,
+            "9728d19b-7d17-4acb-8be1-c4b0847179df",
+        )
+        self.assert_denied(valid_env(), "RAILWAY_IDENTITY",
                            identity=guard.PINNED_IDENTITY)
+
+    def test_actual_service_identity_only_passes_pure_validation(self):
+        env = valid_env()
+        env["RAILWAY_SERVICE_ID"] = guard.PINNED_IDENTITY.service_id
+        # This validates only an offline synthetic mapping, NOT a real Railway
+        # endpoint or the private Postgres database.
+        guard.validate_identity(env)
 
     def test_synthetic_identity_accepts_only_test_injected_pin(self):
         guard.validate_identity(valid_env(), identity=SYNTHETIC_ID)
@@ -166,7 +176,7 @@ class MaintenanceTest(unittest.TestCase):
         env = valid_env()
         env["S01_LAB_MODE"] = "true"
         env["S01_SYNTHETIC_LAB_MODE"] = "true"
-        self.assert_denied(env, "SERVICE_UNPINNED",
+        self.assert_denied(env, "RAILWAY_IDENTITY",
                            identity=guard.PINNED_IDENTITY)
 
     def test_identity_fails_before_any_connection_attempt(self):
@@ -270,7 +280,7 @@ class MaintenanceTest(unittest.TestCase):
                 with self.assertRaises(SystemExit) as ctx:
                     guard.main()
         self.assertEqual(ctx.exception.code, 1)
-        self.assertIn("SERVICE_UNPINNED", stderr.getvalue())
+        self.assertIn("RAILWAY_IDENTITY", stderr.getvalue())
         self.assertNotIn("CI_ONLY_PASSWORD", stderr.getvalue())
 
 

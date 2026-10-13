@@ -1,8 +1,9 @@
 """STG-B10A: private, READ-ONLY PostgreSQL maintenance preflight.
 
 No schema writes, Alembic, app import, web listeners, or provider calls.
-A real maintenance service ID has NOT been approved: the CLI MUST fail closed.
-Future execution of bootstrap_db.py requires a new, separately reviewed change
+The real empty Railway lab maintenance service ID was verified at B10B.
+No code is connected to that Railway service, and no deployment has run.
+Future execution of bootstrap_db.py requires a separately reviewed change
 and explicit authorization; this module intentionally has no DDL entrypoint.
 """
 from __future__ import annotations
@@ -26,12 +27,13 @@ class MaintenanceIdentity:
 
 
 # Fixed IDs independently read from the isolated Railway laboratory.
-# None is a deliberately CLOSED gate: B10B must pin the *real* executor ID
-# after a separate Railway authorization and renewed operational inventory.
+# B10B pinned the ID actually created in the isolated lab. This pin is NOT
+# authorization to attach executable source, invoke a runner, or execute DDL.
+# Private DNS is a convention until its effective runtime value is verified.
 PINNED_IDENTITY = MaintenanceIdentity(
     project_id="5f26aa6e-2e6d-46ef-bb5f-bca4ece07d5e",
     environment_id="3f9758ef-4e26-4e8d-9dd4-7b9286d81ea8",
-    service_id=None,
+    service_id="9728d19b-7d17-4acb-8be1-c4b0847179df",
     service_domain="s01-lab-maintenance.railway.internal",
     db_hostname="postgres.railway.internal",
 )
@@ -209,8 +211,8 @@ def run_preflight(
 
 
 def main() -> None:
-    # Must reject an unpinned Railway maintenance service BEFORE driver import,
-    # DNS lookup or opening a socket. No env variable may unlock this gate.
+    # Exact service/project/environment identity is checked before driver
+    # import or any socket. Source remains unattached: B10B does NOT run this.
     try:
         validate_identity(os.environ)
         from psycopg2 import connect
