@@ -4706,7 +4706,11 @@ def advisory_request_page():
 @app.route("/asesoramiento-fiscal-confirmado", strict_slashes=False)
 @limiter.exempt
 def advisory_confirmed():
-    return send_from_directory("static", "asesoramiento-confirmado.html")
+    """Legacy URL: never assert a paid/confirmed S01 request during C1."""
+    response = send_from_directory("static", "asesoramiento-confirmado.html")
+    response.status_code = 503
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 @app.route("/asesoramiento-fiscal-cancelado", strict_slashes=False)
 @limiter.exempt
@@ -4745,7 +4749,7 @@ def advisory_prices():
 @login_required
 @limiter.limit("3 per hour")
 def advisory_solicitar():
-    """Crea la solicitud. Rafa revisará el caso y enviará un presupuesto por email."""
+    """Recibe solicitud para revisión; C1 no presupone oferta, cobro o plazo."""
     data = request.get_json(silent=True) or {}
 
     # Validaciones

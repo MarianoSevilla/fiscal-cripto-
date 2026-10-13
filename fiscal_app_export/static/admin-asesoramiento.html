@@ -300,6 +300,22 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
 .modal-delete-btn:hover:not(:disabled) { background: #dc2626; }
 .modal-delete-btn:disabled { opacity: .4; cursor: not-allowed; }
 .modal-err { font-size: 13px; color: #f87171; margin-top: 10px; text-align: right; }
+/* C2-R02: mobile administration shows list above full-width detail. */
+@media (max-width: 700px) {
+  .layout { flex-direction: column; height: auto; min-height: calc(100dvh - 64px); }
+  .sidebar {
+    width: 100%; height: 290px; min-height: 0;
+    flex-shrink: 0; border-right: 0; border-bottom: 1px solid var(--border);
+  }
+  .sidebar-list { min-height: 0; }
+  .detail-panel {
+    width: 100%; min-width: 0; min-height: 340px;
+    overflow: visible; padding: 20px 16px;
+  }
+  .sidebar-filter-row, .action-row { flex-wrap: wrap; }
+  .action-select, .action-input { min-width: 0; flex: 1 1 150px; }
+  .action-card, .detail-field, .detail-section { min-width: 0; }
+}
 </style>
 </head>
 <body>
@@ -391,20 +407,20 @@ function relativeTime(iso) {
 function getPriority(status) {
   if (['paid_received', 'under_review'].includes(status)) return 'high';
   if (status === 'in_progress')                           return 'active';
-  if (status === 'submitted')                             return 'payment';
-  if (status === 'quote_sent')                            return 'payment';
+  if (status === 'submitted')                             return 'waiting';
+  if (status === 'quote_sent')                            return 'waiting';
   if (['waiting_user_info', 'pendiente_info'].includes(status)) return 'waiting';
   return 'done';
 }
 function getPriorityTitle(status) {
   const map = {
-    submitted:         'Pendiente de presupuesto',
-    pendiente_info:    'Esperando información del cliente',
-    quote_sent:        'Esperando pago del cliente',
-    paid_received:     'Pago recibido — comenzar',
+    submitted:         'Pendiente de revisión interna',
+    pendiente_info:    'Información pendiente (histórico)',
+    quote_sent:        'Presupuesto histórico; pagos suspendidos',
+    paid_received:     'Pago histórico: solo consulta',
     under_review:      'Requiere revisión',
     in_progress:       'En curso',
-    waiting_user_info: 'Esperando cliente',
+    waiting_user_info: 'Información pendiente (histórico)',
     completed:         'Finalizado',
     cancelled:         'Cancelado',
     refunded:          'Reembolsado',
@@ -579,10 +595,10 @@ async function openDetail(id, el) {
       submitted:         'Revisar internamente: presupuestos y pagos suspendidos.',
       pendiente_info:    'Revisión interna pendiente: comunicación al cliente suspendida.',
       quote_sent:        'No reenviar enlaces: expediente protegido durante la suspensión.',
-      paid_received:     'Comenzar a trabajar en el caso del cliente.',
+      paid_received:     'Historial de pago conservado; gestiones financieras suspendidas.',
       under_review:      'Revisar internamente sin generar presupuestos ni mensajes.',
       waiting_user_info: 'Revisión interna: no se enviarán peticiones al cliente en C1.',
-      in_progress:       'Continuar el trabajo con el cliente.',
+      in_progress:       'Estado histórico protegido; solo lectura durante C1.',
       completed:         'Sin acción requerida.',
       cancelled:         'Sin acción requerida.',
       refunded:          'Sin acción requerida.',
