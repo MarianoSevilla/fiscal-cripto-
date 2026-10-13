@@ -1,7 +1,7 @@
 # C2-R01 — Revisión independiente final de la implementación y dependencias S01
 
 **Fecha:** 13/10/2026 · **Tipo:** auditoría de solo lectura en GitHub; cambios documentales únicamente.  
-**Veredicto:** **CORRECCIONES C2-01 A C2-05 ACEPTABLES BAJO ALCANCE C1 / NO-GO PARA MERGE Y PRODUCCIÓN**.
+**Veredicto:** **C2-01, C2-02, C2-03 y C2-05 VERIFICADAS; C2-04 PARCIAL / NO-GO PARA MERGE Y PRODUCCIÓN**.
 
 ## 1. Fuentes y SHA certificados
 
@@ -9,7 +9,7 @@
 - PR #56 C1: `598bb0912ad0dc4521aaba881512b13aa268b4eb`, draft, sin fusionar.
 - PR #57 C2-R01: `3945a97eac76451579c95e90fe571bbdf1f7c05e`, draft, base PR #56, sin fusionar.
 - Diff específico #57 sobre #56: **3 commits, 8 archivos**, incluido paso CI PG18. Sin migración, Procfile, secretos, cuenta bancaria o código de proveedor externo nuevos.
-- Diferencial acumulado respecto a `main`: **77 commits y 72 archivos** (incluye todas las capas apiladas entre retirada PayPal, migraciones S01, prefessure/PREFREEZE, G04, G06, G07, tests y C1/C2). No es una PR autónoma desplegable sobre el esquema viejo.
+- Diferencial acumulado respecto a `main`: **77 commits y 72 archivos** (incluye todas las capas apiladas entre retirada PayPal, migraciones S01, PREFREEZE, G04, G06, G07, tests y C1/C2). No es una PR autónoma desplegable sobre el esquema viejo.
 - CI **#86**: https://github.com/MarianoSevilla/fiscal-cripto-/actions/runs/38411560214 · status **SUCCESS** en el SHA exacto anterior; **1.556 passed, 63 skipped** en Python, PostgreSQL 18 SUCCESS y browser-navigation SUCCESS.
 - Logs PostgreSQL 18: import/arranque sin DDL e inspección READ ONLY PASS, Alembic un solo head PASS; `C2-R01 PG18`: bloqueo de fila real en dos procesos PASS, rechazo con evidencia parcial comprometida PASS, rollback y posterior transición PASS; sin proveedores/ emails/cargos en esa prueba.
 
