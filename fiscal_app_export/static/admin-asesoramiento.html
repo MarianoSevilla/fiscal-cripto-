@@ -564,16 +564,21 @@ async function openDetail(id, el) {
       refunded:          'Reembolsado',
       archived:          'Archivada',
     };
-    let statusOpts = '';
-    Object.entries(statusOptions).forEach(([k,v]) => {
-      statusOpts += `<option value="${k}" ${d.status === k ? 'selected' : ''}>${escHtml(v)}</option>`;
-    });
+    const c1Editable = ['submitted','pendiente_info','under_review','waiting_user_info'].includes(d.status);
+    let statusOpts = c1Editable ? '' : '<option value="" selected>Estado financiero conservado (solo lectura)</option>';
+    if (c1Editable) {
+      Object.entries(statusOptions).forEach(([k,v]) => {
+        if (['submitted','pendiente_info','under_review','waiting_user_info'].includes(k)) {
+          statusOpts += `<option value="${k}" ${d.status === k ? 'selected' : ''}>${escHtml(v)}</option>`;
+        }
+      });
+    }
 
     // Próximo paso recomendado
     const NEXT_STEPS = {
-      submitted:         'Revisar el caso y enviar un mensaje o presupuesto al cliente.',
+      submitted:         'Revisar internamente: presupuestos y pagos suspendidos.',
       pendiente_info:    'Esperar respuesta del cliente al mensaje enviado.',
-      quote_sent:        'Esperar a que el cliente complete el pago.',
+      quote_sent:        'No reenviar enlaces: expediente protegido durante la suspensión.',
       paid_received:     'Comenzar a trabajar en el caso del cliente.',
       under_review:      'Valorar complejidad y preparar propuesta o confirmación.',
       waiting_user_info: 'Esperar respuesta del cliente al email enviado.',
@@ -635,42 +640,15 @@ async function openDetail(id, el) {
         <div class="text-block">${escHtml(d.case_description||'—')}</div>
       </div>
 
-      ${!['paid_received','completed','cancelled','refunded'].includes(d.status) ? `
       <div class="detail-section">
-        <div class="detail-section-title">Responder al cliente</div>
-        <div class="reply-section">
-          ${d.status === 'quote_sent' && d.quote_sent_at ? `
-            <p class="reply-quote-info">Presupuesto enviado el ${new Date(d.quote_sent_at).toLocaleDateString('es-ES')} · Caduca el ${d.quote_expires_at ? new Date(d.quote_expires_at).toLocaleDateString('es-ES') : '—'}</p>
-            <p class="reply-quote-link">${location.origin}/pagar/${escHtml(d.payment_link_token||'')}</p>
-          ` : ''}
-          <div class="reply-field">
-            <label>Mensaje para ${escHtml(d.full_name)}</label>
-            <textarea id="replyText" placeholder="Hola, hemos revisado tu caso y…">${escHtml(d.status === 'quote_sent' ? (d.quote_message||'') : '')}</textarea>
-          </div>
-          <label class="reply-check-row">
-            <input type="checkbox" id="replyIsQuote" onchange="toggleReplyMode()" ${['submitted','quote_sent','pendiente_info'].includes(d.status) && d.status === 'quote_sent' ? 'checked' : ''}>
-            Es presupuesto (genera importe y link de pago)
-          </label>
-          <div class="reply-amount-wrap ${['submitted','quote_sent','pendiente_info'].includes(d.status) && d.status === 'quote_sent' ? 'visible' : ''}" id="replyAmountWrap">
-            <div class="reply-field" style="margin-bottom:0">
-              <label>Honorarios de Rafa (€) *</label>
-              <input type="number" id="replyAmount" min="1" step="0.01" placeholder="79.00" value="${d.rafa_fee_cents != null ? (d.rafa_fee_cents/100).toFixed(2) : ''}">
-            </div>
-          </div>
-          <div class="reply-pendiente-wrap ${d.status === 'quote_sent' ? 'hidden' : ''}" id="replyPendienteWrap" style="margin-top:10px;">
-            <label class="reply-check-row" style="margin-bottom:0">
-              <input type="checkbox" id="replySetPendiente" ${d.status !== 'quote_sent' ? 'checked' : ''}>
-              Cambiar estado a «Pendiente de información»
-            </label>
-          </div>
-          <button class="reply-send-btn ${d.status === 'quote_sent' ? 'mode-quote' : 'mode-msg'}" id="replySendBtn" onclick="enviarRespuesta(${d.id})" style="margin-top:14px;">
-            ${d.status === 'quote_sent' ? 'Reenviar link de pago' : 'Enviar mensaje al cliente'}
-          </button>
-          <div class="reply-ok" id="replyOk"></div>
-          <div class="reply-err" id="replyErr"></div>
-        </div>
+        <div class="detail-section-title">Operativa S01 temporalmente suspendida</div>
+        <p style="font-size:14px;color:var(--sub);line-height:1.65">
+          Se reciben y revisan solicitudes. El envío de presupuestos, su aceptación,
+          los enlaces de pago y los mensajes externos permanecen bloqueados
+          durante la transición a Stripe Connect. Las notas y los estados
+          internos no financieros siguen disponibles.
+        </p>
       </div>
-      ` : ''}
 
       <div class="detail-section">
         <div class="detail-section-title">Notas internas</div>
@@ -701,7 +679,7 @@ async function openDetail(id, el) {
           <div class="action-row">
             <select class="action-select" id="newStatus">${statusOpts}</select>
             <input type="text" class="action-input" id="statusNote" placeholder="Nota (opcional)" style="flex:2">
-            <button class="action-btn" onclick="changeStatus(${d.id})" id="btnStatus">Guardar</button>
+            <button class="action-btn" onclick="changeStatus(${d.id})" id="btnStatus" ${c1Editable ? "" : "disabled"}>Guardar</button>
           </div>
           <div id="statusMsg"></div>
         </div>
@@ -726,7 +704,7 @@ async function openDetail(id, el) {
             Las solicitudes de prueba se identifican visualmente en el panel. No se filtran por defecto.
           </div>
           <label class="reply-check-row" style="margin-bottom:0">
-            <input type="checkbox" id="isTestCheck" ${d.is_test ? 'checked' : ''} onchange="toggleIsTest(${d.id})">
+            <input type="checkbox" id="isTestCheck" ${d.is_test ? 'checked' : ''} disabled title="Suspendido en C1">
             Esta solicitud es una prueba interna
           </label>
           <div id="isTestMsg" style="font-size:13px;margin-top:6px;"></div>
@@ -738,7 +716,7 @@ async function openDetail(id, el) {
             Solo administradores. Elimina permanentemente la solicitud y todos sus datos asociados
             (notas, historial, archivos). <strong style="color:#f87171">Esta acción no se puede deshacer.</strong>
           </div>
-          <button class="btn-danger" data-name="${escHtml(d.full_name)}" onclick="showDeleteModal(${d.id}, this.dataset.name)">🗑&nbsp; Eliminar solicitud</button>
+          <button class="btn-danger" data-name="${escHtml(d.full_name)}" disabled title="C1: prohibido borrar historial">🗑&nbsp; Eliminar solicitud</button>
           <div id="deleteMsg"></div>
         </div>
         ` : ''}
@@ -749,84 +727,17 @@ async function openDetail(id, el) {
   }
 }
 
-function toggleReplyMode() {
-  const isQuote    = document.getElementById('replyIsQuote')?.checked;
-  const amountWrap = document.getElementById('replyAmountWrap');
-  const pendWrap   = document.getElementById('replyPendienteWrap');
-  const btn        = document.getElementById('replySendBtn');
-  if (amountWrap) amountWrap.classList.toggle('visible', isQuote);
-  if (pendWrap)   pendWrap.classList.toggle('hidden', isQuote);
-  if (btn) {
-    btn.classList.toggle('mode-quote', isQuote);
-    btn.classList.toggle('mode-msg',  !isQuote);
-    btn.textContent = isQuote ? 'Enviar presupuesto y link de pago' : 'Enviar mensaje al cliente';
-  }
-}
-
-async function enviarRespuesta(id) {
-  const btn     = document.getElementById('replySendBtn');
-  const okEl    = document.getElementById('replyOk');
-  const errEl   = document.getElementById('replyErr');
-  const isQuote = document.getElementById('replyIsQuote')?.checked;
-  const texto   = (document.getElementById('replyText')?.value || '').trim();
-
-  okEl.style.display  = 'none';
-  errEl.style.display = 'none';
-
-  if (!texto) {
-    errEl.textContent = 'El mensaje no puede estar vacío.';
-    errEl.style.display = 'block';
-    return;
-  }
-
-  if (isQuote) {
-    const amount = parseFloat((document.getElementById('replyAmount')?.value || '').replace(',', '.'));
-    if (!amount || amount < 1) {
-      errEl.textContent = 'Introduce los honorarios de Rafa (mínimo 1 €).';
-      errEl.style.display = 'block';
-      return;
-    }
-  }
-
-  btn.disabled    = true;
-  btn.textContent = 'Enviando…';
-
-  try {
-    let r, data;
-
-    if (isQuote) {
-      const amount = parseFloat((document.getElementById('replyAmount')?.value || '').replace(',', '.'));
-      r    = await fetch(`/api/admin/asesoramiento/solicitudes/${id}/enviar-presupuesto`, {
-        method: 'POST', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount_euros: amount, message: texto }),
-      });
-      data = await r.json();
-      if (!r.ok) throw new Error(data.error || 'Error al enviar el presupuesto.');
-      okEl.textContent = data.email_warning ? '✓ Presupuesto guardado.' : `✓ Presupuesto enviado a ${data.email_to}`;
-      if (data.email_warning) { errEl.textContent = `⚠️ Email no enviado a ${data.email_to}. Revisa los logs de Railway.`; errEl.style.display = 'block'; }
-    } else {
-      const setPendiente = document.getElementById('replySetPendiente')?.checked ?? true;
-      r    = await fetch(`/api/admin/asesoramiento/solicitudes/${id}/mensaje`, {
-        method: 'POST', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mensaje: texto, set_pendiente_info: setPendiente }),
-      });
-      data = await r.json();
-      if (!r.ok) throw new Error(data.error || 'Error al enviar el mensaje.');
-      okEl.textContent = data.email_warning ? '✓ Mensaje registrado.' : `✓ Mensaje enviado a ${data.email_to}`;
-      if (data.email_warning) { errEl.textContent = `⚠️ Email no enviado a ${data.email_to}. Revisa los logs de Railway.`; errEl.style.display = 'block'; }
-    }
-
-    okEl.style.display = 'block';
-    await loadList();
-    setTimeout(() => openDetail(id), 1300);
-  } catch (err) {
-    errEl.textContent   = err.message;
-    errEl.style.display = 'block';
-    btn.disabled        = false;
-    btn.textContent     = isQuote ? 'Enviar presupuesto y link de pago' : 'Enviar mensaje al cliente';
-  }
+let _c1ManagementToken = null;
+async function getC1ManagementToken() {
+  if (_c1ManagementToken) return _c1ManagementToken;
+  const r = await fetch('/api/admin/asesoramiento/gestion-token', {
+    credentials: 'include', cache: 'no-store',
+  });
+  if (!r.ok) throw new Error('No se pudo validar la sesión de gestión.');
+  const data = await r.json();
+  if (!data.csrf_token) throw new Error('Token de gestión no disponible.');
+  _c1ManagementToken = data.csrf_token;
+  return _c1ManagementToken;
 }
 
 async function changeStatus(id) {
@@ -837,9 +748,10 @@ async function changeStatus(id) {
   btn.disabled = true;
   msg.textContent = '';
   try {
-    const r = await fetch(`/api/admin/asesoramiento/solicitudes/${id}/estado`, {
+    const c1csrf = await getC1ManagementToken();
+    const r = await fetch(`/api/admin/asesoramiento/solicitudes/${id}/gestion/estado`, {
       method: 'POST', credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-S01-C1-CSRF': c1csrf },
       body: JSON.stringify({ status: newStatus, note }),
     });
     const d = await r.json();
@@ -865,9 +777,10 @@ async function addNote(id) {
   msg.className = '';
   msg.textContent = '';
   try {
-    const r = await fetch(`/api/admin/asesoramiento/solicitudes/${id}/nota`, {
+    const c1csrf = await getC1ManagementToken();
+    const r = await fetch(`/api/admin/asesoramiento/solicitudes/${id}/gestion/nota`, {
       method: 'POST', credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-S01-C1-CSRF': c1csrf },
       body: JSON.stringify({ nota }),
     });
     const data = await r.json();
