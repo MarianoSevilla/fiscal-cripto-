@@ -133,9 +133,9 @@ def run_step(label: str, args: list[str], *, env: dict[str, str],
         if label.startswith("Gate de arranque READ ONLY"):
             match = re.search(
                 rb"S01 G04 STARTUP: NO-GO "
-                rb"\\((GRAPH|DATABASE|READONLY|TABLES|REVISION|COLUMNS|"
+                rb"\((GRAPH|DATABASE|READONLY|TABLES|REVISION|COLUMNS|"
                 rb"ADVISORY_COLUMNS|CONSTRAINTS|INDEXES|CHECK|INTERNAL); "
-                rb"details protected\\)",
+                rb"details protected\)",
                 result.stdout or b"",
             )
             if match:
