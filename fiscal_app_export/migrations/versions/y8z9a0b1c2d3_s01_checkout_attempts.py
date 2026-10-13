@@ -15,8 +15,10 @@ depends_on = None
 
 
 def upgrade():
-    # CREATE IF NOT EXISTS necesario por app.py, que inicializa ORM create_all
-    # en bases recién creadas. La migración no toca datos preexistentes.
+    # El esquema financiero se crea exclusivamente por la migración; app.py
+    # ya no ejecuta ORM create_all() al importar. Los nombres de CHECK deben
+    # coincidir con el contrato del gate de arranque READ ONLY (G04).
+    # CREATE IF NOT EXISTS preserva esquemas preexistentes; el gate valida drift.
     op.execute("""
         CREATE TABLE IF NOT EXISTS s01_stripe_checkout_attempts (
             id VARCHAR(36) PRIMARY KEY,
@@ -25,8 +27,10 @@ def upgrade():
             quote_fingerprint VARCHAR(64) NOT NULL,
             idempotency_key VARCHAR(100) NOT NULL UNIQUE,
             expected_amount_cents INTEGER NOT NULL
+                CONSTRAINT ck_s01_attempt_amount
                 CHECK (expected_amount_cents >= 100 AND expected_amount_cents <= 99999999),
             currency VARCHAR(3) NOT NULL DEFAULT 'eur'
+                CONSTRAINT ck_s01_attempt_currency
                 CHECK (currency = 'eur'),
             status VARCHAR(24) NOT NULL DEFAULT 'reserved',
             checkout_session_id VARCHAR(255) UNIQUE,
