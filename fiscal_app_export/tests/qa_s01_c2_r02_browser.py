@@ -162,9 +162,8 @@ def main():
                             "Situación completamente inventada para verificar C2-R02 sin datos reales."
                         )
                         page.locator("#submitBtn").click()
-                        page.locator("#errorMsg").get_by_text(
-                            "Debes aceptar la política de privacidad", exact=False,
-                        ).wait_for(state="visible")
+                        page.locator("#errorMsg").wait_for(state="visible")
+                        assert "Debes aceptar la política de privacidad" in page.locator("#errorMsg").inner_text()
                         page.locator("#legalPrivacy").check()
                         page.locator("#submitBtn").click()
                         page.locator("#successMsg").wait_for(state="visible", timeout=15000)
