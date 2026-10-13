@@ -127,7 +127,19 @@ def run_step(label: str, args: list[str], *, env: dict[str, str],
     except (OSError, subprocess.TimeoutExpired):
         raise RehearsalError(f"{label}: error de ejecución o timeout") from None
     if result.returncode:
-        # Do not echo log output: it may contain restored business data.
+        # NEVER echo subprocess logs: they can contain restored business
+        # records. Only the approved G04 failure taxonomy, emitted from fixed
+        # literal strings by the gate, may be surfaced to the Mac operator.
+        if label.startswith("Gate de arranque READ ONLY"):
+            match = re.search(
+                rb"S01 G04 STARTUP: NO-GO "
+                rb"\\((GRAPH|DATABASE|READONLY|TABLES|REVISION|COLUMNS|"
+                rb"ADVISORY_COLUMNS|CONSTRAINTS|INDEXES|CHECK|INTERNAL); "
+                rb"details protected\\)",
+                result.stdout or b"",
+            )
+            if match:
+                print("S01 G04 CAUSA: " + match.group(1).decode("ascii"), flush=True)
         raise RehearsalError(f"{label}: fallo (código {result.returncode})")
 
 
