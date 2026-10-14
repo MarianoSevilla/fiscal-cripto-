@@ -42,6 +42,15 @@
 
 Su comando `main()` está cerrado, sale con `NO-GO` siempre. No abre conexiones ni procesa dumps.
 
+## Resultado de STG-B10J en CI
+
+- GitHub Actions [#38544630254](https://github.com/MarianoSevilla/fiscal-cripto-/actions/runs/38544630254): **SUCCESS**; 15 contratos sintéticos y dos contenedores PostgreSQL18 desechables.
+- `pg_dump -Fc` sobre base fuente sintética: archivo generado; comprobación `valid-synthetic.dump: OK` por SHA256.
+- Se generó una copia truncada deliberadamente. `pg_restore --list` y `pg_restore --exit-on-error` devolvieron fallo obligatorio; destino continuó sin relaciones en `public`.
+- Mensaje CI: `B10J PASS: broken pg_dump rejected, exit status nonzero; disposable target intact`.
+- Esta prueba es evidencia de comportamiento frente a un **archivo deliberadamente truncado**, no de tolerancia a toda clase de corrupciones posibles.
+- La validación `private_restore_evidence_gate.py` es estrictamente formal: **ningún registro manual constituye una prueba autónoma de que un backup real exista o haya sido restaurado**. Exigir evidencia independiente de infraestructura y consultas.
+
 ## 6. Autorizaciones y recuperación ante fallos
 
 **Puerta 1 — lectura/extracción:** la autorización de un backup real permite únicamente su creación/copia segura, NO servicios nuevos, restauración ni cambios del origen.
