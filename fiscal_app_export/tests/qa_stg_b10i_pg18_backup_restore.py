@@ -135,8 +135,16 @@ def main() -> None:
     target = fingerprint(TARGET_DSN)
     if source[0] == target[0]:
         raise AssertionError("Recovery target is not an independent cluster")
-    if source[1:] != target[1:]:
-        raise AssertionError("Logical restore differs from source schema/data")
+    groups = ("tables", "row_counts", "resource_seed", "constraints", "indexes")
+    differences = [
+        name for i, name in enumerate(groups, start=1)
+        if source[i] != target[i]
+    ]
+    if differences:
+        # Classification only: never expose even synthetic row contents.
+        raise AssertionError(
+            "Logical restore mismatch categories: " + ",".join(differences)
+        )
     if len(source[1]) < 10:
         raise AssertionError("Restored table count unexpectedly small")
     print(
