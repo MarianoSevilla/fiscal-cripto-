@@ -1,0 +1,92 @@
+name: QA S01 STG-B10O no-live restore candidate
+
+on:
+  pull_request:
+    branches:
+      - security/s01-stg-b10n-readonly-target-probe
+    paths:
+      - infra/s01_lab_restore/**
+      - .github/workflows/qa-s01-stg-b10o-no-live-restore.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  guarded-candidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version-file: fiscal_app_export/.python-version
+      - name: Run readonly probe + candidate contract suites without any Railway access
+        working-directory: infra/s01_lab_restore
+        run: |
+          python -m unittest -v test_probe
+          python -m unittest -v test_restore_candidate
+      - name: Build existing READONLY image and assert restore candidate excluded
+        run: |
+          set -euo pipefail
+          docker build --pull -t s01-b10o-readonly-no-restore:ci infra/s01_lab_restore
+          docker run --rm --entrypoint /bin/sh s01-b10o-readonly-no-restore:ci \
+            -c 'test -f /app/probe.py && test ! -e /app/restore_candidate.py && test ! -e /app/test_restore_candidate.py'
+          echo "B10O IMAGE PASS: candidate worker excluded from the actual Railway image"
+      - name: Candidate Python entrypoint must ALWAYS exit NO-GO
+        working-directory: infra/s01_lab_restore
+        run: |
+          set -euo pipefail
+          if python restore_candidate.py > "${{ runner.temp }}/candidate-log.txt" 2>&1; then
+            echo "NO-GO: restore candidate accidentally executable"; exit 1
+          fi
+          grep -q 'LIVE_RESTORE_NOT_AUTHORIZED' "${{ runner.temp }}/candidate-log.txt"
+          echo "B10O GATE PASS: no live restore entrypoint"
+
+  pg18-transaction-flag:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      source:
+        image: postgres:18
+        env: {POSTGRES_PASSWORD: ci-only-test-password}
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+      target:
+        image: postgres:18
+        env: {POSTGRES_PASSWORD: ci-only-test-password}
+        ports: ["55433:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    steps:
+      - name: Synthetic PostgreSQL18 backup and one-transaction restore
+        env:
+          PGPASSWORD: ci-only-test-password
+        run: |
+          set -euo pipefail
+          cli() { docker run --rm --network host -e PGPASSWORD postgres:18 "$@"; }
+          for port in 5432 55433; do
+            cli psql -h 127.0.0.1 -p "$port" -U postgres -d postgres \
+              -v ON_ERROR_STOP=1 -c 'CREATE DATABASE railway;'
+          done
+          cli psql -h 127.0.0.1 -p 5432 -U postgres -d railway \
+            -v ON_ERROR_STOP=1 -c 'CREATE TABLE public.only_in_ci (n integer PRIMARY KEY); INSERT INTO public.only_in_ci VALUES (123);'
+          docker run --rm --network host -e PGPASSWORD -v "${{ runner.temp }}:/backup" postgres:18 \
+            pg_dump -h 127.0.0.1 -p 5432 -U postgres -d railway -Fc \
+              --no-owner --no-acl -f /backup/ci-only.pgcustom
+          docker run --rm --network host -e PGPASSWORD -v "${{ runner.temp }}:/backup:ro" postgres:18 \
+            pg_restore -h 127.0.0.1 -p 55433 -U postgres -d railway \
+              --single-transaction --exit-on-error --no-owner --no-acl /backup/ci-only.pgcustom
+          value="$(cli psql -h 127.0.0.1 -p 55433 -U postgres -d railway -At \
+            -v ON_ERROR_STOP=1 -c 'SELECT n FROM public.only_in_ci;')"
+          test "$value" = 123
+          echo "B10O PG18 PASS: single transaction restore to a disposable independent PostgreSQL18 DB"
