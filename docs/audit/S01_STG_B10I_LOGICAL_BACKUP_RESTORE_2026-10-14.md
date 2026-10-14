@@ -17,3 +17,14 @@ Aunque sea PASS, este ensayo **no demuestra** que exista un backup íntegro de l
 
 ## Estado de otros gates
 La huella real del clúster S01 `7696213098351943739` fue confirmada por ambos orígenes en el despliegue privado de solo lectura `86336018-9964-471b-92c7-e4b40db8e4e1`. Las migraciones del laboratorio, el despliegue web, las fusiones de PRs y las operaciones financieras siguen NO-GO. Se necesita autorización específica futura para cualquier escritura o restauración con datos reales.
+
+
+## Resultado de CI y revisión del desfase
+
+- Workflow GitHub Actions **#38543045211**: **SUCCESS**; SHA del código probado `0e7e86efb12b0c67fcbe204c5365938d76ec8d23`.
+- Evidencia: `S01 B10I SETUP PASS`; `s01-ci-synthetic-only.dump: OK` (SHA256); `S01 B10I RESTORE PASS: two independent PostgreSQL18 clusters; Alembic head, all table counts, indexes, constraints and seeded synthetic resources match; no Railway writes`.
+- Primeros intentos #38542141912, #38542362270 y #38542584671 terminaron en **FAIL** durante verificación final, aunque `pg_dump` y `pg_restore` finalizaron sin error. La discrepancia se limitó a definiciones `CHECK` de tres constraints: `ck_s01_checkout_status`, `ck_s01_outbox_kind`, `ck_s01_outbox_status`.
+- PG18 normalizó `(ARRAY['x'::character varying, ...])::text[]` como `ARRAY[('x'::character varying)::text, ...]` tras restore. Los dos formatos representan la misma lista literal; **la prueba normaliza solo dos renderizados exactos para los tres nombres y los valores enumerados esperados**. Si se altera un valor, la expresión o aparece cualquier otra variante, se lanza error y la CI vuelve a fallar.
+- Permanecen comprobaciones estrictas de todos los demás nombres/definiciones de restricciones, tablas, índices, recuentos, seed, PG18, Alembic y huellas de clúster distintas.
+- El resultado positivo no permite concluir que exista un backup real de S01 RESTAURABLE. Gate pendiente: respaldo del lab, checksum y restauración **en destino independiente**, sin sustituir el volumen `c35d178f-7473-4d0b-adb9-1faae815b7af` ni tocar la web/producción.
+- Ningún servicio Railway fue modificado en esta fase B10I. No autorizado DDL real ni merge de PR.
