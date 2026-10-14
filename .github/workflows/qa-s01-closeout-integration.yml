@@ -85,6 +85,9 @@ jobs:
           python fiscal_app_export/tests/qa_stg_b01_app_isolation.py
           python fiscal_app_export/tests/qa_stg_b04_lab_app_isolation.py
 
+      - name: Disposable PG18 guard contract (no Docker or network)
+        run: python fiscal_app_export/qa_s01_disposable_pg18.py --selftest
+
 
   postgres-bootstrap:
     name: postgres-bootstrap
