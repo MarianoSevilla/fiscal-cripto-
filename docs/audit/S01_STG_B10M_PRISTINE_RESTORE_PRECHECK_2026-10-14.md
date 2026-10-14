@@ -29,3 +29,12 @@ No utilizar el botón Restore de Railway sobre el volumen original; no copiar cr
 
 ## Estado operativo
 **Backup REAL creado y verificado SHA256. Restauración REAL aún PENDIENTE.** B10M es un gate de ensayo sintético adicional para justificar la creación futura de infraestructura aislada; no autoriza por sí solo DDL real.
+
+## Ejecución CI comprobada
+
+- GitHub Actions [#38548860446](https://github.com/MarianoSevilla/fiscal-cripto-/actions/runs/38548860446) **SUCCESS**. Código ejecutado: `a0d7c719f0926fbe812c7a9f416e9dc1919a85f8`.
+- Se crearon dos bases `railway` vacías en **dos PostgreSQL18 efímeros**, con huellas diferentes entre sí y diferentes del clúster S01.
+- `pg_dump -Fc` de la fuente realmente vacía y prueba SHA-256 de archivo `pristine-pg18-ci.dump: OK`.
+- `pg_restore --exit-on-error` sobre el PostgreSQL18 distinto y comprobación de esquema `public` sin relaciones, funciones ni tipos, sin extensiones no estándar ni event triggers, todo PASS.
+- Salida literal: `B10M PASS: actual pg_dump of empty PG18 DB restores to a different cluster and remains pristine`.
+- **No se accedió a Railway desde la CI**. El éxito corresponde al ensayo en dos clústeres sintéticos, no a un `pg_restore` del objeto REAL `1af6ba229c781a7cc0b357610119d546c4a47bcce5a2b19442a11501ea3afdab` disponible en el bucket privado.
