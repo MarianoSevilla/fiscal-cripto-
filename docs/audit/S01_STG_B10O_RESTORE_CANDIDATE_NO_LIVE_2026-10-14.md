@@ -36,3 +36,14 @@ Copia REAL previamente obtenida por B10L desde el origen intacto: bucket privado
 - Sin esa autorización: **NO-GO** para restore REAL, bootstrap, migraciones, PR merge, producción, staging, web, Stripe, PayPal y emails.
 
 **Nota:** S3 `IfNoneMatch` es una medida antirreintento cooperativa, no un mecanismo de autenticación ni una garantía absoluta ante un actor malicioso. `sslmode=require` cifra, pero la identidad TLS completa requiere `verify-full` con CA/hostname verificados. Ambas son limitaciones documentadas, no excusas para operar fuera de alcance.
+
+
+## Resultado de validación B10O
+
+- [Ejecución inicial #38581897895](https://github.com/MarianoSevilla/fiscal-cripto-/actions/runs/38581897895): **SUCCESS**, 14 contratos B10N + 22 contratos B10O, contenedor readonly confirmado sin restaurador y `main()` del candidato NO-GO.
+- [Ejecución adversarial definitiva #38582342330](https://github.com/MarianoSevilla/fiscal-cripto-/actions/runs/38582342330): **SUCCESS en ambos jobs**, SHA del código probado `35bca8ea929a40abff6d067186acd6c8152eddcd`.
+- Prueba positiva: `B10O PG18 PASS: single transaction restore to a disposable independent PostgreSQL18 DB`.
+- Prueba de fallo deliberado: dos tablas anteriores del archive se crearon provisionalmente; una tercera tabla con nombre en conflicto forzó el error de `pg_restore`. Por `--single-transaction --exit-on-error`, PostgreSQL18 **revirtió las tablas anteriores**, preservó la preexistente y registró `B10O ROLLBACK PASS: forced late conflict rolled back preceding tables, target fixture preserved`.
+- Todos los recursos de esa prueba son sintéticos y desechables de GitHub Actions; no se modificó `Postgres-Im3h` ni el original.
+- **IMPORTANTE:** haber validado el rollback en un caso sintético no equivale a una garantía de que cualquier operación futura pueda revertirse sin intervención. El marcador S3 de un intento real sería persistente, y una incidencia posterior requeriría evaluación manual.
+- La CI no incluye claves reales de Railway, no descarga el respaldo real y **no genera una imagen ejecutable con `restore_candidate.py`**. No se concede ninguna autorización nueva de escritura.
