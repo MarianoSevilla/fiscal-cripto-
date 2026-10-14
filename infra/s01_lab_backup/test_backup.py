@@ -93,7 +93,7 @@ class BackupGuard(unittest.TestCase):
                     "BACKUP_ACCESS_KEY_ID", "BACKUP_SECRET_ACCESS_KEY"):
             with self.subTest(key=key):
                 env = fake_env()
-                env[key] = "" if key.endswith("KEY") else "secret-fake-value"
+                env[key] = "" if key in ("BACKUP_ACCESS_KEY_ID", "BACKUP_SECRET_ACCESS_KEY") else "secret-fake-value"
                 with self.assertRaises(b.StopBackup) as caught:
                     b.checked_environment(env)
                 self.assertEqual(
