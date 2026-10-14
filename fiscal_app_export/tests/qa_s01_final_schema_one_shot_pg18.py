@@ -47,6 +47,17 @@ def local_connection(fake_dsn, **kwargs):
     )
 
 
+def local_postcheck_connection(dsn, **kwargs):
+    # GitHub Actions PG18 container is non-TLS. This substitute exists ONLY
+    # in CI and cannot be selected by the deployed one-shot entrypoint.
+    if dsn != CI_DSN or kwargs.get("sslmode") != "require":
+        raise RuntimeError("CI_POSTCHECK_SCOPE")
+    return psycopg2.connect(
+        CI_DSN, connect_timeout=kwargs["connect_timeout"],
+        sslmode="prefer", options=kwargs["options"],
+    )
+
+
 def local_pristine_probe(_):
     conn = psycopg2.connect(
         CI_DSN, connect_timeout=5,
@@ -95,7 +106,9 @@ def run():
             fake_runtime(), preflight_fn=local_pristine_probe,
             connect_fn=local_connection,
             migrate_fn=lambda _: live._real_schema_changes(CI_DSN),
-            postcheck_fn=lambda _: live._read_only_postcheck(CI_DSN),
+            postcheck_fn=lambda _: live._read_only_postcheck(
+                CI_DSN, connect_fn=local_postcheck_connection
+            ),
         )
         if status != live.PASS:
             raise RuntimeError("FAILED_FULL_SCHEMA_BOOTSTRAP")
@@ -104,7 +117,9 @@ def run():
                 fake_runtime(), preflight_fn=local_pristine_probe,
                 connect_fn=local_connection,
                 migrate_fn=lambda _: live._real_schema_changes(CI_DSN),
-                postcheck_fn=lambda _: live._read_only_postcheck(CI_DSN),
+                postcheck_fn=lambda _: live._read_only_postcheck(
+                CI_DSN, connect_fn=local_postcheck_connection
+            ),
             )
         except PreflightDenied as exc:
             if exc.code != "NOT_PRISTINE":
