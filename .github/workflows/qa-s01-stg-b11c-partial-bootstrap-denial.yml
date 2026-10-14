@@ -1,0 +1,60 @@
+name: QA S01 STG-B11C reject partial schemas before bootstrap (CI ONLY)
+
+on:
+  pull_request:
+    branches:
+      - security/s01-stg-b11b-readonly-schema-target
+    paths:
+      - fiscal_app_export/tests/qa_s01_b11c_partial_bootstrap_denial_pg18.py
+      - fiscal_app_export/tests/test_s01_b11c_partial_bootstrap_scope.py
+      - .github/workflows/qa-s01-stg-b11c-partial-bootstrap-denial.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  failed-schema-guard:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      disposable:
+        image: postgres:18
+        env: {POSTGRES_PASSWORD: ci-only-test-password}
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version-file: fiscal_app_export/.python-version
+      - name: Install pinned Python dependencies in disposable CI
+        run: python -m pip install -r fiscal_app_export/requirements.txt
+      - name: Run 19 synthetic scope and refusal contracts
+        working-directory: fiscal_app_export
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s tests -p test_s01_b11a_restored_bootstrap_scope.py -v
+          python -m unittest discover -s tests -p test_s01_b11c_partial_bootstrap_scope.py -v
+      - name: Inject 4 unsafe schemas, prove zero bootstrap writes + advisory lock denial
+        env:
+          CI: "true"
+        working-directory: fiscal_app_export
+        run: |
+          set -euo pipefail
+          python tests/qa_s01_b11c_partial_bootstrap_denial_pg18.py
+      - name: B10C live runtime remains impossible
+        working-directory: fiscal_app_export
+        run: |
+          set -euo pipefail
+          if python private_maintenance_rehearsal.py > "$RUNNER_TEMP/b11c-denied.log" 2>&1; then
+            echo "NO-GO: CI rehearsal was executable as live bootstrap"; exit 1
+          fi
+          grep -q "RUNTIME_EXECUTION_NOT_AUTHORIZED" "$RUNNER_TEMP/b11c-denied.log"
+          echo "B11C RUNTIME NO-GO PASS; no Railway access"
