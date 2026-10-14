@@ -85,6 +85,9 @@ jobs:
           python fiscal_app_export/tests/qa_stg_b01_app_isolation.py
           python fiscal_app_export/tests/qa_stg_b04_lab_app_isolation.py
 
+      - name: S01 functional acceptance: login, synthetic FIFO/PDF, advisor CSRF, no network
+        run: python fiscal_app_export/tests/qa_s01_functional_synthetic_ci.py
+
   postgres-bootstrap:
     name: postgres-bootstrap
     runs-on: ubuntu-24.04
