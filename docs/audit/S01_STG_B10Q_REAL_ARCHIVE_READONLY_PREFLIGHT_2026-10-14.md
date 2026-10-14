@@ -35,3 +35,13 @@ Tras CI y preflight independientes de Railway, **se puede autorizar una única e
 
 ## Estado de escritura
 **NO-GO para restauración REAL**. Antes de ejecutar cualquier `pg_restore` real se requerirá commit nuevo con un punto de entrada revisado, verificación de artefacto SHA, revisión independiente de parámetros y S3, y permiso específico de una operación única sobre `Postgres-Im3h`, no sobre el origen.
+
+## Resultado real del preflight privado
+
+- CI de `preflight_archive.py` / imagen `Dockerfile.readonly-archive`: [GitHub Actions #38585932260](https://github.com/MarianoSevilla/fiscal-cripto-/actions/runs/38585932260) **SUCCESS**, suites sintéticas B10N 14/14, B10O 22/22, B10P 8/8 y B10Q 20/20, build de la imagen de solo lectura y rechazo de arranque sin identidad.
+- Commit inmutable conectado al servicio `s01-lab-restore-one-shot`: **`a76afc14392df42f951d086653e431e3836cb14c`**, configuración raíz `/infra/s01_lab_restore`, `Dockerfile.readonly-archive`, inicio `/opt/s01-preflight-venv/bin/python /app/preflight_archive.py`, restart `NEVER`.
+- Deployment Railway **`7211c2b0-48f8-4328-b5f4-3a33d7232aec`** estado **SUCCESS**.
+- Registro literal: `S01 STG-B10Q: PASS (READ ONLY; target cluster=7696517018472497211; source archive SHA256=1af6ba229c781a7cc0b357610119d546c4a47bcce5a2b19442a11501ea3afdab; pg_restore LIST checked; no SQL writes)`.
+- El archivo real se descargó por S3 GET, se compararon longitud + metadatos + SHA-256 de contenido, se comprobó formato de archivo custom con `pg_restore --list` y la huella de destino antes/después con SELECT readonly. La imagen NO contiene `restore_candidate.py` ni instrucciones de importación.
+- Este resultado es evidencia de **legibilidad e integridad del backup real desde el ejecutor privado**, y evidencia de destino PostgreSQL18.6 correcto; **no** confirma que `pg_restore --dbname` se haya ejecutado. La restauración real sigue NO-GO hasta revisión específica y autorización de escritura.
+- El commit que documenta este resultado **no se desplegará** automáticamente en el servicio; mantener la referencia al SHA ejecutable anterior.
