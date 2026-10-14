@@ -34,3 +34,17 @@ Se ejecuta una sola vez, registra exclusivamente estado PASS/NO-GO y la huella p
 6. Si PASS, retirar o inmovilizar la fuente ejecutable bajo procedimiento seguro; conservar evidencias y retornar servicio a modo inerte.
 
 En todo caso **no se modifica** `main`, otras PR, el servicio web ni PostgreSQL original.
+
+
+## Resultado real de la primera ejecución — ABORTADO SIN DB
+
+- Servicio lab maintenance configurado con `rootDirectory=/fiscal_app_export`, `startCommand=python -u private_maintenance_identity.py`, `restartPolicyType=NEVER`, `cronSchedule=null`; sin dominios públicos ni TCP proxies.
+- Fuente GitHub anclada al SHA **`c3047b3cb26ca0280c27b5ff2143f9ca47f19ee2`**, CI sintética **31/31 PASS** en run `38538814977`.
+- Primer deployment de maintenance: **`390cfb49-0901-4046-9b6c-76f6bd9dbe48`**, estado final **CRASHED** con `restart=NEVER`; único mensaje de arranque del proceso: `S01 STG-B10G: NO-GO (PUBLIC_NETWORK)`.
+- El código llama `validate_identity()` **antes de importar psycopg2/abrir conexión**. Por tanto, ese proceso fue rechazado sin consultas al clúster. **No existe aún verificación en dos orígenes de la huella.**
+- Inventario Railway posterior: mantenimiento sin dominio público, dominio custom ni TCP proxy; PostgreSQL original sigue **SUCCESS**, web lab sigue **sin fuente ni despliegue**, no hay staged changes; Railway OAuth solo expone nombres de variables y no permite determinar el marcador efectivo.
+- **Hipótesis, no verificación**: Railway puede inyectar automáticamente `PORT` al proceso, como describe su documentación de red; la guardia B10A clasifica cualquiera de `PORT`, `RAILWAY_PUBLIC_DOMAIN`, `RAILWAY_STATIC_URL`, `APP_BASE_URL` como `PUBLIC_NETWORK`. No se ha determinado cuál lo causó.
+- Una llamada previa para fijar `privateNetworkEndpoint=s01-lab-maintenance` mostró cambios durante estado APPLYING, pero el campo no apareció en el inventario final; sin reconstrucción automática ni confianza en la persistencia de esa asignación. No se ha probado todavía el valor efectivo `RAILWAY_PRIVATE_DOMAIN`.
+- **STOP**: no repetir deployment ni reiniciar el servicio; no relajar la comprobación sin una prueba que identifique el marcador sin divulgar valores. El uso posterior requiere evaluación nueva y código revisado en GitHub. No conceder DDL, restore ni webhook.
+
+Referencias: Railway lab project `5f26aa6e-2e6d-46ef-bb5f-bca4ece07d5e`; despliegue `390cfb49-0901-4046-9b6c-76f6bd9dbe48`, PR #70. La huella aportada por el propietario sigue siendo `7696213098351943739`, **no corroborada desde el ejecutor**.
