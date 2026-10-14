@@ -11,6 +11,7 @@ import sys
 from typing import Callable, Mapping
 
 from private_maintenance_preflight import (
+    FORBIDDEN_NETWORK_SETTINGS,
     PINNED_IDENTITY,
     PreflightDenied,
     check_pristine_readonly,
@@ -92,8 +93,17 @@ def main() -> None:
 
         fingerprint = probe(os.environ, connect)
     except PreflightDenied as exc:
-        print("S01 STG-B10G: NO-GO (" + exc.code + ")", file=sys.stderr,
-              flush=True)
+        if exc.code == "PUBLIC_NETWORK":
+            # Reveal only fixed allowlisted marker NAMES, never secret values.
+            markers = ",".join(
+                name for name in FORBIDDEN_NETWORK_SETTINGS
+                if (os.environ.get(name) or "").strip()
+            ) or "UNDETERMINED"
+            print("S01 STG-B10G: NO-GO (PUBLIC_NETWORK; markers="
+                  + markers + ")", file=sys.stderr, flush=True)
+        else:
+            print("S01 STG-B10G: NO-GO (" + exc.code + ")",
+                  file=sys.stderr, flush=True)
         raise SystemExit(1) from None
     except Exception:
         # Driver exceptions may include host/port/username or raw DSNs.
