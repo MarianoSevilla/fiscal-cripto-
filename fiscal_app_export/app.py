@@ -100,6 +100,16 @@ from auth import (
     require_fiscal_advisor_page,
 )
 from security_config import build_security_config
+from staging_isolation import (
+    validate_staging_isolation,
+    staging_request_denial,
+    install_staging_email_barrier,
+)
+from lab_isolation import (
+    validate_lab_isolation,
+    lab_request_denial,
+    install_lab_email_barrier,
+)
 
 app = Flask(__name__, static_folder="static")
 
@@ -117,6 +127,53 @@ _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Por defecto exige clave real y HTTPS; sólo development/testing locales explícitos
 # permiten una excepción. No altera la clave suministrada ni las firmas existentes.
 app.config.update(build_security_config(os.environ))
+
+# STG-LOCK-001: preserve preflight firewall from the dedicated staging branch.
+# Validate the Railway identity, isolated PostgreSQL hostname, and absence
+# of provider credentials BEFORE db.init_app() or any migration/financial route.
+# Deliberately no lab-mode override in deployed staging: synthetic E2E runs
+# only with FLASK_ENV=testing and an ephemeral, fixture-only CI database.
+# STG-B04/B06: resolve identities BEFORE database initialization.
+# Real lab service and private HTTP origin are pinned, but every runtime marker
+# must match; no boolean LAB_MODE bypass and no network/DB I/O in this gate.
+# The original staging firewall is not weakened by this mutually exclusive path.
+_LAB_ISOLATED = validate_lab_isolation(os.environ)
+_STAGING_ISOLATED = False if _LAB_ISOLATED else validate_staging_isolation(os.environ)
+if _LAB_ISOLATED:
+    install_lab_email_barrier(resend)
+
+    @app.before_request
+    def _lab_preflight_lockdown():
+        denial = lab_request_denial(
+            host=request.host,
+            path=request.path,
+            method=request.method,
+            origin=request.headers.get("Origin"),
+        )
+        if denial is not None:
+            status, message = denial
+            headers = {"Cache-Control": "no-store"}
+            if status == 503:
+                headers["Retry-After"] = "300"
+            return jsonify({"error": message}), status, headers
+
+if _STAGING_ISOLATED:
+    install_staging_email_barrier(resend)
+
+    @app.before_request
+    def _staging_preflight_lockdown():
+        denial = staging_request_denial(
+            host=request.host,
+            path=request.path,
+            method=request.method,
+            origin=request.headers.get("Origin"),
+        )
+        if denial is not None:
+            status, message = denial
+            headers = {"Cache-Control": "no-store"}
+            if status == 503:
+                headers["Retry-After"] = "300"
+            return jsonify({"error": message}), status, headers
 
 # ADMIN_EMAILS y FISCAL_ADVISOR_EMAILS se importan desde auth.py.
 # _is_admin / _is_fiscal_advisor son aliases de las funciones centralizadas
