@@ -11,6 +11,15 @@ La CI STG-B10I verificaba PG18, head Alembic, lista de tablas, contadores de fil
 - La verificación negativa no se considera un fallo CI: el propio test exige el rechazo para superar su control.
 - No se modifica Railway, PostgreSQL del laboratorio, web, DDL, pagos ni código servido al público. La prueba de recuperación se sigue refiriendo únicamente a datos CI.
 
+## Resultado GitHub Actions
+
+- [Run B10K #38545339101](https://github.com/MarianoSevilla/fiscal-cripto-/actions/runs/38545339101): **SUCCESS**, workflow de dos PostgreSQL18 efímeros con copia/restauración custom y prueba negativa.
+- Archivo original SHA256 `OK`.
+- `S01 B10I RESTORE PASS`: tablas, recuentos, restricciones, índices, semillas y los SHA256 de **todo el contenido serializado de cada tabla** coinciden.
+- `S01 B10K TAMPER PASS`: el cambio CI de `resources.description`, sin variar ni número de registros ni pareja `slug/title`, fue detectado por el SHA256 de las filas.
+- Código ejecutado en la CI: commit `74f67b8f381581d2f2fb0ce5a1d5cb3f50a7efeb`; la actualización posterior del documento no modifica código ejecutable.
+- Es una demostración exclusivamente **sintética**. No se ha extraído ni restaurado copia real alguna del laboratorio.
+
 ## Límites
 El SHA256 detecta discrepancias en el contenido transformado a JSONB; ello no sustituye la auditoría de todos los objetos PostgreSQL, privilegios, parámetros de servidor, ni pruebas de copia/restauración del volumen original. La huella usa representación PG18 y debe validarse de nuevo ante un cambio de major, collation, tipos o comportamiento de serialización.
 
