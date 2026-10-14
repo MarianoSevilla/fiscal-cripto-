@@ -132,7 +132,8 @@ class TestIdentity(TestCase):
 
     def test_public_network_marker_names_without_values(self):
         env = authorized_mapping()
-        env["PORT"] = "DO-NOT-LOG-SYNTHETIC-VALUE"
+        env["PORT"] = "8080"
+        env["RAILWAY_STATIC_URL"] = "DO-NOT-LOG-SYNTHETIC-VALUE"
         env["RAILWAY_PUBLIC_DOMAIN"] = "secret-fictional-domain"
         stderr = StringIO()
         with patch.dict(identity.os.environ, env, clear=True):
@@ -141,8 +142,9 @@ class TestIdentity(TestCase):
                     identity.main()
         self.assertEqual(result.exception.code, 1)
         self.assertIn("PUBLIC_NETWORK; markers=", stderr.getvalue())
-        self.assertIn("PORT", stderr.getvalue())
+        self.assertIn("RAILWAY_STATIC_URL", stderr.getvalue())
         self.assertIn("RAILWAY_PUBLIC_DOMAIN", stderr.getvalue())
+        self.assertNotIn("markers=PORT", stderr.getvalue())
         self.assertNotIn("DO-NOT-LOG-SYNTHETIC-VALUE", stderr.getvalue())
         self.assertNotIn("secret-fictional-domain", stderr.getvalue())
         self.assertNotIn("CI_ONLY_PASSWORD", stderr.getvalue())
