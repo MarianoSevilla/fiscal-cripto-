@@ -31,6 +31,41 @@ SOURCE_ADMIN_DSN = SOURCE_DSN.replace("/railway", "/postgres")
 TARGET_ADMIN_DSN = TARGET_DSN.replace("/railway", "/postgres")
 LIVE_LAB_CLUSTER = "7696213098351943739"
 
+# PostgreSQL18 pg_dump/pg_restore can reparse varchar ARRAY casts for these
+# three specifically known S01 checks. Accept only the exact two observed
+# renderings, with the exact permitted values in their original order.
+PG18_CHECK_ARRAYS = {
+    "ck_s01_checkout_status": (
+        "status", ("reserved", "creating", "ready", "uncertain", "paid", "closed"),
+    ),
+    "ck_s01_outbox_kind": (
+        "kind", ("customer_payment_confirmed", "advisor_payment_confirmed"),
+    ),
+    "ck_s01_outbox_status": (
+        "status", ("pending", "sent", "suppressed"),
+    ),
+}
+
+
+def canonical_constraint(name: str, definition: str) -> tuple[str, str]:
+    if name not in PG18_CHECK_ARRAYS:
+        return name, definition
+    column, values = PG18_CHECK_ARRAYS[name]
+    original_items = ", ".join(f"'{v}'::character varying" for v in values)
+    restored_items = ", ".join(
+        f"('{v}'::character varying)::text" for v in values
+    )
+    original = (
+        f"CHECK ((({column})::text = ANY "
+        f"((ARRAY[{original_items}])::text[])))"
+    )
+    restored = (
+        f"CHECK ((({column})::text = ANY (ARRAY[{restored_items}])))"
+    )
+    if definition not in (original, restored):
+        raise AssertionError("Unexpected value or syntax in S01 CHECK " + name)
+    return name, original
+
 
 def assert_ci_only() -> dict[str, str]:
     env = dict(os.environ)
@@ -100,7 +135,10 @@ def fingerprint(dsn: str) -> tuple:
             # Constraint names may repeat across different tables. An
             # ORDER BY conname alone leaves ties in an arbitrary heap order
             # that can change after pg_dump/pg_restore. Canonicalize tuples.
-            constraints = tuple(sorted(cur.fetchall()))
+            constraints = tuple(sorted(
+                canonical_constraint(name, definition)
+                for name, definition in cur.fetchall()
+            ))
             cur.execute(
                 "SELECT tablename, indexname, indexdef "
                 "FROM pg_catalog.pg_indexes WHERE schemaname='public' "
