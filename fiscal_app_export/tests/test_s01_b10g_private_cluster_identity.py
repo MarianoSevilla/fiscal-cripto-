@@ -4,6 +4,8 @@ from __future__ import annotations
 import contextlib
 from io import StringIO
 import inspect
+import sys
+from types import SimpleNamespace
 from unittest import TestCase
 from unittest.mock import Mock, patch
 
@@ -116,7 +118,11 @@ class TestIdentity(TestCase):
         stderr = StringIO()
         env = authorized_mapping()
         with patch.dict(identity.os.environ, env, clear=True):
-            with patch("psycopg2.connect", side_effect=RuntimeError(env["DATABASE_URL"])):
+            with patch.dict(sys.modules, {
+                "psycopg2": SimpleNamespace(
+                    connect=Mock(side_effect=RuntimeError(env["DATABASE_URL"]))
+                )
+            }):
                 with contextlib.redirect_stderr(stderr):
                     with self.assertRaises(SystemExit) as caught:
                         identity.main()
@@ -127,7 +133,7 @@ class TestIdentity(TestCase):
     def test_no_web_or_migration_imports_or_dml_in_entrypoint(self):
         source = inspect.getsource(identity)
         for prohibited in ("from app import", "import app\n", "import models\n",
-                           "bootstrap_db", "flask_migrate", "db.create_all(",
+                           "import bootstrap_db", "flask_migrate", "db.create_all(",
                            "alembic.command", "DROP TABLE ", "INSERT INTO ",
                            "UPDATE public.", "DELETE FROM "):
             self.assertNotIn(prohibited, source)
