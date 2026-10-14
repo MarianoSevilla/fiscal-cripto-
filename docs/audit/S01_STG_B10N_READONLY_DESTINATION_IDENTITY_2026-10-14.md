@@ -35,3 +35,14 @@ La imagen aislada copia **solo `probe.py`**, no contiene el `restore.py` propues
 4. Autorización **separada y específica** antes de cualquier `pg_restore` real en `Postgres-Im3h`. No se ha llevado a cabo hasta esta fase.
 
 **Prohibido:** fusionar PR, activar web, pagos, correo, migraciones o alterar base/volumen original.
+
+## Evidencia final de la prueba privada (14/10/2026)
+
+- [CI #38579144913](https://github.com/MarianoSevilla/fiscal-cripto-/actions/runs/38579144913): **SUCCESS**, 14/14 unittest, build de contenedor `postgres:18.6-bookworm` y rechazo de lanzamiento con identidad no fijada.
+- Código ejecutado inmutable: `c39e046e82ac59cfe7731fbcb6df064efe697b0d`; ejecución Railway `9ab448c9-310c-41fb-83d5-e95da06daccb`, servicio privado `s01-lab-restore-one-shot`.
+- Registro exacto: `S01 STG-B10N PROBE PASS: target PG18.6, pristine, cluster=7696517018472497211, different from original`.
+- La prueba de solo lectura del proceso privado coincide con la huella proporcionada previamente desde la consola de `Postgres-Im3h`; las seis categorías de objetos no previstos devolvieron cero.
+- Para desplegar la sonda se corrigió únicamente el comando de arranque del servicio de `/opt/venv/bin/python /app/probe.py` a `python3 /app/probe.py`, conservando `restartPolicyType=NEVER`, cron vacío, sin dominios ni proxies públicos, sin volúmenes.
+- No se ejecutó `pg_restore`, ningún comando de inicialización SQL ni aplicaciones Flask; el código conectado contiene exclusivamente `probe.py` y no incluye el restaurador de archivo.
+- La integración de código **queda en DRAFT**. El ejecutor en Railway permanece fijado al SHA anterior al commit documental; publicar una evidencia en GitHub no equivale a redeploy.
+- **NO-GO** para la restauración real, las migraciones, la fusión de PR, web, pagos y correos hasta revisar por separado y autorizar el código exacto de restauración de una sola ejecución.
