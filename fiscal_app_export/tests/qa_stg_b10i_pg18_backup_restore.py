@@ -9,6 +9,7 @@ can be provided to this script.
 """
 from __future__ import annotations
 
+import hashlib
 import os
 from pathlib import Path
 import sys
@@ -115,6 +116,7 @@ def fingerprint(dsn: str) -> tuple:
             )
             tables = [row[0] for row in cur.fetchall()]
             row_counts = []
+            content_digests = []
             for table in tables:
                 cur.execute(
                     sql.SQL("SELECT count(*) FROM public.{}").format(
@@ -122,6 +124,20 @@ def fingerprint(dsn: str) -> tuple:
                     )
                 )
                 row_counts.append((table, cur.fetchone()[0]))
+                # Synthetic CI rows only. to_jsonb returns canonical key order
+                # on PostgreSQL18, ORDER BY 1 handles non-PK and duplicates.
+                # Each row is length-delimited to avoid hash ambiguity.
+                cur.execute(
+                    sql.SQL(
+                        "SELECT to_jsonb(t)::text FROM public.{} AS t ORDER BY 1"
+                    ).format(sql.Identifier(table))
+                )
+                hasher = hashlib.sha256()
+                for (row_text,) in cur:
+                    data = row_text.encode("utf-8")
+                    hasher.update(len(data).to_bytes(8, "big"))
+                    hasher.update(data)
+                content_digests.append((table, hasher.hexdigest()))
             cur.execute(
                 "SELECT slug, title FROM public.resources ORDER BY slug"
             )
@@ -147,7 +163,7 @@ def fingerprint(dsn: str) -> tuple:
             indexes = tuple(cur.fetchall())
             return (
                 str(cluster_id), tuple(tables), tuple(row_counts),
-                resources, constraints, indexes
+                resources, constraints, indexes, tuple(content_digests)
             )
     finally:
         conn.rollback()
@@ -156,8 +172,8 @@ def fingerprint(dsn: str) -> tuple:
 
 def main() -> None:
     env = assert_ci_only()
-    if len(sys.argv) != 2 or sys.argv[1] not in ("setup", "verify"):
-        raise SystemExit("Synthetic CI mode required: setup or verify")
+    if len(sys.argv) != 2 or sys.argv[1] not in ("setup", "verify", "tamper"):
+        raise SystemExit("Synthetic CI mode required: setup, verify or tamper")
 
     if sys.argv[1] == "setup":
         create_blank_database(SOURCE_ADMIN_DSN)
@@ -174,9 +190,43 @@ def main() -> None:
 
     source = fingerprint(SOURCE_DSN)
     target = fingerprint(TARGET_DSN)
+    if sys.argv[1] == "tamper":
+        # Alter a synthetic field not covered by the old slug/title seed test,
+        # preserving row counts, tables, constraints and all other metadata.
+        if source[1:] != target[1:]:
+            raise AssertionError("Restore was not identical before tampering")
+        conn = psycopg2.connect(TARGET_DSN, connect_timeout=5)
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE public.resources "
+                    "SET description=coalesce(description, '') || ' [CI only]' "
+                    "WHERE slug='experimento-bitcoin' RETURNING id"
+                )
+                if cur.fetchone() is None:
+                    raise AssertionError("Synthetic resource missing for tamper")
+            conn.commit()
+        finally:
+            conn.close()
+        mutated = fingerprint(TARGET_DSN)
+        if source[2] != mutated[2] or source[3] != mutated[3]:
+            raise AssertionError("Negative fixture changed counts or seed title")
+        if source[6] == mutated[6]:
+            raise AssertionError("B10K row SHA256 did not detect changed content")
+        if source[1:6] != mutated[1:6]:
+            raise AssertionError("Negative fixture also changed schema metadata")
+        print(
+            "S01 B10K TAMPER PASS: identical row counts and seed title, "
+            "modified synthetic row rejected by SHA256 content digests",
+            flush=True,
+        )
+        return
     if source[0] == target[0]:
         raise AssertionError("Recovery target is not an independent cluster")
-    groups = ("tables", "row_counts", "resource_seed", "constraints", "indexes")
+    groups = (
+        "tables", "row_counts", "resource_seed", "constraints", "indexes",
+        "row_content_sha256",
+    )
     differences = [
         name for i, name in enumerate(groups, start=1)
         if source[i] != target[i]
@@ -200,8 +250,9 @@ def main() -> None:
         raise AssertionError("Restored table count unexpectedly small")
     print(
         "S01 B10I RESTORE PASS: two independent PostgreSQL18 clusters; "
-        "Alembic head, all table counts, indexes, constraints and "
-        "seeded synthetic resources match; no Railway writes",
+        "Alembic head, all table counts, indexes, constraints, "
+        "seeded resources and SHA256 for every table's row content match; "
+        "no Railway writes",
         flush=True,
     )
 
