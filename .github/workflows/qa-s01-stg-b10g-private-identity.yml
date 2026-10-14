@@ -1,0 +1,31 @@
+name: QA S01 STG-B10G isolated cluster fingerprint only
+
+on:
+  pull_request:
+    branches:
+      - audit/s01-stg-b10f-integration-inventory
+    paths:
+      - fiscal_app_export/private_maintenance_identity.py
+      - fiscal_app_export/tests/test_s01_b10g_private_cluster_identity.py
+      - .github/workflows/qa-s01-stg-b10g-private-identity.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version-file: fiscal_app_export/.python-version
+      - name: Synthetic unit contracts; no Railway, no DB, no pip
+        working-directory: fiscal_app_export
+        run: |
+          python -m unittest discover -s tests -p test_s01_private_maintenance_preflight.py -v
+          python -m unittest discover -s tests -p test_s01_b10g_private_cluster_identity.py -v
