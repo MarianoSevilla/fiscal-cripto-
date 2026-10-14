@@ -29,3 +29,13 @@
 - Railway y `main` no se alteran al crear esta PR; ninguna PR se fusiona ni se despliega web, pagos, correo, o migraciones SQL de aplicación.
 
 **NO-GO RESTAURACIÓN REAL EN B10R**: esta rama no habilita ni ejecuta la operación, únicamente deja preparado y ensayado el procedimiento.
+
+## Evidencia CI B10R final
+
+- GitHub Actions [#38607868049](https://github.com/MarianoSevilla/fiscal-cripto-/actions/runs/38607868049), estado **SUCCESS** en dos jobs, SHA funcional `8f3ffc2a7b7fc1d7f398d812009805c5ab3a2c96`.
+- **72/72 contratos** PASS: B10N 14, B10O 22, B10P 8, B10Q 20 y B10R 8.
+- Imagen bloqueada `Dockerfile.real-restore-disabled` compiló; al ejecutarse con flags de aprobación falsificados y cadena de conexión sintética, imprimió `B10R NO-LIVE PASS: final-shaped image cannot execute real restore` y salió con código de error sin revelar cadena de conexión.
+- Segundo job: dos clústeres PostgreSQL18 efímeros diferentes entre sí y de S01 lab; `pg_dump -Fc` auténtico de BD vacía; `restore_candidate.restore_once` llama a `pg_restore --list`, coloca una marca S3 simulada de intento y ejecuta realmente `pg_restore --single-transaction --exit-on-error` en el segundo clúster. Preflight/postflight SQL comprueban DB vacía y el replay resulta rechazado. Evidencia textual: `B10R CI PASS: real PG18 restore_once flow on two disposable clusters, authentic pg_dump, mock S3 marker, postflight empty, replay denied; zero Railway access.`
+- La integración sustituye la validación de variables del laboratorio por un mapa sintético local para acceder exclusivamente a contenedores Docker. Las pruebas unitarias independientes cubren los pins de proyecto/env/hostname/huella y rechazo de la fuente. No hay conexiones reales a Railway.
+- **Limitaciones:** el marcador S3 es simulado en este ensayo; B10L ya verificó que el `put_object(IfNoneMatch='*')` de objeto real puede realizarse en Railway S3, pero no se ha ensayado un marcador de intento real ni se ha permitido una escritura sobre `Postgres-Im3h`.
+- El commit que añade esta evidencia modifica solo el documento; ninguna configuración ni deployment Railway se alteró. **NO-GO restauración real** hasta nueva autorización específica.
