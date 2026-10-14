@@ -87,14 +87,21 @@ def checked_environment(env):
             raise ValueError("unapproved DSN")
     except (ValueError, TypeError):
         raise StopBackup("WRONG_DATABASE_DESTINATION") from None
-    if (
-        env.get("BACKUP_ENDPOINT") != S3_ENDPOINT
-        or env.get("BACKUP_BUCKET") != S3_BUCKET
-        or env.get("BACKUP_REGION") != S3_REGION
-        or not env.get("BACKUP_ACCESS_KEY_ID")
-        or not env.get("BACKUP_SECRET_ACCESS_KEY")
-    ):
-        raise StopBackup("WRONG_BUCKET_DESTINATION")
+    # Diagnostics expose ONLY fixed env-variable NAMES, never the values
+    # of the endpoint, bucket, key or secret. Safe even in shared logs.
+    mismatches = [
+        name for name, expected in (
+            ("BACKUP_ENDPOINT", S3_ENDPOINT),
+            ("BACKUP_BUCKET", S3_BUCKET),
+            ("BACKUP_REGION", S3_REGION),
+        ) if env.get(name) != expected
+    ]
+    mismatches.extend(
+        name for name in ("BACKUP_ACCESS_KEY_ID", "BACKUP_SECRET_ACCESS_KEY")
+        if not env.get(name)
+    )
+    if mismatches:
+        raise StopBackup("WRONG_BUCKET_DESTINATION:" + ",".join(mismatches))
     # Only PG* vars are passed to subprocesses. Never place DSNs/passwords on
     # command line or log their values. decode username/pass safely.
     return {
