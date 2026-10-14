@@ -130,6 +130,23 @@ class TestIdentity(TestCase):
         self.assertIn("PROBE_FAILED", stderr.getvalue())
         self.assertNotIn("CI_ONLY_PASSWORD", stderr.getvalue())
 
+    def test_public_network_marker_names_without_values(self):
+        env = authorized_mapping()
+        env["PORT"] = "DO-NOT-LOG-SYNTHETIC-VALUE"
+        env["RAILWAY_PUBLIC_DOMAIN"] = "secret-fictional-domain"
+        stderr = StringIO()
+        with patch.dict(identity.os.environ, env, clear=True):
+            with contextlib.redirect_stderr(stderr):
+                with self.assertRaises(SystemExit) as result:
+                    identity.main()
+        self.assertEqual(result.exception.code, 1)
+        self.assertIn("PUBLIC_NETWORK; markers=", stderr.getvalue())
+        self.assertIn("PORT", stderr.getvalue())
+        self.assertIn("RAILWAY_PUBLIC_DOMAIN", stderr.getvalue())
+        self.assertNotIn("DO-NOT-LOG-SYNTHETIC-VALUE", stderr.getvalue())
+        self.assertNotIn("secret-fictional-domain", stderr.getvalue())
+        self.assertNotIn("CI_ONLY_PASSWORD", stderr.getvalue())
+
     def test_no_web_or_migration_imports_or_dml_in_entrypoint(self):
         source = inspect.getsource(identity)
         for prohibited in ("from app import", "import app\n", "import models\n",
