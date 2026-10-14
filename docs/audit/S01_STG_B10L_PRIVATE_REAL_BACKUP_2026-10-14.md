@@ -37,3 +37,24 @@ No introducir manualmente valores de secreto ni imprimir variables. Railway OAut
 - No crear servicio PostgreSQL de restauración hasta verificar objeto real y tener plan de destino separado. Restauración real requiere un permiso/etapa independiente, verificación de huella del destino diferente y aceptación de que la BD original no cambia.
 
 **STOP / NO-GO:** ningún comando `pg_restore`, `alembic upgrade`, `db.create_all`, SQL DML/DDL, `DROP`, copia a GitHub, deploy web o proveedores externos. No se autorizan cambios en la base original más allá de SELECT/pg_dump ni modificaciones a `main`.
+
+## Resultado real y evidencia validada
+
+### Incidencias NO-GO y resolución controlada
+- Primer deployment reader `4a04aa52-b948-45ac-bd97-096e92fb2b5c`: **`NO-GO (WRONG_BUCKET_DESTINATION)`**, antes de conectar a PostgreSQL. CI inicial 17/17 + Docker image **SUCCESS**.
+- Diagnóstico no sensible en código: segunda ejecución `766562b5-70cc-4bea-9e29-bec2d4f9d1ae` detectó `NO-GO (WRONG_BUCKET_DESTINATION:BACKUP_REGION)`. El código no imprimió valores del bucket ni claves.
+- La región física del bucket Railway es **`ams`**, mientras la API S3 anuncia región **`auto`**. Solo se corrigió la variable `BACKUP_REGION=auto` del reader; no se cambiaron claves, DSN, servicio Postgres ni destino S3. Actualización `skipDeploys=true`.
+- CI corregida [#38547807724](https://github.com/MarianoSevilla/fiscal-cripto-/actions/runs/38547807724): **SUCCESS**, 17/17 contratos, build Docker PG18 y fail-closed. Ejecutado el commit inmutable `1aff998a1cd446ad591492800c534912d4d70a9b` sin código de DDL.
+
+### Evidencia de backup REAL en bucket privado
+- Tercer deployment (redeploy mismo build con región API correcta): `a4dffe40-a1ae-4534-a788-989a457733c2`.
+- Log exacto: `S01 STG-B10L: PASS (private lab backup, remote SHA256=1af6ba229c781a7cc0b357610119d546c4a47bcce5a2b19442a11501ea3afdab, source cluster=7696213098351943739, source pristine)`.
+- El ejecutor verificó identidad del clúster, PostgreSQL18 y catálogo vacío ANTES y DESPUÉS del `pg_dump`; subió el objeto al bucket privado con `IfNoneMatch=*` y **comprobó que los bytes descargados del bucket dan el mismo SHA-256**.
+- Ubicación lógica interna (NO URL pública): bucket `s01-lab-recovery-20261014` / objeto `s01-lab/pg18/prebootstrap/cluster-7696213098351943739.pgcustom`.
+- Hash SHA256 **`1af6ba229c781a7cc0b357610119d546c4a47bcce5a2b19442a11501ea3afdab`**.
+- Railway inspeccionado tras éxito: el Postgres original conserva deployment `cf076b94-1f68-4d31-b143-3277d40ef188`, web lab sin deployment, backup reader `restartPolicyType=NEVER` y **0 réplicas en ejecución**, sin dominios públicos o TCP proxies, 0 cambios pendientes. `main` no se modificó.
+
+### Próxima puerta y estado
+**Backup REAL capturado y verificado por descarga/hash, pero RESTAURACIÓN REAL PENDIENTE.** El bucket S3 no contiene una validación de `pg_restore` real: ello exige otro clúster PostgreSQL 18 y volumen NUEVOS, sin acceso desde la web, con identidad/sello distintos y comprobación de esquema vacío restaurado. **No usar botón Restore del volumen original, ni `pg_restore` hacia el origen.**
+
+La PR queda **DRAFT** y este texto es evidencia; no autoriza ejecución de DDL, fusión a main, despliegue web ni pagos.
