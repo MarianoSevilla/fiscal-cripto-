@@ -51,3 +51,12 @@ La aprobación nunca vendrá dada por el CI verde o por fusionar código. Una fa
 ## 5. Criterio de salida
 
 La fase queda **PREPARADA** cuando GitHub CI del commit de la PR marque éxito y Railway continúe ejecutando solo la sonda de lectura con 0 procesos activos. Este resultado no cambia el estado **NO-GO PARA RESTAURACIÓN REAL**.
+
+## 6. Resultado real de la CI sintética B10P
+
+- [GitHub Actions #38584050709](https://github.com/MarianoSevilla/fiscal-cripto-/actions/runs/38584050709): **SUCCESS**; código funcional ensayado en `49ad05d989410206d9506a655e4ea8a8e6412c84`.
+- **44 pruebas de contrato**: 14 de la sonda B10N, 22 de `restore_candidate` B10O y 8 del bloqueador `release_gate` B10P, todas PASS.
+- La CI construyó la imagen activa READ ONLY y comprobó que no contiene `restore_candidate.py` ni `release_gate.py`.
+- La CI construyó **otra** imagen candidata con esos archivos pero sin permiso para ejecutarlos; su arranque recibió `RESTORE_ALLOWED=true`, `B10P_ALLOW_REAL=true` y una identidad Railway falsa, y retornó obligatoriamente `NO-GO (REAL_RESTORE_NOT_AUTHORIZED)`.
+- Este resultado prueba la denegación de la imagen candidata, no una restauración real ni una autorización de DDL. No se conectaron secretos ni servicios Railway al workflow.
+- El commit que añade este resultado es **solo documentación**. La imagen candidata no se desplegó.
