@@ -172,11 +172,13 @@ def exercise_real_pg(root: Path, socket_dir: Path, original_env: dict[str, str])
     app_path = Path(__file__).resolve().parent
     sys.path.insert(0, str(app_path))
     sys.path.insert(0, str(app_path / "tests"))
+    print('S01 QA PHASE: BEFORE_APP_IMPORT', flush=True)
     from flask_migrate import stamp, upgrade
     from app import app, db, limiter
     from models import User, FifoReport, FiscalAdvisoryRequest, AdvisoryInternalNote
     from qa_s01_functional_synthetic_ci import BITVAVO_CSV
     from lab_isolation import LAB_IDENTITY, lab_request_denial
+    print('S01 QA PHASE: APP_IMPORT_COMPLETE', flush=True)
 
     assert app.config["RUNTIME_MODE"] == "testing"
     assert app.config["SQLALCHEMY_DATABASE_URI"].startswith(
@@ -189,9 +191,12 @@ def exercise_real_pg(root: Path, socket_dir: Path, original_env: dict[str, str])
                       SESSION_COOKIE_SECURE=False)
     limiter.enabled = False
     with app.app_context():
+        print('S01 QA PHASE: BEFORE_DB_CREATE_ALL', flush=True)
         db.create_all()
+        print('S01 QA PHASE: DB_CREATE_ALL_COMPLETE', flush=True)
         directory = str(app_path / "migrations")
         stamp(directory=directory, revision=MIGRATION_BASE)
+        print('S01 QA PHASE: ALEMBIC_STAMP_COMPLETE', flush=True)
         upgrade(directory=directory, revision=MIGRATION_HEAD)
         print("S01 QA PHASE: SCHEMA_UPGRADED", flush=True)
         from sqlalchemy import text
@@ -314,9 +319,12 @@ def main() -> None:
     try:
         with ephemeral_postgresql() as (root, sockdir):
             exercise_real_pg(root, sockdir, original)
-    except Exception:
-        # Never print exception payloads: they may include DB URI, CSV or tokens.
-        print("S01 EPHEMERAL PG18: NO-GO (REDACTED; ONE-SHOT; NO RETRY)", flush=True)
+    except Exception as exc:
+        # Only exception class is safe, never message/SQL/URI/CSV/traceback.
+        name = type(exc).__name__
+        if not (name.isidentifier() and len(name) < 72):
+            name = "UNKNOWN"
+        print("S01 EPHEMERAL PG18: NO-GO (CLASS=" + name + "; REDACTED; ONE-SHOT; NO RETRY)", flush=True)
         raise SystemExit(1) from None
     print("S01 EPHEMERAL PG18: PASS (isolated localhost PG18; real Flask FIFO/PDF/"
           "advisor; no providers; transient database and PDF files deleted)",
