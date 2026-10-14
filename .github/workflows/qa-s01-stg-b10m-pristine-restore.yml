@@ -1,0 +1,114 @@
+name: QA S01 STG-B10M pristine PG18 restore drill
+
+on:
+  pull_request:
+    branches:
+      - security/s01-stg-b10l-private-backup-export
+    paths:
+      - .github/workflows/qa-s01-stg-b10m-pristine-restore.yml
+      - docs/audit/S01_STG_B10M_PRISTINE_RESTORE_PRECHECK_2026-10-14.md
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pristine-pg18-drill:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      source:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: ci-only-test-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+      destination:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: ci-only-test-password
+        ports: ["55433:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Create two isolated PG18 scratch databases, assert independent clusters
+        env:
+          PGPASSWORD: ci-only-test-password
+        run: |
+          set -euo pipefail
+          cli() {
+            docker run --rm --network host -e PGPASSWORD postgres:18 "$@"
+          }
+          for port in 5432 55433; do
+            cli psql -h 127.0.0.1 -p "$port" -U postgres -d postgres \
+              -v ON_ERROR_STOP=1 -c 'CREATE DATABASE railway;'
+          done
+          src="$(cli psql -h 127.0.0.1 -p 5432 -U postgres -d railway \
+            -At -c "SELECT (pg_control_system()).system_identifier;")"
+          dst="$(cli psql -h 127.0.0.1 -p 55433 -U postgres -d railway \
+            -At -c "SELECT (pg_control_system()).system_identifier;")"
+          test -n "$src" && test -n "$dst"
+          test "$src" != "$dst"
+          test "$src" != "7696213098351943739"
+          test "$dst" != "7696213098351943739"
+          echo "B10M PG18: independent synthetic cluster identities PASS"
+      - name: Dump truly pristine empty PG18 source (no fabricated schema)
+        env:
+          PGPASSWORD: ci-only-test-password
+        run: |
+          set -euo pipefail
+          docker run --rm --network host -e PGPASSWORD \
+            -v "${{ runner.temp }}:/snapshot" postgres:18 \
+            pg_dump -h 127.0.0.1 -p 5432 -U postgres -d railway \
+              -Fc --no-owner --no-acl \
+              -f /snapshot/pristine-pg18-ci.dump
+          test -s "${{ runner.temp }}/pristine-pg18-ci.dump"
+          (cd "${{ runner.temp }}" && sha256sum pristine-pg18-ci.dump > pristine-ci.sha256)
+          (cd "${{ runner.temp }}" && sha256sum -c pristine-ci.sha256)
+      - name: Restore pristine archive to different PG18 cluster
+        env:
+          PGPASSWORD: ci-only-test-password
+        run: |
+          set -euo pipefail
+          docker run --rm --network host -e PGPASSWORD \
+            -v "${{ runner.temp }}:/snapshot:ro" postgres:18 \
+            pg_restore -h 127.0.0.1 -p 55433 -U postgres -d railway \
+              --exit-on-error --no-owner --no-acl \
+              /snapshot/pristine-pg18-ci.dump
+      - name: Verify both schemas remain pristine and contain zero user data
+        env:
+          PGPASSWORD: ci-only-test-password
+        run: |
+          set -euo pipefail
+          cli() {
+            docker run --rm --network host -e PGPASSWORD postgres:18 "$@"
+          }
+          for port in 5432 55433; do
+            values="$(cli psql -h 127.0.0.1 -p "$port" -U postgres -d railway \
+              -At -v ON_ERROR_STOP=1 -c "
+              SELECT current_database(), current_setting('server_version_num'),
+                (SELECT count(*) FROM pg_class c JOIN pg_namespace n
+                 ON n.oid=c.relnamespace WHERE n.nspname='public'),
+                (SELECT count(*) FROM pg_proc p JOIN pg_namespace n
+                 ON n.oid=p.pronamespace WHERE n.nspname='public'),
+                (SELECT count(*) FROM pg_type t JOIN pg_namespace n
+                 ON n.oid=t.typnamespace WHERE n.nspname='public'),
+                (SELECT count(*) FROM pg_extension WHERE extname <> 'plpgsql'),
+                (SELECT count(*) FROM pg_event_trigger);
+              ")"
+            case "$values" in
+              railway\|18*\|0\|0\|0\|0\|0) ;;
+              *) echo "NO-GO: pristine PG18 catalog changed"; exit 1;;
+            esac
+          done
+          echo "B10M PASS: actual pg_dump of empty PG18 DB restores to a different cluster and remains pristine"
