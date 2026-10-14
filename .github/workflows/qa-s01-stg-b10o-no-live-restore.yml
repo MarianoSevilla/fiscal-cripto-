@@ -79,7 +79,7 @@ jobs:
               -v ON_ERROR_STOP=1 -c 'CREATE DATABASE railway;'
           done
           cli psql -h 127.0.0.1 -p 5432 -U postgres -d railway \
-            -v ON_ERROR_STOP=1 -c 'CREATE TABLE public.only_in_ci (n integer PRIMARY KEY); INSERT INTO public.only_in_ci VALUES (123);'
+            -v ON_ERROR_STOP=1 -c 'CREATE TABLE public.a_rollback_probe (n integer PRIMARY KEY); INSERT INTO public.a_rollback_probe VALUES (1); CREATE TABLE public.only_in_ci (n integer PRIMARY KEY); INSERT INTO public.only_in_ci VALUES (123); CREATE TABLE public.z_conflict_probe (n integer PRIMARY KEY); INSERT INTO public.z_conflict_probe VALUES (9);'
           docker run --rm --network host -e PGPASSWORD -v "${{ runner.temp }}:/backup" postgres:18 \
             pg_dump -h 127.0.0.1 -p 5432 -U postgres -d railway -Fc \
               --no-owner --no-acl -f /backup/ci-only.pgcustom
@@ -90,3 +90,31 @@ jobs:
             -v ON_ERROR_STOP=1 -c 'SELECT n FROM public.only_in_ci;')"
           test "$value" = 123
           echo "B10O PG18 PASS: single transaction restore to a disposable independent PostgreSQL18 DB"
+      - name: Synthetic mid-restore conflict must rollback EVERY earlier DDL
+        env:
+          PGPASSWORD: ci-only-test-password
+        run: |
+          set -euo pipefail
+          cli() { docker run --rm --network host -e PGPASSWORD postgres:18 "$@"; }
+          cli psql -h 127.0.0.1 -p 55433 -U postgres -d postgres \
+            -v ON_ERROR_STOP=1 -c 'CREATE DATABASE rollback_ci;'
+          cli psql -h 127.0.0.1 -p 55433 -U postgres -d rollback_ci \
+            -v ON_ERROR_STOP=1 -c 'CREATE TABLE public.z_conflict_probe (n integer PRIMARY KEY);'
+          # A and only_in_ci will be created, then z_conflict_probe must fail.
+          # Atomic restore must rollback A and only_in_ci completely.
+          if docker run --rm --network host -e PGPASSWORD \
+            -v "${{ runner.temp }}:/backup:ro" postgres:18 \
+            pg_restore -h 127.0.0.1 -p 55433 -U postgres -d rollback_ci \
+              --single-transaction --exit-on-error --no-owner --no-acl \
+              /backup/ci-only.pgcustom > "${{ runner.temp }}/expected-failure.txt" 2>&1; then
+            echo "NO-GO: synthetic mid-restore constraint unexpectedly succeeded"; exit 1
+          fi
+          result="$(cli psql -h 127.0.0.1 -p 55433 -U postgres -d rollback_ci -At \
+            -v ON_ERROR_STOP=1 -c "SELECT
+              (to_regclass('public.a_rollback_probe') IS NULL),
+              (to_regclass('public.only_in_ci') IS NULL),
+              (to_regclass('public.z_conflict_probe') IS NOT NULL);")"
+          test "$result" = "t|t|t" || {
+            echo "NO-GO: interrupted transaction left behind user DDL"; exit 1;
+          }
+          echo "B10O ROLLBACK PASS: forced late conflict rolled back preceding tables, target fixture preserved"
