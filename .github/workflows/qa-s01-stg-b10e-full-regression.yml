@@ -1,0 +1,191 @@
+name: QA S01 STG-B10E - full regression on draft lab stack
+
+on:
+  pull_request:
+    branches:
+      - security/s01-stg-b10d-adversarial-recovery
+
+permissions:
+  contents: read
+
+concurrency:
+  group: required-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-tests:
+    name: backend-tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      FLASK_ENV: testing
+      PYTHONDONTWRITEBYTECODE: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    steps:
+      - name: Checkout audited commit without persisted token
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5 (node24)
+        with:
+          persist-credentials: false
+
+      - name: Use project Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6 (node24)
+        with:
+          python-version-file: fiscal_app_export/.python-version
+
+      - name: Install app and test requirements
+        run: |
+          python -m pip install -r fiscal_app_export/requirements.txt "pytest==9.0.2" "pdfplumber==0.11.7"
+          python -m pip check
+
+      - name: Verify direct and transitive runtime pins
+        run: |
+          python - <<'PY'
+          from importlib.metadata import version
+          from pathlib import Path
+          from packaging.requirements import Requirement
+          from packaging.utils import canonicalize_name
+          import sys
+
+          assert sys.version_info[:2] == (3, 13), sys.version
+          root = Path("fiscal_app_export")
+          direct = [
+              canonicalize_name(line.strip())
+              for line in (root / "requirements.in").read_text().splitlines()
+              if line.strip() and not line.lstrip().startswith("#")
+          ]
+          pins = {}
+          for line in (root / "requirements.txt").read_text().splitlines():
+              line = line.strip()
+              if not line or line.startswith("#"):
+                  continue
+              requirement = Requirement(line)
+              key = canonicalize_name(requirement.name)
+              assert key not in pins, ("duplicate package", key)
+              assert len(requirement.specifier) == 1, ("unlocked specifier", line)
+              spec = next(iter(requirement.specifier))
+              assert spec.operator == "==" and not spec.version.endswith(".*"), ("unlocked requirement", line)
+              assert not requirement.marker and not requirement.extras and not requirement.url, ("unexpected requirement", line)
+              pins[key] = spec.version
+              assert version(requirement.name) == spec.version, ("pin drift", key, spec.version, version(requirement.name))
+          assert len(direct) == 20, ("direct manifest drift", len(direct))
+          assert len(pins) == 57, ("lock manifest drift", len(pins))
+          assert set(direct).issubset(pins), ("missing direct deps", set(direct) - set(pins))
+          print(f"LOCK_VERIFIED: {len(direct)} direct / {len(pins)} pinned runtime dependencies")
+          PY
+
+      - name: Full Python regression
+        run: python -m pytest -q -rs --import-mode=importlib --disable-warnings --maxfail=1 fiscal_app_export/tests tests
+
+      - name: STG-B01 real Flask firewall and CI-only synthetic lab
+        run: python fiscal_app_export/tests/qa_stg_b01_app_isolation.py
+
+      - name: STG-B04 isolated Railway lab guard with fake identity and no network
+        run: python fiscal_app_export/tests/qa_stg_b04_lab_app_isolation.py
+
+  postgres-bootstrap:
+    name: postgres-bootstrap
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      FLASK_ENV: testing
+      PYTHONDONTWRITEBYTECODE: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: ci-only-test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    steps:
+      - name: Checkout audited commit without persisted token
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5 (node24)
+        with:
+          persist-credentials: false
+
+      - name: Use project Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6 (node24)
+        with:
+          python-version-file: fiscal_app_export/.python-version
+
+      - name: Install app and isolated PostgreSQL test dependencies
+        run: |
+          python -m pip install -r fiscal_app_export/requirements.txt "pytest==9.0.2" "pdfplumber==0.11.7"
+          python -m pip check
+
+      - name: Exercise PostgreSQL 18 startup and defensive Alembic bootstrap
+        run: |
+          python fiscal_app_export/tests/qa_db_bootstrap_postgres.py
+          python fiscal_app_export/tests/qa_advisory_prefreeze_postgres.py
+
+      - name: S01 signed Stripe webhook races against isolated PostgreSQL 18
+        run: python fiscal_app_export/tests/qa_s01_stripe_pg18_concurrency.py
+
+      - name: S01 quote reissue and Checkout reservation row-lock race on PostgreSQL 18
+        run: python fiscal_app_export/tests/qa_s01_quote_reservation_pg18.py
+
+      - name: S01 legacy PayPal evidence and linear Alembic history gate
+        run: python fiscal_app_export/tests/qa_s01_paypal_retirement_pg18.py
+
+      - name: G04 six-case legacy fingerprint migration on isolated PG18
+        run: python fiscal_app_export/tests/qa_s01_g04_six_legacy_pg18.py
+
+      - name: G04-R02 safe recovery startup and frozen HTTP on isolated PG18
+        run: python fiscal_app_export/tests/qa_s01_recovery_gate_pg18.py
+
+      - name: C2-R01 row lock and partial financial evidence on isolated PG18
+        run: python fiscal_app_export/tests/qa_s01_c2_management_pg18.py
+
+  browser-navigation:
+    name: browser-navigation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      FLASK_ENV: testing
+      PYTHONDONTWRITEBYTECODE: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    steps:
+      - name: Checkout audited commit without persisted token
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5 (node24)
+        with:
+          persist-credentials: false
+
+      - name: Use project Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6 (node24)
+        with:
+          python-version-file: fiscal_app_export/.python-version
+
+      - name: Install app, browser and test dependencies
+        run: |
+          python -m pip install -r fiscal_app_export/requirements.txt "playwright==1.57.0"
+          python -m playwright install --with-deps chromium
+          python -m pip check
+
+      - name: Navigation against real browser and in-repo static files
+        run: python fiscal_app_export/tests/qa_responsive_nav.py
+
+      - name: Responsive Home viewport geometry
+        run: python fiscal_app_export/tests/qa_responsive_layout.py
+
+      - name: Flask navigation and access checks with synthetic SQLite data
+        run: python fiscal_app_export/tests/qa_flask_navigation.py
+
+      - name: Advisory prefreeze mobile and desktop without provider calls
+        run: python fiscal_app_export/tests/qa_advisory_prefreeze_browser.py
+
+      - name: C2-R02 real Flask and Chromium advisory intake/management E2E
+        run: python fiscal_app_export/tests/qa_s01_c2_r02_browser.py
+
+      - name: Keep non-sensitive responsive screenshots for review
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6 (node24)
+        with:
+          name: required-ci-responsive-screenshots
+          path: qa-artifacts/home_*.png
+          retention-days: 7
+          if-no-files-found: ignore
