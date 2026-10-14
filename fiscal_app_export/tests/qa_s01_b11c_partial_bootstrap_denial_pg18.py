@@ -53,12 +53,15 @@ FIXTURES = (
 
 
 def query(dsn: str, sql: str):
-    with psycopg2.connect(dsn, connect_timeout=5) as conn:
+    conn = psycopg2.connect(dsn, connect_timeout=5)
+    try:
         with conn.cursor() as cursor:
             cursor.execute(sql)
-            if cursor.description:
-                return cursor.fetchone()[0]
-    return None
+            result = cursor.fetchone()[0] if cursor.description else None
+        conn.commit()
+        return result
+    finally:
+        conn.close()
 
 
 def require_disposable_target():
