@@ -16,6 +16,7 @@ import psycopg2
 
 import schema_preflight as pg
 import schema_bootstrap_one_shot as live
+import schema_postcheck_readonly as parked
 from private_maintenance_preflight import PreflightDenied, check_pristine_readonly
 from private_maintenance_rehearsal import CI_DSN
 from qa_s01_b11a_restored_bootstrap_pg18 import (
@@ -112,6 +113,27 @@ def run():
         )
         if status != live.PASS:
             raise RuntimeError("FAILED_FULL_SCHEMA_BOOTSTRAP")
+
+        # Validate the ACTUAL SQL of the independent readonly parking image
+        # against the populated CI schema. B11B's pristine check is no longer
+        # appropriate once Alembic and the application tables exist.
+        post_conn = psycopg2.connect(
+            CI_DSN, connect_timeout=5,
+            options="-c default_transaction_read_only=on",
+        )
+        try:
+            with post_conn.cursor() as cur:
+                cur.execute(parked.SQL)
+                values = cur.fetchone()
+            post_conn.rollback()
+            if parked.validate_output(
+                "|".join(str(value) for value in values) + "\n"
+            ) != cluster:
+                raise RuntimeError("READONLY_PARKING_QUERY_INVALID")
+        finally:
+            post_conn.close()
+        print("S01 FINAL CI READONLY POSTCHECK PASS: verified live CI schema and Alembic head")
+
         try:
             live.bootstrap_once(
                 fake_runtime(), preflight_fn=local_pristine_probe,
