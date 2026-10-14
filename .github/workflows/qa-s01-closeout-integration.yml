@@ -85,8 +85,6 @@ jobs:
           python fiscal_app_export/tests/qa_stg_b01_app_isolation.py
           python fiscal_app_export/tests/qa_stg_b04_lab_app_isolation.py
 
-      - name: "S01 functional acceptance - login, synthetic FIFO/PDF, advisor CSRF, no network"
-        run: python fiscal_app_export/tests/qa_s01_functional_synthetic_ci.py
 
   postgres-bootstrap:
     name: postgres-bootstrap
@@ -180,6 +178,9 @@ jobs:
 
       - name: C2-R02 real Flask and Chromium advisory intake/management E2E
         run: python fiscal_app_export/tests/qa_s01_c2_r02_browser.py
+
+      - name: S01 functional synthetic smoke - login FIFO PDF advisor and no network
+        run: python fiscal_app_export/tests/qa_s01_functional_synthetic_ci.py
 
       - name: Keep non-sensitive responsive screenshots for review
         if: always()
