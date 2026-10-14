@@ -144,9 +144,19 @@ def main() -> None:
         if source[i] != target[i]
     ]
     if differences:
-        # Classification only: never expose even synthetic row contents.
+        diagnostic = ""
+        if differences == ["constraints"]:
+            # These are DB structure definitions from disposable CI fixtures,
+            # not rows; show the differing named constraints for diagnosis.
+            src = set(source[4])
+            dst = set(target[4])
+            diagnostic = (
+                "; source_only=" + repr(sorted(src - dst)[:5])
+                + "; target_only=" + repr(sorted(dst - src)[:5])
+            )
         raise AssertionError(
             "Logical restore mismatch categories: " + ",".join(differences)
+            + diagnostic
         )
     if len(source[1]) < 10:
         raise AssertionError("Restored table count unexpectedly small")
