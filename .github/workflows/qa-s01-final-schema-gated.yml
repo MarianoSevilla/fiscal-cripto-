@@ -11,6 +11,9 @@ on:
       - fiscal_app_export/requirements.schema-bootstrap.txt
       - fiscal_app_export/tests/test_s01_final_schema_bootstrap_gate.py
       - fiscal_app_export/tests/qa_s01_final_schema_one_shot_pg18.py
+      - fiscal_app_export/schema_postcheck_readonly.py
+      - fiscal_app_export/Dockerfile.schema-postcheck-readonly
+      - fiscal_app_export/tests/test_s01_schema_postcheck_readonly.py
       - .github/workflows/qa-s01-final-schema-gated.yml
   workflow_dispatch:
 
@@ -32,7 +35,10 @@ jobs:
         run: python -m pip install -r fiscal_app_export/requirements.schema-bootstrap.txt
       - name: Verify 13 new fail-closed contracts and exact B11B probe copy
         working-directory: fiscal_app_export
-        run: python -m unittest discover -s tests -p test_s01_final_schema_bootstrap_gate.py -v
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s tests -p test_s01_final_schema_bootstrap_gate.py -v
+          python -m unittest discover -s tests -p test_s01_schema_postcheck_readonly.py -v
       - name: Build NONDEPLOYED one-shot PG18 image, no app or payments
         run: |
           set -euo pipefail
@@ -49,6 +55,11 @@ jobs:
             echo "NO-GO: DSN exposed"; exit 1
           fi
           echo "S01 SCHEMA IMAGE PASS: fail-closed, no web or provider clients"
+          docker build --pull -f fiscal_app_export/Dockerfile.schema-postcheck-readonly \
+            -t s01-schema-park-readonly:ci fiscal_app_export
+          docker run --rm --entrypoint /bin/sh s01-schema-park-readonly:ci \
+            -c 'test -e /app/schema_postcheck_readonly.py && test ! -e /app/schema_bootstrap_one_shot.py && test ! -e /app/models.py && test ! -d /app/migrations'
+          echo "S01 POSTBOOTSTRAP IMAGE PASS: independent readonly-only parking image"
 
   actual-disposable-pg18:
     runs-on: ubuntu-24.04
