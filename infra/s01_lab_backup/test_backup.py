@@ -88,11 +88,19 @@ class BackupGuard(unittest.TestCase):
             with self.subTest(suffix=suffix):
                 self.reject({"DATABASE_URL": url}, "WRONG_DATABASE_DESTINATION")
 
-    def test_bucket_endpoint_name_region_and_keys_pinned(self):
+    def test_bucket_endpoint_name_region_and_keys_pinned_without_value_leak(self):
         for key in ("BACKUP_ENDPOINT", "BACKUP_BUCKET", "BACKUP_REGION",
                     "BACKUP_ACCESS_KEY_ID", "BACKUP_SECRET_ACCESS_KEY"):
             with self.subTest(key=key):
-                self.reject({key: ""}, "WRONG_BUCKET_DESTINATION")
+                env = fake_env()
+                env[key] = "" if key.endswith("KEY") else "secret-fake-value"
+                with self.assertRaises(b.StopBackup) as caught:
+                    b.checked_environment(env)
+                self.assertEqual(
+                    caught.exception.reason, "WRONG_BUCKET_DESTINATION:" + key,
+                )
+                self.assertNotIn("secret-fake-value", caught.exception.reason)
+                self.assertNotIn("SYNTHETIC-SECRET-VALUE", caught.exception.reason)
 
     def test_pg_cli_allowlist(self):
         with self.assertRaises(b.StopBackup) as caught:
