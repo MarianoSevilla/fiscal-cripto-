@@ -83,7 +83,7 @@ def restore_cli(args, **kwargs):
                   "PGPASSWORD", "PGOPTIONS", "PGSSLMODE") for v in ("-e", name)]
     command += ["-v", str(f.parent) + ":/archive:ro",
                 "postgres:18", *args[:-1], "/archive/" + f.name]
-    return subprocess.run(command, env=vars_, **kwargs)
+    return subprocess.run(command, env=vars_, text=kwargs["text"], capture_output=kwargs["capture_output"], check=kwargs["check"], timeout=kwargs["timeout"])
 
 def main():
     if (os.getenv("GITHUB_ACTIONS") != "true" or os.getenv("CI") != "true"
