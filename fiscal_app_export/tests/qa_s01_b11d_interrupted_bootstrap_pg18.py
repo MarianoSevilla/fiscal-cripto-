@@ -1,7 +1,7 @@
 """STG-B11D — test interrupted S01 bootstrap on disposable PG18 only.
 
 Every GitHub Actions matrix job gets its OWN fresh PostgreSQL18 container.
-No DROP DATABASE, rollback repair, stage promotion or real Railway access.
+No database destruction, automatic repair, deployment or real Railway access.
 The same B10C rehearse_once() writes to a fixed local CI database, then
 a deliberately injected failure leaves it dirty for second-run rejection.
 """
