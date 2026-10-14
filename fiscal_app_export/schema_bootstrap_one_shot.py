@@ -75,11 +75,13 @@ def _real_schema_changes(dsn: str):
         upgrade(directory=str(rehearsal.MIGRATION_DIRECTORY), revision=HEAD)
 
 
-def _read_only_postcheck(dsn: str):
+def _read_only_postcheck(dsn: str, *, connect_fn=None):
     import psycopg2
     import private_maintenance_rehearsal as rehearsal
 
-    conn = psycopg2.connect(
+    if connect_fn is None:
+        connect_fn = psycopg2.connect
+    conn = connect_fn(
         dsn, connect_timeout=5, sslmode="require",
         options="-c default_transaction_read_only=on -c statement_timeout=15000",
     )
