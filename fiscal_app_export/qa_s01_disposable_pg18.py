@@ -129,6 +129,7 @@ def ephemeral_postgresql():
                         raise QARefused("POSTGRES_NOT_UNIX_ONLY")
             finally:
                 conn.close()
+            print("S01 QA PHASE: LOCAL_PG18_UNIX_READY", flush=True)
             yield root, sockdir
         finally:
             if started:
@@ -192,6 +193,7 @@ def exercise_real_pg(root: Path, socket_dir: Path, original_env: dict[str, str])
         directory = str(app_path / "migrations")
         stamp(directory=directory, revision=MIGRATION_BASE)
         upgrade(directory=directory, revision=MIGRATION_HEAD)
+        print("S01 QA PHASE: SCHEMA_UPGRADED", flush=True)
         from sqlalchemy import text
         with db.engine.connect() as conn:
             assert conn.dialect.name == "postgresql"
@@ -239,6 +241,7 @@ def exercise_real_pg(root: Path, socket_dir: Path, original_env: dict[str, str])
             "email": "usuario@example.invalid", "password": "not-the-password",
         }).status_code == 401
         client = _login(app, "usuario@example.invalid")
+        print("S01 QA PHASE: AUTH_READY", flush=True)
         assert client.get("/dashboard").status_code == 200
         assert client.get("/api/admin/asesoramiento/solicitudes").status_code in (401, 403)
 
@@ -258,6 +261,7 @@ def exercise_real_pg(root: Path, socket_dir: Path, original_env: dict[str, str])
         pdf = client.get("/api/descargar/" + token)
         assert pdf.status_code == 200 and pdf.data.startswith(b"%PDF")
         assert client.get("/api/descargar/" + token).status_code == 403
+        print("S01 QA PHASE: FIFO_AND_PDF_READY", flush=True)
 
         items = advisor.get("/api/admin/asesoramiento/solicitudes")
         assert items.status_code == 200
@@ -290,6 +294,7 @@ def exercise_real_pg(root: Path, socket_dir: Path, original_env: dict[str, str])
             assert obj.status == "under_review" and obj.quoted_amount is None
             assert obj.amount_paid is None and obj.paypal_capture_id is None
             assert AdvisoryInternalNote.query.filter_by(request_id=case_id).count() == 1
+        print("S01 QA PHASE: ADVISORY_READY", flush=True)
         requests.assert_not_called()
         resend.assert_not_called()
 

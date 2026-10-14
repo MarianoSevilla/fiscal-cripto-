@@ -142,6 +142,29 @@ jobs:
       - name: C2-R01 row lock and partial financial evidence on isolated PG18
         run: python fiscal_app_export/tests/qa_s01_c2_management_pg18.py
 
+
+  disposable-container-check:
+    name: disposable-container-check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout audited candidate
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Build disposable PostgreSQL 18 one-shot image
+        run: docker build --file fiscal_app_export/Dockerfile.s01-disposable-pg18 --tag s01-disposable-test:local fiscal_app_export
+      - name: Exercise exact image without network or persistent volumes
+        run: |
+          docker run --rm --network none \
+            --tmpfs /tmp:rw,nosuid,nodev,size=768m,mode=1777 \
+            --env RAILWAY_PROJECT_ID=5f26aa6e-2e6d-46ef-bb5f-bca4ece07d5e \
+            --env RAILWAY_ENVIRONMENT_ID=3f9758ef-4e26-4e8d-9dd4-7b9286d81ea8 \
+            --env RAILWAY_ENVIRONMENT_NAME=lab \
+            --env RAILWAY_SERVICE_ID=47fa01c4-777e-4d7f-87b2-5b698341ff93 \
+            --env S01_QA_DISPOSABLE_APPROVAL=S01-QA-EPHEMERAL-ONLY:47fa01c4-777e-4d7f-87b2-5b698341ff93 \
+            s01-disposable-test:local
+
   browser-navigation:
     name: browser-navigation
     runs-on: ubuntu-24.04
