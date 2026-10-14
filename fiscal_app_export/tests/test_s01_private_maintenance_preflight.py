@@ -144,12 +144,31 @@ class MaintenanceTest(unittest.TestCase):
         )
         guard.validate_identity(env, identity=SYNTHETIC_ID)
 
-    def test_no_public_network_or_web_port(self):
+    def test_public_network_markers_still_denied_even_with_port(self):
+        self.assertEqual(set(guard.FORBIDDEN_NETWORK_SETTINGS), {
+            "RAILWAY_PUBLIC_DOMAIN", "RAILWAY_STATIC_URL", "APP_BASE_URL",
+        })
         for field in guard.FORBIDDEN_NETWORK_SETTINGS:
             with self.subTest(field=field):
                 env = valid_env()
+                env["PORT"] = "8080"
                 env[field] = "present"
                 self.assert_denied(env, "PUBLIC_NETWORK")
+
+    def test_headless_railway_port_is_allowed_without_public_markers(self):
+        for port in ("1", "3000", "8080", "65535"):
+            with self.subTest(port=port):
+                env = valid_env()
+                env["PORT"] = port
+                guard.validate_identity(env, identity=SYNTHETIC_ID)
+
+    def test_invalid_runtime_port_denied(self):
+        for port in ("0", "65536", "-1", " 8080 ", "8080/tcp",
+                     "abc", "٨٠٨٠", "999999999999"):
+            with self.subTest(port=port):
+                env = valid_env()
+                env["PORT"] = port
+                self.assert_denied(env, "INVALID_RUNTIME_PORT")
 
     def test_all_provider_secrets_forbidden(self):
         for field in guard.FORBIDDEN_CREDENTIALS:
