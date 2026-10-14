@@ -45,8 +45,11 @@ FORBIDDEN_CREDENTIALS = frozenset(DISABLED_STAGING_CREDENTIALS) | {
     "RESEND_API_KEY",
     "SENTRY_DSN",
 }
+# Railway may inject PORT into a headless service. A listening port is
+# NOT proof of public exposure; exposure still requires a public domain/proxy.
+# A separate read-only Railway inventory must confirm that neither exists.
 FORBIDDEN_NETWORK_SETTINGS = (
-    "RAILWAY_PUBLIC_DOMAIN", "RAILWAY_STATIC_URL", "APP_BASE_URL", "PORT",
+    "RAILWAY_PUBLIC_DOMAIN", "RAILWAY_STATIC_URL", "APP_BASE_URL",
 )
 DISABLED_FEATURES = (
     "ENABLE_ADVISORY_STATUS_EMAILS",
@@ -95,6 +98,12 @@ def validate_identity(
 
     if any((env.get(name) or "").strip() for name in FORBIDDEN_NETWORK_SETTINGS):
         raise PreflightDenied("PUBLIC_NETWORK")
+    port = env.get("PORT")
+    if port is not None and port != "":
+        if not port.isascii() or not port.isdecimal() or len(port) > 5:
+            raise PreflightDenied("INVALID_RUNTIME_PORT")
+        if not (1 <= int(port) <= 65535):
+            raise PreflightDenied("INVALID_RUNTIME_PORT")
     if any((env.get(name) or "").strip() for name in FORBIDDEN_CREDENTIALS):
         raise PreflightDenied("EXTERNAL_CREDENTIALS")
     if any(
