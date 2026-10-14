@@ -35,6 +35,11 @@ from flask_migrate import Migrate
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from authlib.integrations.flask_client import OAuth
 from authlib.oidc.core import UserInfo
+from advisory_prefreeze import advisory_financial_prefreeze, refuse_advisory_financial_operation
+from advisory_s01_c2_management import (
+    C2_TARGET_STATES, c2_can_change_state, c2_change_internal_state,
+    C2ProtectedState,
+)
 import resend
 from sqlalchemy import func, extract, text, or_
 from models import db, bcrypt, User, FifoReport, Contacto, ProcessingError, CommunicationCampaign, CommunicationDelivery
@@ -46,7 +51,8 @@ try:
 except ImportError:
     _stripe_available = False
     _stripe_module = None
-from models import FiscalAdvisoryRequest, FiscalAdvisoryFile, FiscalAdvisoryStatusHistory, AdvisoryInternalNote, AdvisoryAuditLog
+from models import FiscalAdvisoryRequest, FiscalAdvisoryFile, FiscalAdvisoryStatusHistory, AdvisoryInternalNote, AdvisoryAuditLog, S01StripeCheckoutAttempt
+from advisory_s01_pricing import calculate_s01_quote, QuotePricingError, COMMISSION_RATE_BPS
 from models import Resource, ResourceRequest
 from error_tracking import record_processing_error_safe, is_actionable_processing_error
 
@@ -94,6 +100,16 @@ from auth import (
     require_fiscal_advisor_page,
 )
 from security_config import build_security_config
+from staging_isolation import (
+    validate_staging_isolation,
+    staging_request_denial,
+    install_staging_email_barrier,
+)
+from lab_isolation import (
+    validate_lab_isolation,
+    lab_request_denial,
+    install_lab_email_barrier,
+)
 
 app = Flask(__name__, static_folder="static")
 
@@ -111,6 +127,53 @@ _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Por defecto exige clave real y HTTPS; sólo development/testing locales explícitos
 # permiten una excepción. No altera la clave suministrada ni las firmas existentes.
 app.config.update(build_security_config(os.environ))
+
+# STG-LOCK-001: preserve preflight firewall from the dedicated staging branch.
+# Validate the Railway identity, isolated PostgreSQL hostname, and absence
+# of provider credentials BEFORE db.init_app() or any migration/financial route.
+# Deliberately no lab-mode override in deployed staging: synthetic E2E runs
+# only with FLASK_ENV=testing and an ephemeral, fixture-only CI database.
+# STG-B04/B06: resolve identities BEFORE database initialization.
+# Real lab service and private HTTP origin are pinned, but every runtime marker
+# must match; no boolean LAB_MODE bypass and no network/DB I/O in this gate.
+# The original staging firewall is not weakened by this mutually exclusive path.
+_LAB_ISOLATED = validate_lab_isolation(os.environ)
+_STAGING_ISOLATED = False if _LAB_ISOLATED else validate_staging_isolation(os.environ)
+if _LAB_ISOLATED:
+    install_lab_email_barrier(resend)
+
+    @app.before_request
+    def _lab_preflight_lockdown():
+        denial = lab_request_denial(
+            host=request.host,
+            path=request.path,
+            method=request.method,
+            origin=request.headers.get("Origin"),
+        )
+        if denial is not None:
+            status, message = denial
+            headers = {"Cache-Control": "no-store"}
+            if status == 503:
+                headers["Retry-After"] = "300"
+            return jsonify({"error": message}), status, headers
+
+if _STAGING_ISOLATED:
+    install_staging_email_barrier(resend)
+
+    @app.before_request
+    def _staging_preflight_lockdown():
+        denial = staging_request_denial(
+            host=request.host,
+            path=request.path,
+            method=request.method,
+            origin=request.headers.get("Origin"),
+        )
+        if denial is not None:
+            status, message = denial
+            headers = {"Cache-Control": "no-store"}
+            if status == 503:
+                headers["Retry-After"] = "300"
+            return jsonify({"error": message}), status, headers
 
 # ADMIN_EMAILS y FISCAL_ADVISOR_EMAILS se importan desde auth.py.
 # _is_admin / _is_fiscal_advisor son aliases de las funciones centralizadas
@@ -189,16 +252,10 @@ from email_templates import (  # noqa: E402
 _STRIPE_SECRET_KEY      = os.environ.get("STRIPE_SECRET_KEY", "")
 _STRIPE_WEBHOOK_SECRET  = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 
-# ── PAYPAL ────────────────────────────────────
-_PAYPAL_CLIENT_ID      = os.environ.get("PAYPAL_CLIENT_ID", "")
-_PAYPAL_CLIENT_SECRET  = os.environ.get("PAYPAL_CLIENT_SECRET", "")
-_PAYPAL_WEBHOOK_ID     = os.environ.get("PAYPAL_WEBHOOK_ID", "")
-_PAYPAL_ENV            = os.environ.get("PAYPAL_ENVIRONMENT", "sandbox")   # 'sandbox' | 'live'
-_PAYPAL_BASE_URL       = (
-    "https://api-m.sandbox.paypal.com" if _PAYPAL_ENV == "sandbox"
-    else "https://api-m.paypal.com"
-)
-_PAYPAL_ENABLED        = bool(_PAYPAL_CLIENT_ID and _PAYPAL_CLIENT_SECRET)
+# ── PAYPAL RETIRADO ──────────────────────────
+# Constante sin interruptor de entorno. Se conserva por compatibilidad de
+# tests antiguos; ningún secreto de PayPal se carga y ningún helper hace IO.
+_PAYPAL_ENABLED = False
 _ADVISORY_NOTIFY_EMAILS = [
     e.strip() for e in os.environ.get("FISCAL_ADVISORY_NOTIFY_EMAILS", "").split(",") if e.strip()
 ]
@@ -274,54 +331,12 @@ if _google_oauth_enabled:
         client_kwargs={"scope": "openid email profile"},
     )
 
-# ── BOOTSTRAP DB (columnas de emergencia) ─────────────────────────────────────
-# Nota: las migraciones formales van en el Procfile via `flask db upgrade`.
-# Este bloque añade columnas que pueden faltar en instancias antiguas.
-# Está protegido contra cuelgues gracias a connect_timeout en SQLALCHEMY_ENGINE_OPTIONS.
-try:
-    with app.app_context():
-        db.create_all()
-        try:
-            from sqlalchemy import text
-            with db.engine.connect() as _conn:
-                _conn.execute(text(
-                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP"
-                ))
-                _conn.execute(text(
-                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(150)"
-                ))
-                _conn.execute(text(
-                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'user' NOT NULL"
-                ))
-                _conn.execute(text(
-                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS nif VARCHAR(20)"
-                ))
-                _conn.execute(text(
-                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token_hash VARCHAR(64)"
-                ))
-                _conn.execute(text(
-                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires_at TIMESTAMP"
-                ))
-                # Error taxonomy columns (migration k4l5m6n7o8p9)
-                _conn.execute(text(
-                    "ALTER TABLE fifo_reports ADD COLUMN IF NOT EXISTS error_category VARCHAR(50)"
-                ))
-                _conn.execute(text(
-                    "ALTER TABLE processing_errors ADD COLUMN IF NOT EXISTS error_category VARCHAR(50)"
-                ))
-                _conn.execute(text(
-                    "ALTER TABLE processing_errors ADD COLUMN IF NOT EXISTS error_code VARCHAR(50)"
-                ))
-                # Evidencia técnica del CSV (migration Sprint 1)
-                _conn.execute(text(
-                    "ALTER TABLE processing_errors ADD COLUMN IF NOT EXISTS csv_context TEXT"
-                ))
-                _conn.commit()
-        except Exception:
-            pass  # columnas ya existen o DB no disponible — no es crítico en arranque
-except Exception:
-    pass  # si DB no está lista aún, flask db upgrade (Procfile) lo gestiona
-
+# ── DB SCHEMA: NO DDL DURING APP IMPORT ──────────────────────────────────────
+# Importing app.py also happens in Gunicorn workers and in Alembic.
+# Never create/alter tables here: schema changes require a separately
+# authorized, explicit bootstrap/migration command. The Procfile's
+# startup_schema_gate.py rejects stale/incomplete databases READ ONLY before
+# Gunicorn starts. Legacy emergency ALTERs are owned by Alembic migrations.
 
 # ── PDF TOKEN STORE (Row-Level Security) ───────
 # El token se guarda en la sesión Flask (cookie firmada), que viaja con el
@@ -4748,7 +4763,11 @@ def advisory_request_page():
 @app.route("/asesoramiento-fiscal-confirmado", strict_slashes=False)
 @limiter.exempt
 def advisory_confirmed():
-    return send_from_directory("static", "asesoramiento-confirmado.html")
+    """Legacy URL: never assert a paid/confirmed S01 request during C1."""
+    response = send_from_directory("static", "asesoramiento-confirmado.html")
+    response.status_code = 503
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 @app.route("/asesoramiento-fiscal-cancelado", strict_slashes=False)
 @limiter.exempt
@@ -4773,18 +4792,21 @@ def admin_advisory_page():
 
 @app.route("/api/asesoramiento/precios")
 def advisory_prices():
-    """Devuelve los precios públicos del servicio."""
-    return jsonify({
-        k: {"label": _ADVISORY_PRICE_LABELS[k], "amount_cents": v, "amount_eur": v / 100}
-        for k, v in _ADVISORY_PRICES.items()
+    """C2: no presentar importes heredados como ofertas S01 mientras está congelado."""
+    response = jsonify({
+        "code": "s01_quotes_suspended",
+        "message": "Los presupuestos y pagos de asesoramiento están suspendidos.",
     })
+    response.status_code = 503
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.route("/api/asesoramiento/solicitar", methods=["POST"])
 @login_required
 @limiter.limit("3 per hour")
 def advisory_solicitar():
-    """Crea la solicitud. Rafa revisará el caso y enviará un presupuesto por email."""
+    """Recibe solicitud para revisión; C1 no presupone oferta, cobro o plazo."""
     data = request.get_json(silent=True) or {}
 
     # Validaciones
@@ -4871,81 +4893,22 @@ def advisory_solicitar():
     return jsonify({"ok": True, "advisory_id": advisory.id})
 
 
-# ── PAYPAL HELPERS ───────────────────────────────────────────────────────────
-
+# ── PAYPAL LEGACY: INTERFAZ INERTE / SIN PROVEEDOR ───────────────────────────
+# Mantener símbolos para tests y rutas históricas; NO RESTAURAR E/S aquí.
+# Los IDs de órdenes/capturas en fiscal_advisory_requests se conservan.
 def _paypal_get_access_token() -> str:
-    """Obtiene un Bearer token OAuth2 de PayPal (válido ~9h, sin caché intencional)."""
-    import requests as _req
-    resp = _req.post(
-        f"{_PAYPAL_BASE_URL}/v1/oauth2/token",
-        auth=(_PAYPAL_CLIENT_ID, _PAYPAL_CLIENT_SECRET),
-        data={"grant_type": "client_credentials"},
-        timeout=10,
-    )
-    resp.raise_for_status()
-    return resp.json()["access_token"]
+    """Retirado: no se llama a ningún endpoint OAuth de PayPal."""
+    refuse_advisory_financial_operation()
 
 
 def _paypal_create_order(advisory: "FiscalAdvisoryRequest") -> dict:
-    """Crea una orden PayPal usando quoted_amount y devuelve {order_id, approval_url}.
-    Se llama on-demand cuando el cliente visita /pagar/<token> y pulsa Pagar.
-    """
-    import requests as _req
-    if not advisory.quoted_amount:
-        raise ValueError("La solicitud no tiene un importe presupuestado")
-    token  = _paypal_get_access_token()
-    euros  = f"{advisory.quoted_amount / 100:.2f}"
-    base   = _APP_BASE_URL.rstrip("/")
-    token_ = advisory.payment_link_token
-    payload = {
-        "intent": "CAPTURE",
-        "purchase_units": [{
-            "custom_id":   str(advisory.id),
-            "description": advisory.service_label()[:127],
-            "amount": {
-                "currency_code": "EUR",
-                "value": euros,
-            },
-        }],
-        "application_context": {
-            "brand_name":   "Mariano Sevilla",
-            "locale":       "es-ES",
-            "landing_page": "NO_PREFERENCE",
-            "user_action":  "PAY_NOW",
-            "return_url":   f"{base}/api/pago/paypal/capture?request_id={advisory.id}",
-            "cancel_url":   f"{base}/pagar/{token_}?cancelado=1",
-        },
-    }
-    resp = _req.post(
-        f"{_PAYPAL_BASE_URL}/v2/checkout/orders",
-        json=payload,
-        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-        timeout=15,
-    )
-    resp.raise_for_status()
-    data         = resp.json()
-    order_id     = data["id"]
-    approval_url = next(
-        (lnk["href"] for lnk in data.get("links", []) if lnk.get("rel") == "approve"),
-        None,
-    )
-    if not approval_url:
-        raise ValueError("PayPal no devolvió approval_url")
-    return {"order_id": order_id, "approval_url": approval_url}
+    """Retirado: jamás crear una nueva orden PayPal."""
+    refuse_advisory_financial_operation()
 
 
 def _paypal_capture_order(order_id: str) -> dict:
-    """Ejecuta el capture de una orden PayPal aprobada. Devuelve el JSON de PayPal."""
-    import requests as _req
-    token = _paypal_get_access_token()
-    resp  = _req.post(
-        f"{_PAYPAL_BASE_URL}/v2/checkout/orders/{order_id}/capture",
-        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-        json={},
-        timeout=15,
-    )
-    resp.raise_for_status()
-    return resp.json()
+    """Retirado: jamás solicitar una captura PayPal."""
+    refuse_advisory_financial_operation()
 
 
 def _on_payment_completed(
@@ -4955,50 +4918,55 @@ def _on_payment_completed(
     provider: str,
     capture_note: str,
 ) -> None:
-    """Centraliza la confirmación de pago de cualquier proveedor.
-    Actualiza el expediente, crea historial y envía notificaciones.
-    El caller debe verificar advisory.status == 'quote_sent' antes de llamar.
-    """
-    now = datetime.utcnow()
-    advisory.status           = "paid_received"
-    advisory.amount_paid      = amount_cents
-    advisory.currency         = currency.lower()
-    advisory.payment_provider = provider
-    advisory.paid_at          = now
-
-    db.session.add(FiscalAdvisoryStatusHistory(
-        request_id = advisory.id,
-        status     = "paid_received",
-        changed_by = None,
-        note       = capture_note,
-    ))
-    db.session.commit()
-
-    _send_advisory_payment_confirmed_email(advisory)
-    _send_advisory_payment_internal_notification(advisory)
+    """Finalizador financiero legacy deshabilitado permanentemente."""
+    refuse_advisory_financial_operation()
 
 
 # ── ADMIN: ENVIAR PRESUPUESTO ─────────────────────────────────────────────────
 
 @app.route("/api/admin/asesoramiento/solicitudes/<int:req_id>/enviar-presupuesto", methods=["POST"])
 @require_fiscal_advisor
+@advisory_financial_prefreeze()
 def advisory_enviar_presupuesto(req_id):
     """Rafa introduce el precio y el sistema envía el link de pago al cliente."""
 
-    advisory = FiscalAdvisoryRequest.query.get_or_404(req_id)
-
-    if advisory.status not in ("submitted", "quote_sent"):
-        return jsonify({"error": f"No se puede enviar presupuesto en estado '{advisory.status}'."}), 409
-
     data = request.get_json(silent=True) or {}
 
-    # Importe
+    # S01: el importe introducido es el honorario de Rafa, NO el precio final.
+    # Se calcula en céntimos exactos; el 30 % queda registrado por separado.
     try:
-        amount_euros = float(str(data.get("amount_euros", "")).replace(",", "."))
-        assert amount_euros >= 1
-    except Exception:
-        return jsonify({"error": "Importe inválido. Debe ser un número >= 1."}), 400
-    amount_cents = int(round(amount_euros * 100))
+        s01_quote = calculate_s01_quote(data.get("amount_euros"))
+    except QuotePricingError as exc:
+        return jsonify({"error": f"Importe inválido: {exc}"}), 400
+    amount_cents = s01_quote.total_cents
+
+    # El mismo bloqueo de fila que utiliza la reserva Checkout S01.
+    # Nunca sobrescribir snapshots o limpiar evidencia cuando existan
+    # órdenes, pagos, aceptaciones o intentos (también inciertos).
+    advisory = (
+        FiscalAdvisoryRequest.query.filter_by(id=req_id)
+        .with_for_update().first_or_404()
+    )
+    if advisory.status not in ("submitted", "quote_sent"):
+        db.session.rollback()
+        return jsonify({"error": f"No se puede enviar presupuesto en estado '{advisory.status}'."}), 409
+
+    if (
+        advisory.paypal_order_id is not None
+        or advisory.paypal_capture_id is not None
+        or advisory.stripe_checkout_session_id is not None
+        or advisory.stripe_payment_intent_id is not None
+        or advisory.payment_provider is not None
+        or advisory.amount_paid is not None
+        or advisory.paid_at is not None
+        or advisory.quote_accepted_at is not None
+        or S01StripeCheckoutAttempt.query.filter_by(advisory_id=req_id).first() is not None
+    ):
+        db.session.rollback()
+        return jsonify({
+            "error": "Existe actividad financiera o un presupuesto aceptado. "
+                     "No se puede sustituir: requiere conciliación previa."
+        }), 409
 
     quote_message = (data.get("message") or "").strip()[:2000] or None
 
@@ -5007,19 +4975,16 @@ def advisory_enviar_presupuesto(req_id):
 
     now                          = datetime.utcnow()
     advisory.quoted_amount       = amount_cents
+    advisory.rafa_fee_cents      = s01_quote.rafa_fee_cents
+    advisory.commission_cents    = s01_quote.commission_cents
+    advisory.commission_rate_bps = COMMISSION_RATE_BPS
     advisory.quoted_by_user_id   = current_user.id
     advisory.quote_message       = quote_message
     advisory.quote_sent_at       = now
     advisory.quote_expires_at    = now + timedelta(days=30)
     advisory.payment_link_token  = _secrets.token_urlsafe(32)
     advisory.status              = "quote_sent"
-    # Invalidar cualquier orden de PayPal anterior: el capture endpoint rechaza
-    # órdenes cuyo ID no coincida con el almacenado, así que limpiar aquí
-    # hace que los links antiguos ya no puedan completar un pago.
-    advisory.paypal_order_id     = None
-    advisory.paypal_capture_id   = None
-
-    history_note = f"Presupuesto enviado: €{amount_euros:.2f} a {advisory.email}"
+    history_note = f"Presupuesto enviado: €{amount_cents / 100:.2f} a {advisory.email}"
     if quote_message:
         history_note += ". Mensaje incluido."
     db.session.add(FiscalAdvisoryStatusHistory(
@@ -5032,7 +4997,9 @@ def advisory_enviar_presupuesto(req_id):
         request_id = advisory.id,
         admin_id   = current_user.id,
         action     = AdvisoryAuditLog.ACTION_QUOTE_SENT,
-        detail     = f"Importe: {amount_euros:.2f} € a {advisory.email}",
+        detail     = (f"Rafa: {s01_quote.rafa_fee_cents / 100:.2f} €; "
+                      f"comisión: {s01_quote.commission_cents / 100:.2f} €; "
+                      f"total: {amount_cents / 100:.2f} € a {advisory.email}"),
     ))
     db.session.commit()
 
@@ -5042,6 +5009,9 @@ def advisory_enviar_presupuesto(req_id):
     return jsonify({
         "ok":           True,
         "payment_url":  payment_url,
+        "rafa_fee_cents": s01_quote.rafa_fee_cents,
+        "commission_cents": s01_quote.commission_cents,
+        "total_cents": amount_cents,
         "email_sent":   email_ok,
         "email_to":     advisory.email,
         # Si email_sent es False el expediente ya está guardado; el admin puede reenviar.
@@ -5052,10 +5022,113 @@ def advisory_enviar_presupuesto(req_id):
     })
 
 
+
+# ── S01 C1: GESTIÓN INTERNA SIN OPERACIONES FINANCIERAS ─────────────────────
+# Las rutas heredadas /enviar-presupuesto, /mensaje, /estado, /nota, /is-test
+# y DELETE continúan bajo PREFREEZE. C1 sólo habilita nuevas rutas limitadas;
+# jamás emite presupuestos, enlaces, mensajes al cliente ni llamadas a Stripe.
+_C1_SESSION_KEY = "_s01_c1_admin_csrf"
+
+
+def _c1_response(payload, status=200):
+    response = jsonify(payload)
+    response.status_code = status
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+def _c1_csrf_ok():
+    from hmac import compare_digest
+    record = session.get(_C1_SESSION_KEY)
+    supplied = request.headers.get("X-S01-C1-CSRF")
+    origin = request.headers.get("Origin")
+    if origin is not None and origin != request.host_url.rstrip("/"):
+        return False
+    return (
+        isinstance(record, dict)
+        and record.get("user_id") == current_user.id
+        and isinstance(record.get("token"), str)
+        and isinstance(supplied, str)
+        and compare_digest(record["token"], supplied)
+    )
+
+
+@app.route("/api/admin/asesoramiento/gestion-token", methods=["GET"])
+@require_fiscal_advisor
+@limiter.limit("30 per minute")
+def admin_c1_management_token():
+    existing = session.get(_C1_SESSION_KEY)
+    if not isinstance(existing, dict) or existing.get("user_id") != current_user.id:
+        session[_C1_SESSION_KEY] = {
+            "user_id": current_user.id,
+            "token": secrets.token_urlsafe(32),
+        }
+    return _c1_response({"csrf_token": session[_C1_SESSION_KEY]["token"]})
+
+
+@app.route("/api/admin/asesoramiento/solicitudes/<int:request_id>/gestion/nota", methods=["POST"])
+@require_fiscal_advisor
+@limiter.limit("30 per minute")
+def admin_c1_add_internal_note(request_id):
+    if not _c1_csrf_ok():
+        return _c1_response({"error": "Solicitud no autorizada."}, 403)
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or not isinstance(data.get("nota"), str):
+        return _c1_response({"error": "Nota inválida."}, 400)
+    note_text = data["nota"].strip()[:2000]
+    if not note_text:
+        return _c1_response({"error": "La nota no puede estar vacía."}, 400)
+    advisory = FiscalAdvisoryRequest.query.get_or_404(request_id)
+    author = (current_user.full_name or current_user.email or "Asesor").strip()
+    note = AdvisoryInternalNote(
+        request_id=advisory.id,
+        author_id=current_user.id,
+        author_name=author,
+        text=note_text,
+    )
+    db.session.add(note)
+    advisory.updated_at = datetime.utcnow()
+    db.session.commit()
+    return _c1_response({"ok": True, "note": note.to_dict()})
+
+
+@app.route("/api/admin/asesoramiento/solicitudes/<int:request_id>/gestion/estado", methods=["POST"])
+@require_fiscal_advisor
+@limiter.limit("30 per minute")
+def admin_c1_change_nonfinancial_state(request_id):
+    if not _c1_csrf_ok():
+        return _c1_response({"error": "Solicitud no autorizada."}, 403)
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or not isinstance(data.get("status"), str):
+        return _c1_response({"error": "Estado inválido."}, 400)
+    new_status = data["status"]
+    if new_status not in C2_TARGET_STATES:
+        return _c1_response({"error": "Solo se permiten estados internos sin aviso al cliente."}, 503)
+    if not isinstance(data.get("note", ""), str):
+        return _c1_response({"error": "Nota inválida."}, 400)
+    note = data.get("note", "").strip()[:1000]
+    try:
+        status, unchanged = c2_change_internal_state(
+            request_id=request_id,
+            new_status=new_status,
+            actor_id=current_user.id,
+            note=note,
+        )
+    except C2ProtectedState:
+        return _c1_response({"error": "Expediente protegido por historial financiero o estado previo."}, 409)
+    # Sin correos, pagos, facturas o proveedores. La API legacy sigue bajo freeze.
+    return _c1_response({
+        "ok": True, "status": status,
+        "status_label": FiscalAdvisoryRequest.STATUS_LABELS[status],
+        "unchanged": unchanged,
+    })
+
+
 # ── ENVIAR MENSAJE SIN PRESUPUESTO ───────────────────────────────────────────
 
 @app.route("/api/admin/asesoramiento/solicitudes/<int:req_id>/mensaje", methods=["POST"])
 @require_fiscal_advisor
+@advisory_financial_prefreeze()
 def advisory_enviar_mensaje(req_id):
     """Envía un mensaje al cliente sin generar presupuesto ni link de pago.
 
@@ -5124,13 +5197,16 @@ def advisory_enviar_mensaje(req_id):
 @app.route("/pagar/<token>")
 def pago_page(token):
     """Página pública de pago para el cliente. No requiere login."""
-    return send_from_directory("static", "pagar.html")
+    response = send_from_directory("static", "pagar.html")
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 # ── API: INFO DEL PRESUPUESTO (para la página /pagar/<token>) ────────────────
 
 @app.route("/api/pago/info/<token>", methods=["GET"])
 @limiter.limit("30 per minute")
+@advisory_financial_prefreeze()
 def pago_info(token):
     """Devuelve los datos públicos del presupuesto para mostrar en la página de pago."""
     advisory = FiscalAdvisoryRequest.query.filter_by(payment_link_token=token).first()
@@ -5160,304 +5236,68 @@ def pago_info(token):
     })
 
 
-# ── API: INICIAR PAGO (acepta presupuesto + crea orden PayPal) ───────────────
+# ── PAYPAL LEGACY: TUMBSTONES COMPATIBLES, SIN LÓGICA DE COBRO ────────────
+# PREFREEZE sigue siendo la primera barrera observable de estas rutas.
+# Las funciones debajo no contienen lectura de argumentos, SQL ni proveedor.
 
 @app.route("/api/pago/iniciar/<token>", methods=["POST"])
 @limiter.limit("10 per hour")
+@advisory_financial_prefreeze()
 def pago_iniciar(token):
-    """El cliente acepta el presupuesto y solicita el link de PayPal.
-    Registra la aceptación antes de crear la orden PayPal.
-    """
-    if not _PAYPAL_ENABLED:
-        return jsonify({"error": "El sistema de pago no está disponible. Inténtalo más tarde."}), 503
+    """Antiguo inicio de PayPal: deshabilitado también sin el decorador."""
+    refuse_advisory_financial_operation()
 
-    # FOR UPDATE: bloquea la fila durante toda la transacción para evitar
-    # que dos requests concurrentes creen dos órdenes de PayPal.
-    advisory = (FiscalAdvisoryRequest.query
-                .filter_by(payment_link_token=token)
-                .with_for_update()
-                .first())
-    if not advisory:
-        return jsonify({"error": "Enlace no válido o expirado."}), 404
-
-    if advisory.status == "paid_received":
-        return jsonify({"error": "Este presupuesto ya ha sido pagado."}), 409
-
-    if advisory.status != "quote_sent":
-        return jsonify({"error": "Este presupuesto ya no está disponible."}), 410
-
-    now = datetime.utcnow()
-    if advisory.quote_expires_at and now > advisory.quote_expires_at:
-        return jsonify({"error": "El presupuesto ha caducado. Contacta con nosotros para renovarlo."}), 410
-
-    # Registrar aceptación del presupuesto
-    client_ip = (
-        request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
-        or request.remote_addr
-        or ""
-    )
-    advisory.quote_accepted_at           = now
-    advisory.quote_acceptance_ip         = client_ip[:45]
-    advisory.quote_acceptance_user_agent = (request.user_agent.string or "")[:512]
-
-    # El rollback puede expirar la fila; el log no debe volver a consultar BD.
-    advisory_id = advisory.id
-    try:
-        paypal_data          = _paypal_create_order(advisory)
-        advisory.paypal_order_id = paypal_data["order_id"]
-        db.session.commit()
-    except Exception as exc:
-        db.session.rollback()
-        error_category = {
-            "Timeout": "timeout",
-            "ConnectTimeout": "timeout",
-            "ReadTimeout": "timeout",
-            "TimeoutError": "timeout",
-            "ConnectionError": "connection_error",
-            "HTTPError": "http_error",
-            "KeyError": "invalid_response",
-            "TypeError": "invalid_response",
-            "ValueError": "invalid_response",
-        }.get(type(exc).__name__, "unexpected_error")
-        app.logger.error(
-            "paypal_create_order_failed advisory_id=%s error_category=%s",
-            advisory_id, error_category,
-        )
-        return jsonify({"error": "No se pudo conectar con PayPal. Inténtalo de nuevo."}), 502
-
-    return jsonify({"ok": True, "redirect_url": paypal_data["approval_url"]})
-
-
-# ── PAYPAL CAPTURE (return URL — pública, no requiere login) ──────────────────
 
 @app.route("/api/pago/paypal/capture", methods=["GET"])
 @limiter.limit("30 per minute")
+@advisory_financial_prefreeze(html=True)
 def pago_paypal_capture():
-    """PayPal redirige aquí tras el pago. Ejecuta el capture y actualiza el expediente."""
-    request_id   = request.args.get("request_id", "")
-    paypal_token = request.args.get("token", "")   # PayPal añade ?token=ORDER_ID
+    """Callback antiguo: nunca ejecutar una segunda captura."""
+    refuse_advisory_financial_operation()
 
-    try:
-        request_id = int(request_id)
-    except (ValueError, TypeError):
-        return redirect("/asesoramiento-fiscal-cancelado")
-
-    # FOR UPDATE: garantiza que si el webhook corre en paralelo,
-    # solo uno de los dos procesará el pago (el segundo verá status != 'quote_sent').
-    advisory = (FiscalAdvisoryRequest.query
-                .filter_by(id=request_id)
-                .with_for_update()
-                .first())
-    if not advisory:
-        return redirect("/asesoramiento-fiscal-cancelado")
-
-    # Idempotente
-    if advisory.status == "paid_received":
-        return redirect("/asesoramiento-fiscal-confirmado")
-
-    if advisory.status != "quote_sent":
-        return redirect("/asesoramiento-fiscal-cancelado")
-
-    # paypal_order_id debe existir y coincidir con el token que PayPal envía.
-    # Si es NULL el cliente nunca completó pago_iniciar — rechazar siempre.
-    if not advisory.paypal_order_id or advisory.paypal_order_id != paypal_token:
-        app.logger.warning("PayPal token mismatch/null request_id=%s stored=%s received=%s",
-                           request_id, advisory.paypal_order_id, paypal_token)
-        return redirect("/asesoramiento-fiscal-cancelado")
-
-    try:
-        capture_data = _paypal_capture_order(paypal_token)
-    except Exception as exc:
-        app.logger.error("PayPal capture error request_id=%s: %s", request_id, exc)
-        token_link = advisory.payment_link_token or ""
-        return redirect(f"/pagar/{token_link}?error=capture")
-
-    capture_status = capture_data.get("status", "")
-    if capture_status != "COMPLETED":
-        app.logger.warning("PayPal capture status inesperado: %s", capture_status)
-        token_link = advisory.payment_link_token or ""
-        return redirect(f"/pagar/{token_link}?error=status")
-
-    purchase_units = capture_data.get("purchase_units", [{}])
-    captures       = purchase_units[0].get("payments", {}).get("captures", [{}])
-    capture_obj    = captures[0] if captures else {}
-    capture_id     = capture_obj.get("id", "")
-    amount_value   = capture_obj.get("amount", {}).get("value", "0")
-    currency_code  = capture_obj.get("amount", {}).get("currency_code", "EUR")
-
-    try:
-        amount_cents = int(float(amount_value) * 100)
-    except ValueError:
-        amount_cents = advisory.quoted_amount or 0
-
-    advisory.paypal_order_id   = paypal_token
-    advisory.paypal_capture_id = capture_id
-
-    try:
-        _on_payment_completed(
-            advisory,
-            amount_cents = amount_cents,
-            currency     = currency_code,
-            provider     = "paypal",
-            capture_note = f"Pago confirmado por PayPal. Capture ID: {capture_id}",
-        )
-    except Exception as exc:
-        db.session.rollback()
-        app.logger.error("PayPal _on_payment_completed error: %s", exc)
-        token_link = advisory.payment_link_token or ""
-        return redirect(f"/pagar/{token_link}?error=db")
-
-    return redirect("/asesoramiento-fiscal-confirmado")
-
-
-# ── PAYPAL WEBHOOK ────────────────────────────────────────────────────────────
 
 @app.route("/api/webhooks/paypal", methods=["POST"])
 @limiter.limit("120 per minute")
+@advisory_financial_prefreeze()
 def paypal_webhook():
-    """Red de seguridad: PayPal notifica el pago aunque el usuario cierre la pestaña."""
-    if not _PAYPAL_ENABLED:
-        return "", 200
-
-    payload = request.get_data()
-    event   = {}
-    try:
-        import json as _json
-        event = _json.loads(payload)
-    except Exception:
-        return jsonify({"error": "Invalid JSON"}), 400
-
-    # Verificación de firma — obligatoria. Si PAYPAL_WEBHOOK_ID no está configurado
-    # no podemos verificar la autenticidad del evento: no procesar y registrar el error.
-    if not _PAYPAL_WEBHOOK_ID:
-        app.logger.critical(
-            "PayPal webhook recibido pero PAYPAL_WEBHOOK_ID no está configurado. "
-            "Evento ignorado. Configura la variable de entorno para activar el webhook."
-        )
-        return "", 200  # 200 para evitar reintentos de PayPal; el admin debe corregir la config.
-
-    import requests as _req
-    try:
-        token = _paypal_get_access_token()
-        verify_resp = _req.post(
-            f"{_PAYPAL_BASE_URL}/v1/notifications/verify-webhook-signature",
-            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-            json={
-                "auth_algo":         request.headers.get("PAYPAL-AUTH-ALGO", ""),
-                "cert_url":          request.headers.get("PAYPAL-CERT-URL", ""),
-                "transmission_id":   request.headers.get("PAYPAL-TRANSMISSION-ID", ""),
-                "transmission_sig":  request.headers.get("PAYPAL-TRANSMISSION-SIG", ""),
-                "transmission_time": request.headers.get("PAYPAL-TRANSMISSION-TIME", ""),
-                "webhook_id":        _PAYPAL_WEBHOOK_ID,
-                "webhook_event":     event,
-            },
-            timeout=10,
-        )
-        if not verify_resp.ok or verify_resp.json().get("verification_status") != "SUCCESS":
-            app.logger.warning("PayPal webhook firma inválida — evento rechazado")
-            return jsonify({"error": "Signature mismatch"}), 400
-    except Exception as exc:
-        app.logger.error("PayPal webhook verify error: %s — evento rechazado", exc)
-        return jsonify({"error": "Verification failed"}), 500
-
-    event_type = event.get("event_type", "")
-
-    if event_type == "PAYMENT.CAPTURE.COMPLETED":
-        resource    = event.get("resource", {})
-        capture_id  = resource.get("id", "")
-        custom_id   = resource.get("custom_id") or (
-            resource.get("purchase_units", [{}])[0].get("custom_id", "")
-            if resource.get("purchase_units") else ""
-        )
-        # custom_id puede venir también en supplementary_data
-        if not custom_id:
-            supp = resource.get("supplementary_data", {})
-            custom_id = supp.get("related_ids", {}).get("order_id", "")
-
-        # Buscar por paypal_capture_id (ya procesado vía return URL) o por custom_id.
-        # FOR UPDATE: previene doble procesado si capture y webhook llegan a la vez.
-        advisory = None
-        if capture_id:
-            advisory = (FiscalAdvisoryRequest.query
-                        .filter_by(paypal_capture_id=capture_id)
-                        .with_for_update()
-                        .first())
-        if not advisory and custom_id:
-            try:
-                advisory = (FiscalAdvisoryRequest.query
-                            .filter_by(id=int(custom_id))
-                            .with_for_update()
-                            .first())
-            except (ValueError, TypeError):
-                pass
-
-        if advisory and advisory.status == "quote_sent":
-            amount_value  = resource.get("amount", {}).get("value", "0")
-            currency_code = resource.get("amount", {}).get("currency_code", "EUR")
-            try:
-                amount_cents = int(float(amount_value) * 100)
-            except ValueError:
-                amount_cents = advisory.amount_paid or 0
-
-            advisory.paypal_capture_id = capture_id
-            try:
-                _on_payment_completed(
-                    advisory,
-                    amount_cents = amount_cents,
-                    currency     = currency_code,
-                    provider     = "paypal",
-                    capture_note = f"Pago confirmado por webhook PayPal. Capture ID: {capture_id}",
-                )
-            except Exception as exc:
-                db.session.rollback()
-                app.logger.error("PayPal webhook _on_payment_completed error: %s", exc)
-                return "", 500
-
-    elif event_type == "PAYMENT.CAPTURE.REFUNDED":
-        resource   = event.get("resource", {})
-        capture_id = resource.get("id", "")
-        if capture_id:
-            advisory = FiscalAdvisoryRequest.query.filter_by(paypal_capture_id=capture_id).first()
-            if advisory and advisory.status not in ("refunded", "cancelled"):
-                advisory.status = "refunded"
-                history = FiscalAdvisoryStatusHistory(
-                    request_id = advisory.id,
-                    status     = "refunded",
-                    changed_by = None,
-                    note       = f"Reembolso confirmado por PayPal. Capture ID: {capture_id}",
-                )
-                db.session.add(history)
-                try:
-                    db.session.commit()
-                except Exception:
-                    db.session.rollback()
-
-    return "", 200
+    """Webhook retirado: 503 y sin ACK, sin parseo ni llamadas a PayPal."""
+    refuse_advisory_financial_operation()
 
 
 @app.route("/api/webhooks/stripe", methods=["POST"])
 @limiter.limit("60 per minute")
+@advisory_financial_prefreeze()
 def stripe_webhook():
     """Webhook de Stripe — solo este endpoint puede marcar un pago como confirmado."""
-    if not _stripe_available or not _STRIPE_SECRET_KEY:
-        return "", 200
+    # Fail closed: neither missing SDK/credentials nor an unsigned payload can
+    # acknowledge or process a financial event. Never fall back to json.loads.
+    if (not _stripe_available or not (_STRIPE_SECRET_KEY or "").strip()
+            or not (_STRIPE_WEBHOOK_SECRET or "").strip()):
+        app.logger.error("stripe_webhook_unavailable provider_configuration_incomplete")
+        return jsonify({"error": "Webhook unavailable."}), 503
 
     payload    = request.get_data()
     sig_header = request.headers.get("Stripe-Signature", "")
+    if not sig_header:
+        app.logger.warning("stripe_webhook_signature_missing")
+        return jsonify({"error": "Invalid request."}), 400
 
     try:
         _stripe_module.api_key = _STRIPE_SECRET_KEY
-        if _STRIPE_WEBHOOK_SECRET:
-            event = _stripe_module.Webhook.construct_event(payload, sig_header, _STRIPE_WEBHOOK_SECRET)
-        else:
-            import json as _json
-            event = _json.loads(payload)
-    except Exception as exc:
-        app.logger.warning("Stripe webhook error: %s", exc)   # solo a logs
+        event = _stripe_module.Webhook.construct_event(
+            payload, sig_header, _STRIPE_WEBHOOK_SECRET
+        )
+    except (ValueError, _stripe_module.error.SignatureVerificationError):
+        # Do not log exception strings: SDK messages may include payload data.
+        app.logger.warning("stripe_webhook_signature_invalid")
         return jsonify({"error": "Invalid request."}), 400
 
     if event["type"] == "checkout.session.completed":
         session_obj = event["data"]["object"]
+        # stripe-python returns StripeObject after verified parsing; its
+        # .get() is not supported. Convert without bypassing signature checks.
+        if not isinstance(session_obj, dict):
+            session_obj = session_obj.to_dict()
         cs_id        = session_obj.get("id")
         pi_id        = session_obj.get("payment_intent")
         amount_total = session_obj.get("amount_total")
@@ -5698,6 +5538,7 @@ def _send_advisory_status_update_email(advisory: "FiscalAdvisoryRequest", note: 
 @app.route("/api/asesoramiento/files/<int:request_id>", methods=["POST"])
 @login_required
 @limiter.limit("10 per hour")
+@advisory_financial_prefreeze()
 def advisory_upload_file(request_id):
     """Sube un fichero asociado a una solicitud (solo el propietario)."""
     if not _ADVISORY_UPLOADS_ENABLED:
@@ -5795,6 +5636,9 @@ def admin_advisory_list():
 def admin_advisory_detail(request_id):
     advisory = FiscalAdvisoryRequest.query.get_or_404(request_id)
     d = advisory.to_dict(full=True)
+    # One backend source of truth for financial evidence, including legacy.
+    # UI is advisory only; every POST recalculates under row lock.
+    d["c1_state_editable"] = c2_can_change_state(advisory)
     d["files"] = [
         {"id": f.id, "file_name": f.file_name, "file_size": f.file_size,
          "file_type": f.file_type, "uploaded_at": f.uploaded_at.isoformat()}
@@ -5815,6 +5659,7 @@ def admin_advisory_detail(request_id):
 
 @app.route("/api/admin/asesoramiento/solicitudes/<int:request_id>/estado", methods=["POST"])
 @require_fiscal_advisor
+@advisory_financial_prefreeze()
 def admin_advisory_change_status(request_id):
     advisory    = FiscalAdvisoryRequest.query.get_or_404(request_id)
     data        = request.get_json(silent=True) or {}
@@ -5854,6 +5699,7 @@ def admin_advisory_change_status(request_id):
 
 @app.route("/api/admin/asesoramiento/solicitudes/<int:request_id>/is-test", methods=["POST"])
 @require_roles("admin")
+@advisory_financial_prefreeze()
 def admin_advisory_set_is_test(request_id):
     """Marca o desmarca una solicitud como 'prueba'. Solo admins."""
     advisory      = FiscalAdvisoryRequest.query.get_or_404(request_id)
@@ -5865,6 +5711,7 @@ def admin_advisory_set_is_test(request_id):
 
 @app.route("/api/admin/asesoramiento/solicitudes/<int:request_id>/nota", methods=["POST"])
 @require_fiscal_advisor
+@advisory_financial_prefreeze()
 def admin_advisory_add_note(request_id):
     advisory = FiscalAdvisoryRequest.query.get_or_404(request_id)
     data     = request.get_json(silent=True) or {}
@@ -5888,6 +5735,7 @@ def admin_advisory_add_note(request_id):
 
 @app.route("/api/admin/asesoramiento/solicitudes/<int:request_id>", methods=["DELETE"])
 @require_roles("admin")
+@advisory_financial_prefreeze()
 def admin_advisory_delete(request_id):
     """Elimina una solicitud. Solo accesible para administradores.
     Los asesores fiscales reciben 403.

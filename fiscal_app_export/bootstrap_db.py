@@ -1,22 +1,19 @@
-"""Safely initialize a new PostgreSQL database, then run Alembic.
+"""Explicit (non-web) database initialization and Alembic upgrade.
 
-Historical migrations begin by ALTERing pre-existing tables; importing app.py
-already calls db.create_all() with the CURRENT model schema. Running historical
-ALTERs on that newly created schema fails with DuplicateColumn.
+Flask import is DDL-free. Existing, versioned databases are upgraded only by
+this separately authorized entrypoint. Only a truly empty PostgreSQL database
+may be initialized from the current SQLAlchemy model schema; no partial,
+populated or ambiguous unversioned database may be silently repaired/stamped.
 
-Only on a fully empty, current-model PostgreSQL schema with no migration
-revision do we stamp the last legacy schema revision and run the remaining,
-audited idempotent/data migrations. Existing, versioned databases always
-follow the original Flask CLI database upgrade path. Ambiguous databases fail shut.
-
-This is an explicit process entrypoint, NOT an app-import side effect.
+NEVER call this program from the web Procfile. A production migration requires
+a separate approved rollout and restoration/rollback plan.
 """
 from __future__ import annotations
 
 from sqlalchemy import inspect, text
 from flask_migrate import stamp, upgrade
 
-# Keep app import semantics identical to the prior Flask DB upgrade CLI.
+# Import Flask app only after its import path became DDL-free.
 from app import app, db
 
 # The next revision (n7o8p9q0r1s2) seeds the Bitcoin dossier and subsequent
@@ -90,6 +87,15 @@ def main() -> None:
             print("DB bootstrap: existing Alembic history upgraded", flush=True)
             return
 
+        tables = set(inspect(db.engine).get_table_names())
+        if not tables:
+            # Creating a new schema is permitted ONLY inside this explicit
+            # command AFTER verifying there are absolutely no tables.
+            # Gunicorn/application imports and the Procfile never reach here.
+            db.create_all()
+            print("DB bootstrap: pristine empty PostgreSQL created explicitly", flush=True)
+        # A populated, partial or unversioned legacy schema is never repaired
+        # just because the ORM knows how to add a missing table.
         _assert_pristine_current_schema(db.engine)
         print(
             "DB bootstrap: empty current-model PostgreSQL schema verified; "

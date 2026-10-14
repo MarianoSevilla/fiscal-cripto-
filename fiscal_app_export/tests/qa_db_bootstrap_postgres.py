@@ -18,7 +18,7 @@ HOST = "127.0.0.1"
 PORT = 5432
 USER = "postgres"
 PASSWORD = "ci-only-test-password"
-HEAD = "v5w6x7y8z9a0"
+HEAD = "z9a0b1c2d3e4"  # S01 TEST outbox schema (dependent on PR #39)
 
 
 def _create_db(name: str) -> str:
@@ -77,6 +77,23 @@ def _bootstrap(name: str, success: bool = True) -> subprocess.CompletedProcess:
     )
 
 
+def _startup(name: str, success: bool = True) -> subprocess.CompletedProcess:
+    return _run(
+        name,
+        "from startup_schema_gate import main; main()",
+        success=success,
+    )
+
+
+def _table_count(name: str) -> int:
+    with _db_conn(name) as conn, conn.cursor() as cur:
+        cur.execute(
+            "SELECT count(*) FROM information_schema.tables "
+            "WHERE table_schema='public' AND table_type='BASE TABLE'"
+        )
+        return cur.fetchone()[0]
+
+
 def _assert_version(name: str) -> None:
     with _db_conn(name) as conn, conn.cursor() as cur:
         cur.execute("SELECT version_num FROM alembic_version")
@@ -84,10 +101,19 @@ def _assert_version(name: str) -> None:
 
 
 def main() -> None:
-    # 1. Fresh PostgreSQL: current ORM model tables initially created on import.
+    # 1. Fresh PostgreSQL: importing Flask or entering Gunicorn MUST NOT
+    # auto-create tables, indexes, constraints, or any other database objects.
     fresh = _create_db("bootstrap_fresh_ci")
+    assert _table_count(fresh) == 0
+    _run(fresh, "import app; assert app.app")
+    assert _table_count(fresh) == 0, "Flask import unexpectedly created tables"
+    _startup(fresh, success=False)
+    assert _table_count(fresh) == 0, "Startup schema gate unexpectedly executed DDL"
+    # Explicit bootstrap remains available only as a separately authorized
+    # maintenance command; it is absent from the Procfile.
     _bootstrap(fresh)
     _assert_version(fresh)
+    _startup(fresh)
     with _db_conn(fresh) as conn, conn.cursor() as cur:
         cur.execute(
             "SELECT headline FROM resources WHERE slug = 'experimento-bitcoin'"
@@ -105,6 +131,7 @@ with app.app_context():
 """)
     _bootstrap(fresh)
     _assert_version(fresh)
+    _startup(fresh)
     with _db_conn(fresh) as conn, conn.cursor() as cur:
         cur.execute("SELECT full_name FROM users WHERE email = %s",
                     ("fixture@example.invalid",))
@@ -118,6 +145,9 @@ with app.app_context():
 from app import app, db
 from models import User
 with app.app_context():
+    # This fixture deliberately creates an unversioned schema, rather than
+    # depending on the now forbidden side effect of importing app.py.
+    db.create_all()
     db.session.add(User(email="existing@example.invalid"))
     db.session.commit()
 """)
@@ -131,7 +161,8 @@ with app.app_context():
             "SELECT COUNT(*) FROM information_schema.tables "
             "WHERE table_name = 'alembic_version' AND table_schema='public'"
         )
-        # No stamping performed, even though app import creates ORM tables.
+        # No stamping performed: app import and the failed bootstrap
+        # must leave this populated unversioned schema untouched.
         if cur.fetchone()[0]:
             cur.execute("SELECT COUNT(*) FROM alembic_version")
             assert cur.fetchone()[0] == 0
@@ -140,12 +171,44 @@ with app.app_context():
     incomplete = _create_db("bootstrap_incomplete_ci")
     with _db_conn(incomplete) as conn, conn.cursor() as cur:
         cur.execute("CREATE TABLE users (id SERIAL PRIMARY KEY, email VARCHAR(254))")
+    before = _table_count(incomplete)
+    _run(incomplete, "import app; assert app.app")
+    assert _table_count(incomplete) == before, "Import repaired a partial schema"
+    _startup(incomplete, success=False)
+    assert _table_count(incomplete) == before, "Read-only startup repaired partial schema"
     failed = _bootstrap(incomplete, success=False)
     assert "schema differs" in failed.stdout or "complete application schema" in failed.stdout
+    assert _table_count(incomplete) == before, "Bootstrap repaired partial schema"
+
+    # 5. Wrong Alembic head is a hard startup NO-GO, not an automatic upgrade.
+    with _db_conn(fresh) as conn, conn.cursor() as cur:
+        cur.execute("UPDATE alembic_version SET version_num='v5w6x7y8z9a0'")
+    before = _table_count(fresh)
+    _startup(fresh, success=False)
+    assert _table_count(fresh) == before
+    with _db_conn(fresh) as conn, conn.cursor() as cur:
+        cur.execute("SELECT version_num FROM alembic_version")
+        assert cur.fetchall() == [("v5w6x7y8z9a0",)]
+        cur.execute("UPDATE alembic_version SET version_num=%s", (HEAD,))
+    _startup(fresh)
+
+    # 6. Missing S01 integrity constraint also fails shut even at correct head.
+    with _db_conn(fresh) as conn, conn.cursor() as cur:
+        cur.execute("ALTER TABLE s01_stripe_checkout_attempts DROP CONSTRAINT ck_s01_attempt_currency")
+    _startup(fresh, success=False)
+    with _db_conn(fresh) as conn, conn.cursor() as cur:
+        cur.execute(
+            "SELECT COUNT(*) FROM pg_constraint "
+            "WHERE conrelid='s01_stripe_checkout_attempts'::regclass "
+            "AND conname='ck_s01_attempt_currency'"
+        )
+        assert cur.fetchone()[0] == 0, "Read-only gate recreated a missing constraint"
+
     print(
-        "PostgreSQL bootstrap: fresh schema + seed PASS; repeated existing "
-        "database PASS; populated unversioned FAIL-CLOSED PASS; "
-        "incomplete schema FAIL-CLOSED PASS"
+        "S01 G04: import without DDL PASS; fresh explicit bootstrap PASS; "
+        "repeated existing versioned PASS; populated unversioned FAIL-CLOSED PASS; "
+        "partial schema FAIL-CLOSED PASS; stale head FAIL-CLOSED PASS; "
+        "missing constraint FAIL-CLOSED PASS; startup READ ONLY PASS"
     )
 
 

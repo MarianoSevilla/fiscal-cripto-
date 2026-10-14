@@ -136,7 +136,7 @@ nav {
 }
 .service-card h3 { font-family: var(--ff-h); font-size: 19px; color: var(--text); margin-bottom: 10px; }
 .service-price {
-  font-family: var(--ff-h); font-size: 34px; font-weight: 800; color: var(--accent);
+  font-family: var(--ff-b); font-size: 15px; font-weight: 600; color: var(--sub);
   margin-bottom: 16px;
 }
 .service-price span { font-size: 16px; font-weight: 500; color: var(--muted); }
@@ -271,7 +271,8 @@ nav {
   <div class="hero-badge">Asesoramiento fiscal cripto</div>
   <h1>Asesoramiento fiscal especializado en <span>criptomonedas</span></h1>
   <p>Revisión personalizada de tu situación fiscal con criptoactivos. Rafael Ramos, economista colegiado, analiza tu caso y te orienta para declarar correctamente tus operaciones.</p>
-  <a href="#servicios" class="btn-primary" id="heroCta">Solicitar revisión fiscal</a>
+  <p role="status" style="margin:12px auto 18px;max-width:720px;line-height:1.6">La recepción de solicitudes continúa abierta. La emisión de presupuestos, los enlaces de pago y los cobros están temporalmente suspendidos.</p>
+  <a href="#servicios" class="btn-primary" id="heroCta">Enviar solicitud sin pago</a>
 </section>
 
 <hr class="divider">
@@ -315,19 +316,19 @@ nav {
   <div class="services-grid" id="servicesGrid">
     <div class="service-card">
       <h3>Revisión fiscal básica</h3>
-      <div class="service-price loading-price" id="price-revision_basica">Cargando...</div>
+      <div class="service-price" id="price-revision_basica" role="status">Presupuestos suspendidos</div>
       <ul class="service-features">
         <li>Revisión del cálculo FIFO de un exchange</li>
         <li>Compraventas y swaps del ejercicio</li>
         <li>Orientación sobre casillas de la declaración</li>
-        <li>Respuesta por email en 2–3 días hábiles</li>
+        <li>Solicitud recibida sin presupuesto ni pago durante la suspensión</li>
       </ul>
       <a href="#" class="btn-service cta-btn">Solicitar</a>
     </div>
     <div class="service-card featured">
       <div class="service-badge">Más solicitado</div>
       <h3>Revisión fiscal avanzada</h3>
-      <div class="service-price loading-price" id="price-revision_avanzada">Cargando...</div>
+      <div class="service-price" id="price-revision_avanzada" role="status">Presupuestos suspendidos</div>
       <ul class="service-features">
         <li>Múltiples exchanges y wallets</li>
         <li>Staking, lending y rendimientos del capital</li>
@@ -339,7 +340,7 @@ nav {
     </div>
     <div class="service-card">
       <h3>Valoración personalizada</h3>
-      <div class="service-price loading-price" id="price-caso_complejo">Cargando...</div>
+      <div class="service-price" id="price-caso_complejo" role="status">Presupuestos suspendidos</div>
       <ul class="service-features">
         <li>Casos complejos: DeFi, NFTs, mining</li>
         <li>Situaciones con múltiples años pendientes</li>
@@ -411,8 +412,8 @@ nav {
 <!-- CTA FINAL -->
 <section class="cta-section">
   <h2>Empieza con tu revisión fiscal</h2>
-  <p>Rellena el formulario con los detalles de tu situación y Rafael te dará respuesta en 2–3 días hábiles.</p>
-  <a href="#" class="btn-primary" id="finalCta">Solicitar revisión fiscal</a>
+  <p>Envíanos tu solicitud para revisión interna. El envío de presupuestos y los pagos están temporalmente suspendidos; no hay un plazo de respuesta confirmado.</p>
+  <a href="#" class="btn-primary" id="finalCta">Enviar solicitud sin pago</a>
 </section>
 
 <footer class="page-footer">
@@ -450,23 +451,9 @@ nav {
   document.getElementById('finalCta').href = dest;
   document.querySelectorAll('.cta-btn').forEach(btn => btn.href = dest);
 
-  // Load prices
-  try {
-    const r = await fetch('/api/asesoramiento/precios');
-    const prices = await r.json();
-    const fmt = (eur) => eur % 1 === 0 ? `${eur} €` : `${eur.toFixed(2).replace('.',',')} €`;
-    for (const [key, val] of Object.entries(prices)) {
-      const el = document.getElementById(`price-${key}`);
-      if (el) {
-        el.textContent = fmt(val.amount_eur);
-        el.classList.remove('loading-price');
-        el.style.fontFamily = 'var(--ff-h)';
-        el.style.fontSize = '34px';
-        el.style.fontWeight = '800';
-        el.style.color = 'var(--accent)';
-      }
-    }
-  } catch {}
+  // C2: nunca solicitar ni renderizar tarifas heredadas durante PREFREEZE.
+  // Ningún importe es oferta ni enlace de pago.
+
 })();
 </script>
 </body>

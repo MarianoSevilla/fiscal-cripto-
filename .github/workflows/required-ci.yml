@@ -78,7 +78,7 @@ jobs:
           PY
 
       - name: Full Python regression
-        run: python -m pytest -q --import-mode=importlib --disable-warnings --maxfail=1 fiscal_app_export/tests tests
+        run: python -m pytest -q -rs --import-mode=importlib --disable-warnings --maxfail=1 fiscal_app_export/tests tests
 
   postgres-bootstrap:
     name: postgres-bootstrap
@@ -117,7 +117,21 @@ jobs:
           python -m pip check
 
       - name: Exercise PostgreSQL 18 startup and defensive Alembic bootstrap
-        run: python fiscal_app_export/tests/qa_db_bootstrap_postgres.py
+        run: |
+          python fiscal_app_export/tests/qa_db_bootstrap_postgres.py
+          python fiscal_app_export/tests/qa_advisory_prefreeze_postgres.py
+
+      - name: S01 signed Stripe webhook races against isolated PostgreSQL 18
+        run: python fiscal_app_export/tests/qa_s01_stripe_pg18_concurrency.py
+
+      - name: S01 quote reissue and Checkout reservation row-lock race on PostgreSQL 18
+        run: python fiscal_app_export/tests/qa_s01_quote_reservation_pg18.py
+
+      - name: S01 legacy PayPal evidence and linear Alembic history gate
+        run: python fiscal_app_export/tests/qa_s01_paypal_retirement_pg18.py
+
+      - name: C2-R01 row lock and partial financial evidence on isolated PG18
+        run: python fiscal_app_export/tests/qa_s01_c2_management_pg18.py
 
   browser-navigation:
     name: browser-navigation
@@ -152,6 +166,12 @@ jobs:
 
       - name: Flask navigation and access checks with synthetic SQLite data
         run: python fiscal_app_export/tests/qa_flask_navigation.py
+
+      - name: Advisory prefreeze mobile and desktop without provider calls
+        run: python fiscal_app_export/tests/qa_advisory_prefreeze_browser.py
+
+      - name: C2-R02 real Flask and Chromium advisory intake/management E2E
+        run: python fiscal_app_export/tests/qa_s01_c2_r02_browser.py
 
       - name: Keep non-sensitive responsive screenshots for review
         if: always()

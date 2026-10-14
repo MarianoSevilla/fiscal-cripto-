@@ -219,12 +219,11 @@ def advisory_confirmation_email(advisory) -> tuple[str, str]:
             f"<strong style='font-weight:600;color:#111827;'>{year}</strong>."
         ) +
         _p(
-            "Revisaremos tu caso y te responderemos por email con los siguientes pasos. "
-            "Si necesitamos documentación adicional, te lo indicaremos."
+            "Seguimos recibiendo solicitudes, pero los presupuestos y los enlaces de pago "
+            "están temporalmente suspendidos. Te informaremos cuando se reanude su tramitación."
         ) +
         _p(
-            "El servicio puede incluir una valoración previa por parte de Rafa, "
-            "economista colegiado, antes de confirmar el precio final.",
+            "La recepción de esta solicitud no supone contratación del servicio ni genera cargos.",
             last=True,
         ) +
         _ref(f"Solicitud #{ref_id}")
@@ -238,8 +237,8 @@ def advisory_confirmation_email(advisory) -> tuple[str, str]:
         f"Hemos recibido tu solicitud de {advisory.service_label()} "
         f"para el ejercicio {advisory.tax_year}.",
         "",
-        "Revisaremos tu caso y te responderemos por email con los siguientes pasos.",
-        "Si necesitamos documentación adicional, te lo indicaremos.",
+        "Seguimos recibiendo solicitudes, pero los presupuestos y los enlaces de pago están temporalmente suspendidos.",
+        "Te informaremos cuando se reanude su tramitación. La solicitud no genera ningún cargo.",
         "",
         f"Solicitud #{ref_id}",
         "",
