@@ -97,7 +97,10 @@ def fingerprint(dsn: str) -> tuple:
                 "JOIN pg_catalog.pg_namespace n ON n.oid = c.connamespace "
                 "WHERE n.nspname='public' ORDER BY c.conname"
             )
-            constraints = tuple(cur.fetchall())
+            # Constraint names may repeat across different tables. An
+            # ORDER BY conname alone leaves ties in an arbitrary heap order
+            # that can change after pg_dump/pg_restore. Canonicalize tuples.
+            constraints = tuple(sorted(cur.fetchall()))
             cur.execute(
                 "SELECT tablename, indexname, indexdef "
                 "FROM pg_catalog.pg_indexes WHERE schemaname='public' "
