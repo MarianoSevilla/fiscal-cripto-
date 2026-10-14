@@ -20,3 +20,14 @@ Este cambio es **solo código de una rama nueva y CI sintética**, sobre la PR #
 Si se desea una tercera ejecución de **solo lectura**, hacer preflight operativo independiente, pin exacto del SHA validado y **una única ejecución**, con reinicio NEVER; ante cualquier denegación, parar. No crear tablas, no restaurar backup original, no pagar, no enviar correo, no fusionar PRs y no desplegar web.
 
 **NO-GO para migraciones y operaciones destructivas.**
+
+
+## Resultado ejecutado de la tercera comprobación real
+- Commit CI validado y anclado al ejecutor: `2062109d900281f383bc1f3a5c94a98be7140d62`. CI **34/34 PASS**, run `38541234720`.
+- Despliegue privado de solo lectura: `86336018-9964-471b-92c7-e4b40db8e4e1`.
+- Línea de registro literal: `S01 STG-B10G: PASS (READ ONLY, PostgreSQL18, cluster 7696213098351943739, pristine schema)`.
+- El `system_identifier` coincide **exactamente** con la lectura aportada por el propietario desde `Postgres > Database > Query` (`7696213098351943739`), con base `railway` y PostgreSQL 18; el esquema estaba vacío según la inspección de catálogos del preflight.
+- Sin migraciones, DML, DDL, envíos, cobros ni activación de web: el script incluye solo consultas a catálogos y control, en transacciones READ ONLY con rollback.
+- `sslmode=require` cifra la conexión, pero NO sustituye verificación del certificado servidor `verify-full`. La coincidencia de huella, pins Railway y referencia interna constituye evidencia operacional del clúster, no prueba absoluta de seguridad de red.
+- Tras la comprobación la ejecución de mantenimiento no tiene ninguna razón para permanecer activa; conservar política `restartPolicyType=NEVER`, sin cron ni endpoints públicos.
+- **PENDIENTE:** copia de seguridad del laboratorio restaurada y verificada en destino separado. La comprobación de identidad, por sí sola, **no autoriza** bootstrap o migraciones reales.
