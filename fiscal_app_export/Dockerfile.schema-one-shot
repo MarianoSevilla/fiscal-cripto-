@@ -1,0 +1,19 @@
+# S01 ONE-SHOT schema bootstrap candidate — DO NOT DEPLOY without NEW explicit approval.
+# The deployed B11B Dockerfile remains /infra/s01_lab_schema/Dockerfile READ ONLY.
+FROM postgres:18.6-bookworm
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends python3 python3-venv \
+ && rm -rf /var/lib/apt/lists/* \
+ && python3 -m venv /opt/s01-schema-venv
+WORKDIR /app
+COPY requirements.schema-bootstrap.txt /app/requirements.schema-bootstrap.txt
+RUN /opt/s01-schema-venv/bin/pip install --no-cache-dir -r requirements.schema-bootstrap.txt
+COPY schema_preflight.py /app/schema_preflight.py
+COPY schema_bootstrap_one_shot.py /app/schema_bootstrap_one_shot.py
+COPY private_maintenance_rehearsal.py /app/private_maintenance_rehearsal.py
+COPY private_maintenance_preflight.py /app/private_maintenance_preflight.py
+COPY staging_isolation.py /app/staging_isolation.py
+COPY models.py /app/models.py
+COPY migrations/ /app/migrations/
+USER postgres
+ENTRYPOINT ["/opt/s01-schema-venv/bin/python", "/app/schema_bootstrap_one_shot.py"]
