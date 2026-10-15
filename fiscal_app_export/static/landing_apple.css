@@ -139,15 +139,15 @@
 .apple-home .apple-editorial p:last-child { margin-bottom:0; }
 .apple-home .apple-editorial strong { color:var(--text); font-weight:600; }
 .apple-home .apple-editorial .apple-container>span { display:block; color:var(--accent); font-weight:600; font-size:.875rem; margin-bottom:16px; }
-.apple-home .apple-faq h2 { margin-bottom:20px; max-width:28ch; }
-.apple-home .apple-faq .apple-container>p { color:var(--muted); max-width:72ch; margin-bottom:36px; }
+.apple-home .apple-faq h2 { margin-bottom:20px; }
+.apple-home .apple-faq .apple-container>p { color:var(--muted); margin-bottom:36px; }
 .apple-home .apple-faq-list { border-top:1px solid var(--border); }
 .apple-home .apple-faq-item { border-bottom:1px solid var(--border); }
 .apple-home .apple-faq-item summary { list-style:none; display:flex; gap:24px; justify-content:space-between; align-items:center; cursor:pointer; padding:24px 0; font-size:1.0625rem; font-weight:600; line-height:1.45; }
 .apple-home .apple-faq-item summary::-webkit-details-marker { display:none; }
 .apple-home .apple-faq-item summary::after { content:'+'; color:var(--accent); flex:0 0 24px; text-align:center; font-size:1.5rem; font-weight:400; }
 .apple-home .apple-faq-item[open] summary::after { content:'−'; }
-.apple-home .apple-faq-answer { padding:0 32px 24px 0; max-width:76ch; color:var(--muted); }
+.apple-home .apple-faq-answer { padding:0 0 24px; color:var(--muted); }
 .apple-home .apple-faq-answer p { margin-bottom:12px; }
 .apple-home .apple-faq-answer a { display:inline-flex; padding-block:6px; }
 .apple-home .legal-bar { padding:28px var(--apple-pad); border-top:1px solid var(--border); background:#f5f6f7; font-size:.875rem; color:var(--muted); }
