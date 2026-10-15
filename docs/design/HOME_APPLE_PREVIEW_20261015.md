@@ -56,3 +56,19 @@ Valorar color, tipografía, claridad, orden, presencia del ejemplo, confianza y
 experiencia móvil. Iterar en la misma rama. La incorporación al original requiere
 aprobación visual, pruebas satisfactorias y una comparación contra el `main`
 vigente que preserve cambios paralelos. Publicar requiere autorización separada.
+
+## Revisión de exchanges (15/10/2026)
+
+Selección manual a partir de las capturas agregadas aportadas por el propietario,
+no a partir de fixtures: Binance, Bitvavo, Nexo, Coinbase, Kraken y Bitget.
+El primer gráfico ordena por cantidad de informes generados correctamente;
+el segundo ordena por media de filas CSV, solo con al menos cinco informes y
+csv_rows registrado. El ancho de sus barras sigue siendo número de informes.
+No se infieren cifras exactas de las barras ni un desempate estable entre
+Coinbase y Kraken: la consulta de conteo no define un segundo criterio.
+
+Se muestran seis tarjetas en orden de la primera captura: 3 columnas desktop,
+2 tablet y 1 móvil. Bit2Me conserva su texto y enlace en un bloque secundario,
+y se añade el acceso a todos los exchanges junto a esta sección. Bitget enlaza
+a la herramienta existente /bitget (incluye instrucciones); no existe una guía
+/exchanges/bitget en esta base. No se crea una ruta ni una consulta de producción.

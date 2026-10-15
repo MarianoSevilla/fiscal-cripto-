@@ -72,6 +72,14 @@ def run_home_apple(browser,origin):
         assert page.locator('h1').count()==1
         assert page.locator('a.btn-primary').get_attribute('href')=='/signup/'
         assert page.locator('.mock-table-head > span').count()==5
+        # The selected six must fill complete rows at each layout breakpoint.
+        cards=page.locator('.apple-exchange-grid > a')
+        assert cards.count()==6
+        boxes=[cards.nth(i).bounding_box() for i in range(6)]
+        expected_columns=1 if width<=640 else 2 if width<=900 else 3
+        row_tops={round(box['y']) for box in boxes}
+        assert len(row_tops)==6//expected_columns,('exchange rows',width,boxes)
+        assert page.locator('.apple-exchange-secondary a').get_attribute('href')=='/exchanges/bit2me'
         # Demonstration must appear before secondary advisory/team blocks on mobile.
         assert page.locator('.apple-demo').bounding_box()['y'] < page.locator('.apple-assistance').bounding_box()['y']
         # Full-page captures must include off-screen portraits as well. Changing
