@@ -134,8 +134,7 @@
 .apple-home .authors-link { margin-top:24px; }
 .apple-home .apple-editorial { border-top:1px solid var(--border); }
 .apple-home .apple-editorial-alt { background:#f5f6f7; }
-.apple-home .apple-editorial .apple-container { max-width:880px; }
-.apple-home .apple-editorial h2 { margin-bottom:24px; max-width:28ch; font-size:clamp(1.75rem,3vw,2.35rem); }
+.apple-home .apple-editorial h2 { margin-bottom:24px; font-size:clamp(1.75rem,3vw,2.35rem); }
 .apple-home .apple-editorial p { color:var(--muted); margin-bottom:18px; }
 .apple-home .apple-editorial p:last-child { margin-bottom:0; }
 .apple-home .apple-editorial strong { color:var(--text); font-weight:600; }
