@@ -191,6 +191,10 @@ def main():
                     print(f"Home {width}px: {'PASS' if not issues else 'FAIL'} ({len(issues)} incidencias)")
                 finally:
                     page.close()
+            # Additive Home proposal: same isolated server/browser, no new dependencies.
+            if (Path(__file__).resolve().parents[1] / "static" / "landing_apple.html").is_file():
+                from qa_home_apple import run_home_apple
+                run_home_apple(browser, origin)
         finally:
             browser.close()
     if all_failures:
