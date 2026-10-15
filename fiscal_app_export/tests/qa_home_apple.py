@@ -74,6 +74,10 @@ def run_home_apple(browser,origin):
         assert page.locator('.mock-table-head > span').count()==5
         # Demonstration must appear before secondary advisory/team blocks on mobile.
         assert page.locator('.apple-demo').bounding_box()['y'] < page.locator('.apple-assistance').bounding_box()['y']
+        # Full-page captures must include off-screen portraits as well. Changing
+        # loading in this ephemeral test DOM keeps production lazy loading intact.
+        page.locator('img[loading="lazy"]').evaluate_all("imgs=>imgs.forEach(img=>{img.loading='eager'})")
+        page.evaluate("async()=>await Promise.all([...document.images].map(img=>img.decode()))")
         page.screenshot(path=str(ARTIFACTS/f'home_apple_{width}px.png'),full_page=True,animations='disabled')
         if width<=1200:
             toggle=page.locator('#snavMenuToggle');toggle.click()
