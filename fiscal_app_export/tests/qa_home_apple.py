@@ -62,6 +62,12 @@ def run_home_apple(browser,origin):
         ctx,violations=context(browser,width=width)
         page=ctx.new_page();errors=ready(page,origin)
         bad=geometry(page,width);assert not bad,(width,bad[:10])
+        if width>1200:
+            logo=page.locator('.snav-logo').bounding_box()
+            links=page.locator('.snav-links').bounding_box()
+            right=page.locator('.snav-right').bounding_box()
+            assert logo['x']+logo['width']+8<=links['x'],('logo/links overlap',width)
+            assert links['x']+links['width']+8<=right['x'],('links/access overlap',width)
         assert page.locator('main').count()==1
         assert page.locator('h1').count()==1
         assert page.locator('a.btn-primary').get_attribute('href')=='/signup/'
