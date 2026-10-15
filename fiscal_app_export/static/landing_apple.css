@@ -16,6 +16,7 @@
 .apple-home a { color:var(--accent); text-underline-offset:.25em; }
 .apple-home :where(a,button,input,summary,[tabindex]):focus-visible { outline:3px solid #005fcc; outline-offset:4px; }
 .apple-home main:focus { outline:none; }
+.apple-home .apple-sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; border:0; }
 .apple-home :where(button,input) { font:inherit; }
 .apple-home img { display:block; max-width:100%; }
 .apple-home h2 { font-size:clamp(1.75rem,3.5vw,2.8rem); line-height:1.15; letter-spacing:-.035em; font-weight:650; }
@@ -57,13 +58,20 @@
 .apple-home .apple-hero-actions { display:flex; justify-content:center; align-items:center; gap:12px 26px; flex-wrap:wrap; }
 .apple-home :is(.btn-primary,.apple-button,.btn-asistencia,.auth-btn-primary) { display:inline-flex; justify-content:center; align-items:center; min-height:48px; padding:12px 24px; border:1px solid transparent; border-radius:999px; background:var(--accent); color:#fff; font-size:1rem; font-weight:600; line-height:1.5; text-align:center; text-decoration:none; cursor:pointer; transition:background .15s ease; }
 .apple-home :is(.btn-primary,.apple-button,.btn-asistencia,.auth-btn-primary):hover { background:#00533f; }
+/* Immediate press feedback without motion or layout shifts. */
+.apple-home :is(.btn-primary,.apple-button,.btn-asistencia,.auth-btn-primary,.snav-btn-cta,.snav-mobile-link-primary,.snav-avatar):active:not(:disabled) { background:#004331; color:#fff; box-shadow:inset 0 0 0 2px rgba(0,0,0,.12); transition:none; }
+.apple-home :is(.snav-btn-login,.snav-menu-toggle,.auth-close,.auth-switch-btn,.apple-text-link,.authors-link,.snav-links a,.snav-dd-item,.snav-mobile-link,.legal-bar-links a):active { background-color:#e4eee9; color:#004331; transition:none; }
+.apple-home .apple-exchange-grid>a:active { background:#edf5f1; border-color:var(--accent); transition:none; }
+.apple-home .apple-faq-item summary:active { background:#edf5f1; color:#004331; }
+.apple-home .auth-btn-primary:disabled { background:#dce4e0; color:#526359; cursor:wait; box-shadow:none; }
 .apple-home :is(.apple-text-link,.authors-link) { display:inline-flex; align-items:center; gap:8px; min-height:44px; text-decoration:none; font-weight:550; }
 .apple-home :is(.apple-text-link,.authors-link):hover { text-decoration:underline; }
-.apple-home .cta-micro { color:var(--muted); margin:14px auto 24px; font-size:.875rem; max-width:54ch; }
+.apple-home .cta-micro { color:var(--muted); margin:14px auto 0; font-size:.875rem; max-width:54ch; }
 .apple-home .hero-checks { list-style:none; padding:0; display:flex; justify-content:center; flex-wrap:wrap; gap:8px 24px; color:var(--muted); font-size:.875rem; }
 .apple-home .hero-checks li { display:flex; align-items:baseline; gap:8px; text-align:left; max-width:100%; min-width:0; }
 .apple-home .hero-checks li::before { content:'✓'; color:var(--accent); font-weight:700; flex-shrink:0; }
-.apple-home .apple-demo { padding-block:12px 56px; }
+.apple-home .apple-demo { padding-block:12px 32px; }
+.apple-home .apple-trust { padding-bottom:40px; }
 .apple-home .apple-demo-heading { display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px 24px; max-width:940px; margin:0 auto 20px; }
 .apple-home .apple-demo-heading h2 { font-size:1.375rem; letter-spacing:-.02em; }
 .apple-home .apple-demo-heading p { color:var(--muted); font-size:.875rem; }
@@ -81,10 +89,17 @@
 .apple-home :is(.red,.mock-red) { color:#b42318; }
 .apple-home .mock-table-wrap { max-width:100%; overflow-x:auto; border:1px solid #e1e6e3; border-radius:10px; }
 .apple-home .apple-table-hint { display:none; }
-.apple-home :is(.mock-table-head,.mock-table-row) { display:grid; grid-template-columns:1.3fr .8fr .85fr 1.2fr 1fr; min-width:590px; gap:12px; padding:12px 16px; align-items:center; font-size:.875rem; }
-.apple-home .mock-table-head { background:#f5f7f6; color:var(--muted); font-weight:600; }
+.apple-home .mock-table { width:100%; min-width:36.875rem; table-layout:fixed; border-collapse:collapse; font-size:.875rem; }
+.apple-home .mock-table :is(th,td) { padding:12px 16px; text-align:left; vertical-align:middle; }
+.apple-home .mock-table th { font-weight:600; }
+.apple-home .mock-table th:nth-child(1) { width:25%; }
+.apple-home .mock-table th:nth-child(2) { width:16%; }
+.apple-home .mock-table th:nth-child(3) { width:17%; }
+.apple-home .mock-table th:nth-child(4) { width:23%; }
+.apple-home .mock-table th:nth-child(5) { width:19%; }
+.apple-home .mock-table-head { background:#f5f7f6; color:var(--muted); }
 .apple-home .mock-table-row { border-top:1px solid #edf0ee; font-variant-numeric:tabular-nums; }
-.apple-home :is(.mock-table-head,.mock-table-row)>span:nth-last-child(-n+2) { text-align:right; }
+.apple-home .mock-table :is(th,td):nth-last-child(-n+2) { text-align:right; }
 .apple-home .mock-badge { display:inline-block; padding:2px 8px; border-radius:5px; background:#edf4f0; color:#35554a; font-size:.8125rem; }
 .apple-home .mock-badge-venta { background:#f2f3f4; color:#4b5660; }
 .apple-home .apple-compatible { border-block:1px solid var(--border); background:#fafbfb; }
@@ -177,13 +192,14 @@
 }
 @media (max-width:640px) {
   .apple-home { --apple-pad:20px; }
-  .apple-home .apple-hero { padding-top:112px; padding-bottom:24px; }
+  .apple-home .apple-hero { padding-top:100px; padding-bottom:24px; }
   .apple-home h1 { font-size:clamp(2rem,8.4vw,3rem); letter-spacing:-.042em; }
   .apple-home .hero-desc { font-size:1rem; margin-bottom:24px; }
   .apple-home .hero-checks { display:grid; grid-template-columns:minmax(0,1fr); max-width:42ch; margin-inline:auto; gap:8px; font-size:.875rem; }
   .apple-home .apple-hero-actions { gap:6px 16px; }
-  .apple-home .cta-micro { margin-bottom:24px; }
-  .apple-home .apple-demo { padding-bottom:36px; }
+  .apple-home .cta-micro { margin-bottom:0; }
+  .apple-home .apple-demo { padding-bottom:24px; }
+  .apple-home .apple-trust { padding-bottom:32px; }
   .apple-home .device-bar { padding:12px 16px; }
   .apple-home .device-body { padding:16px; }
   .apple-home .apple-table-hint { display:block; color:var(--muted); font-size:.8125rem; margin-bottom:12px; }

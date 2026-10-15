@@ -71,7 +71,19 @@ def run_home_apple(browser,origin):
         assert page.locator('main').count()==1
         assert page.locator('h1').count()==1
         assert page.locator('a.btn-primary').get_attribute('href')=='/signup/'
-        assert page.locator('.mock-table-head > span').count()==5
+        table=page.get_by_role('table',name='Operaciones del informe de ejemplo. Datos ficticios.')
+        assert table.get_by_role('columnheader').count()==5
+        assert table.get_by_role('row').count()==6
+        assert table.get_by_role('cell').count()==25
+        assert page.locator('.apple-hero-actions a[href="#como-funciona"]').inner_text()=='Cómo funciona ↓'
+        if width==390:
+            assert page.locator('.device-frame').bounding_box()['y']<750
+        # Earlier owner-approved section widths must survive this polish pass.
+        reference=page.locator('.apple-exchanges .apple-container').bounding_box()
+        for section in ['#fiscalidad','#metodo-fifo','.apple-faq']:
+            box=page.locator(section+' .apple-container').bounding_box()
+            assert abs(box['x']-reference['x'])<1
+            assert abs(box['width']-reference['width'])<1
         # The selected six must fill complete rows at each layout breakpoint.
         cards=page.locator('.apple-exchange-grid > a')
         assert cards.count()==6
@@ -87,6 +99,19 @@ def run_home_apple(browser,origin):
         page.locator('img[loading="lazy"]').evaluate_all("imgs=>imgs.forEach(img=>{img.loading='eager'})")
         page.evaluate("async()=>await Promise.all([...document.images].map(img=>img.decode()))")
         page.screenshot(path=str(ARTIFACTS/f'home_apple_{width}px.png'),full_page=True,animations='disabled')
+        if width==390:
+            wrap=page.locator('.mock-table-wrap')
+            wrap.focus();wrap.press('ArrowRight')
+            page.wait_for_function("document.querySelector('.mock-table-wrap').scrollLeft>0")
+            wrap.evaluate('el=>{el.scrollLeft=0;el.blur()}')
+        if width in [390,1280]:
+            primary=page.locator('a.btn-primary');primary.hover()
+            initial=primary.evaluate('el=>getComputedStyle(el).backgroundColor')
+            page.mouse.down()
+            pressed=primary.evaluate('el=>getComputedStyle(el).backgroundColor')
+            assert pressed!=initial,('missing press feedback',width)
+            page.mouse.move(1,300);page.mouse.up()
+            assert page.url.endswith('/static/landing_apple.html')
         if width<=1200:
             toggle=page.locator('#snavMenuToggle');toggle.click()
             menu=page.locator('#snavMobileMenu')

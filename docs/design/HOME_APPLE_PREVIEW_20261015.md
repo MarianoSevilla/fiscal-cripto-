@@ -20,8 +20,10 @@ exchanges, asesoramiento y equipo después; contenido SEO íntegro al final.
 FAQ con detalles nativos, teclado y contenido en el HTML. Tablas del ejemplo
 conservan las cinco columnas mediante scroll local. Estilos bajo `.apple-home`.
 
-Se preservan todos los párrafos, palabras, enlaces de destino, datos estructurados,
-canonical, campos y script de autenticación de la Home de referencia. Se añade
+Se preserva el contenido original, con las dos correcciones de redacción
+autorizadas en la revisión v6 (descritas abajo). Se mantienen los enlaces de
+destino, datos estructurados, canonical, campos y script de autenticación de
+la Home de referencia. Se añade
 una indicación de datos ficticios y el aviso de suspensión de presupuestos/pagos
 que ya rige en las páginas de asesoramiento de la base.
 
@@ -72,3 +74,32 @@ Se muestran seis tarjetas en orden de la primera captura: 3 columnas desktop,
 y se añade el acceso a todos los exchanges junto a esta sección. Bitget enlaza
 a la herramienta existente /bitget (incluye instrucciones); no existe una guía
 /exchanges/bitget en esta base. No se crea una ruta ni una consulta de producción.
+
+## V6: revisión apple-design aplicada
+
+Revisión documental de la skill original de Emil Kowalski:
+https://github.com/emilkowalski/skills/blob/main/skills/apple-design/SKILL.md
+(blob leído: adf68c517f2d7d2781587d619de07f4de286da57). No se instala la skill,
+ninguna librería ni dependencia adicional. Se aplican feedback, claridad y
+accesibilidad a la interfaz existente; sin animaciones físicas nuevas.
+
+- Dos correcciones de texto autorizadas: el párrafo del PDF indica descarga
+  desde la cuenta y el cierre de exchanges confirma compatibilidad antes de
+  ofrecer ayuda. Se conservan los nombres Nexo, Crypto.com y Uphold. El test
+  protege expresamente estas dos sustituciones y todo el resto del contenido.
+- Tabla HTML nativa con caption y cinco encabezados scope=col; se conservan
+  las 25 celdas de datos y el desplazamiento horizontal local. La captura usa
+  siempre los mismos datos ficticios. Referencia: https://www.w3.org/WAI/tutorials/tables/.
+- Estados de pulsación con color inmediato, sin movimiento ni cambio de tamaño;
+  estilo explícito para el estado deshabilitado del formulario ya existente.
+  No se modifica su envío, validación, endpoints ni script de autenticación.
+- Las cuatro ventajas se leen después del ejemplo en el DOM y visualmente,
+  sin duplicarlas u ocultarlas. El hero móvil tiene menos espacio antes del
+  mensaje; el ejemplo se presenta antes. Se mantienen los anchos aprobados.
+- La flecha de «Cómo funciona» apunta hacia abajo y conserva el enlace interno.
+
+La prueba de navegador valida roles nativos de tabla, scroll con teclado,
+feedback presionado sin seguir enlaces, aparición más temprana del ejemplo
+móvil y conservación de los anchos de fiscalidad, FIFO y FAQ.
+Pendientes Safari/iOS y lector de pantalla físico. La estructura semántica y
+los roles comprobados no sustituyen esa validación manual.
