@@ -75,7 +75,9 @@ def run_home_apple(browser,origin):
         assert table.get_by_role('columnheader').count()==5
         assert table.get_by_role('row').count()==6
         assert table.get_by_role('cell').count()==25
-        assert page.locator('.apple-hero-actions a[href="#como-funciona"]').inner_text()=='Cómo funciona ↓'
+        how=page.locator('.apple-hero-actions a[href="#como-funciona"]')
+        assert page.locator('.apple-hero-actions').get_by_role('link',name='Cómo funciona',exact=True).count()==1
+        assert how.locator('[aria-hidden="true"]').text_content()=='↓'
         if width==390:
             assert page.locator('.device-frame').bounding_box()['y']<750
         # Earlier owner-approved section widths must survive this polish pass.
