@@ -50,7 +50,8 @@ def run_herramientas_apple(browser,origin):
         assert page.locator('.apple-faq-item').first.get_attribute('open') is not None
         question.press('Enter')
         if width<=1200:
-            toggle=page.get_by_role('button',name='Abrir menú',exact=True)
+            toggle=page.locator('#snavMenuToggle')
+            assert toggle.get_attribute('aria-label')=='Abrir menú'
             assert toggle.is_visible()
             toggle.click()
             current=page.locator('#snavMobileMenu a[aria-current="page"]')
