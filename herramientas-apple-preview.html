@@ -799,6 +799,9 @@ body.apple-home { padding:0; }
 @media (max-width:640px) {
   .apple-home .apple-intro-inner { padding-top:36px; }
 }
+
+/* Home assistance copy follows the full width of its component. */
+.apple-home .apple-assistance .asistencia-block>p { max-width:none; }
 </style>
 <style>/* Isolated Tools proposal. Shared Home assets remain unchanged. */
 .apple-tools { --tools-space:40px; --tools-gap:24px; }
@@ -838,7 +841,8 @@ body.apple-home { padding:0; }
 .apple-tools .tools-help .apple-eyebrow { color:var(--accent); margin-bottom:16px; }
 .apple-tools .tools-help h2 { font-size:clamp(1.5rem,2.8vw,2rem); line-height:1.2; margin-bottom:16px; }
 .apple-tools .tools-help p:not(.apple-eyebrow) { max-width:none; color:#415b4d; font-size:1.0625rem; line-height:1.65; }
-.apple-tools .tools-help .apple-button { display:inline-flex; gap:8px; margin-top:24px; max-width:100%; }
+.apple-tools .tools-help .apple-button { display:inline-flex; gap:8px; margin-top:var(--tools-gap); max-width:100%; }
+.apple-tools .tools-help .asistencia-bullets { margin-block:var(--tools-gap) 0; gap:12px 24px; }
 .apple-tools #site-nav .snav-links a[aria-current="page"] { color:var(--text); font-weight:650; }
 @media (min-width:641px) and (max-width:1200px) {
  .apple-tools { --tools-space:32px; --tools-gap:20px; }
@@ -1462,10 +1466,15 @@ window.fetch=function(input,options){
 <details class="apple-faq-item"><summary>¿Qué documentación necesito para preparar el informe?</summary><div class="apple-faq-answer"><p>Reúne los CSV originales y el historial completo de operaciones de la misma criptomoneda, aunque esté repartido entre varios exchanges o monederos. Las compras de ejercicios anteriores pueden afectar al coste de una venta posterior. Comprueba también las transferencias entre cuentas propias para evitar duplicados. Consulta las instrucciones de exportación de cada exchange.</p></div></details></div>
 </div></section>
 <section class="tools-help" aria-labelledby="tools-help-title"><div class="apple-container"><div class="asistencia-block tools-help-inner">
- <p class="apple-eyebrow">Te ayudamos a elegir</p>
- <h2 id="tools-help-title">¿No sabes por dónde empezar?</h2>
- <p>Cuéntanos qué necesitas y te ayudamos a encontrar la herramienta adecuada.</p>
- <a href="https://marianosevilla.com/contacto" class="apple-button">Contactar <span aria-hidden="true">→</span></a>
+ <p class="apple-eyebrow">¿Qué herramienta fiscal necesitas?</p>
+ <h2 id="tools-help-title">Encuentra la opción adecuada para tu caso.</h2>
+ <p>Te orientamos para elegir entre el informe FIFO, las guías y los recursos de la web. El proyecto cuenta con la supervisión fiscal de Rafael Ramos Martínez, economista colegiado nº 4.579.</p>
+ <ul class="asistencia-bullets" role="list">
+  <li><span aria-hidden="true">✓ </span>Orientación inicial sin compromiso</li>
+  <li><span aria-hidden="true">✓ </span>Informe FIFO, guías y recursos</li>
+  <li><span aria-hidden="true">✓ </span>Supervisión fiscal colegiada</li>
+ </ul>
+ <a href="https://marianosevilla.com/contacto" class="apple-button">Ayúdame a elegir <span aria-hidden="true">→</span></a>
 </div></div></section>
 </main>
 <footer class="apple-footer">

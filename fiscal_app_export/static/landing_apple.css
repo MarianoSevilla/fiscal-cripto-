@@ -462,3 +462,6 @@ body.apple-home { padding:0; }
 @media (max-width:640px) {
   .apple-home .apple-intro-inner { padding-top:36px; }
 }
+
+/* Home assistance copy follows the full width of its component. */
+.apple-home .apple-assistance .asistencia-block>p { max-width:none; }

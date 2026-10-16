@@ -36,7 +36,8 @@
 .apple-tools .tools-help .apple-eyebrow { color:var(--accent); margin-bottom:16px; }
 .apple-tools .tools-help h2 { font-size:clamp(1.5rem,2.8vw,2rem); line-height:1.2; margin-bottom:16px; }
 .apple-tools .tools-help p:not(.apple-eyebrow) { max-width:none; color:#415b4d; font-size:1.0625rem; line-height:1.65; }
-.apple-tools .tools-help .apple-button { display:inline-flex; gap:8px; margin-top:24px; max-width:100%; }
+.apple-tools .tools-help .apple-button { display:inline-flex; gap:8px; margin-top:var(--tools-gap); max-width:100%; }
+.apple-tools .tools-help .asistencia-bullets { margin-block:var(--tools-gap) 0; gap:12px 24px; }
 .apple-tools #site-nav .snav-links a[aria-current="page"] { color:var(--text); font-weight:650; }
 @media (min-width:641px) and (max-width:1200px) {
  .apple-tools { --tools-space:32px; --tools-gap:20px; }
