@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calcula tus impuestos de criptomonedas — Mariano Sevilla</title>
+<meta name="description" content="Importa los CSV de tus exchanges y prepara tu informe fiscal de criptomonedas con cálculo FIFO y el detalle de tus operaciones.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="canonical" href="https://marianosevilla.com/">
+
+<!-- Open Graph -->
+<meta property="og:type"        content="website">
+<meta property="og:url"         content="https://marianosevilla.com/">
+<meta property="og:title"       content="Calcula tus impuestos de criptomonedas para Hacienda — Mariano Sevilla">
+<meta property="og:description" content="Importa los CSV de tus exchanges y prepara tu informe fiscal de criptomonedas con cálculo FIFO y el detalle de tus operaciones.">
+<meta property="og:image"       content="https://marianosevilla.com/static/og-image.png">
+<meta name="twitter:card"       content="summary_large_image">
+<meta name="twitter:title"      content="Calcula tus impuestos de criptomonedas para Hacienda — Mariano Sevilla">
+<meta name="twitter:description" content="Importa los CSV de tus exchanges y prepara tu informe fiscal de criptomonedas con cálculo FIFO y el detalle de tus operaciones.">
+<meta name="twitter:image"      content="https://marianosevilla.com/static/og-image.png">
+
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+<link rel="icon" href="/static/favicon.ico">
+<link rel="manifest" href="/static/site.webmanifest">
+
+<link rel="stylesheet" href="/static/nav.css">
+<link rel="preload" href="/static/nav.js" as="script">
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://marianosevilla.com/#website",
+      "url": "https://marianosevilla.com/",
+      "name": "Mariano Sevilla",
+      "description": "Herramienta fiscal para criptomonedas — informe FIFO para preparar tu declaración",
+      "inLanguage": "es"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://marianosevilla.com/#organization",
+      "name": "Mariano Sevilla",
+      "url": "https://marianosevilla.com/",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://marianosevilla.com/static/mariano-sevilla-logo.png"
+      }
+    },
+    {
+      "@type": ["SoftwareApplication", "WebApplication"],
+      "@id": "https://marianosevilla.com/#app",
+      "name": "Herramienta fiscal cripto — Mariano Sevilla",
+      "url": "https://marianosevilla.com/",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "All",
+      "browserRequirements": "Requires JavaScript",
+      "inLanguage": "es",
+      "description": "Prepara tu informe FIFO a partir de los CSV de exchanges compatibles. Revisa el detalle de tus operaciones y comparte el PDF con tu asesor para preparar la declaración de la renta.",
+      "featureList": [
+        "Cálculo FIFO automático",
+        "Compatible con Binance, Bitvavo, Bit2Me, Kraken, Coinbase",
+        "Informe PDF para revisar y compartir con tu asesor",
+        "Detalle de las operaciones importadas"
+      ]
+    }
+  ]
+}
+</script>
+<link rel="stylesheet" href="/static/landing_apple.css">
+<script src="/static/landing_apple.js" defer></script>
+</head>
+<body class="apple-home">
+<a class="apple-skip" href="#contenido">Saltar al contenido</a>
+<nav id="site-nav">
+  <div class="snav-inner">
+    <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
+    <ul class="snav-links">
+      <li><a href="/herramientas">Herramientas</a></li>
+      <li><a href="/como-funciona">Cómo funciona</a></li>
+      <li><a href="/recursos">Recursos</a></li>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/contacto">Contacto</a></li>
+    </ul>
+    <div class="snav-right">
+      <div class="snav-skeleton" aria-hidden="true"></div>
+    </div>
+  </div>
+</nav>
+<script src="/static/nav.js"></script>
+<noscript><style>.apple-home #site-nav{position:static;height:auto}.apple-home .snav-inner{flex-wrap:wrap;padding-block:16px;gap:16px}.apple-home .snav-links{display:flex;position:static;transform:none;flex-wrap:wrap;gap:12px}.apple-home .snav-right{display:none}.apple-home .apple-intro-inner{padding-top:48px}</style><div class="apple-noscript-access"><a href="/login/">Iniciar sesión</a><a href="/signup/">Crear cuenta</a></div></noscript>
+<main id="contenido" tabindex="-1">
+<div class="apple-intro"><div class="apple-intro-inner">
+<section class="apple-hero" aria-labelledby="apple-home-title"><div class="apple-container">
+<p class="apple-eyebrow">Fiscalidad de criptomonedas</p>
+
+    <h1 id="apple-home-title">Calcula tus impuestos de <em>criptomonedas</em> para Hacienda</h1>
+
+    <p class="hero-desc">
+      Importa los CSVs de tus exchanges y prepara tu informe fiscal
+      con cálculo FIFO y el detalle de tus operaciones para la declaración de la renta.
+    </p>
+
+    
+  
+<div class="apple-hero-actions"><a href="/signup/" class="btn-primary">Crear cuenta</a><a class="apple-text-link" href="#como-funciona">Cómo funciona <span aria-hidden="true">↓</span></a></div>
+<p class="cta-micro">Sin tarjeta · Importa tus CSVs · Generación automática FIFO<span class="apple-tablet-only"> · Datos para tu declaración</span></p>
+</div></section>
+<section class="apple-demo" aria-label="Ejemplo de informe fiscal con datos ficticios"><div class="apple-container">
+<div class="hero-right">
+    
+    <div class="device-frame">
+      <div class="device-bar">
+        <span class="device-dot device-dot-r"></span>
+        <span class="device-dot device-dot-y"></span>
+        <span class="device-dot device-dot-g"></span>
+        <div class="device-url">Informe FIFO de criptomonedas</div>
+      </div>
+      <div class="device-body">
+        <div class="mock-kpis">
+          <div class="mock-kpi">
+            <div class="mock-kpi-label">Operaciones</div>
+            <div class="mock-kpi-value">47</div>
+          </div>
+          <div class="mock-kpi">
+            <div class="mock-kpi-label">Ganancias</div>
+            <div class="mock-kpi-value green">+3.241€</div>
+          </div>
+          <div class="mock-kpi">
+            <div class="mock-kpi-label">Pérdidas</div>
+            <div class="mock-kpi-value red">-890€</div>
+          </div>
+          <div class="mock-kpi">
+            <div class="mock-kpi-label">Resultado</div>
+            <div class="mock-kpi-value green">+2.351€</div>
+          </div>
+        </div>
+        <p class="apple-table-hint">Desliza para ver todas las columnas <span aria-hidden="true">↔</span></p><div class="mock-table-wrap" tabindex="0" role="region" aria-label="Operaciones del informe de ejemplo. Tabla desplazable horizontalmente">
+          <table class="mock-table">
+            <caption class="apple-sr-only">Operaciones del informe de ejemplo. Datos ficticios. Importes en euros.</caption>
+            <thead><tr class="mock-table-head"><th scope="col">Fecha</th><th scope="col">Activo</th><th scope="col">Tipo</th><th scope="col">Transmisión</th><th scope="col"><span aria-hidden="true">G/P</span><span class="apple-sr-only">Ganancia o pérdida</span></th></tr></thead>
+            <tbody>
+              <tr class="mock-table-row"><td><time class="apple-example-date" datetime="2025-03-15">15/03/2025</time></td><td>BTC</td><td><span class="mock-badge mock-badge-venta">Venta</span></td><td>2.400,00</td><td class="mock-green">+1.240,00</td></tr>
+              <tr class="mock-table-row"><td><time class="apple-example-date" datetime="2025-05-02">02/05/2025</time></td><td>ETH</td><td><span class="mock-badge mock-badge-swap">Swap</span></td><td>860,50</td><td class="mock-green">+210,30</td></tr>
+              <tr class="mock-table-row"><td><time class="apple-example-date" datetime="2025-06-18">18/06/2025</time></td><td>SOL</td><td><span class="mock-badge mock-badge-venta">Venta</span></td><td>320,00</td><td class="mock-red">-88,40</td></tr>
+              <tr class="mock-table-row"><td><time class="apple-example-date" datetime="2025-09-29">29/09/2025</time></td><td>BNB</td><td><span class="mock-badge mock-badge-swap">Swap</span></td><td>540,20</td><td class="mock-green">+178,60</td></tr>
+              <tr class="mock-table-row"><td><time class="apple-example-date" datetime="2025-11-11">11/11/2025</time></td><td>BTC</td><td><span class="mock-badge mock-badge-venta">Venta</span></td><td>1.612,00</td><td class="mock-green">+800,10</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></section>
+</div></div>
+<section class="apple-trust" aria-label="Características de la herramienta"><div class="apple-container"><ul class="hero-checks">
+      <li>Método FIFO</li>
+      <li>Compatible con los principales exchanges</li>
+      <li>Privacidad y seguridad — tu CSV no se almacena</li>
+      <li>100% online, sin instalación</li>
+    </ul><a class="apple-text-link apple-trust-link" href="/exchanges">Consultar exchanges compatibles →</a></div></section>
+<section class="apple-section apple-how" id="como-funciona"><div class="apple-container"><div class="apple-section-heading"><span class="apple-eyebrow">Cómo funciona</span><h2>De tu historial a tu informe.</h2></div><div class="apple-steps">
+
+    <div class="footer-step">
+      <div class="footer-step-icon">📥</div>
+      <div class="footer-step-body">
+        <div class="footer-step-num">Paso 1</div>
+        <h3 class="footer-step-title">Importa tus CSVs</h3>
+        <p class="footer-step-desc">
+          Descarga el historial completo de operaciones de tu exchange.
+          Compatible con Binance, Bit2Me, Bitvavo y más.
+        </p>
+      </div>
+    </div>
+
+    <div class="footer-step">
+      <div class="footer-step-icon">⚙️</div>
+      <div class="footer-step-body">
+        <div class="footer-step-num">Paso 2</div>
+        <h3 class="footer-step-title">Procesamiento automático</h3>
+        <p class="footer-step-desc">
+          Se aplica el criterio FIFO para identificar las unidades transmitidas
+          y calcular las ganancias y pérdidas de las operaciones importadas.
+        </p>
+      </div>
+    </div>
+
+    <div class="footer-step">
+      <div class="footer-step-icon">📊</div>
+      <div class="footer-step-body">
+        <div class="footer-step-num">Paso 3</div>
+        <h3 class="footer-step-title">Informe listo</h3>
+        <p class="footer-step-desc">
+          PDF detallado para revisar tus cálculos, preparar la información
+          de tu declaración y compartirla con tu asesor.
+        </p>
+      </div>
+    </div>
+
+  </div></div></section><section class="apple-section apple-includes" id="tu-informe"><div class="apple-container">
+
+    <h2>
+      ¿Qué incluye el informe fiscal de criptomonedas?
+    </h2>
+
+    <div class="apple-includes-grid">
+
+      <div>
+        <h3>Ganancias y pérdidas patrimoniales</h3>
+        <p>
+          Detalle de ventas y permutas con identificación de las unidades
+          mediante el criterio FIFO. Revisa el resultado del ejercicio antes
+          de trasladar la información a tu declaración de la renta.
+        </p>
+      </div>
+
+      <div>
+        <h3>Staking y otras recompensas</h3>
+        <p>
+          El tratamiento fiscal del staking, los airdrops y otras recompensas
+          depende de cómo se obtengan y de sus condiciones. Revisa su naturaleza,
+          valoración e imputación con tu asesor antes de declarar.
+        </p>
+      </div>
+
+      <div>
+        <h3>Detalle operación a operación</h3>
+        <p>
+          Fecha, activo, tipo de operación, valor de transmisión, coste de
+          adquisición FIFO y ganancia o pérdida individual. Información
+          para facilitar la revisión de tu declaración con tu gestor fiscal.
+        </p>
+      </div>
+
+      <div>
+        <h3>PDF para tu declaración</h3>
+        <p>
+          Informe PDF para revisar tus cálculos, preparar la información de tu
+          declaración y compartirla con tu asesor. No sustituye al modelo oficial
+          ni se adjunta de forma rutinaria a la declaración.
+        </p>
+      </div>
+
+    </div>
+
+    <div class="apple-report-action" role="group" aria-label="Preparar el informe fiscal"><a class="apple-button" href="/signup/">
+      Preparar mi informe
+    </a></div>
+
+  </div></section><section class="apple-section apple-exchanges" id="exchanges"><div class="apple-container">
+
+    <h2>
+      Compatible con los exchanges más usados en España
+    </h2>
+    <p>
+      Importa el historial directamente en CSV desde tu exchange. Sin APIs, sin
+      claves privadas, sin acceso a tu cuenta.
+    </p>
+
+    <div class="apple-exchange-grid">
+
+      <a class="apple-exchange-card" href="/exchanges/binance">
+        <h3>Binance</h3>
+        <p>
+          El exchange más grande del mundo. Exporta tu historial desde
+          <em>Órdenes → Historial de transacciones</em> y súbelo directamente.
+          Compatible con el CSV estándar de Binance España.
+        </p>
+        <span>Ver guía fiscal →</span>
+      </a>
+
+      <a class="apple-exchange-card" href="/exchanges/bitvavo">
+        <h3>Bitvavo</h3>
+        <p>
+          Exchange europeo muy popular en España. Descarga tu CSV desde la
+          sección <em>Historial</em> de tu cuenta y genera el informe FIFO
+          en segundos.
+        </p>
+        <span>Ver guía fiscal →</span>
+      </a>
+
+      <details class="apple-exchange-more" id="apple-exchange-more" open>
+        <summary>Ver más exchanges destacados <span aria-hidden="true">+</span></summary>
+        <div class="apple-exchange-rest">
+      <a class="apple-exchange-card" href="/exchanges/nexo">
+        <h3>Nexo</h3>
+        <p>Descarga el historial de transacciones en CSV desde Nexo y prepara tu informe FIFO con el historial completo de tus operaciones.</p>
+        <span>Ver guía fiscal →</span>
+      </a>
+
+      <a class="apple-exchange-card" href="/exchanges/coinbase">
+        <h3>Coinbase</h3>
+        <p>
+          El exchange de referencia para usuarios que empiezan. Descarga el
+          historial de transacciones en CSV desde la configuración de
+          tu cuenta de Coinbase.
+        </p>
+        <span>Ver guía fiscal →</span>
+      </a>
+
+      <a class="apple-exchange-card" href="/exchanges/kraken">
+        <h3>Kraken</h3>
+        <p>
+          Uno de los exchanges más veteranos. Descarga el <em>Ledger</em>
+          completo —no Trades— y genera el informe FIFO con el historial
+          desde 2011 si es necesario.
+        </p>
+        <span>Ver guía fiscal →</span>
+      </a>
+
+      <a class="apple-exchange-card" href="/bitget">
+        <h3>Bitget</h3>
+        <p>Sube el historial de operaciones en spot y, si lo tienes, el de depósitos y retiros. Accede a las instrucciones de importación y genera tu informe FIFO.</p>
+        <span>Ver herramienta e instrucciones →</span>
+      </a>
+
+
+    <div class="apple-exchange-secondary">
+      <h3>También compatible con Bit2Me</h3>
+      <p>
+          Consulta cómo exportar el historial de Bit2Me y preparar tus datos.
+          Si incluye staking u otras recompensas, revisa su tratamiento fiscal
+          según las condiciones de cada operación.
+        </p>
+      <a class="apple-text-link" href="/exchanges/bit2me">Ver guía fiscal →</a>
+    </div>
+
+        <div class="apple-compatibility-copy">Calculadora de impuestos de criptomonedas compatible con Bitvavo, Nexo, Binance, Coinbase, Crypto.com y Bit2Me</div>
+        </div>
+      </details>
+    </div>
+
+    <a class="apple-text-link apple-exchanges-all" href="/exchanges">Consultar exchanges compatibles →</a>
+
+  </div></section>
+<section class="apple-section apple-assistance"><div class="apple-container"><div class="asistencia-block" id="asistenciaBlock">
+        <h2 class="asistencia-badge">Asistencia especializada</h2>
+        <p>
+          <strong>¿Necesitas ayuda con tu declaración?</strong>
+          Asistencia fiscal especializada para usuarios con criptomonedas, supervisada por economista colegiado.
+        </p>
+        <p class="apple-advisory-status" role="status">Presupuestos y pagos de asesoramiento temporalmente suspendidos.</p>
+<ul class="asistencia-bullets">
+          <li>✓ Consulta inicial sin compromiso</li>
+          <li>✓ Casos complejos de criptomonedas</li>
+          <li>✓ Supervisado por economista colegiado</li>
+        </ul>
+        <a href="/pedir-asesoramiento" class="btn-asistencia">
+          Solicitar asistencia fiscal
+        </a>
+      </div></div></section>
+<section class="apple-section apple-team"><div class="apple-container"><div class="apple-section-heading"><span class="apple-eyebrow">El equipo</span><h2>Tecnología y criterio profesional.</h2></div><div class="authors">
+        <div class="author-card">
+          <picture class="author-portrait">
+            <source type="image/webp" srcset="/static/home-apple-mariano-88.webp 88w, /static/home-apple-mariano-176.webp 176w, /static/home-apple-mariano-264.webp 264w" sizes="(max-width:640px) 72px, 88px">
+            <img width="72" height="72" loading="lazy" decoding="async" src="/static/home-apple-mariano-176.png" srcset="/static/home-apple-mariano-88.png 88w, /static/home-apple-mariano-176.png 176w, /static/home-apple-mariano-264.png 264w" sizes="(max-width:640px) 72px, 88px" alt="Mariano Sevilla" class="author-avatar">
+          </picture>
+          <div>
+            <div class="author-name">Mariano Sevilla</div>
+            <div class="author-role">Tecnología y automatización aplicada a la fiscalidad cripto</div>
+          </div>
+        </div>
+        <div class="author-card">
+          <picture class="author-portrait">
+            <source type="image/webp" srcset="/static/home-apple-rafa-88.webp 88w, /static/home-apple-rafa-176.webp 176w, /static/home-apple-rafa-264.webp 264w" sizes="(max-width:640px) 72px, 88px">
+            <img width="72" height="72" loading="lazy" decoding="async" src="/static/home-apple-rafa-176.png" srcset="/static/home-apple-rafa-88.png 88w, /static/home-apple-rafa-176.png 176w, /static/home-apple-rafa-264.png 264w" sizes="(max-width:640px) 72px, 88px" alt="Rafael Ramos Martínez" class="author-avatar">
+          </picture>
+          <div>
+            <div class="author-name">Rafael Ramos Martínez</div>
+            <div class="author-role">Economista colegiado · Supervisión y criterio fiscal</div>
+            <div class="author-colegiado">Colegiado nº 4.579</div>
+          </div>
+        </div>
+      </div><a href="/about" class="authors-link">Conoce al equipo →</a></div></section>
+<section class="apple-section apple-editorial" id="fiscalidad"><div class="apple-container">
+
+    <h2>
+      ¿Cómo tributan las criptomonedas en España?
+    </h2>
+
+    <p>
+      En el IRPF de territorio común, las ventas y permutas de criptomonedas
+      realizadas por particulares fuera de una actividad económica
+      tributan como <strong>ganancias y pérdidas patrimoniales</strong>
+      en el IRPF, integradas en la base imponible del ahorro. Esto incluye vender Bitcoin
+      o Ethereum por euros, pero también los swaps entre criptomonedas: intercambiar BTC
+      por ETH es un hecho imponible aunque no hayas convertido nada a dinero fiat.
+    </p>
+    <p>
+      El tratamiento fiscal del staking, los airdrops, el cashback y otras
+      recompensas <strong>depende de cómo se obtengan y de sus condiciones</strong>.
+      No deben agruparse automáticamente en una misma categoría. Revisa su naturaleza,
+      valoración e imputación para <strong>declarar tus criptomonedas correctamente ante Hacienda</strong>.
+    </p>
+    <p>
+      El informe te ayuda a organizar las operaciones importadas y revisar los cálculos.
+      Comprueba que el historial esté completo y que el tratamiento fiscal de cada
+      operación se ajuste a tu caso antes de preparar la declaración.
+    </p>
+
+  </div></section><section class="apple-section apple-editorial apple-editorial-alt" id="metodo-fifo"><div class="apple-container">
+
+    <span>Criterio FIFO de la Agencia Tributaria</span>
+    <h2>
+      Cómo se aplica el criterio FIFO a tus ventas y permutas de criptomonedas
+    </h2>
+
+    <p>
+      El <strong>método FIFO</strong> (<em>First In, First Out</em>)
+      es el criterio que recoge la Agencia Tributaria para identificar las unidades
+      transmitidas de una misma criptomoneda homogénea: se consideran transmitidas
+      primero las adquiridas antes. Ese coste se utiliza al calcular la ganancia o pérdida.
+    </p>
+    <p>
+      Ejemplo sin comisiones: compras 0,5 BTC a 30.000 €/BTC (coste total: 15.000 €)
+      y después otros 0,5 BTC a 25.000 €/BTC (12.500 €). En 2025 vendes 0,5 BTC
+      a 40.000 €/BTC (20.000 €). FIFO asigna el coste del primer lote: 15.000 €.
+      La ganancia es <strong>+5.000 €</strong>. Por eso necesitas el historial
+      <strong>completo</strong> de adquisiciones y transmisiones, también el de años anteriores.
+    </p>
+    <p>
+      La herramienta aplica el FIFO a las operaciones importadas y
+      genera un <strong>informe fiscal de criptomonedas</strong>
+      con cada operación detallada: fecha, activo, coste FIFO utilizado y ganancia o
+      pérdida patrimonial resultante.
+    </p>
+
+  </div></section><section class="apple-section apple-faq" id="preguntas"><div class="apple-container"><h2>
+      Preguntas frecuentes sobre impuestos de criptomonedas
+    </h2><p>
+      Estas son algunas de las preguntas más frecuentes sobre impuestos de criptomonedas,
+      Hacienda, método FIFO, staking y declaración de la renta en España. Si tu situación
+      incluye múltiples exchanges, operaciones complejas o ejercicios anteriores, puede ser
+      recomendable contar con asesoramiento fiscal especializado.
+    </p><div class="apple-faq-list"><details class="apple-faq-item"><summary>¿Tengo que declarar mis criptomonedas en España?</summary><div class="apple-faq-answer"><p>
+          Las ventas y permutas de criptomonedas pueden generar ganancias o pérdidas patrimoniales,
+          aunque no retires dinero a tu banco. En el IRPF de territorio común, fuera de una actividad
+          económica, se integran en la base del ahorro. La obligación de presentar la declaración
+          depende del conjunto, naturaleza e importe de tus rentas y de los límites del ejercicio.
+          Si debes presentarla, incluye las operaciones que correspondan; no existe una exención
+          general por el mero hecho de operar con criptomonedas.
+        </p></div></details><details class="apple-faq-item"><summary>¿Qué operaciones con criptomonedas tributan ante Hacienda?</summary><div class="apple-faq-answer"><p>
+          Para particulares fuera de una actividad económica, vender, permutar o pagar con criptomonedas
+          puede generar una ganancia o pérdida patrimonial. El staking, los airdrops, el cashback y los
+          referidos requieren revisar su naturaleza y condiciones: no comparten necesariamente categoría
+          fiscal. La mera tenencia no genera por sí sola una ganancia realizada en el IRPF, pero puede
+          estar sujeta a otras obligaciones tributarias o informativas.
+        </p></div></details><details class="apple-faq-item"><summary>¿Qué es el método FIFO y cómo se aplica?</summary><div class="apple-faq-answer"><p>
+          FIFO significa «First In, First Out». La Agencia Tributaria recoge este criterio para identificar
+          las unidades transmitidas de una misma criptomoneda homogénea: se consideran transmitidas
+          primero las adquiridas antes. Debes tener en cuenta el historial completo, también las compras
+          de ejercicios anteriores, para determinar el coste de las unidades vendidas o permutadas.
+          <a href="/metodo-fifo-criptomonedas">Ver guía completa del método FIFO →</a>
+        </p></div></details><details class="apple-faq-item"><summary>¿Cómo se calculan las ganancias de Bitcoin?</summary><div class="apple-faq-answer"><p>
+          La ganancia patrimonial de una venta de Bitcoin se calcula como la diferencia entre el valor de
+          transmisión (precio de venta en euros) y el valor de adquisición según el método FIFO (precio
+          de las primeras unidades compradas), con los gastos y tributos que correspondan.
+          Ejemplo sin comisiones: compras 0,1 BTC a 20.000 €/BTC (2.000 €) y lo vendes
+          a 35.000 €/BTC (3.500 €); la ganancia es 1.500 €.
+          En el ejercicio 2025, en territorio común, la base liquidable del ahorro
+          se grava por tramos entre el 19 % y el 30 %. El tipo aplicable depende del importe total de esa base.
+          El mismo cálculo de la ganancia aplica a Ethereum, Solana o cualquier
+          otra criptomoneda.
+        </p></div></details><details class="apple-faq-item"><summary>¿Qué ocurre si tengo criptomonedas en varios exchanges?</summary><div class="apple-faq-answer"><p>
+          Para aplicar FIFO debes reunir el historial completo de la misma criptomoneda, aunque esté
+          repartido entre varios exchanges o monederos. Las adquisiciones en una plataforma pueden
+          afectar al coste de las ventas en otra. Revisa también las transferencias entre cuentas propias
+          para evitar duplicados. Antes de utilizar un informe, comprueba que cubra ese historial completo;
+          un cálculo aislado por exchange puede no reflejar el resultado fiscal correcto.
+        </p></div></details><details class="apple-faq-item"><summary>¿Cómo tributa el staking en España?</summary><div class="apple-faq-answer"><p>
+          No debe aplicarse una respuesta única a todas las modalidades de staking. Su tratamiento
+          depende del funcionamiento del producto, de los derechos que recibes y de las condiciones
+          de las recompensas. Revisa con tu asesor su calificación, valoración e imputación temporal,
+          así como el coste de adquisición que corresponda en una venta posterior. La etiqueta
+          «staking» de un CSV no determina por sí sola el tratamiento fiscal.
+        </p></div></details><details class="apple-faq-item"><summary>¿Puedo compensar pérdidas de criptomonedas?</summary><div class="apple-faq-answer"><p>
+          Sí. Las pérdidas patrimoniales de criptomonedas pueden compensarse con las ganancias del mismo
+          tipo en el mismo ejercicio. Si el saldo es negativo, puedes compensar hasta el 25% de los
+          rendimientos del capital mobiliario positivos del año. El resto puede trasladarse a los cuatro
+          ejercicios siguientes. Por ejemplo, si en 2024 tienes pérdidas de 3.000 € y ganancias de 1.000 €,
+          los 2.000 € negativos se pueden aplicar en ejercicios 2025–2028. El informe detalla el resultado
+          neto del ejercicio para facilitar este cálculo.
+        </p></div></details><details class="apple-faq-item"><summary>¿Sirve el informe para Binance, Bitvavo, Coinbase y Kraken?</summary><div class="apple-faq-answer"><p>
+          Puedes importar los formatos CSV admitidos de los exchanges compatibles. Consulta las
+          instrucciones de exportación de cada plataforma y comprueba que el archivo incluya el historial
+          necesario. El informe detalla las operaciones importadas y el cálculo FIFO para facilitar
+          su revisión con tu gestor; no sustituye la comprobación de que los datos estén completos.
+        </p></div></details><details class="apple-faq-item"><summary>¿Qué documentos debo conservar por si Hacienda los solicita?</summary><div class="apple-faq-answer"><p>
+          Conserva los CSV originales, justificantes de adquisiciones y transmisiones, movimientos entre
+          monederos e informes de cálculo. Guarda los justificantes del coste mientras mantengas las
+          criptomonedas y, después, durante el plazo de prescripción aplicable a las declaraciones
+          afectadas, teniendo en cuenta posibles interrupciones. Una compra antigua puede ser necesaria
+          para justificar una venta posterior: no basta contar cuatro años desde la compra.
+        </p></div></details><details class="apple-faq-item"><summary>¿Puedo corregir declaraciones de años anteriores?</summary><div class="apple-faq-answer"><p>
+          Sí, dentro de los plazos y condiciones aplicables. Para Renta 2025, con carácter general,
+          la corrección se realiza mediante una autoliquidación rectificativa, con independencia del
+          resultado. Para otros ejercicios, revisa el procedimiento correspondiente. Si resulta una
+          cantidad adicional a ingresar fuera de plazo y no hay requerimiento previo, pueden aplicarse
+          recargos y, en su caso, intereses. Las consecuencias dependen de la situación concreta. Consulta con un profesional
+          el procedimiento, los plazos y las consecuencias de tu caso.
+        </p></div></details><details class="apple-faq-item"><summary>¿El informe sustituye a un asesor fiscal?</summary><div class="apple-faq-answer"><p>
+          No. El informe organiza los datos importados y los cálculos para facilitar su revisión.
+          No constituye asesoramiento fiscal ni legal, no sustituye al modelo oficial de declaración
+          y no implica homologación de la Agencia Tributaria. Las operaciones complejas, los rendimientos,
+          las pérdidas de ejercicios anteriores y otras particularidades requieren la valoración de
+          un profesional. Úsalo como documentación de apoyo, junto con los registros originales.
+        </p></div></details><details class="apple-faq-item"><summary>¿Qué pasa si Hacienda me pide justificar mis operaciones?</summary><div class="apple-faq-answer"><p>
+          Si recibes un requerimiento de la Agencia Tributaria para justificar operaciones con
+          criptomonedas, debes aportar documentación que acredite el origen, fecha, precio de adquisición
+          y valor de transmisión de cada operación. El informe generado, junto con los CSV originales de
+          los exchanges, puede servir como documentación de soporte. No ignores el requerimiento ni
+          superes el plazo indicado. En estos casos, la asistencia de un asesor fiscal con experiencia
+          en criptomonedas es especialmente recomendable para gestionar correctamente la respuesta.
+        </p></div></details></div></div><script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "¿Tengo que declarar mis criptomonedas en España?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Las ventas y permutas de criptomonedas pueden generar ganancias o pérdidas patrimoniales, aunque no retires dinero a tu banco. En el IRPF de territorio común, fuera de una actividad económica, se integran en la base del ahorro. La obligación de presentar la declaración depende del conjunto, naturaleza e importe de tus rentas y de los límites del ejercicio. Si debes presentarla, incluye las operaciones que correspondan; no existe una exención general por el mero hecho de operar con criptomonedas."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Qué operaciones con criptomonedas tributan ante Hacienda?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Para particulares fuera de una actividad económica, vender, permutar o pagar con criptomonedas puede generar una ganancia o pérdida patrimonial. El staking, los airdrops, el cashback y los referidos requieren revisar su naturaleza y condiciones: no comparten necesariamente categoría fiscal. La mera tenencia no genera por sí sola una ganancia realizada en el IRPF, pero puede estar sujeta a otras obligaciones tributarias o informativas."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Qué es el método FIFO y cómo se aplica?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "FIFO significa «First In, First Out». La Agencia Tributaria recoge este criterio para identificar las unidades transmitidas de una misma criptomoneda homogénea: se consideran transmitidas primero las adquiridas antes. Debes tener en cuenta el historial completo, también las compras de ejercicios anteriores, para determinar el coste de las unidades vendidas o permutadas. Ver guía completa del método FIFO →"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Cómo se calculan las ganancias de Bitcoin?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "La ganancia patrimonial de una venta de Bitcoin se calcula como la diferencia entre el valor de transmisión (precio de venta en euros) y el valor de adquisición según el método FIFO (precio de las primeras unidades compradas), con los gastos y tributos que correspondan. Ejemplo sin comisiones: compras 0,1 BTC a 20.000 €/BTC (2.000 €) y lo vendes a 35.000 €/BTC (3.500 €); la ganancia es 1.500 €. En el ejercicio 2025, en territorio común, la base liquidable del ahorro se grava por tramos entre el 19 % y el 30 %. El tipo aplicable depende del importe total de esa base. El mismo cálculo de la ganancia aplica a Ethereum, Solana o cualquier otra criptomoneda."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Qué ocurre si tengo criptomonedas en varios exchanges?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Para aplicar FIFO debes reunir el historial completo de la misma criptomoneda, aunque esté repartido entre varios exchanges o monederos. Las adquisiciones en una plataforma pueden afectar al coste de las ventas en otra. Revisa también las transferencias entre cuentas propias para evitar duplicados. Antes de utilizar un informe, comprueba que cubra ese historial completo; un cálculo aislado por exchange puede no reflejar el resultado fiscal correcto."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Cómo tributa el staking en España?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No debe aplicarse una respuesta única a todas las modalidades de staking. Su tratamiento depende del funcionamiento del producto, de los derechos que recibes y de las condiciones de las recompensas. Revisa con tu asesor su calificación, valoración e imputación temporal, así como el coste de adquisición que corresponda en una venta posterior. La etiqueta «staking» de un CSV no determina por sí sola el tratamiento fiscal."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Puedo compensar pérdidas de criptomonedas?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Sí. Las pérdidas patrimoniales de criptomonedas pueden compensarse con las ganancias del mismo tipo en el mismo ejercicio. Si el saldo es negativo, puedes compensar hasta el 25% de los rendimientos del capital mobiliario positivos del año. El resto puede trasladarse a los cuatro ejercicios siguientes. Por ejemplo, si en 2024 tienes pérdidas de 3.000 € y ganancias de 1.000 €, los 2.000 € negativos se pueden aplicar en ejercicios 2025–2028. El informe detalla el resultado neto del ejercicio para facilitar este cálculo."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Sirve el informe para Binance, Bitvavo, Coinbase y Kraken?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Puedes importar los formatos CSV admitidos de los exchanges compatibles. Consulta las instrucciones de exportación de cada plataforma y comprueba que el archivo incluya el historial necesario. El informe detalla las operaciones importadas y el cálculo FIFO para facilitar su revisión con tu gestor; no sustituye la comprobación de que los datos estén completos."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Qué documentos debo conservar por si Hacienda los solicita?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Conserva los CSV originales, justificantes de adquisiciones y transmisiones, movimientos entre monederos e informes de cálculo. Guarda los justificantes del coste mientras mantengas las criptomonedas y, después, durante el plazo de prescripción aplicable a las declaraciones afectadas, teniendo en cuenta posibles interrupciones. Una compra antigua puede ser necesaria para justificar una venta posterior: no basta contar cuatro años desde la compra."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Puedo corregir declaraciones de años anteriores?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Sí, dentro de los plazos y condiciones aplicables. Para Renta 2025, con carácter general, la corrección se realiza mediante una autoliquidación rectificativa, con independencia del resultado. Para otros ejercicios, revisa el procedimiento correspondiente. Si resulta una cantidad adicional a ingresar fuera de plazo y no hay requerimiento previo, pueden aplicarse recargos y, en su caso, intereses. Las consecuencias dependen de la situación concreta. Consulta con un profesional el procedimiento, los plazos y las consecuencias de tu caso."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿El informe sustituye a un asesor fiscal?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. El informe organiza los datos importados y los cálculos para facilitar su revisión. No constituye asesoramiento fiscal ni legal, no sustituye al modelo oficial de declaración y no implica homologación de la Agencia Tributaria. Las operaciones complejas, los rendimientos, las pérdidas de ejercicios anteriores y otras particularidades requieren la valoración de un profesional. Úsalo como documentación de apoyo, junto con los registros originales."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Qué pasa si Hacienda me pide justificar mis operaciones?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Si recibes un requerimiento de la Agencia Tributaria para justificar operaciones con criptomonedas, debes aportar documentación que acredite el origen, fecha, precio de adquisición y valor de transmisión de cada operación. El informe generado, junto con los CSV originales de los exchanges, puede servir como documentación de soporte. No ignores el requerimiento ni superes el plazo indicado. En estos casos, la asistencia de un asesor fiscal con experiencia en criptomonedas es especialmente recomendable para gestionar correctamente la respuesta."
+      }
+    }
+  ]
+}
+</script></section>
+</main>
+<footer class="apple-footer">
+  <div class="apple-container">
+    <div class="apple-footer-top">
+      <div class="apple-footer-brand">
+        <a href="/" class="apple-footer-logo">mariano<span>sevilla</span>.com</a>
+        <p>Informes FIFO de criptomonedas.</p>
+      </div>
+      <nav aria-labelledby="apple-footer-explore">
+        <h2 id="apple-footer-explore">Explorar</h2>
+        <ul>
+          <li><a href="/herramientas">Herramientas</a></li>
+          <li><a href="/como-funciona">Cómo funciona</a></li>
+          <li><a href="/exchanges">Exchanges compatibles</a></li>
+        </ul>
+      </nav>
+      <nav aria-labelledby="apple-footer-help">
+        <h2 id="apple-footer-help">Ayuda</h2>
+        <ul>
+          <li><a href="/faq">Preguntas frecuentes</a></li>
+          <li><a href="/contacto">Contacto</a></li>
+          <li><a href="/about">Equipo</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="apple-footer-legal">
+      <p class="apple-footer-disclaimer">Herramienta de generación de informes FIFO para usuarios con criptomonedas. No constituye asesoramiento fiscal ni legal.</p>
+      <div class="apple-footer-bottom">
+        <p class="apple-footer-copyright">© <span class="apple-footer-year">2026</span> Mariano Sevilla</p>
+        <nav aria-label="Información legal">
+          <ul>
+            <li><a href="/privacidad">Privacidad</a></li>
+            <li><a href="/terminos">Términos</a></li>
+            <li><a href="/cookies">Cookies</a></li>
+            <li><a href="/aviso-legal">Aviso legal</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+</footer><dialog id="authModal" class="auth-dialog" aria-labelledby="authModalTitle">
+  <div class="auth-inner">
+    <div class="auth-header">
+      <span class="auth-title" id="authModalTitle">Iniciar sesión</span>
+      <button class="auth-close" id="authModalClose" aria-label="Cerrar">×</button>
+    </div>
+    <form id="authFormLogin" class="auth-form" novalidate>
+      <div class="auth-field">
+        <label for="authLoginEmail">Email</label>
+        <input type="email" id="authLoginEmail" name="email" required autocomplete="email" placeholder="tu@email.com">
+      </div>
+      <div class="auth-field">
+        <label for="authLoginPass">Contraseña</label>
+        <input type="password" id="authLoginPass" name="password" required autocomplete="current-password" minlength="8">
+      </div>
+      <label class="auth-remember"><input type="checkbox" name="remember"> Recordarme</label>
+      <div class="auth-error" role="alert" hidden></div>
+      <button type="submit" class="auth-btn-primary">Entrar</button>
+      <p class="auth-switch">¿No tienes cuenta? <button type="button" class="auth-switch-btn" id="switchToRegister">Crear cuenta</button></p>
+    </form>
+    <form id="authFormReg" class="auth-form" novalidate hidden>
+      <div class="auth-field">
+        <label for="authRegEmail">Email</label>
+        <input type="email" id="authRegEmail" name="email" required autocomplete="email" placeholder="tu@email.com">
+      </div>
+      <div class="auth-field">
+        <label for="authRegPass">Contraseña</label>
+        <input type="password" id="authRegPass" name="password" required autocomplete="new-password" minlength="8" placeholder="Mínimo 8 caracteres">
+      </div>
+      <div class="auth-error" role="alert" hidden></div>
+      <button type="submit" class="auth-btn-primary">Crear cuenta</button>
+      <p class="auth-switch">¿Ya tienes cuenta? <button type="button" class="auth-switch-btn" id="switchToLogin">Iniciar sesión</button></p>
+    </form>
+  </div>
+</dialog><script>
+  const _authModal = document.getElementById('authModal');
+
+  function abrirAuthModal(tab) {
+    const isLogin = (tab || 'login') === 'login';
+    document.getElementById('authFormLogin').hidden = !isLogin;
+    document.getElementById('authFormReg').hidden   =  isLogin;
+    document.getElementById('authModalTitle').textContent = isLogin ? 'Iniciar sesión' : 'Crear cuenta';
+    _authModal.showModal();
+  }
+
+  document.getElementById('authModalClose').addEventListener('click', () => _authModal.close());
+  document.getElementById('switchToRegister').addEventListener('click', () => abrirAuthModal('register'));
+  document.getElementById('switchToLogin').addEventListener('click',    () => abrirAuthModal('login'));
+
+  function _setLoading(form, loading, label) {
+    const btn = form.querySelector('.auth-btn-primary');
+    btn.disabled = loading; btn.textContent = loading ? 'Un momento…' : label;
+  }
+  function _showError(form, msg) {
+    const el = form.querySelector('.auth-error');
+    el.textContent = msg; el.removeAttribute('hidden');
+  }
+
+  document.getElementById('authFormLogin').addEventListener('submit', async e => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    form.querySelector('.auth-error').setAttribute('hidden', '');
+    _setLoading(form, true, 'Entrar');
+    try {
+      const r = await fetch('/api/login', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email:    form.querySelector('[name=email]').value.trim().toLowerCase(),
+          password: form.querySelector('[name=password]').value,
+          remember: form.querySelector('[name=remember]').checked,
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Error al iniciar sesión');
+      form.reset(); _authModal.close();
+      window.location.href = '/dashboard';
+    } catch (err) { _showError(form, err.message); }
+    finally { _setLoading(form, false, 'Entrar'); }
+  });
+
+  document.getElementById('authFormReg').addEventListener('submit', async e => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    form.querySelector('.auth-error').setAttribute('hidden', '');
+    _setLoading(form, true, 'Crear cuenta');
+    try {
+      const r = await fetch('/api/register', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email:    form.querySelector('[name=email]').value.trim().toLowerCase(),
+          password: form.querySelector('[name=password]').value,
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Error al crear la cuenta');
+      form.reset(); _authModal.close();
+      window.location.href = '/dashboard';
+    } catch (err) { _showError(form, err.message); }
+    finally { _setLoading(form, false, 'Crear cuenta'); }
+  });
+
+
+</script>
+</body>
+</html>
