@@ -803,14 +803,10 @@ body.apple-home { padding:0; }
 <style>/* Isolated Tools proposal. Shared Home assets remain unchanged. */
 .apple-tools { --tools-space:40px; --tools-gap:24px; }
 .apple-tools .tools-intro { padding-block:24px 32px; background:#f5f7f6; }
-.apple-tools .tools-breadcrumb { margin-bottom:24px; font-size:.875rem; color:var(--muted); }
-.apple-tools .tools-breadcrumb ol { display:flex; flex-wrap:wrap; gap:10px; list-style:none; padding:0; }
-.apple-tools .tools-breadcrumb li { display:flex; gap:10px; align-items:center; }
-.apple-tools .tools-breadcrumb a { display:inline-flex; align-items:center; min-height:44px; color:var(--muted); }
 .apple-tools .tools-intro .apple-eyebrow { margin-bottom:12px; }
-.apple-tools h1 { max-width:28ch; margin-bottom:20px; font-size:clamp(2rem,4.5vw,3.5rem); line-height:1.1; text-wrap:balance; }
+.apple-tools h1 { max-width:none; width:100%; margin-bottom:20px; font-size:clamp(2rem,4.5vw,3.5rem); line-height:1.1; text-wrap:wrap; }
 .apple-tools h1 em { color:var(--accent); }
-.apple-tools .tools-lead { max-width:65ch; color:var(--muted); font-size:1.125rem; line-height:1.6; text-wrap:pretty; }
+.apple-tools .tools-lead { max-width:none; width:100%; color:var(--muted); font-size:1.125rem; line-height:1.6; text-wrap:wrap; }
 .apple-tools :is(.tools-catalogue,.tools-confidence,.tools-faq,.tools-help) { padding-block:var(--tools-space); }
 .apple-tools :is(.tools-confidence,.tools-faq) { border-top:1px solid var(--border); }
 .apple-tools .tools-section-heading { margin-bottom:var(--tools-gap); }
@@ -855,7 +851,6 @@ body.apple-home { padding:0; }
 @media (max-width:640px) {
  .apple-tools { --tools-space:24px; --tools-gap:20px; }
  .apple-tools .tools-intro { padding-block:12px 24px; }
- .apple-tools .tools-breadcrumb { margin-bottom:16px; }
  .apple-tools h1 { max-width:none; font-size:clamp(2rem,8.4vw,3rem); margin-bottom:16px; }
  .apple-tools .tools-lead { font-size:1rem; }
  .apple-tools .tools-grid,.apple-tools .tools-confidence-grid { grid-template-columns:minmax(0,1fr); gap:16px; }
@@ -880,7 +875,7 @@ body.apple-home { padding:0; }
       "@type": "CollectionPage",
       "@id": "https://marianosevilla.com/herramientas#webpage",
       "url": "https://marianosevilla.com/herramientas",
-      "name": "Herramientas fiscales para tus criptomonedas",
+      "name": "Herramientas fiscales para criptomonedas",
       "description": "Informe FIFO, guía del Modelo 721, exchanges compatibles, asesoramiento y recursos para organizar la fiscalidad de tus criptomonedas.",
       "inLanguage": "es",
       "hasPart": [
@@ -1415,9 +1410,8 @@ window.fetch=function(input,options){
 </noscript>
 <main id="contenido" tabindex="-1">
 <section class="tools-intro" aria-labelledby="tools-title"><div class="apple-container">
- <nav class="tools-breadcrumb" aria-label="Ruta de navegación"><ol><li><a href="https://marianosevilla.com/">Inicio</a><span aria-hidden="true">/</span></li><li aria-current="page">Herramientas</li></ol></nav>
  <p class="apple-eyebrow">Fiscalidad de criptomonedas</p>
- <h1 id="tools-title">Herramientas fiscales para tus <em>criptomonedas.</em></h1>
+ <h1 id="tools-title">Herramientas fiscales para <em>criptomonedas.</em></h1>
  <p class="tools-lead">Prepara tu informe FIFO, organiza tus datos y encuentra la información que necesitas para tu declaración.</p>
 </div></section>
 <section class="tools-catalogue" aria-labelledby="tools-catalogue-title"><div class="apple-container">

@@ -26,6 +26,11 @@ def run_herramientas_apple(browser,origin):
         intro=page.locator('.tools-intro').bounding_box()
         assert abs(intro['y']-header['height'])<1,(width,intro)
         assert page.locator('h1').count()==1 and page.locator('main').count()==1
+        assert page.locator('h1').inner_text()=='Herramientas fiscales para criptomonedas.'
+        assert page.locator('.tools-breadcrumb').count()==0
+        assert page.locator('nav[aria-label="Ruta de navegación"]').count()==0
+        for selector in ['h1','.tools-lead']:
+            assert page.locator(selector).evaluate('e=>{const s=getComputedStyle(e.parentElement);return Math.abs(e.getBoundingClientRect().width-(e.parentElement.clientWidth-parseFloat(s.paddingLeft)-parseFloat(s.paddingRight)))<1}'),(width,selector)
         assert page.locator('.tools-card').count()==6
         cards=page.locator('.tools-card')
         assert all(cards.nth(i).is_visible() for i in range(6))
