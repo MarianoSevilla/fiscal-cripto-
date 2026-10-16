@@ -8,14 +8,48 @@ import unittest
 import xml.etree.ElementTree as ET
 
 STATIC=Path(__file__).resolve().parents[1]/'static'
+BASELINES=Path(__file__).with_name('fixtures')/'home_apple'
+V20_COPY=json.loads((Path(__file__).with_name('home_apple_v20_copy.json')).read_text())
 
-# Only these two copy corrections were approved in the v6 review. All other
-# source paragraphs and words remain protected by the preservation contract.
+def revise_v20(text, include_labels=False):
+    for change in V20_COPY['paragraphs']+(V20_COPY['labels'] if include_labels else []):
+        text=text.replace(change['before'],change['after'])
+    return text
+
+# Explicitly approved paragraph revisions and labels (V6–V11).
+# All remaining source paragraphs and words stay protected.
 APPROVED_COPY_REVISIONS={
     'Formato estructurado y claro, listo para adjuntar a tu declaración de la renta o entregar a tu asesor. Generado en segundos, descarga inmediata, sin registro previo.':
     'Formato estructurado y claro, listo para adjuntar a tu declaración de la renta o entregar a tu asesor. Generado en segundos, con descarga inmediata desde tu cuenta.',
-    '¿Usas Nexo, Crypto.com, Uphold u otro exchange? Escríbenos — seguimos añadiendo soporte continuamente.':
-    'Nexo, Crypto.com y Uphold también están en el listado completo de exchanges compatibles. ¿Necesitas ayuda? Escríbenos — seguimos añadiendo soporte continuamente.',
+    'Sin tarjeta · Importa tus CSVs · Generación automática FIFO':
+    'Sin tarjeta · Importa tus CSVs · Generación automática FIFO · Datos para tu declaración',
+}
+
+# V17: bounded audit correction, supported by AEAT Renta 2025 scales.
+APPROVED_FISCAL_COPY=(
+    'A esa ganancia se aplica el tipo del ahorro: entre el 19% y el 28% según el importe total del ejercicio. El mismo cálculo aplica',
+    'En el ejercicio 2025, en territorio común, la base liquidable del ahorro se grava por tramos entre el 19 % y el 30 %. El tipo aplicable depende del importe total de esa base. El mismo cálculo de la ganancia aplica',
+)
+APPROVED_FISCAL_SCHEMA=(
+    'A esa ganancia se aplica el tipo del ahorro, entre el 19% y el 28% según el importe total del ejercicio.',
+    'En el ejercicio 2025, en territorio común, la base liquidable del ahorro se grava por tramos entre el 19 % y el 30 %. El tipo aplicable depende del importe total de esa base.',
+)
+
+# V15: owner-approved removal of this complete redundant support block.
+REMOVED_SOURCE_PARAGRAPH='¿Usas Nexo, Crypto.com, Uphold u otro exchange? Escríbenos — seguimos añadiendo soporte continuamente.'
+REMOVED_PREVIEW_PARAGRAPH='Nexo, Crypto.com y Uphold también están en el listado completo de exchanges compatibles. ¿Necesitas ayuda? Escríbenos — seguimos añadiendo soporte continuamente.'
+
+# V8: explicitly approved navigation label; destination and content are retained.
+APPROVED_LINK_LABEL=('Ver todos los exchanges compatibles →',
+                     'Consultar exchanges compatibles →')
+APPROVED_REPORT_CTA=('Genera tu informe gratis','Preparar mi informe')
+APPROVED_PRESENTATION_LABELS={
+    'Crea tu cuenta gratis':'Crear cuenta',
+    'fiscal.marianosevilla.com':'Informe FIFO de criptomonedas',
+}
+APPROVED_EXAMPLE_DATES={
+    f'{day}/{month}/2024':f'{day}/{month}/2025'
+    for day,month in [('15','03'),('02','05'),('18','06'),('29','09'),('11','11')]
 }
 
 def normal(text):
@@ -63,16 +97,36 @@ class HomeAppleContracts(unittest.TestCase):
     def test_original_copy_remains_except_approved_revisions(self):
         for old,new in APPROVED_COPY_REVISIONS.items():
             self.assertEqual(self.a.paragraphs.count(old),1)
-            self.assertEqual(self.b.paragraphs.count(new),1)
+            self.assertEqual(self.b.paragraphs.count(revise_v20(new)),1)
             self.assertNotIn(old,self.b.paragraphs)
-        expected=[APPROVED_COPY_REVISIONS.get(p,p) for p in self.a.paragraphs]
+        self.assertEqual(self.a.paragraphs.count(REMOVED_SOURCE_PARAGRAPH),1)
+        expected=[revise_v20(APPROVED_COPY_REVISIONS.get(p,p).replace(*APPROVED_FISCAL_COPY)) for p in self.a.paragraphs
+                  if p!=REMOVED_SOURCE_PARAGRAPH]
         missing=Counter(expected)-Counter(self.b.paragraphs)
         self.assertFalse(missing,dict(missing))
         # Also protect non-paragraph copy, including FAQ prompts and legal text.
         expected_text=normal(' '.join(self.a.text))
+        self.assertEqual(expected_text.count(REMOVED_SOURCE_PARAGRAPH),1)
+        expected_text=expected_text.replace(REMOVED_SOURCE_PARAGRAPH,'')
         for old,new in APPROVED_COPY_REVISIONS.items():
             self.assertEqual(expected_text.count(old),1)
             expected_text=expected_text.replace(old,new)
+        old,new=APPROVED_FISCAL_COPY
+        self.assertEqual(expected_text.count(old),1)
+        expected_text=expected_text.replace(old,new)
+        expected_text=revise_v20(expected_text,include_labels=True)
+        old_label,new_label=APPROVED_LINK_LABEL
+        self.assertEqual(expected_text.count(old_label),1)
+        expected_text=expected_text.replace(old_label,new_label)
+        self.assertEqual(normal(' '.join(self.b.text)).count(new_label),2)
+        old_cta,new_cta=APPROVED_REPORT_CTA
+        self.assertEqual(expected_text.count(old_cta),1)
+        expected_text=expected_text.replace(old_cta,new_cta)
+        self.assertEqual(normal(' '.join(self.b.text)).count(new_cta),1)
+        self.assertNotIn(old_cta,normal(' '.join(self.b.text)))
+        for old_value,new_value in {**APPROVED_PRESENTATION_LABELS,**APPROVED_EXAMPLE_DATES}.items():
+            self.assertEqual(expected_text.count(old_value),1)
+            expected_text=expected_text.replace(old_value,new_value)
         old=Counter(expected_text.split())
         new=Counter(normal(' '.join(self.b.text)).split())
         self.assertFalse(old-new,dict(old-new))
@@ -83,19 +137,65 @@ class HomeAppleContracts(unittest.TestCase):
         table=ET.fromstring(fragment.group(0))
         self.assertIn('Datos ficticios',table.findtext('caption'))
         headers=table.findall('./thead/tr/th')
-        self.assertEqual([h.text for h in headers],['Fecha','Activo','Tipo','Transmisión','G/P'])
+        self.assertEqual([h.text for h in headers[:4]],['Fecha','Activo','Tipo','Transmisión'])
+        self.assertEqual(headers[-1].find("span[@aria-hidden='true']").text,'G/P')
+        self.assertEqual(headers[-1].find("span[@class='apple-sr-only']").text,'Ganancia o pérdida')
+        self.assertIn('Importes en euros',table.findtext('caption'))
         self.assertTrue(all(h.get('scope')=='col' for h in headers))
         rows=table.findall('./tbody/tr')
         self.assertEqual(len(rows),5)
         self.assertTrue(all(len(row.findall('td'))==5 for row in rows))
         original_rows=re.findall(r'<div class="mock-table-row">([\s\S]*?)</div>',self.old)
         original_text=[normal(' '.join(ET.fromstring('<div>'+r+'</div>').itertext())) for r in original_rows]
+        for old_date,new_date in APPROVED_EXAMPLE_DATES.items():
+            original_text=[row.replace(old_date,new_date) for row in original_text]
         self.assertEqual([normal(' '.join(row.itertext())) for row in rows],original_text)
+        dates=table.findall('./tbody/tr/td/time')
+        self.assertEqual(len(dates),5)
+        self.assertEqual([date.text for date in dates],list(APPROVED_EXAMPLE_DATES.values()))
+        for date in dates:
+            day,month,year=date.text.split('/')
+            self.assertEqual(date.get('datetime'),f'{year}-{month}-{day}')
     def test_links_and_structured_data_are_preserved(self):
-        self.assertFalse(Counter(self.a.links)-Counter(self.b.links))
-        self.assertEqual(self.a.schemas,self.b.schemas)
+        expected_links=Counter(self.a.links)
+        expected_links['/contacto']-=1  # Link inside the explicitly removed block.
+        self.assertFalse(expected_links-Counter(self.b.links))
+        self.assertGreaterEqual(self.b.links.count('/contacto'),1)
+        # Footer redesign keeps each original destination and its full disclaimer.
+        original_footer=re.search(r'<div class="legal-bar">[\s\S]*?</div>\s*</div>',self.old).group(0)
+        footer=ET.fromstring(re.search(r'<footer\b[\s\S]*?</footer>',self.new).group(0))
+        original_notice=normal(re.search(r'<span>([\s\S]*?)</span>',original_footer).group(1))
+        self.assertEqual(footer.find('.//p[@class="apple-footer-disclaimer"]').text,original_notice)
+        footer_links=Counter(link.get('href') for link in footer.findall('.//a'))
+        self.assertFalse(Counter(re.findall(r'href="([^"]+)"',original_footer))-footer_links)
+        self.assertEqual(footer_links['/contacto'],1)
+        expected_schemas=json.loads(json.dumps(self.a.schemas))
+        app=next(item for item in expected_schemas[0]['@graph'] if item['@id'].endswith('#app'))
+        self.assertEqual(app.pop('offers'),{'@type':'Offer','price':'0','priceCurrency':'EUR'})
+        faq=next(item for item in expected_schemas[1]['mainEntity'] if item['name']=='¿Cómo se calculan las ganancias de Bitcoin?')
+        self.assertIn(APPROVED_FISCAL_SCHEMA[0],faq['acceptedAnswer']['text'])
+        faq['acceptedAnswer']['text']=faq['acceptedAnswer']['text'].replace(*APPROVED_FISCAL_SCHEMA)
+        for change in V20_COPY['schemas']:
+            parent=expected_schemas
+            for key in change['path'][:-1]:parent=parent[key]
+            key=change['path'][-1]
+            self.assertEqual(parent[key],change['before'])
+            parent[key]=change['after']
+        self.assertEqual(expected_schemas,self.b.schemas)
         self.assertEqual(self.a.canonical,self.b.canonical)
         self.assertEqual(self.b.canonical,'https://marianosevilla.com/')
+    def test_removed_support_block_does_not_return(self):
+        text=normal(' '.join(self.b.text))
+        self.assertNotIn('apple-exchange-support',self.new)
+        self.assertNotIn('apple-support-context',self.new)
+        self.assertNotIn(REMOVED_SOURCE_PARAGRAPH,text)
+        self.assertNotIn(REMOVED_PREVIEW_PARAGRAPH,text)
+        self.assertNotIn('¿Necesitas ayuda?',text)
+        self.assertNotIn('seguimos añadiendo soporte continuamente.',text)
+        self.assertEqual(self.b.ids.count('asistenciaBlock'),1)
+        self.assertIn('Asistencia especializada',text)
+        self.assertIn('¿Necesitas ayuda con tu declaración?',text)
+        self.assertIn('/pedir-asesoramiento',self.b.links)
     def test_variant_is_noindex_and_isolated(self):
         self.assertIn('noindex',self.b.robots)
         self.assertIn('nofollow',self.b.robots)
@@ -119,5 +219,80 @@ class HomeAppleContracts(unittest.TestCase):
         self.assertNotIn('fonts.googleapis.com',self.new)
         self.assertIn('Datos ficticios',self.new)
         self.assertEqual(self.new.count('class="apple-faq-item"'),12)
+        self.assertNotIn('class="apple-faq-item" open',self.new)
+        self.assertIn('id="apple-exchange-more" open',self.new)
+
+    def test_metadata_does_not_promise_an_undefined_free_report(self):
+        descriptions=re.findall(r'<meta (?:name="description"|property="og:description"|name="twitter:description") content="([^"]+)"',self.new)
+        self.assertEqual(len(descriptions),3)
+        self.assertEqual(len(set(descriptions)),1)
+        self.assertNotIn('gratis',descriptions[0].lower())
+        app=next(item for item in self.b.schemas[0]['@graph'] if item['@id'].endswith('#app'))
+        self.assertNotIn('offers',app)
+
+    def test_v20_is_bounded_editorial_revision_and_faq_schema_matches(self):
+        previous=Document((BASELINES/'v19.html').read_text())
+        actual_changes=[{'before':old,'after':new} for old,new in zip(previous.paragraphs,self.b.paragraphs) if old!=new]
+        self.assertEqual(len(previous.paragraphs),len(self.b.paragraphs))
+        self.assertEqual(actual_changes,V20_COPY['paragraphs'])
+        for change in V20_COPY['paragraphs']:
+            self.assertEqual(previous.paragraphs.count(change['before']),1)
+            self.assertEqual(self.b.paragraphs.count(change['after']),1)
+        self.assertEqual((STATIC/'landing_apple.js').read_bytes(),(BASELINES/'v19.js').read_bytes())
+        css=(STATIC/'landing_apple.css').read_text()
+        original,layout=css.split('/* V24: approved V23 geometry, with the application\'s session-aware header. */')
+        self.assertEqual(original.rstrip(),(BASELINES/'v19.css').read_text().rstrip())
+        self.assertIn('.apple-home #site-nav { position:relative;',layout)
+        self.assertIn('.apple-home .apple-intro-inner { padding-top:36px; }',layout)
+        self.assertNotIn('position:fixed',layout)
+        self.assertEqual(previous.ids,self.b.ids)
+        without_noscript=lambda text: re.sub(r'<noscript>[\s\S]*?</noscript>','',text)
+        self.assertEqual(Document(without_noscript((BASELINES/'v19.html').read_text())).links,
+                         Document(without_noscript(self.new)).links)
+        items=re.findall(r'<details class="apple-faq-item"><summary>(.*?)</summary><div class="apple-faq-answer"><p>([\s\S]*?)</p>',self.new)
+        from html import unescape
+        faq=self.b.schemas[1]['mainEntity']
+        self.assertEqual(len(items),12)
+        for (question,answer),entry in zip(items,faq):
+            self.assertEqual(unescape(question),entry['name'])
+            self.assertEqual(normal(unescape(re.sub('<[^>]+>','',answer))),entry['acceptedAnswer']['text'])
+        for stale in ('casilla 0033','casilla 1626','desde 2019','art. 37.2','Art. 37.2','única forma válida','PDF listo para Hacienda','combina los datos automáticamente'):
+            self.assertNotIn(stale,self.new)
+
+    def test_v21_changes_only_noscript_header_and_preserves_native_navigation(self):
+        baseline=(BASELINES/'v20.html').read_text()
+        pattern=r'<noscript>[\s\S]*?</noscript>'
+        self.assertEqual(re.sub(pattern,'',baseline),re.sub(pattern,'',self.new))
+        fallback=re.search(pattern,self.new).group(0)
+        menu=re.search(r'<details class="apple-noscript-menu">([\s\S]*?)</details>',fallback).group(1)
+        self.assertIn('<summary>',menu)
+        self.assertIn('Menú principal',menu)
+        self.assertNotIn(' open',menu)
+        self.assertNotIn('<script',fallback)
+        self.assertNotIn('onclick',fallback)
+        self.assertEqual(Document('<body>'+menu+'</body>').links,
+                         ['/herramientas','/como-funciona','/recursos','/faq','/contacto','/login/','/signup/'])
+        self.assertIn('@media (max-width:1200px)',fallback)
+        self.assertIn('@media (min-width:1201px)',fallback)
+        mobile=fallback.split('@media (max-width:1200px)',1)[1]
+        self.assertNotIn('position:static',mobile)
+        self.assertNotIn('flex-wrap:wrap',mobile)
+        self.assertIn('width:44px;height:44px',mobile)
+        self.assertIn('max-height:calc(100dvh - 64px)',mobile)
+
+    def test_portraits_have_local_responsive_assets_and_png_fallbacks(self):
+        pictures=re.findall(r'<picture class="author-portrait">([\s\S]*?)</picture>',self.new)
+        self.assertEqual(len(pictures),2)
+        for picture in pictures:
+            self.assertIn('type="image/webp"',picture)
+            self.assertIn('loading="lazy"',picture)
+            self.assertIn('decoding="async"',picture)
+            self.assertIn('sizes="(max-width:640px) 72px, 88px"',picture)
+            for asset in re.findall(r'/static/(home-apple-[\w.-]+)',picture):
+                self.assertTrue((STATIC/asset).is_file(),asset)
+            self.assertRegex(picture,r'<img[^>]+src="/static/home-apple-[^"]+\.png"')
+        # At 2x and 3x, both WebP images stay below the agreed 100 kB budget.
+        for width in (176,264):
+            self.assertLess(sum((STATIC/f'home-apple-{person}-{width}.webp').stat().st_size for person in ('mariano','rafa')),100_000)
 
 if __name__=='__main__':unittest.main()
