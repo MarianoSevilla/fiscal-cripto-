@@ -813,8 +813,7 @@ body.apple-home { padding:0; }
 .apple-tools .tools-section-heading h2 { font-size:clamp(1.625rem,2.8vw,2.25rem); line-height:1.18; }
 .apple-tools .tools-section-heading p { color:var(--muted); margin-top:8px; }
 .apple-tools .tools-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; list-style:none; padding:0; }
-.apple-tools .tools-card { min-width:0; display:flex; flex-direction:column; padding:24px; border:1px solid var(--border); border-radius:20px; background:#f8faf9; }
-.apple-tools .tools-card-featured { border-color:#b9d8cb; background:#edf5f0; }
+.apple-tools .tools-card { min-width:0; display:flex; flex-direction:column; padding:24px; border:1px solid #b9d8cb; border-radius:20px; background:#edf5f0; }
 .apple-tools .tools-card-top { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
 .apple-tools .tools-icon { display:flex; align-items:center; justify-content:center; flex:0 0 44px; height:44px; border-radius:12px; background:#e5eeea; color:var(--accent); }
 .apple-tools .tools-category { color:var(--muted); font-size:.8125rem; font-weight:550; line-height:1.4; }
@@ -835,17 +834,17 @@ body.apple-home { padding:0; }
 .apple-tools .tools-faq .apple-faq-item summary { padding-block:20px; }
 .apple-tools .tools-faq .apple-faq-answer { padding-bottom:20px; }
 .apple-tools .tools-help { padding-top:0; }
-.apple-tools .tools-help-inner { display:flex; align-items:center; justify-content:space-between; gap:24px; padding:28px; background:#edf5f0; border:1px solid #d4e5db; border-radius:20px; }
-.apple-tools .tools-help h2 { font-size:clamp(1.5rem,2.4vw,1.875rem); line-height:1.2; margin-bottom:12px; }
-.apple-tools .tools-help p { color:var(--muted); }
-.apple-tools .tools-help .apple-button { display:inline-flex; flex-shrink:0; gap:8px; }
+.apple-tools .tools-help-inner { display:block; }
+.apple-tools .tools-help .apple-eyebrow { color:var(--accent); margin-bottom:16px; }
+.apple-tools .tools-help h2 { font-size:clamp(1.5rem,2.8vw,2rem); line-height:1.2; margin-bottom:16px; }
+.apple-tools .tools-help p:not(.apple-eyebrow) { max-width:none; color:#415b4d; font-size:1.0625rem; line-height:1.65; }
+.apple-tools .tools-help .apple-button { display:inline-flex; gap:8px; margin-top:24px; max-width:100%; }
 .apple-tools #site-nav .snav-links a[aria-current="page"] { color:var(--text); font-weight:650; }
 @media (min-width:641px) and (max-width:1200px) {
  .apple-tools { --tools-space:32px; --tools-gap:20px; }
  .apple-tools .tools-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
  .apple-tools .tools-confidence-grid { grid-template-columns:minmax(0,1fr); gap:24px; }
  .apple-tools .tools-lead { max-width:none; }
- .apple-tools .tools-help-inner { align-items:flex-start; flex-direction:column; }
 }
 @media (max-width:640px) {
  .apple-tools { --tools-space:24px; --tools-gap:20px; }
@@ -857,7 +856,7 @@ body.apple-home { padding:0; }
  .apple-tools .tools-card-top { margin-bottom:16px; }
  .apple-tools .tools-card-meta { margin-top:16px; }
  .apple-tools .tools-confidence-grid { gap:24px; }
- .apple-tools .tools-help-inner { flex-direction:column; align-items:stretch; padding:20px; border-radius:16px; gap:20px; }
+ .apple-tools .tools-help-inner { border-radius:16px; }
  .apple-tools .tools-help .apple-button { align-self:center; width:100%; }
  .apple-tools .tools-faq .apple-faq-item summary { padding-block:18px; }
 }
@@ -1414,7 +1413,7 @@ window.fetch=function(input,options){
 </div></section>
 <section class="tools-catalogue" aria-labelledby="tools-catalogue-title"><div class="apple-container">
  <div class="tools-section-heading"><h2 id="tools-catalogue-title">¿Qué necesitas hacer?</h2><p>Elige por dónde empezar.</p></div>
- <ul class="tools-grid" role="list"><li class="tools-card tools-card-featured">
+ <ul class="tools-grid" role="list"><li class="tools-card">
  <div class="tools-card-top"><span class="tools-icon"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 11h2m4 0h2m-8 4h2m4 0h2m-8 3h2m4 0h2"/></svg></span><span class="tools-category">Informe</span></div>
  <h3>Informe fiscal FIFO</h3><p class="tools-card-description">Importa los CSVs de tus exchanges y prepara un informe con el cálculo FIFO y el detalle de tus operaciones.</p>
  <p class="tools-card-meta">Requiere cuenta</p>
@@ -1462,8 +1461,10 @@ window.fetch=function(input,options){
 <details class="apple-faq-item"><summary>¿El informe sustituye a un asesor fiscal?</summary><div class="apple-faq-answer"><p>No. El informe organiza los datos importados y los cálculos para facilitar su revisión. No constituye asesoramiento fiscal ni legal, no sustituye al modelo oficial de declaración y no implica homologación de la Agencia Tributaria. Las operaciones complejas y otras particularidades requieren la valoración de un profesional. Úsalo como documentación de apoyo, junto con los registros originales.</p></div></details>
 <details class="apple-faq-item"><summary>¿Qué documentación necesito para preparar el informe?</summary><div class="apple-faq-answer"><p>Reúne los CSV originales y el historial completo de operaciones de la misma criptomoneda, aunque esté repartido entre varios exchanges o monederos. Las compras de ejercicios anteriores pueden afectar al coste de una venta posterior. Comprueba también las transferencias entre cuentas propias para evitar duplicados. Consulta las instrucciones de exportación de cada exchange.</p></div></details></div>
 </div></section>
-<section class="tools-help" aria-labelledby="tools-help-title"><div class="apple-container"><div class="tools-help-inner">
- <div><h2 id="tools-help-title">¿No sabes por dónde empezar?</h2><p>Cuéntanos qué necesitas y te orientamos sobre las herramientas disponibles.</p></div>
+<section class="tools-help" aria-labelledby="tools-help-title"><div class="apple-container"><div class="asistencia-block tools-help-inner">
+ <p class="apple-eyebrow">Te ayudamos a elegir</p>
+ <h2 id="tools-help-title">¿No sabes por dónde empezar?</h2>
+ <p>Cuéntanos qué necesitas y te ayudamos a encontrar la herramienta adecuada.</p>
  <a href="https://marianosevilla.com/contacto" class="apple-button">Contactar <span aria-hidden="true">→</span></a>
 </div></div></section>
 </main>
