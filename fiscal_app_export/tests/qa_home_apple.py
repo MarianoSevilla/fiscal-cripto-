@@ -212,6 +212,14 @@ def run_home_apple(browser,origin):
             assert menu.locator('a[href="/signup/"]').is_visible()
             signup=menu.get_by_role('link',name='Crear cuenta',exact=True)
             assert signup.is_visible()
+            # At 390px the preceding press test leaves a short color transition.
+            # Compare resting button states, with the pointer outside both CTAs.
+            page.mouse.move(1,1)
+            page.wait_for_function('''() => {
+              const a=getComputedStyle(document.querySelector('a.btn-primary'));
+              const b=getComputedStyle(document.querySelector('#snavMobileMenu a[href="/signup/"]'));
+              return a.backgroundColor===b.backgroundColor && a.color===b.color && a.borderRadius===b.borderRadius;
+            }''',timeout=3000)
             primary_style=page.locator('a.btn-primary').evaluate('el=>{const s=getComputedStyle(el);return [s.backgroundColor,s.color,s.borderRadius]}')
             assert signup.evaluate('el=>{const s=getComputedStyle(el);return [s.backgroundColor,s.color,s.borderRadius]}')==primary_style
             assert not geometry(page,width)
