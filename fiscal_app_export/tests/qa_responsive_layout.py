@@ -9,6 +9,7 @@ delayed sessions, 200% text and native no-JavaScript navigation.
 from playwright.sync_api import sync_playwright
 from qa_responsive_nav import server
 from qa_home_redesign import run_home_redesign
+from qa_herramientas_apple import run_herramientas_apple
 
 
 def main():
@@ -16,6 +17,7 @@ def main():
         browser=p.chromium.launch(headless=True)
         try:
             run_home_redesign(browser,origin)
+            run_herramientas_apple(browser,origin)
         finally:
             browser.close()
 
