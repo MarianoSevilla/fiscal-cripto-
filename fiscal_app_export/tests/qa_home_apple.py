@@ -63,7 +63,11 @@ def run_home_apple(browser,origin):
     for width in WIDTHS:
         ctx,violations=context(browser,width=width)
         page=ctx.new_page();errors=ready(page,origin)
-        bad=geometry(page,width);assert not bad,(width,bad[:10])
+        bad=geometry(page,width)
+        if bad:
+            page.screenshot(path=str(ARTIFACTS/f'home_apple_failure_{width}px.png'),full_page=True)
+            print('Overflow diagnostics:',page.locator('.apple-sr-only').evaluate_all('els=>els.map(el=>({text:el.textContent,rect:el.getBoundingClientRect().toJSON(),offsetParent:el.offsetParent&&el.offsetParent.className}))'))
+        assert not bad,(width,bad[:10])
         # Same in-flow, compact header geometry as the approved public V23.
         header=page.locator('#site-nav').bounding_box()
         assert abs(header['y'])<1,('header starts below document top',width,header)
