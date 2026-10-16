@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Calcula tus impuestos de criptomonedas — Mariano Sevilla</title>
-<meta name="description" content="Calcula tus impuestos de criptomonedas con el método FIFO obligatorio. Importa el CSV de Binance, Bitvavo, Kraken y genera el PDF para Hacienda. Gratis.">
+<meta name="description" content="Importa los CSV de tus exchanges y prepara tu informe fiscal de criptomonedas con cálculo FIFO y el detalle de tus operaciones.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://marianosevilla.com/">
 
@@ -12,11 +12,11 @@
 <meta property="og:type"        content="website">
 <meta property="og:url"         content="https://marianosevilla.com/">
 <meta property="og:title"       content="Calcula tus impuestos de criptomonedas para Hacienda — Mariano Sevilla">
-<meta property="og:description" content="Importa tus CSVs de Binance, Kraken, Bitvavo y genera el informe PDF listo para la Agencia Tributaria. Cálculo FIFO automático. Gratis.">
+<meta property="og:description" content="Importa los CSV de tus exchanges y prepara tu informe fiscal de criptomonedas con cálculo FIFO y el detalle de tus operaciones.">
 <meta property="og:image"       content="https://marianosevilla.com/static/og-image.png">
 <meta name="twitter:card"       content="summary_large_image">
 <meta name="twitter:title"      content="Calcula tus impuestos de criptomonedas para Hacienda — Mariano Sevilla">
-<meta name="twitter:description" content="Importa tus CSVs de Binance, Kraken, Bitvavo y genera el informe PDF listo para la Agencia Tributaria. Cálculo FIFO automático. Gratis.">
+<meta name="twitter:description" content="Importa los CSV de tus exchanges y prepara tu informe fiscal de criptomonedas con cálculo FIFO y el detalle de tus operaciones.">
 <meta name="twitter:image"      content="https://marianosevilla.com/static/og-image.png">
 
 <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
@@ -25,467 +25,9 @@
 <link rel="icon" href="/static/favicon.ico">
 <link rel="manifest" href="/static/site.webmanifest">
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/nav.css">
 <link rel="preload" href="/static/nav.js" as="script">
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  :root {
-    --bg:         #0b1220;
-    --bg2:        #101829;
-    --surface:    #141f32;
-    --surface2:   #1a2540;
-    --border:     rgba(255,255,255,0.07);
-    --border2:    rgba(255,255,255,0.13);
-    --text:       #eef2ff;
-    --muted:      #7a8aa8;
-    --accent:     #00C896;
-    --accent-dim: rgba(0,200,150,0.12);
-    --accent-glow:rgba(0,200,150,0.25);
-    --footer-bg:  #070e1a;
-    --max-w:      1280px;
-    --pad-x:      3rem;
-    --font-display:'Syne', sans-serif;
-    --font-body:   'DM Sans', sans-serif;
-  }
-
-  html { scroll-behavior: smooth; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font-body);
-    font-size: 16px;
-    line-height: 1.6;
-
-    overflow-x: hidden;
-  }
-
-  /* ── NAV ─────────────────────────────────── */
-  nav {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    height: 64px;
-    background: rgba(11,18,32,0.95);
-    backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--border);
-  }
-  .nav-inner {
-    max-width: var(--max-w); margin: 0 auto;
-    padding: 0 var(--pad-x); height: 100%;
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .nav-logo {
-    font-family: var(--font-display); font-weight: 800; font-size: 1rem;
-    letter-spacing: -0.02em; color: var(--text); text-decoration: none;
-    white-space: nowrap; flex-shrink: 0;
-  }
-  .nav-logo span { color: var(--accent); }
-
-  .nav-links {
-    display: flex; align-items: center; gap: 2rem; list-style: none;
-  }
-  .nav-links a {
-    color: var(--muted); text-decoration: none; font-size: 14px;
-    font-weight: 500; transition: color 0.15s;
-  }
-  .nav-links a:hover { color: var(--text); }
-
-  .nav-right { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
-
-  .btn-nav-login {
-    background: none; border: 1.5px solid var(--accent); color: var(--text);
-    border-radius: 8px; padding: 8px 18px;
-    font-family: var(--font-body); font-size: 13px; font-weight: 500;
-    cursor: pointer; transition: background 0.15s; white-space: nowrap;
-    text-decoration: none;
-  }
-  .btn-nav-login:hover { background: var(--accent-dim); }
-
-  .btn-nav-cta {
-    background: var(--accent); color: #0a0a0a;
-    border: none; border-radius: 8px; padding: 8px 18px;
-    font-family: var(--font-display); font-size: 13px; font-weight: 700;
-    cursor: pointer; transition: opacity 0.15s; white-space: nowrap;
-    text-decoration: none; display: inline-block;
-  }
-  .btn-nav-cta:hover { opacity: 0.88; }
-
-  /* ── NAV AVATAR (estado logueado) ─────────── */
-  .nav-avatar-wrap { position: relative; }
-  .nav-avatar {
-    width: 34px; height: 34px; border-radius: 50%;
-    background: var(--accent); color: #080c12;
-    font-family: var(--font-display); font-size: 13px; font-weight: 700;
-    border: 2px solid transparent; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    transition: opacity .15s, border-color .15s;
-  }
-  .nav-avatar:hover { opacity: .85; border-color: rgba(0,200,150,.4); }
-  .nav-dropdown {
-    position: absolute; right: 0; top: calc(100% + 10px);
-    background: var(--surface2); border: 1px solid var(--border2);
-    border-radius: 14px; min-width: 180px;
-    box-shadow: 0 12px 40px rgba(0,0,0,.6);
-    padding: 6px; z-index: 300; display: none;
-  }
-  .nav-dropdown.open { display: block; }
-  .nav-dd-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 13px; border-radius: 9px;
-    color: var(--text); font-family: var(--font-body); font-size: 14px; font-weight: 500;
-    cursor: pointer; text-decoration: none; transition: background .12s;
-    background: none; border: none; width: 100%; text-align: left;
-  }
-  .nav-dd-item:hover { background: var(--surface2); }
-  .nav-dd-divider { height: 1px; background: var(--border); margin: 4px 0; }
-  .nav-dd-item.danger { color: #e55; }
-  .nav-dd-item.danger:hover { background: rgba(220,60,60,.1); }
-
-  .compatible-inner { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; }
-  .compatible-inner > * { min-width: 0; overflow-wrap: anywhere; }
-
-  /* ── HERO ────────────────────────────────── */
-  .hero-wrap {
-    max-width: var(--max-w); margin: 0 auto;
-    padding: 72px var(--pad-x) 2.5rem;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* Fila 1: full-width — badge, H1, subtítulo, bullets */
-  .hero-header {
-    margin-bottom: 3rem;
-  }
-
-  /* Fila 2: dos columnas — CTA/asistencia | mockup */
-  .hero-body {
-    display: grid;
-    grid-template-columns: 1fr 460px;
-    gap: 4rem;
-    align-items: start;
-  }
-
-  h1 {
-    font-family: var(--font-display);
-    font-size: 3.4rem;
-    font-weight: 800; line-height: 1.08;
-    letter-spacing: -0.03em;
-    margin-bottom: 1.25rem;
-  }
-  h1 em { font-style: normal; color: var(--accent); }
-
-  .hero-desc {
-    font-size: 1.05rem; color: var(--muted);
-    line-height: 1.75; margin-bottom: 1.75rem;
-    max-width: 1150px;
-  }
-
-  .hero-checks {
-    list-style: none;
-    display: flex; flex-flow: row wrap;
-    gap: 0.6rem 2.5rem;
-    margin-bottom: 0;
-  }
-  .hero-checks li {
-    display: flex; align-items: center; gap: 10px;
-    font-size: 0.93rem; color: var(--text);
-  }
-  .hero-checks li::before {
-    content: '✓'; flex-shrink: 0;
-    width: 20px; height: 20px; border-radius: 50%;
-    background: var(--accent-dim); border: 1px solid var(--accent-glow);
-    color: var(--accent); font-size: 10px; font-weight: 700;
-    display: flex; align-items: center; justify-content: center;
-  }
-
-  /* CTA principal */
-  .btn-primary {
-    display: block; width: 100%;
-    background: var(--accent); color: #0a0a0a;
-    border: none; border-radius: 10px; padding: 15px 32px;
-    font-family: var(--font-display); font-size: 1rem; font-weight: 700;
-    cursor: pointer; transition: opacity 0.15s, transform 0.1s;
-    text-decoration: none; letter-spacing: -0.01em;
-    text-align: center; margin-bottom: 0;
-  }
-  .cta-micro {
-    font-size: 13px; color: var(--muted); opacity: 0.75;
-    text-align: center; margin-top: 10px; margin-bottom: 1.5rem;
-  }
-  .btn-primary:hover { opacity: 0.88; }
-  .btn-primary:active { transform: scale(0.98); }
-
-  /* Mini badge asistencia */
-  .asistencia-badge {
-    display: inline-flex; align-items: center;
-    font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-    color: var(--muted); border: 1px solid var(--border2);
-    border-radius: 100px; padding: 3px 10px;
-    margin-bottom: 0.6rem;
-  }
-
-  /* Bloque asistencia */
-  .asistencia-block {
-    background: var(--surface);
-    border: 1px solid var(--border2);
-    border-radius: 12px;
-    padding: 1.1rem 1.25rem;
-    margin-bottom: 2rem;
-  }
-  .asistencia-block p {
-    font-size: 0.88rem; color: var(--muted); line-height: 1.55;
-    margin-bottom: 0.85rem;
-  }
-  .asistencia-block p strong { color: var(--text); display: block; margin-bottom: 3px; font-size: 0.95rem; }
-
-  .asistencia-bullets {
-    list-style: none; margin: 0 0 1rem;
-    display: flex; flex-direction: column; gap: 5px;
-  }
-  .asistencia-bullets li {
-    font-size: 0.82rem; color: var(--accent);
-    letter-spacing: 0.01em;
-  }
-
-  .btn-asistencia {
-    display: flex; align-items: center; gap: 10px; width: 100%;
-    justify-content: center;
-    background: none; color: var(--accent);
-    border: 1.5px solid var(--accent); border-radius: 10px;
-    padding: 13px 24px;
-    font-family: var(--font-display); font-size: 1rem; font-weight: 700;
-    cursor: pointer; transition: background 0.15s;
-    text-decoration: none; letter-spacing: -0.01em;
-  }
-  .btn-asistencia:hover { background: var(--accent-dim); }
-  .btn-asistencia img {
-    width: 28px; height: 28px; border-radius: 50%;
-    object-fit: cover; flex-shrink: 0;
-    border: 1.5px solid var(--accent-glow);
-  }
-
-  /* Autores */
-  .authors {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
-    width: 100%; margin-bottom: 0;
-  }
-  .author-card {
-    display: flex; align-items: flex-start; gap: 11px;
-    padding: 14px 14px 14px 12px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 14px;
-    width: 100%;
-  }
-  .author-avatar {
-    width: 62px; height: 62px; border-radius: 50%;
-    object-fit: cover; flex-shrink: 0;
-    border: 2px solid var(--border2);
-    margin-top: 1px;
-  }
-  .author-name { font-size: 0.93rem; font-weight: 700; color: var(--text); margin-bottom: 3px; }
-  .author-role { font-size: 0.88rem; color: var(--muted); line-height: 1.4; }
-  .author-colegiado { font-size: 10px; color: rgba(0,200,150,0.65); margin-top: 4px; letter-spacing: 0.02em; }
-  .authors-link { display: inline-block; margin-top: 0.75rem; font-size: 0.82rem; color: var(--muted); text-decoration: none; transition: color 0.15s; }
-  .authors-link:hover { color: var(--text); }
-
-  /* ── MOCKUP ──────────────────────────────── */
-  .hero-right {
-    position: relative;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .device-glow {
-    position: absolute;
-    width: min(480px, 100%); height: auto; aspect-ratio: 1;
-    background: radial-gradient(circle, rgba(0,200,150,0.12) 0%, transparent 65%);
-    top: 50%; left: 50%; transform: translate(-50%,-50%);
-    pointer-events: none;
-  }
-  .device-frame {
-    width: 100%; position: relative; z-index: 1;
-    background: var(--surface2);
-    border: 1px solid var(--border2);
-    border-radius: 14px; overflow: hidden;
-    box-shadow: 0 0 0 1px var(--border), 0 40px 100px rgba(0,0,0,0.7), 0 0 80px rgba(0,200,150,0.07);
-  }
-  .device-bar {
-    background: var(--surface); padding: 10px 14px;
-    display: flex; align-items: center; gap: 8px;
-    border-bottom: 1px solid var(--border);
-  }
-  .device-dot { width: 10px; height: 10px; border-radius: 50%; }
-  .device-dot-r { background: #ff5f57; }
-  .device-dot-y { background: #febc2e; }
-  .device-dot-g { background: #28c840; }
-  .device-url {
-    flex: 1; background: var(--bg2); border-radius: 6px; padding: 4px 10px;
-    font-size: 11px; color: var(--muted); margin-left: 6px;
-  }
-  .device-body { padding: 1.25rem; min-width: 0; max-width: 100%; overflow: hidden; }
-  .mock-kpis {
-    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 8px; margin-bottom: 1rem;
-  }
-  .mock-kpi {
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: 8px; padding: 10px 8px; text-align: center; min-width: 0;
-  }
-  .mock-kpi-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
-  .mock-kpi-value { font-family: var(--font-display); font-size: .85rem; font-weight: 800; white-space: nowrap; }
-  .mock-kpi-value.green { color: var(--accent); }
-  .mock-kpi-value.red   { color: #e24b4a; }
-  .mock-table-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-  .mock-table-head {
-    display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.2fr;
-    padding: 8px 10px; font-size: 9px; color: var(--muted);
-    text-transform: uppercase; letter-spacing: 0.06em;
-    border-bottom: 1px solid var(--accent); background: var(--surface);
-  }
-  .mock-table-row {
-    display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.2fr;
-    padding: 7px 10px; font-size: 11px;
-    border-bottom: 1px solid var(--border); align-items: center;
-  }
-  .mock-table-row:last-child { border-bottom: none; }
-  .mock-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; text-transform: uppercase; }
-  .mock-badge-venta { background: rgba(226,75,74,0.12); color: #e24b4a; }
-  .mock-badge-swap  { background: var(--accent-dim); color: var(--accent); }
-  .mock-green { color: var(--accent); font-weight: 600; }
-  .mock-red   { color: #e24b4a; font-weight: 600; }
-
-  /* ── LEGAL TEXT (fuera del footer) ───────── */
-  .legal-bar {
-    max-width: var(--max-w); margin: 0 auto;
-    padding: 0.75rem var(--pad-x);
-    font-size: 12px; color: var(--muted);
-    border-top: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 2rem; flex-wrap: wrap;
-  }
-  .legal-bar-links { display: flex; flex-wrap: wrap; gap: .6rem 1rem; min-width: 0; }
-  .legal-bar-links a { font-size: 12px; color: var(--muted); text-decoration: none; transition: color 0.15s; }
-  .legal-bar-links a:hover { color: var(--text); }
-
-  /* ── FOOTER ──────────────────────────────── */
-  footer {
-    background: var(--footer-bg);
-    border-top: 1px solid var(--border);
-    width: 100%;
-  }
-  .footer-inner {
-    max-width: var(--max-w); margin: 0 auto;
-    padding: 2.5rem var(--pad-x);
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 2rem;
-  }
-  .footer-step {
-    display: flex; align-items: flex-start; gap: 1rem;
-  }
-  .footer-step-icon {
-    width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0;
-    background: var(--accent-dim); border: 1px solid var(--accent-glow);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px;
-  }
-  .footer-step-body {}
-  .footer-step-title {
-    font-family: var(--font-display); font-size: 0.95rem;
-    font-weight: 700; margin-bottom: 0.35rem; letter-spacing: -0.01em;
-  }
-  .footer-step-num {
-    font-size: 11px; color: var(--accent); font-weight: 600;
-    margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.06em;
-  }
-  .footer-step-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
-
-  /* ── RESPONSIVE ──────────────────────────── */
-  @media (max-width: 1100px) {
-    .mock-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    :root { --pad-x: 2rem; }
-    .hero-body { grid-template-columns: 1fr 400px; gap: 3rem; }
-    h1 { font-size: 3rem; }
-  }
-  @media (max-width: 900px) {
-    :root { --pad-x: 1.5rem; }
-    .hero-wrap { padding-top: 80px; }
-    .hero-header { margin-bottom: 2rem; }
-    .hero-body { grid-template-columns: 1fr; gap: 2rem; }
-    .hero-right { order: 1; } /* mockup debajo del CTA en móvil */
-    .hero-checks { flex-direction: column; gap: 9px; }
-    h1 { font-size: 2.4rem; }
-    .footer-inner { grid-template-columns: 1fr; }
-    .nav-links { display: none; }
-    .authors { grid-template-columns: 1fr; }
-    .faq-grid { grid-template-columns: 1fr !important; }
-  }
-  @media (max-width: 480px) {
-    .hero-wrap, .hero-header, .hero-left, .hero-right, .device-frame,
-    .author-card > div, .footer-step-body { min-width: 0; }
-    .hero-body { grid-template-columns: minmax(0, 1fr); }
-    /* Con Syne real, ajustar el tamaño antes que partir palabras clave. */
-    h1 { font-size: clamp(1.35rem, 6vw, 1.8rem); letter-spacing: -0.02em; overflow-wrap: normal; }
-    section h2 {
-      font-size: clamp(1.25rem, 5.5vw, 1.6rem) !important;
-      overflow-wrap: normal;
-    }
-    .hero-checks li, .cta-micro { min-width: 0; overflow-wrap: anywhere; }
-    .authors { grid-template-columns: minmax(0, 1fr); }
-    .btn-asistencia { flex-wrap: wrap; text-align: center; overflow-wrap: anywhere; }
-    .mock-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .mock-kpi-value { font-size: .85rem; }
-    /* Mockup decorativo: tres columnas legibles, sin desbordar la pantalla. */
-    .mock-table-head, .mock-table-row {
-      min-width: 0;
-      grid-template-columns: minmax(0, 1.25fr) minmax(0, .7fr) minmax(0, .95fr);
-    }
-    .mock-table-head > :nth-child(3), .mock-table-head > :nth-child(4),
-    .mock-table-row > :nth-child(3), .mock-table-row > :nth-child(4) {
-      display: none;
-    }
-  }
-  @media (max-width: 350px) {
-    .mock-kpi-value { font-size: .75rem; }
-  }
-
-  /* ── AUTH MODAL ──────────────────────────── */
-  .auth-dialog {
-    background: var(--surface); border: 1px solid var(--border2);
-    border-radius: 16px; padding: 0; width: min(420px, 92vw);
-    color: var(--text); box-shadow: 0 24px 48px rgba(0,0,0,0.7);
-  }
-  .auth-dialog::backdrop { background: rgba(0,0,0,0.72); backdrop-filter: blur(4px); }
-  .auth-inner { padding: 1.75rem; }
-  .auth-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
-  .auth-title { font-family: var(--font-display); font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em; }
-  .auth-close { background: none; border: none; color: var(--muted); font-size: 1.35rem; line-height: 1; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.15s; }
-  .auth-close:hover { background: var(--surface2); color: var(--text); }
-  .auth-form { display: flex; flex-direction: column; gap: 1rem; }
-  .auth-field label { display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 5px; }
-  .auth-field input[type="email"],
-  .auth-field input[type="password"] {
-    width: 100%; background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 8px; color: var(--text); font-family: var(--font-body);
-    font-size: 14px; padding: 10px 13px; outline: none; box-sizing: border-box;
-    transition: border-color 0.2s;
-  }
-  .auth-field input:focus { border-color: var(--accent); }
-  .auth-remember { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); cursor: pointer; user-select: none; }
-  .auth-remember input { width: auto; cursor: pointer; }
-  .auth-error { background: rgba(226,75,74,0.1); border: 1px solid rgba(226,75,74,0.25); border-radius: 8px; padding: 9px 13px; font-size: 13px; color: #c8a5a4; }
-  .auth-btn-primary { width: 100%; padding: 13px; background: var(--accent); color: #0a0a0a; border: none; border-radius: 10px; font-family: var(--font-display); font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: opacity 0.2s; }
-  .auth-btn-primary:hover { opacity: 0.9; }
-  .auth-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
-  .auth-switch { text-align: center; font-size: 13px; color: var(--muted); margin: 0.25rem 0 0; }
-  .auth-switch-btn { background: none; border: none; color: var(--accent); font-size: 13px; font-family: var(--font-body); cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 2px; }
-
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  .hero-wrap { animation: fadeUp 0.45s ease both; }
-</style>
 
 <script type="application/ld+json">
 {
@@ -496,7 +38,7 @@
       "@id": "https://marianosevilla.com/#website",
       "url": "https://marianosevilla.com/",
       "name": "Mariano Sevilla",
-      "description": "Herramienta fiscal para criptomonedas — informe FIFO para Hacienda",
+      "description": "Herramienta fiscal para criptomonedas — informe FIFO para preparar tu declaración",
       "inLanguage": "es"
     },
     {
@@ -518,27 +60,22 @@
       "operatingSystem": "All",
       "browserRequirements": "Requires JavaScript",
       "inLanguage": "es",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "EUR"
-      },
-      "description": "Genera tu informe FIFO para la declaración de la renta. Importa el CSV de Binance, Bitvavo, Kraken, Coinbase y más. PDF listo para Hacienda en minutos.",
+      "description": "Prepara tu informe FIFO a partir de los CSV de exchanges compatibles. Revisa el detalle de tus operaciones y comparte el PDF con tu asesor para preparar la declaración de la renta.",
       "featureList": [
         "Cálculo FIFO automático",
         "Compatible con Binance, Bitvavo, Bit2Me, Kraken, Coinbase",
-        "Informe PDF para Hacienda",
-        "Clasificación automática de operaciones",
-        "Separación de ganancias patrimoniales y rendimientos del capital"
+        "Informe PDF para revisar y compartir con tu asesor",
+        "Detalle de las operaciones importadas"
       ]
     }
   ]
 }
 </script>
+<link rel="stylesheet" href="/static/landing_apple.css">
+<script src="/static/landing_apple.js" defer></script>
 </head>
-<body>
-
-<!-- ── NAV ────────────────────────────────── -->
+<body class="apple-home">
+<a class="apple-skip" href="#contenido">Saltar al contenido</a>
 <nav id="site-nav">
   <div class="snav-inner">
     <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
@@ -555,82 +92,74 @@
   </div>
 </nav>
 <script src="/static/nav.js"></script>
+<noscript>
+<style>
+/* Native mobile disclosure: useful in HTML viewers without JavaScript too. */
+.apple-home .snav-right{display:none}
+.apple-home .apple-noscript-menu{display:none}
+@media (min-width:1201px){
+  .apple-home #site-nav{position:static;height:auto}
+  .apple-home .snav-inner{flex-wrap:wrap;padding-block:16px;gap:16px}
+  .apple-home .snav-links{display:flex;position:static;transform:none;flex-wrap:wrap;gap:12px}
+  .apple-home .apple-intro-inner{padding-top:48px}
+}
+@media (max-width:1200px){
+  .apple-home .apple-noscript-access{display:none}
+  .apple-home .apple-noscript-menu{display:block;position:absolute;top:8px;right:var(--apple-pad);z-index:1001}
+  .apple-home .apple-noscript-menu>summary{display:flex;align-items:center;justify-content:center;width:44px;height:44px;list-style:none;border:1px solid #d8e1dd;border-radius:9px;background:#f3f6f5;color:var(--text);cursor:pointer}
+  .apple-home .apple-noscript-menu>summary::-webkit-details-marker{display:none}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon{background:transparent}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::before{transform:translateY(6px) rotate(45deg)}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::after{transform:translateY(-6px) rotate(-45deg)}
+  .apple-home .apple-noscript-panel{position:absolute;top:56px;left:auto;right:calc(-1 * var(--apple-pad));width:100vw;display:flex;flex-direction:column;gap:4px;padding:12px var(--apple-pad) 18px;max-height:calc(100vh - 64px);max-height:calc(100dvh - 64px);overflow-y:auto;overscroll-behavior:contain;background:#fff;border-top:1px solid var(--border);box-shadow:0 14px 28px rgba(20,34,30,.1)}
+  .apple-home .apple-noscript-panel>a{display:flex;align-items:center;min-height:44px;padding:11px 14px;border-radius:8px;color:var(--muted);font-size:.9375rem;line-height:1.4;text-decoration:none}
+  .apple-home .apple-noscript-panel>a:hover{background:#f1f5f3;color:var(--text)}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary{justify-content:center;min-height:48px;border-radius:999px;background:var(--accent);color:#fff;font-weight:600}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary:hover{background:#00533f}
+  .apple-home .apple-noscript-menu .snav-menu-icon{width:19px}
+  .apple-home #site-nav .snav-logo{max-width:calc(100% - 60px)}
+}
+</style>
+<details class="apple-noscript-menu">
+  <summary><span class="snav-menu-icon" aria-hidden="true"></span><span class="apple-sr-only">Menú principal</span></summary>
+  <nav class="apple-noscript-panel" aria-label="Navegación móvil">
+    <a href="/herramientas">Herramientas</a>
+    <a href="/como-funciona">Cómo funciona</a>
+    <a href="/recursos">Recursos</a>
+    <a href="/faq">FAQ</a>
+    <a href="/contacto">Contacto</a>
+    <a href="/login/">Iniciar sesión</a>
+    <a href="/signup/" class="snav-mobile-link-primary">Crear cuenta</a>
+  </nav>
+</details>
+<div class="apple-noscript-access"><a href="/login/">Iniciar sesión</a><a href="/signup/">Crear cuenta</a></div>
+</noscript>
+<main id="contenido" tabindex="-1">
+<div class="apple-intro"><div class="apple-intro-inner">
+<section class="apple-hero" aria-labelledby="apple-home-title"><div class="apple-container">
+<p class="apple-eyebrow">Fiscalidad de criptomonedas</p>
 
-<!-- ── HERO ───────────────────────────────── -->
-<div class="hero-wrap">
-
-  <!-- Fila 1: full-width — H1, subtítulo, bullets -->
-  <div class="hero-header">
-    <h1>Calcula tus impuestos de<br><em>criptomonedas</em> para Hacienda</h1>
+    <h1 id="apple-home-title">Calcula tus impuestos de <em>criptomonedas</em> para Hacienda</h1>
 
     <p class="hero-desc">
-      Importa los CSVs de tus exchanges y genera automáticamente tu
-      informe fiscal en formato compatible con la Agencia Tributaria.
+      Importa los CSVs de tus exchanges y prepara tu informe fiscal
+      con cálculo FIFO y el detalle de tus operaciones para la declaración de la renta.
     </p>
 
-    <ul class="hero-checks">
-      <li>Método FIFO</li>
-      <li>Compatible con los principales exchanges</li>
-      <li>Privacidad y seguridad — tu CSV no se almacena</li>
-      <li>100% online, sin instalación</li>
-    </ul>
-  </div>
-
-  <!-- Fila 2: dos columnas — CTA/asistencia | mockup -->
-  <div class="hero-body">
-
-    <!-- CTA + asistencia + autores -->
-    <div class="hero-left">
-      <a href="/signup/" class="btn-primary">Crea tu cuenta gratis</a>
-      <p class="cta-micro">Sin tarjeta · Importa tus CSVs · Generación automática FIFO</p>
-
-      <!-- Bloque asistencia fiscal -->
-      <div class="asistencia-block" id="asistenciaBlock">
-        <div class="asistencia-badge">Asistencia especializada</div>
-        <p>
-          <strong>¿Necesitas ayuda con tu declaración?</strong>
-          Asistencia fiscal especializada para usuarios con criptomonedas, supervisada por economista colegiado.
-        </p>
-        <ul class="asistencia-bullets">
-          <li>✓ Consulta inicial sin compromiso</li>
-          <li>✓ Casos complejos de criptomonedas</li>
-          <li>✓ Supervisado por economista colegiado</li>
-        </ul>
-        <a href="/pedir-asesoramiento" class="btn-asistencia">
-          Solicitar asistencia fiscal
-        </a>
-      </div>
-
-      <!-- Autores -->
-      <div class="authors">
-        <div class="author-card">
-          <img src="/static/mariano-sevilla-logo.png" alt="Mariano Sevilla" class="author-avatar">
-          <div>
-            <div class="author-name">Mariano Sevilla</div>
-            <div class="author-role">Tecnología y automatización aplicada a la fiscalidad cripto</div>
-          </div>
-        </div>
-        <div class="author-card">
-          <img src="/static/rafa-ramos-logo.png" alt="Rafael Ramos Martínez" class="author-avatar">
-          <div>
-            <div class="author-name">Rafael Ramos Martínez</div>
-            <div class="author-role">Economista colegiado · Supervisión y criterio fiscal</div>
-            <div class="author-colegiado">Colegiado nº 4.579</div>
-          </div>
-        </div>
-      </div>
-      <a href="/about" class="authors-link">Conoce al equipo →</a>
-    </div>
-
-    <!-- Mockup -->
-    <div class="hero-right">
-    <div class="device-glow"></div>
+    
+  
+<div class="apple-hero-actions"><a href="/signup/" class="btn-primary">Crear cuenta</a><a class="apple-text-link" href="#como-funciona">Cómo funciona <span aria-hidden="true">↓</span></a></div>
+<p class="cta-micro">Sin tarjeta · Importa tus CSVs · Generación automática FIFO<span class="apple-tablet-only"> · Datos para tu declaración</span></p>
+</div></section>
+<section class="apple-demo" aria-label="Ejemplo de informe fiscal con datos ficticios"><div class="apple-container">
+<div class="hero-right">
+    
     <div class="device-frame">
       <div class="device-bar">
         <span class="device-dot device-dot-r"></span>
         <span class="device-dot device-dot-y"></span>
         <span class="device-dot device-dot-g"></span>
-        <div class="device-url">fiscal.marianosevilla.com</div>
+        <div class="device-url">Informe FIFO de criptomonedas</div>
       </div>
       <div class="device-body">
         <div class="mock-kpis">
@@ -651,53 +180,31 @@
             <div class="mock-kpi-value green">+2.351€</div>
           </div>
         </div>
-        <div class="mock-table-wrap">
-          <div class="mock-table-head">
-            <span>Fecha</span><span>Activo</span><span>Tipo</span><span>Transmisión</span><span>G/P</span>
-          </div>
-          <div class="mock-table-row">
-            <span>15/03/2024</span><span>BTC</span>
-            <span><span class="mock-badge mock-badge-venta">Venta</span></span>
-            <span>2.400,00</span><span class="mock-green">+1.240,00</span>
-          </div>
-          <div class="mock-table-row">
-            <span>02/05/2024</span><span>ETH</span>
-            <span><span class="mock-badge mock-badge-swap">Swap</span></span>
-            <span>860,50</span><span class="mock-green">+210,30</span>
-          </div>
-          <div class="mock-table-row">
-            <span>18/06/2024</span><span>SOL</span>
-            <span><span class="mock-badge mock-badge-venta">Venta</span></span>
-            <span>320,00</span><span class="mock-red">-88,40</span>
-          </div>
-          <div class="mock-table-row">
-            <span>29/09/2024</span><span>BNB</span>
-            <span><span class="mock-badge mock-badge-swap">Swap</span></span>
-            <span>540,20</span><span class="mock-green">+178,60</span>
-          </div>
-          <div class="mock-table-row">
-            <span>11/11/2024</span><span>BTC</span>
-            <span><span class="mock-badge mock-badge-venta">Venta</span></span>
-            <span>1.612,00</span><span class="mock-green">+800,10</span>
-          </div>
+        <p class="apple-table-hint">Desliza para ver todas las columnas <span aria-hidden="true">↔</span></p><div class="mock-table-wrap" tabindex="0" role="region" aria-label="Operaciones del informe de ejemplo. Tabla desplazable horizontalmente">
+          <table class="mock-table">
+            <caption class="apple-sr-only">Operaciones del informe de ejemplo. Datos ficticios. Importes en euros.</caption>
+            <thead><tr class="mock-table-head"><th scope="col">Fecha</th><th scope="col">Activo</th><th scope="col">Tipo</th><th scope="col">Transmisión</th><th scope="col"><span aria-hidden="true">G/P</span><span class="apple-sr-only">Ganancia o pérdida</span></th></tr></thead>
+            <tbody>
+              <tr class="mock-table-row"><td><time class="apple-example-date" datetime="2025-03-15">15/03/2025</time></td><td>BTC</td><td><span class="mock-badge mock-badge-venta">Venta</span></td><td>2.400,00</td><td class="mock-green">+1.240,00</td></tr>
+              <tr class="mock-table-row"><td><time class="apple-example-date" datetime="2025-05-02">02/05/2025</time></td><td>ETH</td><td><span class="mock-badge mock-badge-swap">Swap</span></td><td>860,50</td><td class="mock-green">+210,30</td></tr>
+              <tr class="mock-table-row"><td><time class="apple-example-date" datetime="2025-06-18">18/06/2025</time></td><td>SOL</td><td><span class="mock-badge mock-badge-venta">Venta</span></td><td>320,00</td><td class="mock-red">-88,40</td></tr>
+              <tr class="mock-table-row"><td><time class="apple-example-date" datetime="2025-09-29">29/09/2025</time></td><td>BNB</td><td><span class="mock-badge mock-badge-swap">Swap</span></td><td>540,20</td><td class="mock-green">+178,60</td></tr>
+              <tr class="mock-table-row"><td><time class="apple-example-date" datetime="2025-11-11">11/11/2025</time></td><td>BTC</td><td><span class="mock-badge mock-badge-venta">Venta</span></td><td>1.612,00</td><td class="mock-green">+800,10</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
-  </div><!-- /hero-right -->
-  </div><!-- /hero-body -->
-</div><!-- /hero-wrap -->
-
-<!-- ── COMPATIBLE CON ─────────────────────── -->
-<div style="border-top:1px solid var(--border); border-bottom:1px solid var(--border);">
-  <div class="compatible-inner" style="max-width:var(--max-w);margin:0 auto;padding:1rem var(--pad-x);">
-    <span style="font-size:13px;color:var(--muted);">Calculadora de impuestos de criptomonedas compatible con Bitvavo, Nexo, Binance, Coinbase, Crypto.com y Bit2Me</span>
-    <a href="/exchanges" style="font-size:13px;color:var(--accent);text-decoration:none;">Ver todos los exchanges compatibles →</a>
   </div>
-</div>
-
-<!-- ── PASOS: CÓMO FUNCIONA ──────────────────── -->
-<section style="border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--bg2);">
-  <div class="footer-inner">
+</div></section>
+</div></div>
+<section class="apple-trust" aria-label="Características de la herramienta"><div class="apple-container"><ul class="hero-checks">
+      <li>Método FIFO</li>
+      <li>Compatible con los principales exchanges</li>
+      <li>Privacidad y seguridad — tu CSV no se almacena</li>
+      <li>100% online, sin instalación</li>
+    </ul><a class="apple-text-link apple-trust-link" href="/exchanges">Consultar exchanges compatibles →</a></div></section>
+<section class="apple-section apple-how" id="como-funciona"><div class="apple-container"><div class="apple-section-heading"><span class="apple-eyebrow">Cómo funciona</span><h2>De tu historial a tu informe.</h2></div><div class="apple-steps">
 
     <div class="footer-step">
       <div class="footer-step-icon">📥</div>
@@ -717,8 +224,8 @@
         <div class="footer-step-num">Paso 2</div>
         <h3 class="footer-step-title">Procesamiento automático</h3>
         <p class="footer-step-desc">
-          Se aplica el método FIFO obligatorio (art. 37.2 LIRPF)
-          y se calculan plusvalías, minusvalías y rendimientos.
+          Se aplica el criterio FIFO para identificar las unidades transmitidas
+          y calcular las ganancias y pérdidas de las operaciones importadas.
         </p>
       </div>
     </div>
@@ -729,460 +236,471 @@
         <div class="footer-step-num">Paso 3</div>
         <h3 class="footer-step-title">Informe listo</h3>
         <p class="footer-step-desc">
-          PDF detallado listo para tu gestor fiscal o para completar
-          la declaración de la renta con las casillas correctas.
+          PDF detallado para revisar tus cálculos, preparar la información
+          de tu declaración y compartirla con tu asesor.
         </p>
       </div>
     </div>
 
-  </div>
-</section>
+  </div></div></section><section class="apple-section apple-includes" id="tu-informe"><div class="apple-container">
 
-<!-- ── FISCALIDAD CRIPTO EN ESPAÑA ──────────── -->
-<section style="border-top:1px solid var(--border);padding:4rem 0;">
-  <div style="max-width:var(--max-w);margin:0 auto;padding:0 2rem;">
-
-    <h2 style="font-family:var(--font-display);font-size:clamp(1.75rem,2.8vw,2.2rem);font-weight:800;line-height:1.15;margin-bottom:1.25rem;">
-      ¿Cómo tributan las criptomonedas en España?
+    <h2>
+      ¿Qué incluye el informe fiscal de criptomonedas?
     </h2>
 
-    <p style="color:var(--muted);max-width:1150px;line-height:1.8;margin-bottom:1rem;">
-      En España, las ganancias y pérdidas por venta o permuta de criptomonedas
-      tributan como <strong style="color:var(--text);">ganancias y pérdidas patrimoniales</strong>
-      en el IRPF, integradas en la base imponible del ahorro. Esto incluye vender Bitcoin
-      o Ethereum por euros, pero también los swaps entre criptomonedas: intercambiar BTC
-      por ETH es un hecho imponible aunque no hayas convertido nada a dinero fiat.
-    </p>
-    <p style="color:var(--muted);max-width:1150px;line-height:1.8;margin-bottom:1rem;">
-      Las recompensas por staking, airdrops y cashback tributan de forma diferente:
-      como <strong style="color:var(--text);">rendimientos del capital mobiliario</strong>
-      (casilla 0033 de la declaración). Esta distinción es fundamental para
-      <strong style="color:var(--text);">declarar tus criptomonedas correctamente ante Hacienda</strong>
-      y evitar errores que pueden derivar en requerimientos o sanciones.
-    </p>
-    <p style="color:var(--muted);max-width:1150px;line-height:1.8;">
-      La herramienta detecta automáticamente el tipo de cada operación en tu CSV y
-      genera el informe fiscal separado según la clasificación correcta: ganancias
-      patrimoniales por un lado, rendimientos del capital por otro.
-    </p>
+    <div class="apple-includes-grid">
 
-  </div>
-</section>
+      <div>
+        <h3>Ganancias y pérdidas patrimoniales</h3>
+        <p>
+          Detalle de ventas y permutas con identificación de las unidades
+          mediante el criterio FIFO. Revisa el resultado del ejercicio antes
+          de trasladar la información a tu declaración de la renta.
+        </p>
+      </div>
 
-<!-- ── MÉTODO FIFO ────────────────────────── -->
-<section style="border-top:1px solid var(--border);padding:4rem 0;background:var(--bg2);">
-  <div style="max-width:var(--max-w);margin:0 auto;padding:0 2rem;">
+      <div>
+        <h3>Staking y otras recompensas</h3>
+        <p>
+          El tratamiento fiscal del staking, los airdrops y otras recompensas
+          depende de cómo se obtengan y de sus condiciones. Revisa su naturaleza,
+          valoración e imputación con tu asesor antes de declarar.
+        </p>
+      </div>
 
-    <span style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:0.75rem;">Art. 37.2 Ley del IRPF</span>
-    <h2 style="font-family:var(--font-display);font-size:clamp(1.75rem,2.8vw,2.2rem);font-weight:800;line-height:1.15;margin-bottom:1.25rem;">
-      El método FIFO: la única forma válida para calcular tus impuestos de criptomonedas
-    </h2>
+      <div>
+        <h3>Detalle operación a operación</h3>
+        <p>
+          Fecha, activo, tipo de operación, valor de transmisión, coste de
+          adquisición FIFO y ganancia o pérdida individual. Información
+          para facilitar la revisión de tu declaración con tu gestor fiscal.
+        </p>
+      </div>
 
-    <p style="color:var(--muted);max-width:1150px;line-height:1.8;margin-bottom:1rem;">
-      El <strong style="color:var(--text);">método FIFO</strong> (<em>First In, First Out</em>)
-      es el sistema que obliga a aplicar la normativa española para calcular las ganancias
-      y pérdidas de criptomonedas. Significa que cuando vendes, el precio de adquisición
-      que Hacienda considera es siempre el de las unidades compradas primero.
-    </p>
-    <p style="color:var(--muted);max-width:1150px;line-height:1.8;margin-bottom:1rem;">
-      Ejemplo práctico: si compraste 0,5 BTC en 2021 a 30.000 € y otros 0,5 BTC en 2023
-      a 25.000 €, y en 2024 vendes 0,5 BTC a 40.000 €, Hacienda aplica el coste de 2021
-      (30.000 €). La ganancia computable es <strong style="color:var(--accent);">+10.000 €</strong>,
-      no +15.000 €. Por eso es imprescindible subir el historial
-      <strong style="color:var(--text);">completo</strong> desde el origen, no solo el año
-      que vas a declarar.
-    </p>
-    <p style="color:var(--muted);max-width:1150px;line-height:1.8;">
-      La herramienta aplica el FIFO de forma automática sobre todas tus operaciones y
-      genera un <strong style="color:var(--text);">informe fiscal de criptomonedas</strong>
-      con cada operación detallada: fecha, activo, coste FIFO utilizado y ganancia o
-      pérdida patrimonial resultante.
-    </p>
+      <div>
+        <h3>PDF para tu declaración</h3>
+        <p>
+          Informe PDF para revisar tus cálculos, preparar la información de tu
+          declaración y compartirla con tu asesor. No sustituye al modelo oficial
+          ni se adjunta de forma rutinaria a la declaración.
+        </p>
+      </div>
 
-  </div>
-</section>
+    </div>
 
-<!-- ── EXCHANGES COMPATIBLES ─────────────── -->
-<section style="border-top:1px solid var(--border);padding:4rem 0;">
-  <div style="max-width:var(--max-w);margin:0 auto;padding:0 2rem;">
+    <div class="apple-report-action" role="group" aria-label="Preparar el informe fiscal"><a class="apple-button" href="/signup/">
+      Preparar mi informe
+    </a></div>
 
-    <h2 style="font-family:var(--font-display);font-size:clamp(1.75rem,2.8vw,2.2rem);font-weight:800;line-height:1.15;margin-bottom:0.6rem;">
+  </div></section><section class="apple-section apple-exchanges" id="exchanges"><div class="apple-container">
+
+    <h2>
       Compatible con los exchanges más usados en España
     </h2>
-    <p style="color:var(--muted);margin-bottom:2.5rem;max-width:60ch;line-height:1.75;">
+    <p>
       Importa el historial directamente en CSV desde tu exchange. Sin APIs, sin
       claves privadas, sin acceso a tu cuenta.
     </p>
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1rem;">
+    <div class="apple-exchange-grid">
 
-      <a href="/exchanges/binance" style="display:block;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:1.25rem 1.5rem;text-decoration:none;transition:border-color 0.15s,background 0.15s;" onmouseover="this.style.borderColor='rgba(0,200,150,0.4)';this.style.background='#1a2540'" onmouseout="this.style.borderColor='rgba(255,255,255,0.13)';this.style.background='var(--surface)'">
-        <h3 style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:0.5rem;color:var(--text);">Binance</h3>
-        <p style="color:var(--muted);font-size:14px;line-height:1.65;margin-bottom:0.65rem;">
+      <a class="apple-exchange-card" href="/exchanges/binance">
+        <h3>Binance</h3>
+        <p>
           El exchange más grande del mundo. Exporta tu historial desde
           <em>Órdenes → Historial de transacciones</em> y súbelo directamente.
           Compatible con el CSV estándar de Binance España.
         </p>
-        <span style="font-size:12px;color:var(--accent);font-weight:600;">Ver guía fiscal →</span>
+        <span>Ver guía fiscal →</span>
       </a>
 
-      <a href="/exchanges/bitvavo" style="display:block;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:1.25rem 1.5rem;text-decoration:none;transition:border-color 0.15s,background 0.15s;" onmouseover="this.style.borderColor='rgba(0,200,150,0.4)';this.style.background='#1a2540'" onmouseout="this.style.borderColor='rgba(255,255,255,0.13)';this.style.background='var(--surface)'">
-        <h3 style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:0.5rem;color:var(--text);">Bitvavo</h3>
-        <p style="color:var(--muted);font-size:14px;line-height:1.65;margin-bottom:0.65rem;">
+      <a class="apple-exchange-card" href="/exchanges/bitvavo">
+        <h3>Bitvavo</h3>
+        <p>
           Exchange europeo muy popular en España. Descarga tu CSV desde la
           sección <em>Historial</em> de tu cuenta y genera el informe FIFO
           en segundos.
         </p>
-        <span style="font-size:12px;color:var(--accent);font-weight:600;">Ver guía fiscal →</span>
+        <span>Ver guía fiscal →</span>
       </a>
 
-      <a href="/exchanges/kraken" style="display:block;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:1.25rem 1.5rem;text-decoration:none;transition:border-color 0.15s,background 0.15s;" onmouseover="this.style.borderColor='rgba(0,200,150,0.4)';this.style.background='#1a2540'" onmouseout="this.style.borderColor='rgba(255,255,255,0.13)';this.style.background='var(--surface)'">
-        <h3 style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:0.5rem;color:var(--text);">Kraken</h3>
-        <p style="color:var(--muted);font-size:14px;line-height:1.65;margin-bottom:0.65rem;">
-          Uno de los exchanges más veteranos. Descarga el <em>Ledger</em>
-          completo —no Trades— y genera el informe FIFO con el historial
-          desde 2011 si es necesario.
-        </p>
-        <span style="font-size:12px;color:var(--accent);font-weight:600;">Ver guía fiscal →</span>
+      <details class="apple-exchange-more" id="apple-exchange-more" open>
+        <summary>Ver más exchanges destacados <span aria-hidden="true">+</span></summary>
+        <div class="apple-exchange-rest">
+      <a class="apple-exchange-card" href="/exchanges/nexo">
+        <h3>Nexo</h3>
+        <p>Descarga el historial de transacciones en CSV desde Nexo y prepara tu informe FIFO con el historial completo de tus operaciones.</p>
+        <span>Ver guía fiscal →</span>
       </a>
 
-      <a href="/exchanges/coinbase" style="display:block;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:1.25rem 1.5rem;text-decoration:none;transition:border-color 0.15s,background 0.15s;" onmouseover="this.style.borderColor='rgba(0,200,150,0.4)';this.style.background='#1a2540'" onmouseout="this.style.borderColor='rgba(255,255,255,0.13)';this.style.background='var(--surface)'">
-        <h3 style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:0.5rem;color:var(--text);">Coinbase</h3>
-        <p style="color:var(--muted);font-size:14px;line-height:1.65;margin-bottom:0.65rem;">
+      <a class="apple-exchange-card" href="/exchanges/coinbase">
+        <h3>Coinbase</h3>
+        <p>
           El exchange de referencia para usuarios que empiezan. Descarga el
           historial de transacciones en CSV desde la configuración de
           tu cuenta de Coinbase.
         </p>
-        <span style="font-size:12px;color:var(--accent);font-weight:600;">Ver guía fiscal →</span>
+        <span>Ver guía fiscal →</span>
       </a>
 
-      <a href="/exchanges/bit2me" style="display:block;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:1.25rem 1.5rem;text-decoration:none;transition:border-color 0.15s,background 0.15s;" onmouseover="this.style.borderColor='rgba(0,200,150,0.4)';this.style.background='#1a2540'" onmouseout="this.style.borderColor='rgba(255,255,255,0.13)';this.style.background='var(--surface)'">
-        <h3 style="font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:0.5rem;color:var(--text);">Bit2Me</h3>
-        <p style="color:var(--muted);font-size:14px;line-height:1.65;margin-bottom:0.65rem;">
-          El exchange español de referencia. Soporte nativo del historial
-          de Bit2Me, incluyendo operaciones de staking y recompensas
-          con clasificación automática.
+      <a class="apple-exchange-card" href="/exchanges/kraken">
+        <h3>Kraken</h3>
+        <p>
+          Uno de los exchanges más veteranos. Descarga el <em>Ledger</em>
+          completo —no Trades— y genera el informe FIFO con el historial
+          desde 2011 si es necesario.
         </p>
-        <span style="font-size:12px;color:var(--accent);font-weight:600;">Ver guía fiscal →</span>
+        <span>Ver guía fiscal →</span>
       </a>
 
+      <a class="apple-exchange-card" href="/bitget">
+        <h3>Bitget</h3>
+        <p>Sube el historial de operaciones en spot y, si lo tienes, el de depósitos y retiros. Accede a las instrucciones de importación y genera tu informe FIFO.</p>
+        <span>Ver herramienta e instrucciones →</span>
+      </a>
+
+
+    <div class="apple-exchange-secondary">
+      <h3>También compatible con Bit2Me</h3>
+      <p>
+          Consulta cómo exportar el historial de Bit2Me y preparar tus datos.
+          Si incluye staking u otras recompensas, revisa su tratamiento fiscal
+          según las condiciones de cada operación.
+        </p>
+      <a class="apple-text-link" href="/exchanges/bit2me">Ver guía fiscal →</a>
     </div>
 
-    <p style="color:var(--muted);font-size:14px;margin-top:1.75rem;">
-      ¿Usas Nexo, Crypto.com, Uphold u otro exchange?
-      <a href="/contacto" style="color:var(--accent);text-decoration:none;">Escríbenos</a> —
-      seguimos añadiendo soporte continuamente.
+        <div class="apple-compatibility-copy">Calculadora de impuestos de criptomonedas compatible con Bitvavo, Nexo, Binance, Coinbase, Crypto.com y Bit2Me</div>
+        </div>
+      </details>
+    </div>
+
+    <a class="apple-text-link apple-exchanges-all" href="/exchanges">Consultar exchanges compatibles →</a>
+
+  </div></section>
+<section class="apple-section apple-assistance"><div class="apple-container"><div class="asistencia-block" id="asistenciaBlock">
+        <h2 class="asistencia-badge">Asistencia especializada</h2>
+        <p>
+          <strong>¿Necesitas ayuda con tu declaración?</strong>
+          Asistencia fiscal especializada para usuarios con criptomonedas, supervisada por economista colegiado.
+        </p>
+        <p class="apple-advisory-status" role="status">Presupuestos y pagos de asesoramiento temporalmente suspendidos.</p>
+<ul class="asistencia-bullets">
+          <li>✓ Consulta inicial sin compromiso</li>
+          <li>✓ Casos complejos de criptomonedas</li>
+          <li>✓ Supervisado por economista colegiado</li>
+        </ul>
+        <a href="/pedir-asesoramiento" class="btn-asistencia">
+          Solicitar asistencia fiscal
+        </a>
+      </div></div></section>
+<section class="apple-section apple-team"><div class="apple-container"><div class="apple-section-heading"><span class="apple-eyebrow">El equipo</span><h2>Tecnología y criterio profesional.</h2></div><div class="authors">
+        <div class="author-card">
+          <picture class="author-portrait">
+            <source type="image/webp" srcset="/static/home-apple-mariano-88.webp 88w, /static/home-apple-mariano-176.webp 176w, /static/home-apple-mariano-264.webp 264w" sizes="(max-width:640px) 72px, 88px">
+            <img width="72" height="72" loading="lazy" decoding="async" src="/static/home-apple-mariano-176.png" srcset="/static/home-apple-mariano-88.png 88w, /static/home-apple-mariano-176.png 176w, /static/home-apple-mariano-264.png 264w" sizes="(max-width:640px) 72px, 88px" alt="Mariano Sevilla" class="author-avatar">
+          </picture>
+          <div>
+            <div class="author-name">Mariano Sevilla</div>
+            <div class="author-role">Tecnología y automatización aplicada a la fiscalidad cripto</div>
+          </div>
+        </div>
+        <div class="author-card">
+          <picture class="author-portrait">
+            <source type="image/webp" srcset="/static/home-apple-rafa-88.webp 88w, /static/home-apple-rafa-176.webp 176w, /static/home-apple-rafa-264.webp 264w" sizes="(max-width:640px) 72px, 88px">
+            <img width="72" height="72" loading="lazy" decoding="async" src="/static/home-apple-rafa-176.png" srcset="/static/home-apple-rafa-88.png 88w, /static/home-apple-rafa-176.png 176w, /static/home-apple-rafa-264.png 264w" sizes="(max-width:640px) 72px, 88px" alt="Rafael Ramos Martínez" class="author-avatar">
+          </picture>
+          <div>
+            <div class="author-name">Rafael Ramos Martínez</div>
+            <div class="author-role">Economista colegiado · Supervisión y criterio fiscal</div>
+            <div class="author-colegiado">Colegiado nº 4.579</div>
+          </div>
+        </div>
+      </div><a href="/about" class="authors-link">Conoce al equipo →</a></div></section>
+<section class="apple-section apple-editorial" id="fiscalidad"><div class="apple-container">
+
+    <h2>
+      ¿Cómo tributan las criptomonedas en España?
+    </h2>
+
+    <p>
+      En el IRPF de territorio común, las ventas y permutas de criptomonedas
+      realizadas por particulares fuera de una actividad económica
+      tributan como <strong>ganancias y pérdidas patrimoniales</strong>
+      en el IRPF, integradas en la base imponible del ahorro. Esto incluye vender Bitcoin
+      o Ethereum por euros, pero también los swaps entre criptomonedas: intercambiar BTC
+      por ETH es un hecho imponible aunque no hayas convertido nada a dinero fiat.
+    </p>
+    <p>
+      El tratamiento fiscal del staking, los airdrops, el cashback y otras
+      recompensas <strong>depende de cómo se obtengan y de sus condiciones</strong>.
+      No deben agruparse automáticamente en una misma categoría. Revisa su naturaleza,
+      valoración e imputación para <strong>declarar tus criptomonedas correctamente ante Hacienda</strong>.
+    </p>
+    <p>
+      El informe te ayuda a organizar las operaciones importadas y revisar los cálculos.
+      Comprueba que el historial esté completo y que el tratamiento fiscal de cada
+      operación se ajuste a tu caso antes de preparar la declaración.
     </p>
 
-  </div>
-</section>
+  </div></section><section class="apple-section apple-editorial apple-editorial-alt" id="metodo-fifo"><div class="apple-container">
 
-<!-- ── QUÉ INCLUYE EL INFORME ─────────────── -->
-<section style="border-top:1px solid var(--border);padding:4rem 0;background:var(--bg2);">
-  <div style="max-width:var(--max-w);margin:0 auto;padding:0 2rem;">
-
-    <h2 style="font-family:var(--font-display);font-size:clamp(1.75rem,2.8vw,2.2rem);font-weight:800;line-height:1.15;margin-bottom:1.75rem;">
-      ¿Qué incluye el informe fiscal de criptomonedas?
+    <span>Criterio FIFO de la Agencia Tributaria</span>
+    <h2>
+      Cómo se aplica el criterio FIFO a tus ventas y permutas de criptomonedas
     </h2>
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.5rem;margin-bottom:2.5rem;">
+    <p>
+      El <strong>método FIFO</strong> (<em>First In, First Out</em>)
+      es el criterio que recoge la Agencia Tributaria para identificar las unidades
+      transmitidas de una misma criptomoneda homogénea: se consideran transmitidas
+      primero las adquiridas antes. Ese coste se utiliza al calcular la ganancia o pérdida.
+    </p>
+    <p>
+      Ejemplo sin comisiones: compras 0,5 BTC a 30.000 €/BTC (coste total: 15.000 €)
+      y después otros 0,5 BTC a 25.000 €/BTC (12.500 €). En 2025 vendes 0,5 BTC
+      a 40.000 €/BTC (20.000 €). FIFO asigna el coste del primer lote: 15.000 €.
+      La ganancia es <strong>+5.000 €</strong>. Por eso necesitas el historial
+      <strong>completo</strong> de adquisiciones y transmisiones, también el de años anteriores.
+    </p>
+    <p>
+      La herramienta aplica el FIFO a las operaciones importadas y
+      genera un <strong>informe fiscal de criptomonedas</strong>
+      con cada operación detallada: fecha, activo, coste FIFO utilizado y ganancia o
+      pérdida patrimonial resultante.
+    </p>
 
-      <div>
-        <h3 style="font-size:0.9rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.5rem;">Ganancias y pérdidas patrimoniales</h3>
-        <p style="color:var(--muted);font-size:14px;line-height:1.75;">
-          Cada venta y permuta calculada con el método FIFO obligatorio.
-          Resultado neto del ejercicio listo para trasladar a la casilla 1626
-          de la declaración de la renta.
-        </p>
-      </div>
-
-      <div>
-        <h3 style="font-size:0.9rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.5rem;">Rendimientos del capital mobiliario</h3>
-        <p style="color:var(--muted);font-size:14px;line-height:1.75;">
-          Staking, airdrops y recompensas separados y clasificados para
-          la casilla 0033. La herramienta los detecta automáticamente
-          en tu CSV sin configuración adicional.
-        </p>
-      </div>
-
-      <div>
-        <h3 style="font-size:0.9rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.5rem;">Detalle operación a operación</h3>
-        <p style="color:var(--muted);font-size:14px;line-height:1.75;">
-          Fecha, activo, tipo de operación, valor de transmisión, coste de
-          adquisición FIFO y ganancia o pérdida individual. Todo lo que
-          necesita tu gestor fiscal para revisar la declaración.
-        </p>
-      </div>
-
-      <div>
-        <h3 style="font-size:0.9rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.5rem;">PDF profesional para Hacienda</h3>
-        <p style="color:var(--muted);font-size:14px;line-height:1.75;">
-          Formato estructurado y claro, listo para adjuntar a tu
-          declaración de la renta o entregar a tu asesor. Generado
-          en segundos, descarga inmediata, sin registro previo.
-        </p>
-      </div>
-
-    </div>
-
-    <a href="/signup/" style="display:inline-block;background:var(--accent);color:#0a0a0a;border-radius:8px;padding:13px 30px;font-family:var(--font-display);font-weight:700;font-size:15px;text-decoration:none;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">
-      Genera tu informe gratis
-    </a>
-
-  </div>
-</section>
-
-<!-- ── FAQ HOMEPAGE ──────────────────────── -->
-<section style="border-top:1px solid var(--border);padding:4rem 0;">
-  <div style="max-width:var(--max-w);margin:0 auto;padding:0 2rem;">
-
-    <h2 style="font-family:var(--font-display);font-size:clamp(1.75rem,2.8vw,2.2rem);font-weight:800;line-height:1.15;margin-bottom:0.75rem;">
+  </div></section><section class="apple-section apple-faq" id="preguntas"><div class="apple-container"><h2>
       Preguntas frecuentes sobre impuestos de criptomonedas
-    </h2>
-    <p style="color:var(--muted);max-width:1150px;line-height:1.75;margin-bottom:3rem;">
+    </h2><p>
       Estas son algunas de las preguntas más frecuentes sobre impuestos de criptomonedas,
       Hacienda, método FIFO, staking y declaración de la renta en España. Si tu situación
       incluye múltiples exchanges, operaciones complejas o ejercicios anteriores, puede ser
       recomendable contar con asesoramiento fiscal especializado.
-    </p>
-
-    <div class="faq-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:2.5rem 2rem;">
-
-      <div>
-        <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);">¿Tengo que declarar mis criptomonedas en España?</h3>
-        <p style="color:var(--muted);font-size:15px;line-height:1.75;">
-          Sí. Cualquier ganancia o pérdida derivada de la venta, permuta o intercambio de criptomonedas
-          debe declararse en la declaración de la renta, en la base imponible del ahorro. La obligación existe
-          desde 2019, cuando la Agencia Tributaria incluyó las criptomonedas en sus planes de control.
-          No declarar puede generar sanciones, recargos e intereses. La obligación no depende del importe
-          de las operaciones ni de si has retirado dinero a una cuenta bancaria: el simple intercambio
-          entre criptomonedas ya es un hecho imponible.
-        </p>
-      </div>
-
-      <div>
-        <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);">¿Qué operaciones con criptomonedas tributan ante Hacienda?</h3>
-        <p style="color:var(--muted);font-size:15px;line-height:1.75;">
-          Tributan como ganancias o pérdidas patrimoniales: las ventas por euros u otras monedas fiat,
-          los swaps entre criptomonedas (por ejemplo, Bitcoin por Ethereum) y los pagos con criptomonedas.
-          Tributan como rendimientos del capital mobiliario: el staking, los airdrops y las recompensas
-          por referido. Lo que no genera tributación directa es simplemente mantener criptomonedas sin
-          venderlas ni permutarlas. La herramienta clasifica automáticamente cada tipo de operación al
-          procesar el CSV de tu exchange.
-        </p>
-      </div>
-
-      <div>
-        <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);">¿Qué es el método FIFO y por qué es obligatorio?</h3>
-        <p style="color:var(--muted);font-size:15px;line-height:1.75;">
-          FIFO significa «First In, First Out»: al vender criptomonedas, Hacienda considera que vendes
-          primero las que compraste antes. Está regulado en el artículo 37.2 de la Ley del IRPF y es
-          el único sistema válido en España. Significa que el precio de adquisición depende del historial
-          completo de compras anteriores, independientemente del año fiscal. No puedes elegir qué unidades
-          vender para optimizar el resultado: el orden cronológico de compra es obligatorio por ley.
-          <a href="/metodo-fifo-criptomonedas" style="display:inline-block;margin-top:0.5rem;font-size:14px;">Ver guía completa del método FIFO →</a>
-        </p>
-      </div>
-
-      <div>
-        <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);">¿Cómo se calculan las ganancias de Bitcoin?</h3>
-        <p style="color:var(--muted);font-size:15px;line-height:1.75;">
+    </p><div class="apple-faq-list"><details class="apple-faq-item"><summary>¿Tengo que declarar mis criptomonedas en España?</summary><div class="apple-faq-answer"><p>
+          Las ventas y permutas de criptomonedas pueden generar ganancias o pérdidas patrimoniales,
+          aunque no retires dinero a tu banco. En el IRPF de territorio común, fuera de una actividad
+          económica, se integran en la base del ahorro. La obligación de presentar la declaración
+          depende del conjunto, naturaleza e importe de tus rentas y de los límites del ejercicio.
+          Si debes presentarla, incluye las operaciones que correspondan; no existe una exención
+          general por el mero hecho de operar con criptomonedas.
+        </p></div></details><details class="apple-faq-item"><summary>¿Qué operaciones con criptomonedas tributan ante Hacienda?</summary><div class="apple-faq-answer"><p>
+          Para particulares fuera de una actividad económica, vender, permutar o pagar con criptomonedas
+          puede generar una ganancia o pérdida patrimonial. El staking, los airdrops, el cashback y los
+          referidos requieren revisar su naturaleza y condiciones: no comparten necesariamente categoría
+          fiscal. La mera tenencia no genera por sí sola una ganancia realizada en el IRPF, pero puede
+          estar sujeta a otras obligaciones tributarias o informativas.
+        </p></div></details><details class="apple-faq-item"><summary>¿Qué es el método FIFO y cómo se aplica?</summary><div class="apple-faq-answer"><p>
+          FIFO significa «First In, First Out». La Agencia Tributaria recoge este criterio para identificar
+          las unidades transmitidas de una misma criptomoneda homogénea: se consideran transmitidas
+          primero las adquiridas antes. Debes tener en cuenta el historial completo, también las compras
+          de ejercicios anteriores, para determinar el coste de las unidades vendidas o permutadas.
+          <a href="/metodo-fifo-criptomonedas">Ver guía completa del método FIFO →</a>
+        </p></div></details><details class="apple-faq-item"><summary>¿Cómo se calculan las ganancias de Bitcoin?</summary><div class="apple-faq-answer"><p>
           La ganancia patrimonial de una venta de Bitcoin se calcula como la diferencia entre el valor de
           transmisión (precio de venta en euros) y el valor de adquisición según el método FIFO (precio
-          de las primeras unidades compradas). Si compraste 0,1 BTC a 20.000 € y lo vendes a 35.000 €,
-          la ganancia es 1.500 €. A esa ganancia se aplica el tipo del ahorro: entre el 19% y el 28%
-          según el importe total del ejercicio. El mismo cálculo aplica a Ethereum, Solana o cualquier
+          de las primeras unidades compradas), con los gastos y tributos que correspondan.
+          Ejemplo sin comisiones: compras 0,1 BTC a 20.000 €/BTC (2.000 €) y lo vendes
+          a 35.000 €/BTC (3.500 €); la ganancia es 1.500 €.
+          En el ejercicio 2025, en territorio común, la base liquidable del ahorro
+          se grava por tramos entre el 19 % y el 30 %. El tipo aplicable depende del importe total de esa base.
+          El mismo cálculo de la ganancia aplica a Ethereum, Solana o cualquier
           otra criptomoneda.
-        </p>
-      </div>
-
-      <div>
-        <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);">¿Qué ocurre si tengo criptomonedas en varios exchanges?</h3>
-        <p style="color:var(--muted);font-size:15px;line-height:1.75;">
-          Si usas más de un exchange —Binance y Bitvavo, por ejemplo— debes consolidar el historial
-          completo de todos ellos para aplicar correctamente el método FIFO. Hacienda considera todas
-          tus criptomonedas de forma conjunta: las compras en Binance afectan al coste de adquisición
-          de las ventas en Bitvavo si son del mismo activo. La herramienta permite procesar el CSV de
-          cada exchange por separado y combina los datos automáticamente para generar un informe fiscal
-          unificado con todos tus exchanges.
-        </p>
-      </div>
-
-      <div>
-        <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);">¿Cómo tributa el staking en España?</h3>
-        <p style="color:var(--muted);font-size:15px;line-height:1.75;">
-          Las recompensas por staking tributan como rendimientos del capital mobiliario a su valor de
-          mercado en el momento de recibirlas (casilla 0033 de la declaración de la renta), no como
-          ganancias patrimoniales. El importe se considera ingreso en el año en que se acredita.
-          Cuando posteriormente vendes esas monedas, la ganancia o pérdida se calcula sobre ese valor
-          de adquisición inicial. La herramienta detecta y clasifica automáticamente las operaciones de
-          staking en el CSV de tu exchange, separándolas en el informe con la clasificación correcta.
-        </p>
-      </div>
-
-      <div>
-        <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);">¿Puedo compensar pérdidas de criptomonedas?</h3>
-        <p style="color:var(--muted);font-size:15px;line-height:1.75;">
+        </p></div></details><details class="apple-faq-item"><summary>¿Qué ocurre si tengo criptomonedas en varios exchanges?</summary><div class="apple-faq-answer"><p>
+          Para aplicar FIFO debes reunir el historial completo de la misma criptomoneda, aunque esté
+          repartido entre varios exchanges o monederos. Las adquisiciones en una plataforma pueden
+          afectar al coste de las ventas en otra. Revisa también las transferencias entre cuentas propias
+          para evitar duplicados. Antes de utilizar un informe, comprueba que cubra ese historial completo;
+          un cálculo aislado por exchange puede no reflejar el resultado fiscal correcto.
+        </p></div></details><details class="apple-faq-item"><summary>¿Cómo tributa el staking en España?</summary><div class="apple-faq-answer"><p>
+          No debe aplicarse una respuesta única a todas las modalidades de staking. Su tratamiento
+          depende del funcionamiento del producto, de los derechos que recibes y de las condiciones
+          de las recompensas. Revisa con tu asesor su calificación, valoración e imputación temporal,
+          así como el coste de adquisición que corresponda en una venta posterior. La etiqueta
+          «staking» de un CSV no determina por sí sola el tratamiento fiscal.
+        </p></div></details><details class="apple-faq-item"><summary>¿Puedo compensar pérdidas de criptomonedas?</summary><div class="apple-faq-answer"><p>
           Sí. Las pérdidas patrimoniales de criptomonedas pueden compensarse con las ganancias del mismo
           tipo en el mismo ejercicio. Si el saldo es negativo, puedes compensar hasta el 25% de los
           rendimientos del capital mobiliario positivos del año. El resto puede trasladarse a los cuatro
           ejercicios siguientes. Por ejemplo, si en 2024 tienes pérdidas de 3.000 € y ganancias de 1.000 €,
           los 2.000 € negativos se pueden aplicar en ejercicios 2025–2028. El informe detalla el resultado
           neto del ejercicio para facilitar este cálculo.
-        </p>
-      </div>
-
-      <div>
-        <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);">¿Sirve el informe para Binance, Bitvavo, Coinbase y Kraken?</h3>
-        <p style="color:var(--muted);font-size:15px;line-height:1.75;">
-          Sí. La herramienta procesa directamente los CSV que exportan Binance, Bitvavo, Coinbase, Kraken,
-          Bit2Me, Nexo, Crypto.com y Uphold. Solo descarga el historial de operaciones desde la sección
-          de exportación de cada exchange y súbelo a la plataforma. El sistema identifica automáticamente
-          el formato de cada exchange, clasifica las operaciones y aplica el método FIFO. El PDF incluye
-          todas las operaciones del ejercicio con el detalle necesario para la declaración de la renta o
-          para entregarlo a tu gestor fiscal.
-        </p>
-      </div>
-
-      <div>
-        <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);">¿Qué documentos debo conservar por si Hacienda los solicita?</h3>
-        <p style="color:var(--muted);font-size:15px;line-height:1.75;">
-          La Agencia Tributaria puede solicitar justificación de tus operaciones en una comprobación fiscal.
-          Se recomienda conservar durante al menos cuatro años: el historial completo exportado de cada
-          exchange (CSV o equivalente), justificantes de compra y venta, y el informe fiscal generado.
-          Cuantos más registros tengas del precio de adquisición y la fecha de cada operación, más fácil
-          será demostrar la corrección del cálculo ante un posible requerimiento de la Agencia Tributaria.
-          La herramienta genera un informe detallado que puede servir como documentación de soporte.
-        </p>
-      </div>
-
-      <div>
-        <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);">¿Puedo corregir declaraciones de años anteriores?</h3>
-        <p style="color:var(--muted);font-size:15px;line-height:1.75;">
-          Sí. Si detectas que declaraste incorrectamente las ganancias o pérdidas de criptomonedas en
-          ejercicios anteriores, puedes presentar una declaración rectificativa (si el error perjudicó a
-          Hacienda) o solicitar una rectificación de autoliquidación (si el error fue a tu perjuicio).
-          El plazo general es de cuatro años desde el fin del plazo de presentación original. Si la
-          corrección implica una cuota adicional, la regularización voluntaria reduce las sanciones
-          aplicables. Para estos casos, el asesoramiento de un profesional fiscal es especialmente
-          recomendable.
-        </p>
-      </div>
-
-      <div>
-        <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);">¿El informe sustituye a un asesor fiscal?</h3>
-        <p style="color:var(--muted);font-size:15px;line-height:1.75;">
-          No. El informe es un documento de organización fiscal que aplica el método FIFO según la
-          normativa general española. No constituye asesoramiento fiscal ni legal. Cada situación puede
-          tener particularidades —operaciones en el extranjero, derivados, NFT, pérdidas de ejercicios
-          anteriores, cambios normativos— que requieren la valoración de un profesional. El informe sirve
-          como punto de partida sólido y facilita el trabajo de tu gestor, pero no puede reemplazar el
-          criterio de un asesor cualificado ante situaciones complejas o ante una inspección de la
-          Agencia Tributaria.
-        </p>
-      </div>
-
-      <div>
-        <h3 style="font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:0.6rem;color:var(--text);">¿Qué pasa si Hacienda me pide justificar mis operaciones?</h3>
-        <p style="color:var(--muted);font-size:15px;line-height:1.75;">
+        </p></div></details><details class="apple-faq-item"><summary>¿Sirve el informe para Binance, Bitvavo, Coinbase y Kraken?</summary><div class="apple-faq-answer"><p>
+          Puedes importar los formatos CSV admitidos de los exchanges compatibles. Consulta las
+          instrucciones de exportación de cada plataforma y comprueba que el archivo incluya el historial
+          necesario. El informe detalla las operaciones importadas y el cálculo FIFO para facilitar
+          su revisión con tu gestor; no sustituye la comprobación de que los datos estén completos.
+        </p></div></details><details class="apple-faq-item"><summary>¿Qué documentos debo conservar por si Hacienda los solicita?</summary><div class="apple-faq-answer"><p>
+          Conserva los CSV originales, justificantes de adquisiciones y transmisiones, movimientos entre
+          monederos e informes de cálculo. Guarda los justificantes del coste mientras mantengas las
+          criptomonedas y, después, durante el plazo de prescripción aplicable a las declaraciones
+          afectadas, teniendo en cuenta posibles interrupciones. Una compra antigua puede ser necesaria
+          para justificar una venta posterior: no basta contar cuatro años desde la compra.
+        </p></div></details><details class="apple-faq-item"><summary>¿Puedo corregir declaraciones de años anteriores?</summary><div class="apple-faq-answer"><p>
+          Sí, dentro de los plazos y condiciones aplicables. Para Renta 2025, con carácter general,
+          la corrección se realiza mediante una autoliquidación rectificativa, con independencia del
+          resultado. Para otros ejercicios, revisa el procedimiento correspondiente. Si resulta una
+          cantidad adicional a ingresar fuera de plazo y no hay requerimiento previo, pueden aplicarse
+          recargos y, en su caso, intereses. Las consecuencias dependen de la situación concreta. Consulta con un profesional
+          el procedimiento, los plazos y las consecuencias de tu caso.
+        </p></div></details><details class="apple-faq-item"><summary>¿El informe sustituye a un asesor fiscal?</summary><div class="apple-faq-answer"><p>
+          No. El informe organiza los datos importados y los cálculos para facilitar su revisión.
+          No constituye asesoramiento fiscal ni legal, no sustituye al modelo oficial de declaración
+          y no implica homologación de la Agencia Tributaria. Las operaciones complejas, los rendimientos,
+          las pérdidas de ejercicios anteriores y otras particularidades requieren la valoración de
+          un profesional. Úsalo como documentación de apoyo, junto con los registros originales.
+        </p></div></details><details class="apple-faq-item"><summary>¿Qué pasa si Hacienda me pide justificar mis operaciones?</summary><div class="apple-faq-answer"><p>
           Si recibes un requerimiento de la Agencia Tributaria para justificar operaciones con
           criptomonedas, debes aportar documentación que acredite el origen, fecha, precio de adquisición
           y valor de transmisión de cada operación. El informe generado, junto con los CSV originales de
           los exchanges, puede servir como documentación de soporte. No ignores el requerimiento ni
           superes el plazo indicado. En estos casos, la asistencia de un asesor fiscal con experiencia
           en criptomonedas es especialmente recomendable para gestionar correctamente la respuesta.
-        </p>
+        </p></div></details></div></div><script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "¿Tengo que declarar mis criptomonedas en España?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Las ventas y permutas de criptomonedas pueden generar ganancias o pérdidas patrimoniales, aunque no retires dinero a tu banco. En el IRPF de territorio común, fuera de una actividad económica, se integran en la base del ahorro. La obligación de presentar la declaración depende del conjunto, naturaleza e importe de tus rentas y de los límites del ejercicio. Si debes presentarla, incluye las operaciones que correspondan; no existe una exención general por el mero hecho de operar con criptomonedas."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Qué operaciones con criptomonedas tributan ante Hacienda?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Para particulares fuera de una actividad económica, vender, permutar o pagar con criptomonedas puede generar una ganancia o pérdida patrimonial. El staking, los airdrops, el cashback y los referidos requieren revisar su naturaleza y condiciones: no comparten necesariamente categoría fiscal. La mera tenencia no genera por sí sola una ganancia realizada en el IRPF, pero puede estar sujeta a otras obligaciones tributarias o informativas."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Qué es el método FIFO y cómo se aplica?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "FIFO significa «First In, First Out». La Agencia Tributaria recoge este criterio para identificar las unidades transmitidas de una misma criptomoneda homogénea: se consideran transmitidas primero las adquiridas antes. Debes tener en cuenta el historial completo, también las compras de ejercicios anteriores, para determinar el coste de las unidades vendidas o permutadas. Ver guía completa del método FIFO →"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Cómo se calculan las ganancias de Bitcoin?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "La ganancia patrimonial de una venta de Bitcoin se calcula como la diferencia entre el valor de transmisión (precio de venta en euros) y el valor de adquisición según el método FIFO (precio de las primeras unidades compradas), con los gastos y tributos que correspondan. Ejemplo sin comisiones: compras 0,1 BTC a 20.000 €/BTC (2.000 €) y lo vendes a 35.000 €/BTC (3.500 €); la ganancia es 1.500 €. En el ejercicio 2025, en territorio común, la base liquidable del ahorro se grava por tramos entre el 19 % y el 30 %. El tipo aplicable depende del importe total de esa base. El mismo cálculo de la ganancia aplica a Ethereum, Solana o cualquier otra criptomoneda."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Qué ocurre si tengo criptomonedas en varios exchanges?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Para aplicar FIFO debes reunir el historial completo de la misma criptomoneda, aunque esté repartido entre varios exchanges o monederos. Las adquisiciones en una plataforma pueden afectar al coste de las ventas en otra. Revisa también las transferencias entre cuentas propias para evitar duplicados. Antes de utilizar un informe, comprueba que cubra ese historial completo; un cálculo aislado por exchange puede no reflejar el resultado fiscal correcto."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Cómo tributa el staking en España?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No debe aplicarse una respuesta única a todas las modalidades de staking. Su tratamiento depende del funcionamiento del producto, de los derechos que recibes y de las condiciones de las recompensas. Revisa con tu asesor su calificación, valoración e imputación temporal, así como el coste de adquisición que corresponda en una venta posterior. La etiqueta «staking» de un CSV no determina por sí sola el tratamiento fiscal."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Puedo compensar pérdidas de criptomonedas?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Sí. Las pérdidas patrimoniales de criptomonedas pueden compensarse con las ganancias del mismo tipo en el mismo ejercicio. Si el saldo es negativo, puedes compensar hasta el 25% de los rendimientos del capital mobiliario positivos del año. El resto puede trasladarse a los cuatro ejercicios siguientes. Por ejemplo, si en 2024 tienes pérdidas de 3.000 € y ganancias de 1.000 €, los 2.000 € negativos se pueden aplicar en ejercicios 2025–2028. El informe detalla el resultado neto del ejercicio para facilitar este cálculo."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Sirve el informe para Binance, Bitvavo, Coinbase y Kraken?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Puedes importar los formatos CSV admitidos de los exchanges compatibles. Consulta las instrucciones de exportación de cada plataforma y comprueba que el archivo incluya el historial necesario. El informe detalla las operaciones importadas y el cálculo FIFO para facilitar su revisión con tu gestor; no sustituye la comprobación de que los datos estén completos."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Qué documentos debo conservar por si Hacienda los solicita?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Conserva los CSV originales, justificantes de adquisiciones y transmisiones, movimientos entre monederos e informes de cálculo. Guarda los justificantes del coste mientras mantengas las criptomonedas y, después, durante el plazo de prescripción aplicable a las declaraciones afectadas, teniendo en cuenta posibles interrupciones. Una compra antigua puede ser necesaria para justificar una venta posterior: no basta contar cuatro años desde la compra."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Puedo corregir declaraciones de años anteriores?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Sí, dentro de los plazos y condiciones aplicables. Para Renta 2025, con carácter general, la corrección se realiza mediante una autoliquidación rectificativa, con independencia del resultado. Para otros ejercicios, revisa el procedimiento correspondiente. Si resulta una cantidad adicional a ingresar fuera de plazo y no hay requerimiento previo, pueden aplicarse recargos y, en su caso, intereses. Las consecuencias dependen de la situación concreta. Consulta con un profesional el procedimiento, los plazos y las consecuencias de tu caso."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿El informe sustituye a un asesor fiscal?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. El informe organiza los datos importados y los cálculos para facilitar su revisión. No constituye asesoramiento fiscal ni legal, no sustituye al modelo oficial de declaración y no implica homologación de la Agencia Tributaria. Las operaciones complejas, los rendimientos, las pérdidas de ejercicios anteriores y otras particularidades requieren la valoración de un profesional. Úsalo como documentación de apoyo, junto con los registros originales."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "¿Qué pasa si Hacienda me pide justificar mis operaciones?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Si recibes un requerimiento de la Agencia Tributaria para justificar operaciones con criptomonedas, debes aportar documentación que acredite el origen, fecha, precio de adquisición y valor de transmisión de cada operación. El informe generado, junto con los CSV originales de los exchanges, puede servir como documentación de soporte. No ignores el requerimiento ni superes el plazo indicado. En estos casos, la asistencia de un asesor fiscal con experiencia en criptomonedas es especialmente recomendable para gestionar correctamente la respuesta."
+      }
+    }
+  ]
+}
+</script></section>
+</main>
+<footer class="apple-footer">
+  <div class="apple-container">
+    <div class="apple-footer-top">
+      <div class="apple-footer-brand">
+        <a href="/" class="apple-footer-logo">mariano<span>sevilla</span>.com</a>
+        <p>Informes FIFO de criptomonedas.</p>
       </div>
-
+      <nav aria-labelledby="apple-footer-explore">
+        <h2 id="apple-footer-explore">Explorar</h2>
+        <ul>
+          <li><a href="/herramientas">Herramientas</a></li>
+          <li><a href="/como-funciona">Cómo funciona</a></li>
+          <li><a href="/exchanges">Exchanges compatibles</a></li>
+        </ul>
+      </nav>
+      <nav aria-labelledby="apple-footer-help">
+        <h2 id="apple-footer-help">Ayuda</h2>
+        <ul>
+          <li><a href="/faq">Preguntas frecuentes</a></li>
+          <li><a href="/contacto">Contacto</a></li>
+          <li><a href="/about">Equipo</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="apple-footer-legal">
+      <p class="apple-footer-disclaimer">Herramienta de generación de informes FIFO para usuarios con criptomonedas. No constituye asesoramiento fiscal ni legal.</p>
+      <div class="apple-footer-bottom">
+        <p class="apple-footer-copyright">© <span class="apple-footer-year">2026</span> Mariano Sevilla</p>
+        <nav aria-label="Información legal">
+          <ul>
+            <li><a href="/privacidad">Privacidad</a></li>
+            <li><a href="/terminos">Términos</a></li>
+            <li><a href="/cookies">Cookies</a></li>
+            <li><a href="/aviso-legal">Aviso legal</a></li>
+          </ul>
+        </nav>
+      </div>
     </div>
   </div>
-
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": [
-      {
-        "@type": "Question",
-        "name": "¿Tengo que declarar mis criptomonedas en España?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Sí. Cualquier ganancia o pérdida derivada de la venta, permuta o intercambio de criptomonedas debe declararse en la declaración de la renta, en la base imponible del ahorro. La obligación existe desde 2019. No declarar puede generar sanciones, recargos e intereses. El simple intercambio entre criptomonedas ya es un hecho imponible." }
-      },
-      {
-        "@type": "Question",
-        "name": "¿Qué operaciones con criptomonedas tributan ante Hacienda?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Tributan como ganancias o pérdidas patrimoniales: ventas por euros, swaps entre criptomonedas y pagos con criptomonedas. Tributan como rendimientos del capital mobiliario: el staking, los airdrops y las recompensas por referido. Mantener criptomonedas sin venderlas ni permutarlas no genera tributación directa." }
-      },
-      {
-        "@type": "Question",
-        "name": "¿Qué es el método FIFO y por qué es obligatorio?",
-        "acceptedAnswer": { "@type": "Answer", "text": "FIFO significa First In, First Out: al vender criptomonedas, Hacienda considera que vendes primero las que compraste antes. Está regulado en el artículo 37.2 de la Ley del IRPF y es el único método válido en España para calcular ganancias y pérdidas patrimoniales de criptomonedas." }
-      },
-      {
-        "@type": "Question",
-        "name": "¿Cómo se calculan las ganancias de Bitcoin?",
-        "acceptedAnswer": { "@type": "Answer", "text": "La ganancia patrimonial de una venta de Bitcoin se calcula como la diferencia entre el valor de transmisión (precio de venta en euros) y el valor de adquisición según el método FIFO. A esa ganancia se aplica el tipo del ahorro, entre el 19% y el 28% según el importe total del ejercicio." }
-      },
-      {
-        "@type": "Question",
-        "name": "¿Qué ocurre si tengo criptomonedas en varios exchanges?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Debes consolidar el historial completo de todos los exchanges para aplicar correctamente el método FIFO. Hacienda considera todas tus criptomonedas de forma conjunta: las compras en Binance afectan al coste de adquisición de las ventas en Bitvavo si son del mismo activo." }
-      },
-      {
-        "@type": "Question",
-        "name": "¿Cómo tributa el staking en España?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Las recompensas por staking tributan como rendimientos del capital mobiliario a su valor de mercado en el momento de recibirlas, en la casilla 0033 de la declaración de la renta. No tributan como ganancias patrimoniales. El importe se considera ingreso en el año en que se acredita." }
-      },
-      {
-        "@type": "Question",
-        "name": "¿Puedo compensar pérdidas de criptomonedas?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Sí. Las pérdidas patrimoniales de criptomonedas pueden compensarse con las ganancias del mismo tipo en el mismo ejercicio. Si el saldo es negativo, puedes compensar hasta el 25% de los rendimientos del capital mobiliario positivos del año, y el resto trasladarlo a los cuatro ejercicios siguientes." }
-      },
-      {
-        "@type": "Question",
-        "name": "¿Sirve el informe para Binance, Bitvavo, Coinbase y Kraken?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Sí. La herramienta procesa directamente los CSV de Binance, Bitvavo, Coinbase, Kraken, Bit2Me, Nexo, Crypto.com y Uphold. Solo descarga el historial de operaciones de tu exchange y súbelo a la plataforma. El sistema clasifica las operaciones y aplica el método FIFO automáticamente." }
-      },
-      {
-        "@type": "Question",
-        "name": "¿Qué documentos debo conservar por si Hacienda los solicita?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Se recomienda conservar durante al menos cuatro años: el historial completo exportado de cada exchange, justificantes de compra y venta, y el informe fiscal generado. Cuantos más registros tengas del precio de adquisición y la fecha de cada operación, más fácil será demostrar la corrección del cálculo ante un requerimiento de la Agencia Tributaria." }
-      },
-      {
-        "@type": "Question",
-        "name": "¿Puedo corregir declaraciones de años anteriores?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Sí. Puedes presentar una declaración rectificativa o solicitar una rectificación de autoliquidación. El plazo general es de cuatro años desde el fin del plazo de presentación original. Si la corrección implica una cuota adicional, la regularización voluntaria reduce las sanciones aplicables." }
-      },
-      {
-        "@type": "Question",
-        "name": "¿El informe sustituye a un asesor fiscal?",
-        "acceptedAnswer": { "@type": "Answer", "text": "No. El informe es un documento de organización fiscal que aplica el método FIFO según la normativa general española. No constituye asesoramiento fiscal ni legal. Cada situación puede tener particularidades que requieren la valoración de un profesional cualificado." }
-      },
-      {
-        "@type": "Question",
-        "name": "¿Qué pasa si Hacienda me pide justificar mis operaciones?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Debes aportar documentación que acredite el origen, fecha, precio de adquisición y valor de transmisión de cada operación. El informe generado, junto con los CSV originales de los exchanges, puede servir como documentación de soporte. No ignores el requerimiento ni superes el plazo indicado." }
-      }
-    ]
-  }
-  </script>
-</section>
-
-<!-- ── TEXTO LEGAL (fuera del footer) ───────── -->
-<div class="legal-bar">
-  <span>Herramienta de generación de informes FIFO para usuarios con criptomonedas. No constituye asesoramiento fiscal ni legal.</span>
-  <div class="legal-bar-links">
-    <a href="/about">Equipo</a>
-    <a href="/privacidad">Privacidad</a>
-    <a href="/terminos">Términos</a>
-    <a href="/cookies">Cookies</a>
-    <a href="/aviso-legal">Aviso legal</a>
-  </div>
-</div>
-
-<!-- ── FOOTER ─────────────────────────────── -->
-
-<!-- ── AUTH MODAL ─────────────────────────── -->
-<dialog id="authModal" class="auth-dialog">
+</footer><dialog id="authModal" class="auth-dialog" aria-labelledby="authModalTitle">
   <div class="auth-inner">
     <div class="auth-header">
       <span class="auth-title" id="authModalTitle">Iniciar sesión</span>
@@ -1198,7 +716,7 @@
         <input type="password" id="authLoginPass" name="password" required autocomplete="current-password" minlength="8">
       </div>
       <label class="auth-remember"><input type="checkbox" name="remember"> Recordarme</label>
-      <div class="auth-error" hidden></div>
+      <div class="auth-error" role="alert" hidden></div>
       <button type="submit" class="auth-btn-primary">Entrar</button>
       <p class="auth-switch">¿No tienes cuenta? <button type="button" class="auth-switch-btn" id="switchToRegister">Crear cuenta</button></p>
     </form>
@@ -1211,14 +729,12 @@
         <label for="authRegPass">Contraseña</label>
         <input type="password" id="authRegPass" name="password" required autocomplete="new-password" minlength="8" placeholder="Mínimo 8 caracteres">
       </div>
-      <div class="auth-error" hidden></div>
+      <div class="auth-error" role="alert" hidden></div>
       <button type="submit" class="auth-btn-primary">Crear cuenta</button>
       <p class="auth-switch">¿Ya tienes cuenta? <button type="button" class="auth-switch-btn" id="switchToLogin">Iniciar sesión</button></p>
     </form>
   </div>
-</dialog>
-
-<script>
+</dialog><script>
   const _authModal = document.getElementById('authModal');
 
   function abrirAuthModal(tab) {
