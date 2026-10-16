@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Política de Privacidad | Mariano Sevilla</title>
-<meta name="description" content="Política de privacidad de la herramienta fiscal para criptomonedas de Mariano Sevilla. Información sobre el tratamiento de datos personales conforme al RGPD.">
+<meta name="description" content="Política de privacidad de los servicios, encuestas y comunicaciones de Mariano Sevilla conforme al RGPD.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://marianosevilla.com/privacidad">
 
@@ -124,7 +124,7 @@ a:hover { text-decoration: underline; }
 
   <span class="page-kicker">Legal</span>
   <h1>Política de Privacidad</h1>
-  <p class="page-meta">Última actualización: mayo de 2026 &nbsp;·&nbsp; Versión 1.0</p>
+  <p class="page-meta">Última actualización: octubre de 2026 &nbsp;·&nbsp; Versión 1.1</p>
 
   <!-- 1 -->
   <div class="policy-section">
@@ -140,108 +140,91 @@ a:hover { text-decoration: underline; }
 
   <!-- 2 -->
   <div class="policy-section">
-    <h2>2. Qué datos recogemos y por qué</h2>
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>Dato</th>
-          <th>Finalidad</th>
-          <th>Base legal</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Dirección de email</td>
-          <td>Identificación y acceso a tu cuenta</td>
-          <td>Ejecución del contrato (art. 6.1.b RGPD)</td>
-        </tr>
-        <tr>
-          <td>Contraseña (hash bcrypt)</td>
-          <td>Autenticación segura. Nunca se guarda en texto plano</td>
-          <td>Ejecución del contrato (art. 6.1.b RGPD)</td>
-        </tr>
-        <tr>
-          <td>Google ID (solo si usas «Continuar con Google»)</td>
-          <td>Autenticación mediante Google OAuth 2.0</td>
-          <td>Ejecución del contrato (art. 6.1.b RGPD)</td>
-        </tr>
-        <tr>
-          <td>Fecha del último inicio de sesión</td>
-          <td>Seguridad y detección de accesos no autorizados</td>
-          <td>Interés legítimo (art. 6.1.f RGPD)</td>
-        </tr>
-      </tbody>
-    </table>
-    <div class="notice">
-      <strong>Tus ficheros CSV y los informes PDF no se almacenan.</strong> El CSV con tu historial de operaciones se procesa exclusivamente en memoria del servidor y se elimina de forma inmediata. El PDF generado se borra en cuanto lo descargas. En ningún momento guardamos tus datos financieros.
-    </div>
+    <h2>2. Datos tratados y finalidades</h2>
+    <p>Según los servicios utilizados, se podrán tratar las siguientes categorías de datos. No se solicitan todos estos datos a todas las personas.</p>
+    <table class="data-table"><thead><tr><th>Datos</th><th>Para qué</th><th>Base jurídica</th></tr></thead><tbody>
+      <tr><td>Cuenta: correo, nombre si se facilita, hash de contraseña, Google ID si se usa OAuth, registros de acceso.</td><td>Registro, acceso y gestión de la cuenta y su seguridad.</td><td>Servicio solicitado (art. 6.1.b RGPD); seguridad (art. 6.1.f).</td></tr>
+      <tr><td>Herramienta FIFO: archivo de operaciones durante el cálculo, exchange, ejercicio, métricas, resultados económicos agregados e historial de generación.</td><td>Elaborar y descargar informes, mantener trazabilidad técnica y estadísticas de uso.</td><td>Prestación del servicio (art. 6.1.b); seguridad y diagnóstico proporcionado (art. 6.1.f).</td></tr>
+      <tr><td>Incidencias: usuario o email cuando proceda, metadatos del fichero, contexto técnico y errores.</td><td>Investigar fallos y proteger la integridad del servicio.</td><td>Interés legítimo en mantener el servicio seguro y operativo (art. 6.1.f).</td></tr>
+      <tr><td>Contacto: nombre, email, mensaje e información técnica de la solicitud.</td><td>Atender y responder consultas.</td><td>Gestión de solicitudes y medidas precontractuales (art. 6.1.b), o interés legítimo en responder (art. 6.1.f), según el caso.</td></tr>
+      <tr><td>Asesoramiento: datos de contacto, residencia, ejercicio, caso, documentación aportada, presupuestos, facturación y referencias de pago cuando corresponda.</td><td>Tramitar solicitudes, presupuestos, pagos y coordinación del servicio solicitado.</td><td>Medidas precontractuales y servicio (art. 6.1.b); obligaciones legales aplicables (art. 6.1.c).</td></tr>
+      <tr><td>Recursos educativos: nombre, email, recurso solicitado y datos de exchange o identificadores aportados cuando sean necesarios.</td><td>Evaluar, gestionar y entregar recursos solicitados.</td><td>Tramitación de la solicitud (art. 6.1.b). Las comunicaciones promocionales requieren legitimación separada.</td></tr>
+      <tr><td>Encuestas de audiencia: respuestas, procedencia declarada y fecha. No se solicita nombre ni correo electrónico; las respuestas abiertas podrían contener datos personales introducidos por el participante.</td><td>Identificar problemas, intereses y necesidades para mejorar contenidos y recursos.</td><td>Participación voluntaria e informada (consentimiento, art. 6.1.a).</td></tr>
+      <tr><td>Comunicaciones por correo, cuando se habilite un mecanismo independiente de la encuesta: dirección, preferencias y evidencia de consentimiento o de su retirada.</td><td>Remitir contenidos editoriales o comunicaciones promocionales según lo solicitado y gestionar las bajas.</td><td>Consentimiento por finalidad (art. 6.1.a RGPD) y LSSI art. 21, sin perjuicio de excepciones legales aplicables.</td></tr>
+    </tbody></table>
+    <div class="notice"><strong>Archivos e informes:</strong> el flujo ordinario de cálculo FIFO no está diseñado para archivar permanentemente el CSV original ni el PDF descargable. Sí puede conservarse información de informes, resultados económicos agregados y datos técnicos limitados de diagnóstico. Los documentos facilitados para asesoramiento constituyen un tratamiento distinto. No debe interpretarse que la plataforma nunca almacena información económica.</div>
+    <p>Evita incluir contraseñas, claves privadas, datos bancarios, identificadores de cuenta o información fiscal personal en las respuestas abiertas de las encuestas.</p>
   </div>
 
   <!-- 3 -->
   <div class="policy-section">
-    <h2>3. Plazos de conservación</h2>
-    <p>Los datos de tu cuenta (email, contraseña hasheada) se conservan mientras mantengas la cuenta activa. Si solicitas la eliminación de tu cuenta, los datos se borran de forma permanente en un plazo máximo de 30 días, salvo que una obligación legal exija conservarlos durante más tiempo.</p>
-    <p>Los registros de actividad (fecha de último acceso) se conservan un máximo de 12 meses con fines de seguridad.</p>
+    <h2>3. Conservación</h2>
+    <p>Conservamos los datos mientras resulten necesarios para cada finalidad y, cuando corresponda, durante los plazos exigidos por la normativa o la atención de reclamaciones.</p>
+    <ul>
+      <li><strong>Cuenta:</strong> mientras permanezca activa y durante el tiempo que requieran obligaciones legales aplicables tras su baja.</li>
+      <li><strong>Informes y diagnósticos:</strong> durante la prestación y mantenimiento del servicio, con revisiones de necesidad y minimización.</li>
+      <li><strong>Contacto, recursos y asesoramiento:</strong> durante su tramitación y los periodos de conservación legal correspondientes.</li>
+      <li><strong>Encuesta:</strong> mientras permanezca abierto el periodo de participación y, como máximo, durante los 90 días naturales siguientes al cierre oficial de la recogida de respuestas. La fecha de cierre se registrará para calcular el plazo. Antes de que venza, se eliminarán o anonimizarán de forma irreversible las respuestas que pudieran incluir datos personales, tanto en Google Forms y Sheets como en copias o exportaciones bajo nuestro control. Podrán conservarse únicamente resultados estadísticos agregados que no permitan identificar a personas.</li>
+      <li><strong>Suscripciones:</strong> los correos facilitados voluntariamente con autorización válida para una o ambas categorías podrán mantenerse en una lista independiente mientras siga vigente cada consentimiento. Al retirar la autorización se detendrán los envíos de esa categoría y se conservará, cuando sea necesario y de forma proporcionada, una evidencia mínima de la autorización o de la baja para atender posibles responsabilidades. Estas evidencias no autorizan nuevos envíos comerciales.</li>
+    </ul>
+    <p>La fecha de cierre del estudio, la fecha límite de depuración (90 días naturales después) y la realización efectiva de la eliminación o anonimización deberán anotarse en un registro de control. Google Forms y la hoja vinculada Google Sheets almacenan respuestas en lugares independientes: para la depuración deben revisarse ambos, además de copias y exportaciones que estén bajo nuestro control. Borrar filas de la hoja no borra por sí solo las respuestas que permanezcan en Forms. Las respuestas y copias identificables tendrán acceso restringido. La retirada del consentimiento o una solicitud de supresión se atenderán conforme a los derechos de cada persona, sin esperar necesariamente a que venza el plazo general.</p>
   </div>
 
   <!-- 4 -->
   <div class="policy-section">
-    <h2>4. Encargados del tratamiento</h2>
-    <p>Para prestar el servicio contamos con los siguientes proveedores externos que actúan como encargados del tratamiento y con los que existen las garantías adecuadas conforme al artículo 46 del RGPD:</p>
+    <h2>4. Proveedores y destinatarios</h2>
+    <p>Cuando resulte necesario para prestar cada servicio, intervienen proveedores externos y destinatarios de datos bajo las condiciones contractuales y garantías que correspondan:</p>
     <ul>
-      <li>
-        <strong>Railway</strong> — Proveedor de infraestructura y alojamiento del servidor (EE. UU.).
-        Datos transferidos: email, contraseña hasheada, fecha de último acceso.
-        Garantías: cláusulas contractuales tipo (SCCs).
-      </li>
-      <li>
-        <strong>Google LLC</strong> — Proveedor de autenticación OAuth 2.0 (EE. UU.), únicamente si utilizas «Continuar con Google».
-        Datos transferidos: email y Google ID.
-        Garantías: cláusulas contractuales tipo (SCCs) y
-        <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">política de privacidad de Google</a>.
-      </li>
+      <li><strong>Railway:</strong> alojamiento e infraestructura de la aplicación y su base de datos.</li>
+      <li><strong>Google:</strong> autenticación voluntaria mediante Google OAuth, cuando se utilice; para la encuesta, Google Forms y Google Sheets/Drive con una cuenta personal gratuita. Google declara que en las versiones de consumo de Gmail y Drive se aplican sus <a href="https://policies.google.com/terms?hl=es" target="_blank" rel="noopener noreferrer">condiciones de uso</a> y su <a href="https://policies.google.com/privacy?hl=es" target="_blank" rel="noopener noreferrer">política de privacidad</a>, y que no ofrece un acuerdo de encargo del tratamiento para esas versiones. Esto no equivale a afirmar que Google actúe como encargado bajo un contrato empresarial para esta encuesta.</li>
+      <li><strong>Resend:</strong> prestación técnica del envío de correos electrónicos.</li>
+      <li><strong>Stripe:</strong> procesamiento de pagos cuando se utiliza este método, sujeto también a su información de privacidad.</li>
+      <li><strong>Profesional de asesoramiento fiscal:</strong> información necesaria para atender la petición de asesoramiento, conforme a las funciones y acuerdos aplicables.</li>
     </ul>
-    <p>No vendemos, cedemos ni compartimos tus datos con terceros con fines comerciales o publicitarios.</p>
+    <p>Participar en una encuesta no autoriza a incorporar su dirección a una lista comercial. No vendemos respuestas de encuestas a anunciantes.</p>
   </div>
 
   <!-- 5 -->
   <div class="policy-section">
     <h2>5. Transferencias internacionales</h2>
-    <p>Railway y Google LLC están ubicados en Estados Unidos. Las transferencias de datos a estos proveedores se realizan con las garantías adecuadas previstas en el artículo 46 del RGPD, mediante cláusulas contractuales tipo adoptadas por la Comisión Europea.</p>
+    <p>Algunos proveedores pueden prestar servicios desde fuera del Espacio Económico Europeo, incluido Estados Unidos. Las eventuales transferencias deben sustentarse en el mecanismo aplicable según el RGPD: decisión de adecuación para destinatarios comprendidos en su ámbito o, cuando proceda, cláusulas contractuales tipo y garantías adicionales. Google informa sobre sus mecanismos y su adhesión al Marco de Privacidad de Datos UE-EE. UU. en su <a href="https://policies.google.com/privacy/frameworks?hl=es" target="_blank" rel="noopener noreferrer">información oficial sobre transferencias</a>. Esta información no constituye ni sustituye un contrato empresarial de encargo del tratamiento para nuestra cuenta personal.</p>
+    <p>El mecanismo concreto y las condiciones de cada servicio dependen del proveedor y de la modalidad contratada. Puedes solicitar información adicional sobre las garantías aplicables al responsable del tratamiento.</p>
   </div>
 
   <!-- 6 -->
   <div class="policy-section">
     <h2>6. Tus derechos</h2>
-    <p>De acuerdo con el RGPD y la Ley Orgánica 3/2018 (LOPDGDD), tienes derecho a:</p>
-    <ul>
-      <li><strong>Acceso:</strong> solicitar una copia de los datos personales que tratamos sobre ti.</li>
-      <li><strong>Rectificación:</strong> corregir datos inexactos o incompletos.</li>
-      <li><strong>Supresión:</strong> solicitar el borrado de tus datos («derecho al olvido»).</li>
-      <li><strong>Oposición:</strong> oponerte al tratamiento basado en interés legítimo.</li>
-      <li><strong>Portabilidad:</strong> recibir tus datos en formato estructurado y de uso común.</li>
-      <li><strong>Limitación:</strong> solicitar que se restrinja el tratamiento en determinadas circunstancias.</li>
-    </ul>
-    <p>Para ejercer cualquiera de estos derechos, escríbenos a <a href="mailto:colab.marianosevilla@gmail.com">colab.marianosevilla@gmail.com</a> indicando el derecho que deseas ejercer y adjuntando una copia de tu documento de identidad. Responderemos en el plazo máximo de un mes.</p>
-    <p>Si consideras que el tratamiento de tus datos no es conforme a la normativa, puedes presentar una reclamación ante la <a href="https://www.aepd.es" target="_blank" rel="noopener noreferrer">Agencia Española de Protección de Datos (AEPD)</a>.</p>
+    <p>Según corresponda, puedes ejercer tus derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad. Puedes retirar el consentimiento en cualquier momento sin afectar a la licitud del tratamiento anterior a su retirada.</p>
+    <p>Escríbenos a <a href="mailto:colab.marianosevilla@gmail.com">colab.marianosevilla@gmail.com</a> indicando qué derecho deseas ejercer. <strong>No es necesario adjuntar una copia del DNI por defecto.</strong> Solo ante dudas razonables sobre tu identidad podremos solicitar información adicional proporcionada para comprobarla. Responderemos dentro del plazo legal, generalmente un mes.</p>
+    <p>Puedes reclamar ante la <a href="https://www.aepd.es" target="_blank" rel="noopener noreferrer">Agencia Española de Protección de Datos (AEPD)</a>.</p>
+    <p>La baja de comunicaciones electrónicas se facilitará por un medio sencillo y gratuito, también disponible en los propios mensajes comerciales.</p>
   </div>
 
   <!-- 7 -->
   <div class="policy-section">
     <h2>7. Cookies</h2>
-    <p>Este sitio utiliza exclusivamente cookies técnicas estrictamente necesarias para el funcionamiento del servicio: una cookie de sesión que mantiene tu sesión iniciada mientras navegas. No se utilizan cookies de seguimiento, analítica ni publicidad.</p>
-    <p>Las cookies técnicas necesarias no requieren tu consentimiento según la normativa vigente (Directiva ePrivacy y LSSI).</p>
+    <p>El sitio utiliza tecnologías necesarias para mantener la sesión, el acceso y la seguridad cuando proceda. Los servicios externos, como Google Forms, se rigen asimismo por sus propias condiciones. Consulta la <a href="/cookies">Política de Cookies</a> para obtener información específica sobre este sitio.</p>
   </div>
 
   <!-- 8 -->
   <div class="policy-section">
     <h2>8. Menores de edad</h2>
-    <p>Este servicio no está dirigido a menores de 14 años. No recogemos conscientemente datos de menores. Si eres padre, madre o tutor y crees que tu hijo ha facilitado datos personales, contáctanos para eliminarlos.</p>
+    <p>La herramienta fiscal, el estudio de audiencia sobre inversiones y las comunicaciones asociadas no están dirigidas a menores de 14 años. Si un representante legal considera que se han recibido datos de un menor de esa edad sin la autorización necesaria, puede contactar para solicitar su supresión.</p>
   </div>
 
   <!-- 9 -->
   <div class="policy-section">
-    <h2>9. Cambios en esta política</h2>
+    <h2>9. Encuesta de audiencia y comunicaciones independientes</h2>
+    <p>La encuesta del canal se realiza mediante Google Forms gratuito y no solicita nombre, dirección de correo electrónico, datos fiscales ni identificadores financieros. Las respuestas abiertas podrían contener datos personales si el participante los introduce pese a la advertencia de no hacerlo; además, Google puede tratar información técnica sobre el acceso al servicio conforme a su propia política. Por ello, no garantizamos el anonimato absoluto del proceso. Consulta la <a href="https://policies.google.com/privacy?hl=es" target="_blank" rel="noopener noreferrer">política de privacidad de Google</a> para el tratamiento de datos que realiza ese proveedor.</p>
+    <p>La participación en esta encuesta no supone una suscripción a comunicaciones del canal. No se recogen autorizaciones para publicidad ni se incorporan las respuestas a listas de correo. Cualquier eventual suscripción editorial o comercial se gestionará mediante un mecanismo independiente, con la información pertinente y consentimiento diferenciado cuando sea exigible.</p>
+    <p>Los resultados se analizarán de forma agregada. Las respuestas abiertas no se utilizarán para crear perfiles comerciales individualizados sin una base jurídica y una información adicional adecuadas.</p>
+    <p>Puedes solicitar información, retirar la autorización o ejercer tus derechos escribiendo a <a href="mailto:colab.marianosevilla@gmail.com">colab.marianosevilla@gmail.com</a>.</p>
+  </div>
+
+  <!-- 10 -->
+
+  <div class="policy-section">
+    <h2>10. Cambios en esta política</h2>
     <p>Podemos actualizar esta política de privacidad para reflejar cambios en el servicio o en la normativa aplicable. Cuando lo hagamos, actualizaremos la fecha de «Última actualización» que aparece al inicio del documento. Te recomendamos revisarla periódicamente.</p>
   </div>
 
@@ -250,7 +233,7 @@ a:hover { text-decoration: underline; }
 <!-- ── FOOTER ── -->
 <footer class="page-footer">
   <div class="footer-inner">
-    <span class="footer-copy">© 2025 marianosevilla.com — No constituye asesoramiento fiscal ni legal.</span>
+    <span class="footer-copy">© 2026 marianosevilla.com — No constituye asesoramiento fiscal ni legal.</span>
     <div class="footer-links">
       <a href="/privacidad">Privacidad</a>
       <a href="/terminos">Términos</a>
