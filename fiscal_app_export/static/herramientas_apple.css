@@ -23,7 +23,6 @@
 .apple-tools :is(.tools-card-link,.tools-text-link) { display:inline-flex; align-items:center; align-self:flex-start; gap:8px; min-height:44px; color:var(--accent); font-weight:600; line-height:1.5; text-decoration:none; }
 .apple-tools :is(.tools-card-link,.tools-text-link):hover { text-decoration:underline; }
 .apple-tools :is(.tools-card-link,.tools-text-link):active { background:#e4eee9; color:#004331; }
-.apple-tools .tools-card .apple-button { display:inline-flex; align-self:flex-start; gap:8px; max-width:100%; }
 .apple-tools .tools-confidence { background:#f5f7f6; }
 .apple-tools .tools-confidence-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:32px; }
 .apple-tools .tools-confidence-grid>div { min-width:0; display:flex; flex-direction:column; }
@@ -58,7 +57,6 @@
  .apple-tools .tools-confidence-grid { gap:24px; }
  .apple-tools .tools-help-inner { flex-direction:column; align-items:stretch; padding:20px; border-radius:16px; gap:20px; }
  .apple-tools .tools-help .apple-button { align-self:center; width:100%; }
- .apple-tools .tools-card .apple-button { align-self:stretch; width:100%; }
  .apple-tools .tools-faq .apple-faq-item summary { padding-block:18px; }
 }
 @media (prefers-reduced-motion:reduce) {
