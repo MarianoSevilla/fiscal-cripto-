@@ -930,6 +930,11 @@ body.apple-home { padding:0; }
  .apple-resources-page .form-grid { grid-template-columns:minmax(0,1fr); }
 }
 @media (prefers-reduced-motion:reduce) { .apple-resources-page *,.apple-resources-page *::before,.apple-resources-page *::after { transition:none!important; animation:none!important; scroll-behavior:auto!important; } }
+
+/* Primary purchase path and a quieter registration shortcut. */
+.apple-resources-page .resources-hero-actions{display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+.apple-resources-page .resources-hero-link{color:#a4ead2;min-height:44px;display:inline-flex;align-items:center;text-decoration:underline;text-underline-offset:4px;font-weight:600}
+@media(max-width:640px){.apple-resources-page .resources-hero-actions{gap:12px;justify-content:center}.apple-resources-page .resources-hero-actions .apple-button{width:100%}}
 </style>
 <script>window.fetch=function(input,options){const u=new URL(typeof input==='string'?input:input.url,location.href);if(u.pathname==='/api/me'&&(!options||!options.method||options.method==='GET'))return Promise.resolve(new Response('{"user":null}',{status:200,headers:{'Content-Type':'application/json'}}));return Promise.reject(new Error('Esta vista previa no envía solicitudes.'));};</script>
 </head>

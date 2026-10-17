@@ -21,3 +21,13 @@ La tienda pública masetru.gumroad.com y sus ocho fichas respondieron200 el17/10
 Colaboradores: Bitvavo conserva su URL; Gate usa exactamente la campaña facilitada previamente por el propietario: https://www.gate.com/es-eu/campaigns/76?ref=VFKRXV1ACA&ref_type=132 . Se eliminan BingX, Bitget y Bitunix de esta variante. Gate devolvió403 en la comprobación pública: no se afirma vigencia de promociones; verificar campaña antes de publicar. No se añade Gate al formulario ni se elimina Binance de la API, porque esta petición afecta al bloque de colaboradores y no autoriza cambiar las reglas de acceso.
 
 Se amplían contratos a siete y se conserva la matriz de48 escenarios. Pendiente CI de V2 y revisión visual. Producción intacta.
+
+## V3 · compra y registro como objetivos principales
+
+Petición del propietario 17/10/2026: retirar las menciones visibles a la plataforma de venta, concretar las acciones y orientar Recursos a ventas y registros. Se conservan los destinos individuales y parámetros de afiliación exactos. CTA de pago: Comprar informe (5), Comprar guía y Comprar el mapa; checklist: Descargar checklist con aportación libre desde0EUR. Comprar refleja el paso previo a descargar. Partners: Registrarse en Bitvavo / Registrarse en Gate.
+
+Jerarquía: hero con acceso a informes y atajo a colaboradores; informes y guías primero, colaboradores después, recursos gratuitos y pasos de solicitud a continuación. Mantiene tarjetas Home, hover/foco/movimiento reducido y aviso de afiliación antes de los enlaces. Ninguna promoción, urgencia, testimonio o resultado financiero inventado. No se añade seguimiento ni scripts de terceros. El cambio persigue facilitar conversiones, no acredita un aumento de CTR.
+
+Criterio UX contrastado: Nielsen Norman Group, “Learn More Links: You Can Do Better” y “Better Link Labels: 4Ss for Encouraging Clicks”: etiquetas descriptivas y expectativas coherentes con el destino. Medición propuesta tras aprobación: clic por recurso/exchange y compras/registros confirmados, diferenciados por dispositivo y fuente; no atribuir ventas a meros clics. La configuración de medición requiere revisión posterior y no forma parte de este cambio.
+
+Se refuerzan contratos y los48 escenarios con orden de secciones, etiquetas de compra/registro y ausencia de branding visible de la plataforma. Pendiente CI de V3. Producción intacta.

@@ -81,11 +81,16 @@ def test_gumroad_resources_and_visible_copy():
     text=render();p=DOM();p.feed(text)
     product_links={a['href'] for a in p.links if a.get('href','').startswith('https://masetru.gumroad.com/l/')}
     assert product_links=={'https://masetru.gumroad.com/l/'+slug+'?layout=profile' for slug in ['algorand','velo','xdc','wevnv','shx','hbar','mapa-nuevo-dinero','checklist-exchange']}
-    assert text.count('Ver precio en Gumroad')==7
-    assert 'Recursos gratuitos.' in text and 'Recursos de pago.' in text
+    assert text.count('Comprar informe')==5
+    assert 'Comprar guía' in text and 'Comprar el mapa' in text
+    assert 'Descargar checklist' in text
+    assert 'Registrarse en Bitvavo' in text and 'Registrarse en Gate' in text
+    assert 'Gumroad' not in text
+    assert text.index('id="informes-y-guias"') < text.index('id="exchanges-colaboradores"') < text.index('id="recursos-disponibles"')
+    assert 'Recursos gratuitos.' in text and 'Informes y guías de criptomonedas.' in text
     assert 'El dossier Bitcoin es gratuito y se solicita aquí.' in text
     assert 'Aportación libre desde 0 €' in text
-    assert 'La compra y la descarga se gestionan allí.' in text
+    assert 'el contenido y el precio antes de comprar' in text
     for name in ['recursos-apple-preview','recurso-apple-preview']:
         preview=(ROOT.parent/name/'index.html').read_text()
         assert 'Vista de diseño con contenido ficticio.' not in preview

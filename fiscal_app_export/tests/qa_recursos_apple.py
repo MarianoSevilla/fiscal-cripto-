@@ -44,6 +44,11 @@ def run_recursos_apple(browser,origin):
                 assert page.locator('.resources-paid a').count()==7
                 assert page.locator('.resources-paid a').evaluate_all("els=>els.every(e=>e.href.startsWith('https://masetru.gumroad.com/l/'))")
                 assert page.locator('.resources-affiliates h3').all_text_contents()==['Bitvavo','Gate']
+                assert 'Gumroad' not in page.locator('main').inner_text()
+                assert page.locator('.resources-paid a').filter(has_text='Comprar informe').count()==5
+                for name in ['Bitvavo','Gate']:assert page.locator('.resources-affiliates').get_by_text('Registrarse en '+name,exact=False).count()==1
+                assert page.locator('#informes-y-guias').bounding_box()['y'] < page.locator('#exchanges-colaboradores').bounding_box()['y'] < page.locator('#recursos-disponibles').bounding_box()['y']
+                for target in ['informes-y-guias','exchanges-colaboradores']:assert page.locator('.resources-hero-actions a[href="#'+target+'"]').count()==1
                 for card in cards.all():
                     assert card.evaluate("e=>getComputedStyle(e).backgroundColor")=='rgb(237, 245, 240)'
                     assert card.evaluate("e=>getComputedStyle(e).borderRadius")=='16px'
