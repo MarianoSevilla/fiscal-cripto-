@@ -54,3 +54,13 @@ After content/operating gates and user review, create a clean release from then-
 - https://www.aepd.es/preguntas-frecuentes/1-tus-derechos/3-identificacion-con-dni/FAQ-0108-para-el-ejercicio-de-estos-derechos-es-necesario-facilitar-la-copia-del-dni
 - https://www.aepd.es/sites/default/files/2019-09/guia-modelo-clausula-informativa.pdf
 - https://sede.agenciatributaria.gob.es/Sede/ayuda/manuales-videos-folletos/manuales-practicos/irpf-2025/c14-adecuacion-impuesto-circunstancias-personales/ejemplos-practicos/ejemplo-2.html
+
+
+
+## Update — 18 October 2026: describe current code
+
+The user now explicitly requests an audit of existing behavior and wording aligned with it, updating the policy alongside future programming. The new audit `PRIVACIDAD_CODIGO_ACTUAL_20261018.md` supersedes earlier assumptions about immediate file removal, optional marketing, universal anonymization, and the availability of advisory uploads. It does not authorize data purges or storage changes.
+
+The preview now documents persistent fiscal results, automatic diagnostic metadata, current resource fields/marketing condition, partial account erasure, active advisory requests and suspended new uploads/payments. The user permits only the locality Xirivella (Valencia); no complete private address or NIF is added. Future non-retention is not described as implemented.
+
+The previous list of release gates identifies unresolved compliance/operating matters, not a requirement to implement all future functionality before describing existing behavior truthfully. Pending lawful bases, retention decisions and provider guarantees must not be represented as verified. Production remains unchanged in this audit; a clean release still excludes the static viewer and local session fixture.
