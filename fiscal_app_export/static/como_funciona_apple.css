@@ -1,0 +1,58 @@
+/* Isolated How it works proposal. Home, Tools and session assets stay unchanged. */
+.apple-how-page { --how-space:40px; --how-gap:24px; }
+.apple-how-page .how-intro { padding-block:40px 32px; background:var(--intro-bg); color:var(--intro-text); }
+.apple-how-page .how-intro .apple-eyebrow { color:var(--intro-accent); margin-bottom:12px; }
+.apple-how-page h1 { max-width:none; width:100%; font-size:clamp(2rem,4.5vw,3.5rem); line-height:1.1; text-wrap:wrap; margin-bottom:20px; }
+.apple-how-page .how-lead { width:100%; max-width:none; font-size:1.125rem; line-height:1.6; color:var(--intro-muted); }
+.apple-how-page .how-actions { margin-top:24px; }
+.apple-how-page .how-intro .apple-button { border:1px solid var(--intro-accent); }
+.apple-how-page .how-intro .how-micro { margin-top:12px; color:var(--intro-muted); font-size:.875rem; }
+.apple-how-page .how-section { padding-block:var(--how-space); scroll-margin-top:24px; }
+.apple-how-page .how-section h2 { font-size:clamp(1.625rem,2.8vw,2.25rem); line-height:1.18; }
+.apple-how-page .how-heading { margin-bottom:var(--how-gap); }
+.apple-how-page .how-heading p { margin-top:8px; color:var(--muted); }
+.apple-how-page .how-muted { color:var(--muted); }
+.apple-how-page .how-soft { background:#f5f7f6; border-block:1px solid var(--border); }
+.apple-how-page .apple-catalog-card>p { color:var(--muted); font-size:.9375rem; line-height:1.65; margin-bottom:20px; }
+.apple-how-page .apple-catalog-card>span { display:inline-flex; align-items:center; align-self:flex-start; min-height:44px; color:var(--accent); font-size:.875rem; font-weight:600; line-height:1.5; margin-top:auto; }
+.apple-how-page .apple-catalog-card:focus-visible { border-color:var(--accent); }
+.apple-how-page .how-copy { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--how-gap); }
+.apple-how-page .how-copy>div { min-width:0; }
+.apple-how-page .how-copy h3 { font-size:1.125rem; margin-bottom:12px; }
+.apple-how-page .how-copy p { color:var(--muted); }
+.apple-how-page .how-copy p+p { margin-top:12px; }
+.apple-how-page .how-list { padding-left:1.25rem; margin-top:12px; color:var(--muted); }
+.apple-how-page .how-list li+li { margin-top:8px; }
+.apple-how-page .how-note { margin-top:var(--how-gap); padding:20px 24px; border:1px solid var(--border); border-radius:16px; background:#f5f7f6; color:#415b4d; }
+.apple-how-page .how-note p+p { margin-top:8px; }
+.apple-how-page .how-details { margin-top:var(--how-gap); border-block:1px solid var(--border); }
+.apple-how-page .how-details>summary { min-height:48px; padding-block:16px; color:var(--accent); font-weight:600; cursor:pointer; }
+.apple-how-page .how-details-body { padding-bottom:20px; }
+.apple-how-page .how-exchanges { display:flex; flex-wrap:wrap; gap:8px 12px; list-style:none; padding:0; margin-block:12px; }
+.apple-how-page .how-exchanges a { display:flex; align-items:center; min-height:44px; padding:8px 14px; border:1px solid #b9d8cb; border-radius:999px; background:#edf5f0; font-size:.9375rem; font-weight:550; }
+.apple-how-page .how-exchanges a:hover { border-color:var(--accent); }
+.apple-how-page .how-small { color:var(--muted); font-size:.875rem; }
+.apple-how-page .how-report .device-frame { box-shadow:none; }
+.apple-how-page .how-report .how-small { margin-top:12px; }
+.apple-how-page .how-anchor { scroll-margin-top:24px; }
+.apple-how-page .how-faq-list { border-top:1px solid var(--border); }
+.apple-how-page .how-faq-list .apple-faq-item summary { padding-block:20px; }
+.apple-how-page .how-faq-list .apple-faq-answer { padding-bottom:20px; }
+.apple-how-page #site-nav a[aria-current="page"] { color:var(--text); font-weight:650; }
+@media (min-width:641px) and (max-width:1200px) {
+ .apple-how-page { --how-space:32px; --how-gap:20px; }
+ .apple-how-page .how-intro { padding-top:32px; }
+}
+@media (max-width:900px) { .apple-how-page .how-copy { grid-template-columns:minmax(0,1fr); } }
+@media (max-width:640px) {
+ .apple-how-page { --how-space:24px; --how-gap:20px; }
+ .apple-how-page .how-intro { padding-block:36px 24px; }
+ .apple-how-page h1 { font-size:clamp(2rem,8.4vw,3rem); margin-bottom:16px; }
+ .apple-how-page .how-lead { font-size:1rem; }
+ .apple-how-page .how-actions .apple-button { width:100%; justify-content:center; }
+ .apple-how-page .how-note { padding:20px; }
+ .apple-how-page .how-faq-list .apple-faq-item summary { padding-block:18px; }
+}
+@media (prefers-reduced-motion:reduce) {
+ .apple-how-page *,.apple-how-page *::before,.apple-how-page *::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; }
+}
