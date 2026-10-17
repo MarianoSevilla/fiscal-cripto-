@@ -1,0 +1,1541 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fiscalidad de criptomonedas: preguntas frecuentes | Mariano Sevilla</title>
+<meta name="description" content="Resuelve tus dudas sobre declarar criptomonedas en España, cálculo FIFO, pérdidas, staking y uso del informe fiscal. Consulta requisitos y límites.">
+<meta name="robots" content="noindex, nofollow"><link rel="canonical" href="https://marianosevilla.com/faq">
+<meta property="og:type" content="website"><meta property="og:title" content="Fiscalidad de criptomonedas: preguntas frecuentes | Mariano Sevilla"><meta property="og:url" content="https://marianosevilla.com/faq"><meta name="twitter:card" content="summary_large_image">
+<style>/*
+ * nav.css — Header desktop unificado
+ * Scope: #site-nav y clases .snav-*
+ * NO depende de las variables CSS de cada página.
+ */
+
+/* ── Variables propias del nav ───────────────────── */
+#site-nav {
+  --snav-bg:        rgba(11, 18, 32, 0.95);
+  --snav-border:    rgba(255, 255, 255, 0.07);
+  --snav-border2:   rgba(255, 255, 255, 0.13);
+  --snav-text:      #eef2ff;
+  --snav-muted:     #7a8aa8;
+  --snav-accent:    #00C896;
+  --snav-accent-dim:rgba(0, 200, 150, 0.12);
+  --snav-surface:   #1a2540;
+  --snav-surface2:  rgba(255, 255, 255, 0.05);
+  --snav-font-d:    'Syne', sans-serif;
+  --snav-font-b:    'DM Sans', sans-serif;
+
+  /* Posición y aspecto */
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 1000;
+  height: 64px;
+  background: var(--snav-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--snav-border);
+}
+
+/* ── Contenedor interior ─────────────────────────── */
+.snav-inner {
+  position: relative;            /* ancla el centrado absoluto de .snav-links */
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 3rem;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+/* ── Logo ────────────────────────────────────────── */
+.snav-logo {
+  font-family: var(--snav-font-d);
+  font-weight: 800;
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+  color: var(--snav-text);
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.snav-logo span { color: var(--snav-accent); }
+
+/* ── Nav links — centrados absolutamente ─────────── */
+.snav-links {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  list-style: none;
+  white-space: nowrap;
+}
+.snav-links a {
+  color: var(--snav-muted);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.15s;
+}
+.snav-links a:hover  { color: var(--snav-text); }
+.snav-links a.active { color: var(--snav-text); font-weight: 600; }
+
+/* ── Zona derecha ────────────────────────────────── */
+.snav-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* ── Skeleton placeholder (visible mientras /api/me carga) ── */
+.snav-skeleton {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--snav-accent);   /* mismo verde que el avatar real */
+  border: 2px solid transparent;    /* misma geometría que .snav-avatar */
+  flex-shrink: 0;
+}
+
+/* ── Botón outline: Iniciar sesión ───────────────── */
+.snav-btn-login {
+  background: none;
+  border: 1.5px solid var(--snav-accent);
+  color: var(--snav-text);
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-family: var(--snav-font-b);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+.snav-btn-login:hover { background: var(--snav-accent-dim); }
+
+/* ── Botón primario: Crea tu cuenta gratis ───────── */
+.snav-btn-cta {
+  background: var(--snav-accent);
+  color: #0a0a0a;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-family: var(--snav-font-d);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+.snav-btn-cta:hover { opacity: 0.88; }
+
+/* ── Avatar (estado autenticado) ─────────────────── */
+.snav-avatar-wrap { position: relative; }
+
+.snav-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--snav-accent);
+  color: #080c12;
+  font-family: var(--snav-font-d);
+  font-size: 14px;
+  font-weight: 700;
+  border: 2px solid transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s, border-color 0.15s;
+}
+.snav-avatar:hover {
+  opacity: 0.85;
+  border-color: rgba(0, 200, 150, 0.4);
+}
+
+/* ── Dropdown ────────────────────────────────────── */
+.snav-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  background: var(--snav-surface);
+  border: 1px solid var(--snav-border2);
+  border-radius: 14px;
+  min-width: 190px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  padding: 6px;
+  z-index: 1100;
+  display: none;
+}
+.snav-dropdown.open {
+  display: block;
+  animation: snav-dd-in 0.12s ease;
+}
+
+@keyframes snav-dd-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Dropdown items ──────────────────────────────── */
+.snav-dd-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 13px;
+  border-radius: 9px;
+  color: var(--snav-text);
+  font-family: var(--snav-font-b);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.12s;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  box-sizing: border-box;
+}
+.snav-dd-item:hover      { background: var(--snav-surface2); }
+.snav-dd-item.active     { color: var(--snav-accent); }
+.snav-dd-divider         { height: 1px; background: var(--snav-border); margin: 4px 0; }
+.snav-dd-item.danger     { color: #e55; }
+.snav-dd-item.danger:hover { background: rgba(220, 60, 60, 0.1); }
+
+/* ── Utilidad: ocultar elementos ─────────────────── */
+.snav-hidden { display: none !important; }
+
+/* Menú móvil: conserva el mismo diseño y los enlaces de la navegación. */
+.snav-menu-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  margin-left: .75rem;
+  border: 1px solid var(--snav-border2);
+  border-radius: 9px;
+  background: var(--snav-surface);
+  color: var(--snav-text);
+  cursor: pointer;
+}
+.snav-menu-toggle:focus-visible,
+.snav-mobile-link:focus-visible {
+  outline: 2px solid var(--snav-accent);
+  outline-offset: 3px;
+}
+.snav-menu-icon,
+.snav-menu-icon::before,
+.snav-menu-icon::after {
+  display: block;
+  width: 19px;
+  height: 2px;
+  position: relative;
+  border-radius: 2px;
+  background: currentColor;
+  transition: transform .15s ease;
+}
+.snav-menu-icon::before,
+.snav-menu-icon::after {
+  content: "";
+  position: absolute;
+  left: 0;
+}
+.snav-menu-icon::before { top: -6px; }
+.snav-menu-icon::after { top: 6px; }
+.snav-menu-toggle[aria-expanded="true"] .snav-menu-icon { background: transparent; }
+.snav-menu-toggle[aria-expanded="true"] .snav-menu-icon::before {
+  background: var(--snav-text);
+  transform: translateY(6px) rotate(45deg);
+}
+.snav-menu-toggle[aria-expanded="true"] .snav-menu-icon::after {
+  background: var(--snav-text);
+  transform: translateY(-6px) rotate(-45deg);
+}
+.snav-mobile-menu,
+.snav-mobile-menu[hidden] { display: none; }
+
+@media (max-width: 1200px) {
+  .snav-links { display: none; }
+  .snav-inner { padding: 0 1.5rem; }
+  .snav-menu-toggle { display: inline-flex; }
+  .snav-btn-cta { display: none; }
+  .snav-mobile-menu:not([hidden]) {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: calc(100vh - 64px);
+    max-height: calc(100dvh - 64px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 12px 1.5rem 18px;
+    background: #0b1220;
+    border-bottom: 1px solid var(--snav-border2);
+    box-shadow: 0 20px 30px rgba(0, 0, 0, .35);
+  }
+  .snav-mobile-link {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--snav-text);
+    font: 500 14px var(--snav-font-b);
+    text-decoration: none;
+    text-align: left;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+  }
+  .snav-mobile-link:hover,
+  .snav-mobile-link.active { background: var(--snav-surface); }
+  .snav-mobile-link-primary {
+    background: var(--snav-accent);
+    color: #080c12;
+    font-weight: 700;
+  }
+  .snav-mobile-link-primary:hover { background: #00b887; }
+  .snav-mobile-separator {
+    height: 1px;
+    margin: 8px 0;
+    background: var(--snav-border2);
+  }
+}
+@media (max-width: 520px) {
+  .snav-inner { padding: 0 1rem; }
+  .snav-btn-login { display: none; }
+  .snav-menu-toggle { margin-left: .5rem; }
+  .snav-mobile-menu:not([hidden]) { padding-left: 1rem; padding-right: 1rem; }
+}
+@media (max-width: 350px) {
+  .snav-logo { font-size: .9rem; }
+}
+
+</style><style>/* Isolated Home proposal. Never loaded by landing.html or other pages. */
+.apple-home {
+  --bg:#ffffff; --bg2:#f5f6f7; --surface:#ffffff; --surface2:#f0f3f2;
+  --text:#1d2428; --muted:#53616b; --accent:#006b54;
+  --border:#dce2e5; --border2:#cbd4d8; --footer-bg:#f5f6f7;
+  --font-display:system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-body:system-ui,-apple-system,"Segoe UI",sans-serif;
+  --apple-max:1160px; --apple-pad:clamp(20px,4vw,48px);
+  --intro-bg:#073c32; --intro-text:#ffffff; --intro-muted:#c3dbd1; --intro-accent:#a6edcf;
+  margin:0; color:var(--text); background:var(--bg);
+  font:400 1rem/1.65 var(--font-body); -webkit-font-smoothing:antialiased; overflow-wrap:anywhere;
+}
+.apple-home *, .apple-home *::before, .apple-home *::after { box-sizing:border-box; }
+.apple-home [hidden] { display:none !important; }
+.apple-home :where(h1,h2,h3,p,ul) { margin:0; }
+.apple-home :where(a,button,input,summary) { -webkit-tap-highlight-color:rgba(0,107,84,.14); }
+.apple-home a { color:var(--accent); text-underline-offset:.25em; }
+.apple-home :where(a,button,input,summary,[tabindex]):focus-visible { outline:3px solid #005fcc; outline-offset:4px; }
+.apple-home main:focus { outline:none; }
+.apple-home .apple-sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; border:0; }
+.apple-home .apple-tablet-only { display:none; }
+.apple-home .apple-report-action { display:block; }
+.apple-home :where(button,input) { font:inherit; }
+.apple-home img { display:block; max-width:100%; }
+.apple-home h2 { font-size:clamp(1.875rem,3.6vw,3.125rem); line-height:1.12; letter-spacing:-.035em; font-weight:650; }
+.apple-home h3 { font-size:1.125rem; line-height:1.4; letter-spacing:-.015em; font-weight:650; }
+.apple-home .apple-container { width:100%; max-width:var(--apple-max); margin-inline:auto; padding-inline:var(--apple-pad); }
+.apple-home .apple-section { padding-block:clamp(64px,9vw,112px); scroll-margin-top:90px; }
+.apple-home .apple-section-heading { margin-bottom:44px; }
+.apple-home .apple-eyebrow { display:block; margin-bottom:14px; color:var(--accent); font-size:.875rem; font-weight:650; letter-spacing:.025em; }
+.apple-home .apple-skip { position:fixed; left:20px; top:12px; z-index:2000; transform:translateY(-160%); background:#fff; padding:12px 18px; border-radius:8px; }
+.apple-home .apple-skip:focus { transform:none; }
+.apple-home .apple-noscript-access { display:flex; gap:20px; flex-wrap:wrap; padding:12px var(--apple-pad); }
+
+/* Shared navigation is reused unchanged; all overrides are Home-scoped. */
+.apple-home #site-nav {
+  --snav-bg:rgba(255,255,255,.96); --snav-border:#e1e6e8; --snav-border2:#cbd4d8;
+  --snav-text:#1d2428; --snav-muted:#53616b; --snav-accent:#006b54;
+  --snav-accent-dim:#e8f3ef; --snav-surface:#ffffff; --snav-surface2:#f1f5f3;
+  --snav-font-d:var(--font-display); --snav-font-b:var(--font-body);
+  min-height:64px; height:auto; backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+}
+.apple-home .snav-inner { max-width:var(--apple-max); padding:8px var(--apple-pad); min-height:64px; height:auto; }
+.apple-home .snav-logo { font-size:1rem; font-weight:750; letter-spacing:-.035em; white-space:normal; overflow-wrap:anywhere; min-width:0; flex-shrink:1; line-height:1.25; color:var(--snav-text); }
+.apple-home .snav-links { position:static; transform:none; margin-inline:auto; gap:24px; padding:0; }
+.apple-home .snav-links a { color:var(--snav-muted); }
+.apple-home .snav-links a:hover { color:var(--snav-text); }
+.apple-home :is(.snav-btn-cta,.snav-mobile-link-primary,.snav-avatar) { color:#fff; }
+.apple-home :is(.snav-btn-login,.snav-btn-cta) { min-height:40px; padding:10px 16px; border-radius:999px; }
+.apple-home .snav-avatar { width:44px; height:44px; }
+.apple-home .snav-dropdown { box-shadow:0 12px 36px rgba(20,34,30,.12); }
+.apple-home .snav-dd-item { min-height:44px; }
+/* V17: the inherited logout red was intended for a dark dropdown. */
+.apple-home #site-nav .snav-dd-item.danger { color:#b42318; }
+.apple-home #site-nav .snav-dd-item.danger:hover { background:#fff1ef; color:#b42318; }
+.apple-home #site-nav .snav-dd-item.danger:active { background:#fde4df; color:#b42318; }
+.apple-home .snav-menu-toggle { background:#f3f6f5; border-color:#d8e1dd; }
+.apple-home .snav-mobile-menu:not([hidden]) { background:#fff; box-shadow:0 14px 28px rgba(20,34,30,.1); max-height:calc(100dvh - var(--apple-nav-height,64px)); }
+/* Public links remain available if the shared session lookup is delayed. */
+.apple-home .apple-access-fallback { display:flex; gap:12px; }
+.apple-home .apple-access-mobile { flex-direction:column; gap:4px; }
+.apple-home #site-nav.apple-access-waiting .snav-skeleton { display:none; }
+@media (max-width:1200px) {
+  .apple-home .apple-access-desktop { display:none; }
+}
+
+/* V7: message and example share a stage; DOM reading order stays unchanged. */
+.apple-home .apple-intro { background:var(--intro-bg); color:var(--intro-text); }
+.apple-home .apple-intro-inner { max-width:var(--apple-max); margin-inline:auto; padding:116px var(--apple-pad) 64px; }
+.apple-home .apple-intro .apple-container { padding:0; }
+.apple-home .apple-hero { padding:0 0 40px; text-align:left; }
+.apple-home .apple-hero .apple-eyebrow { color:var(--intro-accent); }
+.apple-home .apple-intro :focus-visible { outline-color:#a6edcf; }
+.apple-home .device-frame :focus-visible { outline-color:#005fcc; }
+.apple-home h1 { max-width:21ch; margin:0 0 24px; font-size:clamp(2.25rem,5.8vw,4.75rem); line-height:1.05; letter-spacing:-.045em; font-weight:700; text-wrap:balance; overflow-wrap:anywhere; }
+.apple-home h1 em { color:var(--intro-accent); font-style:normal; }
+.apple-home .hero-desc { max-width:56ch; margin:0 0 28px; font-size:clamp(1rem,1.5vw,1.18rem); line-height:1.65; color:var(--intro-muted); text-wrap:pretty; }
+.apple-home .apple-hero-actions { display:flex; justify-content:flex-start; align-items:center; gap:12px 26px; flex-wrap:wrap; }
+.apple-home :is(.btn-primary,.apple-button,.btn-asistencia,.auth-btn-primary) { display:inline-flex; }
+.apple-home :is(.btn-primary,.apple-button,.btn-asistencia,.auth-btn-primary,.snav-btn-cta,.snav-mobile-link-primary,.snav-btn-login) { justify-content:center; align-items:center; min-height:48px; padding:11px 24px; border:1px solid var(--intro-accent); border-radius:999px; background:var(--accent); color:#fff; font:600 1rem/1.5 var(--font-body); text-align:center; text-decoration:none; cursor:pointer; transition:background .15s ease; }
+.apple-home :is(.btn-primary,.apple-button,.btn-asistencia,.auth-btn-primary,.snav-btn-cta,.snav-mobile-link-primary,.snav-btn-login):hover { background:#00533f; color:#fff; opacity:1; }
+/* Immediate press feedback without motion or layout shifts. */
+.apple-home :is(.btn-primary,.apple-button,.btn-asistencia,.auth-btn-primary,.snav-btn-cta,.snav-mobile-link-primary,.snav-btn-login,.snav-avatar):active:not(:disabled) { background:#004331; color:#fff; box-shadow:inset 0 0 0 2px rgba(0,0,0,.12); transition:none; }
+.apple-home :is(.snav-btn-login,.snav-menu-toggle,.auth-close,.auth-switch-btn,.apple-text-link,.authors-link,.snav-links a,.snav-dd-item,.snav-mobile-link,.apple-footer a):active { background-color:#e4eee9; color:#004331; transition:none; }
+.apple-home .apple-exchange-card:active { background:#edf5f1; border-color:var(--accent); transition:none; }
+.apple-home .apple-faq-item summary:active { background:#edf5f1; color:#004331; }
+.apple-home .auth-btn-primary:disabled { background:#dce4e0; color:#526359; cursor:wait; box-shadow:none; }
+.apple-home :is(.apple-text-link,.authors-link) { display:inline-flex; align-items:center; gap:8px; min-height:44px; text-decoration:none; font-weight:550; }
+.apple-home :is(.apple-text-link,.authors-link):hover { text-decoration:underline; }
+.apple-home .apple-hero .apple-text-link { color:var(--intro-text); }
+.apple-home .apple-hero .apple-text-link:active { background:#1c5847; color:#fff; }
+.apple-home .cta-micro { color:var(--intro-muted); margin:14px 0 0; font-size:.875rem; max-width:54ch; }
+.apple-home .hero-checks { list-style:none; padding:0; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:24px; color:var(--muted); font-size:.875rem; }
+.apple-home .hero-checks li { display:flex; align-items:baseline; gap:8px; text-align:left; max-width:100%; min-width:0; }
+.apple-home .hero-checks li::before { content:'✓'; color:var(--accent); font-weight:700; flex-shrink:0; }
+.apple-home .apple-demo { padding:0; min-width:0; }
+.apple-home .apple-trust { padding-block:32px; }
+.apple-home .hero-right { width:100%; max-width:940px; margin:auto; }
+.apple-home .device-frame { border:1px solid #dce4e0; border-radius:20px; overflow:hidden; background:#fff; color:var(--text); box-shadow:0 24px 64px rgba(0,20,13,.18); }
+.apple-home .device-bar { display:flex; align-items:center; gap:8px; border-bottom:1px solid #e2e9e5; padding:14px 24px; background:#f7f9f8; }
+.apple-home .device-dot { width:6px; height:6px; border-radius:50%; background:#9caaa4; }
+.apple-home .device-url { margin-left:6px; color:var(--muted); font-size:.875rem; overflow-wrap:anywhere; }
+.apple-home .device-body { padding:24px; min-width:0; }
+.apple-home .mock-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:24px; }
+.apple-home .mock-kpi { padding:16px; min-width:0; background:#f4f7f5; border-radius:12px; }
+.apple-home .mock-kpi-label { margin-bottom:6px; font-size:.875rem; color:var(--muted); }
+.apple-home .mock-kpi-value { font-size:clamp(1.125rem,2.1vw,1.75rem); line-height:1.2; letter-spacing:-.035em; font-weight:650; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.apple-home :is(.green,.mock-green) { color:#006b54; }
+.apple-home :is(.red,.mock-red) { color:#b42318; }
+.apple-home .mock-table-wrap { max-width:100%; overflow-x:auto; border:1px solid #e1e6e3; border-radius:10px; }
+.apple-home .apple-table-hint { display:block; color:var(--muted); font-size:.8125rem; margin-bottom:12px; }
+.apple-home .mock-table { width:100%; min-width:36.875rem; table-layout:fixed; border-collapse:collapse; font-size:.875rem; }
+.apple-home .mock-table :is(th,td) { padding:12px 16px; text-align:left; vertical-align:middle; }
+.apple-home .mock-table th { font-weight:600; }
+.apple-home .mock-table th:nth-child(1) { width:25%; }
+.apple-home .mock-table th:nth-child(2) { width:16%; }
+.apple-home .mock-table th:nth-child(3) { width:17%; }
+.apple-home .mock-table th:nth-child(4) { width:23%; }
+.apple-home .mock-table th:nth-child(5) { width:19%; }
+.apple-home .mock-table-head { background:#f5f7f6; color:var(--muted); }
+.apple-home .mock-table-row { border-top:1px solid #edf0ee; font-variant-numeric:tabular-nums; }
+.apple-home .mock-table :is(th,td):nth-last-child(-n+2) { text-align:right; }
+.apple-home .mock-badge { display:inline-block; padding:2px 8px; border-radius:5px; background:#edf4f0; color:#35554a; font-size:.8125rem; }
+.apple-home .mock-badge-venta { background:#f2f3f4; color:#4b5660; }
+.apple-home .apple-trust { border-bottom:1px solid var(--border); }
+.apple-home .apple-trust-link { margin-top:20px; }
+
+.apple-home .apple-how { background:#fff; }
+.apple-home .apple-steps { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:32px; }
+.apple-home .footer-step { min-width:0; border-top:1px solid var(--border); padding-top:24px; }
+.apple-home .footer-step-icon { display:none; }
+.apple-home .footer-step-num { display:block; color:var(--accent); font-size:clamp(1.5rem,2.5vw,2.25rem); line-height:1.2; letter-spacing:-.035em; font-weight:650; margin-bottom:24px; }
+.apple-home .footer-step-title { margin-bottom:12px; font-size:1.25rem; }
+.apple-home .footer-step-desc { color:var(--muted); font-size:1rem; }
+.apple-home .apple-includes { background:#f5f6f7; }
+.apple-home .apple-includes h2 { max-width:26ch; margin-bottom:44px; }
+.apple-home .apple-includes-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; margin-bottom:36px; }
+.apple-home .apple-includes-grid>div { min-width:0; padding:clamp(24px,3.5vw,40px); border:1px solid #e5e9e7; border-radius:20px; background:#fff; }
+.apple-home .apple-includes-grid h3 { margin-bottom:12px; }
+.apple-home .apple-includes-grid p { color:var(--muted); max-width:56ch; }
+.apple-home .apple-exchanges { background:#fff; }
+.apple-home .apple-exchanges h2 { max-width:26ch; margin-bottom:20px; }
+.apple-home .apple-exchanges .apple-container>p { color:var(--muted); max-width:65ch; margin-block:16px 28px; }
+.apple-home .apple-exchange-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.apple-home .apple-exchange-card { display:flex; flex-direction:column; padding:28px; background:#f5f7f6; border:1px solid #e1e7e3; border-radius:16px; text-decoration:none; color:var(--text); min-width:0; transition:border-color .15s; }
+.apple-home .apple-exchange-card:hover { border-color:var(--accent); }
+.apple-home .apple-exchange-grid h3 { margin-bottom:16px; font-size:1.5rem; letter-spacing:-.035em; }
+.apple-home .apple-exchange-grid p { color:var(--muted); font-size:.9375rem; margin-bottom:20px; }
+.apple-home .apple-exchange-grid a>span { color:var(--accent); margin-top:auto; font-size:.875rem; font-weight:600; }
+.apple-home .apple-exchange-more { grid-column:1 / -1; min-width:0; }
+.apple-home .apple-exchange-more>summary { display:none; }
+.apple-home .apple-exchange-rest { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.apple-home .apple-exchange-secondary { grid-column:1 / -1; padding-top:24px; border-top:1px solid var(--border); }
+.apple-home .apple-compatibility-copy { grid-column:1 / -1; color:var(--muted); font-size:.875rem; }
+.apple-home .apple-exchange-secondary p { max-width:none; color:var(--muted); margin-top:8px; }
+.apple-home .apple-exchanges-all { margin-top:24px; }
+.apple-home .apple-assistance { padding-bottom:0; }
+.apple-home .asistencia-block { max-width:none; margin:0; padding:clamp(28px,5vw,56px); border:1px solid #d4e5db; border-radius:20px; background:#edf5f0; }
+.apple-home .asistencia-badge { color:#006b54; font-size:.875rem; line-height:1.5; letter-spacing:.025em; margin-bottom:18px; }
+.apple-home .asistencia-block>p { color:#415b4d; max-width:64ch; }
+.apple-home .asistencia-block>p strong { display:block; font-size:clamp(1.5rem,3vw,2rem); line-height:1.2; color:#1c3227; letter-spacing:-.03em; font-weight:650; margin-bottom:14px; }
+.apple-home .asistencia-block .apple-advisory-status { margin-top:20px; color:#314a3b; font-weight:550; }
+.apple-home .asistencia-bullets { list-style:none; padding:0; display:flex; gap:8px 28px; flex-wrap:wrap; margin:20px 0 28px; color:#365745; font-size:.9375rem; }
+.apple-home .authors { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:40px; }
+.apple-home .author-card { display:flex; gap:24px; align-items:center; min-width:0; padding-block:24px; border-top:1px solid var(--border); }
+.apple-home .author-card>div { min-width:0; }
+.apple-home .author-portrait { display:block; flex:0 0 88px; width:88px; height:88px; }
+.apple-home .author-avatar { flex-shrink:0; width:88px; height:88px; border-radius:50%; object-fit:cover; background:#f0f3f1; }
+.apple-home .author-name { font-size:1.125rem; font-weight:650; margin-bottom:8px; }
+.apple-home .author-role { color:var(--muted); font-size:.9375rem; }
+.apple-home .author-colegiado { color:var(--accent); font-size:.875rem; margin-top:6px; }
+.apple-home .authors-link { margin-top:24px; }
+.apple-home .apple-editorial { border-top:1px solid var(--border); }
+.apple-home .apple-editorial-alt { background:#f5f6f7; }
+.apple-home .apple-editorial h2 { margin-bottom:32px; font-size:clamp(1.875rem,3.4vw,2.75rem); }
+.apple-home .apple-editorial p { color:var(--muted); margin-bottom:18px; }
+.apple-home .apple-editorial p:last-child { margin-bottom:0; }
+.apple-home .apple-editorial strong { color:var(--text); font-weight:600; }
+.apple-home .apple-editorial .apple-container>span { display:block; color:var(--accent); font-weight:600; font-size:.875rem; margin-bottom:16px; }
+.apple-home .apple-faq { background:#f5f6f7; }
+.apple-home .apple-faq h2 { margin-bottom:20px; }
+.apple-home .apple-faq .apple-container>p { color:var(--muted); margin-bottom:36px; }
+.apple-home .apple-faq-list { border-top:1px solid var(--border); }
+.apple-home .apple-faq-item { border-bottom:1px solid var(--border); }
+.apple-home .apple-faq-item summary { list-style:none; display:flex; gap:24px; justify-content:space-between; align-items:center; cursor:pointer; padding:24px 0; font-size:1.0625rem; font-weight:600; line-height:1.45; }
+.apple-home .apple-faq-item summary::-webkit-details-marker { display:none; }
+.apple-home .apple-faq-item summary::after { content:'+'; color:var(--accent); flex:0 0 24px; text-align:center; font-size:1.5rem; font-weight:400; }
+.apple-home .apple-faq-item[open] summary::after { content:'−'; }
+.apple-home .apple-faq-answer { padding:0 0 24px; color:var(--muted); }
+.apple-home .apple-faq-answer p { margin-bottom:12px; }
+.apple-home .apple-faq-answer a { display:inline-flex; padding-block:6px; }
+/* V18: compact footer, aligned with the same container as the approved Home. */
+.apple-home .apple-footer { padding-block:32px 24px; border-top:1px solid var(--border); background:var(--bg); color:var(--muted); font-size:.875rem; }
+.apple-home .apple-footer-top { display:grid; grid-template-columns:minmax(0,1.45fr) repeat(2,minmax(0,1fr)); gap:32px; }
+.apple-home .apple-footer-top>* { min-width:0; }
+.apple-home .apple-footer a { color:var(--muted); text-decoration:none; }
+.apple-home .apple-footer a:hover { color:var(--accent); text-decoration:underline; }
+.apple-home .apple-footer .apple-footer-logo { display:inline-block; max-width:100%; min-height:36px; padding-block:6px; color:var(--text); font-size:1.125rem; line-height:1.3; font-weight:750; letter-spacing:-.035em; }
+.apple-home .apple-footer-logo span { color:var(--accent); }
+.apple-home .apple-footer-brand p { margin-top:8px; max-width:30ch; }
+.apple-home .apple-footer h2 { margin:4px 0 8px; color:var(--text); font-size:.875rem; line-height:1.5; letter-spacing:normal; font-weight:650; }
+.apple-home .apple-footer ul { padding:0; margin:0; list-style:none; }
+.apple-home .apple-footer li a { display:flex; align-items:center; min-height:36px; padding-block:6px; }
+.apple-home .apple-footer-legal { margin-top:24px; padding-top:20px; border-top:1px solid var(--border); }
+.apple-home .apple-footer-disclaimer { font-size:.8125rem; line-height:1.6; }
+.apple-home .apple-footer-bottom { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px 24px; margin-top:12px; font-size:.8125rem; }
+.apple-home .apple-footer-bottom>* { min-width:0; }
+.apple-home .apple-footer-bottom ul { display:flex; flex-wrap:wrap; gap:0 20px; }
+
+/* V14: header actions follow their own, quieter hierarchy. Body CTA unchanged. */
+.apple-home #site-nav .snav-links a { display:inline-flex; align-items:center; min-height:44px; }
+.apple-home #site-nav .snav-right { gap:12px; }
+.apple-home #site-nav .snav-btn-login {
+  justify-content:center; align-items:center; min-height:44px; padding:10px 8px;
+  border:0; border-radius:6px; background:transparent; color:var(--snav-muted);
+  font:500 .875rem/1.4 var(--font-body); text-decoration:none; box-shadow:none;
+}
+.apple-home #site-nav .snav-btn-login:hover {
+  background:transparent; color:var(--accent); text-decoration:underline;
+  text-underline-offset:.3em; opacity:1;
+}
+.apple-home #site-nav .snav-btn-login:active { background:#edf3ef; color:#004331; box-shadow:none; }
+.apple-home #site-nav .snav-btn-cta {
+  justify-content:center; align-items:center; min-height:44px; padding:10px 18px;
+  border:1px solid transparent; border-radius:999px; background:var(--accent);
+  color:#fff; font:600 .875rem/1.4 var(--font-body); text-decoration:none;
+  box-shadow:none;
+}
+.apple-home #site-nav .snav-btn-cta:hover { background:#00533f; color:#fff; opacity:1; }
+.apple-home #site-nav .snav-btn-cta:active { background:#004331; color:#fff; box-shadow:inset 0 0 0 2px rgba(0,0,0,.12); }
+
+/* Existing auth form contract is retained, with presentation/accessibility only. */
+.apple-home .auth-dialog { border:1px solid var(--border2); border-radius:20px; max-width:min(460px,calc(100% - 32px)); width:100%; padding:28px; color:var(--text); background:#fff; }
+.apple-home .auth-dialog::backdrop { background:rgba(16,28,23,.5); }
+.apple-home .auth-header { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:20px; }
+.apple-home .auth-title { font-size:1.5rem; font-weight:650; }
+.apple-home .auth-close { width:44px; height:44px; border:0; background:#f1f4f2; border-radius:50%; cursor:pointer; font-size:1.5rem; color:var(--text); }
+.apple-home .auth-field { margin-bottom:16px; }
+.apple-home .auth-field label { display:block; margin-bottom:6px; font-size:.9375rem; }
+.apple-home .auth-field input { width:100%; min-height:48px; padding:10px 12px; border:1px solid #667085; border-radius:8px; color:var(--text); background:#fff; }
+.apple-home .auth-form :is(.auth-row,.auth-remember) { display:flex; gap:10px; align-items:center; }
+.apple-home .auth-error { padding:12px; margin:12px 0; border-radius:8px; background:#fff1ef; color:#a01b13; }
+.apple-home .auth-btn-primary { width:100%; margin-top:16px; }
+.apple-home .auth-switch { margin-top:16px; text-align:center; font-size:.9375rem; }
+.apple-home .auth-switch-btn { border:0; padding:8px; color:var(--accent); background:transparent; cursor:pointer; }
+
+@media (min-width:1201px) {
+  .apple-home #site-nav .snav-inner { display:grid; grid-template-columns:auto minmax(0,1fr) auto; column-gap:28px; }
+  .apple-home #site-nav .snav-links { justify-content:center; margin-inline:0; gap:clamp(16px,1.4vw,24px); }
+  .apple-home #site-nav .snav-right { margin-left:0; padding-left:20px; border-left:1px solid #e1e6e3; }
+  .apple-home { --apple-section-space:2.5rem; --apple-content-gap:1.5rem; --apple-card-pad:2rem; }
+  .apple-home .apple-intro-inner { display:grid; grid-template-columns:minmax(0,5fr) minmax(0,6fr); gap:40px; align-items:center; padding-top:104px; padding-bottom:var(--apple-section-space); }
+  .apple-home .apple-hero { padding:0; }
+  .apple-home h1 { font-size:clamp(3rem,4.2vw,3.75rem); max-width:none; text-wrap:pretty; }
+  .apple-home .hero-desc { font-size:1.0625rem; }
+  .apple-home .device-body { padding:20px; }
+  .apple-home .device-bar { padding:14px 20px; }
+  .apple-home .mock-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-bottom:18px; }
+  .apple-home .mock-kpi-value { font-size:1.5rem; }
+  /* V16: all five sample columns fit beside the hero at normal text size.
+     A rem minimum preserves readability and local scrolling with larger text. */
+  .apple-home .mock-table { min-width:31.25rem; }
+  .apple-home .mock-table :is(th,td) { padding-inline:8px; white-space:nowrap; }
+  .apple-home .mock-table th:nth-child(1) { width:24%; }
+  .apple-home .mock-table th:nth-child(2) { width:12%; }
+  .apple-home .mock-table th:nth-child(3) { width:14%; }
+  .apple-home .mock-table th:nth-child(4) { width:26%; }
+  .apple-home .mock-table th:nth-child(5) { width:24%; }
+  .apple-home .apple-table-hint { display:block; color:var(--muted); font-size:.8125rem; margin-bottom:12px; }
+  /* V13: the same spacing system as mobile/tablet, scaled for desktop. */
+  .apple-home .apple-section,.apple-home .apple-trust { padding-block:var(--apple-section-space); }
+  .apple-home .apple-section-heading { margin-bottom:var(--apple-card-pad); }
+  .apple-home .apple-steps { gap:var(--apple-card-pad); }
+  .apple-home .footer-step { padding-top:var(--apple-content-gap); }
+  .apple-home .footer-step-num { margin-bottom:var(--apple-content-gap); }
+  .apple-home .apple-includes h2 { margin-bottom:var(--apple-card-pad); }
+  .apple-home .apple-includes-grid { gap:var(--apple-content-gap); margin-bottom:var(--apple-content-gap); }
+  .apple-home .apple-includes-grid>div { padding:var(--apple-card-pad); }
+  .apple-home .apple-exchanges h2 { margin-bottom:var(--apple-content-gap); }
+  .apple-home .apple-exchanges .apple-container>p { margin-block:1rem var(--apple-content-gap); }
+  .apple-home .apple-exchange-card { padding:var(--apple-content-gap); }
+  .apple-home .asistencia-block { padding:var(--apple-card-pad); }
+  .apple-home .asistencia-badge { margin-bottom:1rem; }
+  .apple-home .asistencia-block>p strong { margin-bottom:1rem; }
+  .apple-home .asistencia-block .apple-advisory-status { margin-top:var(--apple-content-gap); }
+  .apple-home .asistencia-bullets { margin-block:var(--apple-content-gap); }
+  .apple-home .authors { gap:var(--apple-card-pad); }
+  .apple-home .author-card { padding-block:var(--apple-content-gap); }
+  .apple-home .authors-link { margin-top:var(--apple-content-gap); }
+  .apple-home .apple-editorial h2 { margin-bottom:var(--apple-card-pad); }
+  .apple-home .apple-editorial p:not(:last-child) { margin-bottom:1rem; }
+  .apple-home .apple-faq .apple-container>p { margin-bottom:var(--apple-card-pad); }
+  .apple-home .apple-faq-item summary { padding-block:var(--apple-content-gap); }
+  .apple-home .apple-faq-answer { padding-bottom:var(--apple-content-gap); }
+}
+@media (min-width:641px) and (max-width:1200px) {
+  .apple-home .apple-intro-inner { padding-top:120px; }
+  .apple-home .apple-hero { padding-bottom:48px; }
+  .apple-home .hero-checks { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:900px) {
+  .apple-home :is(.apple-exchange-grid,.apple-exchange-rest) { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .apple-home .apple-steps { gap:24px; }
+  .apple-home .authors { gap:28px; }
+}
+/* V11: tablet refinements; the approved mobile rules below stay unchanged. */
+@media (min-width:641px) and (max-width:1200px) {
+  .apple-home { --apple-section-space:2rem; --apple-content-gap:1.25rem; --apple-card-pad:1.5rem; }
+  .apple-home .apple-intro-inner { padding-top:96px; padding-bottom:var(--apple-section-space); }
+  .apple-home .apple-hero { padding-bottom:var(--apple-section-space); }
+  .apple-home .hero-desc { max-width:none; }
+  .apple-home .apple-hero-actions a[href="#como-funciona"] { display:none; }
+  .apple-home .cta-micro { max-width:none; font-size:clamp(.8125rem,1.55vw,.875rem); text-wrap:pretty; }
+  .apple-home .apple-tablet-only { display:inline; }
+  .apple-home .apple-section,.apple-home .apple-trust { padding-block:var(--apple-section-space); }
+  .apple-home .apple-section-heading { margin-bottom:var(--apple-card-pad); }
+  .apple-home .apple-eyebrow { margin-bottom:12px; }
+  .apple-home .apple-steps { gap:var(--apple-card-pad); }
+  .apple-home .footer-step { padding-top:var(--apple-card-pad); }
+  .apple-home .footer-step-num { margin-bottom:var(--apple-content-gap); }
+  .apple-home .apple-includes h2 { margin-bottom:var(--apple-card-pad); }
+  .apple-home .apple-includes-grid { gap:var(--apple-content-gap); margin-bottom:var(--apple-content-gap); }
+  .apple-home .apple-includes-grid>div { padding:var(--apple-card-pad); }
+  .apple-home .apple-report-action { display:flex; align-items:center; justify-content:center; padding:var(--apple-content-gap); border:1px solid #dce7e0; border-radius:16px; background:#fff; }
+  .apple-home .apple-exchanges h2 { margin-bottom:var(--apple-content-gap); }
+  .apple-home .apple-exchanges .apple-container>p { margin-block:12px var(--apple-card-pad); }
+  .apple-home .apple-exchange-card { padding:var(--apple-card-pad); }
+  .apple-home .asistencia-block { padding:var(--apple-card-pad); }
+  .apple-home .asistencia-badge { margin-bottom:12px; }
+  .apple-home .asistencia-block>p strong { margin-bottom:12px; }
+  .apple-home .asistencia-block .apple-advisory-status { margin-top:var(--apple-content-gap); }
+  .apple-home .asistencia-bullets { margin-block:var(--apple-content-gap) var(--apple-card-pad); }
+  .apple-home .authors { gap:var(--apple-card-pad); }
+  .apple-home .author-card { padding-block:var(--apple-content-gap); }
+  .apple-home .authors-link { margin-top:var(--apple-content-gap); }
+  .apple-home .apple-editorial h2 { margin-bottom:var(--apple-card-pad); }
+  .apple-home .apple-editorial p:not(:last-child) { margin-bottom:var(--apple-content-gap); }
+  .apple-home .apple-faq .apple-container>p { margin-bottom:var(--apple-card-pad); }
+  .apple-home .apple-faq-item summary { padding-block:var(--apple-content-gap); }
+  .apple-home .apple-faq-answer { padding-bottom:var(--apple-content-gap); }
+}
+@media (max-width:640px) {
+  .apple-home { --apple-pad:20px; --apple-section-space:1.5rem; --apple-content-gap:1rem; --apple-card-pad:1.25rem; }
+  .apple-home .apple-intro-inner { padding-top:100px; padding-bottom:var(--apple-section-space); }
+  .apple-home .apple-hero { padding:0 0 var(--apple-section-space); }
+  .apple-home h1 { font-size:clamp(2rem,8.4vw,3rem); letter-spacing:-.04em; line-height:1.08; margin-bottom:20px; }
+  .apple-home .hero-desc { font-size:1rem; margin-bottom:24px; }
+  .apple-home .hero-checks { display:grid; grid-template-columns:minmax(0,1fr); max-width:42ch; margin-inline:auto; gap:8px; font-size:.875rem; }
+  .apple-home .apple-hero-actions { gap:6px 16px; }
+  .apple-home .apple-hero-actions a[href="#como-funciona"] { display:none; }
+  .apple-home .cta-micro { margin-bottom:0; }
+  .apple-home .apple-demo { padding-bottom:0; }
+  .apple-home .apple-trust { padding-block:var(--apple-section-space); }
+  .apple-home .device-bar { padding:12px 16px; }
+  .apple-home .device-body { padding:16px; }
+  .apple-home .apple-table-hint { display:block; color:var(--muted); font-size:.8125rem; margin-bottom:12px; }
+  .apple-home .mock-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-bottom:16px; }
+  .apple-home .mock-kpi { padding:14px 12px; }
+  .apple-home .mock-kpi-value { font-size:1.4rem; }
+  .apple-home .device-frame { border-radius:14px; }
+  .apple-home .device-dot { display:none; }
+  .apple-home .device-url { margin:0; font-size:.8125rem; }
+  .apple-home :is(.apple-steps,.apple-includes-grid,.apple-exchange-grid,.authors) { grid-template-columns:minmax(0,1fr); }
+  .apple-home .apple-steps { gap:var(--apple-section-space); }
+  .apple-home .footer-step-num { margin-bottom:8px; }
+  .apple-home .apple-includes-grid { gap:var(--apple-content-gap); margin-bottom:var(--apple-section-space); }
+  .apple-home .apple-exchange-card { padding:var(--apple-card-pad); }
+  .apple-home .btn-primary,.apple-home .apple-includes .apple-button { width:100%; }
+  .apple-home .apple-trust-link { width:100%; margin-top:16px; }
+  .apple-home .apple-exchange-rest { grid-template-columns:minmax(0,1fr); }
+  .apple-home .apple-exchange-more>summary { list-style:none; display:flex; align-items:center; justify-content:space-between; gap:16px; min-height:48px; padding:14px 16px; border:1px solid var(--border2); border-radius:12px; color:var(--accent); font-weight:600; cursor:pointer; }
+  .apple-home .apple-exchange-more>summary::-webkit-details-marker { display:none; }
+  .apple-home .apple-exchange-more>summary>span { flex-shrink:0; font-size:1.5rem; line-height:1; }
+  .apple-home .apple-exchange-more[open]>summary>span { font-size:0; }
+  .apple-home .apple-exchange-more[open]>summary>span::after { content:'−'; font-size:1.5rem; }
+  .apple-home .apple-exchange-more>summary:active { background:#edf5f1; }
+  .apple-home .apple-exchange-more[open] .apple-exchange-rest { margin-top:16px; }
+  .apple-home .apple-exchanges-all { width:100%; margin-top:16px; }
+  .apple-home .apple-advisory-status { font-size:.9375rem; }
+  .apple-home .asistencia-bullets { flex-direction:column; }
+  .apple-home .btn-asistencia { width:100%; padding-inline:16px; }
+  .apple-home .author-card { gap:16px; }
+  .apple-home .author-avatar { width:72px; height:72px; }
+  .apple-home .author-portrait { flex-basis:72px; width:72px; height:72px; }
+  .apple-home .apple-faq-answer { padding-right:0; }
+  /* V9: one mobile spacing scale. Keep the hero's nav clearance intact. */
+  .apple-home .apple-section { padding-block:var(--apple-section-space); }
+  .apple-home .apple-section-heading { margin-bottom:var(--apple-section-space); }
+  .apple-home .apple-eyebrow { margin-bottom:12px; }
+  .apple-home .footer-step { padding-top:var(--apple-card-pad); }
+  .apple-home .apple-includes h2 { margin-bottom:var(--apple-section-space); }
+  .apple-home .apple-includes-grid>div { padding:var(--apple-card-pad); }
+  .apple-home .apple-exchanges h2 { margin-bottom:var(--apple-content-gap); }
+  .apple-home .apple-exchanges .apple-container>p { margin-block:12px var(--apple-card-pad); }
+  .apple-home .apple-exchange-grid h3 { margin-bottom:12px; }
+  .apple-home .apple-exchange-grid p { margin-bottom:var(--apple-content-gap); }
+  .apple-home .asistencia-block { padding:var(--apple-card-pad); }
+  .apple-home .asistencia-badge { margin-bottom:12px; }
+  .apple-home .asistencia-block>p strong { margin-bottom:12px; }
+  .apple-home .asistencia-block .apple-advisory-status { margin-top:var(--apple-content-gap); }
+  .apple-home .asistencia-bullets { margin-block:var(--apple-content-gap) var(--apple-card-pad); }
+  .apple-home .authors { gap:var(--apple-content-gap); }
+  .apple-home .author-card { padding-block:var(--apple-content-gap); }
+  .apple-home .authors-link { margin-top:var(--apple-content-gap); }
+  .apple-home .apple-editorial h2 { margin-bottom:var(--apple-section-space); }
+  .apple-home .apple-editorial p:not(:last-child) { margin-bottom:var(--apple-content-gap); }
+  .apple-home .apple-faq .apple-container>p { margin-bottom:var(--apple-section-space); }
+  .apple-home .apple-faq-item summary { padding-block:var(--apple-content-gap); }
+  .apple-home .apple-faq-answer { padding-bottom:var(--apple-card-pad); }
+}
+@media (max-width:1200px) {
+  .apple-home .apple-footer-top { grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px 24px; }
+  .apple-home .apple-footer-brand { grid-column:1 / -1; }
+  .apple-home .apple-footer-bottom { flex-direction:column; align-items:flex-start; }
+  .apple-home .apple-footer-bottom nav { order:0; width:100%; }
+  .apple-home .apple-footer-copyright { order:1; }
+}
+@media (max-width:640px) {
+  .apple-home .apple-footer { padding-block:24px; }
+  .apple-home .apple-footer-top { gap:20px 16px; }
+  .apple-home .apple-footer li a,.apple-home .apple-footer .apple-footer-logo { min-height:44px; }
+  .apple-home .apple-footer .apple-footer-logo { padding-block:10px; }
+  .apple-home .apple-footer-legal { margin-top:20px; }
+  .apple-home .apple-footer-bottom { gap:12px; }
+  .apple-home .apple-footer-bottom ul { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 16px; }
+}
+@media (pointer:coarse) {
+  .apple-home .apple-footer li a,.apple-home .apple-footer .apple-footer-logo { min-height:44px; }
+  .apple-home .apple-footer .apple-footer-logo { padding-block:10px; }
+}
+@media (max-width:360px) {
+  .apple-home { --apple-pad:16px; }
+  .apple-home .hero-checks { grid-template-columns:minmax(0,1fr); gap:8px; }
+  .apple-home .apple-hero-actions { flex-direction:column; }
+  .apple-home .btn-primary { width:100%; }
+  .apple-home .mock-kpi-value { font-size:1.25rem; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .apple-home *, .apple-home *::before, .apple-home *::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; }
+}
+@media (prefers-reduced-transparency:reduce) {
+  .apple-home #site-nav { background:#fff; backdrop-filter:none; -webkit-backdrop-filter:none; }
+}
+@media (prefers-contrast:more) {
+  .apple-home { --muted:#34434d; --border:#667085; }
+  .apple-home #site-nav { background:#fff; --snav-muted:#34434d; }
+}
+
+/* V24: approved V23 geometry, with the application's session-aware header. */
+.apple-home .mock-table-wrap { position:relative; }
+body.apple-home { padding:0; }
+.apple-home #site-nav { position:relative; top:auto; left:auto; right:auto; margin:0; padding:0; background:#fff; backdrop-filter:none; -webkit-backdrop-filter:none; }
+.apple-home #site-nav .snav-inner { margin-block:0; padding-block:8px; min-height:64px; height:auto; }
+.apple-home .apple-skip { position:absolute; top:0; }
+.apple-home .apple-intro-inner { padding-top:40px; }
+@media (max-width:1200px) {
+  .apple-home #site-nav .snav-inner { gap:16px; }
+  .apple-home #site-nav .snav-menu-toggle { margin-left:0; }
+  .apple-home #site-nav .snav-btn-login,.apple-home #site-nav .snav-skeleton { display:none; }
+  .apple-home .apple-intro-inner { padding-top:32px; }
+}
+@media (max-width:640px) {
+  .apple-home .apple-intro-inner { padding-top:36px; }
+}
+
+/* Home assistance copy follows the full width of its component. */
+.apple-home .apple-assistance .asistencia-block>p { max-width:none; }
+
+/* Shared catalogue cards: Home exchanges, Tools and future catalogue pages. */
+.apple-home {
+ --catalog-card-bg:#edf5f0; --catalog-card-border:#b9d8cb;
+ --catalog-card-radius:16px; --catalog-card-padding:24px; --catalog-card-gap:16px;
+}
+.apple-home main :is(.apple-catalog-grid,.apple-exchange-grid,.apple-exchange-rest,.tools-grid) {
+ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--catalog-card-gap);
+}
+.apple-home main :is(.apple-catalog-card,.apple-exchange-card,.tools-card) {
+ position:relative; display:flex; flex-direction:column; min-width:0;
+ padding:var(--catalog-card-padding); border:1px solid var(--catalog-card-border);
+ border-radius:var(--catalog-card-radius); background:var(--catalog-card-bg);
+ color:var(--text); font-family:var(--font-body); text-decoration:none;
+ transition:border-color .15s;
+}
+.apple-home main :is(.apple-catalog-card,.apple-exchange-card,.tools-card) h3 {
+ margin-bottom:16px; font-size:1.5rem; line-height:1.3; letter-spacing:-.035em; font-weight:650;
+}
+.apple-home main :is(.apple-exchange-card>p,.tools-card-description) {
+ color:var(--muted); font-size:.9375rem; line-height:1.65; margin-bottom:20px;
+}
+.apple-home main :is(.apple-exchange-card>span,.tools-card-link) {
+ display:inline-flex; align-items:center; align-self:flex-start; min-height:44px;
+ margin-top:auto; color:var(--accent); font-size:.875rem; font-weight:600; line-height:1.5;
+ text-decoration:none;
+}
+/* One existing semantic link covers the whole Tools card, without extra tab stops. */
+.apple-home main .tools-card-link::after { content:''; position:absolute; inset:0; border-radius:var(--catalog-card-radius); }
+.apple-home main .tools-card:focus-within,
+.apple-home main .apple-exchange-card:focus-visible {
+ border-color:var(--accent); outline:3px solid #005fcc; outline-offset:4px;
+}
+.apple-home main .tools-card-link:focus-visible { outline:none; }
+@media (hover:hover) and (pointer:fine) {
+ .apple-home main :is(.apple-catalog-card,.apple-exchange-card,.tools-card):hover { border-color:var(--accent); }
+ .apple-home main .tools-card:hover .tools-card-link { text-decoration:underline; }
+}
+@media (max-width:1200px) {
+ .apple-home main :is(.apple-catalog-grid,.apple-exchange-grid,.apple-exchange-rest,.tools-grid) { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:640px) {
+ .apple-home { --catalog-card-padding:20px; }
+ .apple-home main :is(.apple-catalog-grid,.apple-exchange-grid,.apple-exchange-rest,.tools-grid) { grid-template-columns:minmax(0,1fr); }
+}
+@media (prefers-reduced-motion:reduce) {
+ .apple-home main :is(.apple-catalog-card,.apple-exchange-card,.tools-card) { transition:none; }
+}
+
+</style><style>/* Reusable CTA panel, matching the approved Home assistance block.
+   Opt-in only: no existing page changes until it adopts these classes. */
+.apple-home .apple-cta-section { padding-block:var(--apple-section-space); }
+.apple-home .apple-cta {
+ display:grid; gap:var(--apple-content-gap); padding:var(--apple-card-pad);
+ border:1px solid #d4e5db; border-radius:20px; background:#edf5f0; color:#415b4d;
+}
+.apple-home .apple-cta>* { margin:0; min-width:0; }
+.apple-home .apple-cta .apple-cta-eyebrow { color:#006b54; font-size:.875rem; line-height:1.5; letter-spacing:.025em; }
+.apple-home .apple-cta .apple-cta-title { color:#1c3227; font-size:clamp(1.5rem,3vw,2rem); line-height:1.2; letter-spacing:-.03em; font-weight:650; }
+.apple-home .apple-cta p { max-width:none; }
+.apple-home .apple-cta-notice { font-size:.9375rem; }
+.apple-home .apple-cta-notice strong { font-weight:550; }
+.apple-home .apple-cta-benefits { display:flex; flex-wrap:wrap; gap:8px 28px; padding:0; list-style:none; color:#365745; font-size:.9375rem; }
+.apple-home .apple-cta .apple-button { justify-self:start; }
+.apple-home .apple-cta--compact { grid-template-columns:minmax(0,1fr) auto; align-items:center; }
+.apple-home .apple-cta--compact .apple-cta-title { font-size:1.5rem; }
+.apple-home .apple-cta-copy p { margin-top:12px; }
+@media (max-width:900px) { .apple-home .apple-cta--compact { grid-template-columns:minmax(0,1fr); } }
+@media (max-width:640px) {
+ .apple-home .apple-cta-benefits { flex-direction:column; }
+ .apple-home .apple-cta .apple-button { width:100%; justify-content:center; }
+}
+
+</style><style>/* Opt-in FAQ variant; shared Home assets stay unchanged. */
+.apple-faq-page .faq-intro{padding-block:40px 32px;background:var(--intro-bg);color:var(--intro-text)}
+.apple-faq-page .faq-intro .apple-eyebrow{color:var(--intro-accent);margin-bottom:12px}
+.apple-faq-page h1{width:100%;max-width:none;font-size:clamp(2rem,4.5vw,3.5rem);line-height:1.1;letter-spacing:-.035em;margin-bottom:20px}
+.apple-faq-page h1 em{font-style:normal;color:var(--intro-accent)}
+.apple-faq-page .faq-lead{width:100%;max-width:none;font-size:1.125rem;line-height:1.6;color:var(--intro-muted)}
+.apple-faq-page .faq-topics{padding-block:20px;border-bottom:1px solid var(--border)}
+.apple-faq-page .faq-topics ul{display:flex;flex-wrap:wrap;gap:8px 24px;list-style:none;padding:0}
+.apple-faq-page .faq-topics a{display:inline-flex;align-items:center;min-height:44px;font-weight:600;font-size:.9375rem;text-decoration:underline}
+.apple-faq-page .faq-section{padding-block:var(--apple-section-space);scroll-margin-top:24px}
+.apple-faq-page .faq-section:nth-of-type(odd){background:#f5f7f6}
+.apple-faq-page .faq-heading{margin-bottom:24px}
+.apple-faq-page .faq-heading h2{font-size:clamp(1.625rem,2.8vw,2.25rem);line-height:1.18}
+.apple-faq-page .faq-heading p{margin-top:8px;color:var(--muted)}
+.apple-faq-page .faq-list{border-top:1px solid var(--border)}
+.apple-faq-page .apple-faq-item{scroll-margin-top:24px}
+.apple-faq-page .apple-faq-item summary{padding-block:20px;gap:16px}
+.apple-faq-page .apple-faq-item[open] summary{color:var(--accent)}
+.apple-faq-page .apple-faq-answer{max-width:none;padding-bottom:20px}
+.apple-faq-page .apple-faq-answer p{margin-bottom:8px}
+.apple-faq-page .faq-answer-links{display:flex;flex-wrap:wrap;gap:4px 24px;padding:0;list-style:none}
+.apple-faq-page .faq-answer-links a{min-height:44px;align-items:center;gap:6px}
+.apple-faq-page #site-nav a[aria-current="page"]{color:var(--text);font-weight:650}
+@media(min-width:641px) and (max-width:1200px){.apple-faq-page .faq-intro{padding-top:32px}}
+@media(max-width:640px){.apple-faq-page .faq-intro{padding-block:36px 24px}.apple-faq-page h1{font-size:clamp(2rem,8.4vw,3rem);margin-bottom:16px}.apple-faq-page .faq-lead{font-size:1rem}.apple-faq-page .faq-topics ul{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 16px}.apple-faq-page .faq-topics a{font-size:.875rem}.apple-faq-page .faq-heading{margin-bottom:20px}.apple-faq-page .apple-faq-item summary{padding-block:18px}}
+</style>
+<script>window.fetch=function(input){const u=new URL(typeof input==='string'?input:input.url,location.href);if(u.pathname==='/api/me')return Promise.resolve(new Response('{"user":null}',{status:200,headers:{'Content-Type':'application/json'}}));return Promise.reject(new Error('Solicitud no disponible en esta vista.'));};</script></head><body class="apple-home apple-faq-page">
+<a class="apple-skip" href="#contenido">Saltar al contenido</a>
+<nav id="site-nav" aria-label="Principal">
+  <div class="snav-inner">
+    <a href="https://marianosevilla.com/" class="snav-logo">mariano<span>sevilla</span>.com</a>
+    <ul class="snav-links">
+      <li><a href="https://marianosevilla.com/herramientas">Herramientas</a></li>
+      <li><a href="https://marianosevilla.com/como-funciona">Cómo funciona</a></li>
+      <li><a href="https://marianosevilla.com/recursos">Recursos</a></li>
+      <li><a href="https://marianosevilla.com/faq" aria-current="page">FAQ</a></li>
+      <li><a href="https://marianosevilla.com/contacto">Contacto</a></li>
+    </ul>
+    <div class="snav-right">
+      <div class="snav-skeleton" aria-hidden="true"></div>
+    </div>
+  </div>
+</nav>
+<script>/**
+ * nav.js — Header desktop unificado
+ *
+ * Uso: añadir <nav id="site-nav"></nav> en el HTML y cargar este script.
+ * El script detecta la página actual, hace fetch a /api/me y renderiza
+ * el estado correcto (no autenticado / autenticado / admin).
+ *
+ * Expone window.SiteNav con:
+ *   SiteNav.updateAvatar(initial)  — para actualizar la inicial del avatar
+ *                                    desde páginas que cambian el nombre del usuario.
+ */
+(function () {
+  'use strict';
+
+  // ── HTML de la zona derecha (skeleton + botones + avatar) ────────────────
+  // Se inyecta en .snav-right cuando ya existe el shell estático en el HTML.
+  function buildRightHTML() {
+    return `
+          <!-- Skeleton: visible mientras /api/me está en vuelo -->
+          <div class="snav-skeleton" id="snavSkeleton" aria-hidden="true"></div>
+
+          <!-- Estado NO autenticado (oculto hasta que /api/me resuelve) -->
+          <a href="https://marianosevilla.com/login/"   class="snav-btn-login snav-hidden" id="snavBtnLogin">Iniciar sesión</a>
+          <a href="https://marianosevilla.com/signup/"  class="snav-btn-cta   snav-hidden" id="snavBtnSignup">Crea tu cuenta gratis</a>
+
+          <!-- Estado autenticado (oculto hasta que /api/me resuelve) -->
+          <div class="snav-avatar-wrap snav-hidden" id="snavAvatarWrap">
+            <button class="snav-avatar" id="snavAvatar" aria-label="Menú de usuario" aria-haspopup="true" aria-expanded="false">U</button>
+            <div class="snav-dropdown" id="snavDropdown" role="menu">
+              <a href="https://marianosevilla.com/pricing"   class="snav-dd-item snav-hidden" id="snavItemPlanes"  role="menuitem">💎&nbsp; Planes</a>
+              <a href="https://marianosevilla.com/account"   class="snav-dd-item"             id="snavItemAccount" role="menuitem">👤&nbsp; Mi cuenta</a>
+              <a href="https://marianosevilla.com/dashboard" class="snav-dd-item"             id="snavItemDash"    role="menuitem">⚡&nbsp; Dashboard</a>
+              <a href="https://marianosevilla.com/stats"     class="snav-dd-item snav-hidden" id="snavItemStats"          role="menuitem">📊&nbsp; Stats</a>
+              <a href="https://marianosevilla.com/admin/asesoramiento"      class="snav-dd-item snav-hidden" id="snavItemAdminAsesoria"    role="menuitem">🛠&nbsp; Panel asesoramiento</a>
+              <a href="https://marianosevilla.com/admin/comunicaciones"     class="snav-dd-item snav-hidden" id="snavItemAdminComms"       role="menuitem">📢&nbsp; Comunicaciones</a>
+              <a href="https://marianosevilla.com/admin/recursos"           class="snav-dd-item snav-hidden" id="snavItemAdminRecursos"    role="menuitem">📚&nbsp; Solicitudes de recursos</a>
+              <a href="https://marianosevilla.com/mis-solicitudes-fiscales" class="snav-dd-item snav-hidden" id="snavItemMisSolicitudes"  role="menuitem">📋&nbsp; Mis solicitudes fiscales</a>
+              <div class="snav-dd-divider"></div>
+              <button class="snav-dd-item danger" id="snavBtnLogout" role="menuitem">↩&nbsp; Cerrar sesión</button>
+            </div>
+          </div>`;
+  }
+
+  // ── HTML completo del nav (fallback si el shell NO está en el HTML) ───────
+  function buildFullHTML() {
+    return `
+      <div class="snav-inner">
+
+        <a href="https://marianosevilla.com/" class="snav-logo">mariano<span>sevilla</span>.com</a>
+
+        <ul class="snav-links">
+          <li><a href="https://marianosevilla.com/como-funciona">Cómo funciona</a></li>
+          <li><a href="https://marianosevilla.com/faq">FAQ</a></li>
+          <li><a href="https://marianosevilla.com/contacto">Contacto</a></li>
+        </ul>
+
+        <div class="snav-right">
+          ${buildRightHTML()}
+        </div>
+      </div>`;
+  }
+
+  // ── Marcar item activo según la URL actual ────────────────────────────────
+  function markActive() {
+    const path = window.location.pathname;
+
+    // Dropdown items (avatar menu)
+    const map = {
+      '/account':                   'snavItemAccount',
+      '/dashboard':                 'snavItemDash',
+      '/stats':                     'snavItemStats',
+      '/pricing':                   'snavItemPlanes',
+      '/admin/asesoramiento':       'snavItemAdminAsesoria',
+      '/admin/comunicaciones':      'snavItemAdminComms',
+      '/admin/recursos':            'snavItemAdminRecursos',
+      '/mis-solicitudes-fiscales':  'snavItemMisSolicitudes',
+    };
+    for (const [prefix, id] of Object.entries(map)) {
+      if (path.startsWith(prefix)) {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('active');
+        break;
+      }
+    }
+
+    // Links centrales del nav (Cómo funciona / FAQ / Contacto)
+    const navLinks = document.querySelectorAll('.snav-links a');
+    navLinks.forEach(function (a) {
+      const href = a.getAttribute('href');
+      if (!href || href === '/') return;
+      if (path === href || path.startsWith(href + '/')) {
+        a.classList.add('active');
+      }
+    });
+  }
+
+  // ── Dropdown ──────────────────────────────────────────────────────────────
+  function initDropdown() {
+    const avatar   = document.getElementById('snavAvatar');
+    const dropdown = document.getElementById('snavDropdown');
+    if (!avatar || !dropdown) return;
+
+    avatar.addEventListener('click', function (e) {
+      e.stopPropagation();
+      const isOpen = dropdown.classList.toggle('open');
+      avatar.setAttribute('aria-expanded', String(isOpen));
+    });
+
+    // Cerrar al hacer click fuera
+    document.addEventListener('click', function () {
+      dropdown.classList.remove('open');
+      avatar.setAttribute('aria-expanded', 'false');
+    });
+
+    // Cerrar con Escape
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        dropdown.classList.remove('open');
+        avatar.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
+
+  // Mobile navigation reuses the per-page links and current auth state.
+  let refreshMobileMenu = function () {};
+
+  function initMobileMenu() {
+    const nav = document.getElementById('site-nav');
+    const inner = nav && nav.querySelector('.snav-inner');
+    if (!nav || !inner || document.getElementById('snavMenuToggle')) return;
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.id = 'snavMenuToggle';
+    toggle.className = 'snav-menu-toggle';
+    toggle.setAttribute('aria-controls', 'snavMobileMenu');
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.setAttribute('aria-label', 'Abrir menú');
+    const icon = document.createElement('span');
+    icon.className = 'snav-menu-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    toggle.appendChild(icon);
+    inner.appendChild(toggle);
+
+    const menu = document.createElement('div');
+    menu.id = 'snavMobileMenu';
+    menu.className = 'snav-mobile-menu';
+    menu.setAttribute('role', 'navigation');
+    menu.setAttribute('aria-label', 'Navegación móvil');
+    menu.hidden = true;
+    nav.appendChild(menu);
+
+    function closeMenu(returnFocus) {
+      if (menu.hidden) return;
+      menu.hidden = true;
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.setAttribute('aria-label', 'Abrir menú');
+      if (returnFocus) toggle.focus();
+    }
+
+    function addLink(label, href, isPrimary, isActive) {
+      const link = document.createElement('a');
+      link.href = href;
+      link.textContent = label;
+      link.className = 'snav-mobile-link' +
+        (isPrimary ? ' snav-mobile-link-primary' : '') +
+        (isActive ? ' active' : '');
+      menu.appendChild(link);
+    }
+
+    function addSeparator() {
+      const sep = document.createElement('div');
+      sep.className = 'snav-mobile-separator';
+      sep.setAttribute('aria-hidden', 'true');
+      menu.appendChild(sep);
+    }
+
+    refreshMobileMenu = function () {
+      menu.replaceChildren();
+      nav.querySelectorAll('.snav-links a').forEach(function (link) {
+        addLink(link.textContent.trim(), link.getAttribute('href'), false,
+          link.classList.contains('active'));
+      });
+      addSeparator();
+
+      const userPanel = document.getElementById('snavAvatarWrap');
+      const authenticated = userPanel && !userPanel.classList.contains('snav-hidden');
+
+      if (authenticated) {
+        const drop = document.getElementById('snavDropdown');
+        if (!drop) return;
+        drop.querySelectorAll('.snav-dd-item').forEach(function (item) {
+          if (item.classList.contains('snav-hidden')) return;
+          if (item.tagName === 'A') {
+            addLink(item.textContent.trim(), item.getAttribute('href'), false,
+              item.classList.contains('active'));
+          } else if (item.id === 'snavBtnLogout') {
+            const logout = document.createElement('button');
+            logout.type = 'button';
+            logout.className = 'snav-mobile-link';
+            logout.textContent = item.textContent.trim();
+            logout.addEventListener('click', function () { item.click(); });
+            menu.appendChild(logout);
+          }
+        });
+      } else {
+        const login = document.getElementById('snavBtnLogin');
+        const signup = document.getElementById('snavBtnSignup');
+        if (login && !login.classList.contains('snav-hidden'))
+          addLink(login.textContent.trim(), login.getAttribute('href'), false, false);
+        if (signup && !signup.classList.contains('snav-hidden'))
+          addLink(signup.textContent.trim(), signup.getAttribute('href'), true, false);
+      }
+    };
+
+    toggle.addEventListener('click', function () {
+      const opening = menu.hidden;
+      if (opening) refreshMobileMenu();
+      menu.hidden = !opening;
+      toggle.setAttribute('aria-expanded', String(opening));
+      toggle.setAttribute('aria-label', opening ? 'Cerrar menú' : 'Abrir menú');
+    });
+    menu.addEventListener('click', function (event) {
+      if (event.target.closest('a,button')) closeMenu(false);
+    });
+    document.addEventListener('click', function (event) {
+      if (!nav.contains(event.target)) closeMenu(false);
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') closeMenu(true);
+    });
+    window.addEventListener('resize', function () {
+      if (window.innerWidth > 1200) closeMenu(false);
+    });
+    refreshMobileMenu();
+  }
+
+  // ── Logout ────────────────────────────────────────────────────────────────
+  function initLogout() {
+    const btn = document.getElementById('snavBtnLogout');
+    if (!btn) return;
+    btn.addEventListener('click', async function () {
+      try {
+        await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+      } catch (_) {}
+      window.location.href = '/';
+    });
+  }
+
+  // ── Actualizar estado según /api/me ───────────────────────────────────────
+  async function updateAuthState() {
+    // Por defecto mostramos botones (no autenticado).
+    // Se pone a false si detectamos sesión activa.
+    let authenticated = false;
+
+    try {
+      const r = await fetch('/api/me', { credentials: 'include' });
+
+      if (r.ok) {
+        const d = await r.json();
+
+        if (d && d.user) {
+          authenticated = true;
+          const user = d.user;
+
+          // Mostrar avatar con la inicial correcta
+          const avatarWrap = document.getElementById('snavAvatarWrap');
+          const avatar     = document.getElementById('snavAvatar');
+          if (avatarWrap) avatarWrap.classList.remove('snav-hidden');
+          if (avatar) {
+            const name = user.full_name || user.email || 'U';
+            avatar.textContent = name.charAt(0).toUpperCase();
+          }
+
+          // Mostrar items según rol
+          if (user.is_admin) {
+            const planes          = document.getElementById('snavItemPlanes');
+            const stats           = document.getElementById('snavItemStats');
+            const adminAsesoria   = document.getElementById('snavItemAdminAsesoria');
+            const adminComms      = document.getElementById('snavItemAdminComms');
+            const adminRecursos   = document.getElementById('snavItemAdminRecursos');
+            const misSolicitudes  = document.getElementById('snavItemMisSolicitudes');
+            if (planes)         planes.classList.remove('snav-hidden');
+            if (stats)          stats.classList.remove('snav-hidden');
+            if (adminAsesoria)  adminAsesoria.classList.remove('snav-hidden');
+            if (adminComms)     adminComms.classList.remove('snav-hidden');
+            if (adminRecursos)  adminRecursos.classList.remove('snav-hidden');
+            if (misSolicitudes) misSolicitudes.classList.remove('snav-hidden');
+          } else if (user.is_fiscal_advisor) {
+            const adminAsesoria = document.getElementById('snavItemAdminAsesoria');
+            if (adminAsesoria) adminAsesoria.classList.remove('snav-hidden');
+          }
+        }
+      }
+
+    } catch (_) {
+      // Error de red: se muestra el estado no autenticado (comportamiento correcto)
+    } finally {
+      // Ocultar skeleton siempre (tanto si hay sesión como si no)
+      const skeleton = document.getElementById('snavSkeleton');
+      if (skeleton) skeleton.classList.add('snav-hidden');
+
+      // Mostrar botones solo si no hay sesión
+      if (!authenticated) {
+        const btnLogin  = document.getElementById('snavBtnLogin');
+        const btnSignup = document.getElementById('snavBtnSignup');
+        if (btnLogin)  btnLogin.classList.remove('snav-hidden');
+        if (btnSignup) btnSignup.classList.remove('snav-hidden');
+      }
+      refreshMobileMenu();
+    }
+  }
+
+  // ── Init principal ────────────────────────────────────────────────────────
+  function init() {
+    const nav = document.getElementById('site-nav');
+    if (!nav) return;
+
+    const existing = nav.querySelector('.snav-inner');
+    if (existing) {
+      // Shell estático ya en el HTML: solo hidratar .snav-right
+      // Esto garantiza que logo + links nunca desaparecen, ni un frame.
+      const right = existing.querySelector('.snav-right');
+      if (right) right.innerHTML = buildRightHTML();
+    } else {
+      // Fallback: generar el nav completo (no debería ocurrir con los HTML actualizados)
+      nav.innerHTML = buildFullHTML();
+    }
+
+    markActive();
+    initDropdown();
+    initLogout();
+    initMobileMenu();
+    updateAuthState();
+  }
+
+  // ── API pública ───────────────────────────────────────────────────────────
+  window.SiteNav = {
+    /** Actualiza la inicial del avatar (útil en account.html al cambiar el nombre) */
+    updateAvatar: function (initial) {
+      const avatar = document.getElementById('snavAvatar');
+      if (avatar && initial) avatar.textContent = String(initial).charAt(0).toUpperCase();
+    },
+  };
+
+  // ── Bootstrap ─────────────────────────────────────────────────────────────
+  //
+  // Si el script está posicionado justo después de <nav id="site-nav">,
+  // el elemento ya existe en el DOM cuando este código ejecuta.
+  // En ese caso init() se llama de forma síncrona — el skeleton aparece
+  // al instante, sin esperar a DOMContentLoaded.
+  //
+  // Si por cualquier razón el nav aún no existe (script en <head>, etc.),
+  // se usa el fallback estándar.
+  if (document.getElementById('site-nav')) {
+    init();
+  } else if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+})();
+
+</script>
+<noscript>
+<style>
+/* Native mobile disclosure: useful in HTML viewers without JavaScript too. */
+.apple-home .snav-right{display:none}
+.apple-home .apple-noscript-menu{display:none}
+@media (min-width:1201px){
+  .apple-home #site-nav{position:static;height:auto}
+  .apple-home .snav-inner{flex-wrap:wrap;padding-block:16px;gap:16px}
+  .apple-home .snav-links{display:flex;position:static;transform:none;flex-wrap:wrap;gap:12px}
+  .apple-home .apple-intro-inner{padding-top:48px}
+}
+@media (max-width:1200px){
+  .apple-home .apple-noscript-access{display:none}
+  .apple-home .apple-noscript-menu{display:block;position:absolute;top:8px;right:var(--apple-pad);z-index:1001}
+  .apple-home .apple-noscript-menu>summary{display:flex;align-items:center;justify-content:center;width:44px;height:44px;list-style:none;border:1px solid #d8e1dd;border-radius:9px;background:#f3f6f5;color:var(--text);cursor:pointer}
+  .apple-home .apple-noscript-menu>summary::-webkit-details-marker{display:none}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon{background:transparent}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::before{transform:translateY(6px) rotate(45deg)}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::after{transform:translateY(-6px) rotate(-45deg)}
+  .apple-home .apple-noscript-panel{position:absolute;top:56px;left:auto;right:calc(-1 * var(--apple-pad));width:100vw;display:flex;flex-direction:column;gap:4px;padding:12px var(--apple-pad) 18px;max-height:calc(100vh - 64px);max-height:calc(100dvh - 64px);overflow-y:auto;overscroll-behavior:contain;background:#fff;border-top:1px solid var(--border);box-shadow:0 14px 28px rgba(20,34,30,.1)}
+  .apple-home .apple-noscript-panel>a{display:flex;align-items:center;min-height:44px;padding:11px 14px;border-radius:8px;color:var(--muted);font-size:.9375rem;line-height:1.4;text-decoration:none}
+  .apple-home .apple-noscript-panel>a:hover{background:#f1f5f3;color:var(--text)}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary{justify-content:center;min-height:48px;border-radius:999px;background:var(--accent);color:#fff;font-weight:600}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary:hover{background:#00533f}
+  .apple-home .apple-noscript-menu .snav-menu-icon{width:19px}
+  .apple-home #site-nav .snav-logo{max-width:calc(100% - 60px)}
+}
+</style>
+<details class="apple-noscript-menu">
+  <summary><span class="snav-menu-icon" aria-hidden="true"></span><span class="apple-sr-only">Menú principal</span></summary>
+  <nav class="apple-noscript-panel" aria-label="Navegación móvil">
+    <a href="https://marianosevilla.com/herramientas">Herramientas</a>
+    <a href="https://marianosevilla.com/como-funciona">Cómo funciona</a>
+    <a href="https://marianosevilla.com/recursos">Recursos</a>
+    <a href="https://marianosevilla.com/faq" aria-current="page">FAQ</a>
+    <a href="https://marianosevilla.com/contacto">Contacto</a>
+    <a href="https://marianosevilla.com/login/">Iniciar sesión</a>
+    <a href="https://marianosevilla.com/signup/" class="snav-mobile-link-primary">Crear cuenta</a>
+  </nav>
+</details>
+<div class="apple-noscript-access"><a href="https://marianosevilla.com/login/">Iniciar sesión</a><a href="https://marianosevilla.com/signup/">Crear cuenta</a></div>
+</noscript>
+<main id="contenido" tabindex="-1"><section class="faq-intro" aria-labelledby="faq-title"><div class="apple-container"><p class="apple-eyebrow">Fiscalidad y ayuda</p><h1 id="faq-title">Preguntas frecuentes sobre impuestos de <em>criptomonedas.</em></h1><p class="faq-lead">Resuelve tus dudas sobre el historial de tus exchanges, el cálculo FIFO y la información que necesitas para preparar tu declaración.</p></div></section>
+<nav class="faq-topics" aria-label="Temas de preguntas frecuentes"><div class="apple-container"><ul><li><a href="#historial-y-fifo">Historial y cálculo FIFO</a></li><li><a href="#declaracion-e-impuestos">Declaración e impuestos</a></li><li><a href="#informe-y-cuenta">Informe y cuenta</a></li><li><a href="#privacidad-y-ayuda">Privacidad y ayuda</a></li></ul></div></nav><section class="faq-section" id="historial-y-fifo" aria-labelledby="historial-y-fifo-title"><div class="apple-container"><div class="faq-heading"><h2 id="historial-y-fifo-title">Historial y cálculo FIFO</h2><p>Prepara los archivos y entiende qué necesita el cálculo.</p></div><div class="faq-list"><details class="apple-faq-item" id="informe-exchange"><summary>¿Cómo obtengo el informe fiscal o historial de Binance, Coinbase o Bit2Me?</summary><div class="apple-faq-answer"><p>Consulta las instrucciones de tu plataforma para descargar el historial y los archivos admitidos. El nombre del documento, su formato y el periodo disponible pueden variar. Conserva el historial de compras anteriores, no solo el del ejercicio que vas a revisar.</p><ul class="faq-answer-links"><li><a href="https://marianosevilla.com/exchanges/binance">Guía de Binance <span aria-hidden="true">→</span></a></li><li><a href="https://marianosevilla.com/exchanges/coinbase">Guía de Coinbase <span aria-hidden="true">→</span></a></li><li><a href="https://marianosevilla.com/exchanges/bit2me">Guía de Bit2Me <span aria-hidden="true">→</span></a></li></ul></div></details><details class="apple-faq-item" id="extracto-informe-fifo"><summary>¿Qué diferencia hay entre el extracto del exchange y el informe fiscal FIFO?</summary><div class="apple-faq-answer"><p>El extracto recoge los movimientos que facilita una plataforma. El informe FIFO utiliza los datos importados para calcular el coste de las unidades transmitidas y su resultado. Un archivo de una sola plataforma puede ser insuficiente si compraste o transferiste criptomonedas desde otras. Revisa el historial y las limitaciones antes de usar el resultado.</p><ul class="faq-answer-links"><li><a href="https://marianosevilla.com/como-funciona">Cómo funciona el informe <span aria-hidden="true">→</span></a></li></ul></div></details><details class="apple-faq-item" id="historial-completo"><summary>¿Por qué necesito el historial completo para calcular el FIFO?</summary><div class="apple-faq-answer"><p>Porque una venta del ejercicio puede utilizar unidades adquiridas años antes. Si faltan compras, comisiones o movimientos, el coste de adquisición puede quedar incompleto. Incluye los antecedentes necesarios para identificar las unidades transmitidas y conserva los justificantes.</p><ul class="faq-answer-links"><li><a href="https://marianosevilla.com/metodo-fifo-criptomonedas">Entender el método FIFO <span aria-hidden="true">→</span></a></li></ul></div></details><details class="apple-faq-item" id="varios-exchanges"><summary>¿Cómo se aplica el FIFO si opero en varios exchanges?</summary><div class="apple-faq-answer"><p>Para revisar las transmisiones de una misma criptomoneda homogénea necesitas considerar sus adquisiciones y movimientos, aunque procedan de distintas plataformas. Generar informes separados no acredita por sí solo que exista una consolidación fiscal global. Comprueba la cobertura real de la herramienta y revisa las transferencias entre cuentas.</p><ul class="faq-answer-links"><li><a href="https://marianosevilla.com/metodo-fifo-criptomonedas">Ver instrucciones de cálculo <span aria-hidden="true">→</span></a></li></ul></div></details><details class="apple-faq-item" id="exchanges-compatibles"><summary>¿Con qué exchanges y formatos es compatible la herramienta?</summary><div class="apple-faq-answer"><p>Consulta el catálogo actualizado y las instrucciones de cada plataforma. La compatibilidad depende del tipo de archivo y de las operaciones incluidas; no basta con que el exchange aparezca mencionado en una guía. Si tu formato no está indicado, consúltanos antes de prepararlo.</p><ul class="faq-answer-links"><li><a href="https://marianosevilla.com/exchanges">Consultar exchanges compatibles <span aria-hidden="true">→</span></a></li></ul></div></details><details class="apple-faq-item" id="error-archivo"><summary>¿Qué hago si mi archivo da error o faltan compras en el historial?</summary><div class="apple-faq-answer"><p>Comprueba que has elegido la plataforma correcta y descargado el formato y periodo indicados en su guía. No edites cabeceras ni elimines operaciones para forzar la importación. Si el problema continúa, contacta indicando el exchange y el mensaje de error, sin enviar datos personales o fiscales innecesarios.</p><ul class="faq-answer-links"><li><a href="https://marianosevilla.com/contacto">Consultar una incidencia <span aria-hidden="true">→</span></a></li></ul></div></details></div></div></section><section class="faq-section" id="declaracion-e-impuestos" aria-labelledby="declaracion-e-impuestos-title"><div class="apple-container"><div class="faq-heading"><h2 id="declaracion-e-impuestos-title">Declaración e impuestos</h2><p>Distingue operaciones, rentas y obligaciones.</p></div><div class="faq-list"><details class="apple-faq-item" id="sin-euros"><summary>¿Tengo que declarar las criptomonedas aunque no las cambie a euros?</summary><div class="apple-faq-answer"><p>No convertirlas a euros no evita que exista una renta: una permuta entre criptomonedas puede generar una ganancia o pérdida. Recibir determinadas recompensas también puede tener consecuencias fiscales. La obligación de presentar IRPF depende del conjunto de tus rentas y circunstancias; no de haber retirado dinero al banco.</p><ul class="faq-answer-links"><li><a href="https://marianosevilla.com/metodo-fifo-criptomonedas">Consultar la guía fiscal <span aria-hidden="true">→</span></a></li></ul></div></details><details class="apple-faq-item" id="solo-mantener"><summary>¿Tengo que declarar criptomonedas si solo las compro y las mantengo?</summary><div class="apple-faq-answer"><p>La compra y la simple tenencia, sin transmisión ni otras rentas, no equivalen por sí solas a una ganancia por venta. Debes revisar por separado las obligaciones informativas o patrimoniales que puedan corresponder y si has recibido recompensas.</p><ul class="faq-answer-links"><li><a href="https://marianosevilla.com/modelo-721-criptomonedas">Consultar el Modelo 721 <span aria-hidden="true">→</span></a></li></ul></div></details><details class="apple-faq-item" id="importe-minimo"><summary>¿Existe un importe mínimo para declarar criptomonedas?</summary><div class="apple-faq-answer"><p>No hay una única cifra que resuelva todas las obligaciones relacionadas con criptomonedas. Los requisitos para presentar IRPF dependen de tus rentas y circunstancias. Los límites de una declaración informativa, como el Modelo 721, responden a otra obligación y no son un mínimo exento de IRPF.</p><ul class="faq-answer-links"><li><a href="https://marianosevilla.com/contacto">Revisar mi duda <span aria-hidden="true">→</span></a></li></ul></div></details><details class="apple-faq-item" id="perdidas"><summary>¿Puedo compensar las pérdidas de criptomonedas?</summary><div class="apple-faq-answer"><p>Las pérdidas realizadas en transmisiones pueden tener efectos en el IRPF con las reglas y límites aplicables. Que baje el precio de una criptomoneda que conservas no equivale a haber realizado una pérdida. Una estafa, un impago o la quiebra de una plataforma requieren un análisis distinto.</p><ul class="faq-answer-links"><li><a href="https://marianosevilla.com/compensar-perdidas-criptomonedas">Consultar la guía de pérdidas <span aria-hidden="true">→</span></a></li></ul></div></details><details class="apple-faq-item" id="transferencias-propias"><summary>¿Tributa transferir criptomonedas entre mis propias wallets o exchanges?</summary><div class="apple-faq-answer"><p>Un traslado entre cuentas o wallets de tu titularidad debe distinguirse de una venta, una permuta o una entrega a un tercero. Conserva pruebas que permitan identificar el origen, el destino y la titularidad, y revisa por separado las comisiones y cualquier conversión realizada durante el movimiento.</p><ul class="faq-answer-links"><li><a href="https://marianosevilla.com/metodo-fifo-criptomonedas">Entender el historial FIFO <span aria-hidden="true">→</span></a></li></ul></div></details><details class="apple-faq-item" id="staking"><summary>¿Cómo tributan las recompensas de staking?</summary><div class="apple-faq-answer"><p>Su tratamiento depende de la operativa y de las condiciones en que recibes las recompensas. No deben clasificarse automáticamente igual que todos los intereses, airdrops o incentivos. Revisa su naturaleza, valoración y ejercicio de imputación; una transmisión posterior constituye otra operación que también debe analizarse.</p><ul class="faq-answer-links"><li><a href="https://marianosevilla.com/contacto">Consultar una duda fiscal <span aria-hidden="true">→</span></a></li></ul></div></details><details class="apple-faq-item" id="airdrops"><summary>¿Cómo tributan los airdrops y los tokens recibidos gratuitamente?</summary><div class="apple-faq-answer"><p>Recibir tokens puede generar una renta aunque no los vendas. Su clasificación depende del motivo y de las condiciones de la entrega; no debe equipararse automáticamente al staking. Distingue la recepción de la posterior transmisión y conserva los datos de fecha y valoración.</p><ul class="faq-answer-links"><li><a href="https://marianosevilla.com/contacto">Consultar una duda fiscal <span aria-hidden="true">→</span></a></li></ul></div></details><details class="apple-faq-item" id="modelo-721"><summary>¿Qué es el Modelo 721 y cuándo debo revisarlo?</summary><div class="apple-faq-answer"><p>Es una declaración informativa sobre determinadas monedas virtuales situadas en el extranjero. No sustituye al IRPF ni implica que el importe informado sea una ganancia. Revisa las condiciones de titularidad, custodia, valoración y excepciones antes de determinar si te corresponde presentarlo.</p><ul class="faq-answer-links"><li><a href="https://marianosevilla.com/modelo-721-criptomonedas">Consultar requisitos del Modelo 721 <span aria-hidden="true">→</span></a></li></ul></div></details><details class="apple-faq-item" id="exchange-hacienda"><summary>Si un exchange informa a Hacienda, ¿sigo teniendo que revisar mi obligación de declarar?</summary><div class="apple-faq-answer"><p>Sí. La información que pueda comunicar una plataforma y tus obligaciones como contribuyente son cuestiones distintas. No des por hecho que tus operaciones estén completas en el borrador o correctamente clasificadas. Revisa tu historial y las obligaciones que correspondan a tu caso; las comunicaciones de cada entidad dependen de su situación y del ejercicio.</p><ul class="faq-answer-links"><li><a href="https://marianosevilla.com/exchanges/coinbase">Revisar la información de Coinbase <span aria-hidden="true">→</span></a></li></ul></div></details></div></div></section><section class="faq-section" id="informe-y-cuenta" aria-labelledby="informe-y-cuenta-title"><div class="apple-container"><div class="faq-heading"><h2 id="informe-y-cuenta-title">Informe y cuenta</h2><p>Qué puedes obtener y cómo utilizarlo.</p></div><div class="faq-list"><details class="apple-faq-item" id="contenido-informe"><summary>¿Qué incluye el informe y qué información puedo usar en Renta WEB?</summary><div class="apple-faq-answer"><p>El informe permite revisar el resultado del cálculo FIFO y el detalle disponible de las operaciones importadas. Comprueba qué apartados incluye el servicio de tu plataforma y revisa que el historial esté completo. Utilízalo como apoyo para preparar la declaración o compartir información con tu asesor; no equivale al formulario oficial ni acredita homologación de la AEAT.</p><ul class="faq-answer-links"><li><a href="https://marianosevilla.com/como-funciona">Ver cómo funciona <span aria-hidden="true">→</span></a></li></ul></div></details><details class="apple-faq-item" id="presentacion-hacienda"><summary>¿La herramienta presenta mi declaración ante Hacienda?</summary><div class="apple-faq-answer"><p>No. Generar un informe no presenta tu IRPF ni sustituye la revisión y cumplimentación de la declaración oficial. Debes comprobar tus datos y trasladar la información que corresponda, por tu cuenta o con ayuda profesional.</p><ul class="faq-answer-links"><li><a href="https://marianosevilla.com/como-funciona">Conocer el proceso <span aria-hidden="true">→</span></a></li></ul></div></details><details class="apple-faq-item" id="cuenta-y-precio"><summary>¿Crear una cuenta es gratis? ¿Qué informes o descargas son de pago?</summary><div class="apple-faq-answer"><p>Crear cuenta es gratis. El registro no significa que todos los informes, descargas o servicios estén incluidos. Consulta las condiciones y el precio que se indiquen para cada servicio antes de contratarlo o descargarlo.</p><ul class="faq-answer-links"><li><a href="https://marianosevilla.com/herramientas">Consultar las herramientas <span aria-hidden="true">→</span></a></li></ul></div></details></div></div></section><section class="faq-section" id="privacidad-y-ayuda" aria-labelledby="privacidad-y-ayuda-title"><div class="apple-container"><div class="faq-heading"><h2 id="privacidad-y-ayuda-title">Privacidad y ayuda</h2><p>Conoce el alcance del servicio y resuelve incidencias.</p></div><div class="faq-list"><details class="apple-faq-item" id="datos-y-archivos"><summary>¿Cómo se tratan mis archivos y los datos de mis informes?</summary><div class="apple-faq-answer"><p>Los archivos se procesan para generar los cálculos y pueden utilizarse ficheros temporales. La aplicación registra datos asociados a los informes, como el exchange, el ejercicio y resultados del cálculo. No presupongas que el procesamiento se limita a memoria ni que no se guarda ningún dato financiero. Si necesitas conocer un plazo concreto de conservación o solicitar información sobre tus datos, contacta con nosotros.</p><ul class="faq-answer-links"><li><a href="https://marianosevilla.com/privacidad">Consultar privacidad <span aria-hidden="true">→</span></a></li><li><a href="https://marianosevilla.com/contacto">Consultar sobre mis datos <span aria-hidden="true">→</span></a></li></ul></div></details><details class="apple-faq-item" id="asesor-fiscal"><summary>¿El informe sustituye a un asesor fiscal?</summary><div class="apple-faq-answer"><p>No. La herramienta ayuda a calcular y ordenar información a partir de los datos importados, pero no resuelve por sí sola toda tu situación fiscal. Las operaciones complejas, las inconsistencias del historial o los casos particulares pueden necesitar revisión profesional. Consulta la disponibilidad y el alcance de la ayuda antes de solicitar un servicio.</p><ul class="faq-answer-links"><li><a href="https://marianosevilla.com/contacto">Contactar con el equipo <span aria-hidden="true">→</span></a></li></ul></div></details></div></div></section><section class="apple-cta-section" aria-labelledby="faq-help-title"><div class="apple-container"><div class="apple-cta"><p class="apple-cta-eyebrow">Estamos para ayudarte</p><h2 class="apple-cta-title" id="faq-help-title">¿Te queda alguna duda?</h2><p>Cuéntanos qué necesitas aclarar sobre tus archivos, el informe o el uso de la herramienta.</p><a class="apple-button" href="https://marianosevilla.com/contacto">Consultar una duda</a></div></div></section></main><footer class="apple-footer">
+  <div class="apple-container">
+    <div class="apple-footer-top">
+      <div class="apple-footer-brand">
+        <a href="https://marianosevilla.com/" class="apple-footer-logo">mariano<span>sevilla</span>.com</a>
+        <p>Informes FIFO de criptomonedas.</p>
+      </div>
+      <nav aria-labelledby="apple-footer-explore">
+        <h2 id="apple-footer-explore">Explorar</h2>
+        <ul>
+          <li><a href="https://marianosevilla.com/herramientas">Herramientas</a></li>
+          <li><a href="https://marianosevilla.com/como-funciona">Cómo funciona</a></li>
+          <li><a href="https://marianosevilla.com/exchanges">Exchanges compatibles</a></li>
+        </ul>
+      </nav>
+      <nav aria-labelledby="apple-footer-help">
+        <h2 id="apple-footer-help">Ayuda</h2>
+        <ul>
+          <li><a href="https://marianosevilla.com/faq">Preguntas frecuentes</a></li>
+          <li><a href="https://marianosevilla.com/contacto">Contacto</a></li>
+          <li><a href="https://marianosevilla.com/about">Equipo</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="apple-footer-legal">
+      <p class="apple-footer-disclaimer">Herramienta de generación de informes FIFO para usuarios con criptomonedas. No constituye asesoramiento fiscal ni legal.</p>
+      <div class="apple-footer-bottom">
+        <p class="apple-footer-copyright">© <span class="apple-footer-year">2026</span> Mariano Sevilla</p>
+        <nav aria-label="Información legal">
+          <ul>
+            <li><a href="https://marianosevilla.com/privacidad">Privacidad</a></li>
+            <li><a href="https://marianosevilla.com/terminos">Términos</a></li>
+            <li><a href="https://marianosevilla.com/cookies">Cookies</a></li>
+            <li><a href="https://marianosevilla.com/aviso-legal">Aviso legal</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+</footer><script>/* Home-only enhancements. No provider, payment or authentication API changes. */
+(function () {
+  'use strict';
+  if (!document.body.classList.contains('apple-home')) return;
+  // Presentation only: the shared menu copies this label when it opens.
+  const signup = document.getElementById('snavBtnSignup');
+  if (signup) signup.textContent = 'Crear cuenta';
+
+  // A delayed session lookup must not block public navigation. This fallback
+  // adds ordinary links only; the shared script still owns session and roles.
+  const accessNav = document.getElementById('site-nav');
+  const skeleton = document.getElementById('snavSkeleton');
+  const login = document.getElementById('snavBtnLogin');
+  const accessRight = accessNav && accessNav.querySelector('.snav-right');
+  if (accessNav && skeleton && login && signup && accessRight &&
+      !skeleton.classList.contains('snav-hidden') && typeof MutationObserver !== 'undefined') {
+    const fallbacks = [];
+    let fallbackTimer;
+    let fallbackFocus = null;
+    function trackFallbackFocus(event) {
+      const entry = fallbacks.find(item => item.node.contains(event.target));
+      fallbackFocus = entry ? { entry: entry, link: event.target } : null;
+    }
+    document.addEventListener('focusin', trackFallbackFocus);
+    function attachFallbacks() {
+      const lostFocus = fallbackFocus && document.activeElement === document.body &&
+        !accessNav.contains(fallbackFocus.link) ? fallbackFocus.link : null;
+      fallbacks.forEach(function (entry) {
+        if (entry.node.parentElement !== entry.parent) entry.parent.appendChild(entry.node);
+      });
+      if (lostFocus) lostFocus.focus({ preventScroll: true });
+    }
+    const accessObserver = new MutationObserver(function () {
+      if (!skeleton.classList.contains('snav-hidden')) {
+        attachFallbacks();
+        return;
+      }
+      clearTimeout(fallbackTimer);
+      accessObserver.disconnect();
+      const focused = document.activeElement;
+      const previous = focused === document.body && fallbackFocus &&
+        !accessNav.contains(fallbackFocus.link) ? fallbackFocus : null;
+      const entry = fallbacks.find(item => item.node.contains(focused)) || (previous && previous.entry);
+      const href = entry && (previous ? previous.link : focused).getAttribute('href');
+      document.removeEventListener('focusin', trackFallbackFocus);
+      fallbacks.forEach(item => item.node.remove());
+      accessNav.classList.remove('apple-access-waiting');
+      if (entry) {
+        const panel = document.getElementById('snavAvatarWrap');
+        const authenticated = panel && !panel.classList.contains('snav-hidden');
+        let target;
+        if (authenticated) target = document.getElementById(entry.mobile ? 'snavMenuToggle' : 'snavAvatar');
+        else if (entry.mobile) {
+          target = Array.from(entry.parent.querySelectorAll('a')).find(link => link.getAttribute('href') === href);
+        } else target = href === login.getAttribute('href') ? login : signup;
+        if (target) target.focus({ preventScroll: true });
+      }
+    });
+    accessObserver.observe(accessNav, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
+    fallbackTimer = setTimeout(function () {
+      if (skeleton.classList.contains('snav-hidden')) return;
+      const mobileMenu = document.getElementById('snavMobileMenu');
+      [accessRight, mobileMenu].filter(Boolean).forEach(function (parent) {
+        const mobile = parent === mobileMenu;
+        const node = document.createElement('div');
+        node.className = 'apple-access-fallback ' + (mobile ? 'apple-access-mobile' : 'apple-access-desktop');
+        [login, signup].forEach(function (original, index) {
+          const link = document.createElement('a');
+          link.href = original.getAttribute('href');
+          link.textContent = original.textContent;
+          link.className = mobile ? 'snav-mobile-link' + (index ? ' snav-mobile-link-primary' : '') : original.className.replace('snav-hidden', '').trim();
+          node.appendChild(link);
+        });
+        fallbacks.push({ node: node, parent: parent, mobile: mobile });
+      });
+      attachFallbacks();
+      accessNav.classList.add('apple-access-waiting');
+    }, 4000);
+  }
+
+  // Demonstration dates follow the previous tax year in Spain. These nodes
+  // belong only to the fictitious report; no user/report data is read.
+  const exampleYear = Number(new Intl.DateTimeFormat('en', {
+    year: 'numeric', timeZone: 'Europe/Madrid'
+  }).format(new Date())) - 1;
+  document.querySelectorAll('.apple-footer-year').forEach(function (year) {
+    year.textContent = String(exampleYear + 1);
+  });
+  document.querySelectorAll('.apple-example-date').forEach(function (date) {
+    const parts = date.getAttribute('datetime').split('-');
+    date.setAttribute('datetime', exampleYear + '-' + parts[1] + '-' + parts[2]);
+    date.textContent = parts[2] + '/' + parts[1] + '/' + exampleYear;
+  });
+  // A scroll hint is useful only when the example actually overflows. Observe
+  // both widths so text enlargement is handled as well as viewport resizing.
+  const tableWrap = document.querySelector('.mock-table-wrap');
+  const tableHint = document.querySelector('.apple-table-hint');
+  if (tableWrap && tableHint) {
+    function updateTableHint() {
+      tableHint.hidden = tableWrap.scrollWidth <= tableWrap.clientWidth + 1;
+    }
+    updateTableHint();
+    if (typeof ResizeObserver !== 'undefined') {
+      const tableObserver = new ResizeObserver(updateTableHint);
+      tableObserver.observe(tableWrap);
+      const table = tableWrap.querySelector('table');
+      if (table) tableObserver.observe(table);
+    } else {
+      window.addEventListener('resize', updateTableHint);
+    }
+  }
+  // Every card is in the initial HTML. On wide screens, place the four
+  // additional cards in the same grid; mobile keeps them in native details.
+  // Without JavaScript the disclosure stays open and every guide is available.
+  const moreExchanges = document.getElementById('apple-exchange-more');
+  if (moreExchanges) {
+    const mobile = window.matchMedia('(max-width:640px)');
+    const grid = moreExchanges.parentElement;
+    const rest = moreExchanges.querySelector('.apple-exchange-rest');
+    const secondary = rest.querySelector('.apple-exchange-secondary');
+    const cards = Array.from(rest.querySelectorAll('.apple-exchange-card'));
+    const summary = moreExchanges.querySelector('summary');
+    function syncExchanges() {
+      const focused = document.activeElement;
+      if (mobile.matches) {
+        if (moreExchanges.contains(focused) || cards.some(card => card.contains(focused))) {
+          summary.focus({ preventScroll: true });
+        }
+        cards.forEach(card => rest.insertBefore(card, secondary));
+        moreExchanges.open = false;
+      } else {
+        cards.forEach(card => grid.insertBefore(card, moreExchanges));
+        moreExchanges.open = true;
+        if (cards.some(card => card.contains(focused))) focused.focus({ preventScroll: true });
+        else if (focused === summary) cards[0].focus({ preventScroll: true });
+      }
+    }
+    syncExchanges();
+    if (mobile.addEventListener) mobile.addEventListener('change', syncExchanges);
+    else mobile.addListener(syncExchanges);
+  }
+  const nav = document.getElementById('site-nav');
+  if (nav && typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(function () {
+      nav.style.setProperty('--apple-nav-height', Math.ceil(nav.getBoundingClientRect().height) + 'px');
+    }).observe(nav);
+  }
+  const avatar = document.getElementById('snavAvatar');
+  const dropdown = document.getElementById('snavDropdown');
+  // This is a disclosure of native links, not an application menu widget.
+  if (avatar && dropdown) {
+    avatar.removeAttribute('aria-haspopup');
+    avatar.setAttribute('aria-controls', 'snavDropdown');
+    dropdown.removeAttribute('role');
+    dropdown.querySelectorAll('[role="menuitem"]').forEach(function (item) {
+      item.removeAttribute('role');
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && dropdown.classList.contains('open')) {
+        requestAnimationFrame(function () { avatar.focus(); });
+      }
+    }, true);
+  }
+})();
+
+</script><script>/* Progressive enhancement: native details work without JavaScript. */
+(function(){
+ 'use strict';
+ function openAnchor(){
+  let id;try{id=decodeURIComponent(location.hash.slice(1));}catch(_){return;}
+  if(!id)return;
+  const target=document.getElementById(id);
+  if(!target||!target.matches('.apple-faq-item'))return;
+  target.open=true;
+  target.scrollIntoView({block:'start'});
+ }
+ window.addEventListener('hashchange',openAnchor);
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',openAnchor);
+ else openAnchor();
+})();
+</script></body></html>
