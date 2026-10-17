@@ -51,7 +51,7 @@ def run_herramientas_apple(browser,origin):
             }''',[card,description,action])
         assert signature(page,'.tools-card','.tools-card-description','.tools-card-link')==signature(home,'.apple-exchange-card','.apple-exchange-card>p','.apple-exchange-card>span'),width
         assert abs(page.locator('.tools-card').first.bounding_box()['width']-home.locator('.apple-exchange-card').first.bounding_box()['width'])<1,width
-        assert page.locator('.tools-card').first.bounding_box()['height']<=home.locator('.apple-exchange-card').first.bounding_box()['height']+1,('Tools card exceeds Home reference height',width)
+        assert page.locator('.tools-card').first.bounding_box()['height']<=home.locator('.apple-exchange-card').first.bounding_box()['height']+1,('Tools card exceeds Home reference height',width,page.locator('.tools-card').first.bounding_box(),home.locator('.apple-exchange-card').first.bounding_box())
         home.close()
         cards=page.locator('.tools-card')
         assert all(cards.nth(i).is_visible() for i in range(6))
