@@ -1,0 +1,69 @@
+/* Isolated resource proposals; shared styles and production templates unchanged. */
+.apple-resources-page .resources-intro { padding-block:40px 32px; background:var(--intro-bg); color:var(--intro-text); }
+.apple-resources-page .resources-intro .apple-eyebrow { color:var(--intro-accent); margin-bottom:12px; }
+.apple-resources-page h1 { width:100%; max-width:none; font-size:clamp(2rem,4.5vw,3.5rem); line-height:1.1; margin-bottom:20px; overflow-wrap:anywhere; }
+.apple-resources-page .resources-lead { max-width:none; color:var(--intro-muted); font-size:1.125rem; line-height:1.6; }
+.apple-resources-page .resources-intro .apple-button { margin-top:24px; }
+.apple-resources-page .resources-micro { margin-top:12px; color:var(--intro-muted); font-size:.875rem; }
+.apple-resources-page .resources-section { padding-block:var(--apple-section-space); scroll-margin-top:24px; }
+.apple-resources-page .resources-heading { margin-bottom:var(--apple-content-gap); }
+.apple-resources-page .resources-heading h2 { font-size:clamp(1.625rem,2.8vw,2.25rem); line-height:1.18; }
+.apple-resources-page .resources-heading p { margin-top:8px; color:var(--muted); }
+.apple-resources-page .resources-soft { background:#f5f7f6; border-block:1px solid var(--border); }
+.apple-resources-page .apple-catalog-card>p { color:var(--muted); font-size:.9375rem; line-height:1.65; margin-bottom:20px; }
+.apple-resources-page .apple-catalog-card>span { display:inline-flex; align-items:center; align-self:flex-start; min-height:44px; color:var(--accent); font-size:.875rem; font-weight:600; line-height:1.5; margin-top:auto; }
+.apple-resources-page .apple-catalog-card { overflow-wrap:anywhere; }
+.apple-resources-page .resources-steps { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:24px; list-style:decimal inside; }
+.apple-resources-page .resources-steps li::marker { font-weight:650; color:var(--accent); }
+.apple-resources-page .resources-steps h3 { display:inline; font-size:1.125rem; }
+.apple-resources-page .resources-steps p { margin-top:12px; color:var(--muted); }
+.apple-resources-page .resources-affiliate-notice,.apple-resources-page .resources-legal { color:#415b4d; font-size:1rem; line-height:1.65; }
+.apple-resources-page .resources-affiliate-notice { margin-bottom:24px; }
+.apple-resources-page .resources-disclaimer { margin-top:24px; color:var(--muted); font-size:.9375rem; }
+.apple-resources-page .resources-back { padding-top:var(--apple-section-space); }
+.apple-resources-page .resource-points { padding-left:1.25rem; color:var(--muted); }
+.apple-resources-page .resource-points li+li { margin-top:12px; }
+.apple-resources-page .form-section { margin-top:var(--apple-content-gap); padding:var(--apple-card-pad); border:1px solid #d4e5db; border-radius:20px; background:#edf5f0; }
+.apple-resources-page .form-section h2 { font-size:clamp(1.5rem,3vw,2rem); line-height:1.2; margin-bottom:12px; }
+.apple-resources-page .form-intro { color:#415b4d; margin-bottom:24px; }
+.apple-resources-page .form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; }
+.apple-resources-page .form-field { display:flex; flex-direction:column; gap:8px; min-width:0; }
+.apple-resources-page .form-field.full { grid-column:1/-1; }
+.apple-resources-page label { color:#1c3227; font-size:.9375rem; font-weight:600; }
+.apple-resources-page .optional { margin-left:8px; color:#415b4d; font-weight:400; }
+.apple-resources-page :is(input[type=text],input[type=email],select) { width:100%; min-height:48px; padding:11px 12px; font:inherit; color:#1c3227; background:#fff; border:1px solid #718e7f; border-radius:10px; }
+.apple-resources-page input::placeholder { color:#5a6d62; opacity:1; }
+.apple-resources-page :is(input,select):focus-visible { outline:3px solid #006b54; outline-offset:3px; }
+.apple-resources-page [aria-invalid=true] { border-color:#9b2925!important; }
+.apple-resources-page .uid-helper { color:#415b4d; font-size:.875rem; }
+.apple-resources-page .checkbox-row { display:flex; align-items:flex-start; gap:12px; padding-block:8px; }
+.apple-resources-page .checkbox-row input { width:20px; height:20px; flex:0 0 20px; margin-top:3px; accent-color:#006b54; }
+.apple-resources-page .checkbox-row label { font-weight:400; line-height:1.6; cursor:pointer; }
+.apple-resources-page .checkbox-row label a { text-decoration:underline; }
+.apple-resources-page .btn-submit { display:inline-flex; align-items:center; justify-content:center; margin-top:24px; min-height:48px; padding:11px 24px; border:1px solid #a3e7cf; border-radius:999px; background:#006b54; color:#fff; font:600 1rem/1.5 var(--font-body); cursor:pointer; }
+.apple-resources-page .btn-submit:hover:not(:disabled) { background:#00533f; }
+.apple-resources-page .btn-submit:focus-visible { outline:3px solid #006b54; outline-offset:3px; }
+.apple-resources-page .btn-submit:disabled { background:#596d61; cursor:not-allowed; }
+.apple-resources-page .resources-feedback { margin-top:20px; padding:16px; border:1px solid #718e7f; border-radius:12px; color:#1c3227; background:#fff; }
+.apple-resources-page .resources-feedback--error { color:#90231f; border-color:#9b2925; }
+.apple-resources-page [hidden] { display:none!important; }
+@media (max-width:1200px) { .apple-resources-page .resources-intro { padding-top:32px; } }
+@media (max-width:900px) { .apple-resources-page .resources-steps { grid-template-columns:minmax(0,1fr); gap:20px; } }
+@media (max-width:640px) {
+ .apple-resources-page .resources-intro { padding-block:36px 24px; }
+ .apple-resources-page h1 { font-size:clamp(2rem,8.4vw,3rem); margin-bottom:16px; }
+ .apple-resources-page .resources-lead { font-size:1rem; }
+ .apple-resources-page .resources-intro .apple-button,.apple-resources-page .btn-submit { width:100%; }
+ .apple-resources-page .form-grid { grid-template-columns:minmax(0,1fr); }
+}
+@media (prefers-reduced-motion:reduce) { .apple-resources-page *,.apple-resources-page *::before,.apple-resources-page *::after { transition:none!important; animation:none!important; scroll-behavior:auto!important; } }
+
+/* Editorial evidence before partner registration, without an embedded player. */
+.apple-resources-page .resources-section-eyebrow{color:#006b54;font-size:.875rem;font-weight:650;line-height:1.5;margin:0 0 10px}
+.apple-resources-page .resources-audit{display:flex;align-items:flex-start;gap:24px;padding:24px;margin-bottom:24px;border:1px solid #b9d8cb;border-radius:16px;background:#fff}
+.apple-resources-page .resources-audit-mark{color:#006b54;flex:0 0 48px}
+.apple-resources-page .resources-audit-copy{min-width:0;overflow-wrap:anywhere}
+.apple-resources-page .resources-audit h3{font-size:1.375rem;line-height:1.3;margin:0 0 12px}
+.apple-resources-page .resources-audit-copy>p:not(.resources-section-eyebrow){color:var(--muted);margin-bottom:12px}
+.apple-resources-page .resources-audit-link{display:inline-flex;align-items:center;gap:6px;min-height:44px;color:#006b54;font-weight:650;text-decoration:underline;text-underline-offset:4px}
+@media(max-width:640px){.apple-resources-page .resources-audit{padding:20px;gap:16px;flex-direction:column}.apple-resources-page .resources-audit-mark{flex-basis:auto}}
