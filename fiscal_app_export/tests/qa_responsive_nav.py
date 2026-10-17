@@ -20,6 +20,7 @@ PAGES = {
     "/": "landing.html",
     "/como-funciona": "como-funciona.html",
     "/faq": "faq.html",
+    "/privacidad": "privacidad.html",
     "/herramientas": "herramientas.html",
 }
 WIDTHS = (320, 375, 390, 480, 520, 768, 900, 901, 1024, 1200, 1201, 1280)
@@ -212,3 +213,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

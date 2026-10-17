@@ -1,0 +1,77 @@
+/* Legal-page opt-in; approved shared Home/header/footer assets are unchanged. */
+.apple-legal-page .legal-intro{padding-block:40px 32px;background:var(--intro-bg);color:var(--intro-text)}
+.apple-legal-page .legal-intro .apple-eyebrow{color:var(--intro-accent);margin-bottom:12px}
+.apple-legal-page h1{width:100%;max-width:none;font-size:clamp(2rem,4.5vw,3.5rem);line-height:1.1;letter-spacing:-.035em;margin-bottom:20px}
+.apple-legal-page h1 em{font-style:normal;color:var(--intro-accent)}
+.apple-legal-page .legal-lead{width:100%;max-width:none;color:var(--intro-muted);font-size:1.125rem;line-height:1.6}
+.apple-legal-page .legal-hero-link{display:inline-flex;align-items:center;gap:8px;min-height:44px;margin-top:12px;color:var(--intro-accent);font-weight:600;text-decoration:underline}
+.apple-legal-page .legal-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:40px;padding-block:40px 48px;align-items:start}
+.apple-legal-page .legal-index{position:sticky;top:24px;min-width:0;border:1px solid var(--border);border-radius:16px;background:var(--bg2);padding:16px}
+.apple-legal-page .legal-index h2{font-size:1rem;line-height:1.5;letter-spacing:normal;margin-bottom:12px}
+.apple-legal-page .legal-index ol{list-style:none;display:grid;gap:4px;padding:0;margin:0}
+.apple-legal-page .legal-index a{display:flex;align-items:center;min-height:44px;padding:6px 0;font-size:.875rem;line-height:1.45;color:var(--muted);text-decoration:underline}
+.apple-legal-page .legal-index a:hover{color:var(--accent)}
+.apple-legal-page .legal-document{min-width:0}
+.apple-legal-page .legal-section{min-width:0;scroll-margin-top:24px;padding-block:32px;border-top:1px solid var(--border)}
+.apple-legal-page .legal-section:first-child{padding-top:0;border-top:0}
+.apple-legal-page .legal-section h2{font-size:clamp(1.375rem,2vw,1.875rem);line-height:1.25;letter-spacing:-.025em;margin-bottom:16px}
+.apple-legal-page .legal-section p,.apple-legal-page .legal-section li{font-size:1rem;line-height:1.75;color:var(--muted)}
+.apple-legal-page .legal-section p+p,.apple-legal-page .legal-section ul+p,.apple-legal-page .legal-section p+ul{margin-top:12px}
+.apple-legal-page .legal-section ul{padding-left:1.25rem}
+.apple-legal-page .legal-section li+li{margin-top:8px}
+.apple-legal-page .legal-section strong{color:var(--text);font-weight:650}
+.apple-legal-page .legal-section a{overflow-wrap:anywhere;text-decoration:underline}
+.apple-legal-page .legal-purposes{display:grid;gap:16px;margin-block:24px}
+.apple-legal-page .legal-purpose{border:1px solid var(--border);border-radius:16px;padding:20px;background:var(--surface)}
+.apple-legal-page .legal-purpose h3{margin-bottom:12px}
+.apple-legal-page .legal-purpose dl{margin:0;display:grid;gap:12px}
+.apple-legal-page .legal-purpose dl>div{display:grid;grid-template-columns:84px minmax(0,1fr);gap:12px;align-items:start}
+.apple-legal-page .legal-purpose dt{font-size:.875rem;font-weight:650;color:var(--text);line-height:1.75}
+.apple-legal-page .legal-purpose dd{margin:0;color:var(--muted);font-size:.9375rem;line-height:1.65}
+.apple-legal-page .legal-callout{padding:20px;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:12px;background:var(--bg2);margin-block:20px}
+.apple-legal-page .legal-callout h3{margin-bottom:8px}
+.apple-legal-page .legal-retention{margin:20px 0;display:grid;gap:0}
+.apple-legal-page .legal-retention>div{padding-block:16px;border-top:1px solid var(--border)}
+.apple-legal-page .legal-retention dt{font-weight:650;line-height:1.5;color:var(--text);margin-bottom:8px}
+.apple-legal-page .legal-retention dd{margin:0;color:var(--muted);font-size:1rem;line-height:1.75}
+.apple-legal-page .legal-help{padding-block:32px 40px;background:var(--bg2);border-top:1px solid var(--border)}
+.apple-legal-page .legal-help-inner{display:flex;align-items:center;justify-content:space-between;gap:24px}
+.apple-legal-page .legal-help-inner>div{min-width:0;flex:1}
+.apple-legal-page .legal-help .apple-eyebrow{margin-bottom:10px}
+.apple-legal-page .legal-help h2{font-size:clamp(1.625rem,2.8vw,2.25rem);line-height:1.2;margin-bottom:12px}
+.apple-legal-page .legal-help p:not(.apple-eyebrow){color:var(--muted)}
+.apple-legal-page .legal-help .apple-button{flex:none;max-width:100%}
+.apple-legal-page .apple-footer a[aria-current="page"]{color:var(--text);font-weight:650}
+@media(max-width:1200px){
+ .apple-legal-page .legal-intro{padding-block:32px}
+ .apple-legal-page .legal-layout{grid-template-columns:minmax(0,1fr);gap:32px;padding-block:32px}
+ .apple-legal-page .legal-index{position:static;padding:20px}
+ .apple-legal-page .legal-index ol{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 20px}
+ .apple-legal-page .legal-help-inner{flex-direction:column;align-items:flex-start;gap:20px}
+}
+@media(max-width:640px){
+ .apple-legal-page .legal-intro{padding-block:36px 24px}
+ .apple-legal-page h1{font-size:clamp(2rem,8.4vw,3rem);margin-bottom:16px}
+ .apple-legal-page .legal-lead{font-size:1rem}
+ .apple-legal-page .legal-layout{padding-block:24px;gap:24px}
+ .apple-legal-page .legal-index{padding:16px}
+ .apple-legal-page .legal-index ol{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 16px}
+ .apple-legal-page .legal-section{padding-block:24px}
+ .apple-legal-page .legal-purpose{padding:16px}
+ .apple-legal-page .legal-purpose dl>div{grid-template-columns:minmax(0,1fr);gap:2px}
+ .apple-legal-page .legal-help{padding-block:28px 32px}
+ .apple-legal-page .legal-help .apple-button{width:100%;white-space:normal}
+}
+@media print{
+ .apple-legal-page{background:#fff;color:#000;font-size:11pt;line-height:1.5}
+ .apple-legal-page #site-nav,.apple-legal-page .apple-skip,.apple-legal-page .apple-noscript-access,.apple-legal-page .apple-noscript-menu,.apple-legal-page .legal-index,.apple-legal-page .legal-help,.apple-legal-page .apple-footer{display:none!important}
+ .apple-legal-page .legal-intro{background:#fff!important;color:#000;padding-block:0 20px}
+ .apple-legal-page .legal-intro :is(.apple-eyebrow,h1,h1 em,.legal-lead){color:#000}
+ .apple-legal-page .legal-hero-link{display:none}
+ .apple-legal-page .apple-container{padding-inline:0;max-width:none}
+ .apple-legal-page .legal-layout{display:block;padding-block:0}
+ .apple-legal-page .legal-section{padding-block:16px;scroll-margin-top:0}
+ .apple-legal-page .legal-section :is(p,li,dd,dt,a){color:#000}
+ .apple-legal-page .legal-section :is(h2,h3){break-after:avoid}
+ .apple-legal-page .legal-purpose,.apple-legal-page .legal-callout{background:#fff;box-shadow:none}
+}
