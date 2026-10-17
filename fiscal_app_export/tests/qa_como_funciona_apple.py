@@ -55,7 +55,7 @@ def run_como_funciona_apple(browser,origin):
         assert faq.get_attribute('open') is not None
         faq.locator('summary').press('Enter')
         if width<=1200:
-            toggle=page.get_by_role('button',name='Abrir menú',exact=True);assert toggle.is_visible();toggle.click()
+            toggle=page.locator('#snavMenuToggle');assert toggle.is_visible();assert toggle.get_attribute('aria-label')=='Abrir menú';toggle.click()
             current=page.locator('#snavMobileMenu a[aria-current="page"]')
             assert current.count()==1 and current.inner_text()=='Cómo funciona'
             toggle.press('Escape');assert toggle.get_attribute('aria-expanded')=='false'
