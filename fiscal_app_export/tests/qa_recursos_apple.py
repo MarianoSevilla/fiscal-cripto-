@@ -48,7 +48,7 @@ def run_recursos_apple(browser,origin):
                 assert page.locator('.resources-paid a').filter(has_text='Comprar informe').count()==5
                 for name in ['Bitvavo','Gate']:assert page.locator('.resources-affiliates').get_by_text('Registrarse en '+name,exact=False).count()==1
                 assert page.locator('#informes-y-guias').bounding_box()['y'] < page.locator('#exchanges-colaboradores').bounding_box()['y'] < page.locator('#recursos-disponibles').bounding_box()['y']
-                assert page.locator('.resources-intro a[href="#informes-y-guias"]').count()==1
+                assert page.locator('.resources-intro a').count()==0
                 assert 'Elegir exchange' not in page.locator('main').inner_text()
                 audit=page.locator('.resources-audit');assert audit.is_visible()
                 assert audit.locator('a').get_attribute('href')=='https://youtu.be/J5EKVx6gSn0'
