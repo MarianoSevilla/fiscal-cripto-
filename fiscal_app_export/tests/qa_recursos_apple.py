@@ -39,8 +39,11 @@ def run_recursos_apple(browser,origin):
             assert page.locator('h1').count()==page.locator('main').count()==1
             assert page.locator('h1').evaluate('e=>{const s=getComputedStyle(e.parentElement);return Math.abs(e.getBoundingClientRect().width-e.parentElement.clientWidth+parseFloat(s.paddingLeft)+parseFloat(s.paddingRight))<1}')
             if kind=='catalog':
-                cards=page.locator('.apple-catalog-card');assert cards.count()==5
-                assert page.locator('.resources-catalog .apple-catalog-card').get_attribute('href')=='/recursos/recurso-ficticio'
+                cards=page.locator('.apple-catalog-card');assert cards.count()==11
+                assert page.locator('.resources-catalog a[href="/recursos/recurso-ficticio"]').count()==1
+                assert page.locator('.resources-paid a').count()==7
+                assert page.locator('.resources-paid a').evaluate_all("els=>els.every(e=>e.href.startsWith('https://masetru.gumroad.com/l/'))")
+                assert page.locator('.resources-affiliates h3').all_text_contents()==['Bitvavo','Gate']
                 for card in cards.all():
                     assert card.evaluate("e=>getComputedStyle(e).backgroundColor")=='rgb(237, 245, 240)'
                     assert card.evaluate("e=>getComputedStyle(e).borderRadius")=='16px'
@@ -87,7 +90,7 @@ def run_recursos_apple(browser,origin):
         assert not errors and not violations;ctx.close();cases+=1
     for resources in [[],[SimpleNamespace(**dict(SAMPLE,slug=f'ficticio-{i}',title='Recurso '+('largo'*30))) for i in range(4)]]:
         ctx,violations=context(browser,width=320);page,errors=open_page(ctx,origin,markup=html('catalog',resources=resources))
-        assert not geometry(page,320);assert page.locator('.resources-catalog .apple-catalog-card').count()==len(resources)
+        assert not geometry(page,320);assert page.locator('.resources-catalog .apple-catalog-card').count()==len(resources)+1
         if not resources:assert page.locator('.resources-empty').is_visible()
         assert not errors and not violations;ctx.close();cases+=1
     for scenario in ['success','retry','offline','uid']:

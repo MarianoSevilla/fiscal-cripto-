@@ -35,18 +35,20 @@ def test_templates_keep_preview_scope_and_structure():
         assert 'class="apple-skip"' in text and 'class="apple-noscript-menu"' in text
 
 def test_catalog_dynamic_empty_multiple_and_escaping():
-    assert 'Todavía no hay recursos disponibles' in render(resources=[])
+    assert 'Ahora no hay dosieres del canal disponibles.' in render(resources=[])
     resources=[SimpleNamespace(**dict(SAMPLE,slug=f'ficticio-{i}',title='<script>example</script>')) for i in range(4)]
     text=render(resources=resources)
-    assert text.count('class="apple-catalog-card"')==8
+    assert text.count('class="apple-catalog-card"')==14
     assert '<script>example</script>' not in text and '&lt;script&gt;example&lt;/script&gt;' in text
     assert '/recursos/ficticio-3' in text
 
-def test_affiliate_destinations_and_disclosure_preserved():
+def test_only_current_partner_destinations_and_disclosure():
     old=DOM();old.feed((ROOT/'templates/recursos.html').read_text());new=DOM();new.feed(render())
     old_links={a['href'] for a in old.links if 'sponsored' in a.get('rel','')}
     new_links={a['href'] for a in new.links if 'sponsored' in a.get('rel','')}
-    assert len(old_links)==4 and old_links==new_links
+    assert new_links=={'https://bitvavo.com/es/affiliate/marianosevilla','https://www.gate.com/es-eu/campaigns/76?ref=VFKRXV1ACA&ref_type=132'}
+    assert new_links.intersection(old_links)=={'https://bitvavo.com/es/affiliate/marianosevilla'}
+    assert all(name not in render() for name in ['BingX','Bitget','Bitunix'])
     text=render();assert text.index('Estos son enlaces de afiliación.')<text.index('class="apple-catalog-grid resources-affiliates"')
 
 def test_detail_keeps_fields_options_and_consent_requirements():
@@ -74,3 +76,18 @@ def test_header_footer_and_legal_destinations_match_home():
     for href in ['/herramientas','/como-funciona','/recursos','/faq','/contacto','/privacidad','/terminos','/cookies','/aviso-legal']:
         assert f'href="{href}"' in text
     assert 'No constituye asesoramiento fiscal ni legal.' in text
+
+def test_gumroad_resources_and_visible_copy():
+    text=render();p=DOM();p.feed(text)
+    product_links={a['href'] for a in p.links if a.get('href','').startswith('https://masetru.gumroad.com/l/')}
+    assert product_links=={'https://masetru.gumroad.com/l/'+slug+'?layout=profile' for slug in ['algorand','velo','xdc','wevnv','shx','hbar','mapa-nuevo-dinero','checklist-exchange']}
+    assert text.count('Ver precio en Gumroad')==7
+    assert 'Recursos gratuitos.' in text and 'Recursos de pago.' in text
+    assert 'El dossier Bitcoin es gratuito y se solicita aquí.' in text
+    assert 'Aportación libre desde 0 €' in text
+    assert 'La compra y la descarga se gestionan allí.' in text
+    for name in ['recursos-apple-preview','recurso-apple-preview']:
+        preview=(ROOT.parent/name/'index.html').read_text()
+        assert 'Vista de diseño con contenido ficticio.' not in preview
+        assert 'No se envían solicitudes.' not in preview
+        assert 'resources-preview-note' not in preview

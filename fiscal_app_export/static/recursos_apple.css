@@ -47,7 +47,6 @@
 .apple-resources-page .resources-feedback { margin-top:20px; padding:16px; border:1px solid #718e7f; border-radius:12px; color:#1c3227; background:#fff; }
 .apple-resources-page .resources-feedback--error { color:#90231f; border-color:#9b2925; }
 .apple-resources-page [hidden] { display:none!important; }
-.apple-resources-page .resources-preview-note { padding:16px 20px; text-align:center; font-size:.875rem; color:#415b4d; }
 @media (max-width:1200px) { .apple-resources-page .resources-intro { padding-top:32px; } }
 @media (max-width:900px) { .apple-resources-page .resources-steps { grid-template-columns:minmax(0,1fr); gap:20px; } }
 @media (max-width:640px) {
