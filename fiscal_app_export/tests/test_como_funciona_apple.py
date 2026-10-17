@@ -60,3 +60,12 @@ def test_footer_reuses_approved_home_and_nojs_access_exists():
     assert footer(text)==footer(home)
     assert 'class="apple-noscript-menu"' in text
     assert 'class="apple-skip"' in text
+
+def test_cta_positions_and_final_hierarchy():
+    text=PAGE.read_text()
+    assert 'href="/static/apple_cta.css"' in text
+    assert text.index('id="informe-pdf"')<text.index('id="how-mid-cta"')<text.index('id="privacidad-seguridad"')
+    assert text.index('id="faq"')<text.index('id="how-final-cta"')<text.index('<footer')
+    final=text.split('id="how-final-cta">',1)[1].split('</div></div></section>',1)[0]
+    assert final.index('apple-cta-eyebrow')<final.index('<h2')<final.index('apple-cta-description')<final.index('apple-cta-notice')<final.index('apple-cta-benefits')<final.index('class="apple-button"')
+    assert final.rstrip().endswith('>Crear cuenta</a>')

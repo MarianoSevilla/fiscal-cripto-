@@ -27,6 +27,18 @@ def run_como_funciona_apple(browser,origin):
         for selector in ['h1','.how-lead']:
             assert page.locator(selector).evaluate('e=>{const s=getComputedStyle(e.parentElement);return Math.abs(e.getBoundingClientRect().width-e.parentElement.clientWidth+parseFloat(s.paddingLeft)+parseFloat(s.paddingRight))<1}'),(width,selector)
         assert page.locator('.how-intro').evaluate('e=>getComputedStyle(e).backgroundColor')=='rgb(7, 60, 50)'
+        panels=page.locator('.apple-cta');assert panels.count()==2
+        for panel in panels.all():
+            assert panel.evaluate("e=>{const s=getComputedStyle(e);return s.backgroundColor==='rgb(237, 245, 240)'&&s.borderRadius==='20px'}")
+            assert panel.evaluate("e=>parseFloat(getComputedStyle(e).paddingTop)")==(32 if width>1200 else 24 if width>640 else 20)
+            section=panel.locator('xpath=../..')
+            assert section.evaluate("e=>parseFloat(getComputedStyle(e).paddingTop)")==(40 if width>1200 else 32 if width>640 else 24)
+            action=panel.get_by_role('link',name='Crear cuenta',exact=True)
+            assert action.count()==1 and action.get_attribute('href')=='/signup/'
+            assert action.bounding_box()['height']>=48
+            if width<=640:assert abs(action.bounding_box()['width']-panel.locator('h2').bounding_box()['width'])<1
+        assert page.locator('#how-final-cta').evaluate("e=>e.lastElementChild.matches('a.apple-button')")
+        assert page.locator('#how-final-cta .apple-cta-eyebrow').inner_text()=='Tu próximo paso'
         cards=page.locator('.apple-catalog-card');assert cards.count()==3
         for card in cards.all():
             assert card.is_visible() and card.bounding_box()['height']>=44

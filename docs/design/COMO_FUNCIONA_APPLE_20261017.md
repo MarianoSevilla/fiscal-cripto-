@@ -25,3 +25,11 @@ La suite de navegador se incorpora al entrypoint existente tras Home y Herramien
 como-funciona-apple-preview.html es autocontenido noindex/nofollow, con sesión anónima simulada. Intercepta solo GET /api/me y rechaza otros fetch. Enlaces a producción, sin formularios de autenticación, datos reales ni operaciones de pago. No incorporar este archivo raíz a producción.
 
 Pendiente CI, revisión visual y autorización de publicación. Sin instalaciones, cambios de Railway, DB, variables, pagos, seguridad, workflows o dependencias. Como-funciona.html y todas las demás páginas permanecen intactos.
+
+## V2 · CTA aprobados para vista previa
+
+Autorización «procede» del 17/10/2026 15:34 Europe/Madrid: CTA compacto después del informe y antes de privacidad, conservando el CTA del hero y el bloque final. Misma acción Crear cuenta y destino /signup/; no se añaden analíticas ni promesas de informe gratis. El registro completo, no solo el CTR, será la métrica de éxito cuando se instrumente una medición autorizada.
+
+apple_cta.css define un componente reutilizable opt-in, cargado solo por esta variante: fondo #edf5f0, borde #d4e5db, radio 20px y escalas de Home. Espacio exterior simétrico 40/32/24px y relleno interior 32/24/20px en escritorio/tablet/móvil. Se elimina la excepción how-final con padding-top:0. Variante completa: etiqueta, título, descripción, condiciones visibles de asesoramiento, tres argumentos veraces y botón al final. Variante compacta: título, descripción y botón, sin duplicar todo el bloque. Sin altura fija; botón de ancho completo en móvil.
+
+Se amplían los contratos a seis y la suite existente verifica los dos CTA y sus espacios en trece anchos. Pendiente CI de V2 y aprobación visual. No se modifican todavía los CTA de otras páginas ni la producción; el componente queda preparado para su adopción controlada posterior.
