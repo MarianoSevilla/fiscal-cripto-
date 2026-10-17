@@ -1,0 +1,23 @@
+/* Reusable CTA panel, matching the approved Home assistance block.
+   Opt-in only: no existing page changes until it adopts these classes. */
+.apple-home .apple-cta-section { padding-block:var(--apple-section-space); }
+.apple-home .apple-cta {
+ display:grid; gap:var(--apple-content-gap); padding:var(--apple-card-pad);
+ border:1px solid #d4e5db; border-radius:20px; background:#edf5f0; color:#415b4d;
+}
+.apple-home .apple-cta>* { margin:0; min-width:0; }
+.apple-home .apple-cta .apple-cta-eyebrow { color:#006b54; font-size:.875rem; line-height:1.5; letter-spacing:.025em; }
+.apple-home .apple-cta .apple-cta-title { color:#1c3227; font-size:clamp(1.5rem,3vw,2rem); line-height:1.2; letter-spacing:-.03em; font-weight:650; }
+.apple-home .apple-cta p { max-width:none; }
+.apple-home .apple-cta-notice { font-size:.9375rem; }
+.apple-home .apple-cta-notice strong { font-weight:550; }
+.apple-home .apple-cta-benefits { display:flex; flex-wrap:wrap; gap:8px 28px; padding:0; list-style:none; color:#365745; font-size:.9375rem; }
+.apple-home .apple-cta .apple-button { justify-self:start; }
+.apple-home .apple-cta--compact { grid-template-columns:minmax(0,1fr) auto; align-items:center; }
+.apple-home .apple-cta--compact .apple-cta-title { font-size:1.5rem; }
+.apple-home .apple-cta-copy p { margin-top:12px; }
+@media (max-width:900px) { .apple-home .apple-cta--compact { grid-template-columns:minmax(0,1fr); } }
+@media (max-width:640px) {
+ .apple-home .apple-cta-benefits { flex-direction:column; }
+ .apple-home .apple-cta .apple-button { width:100%; justify-content:center; }
+}

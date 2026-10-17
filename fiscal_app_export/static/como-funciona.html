@@ -1,517 +1,35 @@
 <!DOCTYPE html>
-<html lang="es">
-<head>
+<html lang="es"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cómo funciona | Informe fiscal cripto — Mariano Sevilla</title>
-<meta name="description" content="Descubre cómo generar tu informe fiscal FIFO para criptomonedas: sube el CSV de tu exchange, clasificación automática y PDF listo para Hacienda. Sin conocimientos fiscales.">
+<title>Cómo funciona el informe fiscal de criptomonedas | Mariano Sevilla</title>
+<meta name="description" content="Prepara tus archivos, revisa el cálculo FIFO y consulta el detalle de tus operaciones para preparar la información de tu declaración.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://marianosevilla.com/como-funciona">
-
-<!-- Open Graph -->
-<meta property="og:type"        content="website">
-<meta property="og:url"         content="https://marianosevilla.com/como-funciona">
-<meta property="og:title"       content="Cómo funciona la herramienta fiscal cripto — Mariano Sevilla">
-<meta property="og:description" content="Importa tus CSVs, calcula FIFO automáticamente y genera el informe PDF listo para la Agencia Tributaria. Compatible con Binance, Bitvavo, Kraken y más.">
-<meta property="og:image"       content="https://marianosevilla.com/static/mariano-sevilla-logo.png">
-<meta name="twitter:card"       content="summary_large_image">
-
-<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://marianosevilla.com/como-funciona">
+<meta property="og:title" content="Cómo funciona el informe fiscal de criptomonedas | Mariano Sevilla">
+<meta property="og:description" content="Prepara tus archivos, revisa el cálculo FIFO y consulta el detalle de tus operaciones para preparar la información de tu declaración.">
+<meta property="og:image" content="https://marianosevilla.com/static/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Cómo funciona el informe fiscal de criptomonedas | Mariano Sevilla">
+<meta name="twitter:description" content="Prepara tus archivos, revisa el cálculo FIFO y consulta el detalle de tus operaciones para preparar la información de tu declaración.">
+<meta name="twitter:image" content="https://marianosevilla.com/static/og-image.png">
 <link rel="icon" href="/static/favicon.ico">
-<link rel="manifest" href="/static/site.webmanifest">
-
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/nav.css">
-<link rel="preload" href="/static/nav.js" as="script">
-
-<style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --bg:          #0b1220;
-  --bg2:         #101829;
-  --surface:     #141f32;
-  --surface2:    #1a2540;
-  --border:      rgba(255,255,255,0.07);
-  --border2:     rgba(255,255,255,0.13);
-  --text:        #eef2ff;
-  --muted:       #7a8aa8;
-  --accent:      #00C896;
-  --accent-dim:  rgba(0,200,150,0.12);
-  --accent-glow: rgba(0,200,150,0.25);
-  --footer-bg:   #070e1a;
-  --max-w:       1280px;
-  --pad-x:       3rem;
-  --font-display:'Syne', sans-serif;
-  --font-body:   'DM Sans', sans-serif;
-}
-
-html { scroll-behavior: smooth; }
-body {
-  background: var(--bg); color: var(--text);
-  font-family: var(--font-body); font-size: 16px; line-height: 1.7;
-  min-height: 100vh; -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
-}
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
-
-/* ── UTILIDADES ─────────────────────── */
-.wrap {
-  max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x);
-}
-.section {
-  padding: 5rem 0;
-}
-.section + .section {
-  border-top: 1px solid var(--border);
-}
-
-.kicker {
-  font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
-  text-transform: uppercase; color: var(--accent);
-  margin-bottom: 0.85rem; display: block;
-}
-.section-title {
-  font-family: var(--font-display); font-size: 2.1rem; font-weight: 800;
-  letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 1rem;
-}
-.section-title em { font-style: normal; color: var(--accent); }
-.section-desc {
-  font-size: 1rem; color: var(--muted); max-width: 580px; line-height: 1.75;
-}
-
-/* ── HERO ───────────────────────────── */
-.hero {
-  padding: 5rem 0 4rem;
-  text-align: left;
-}
-.hero h1 {
-  font-family: var(--font-display); font-size: clamp(2rem, 4.5vw, 3.4rem);
-  font-weight: 800; line-height: 1.08; letter-spacing: -0.03em;
-  margin-bottom: 1.25rem;
-}
-.hero h1 em { font-style: normal; color: var(--accent); }
-.hero-desc {
-  font-size: 1.15rem; color: var(--muted);
-  margin-bottom: 2rem; line-height: 1.75;
-}
-.btn-cta {
-  display: inline-flex; align-items: center; gap: 10px;
-  background: var(--accent); color: #0a0a0a;
-  border: none; border-radius: 10px; padding: 17px 48px;
-  font-family: var(--font-display); font-size: 1.1rem; font-weight: 700;
-  cursor: pointer; transition: opacity 0.15s, transform 0.1s;
-  text-decoration: none; letter-spacing: -0.01em;
-}
-.btn-cta:hover { opacity: 0.88; text-decoration: none; }
-.btn-cta:active { transform: scale(0.98); }
-.hero-signup-block {
-  background: var(--surface);
-  border: 1px solid var(--border2);
-  border-radius: 14px;
-  padding: 1.6rem 1.75rem 1.5rem;
-  margin-top: 2rem;
-  max-width: 640px;
-}
-.hero-signup-kicker {
-  display: inline-flex; align-items: center;
-  font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--muted); border: 1px solid var(--border2);
-  border-radius: 100px; padding: 3px 10px;
-  margin-bottom: 0.85rem;
-}
-.hero-signup-title {
-  font-family: var(--font-display); font-size: 1.15rem; font-weight: 800;
-  letter-spacing: -0.02em; line-height: 1.25;
-  color: var(--text); margin-bottom: 0.5rem;
-}
-.hero-signup-desc {
-  font-size: 0.88rem; color: var(--muted); line-height: 1.55;
-  margin-bottom: 0.9rem;
-}
-.hero-signup-bullets {
-  list-style: none; margin: 0 0 1.1rem;
-  display: flex; flex-direction: column; gap: 5px;
-}
-.hero-signup-bullets li {
-  font-size: 0.83rem; color: var(--accent); letter-spacing: 0.01em;
-}
-.btn-signup-hero {
-  display: flex; align-items: center; justify-content: center;
-  width: 100%;
-  background: var(--accent); color: #0a0a0a;
-  border: none; border-radius: 10px; padding: 14px 24px;
-  font-family: var(--font-display); font-size: 1rem; font-weight: 700;
-  cursor: pointer; transition: opacity 0.15s, transform 0.1s;
-  text-decoration: none; letter-spacing: -0.01em;
-}
-.btn-signup-hero:hover { opacity: 0.88; text-decoration: none; }
-.btn-signup-hero:active { transform: scale(0.98); }
-.hero-signup-micro {
-  font-size: 12px; color: var(--muted); opacity: 0.7;
-  text-align: center; margin-top: 0.65rem; line-height: 1.5;
-}
-.btn-outline {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: none; color: var(--accent);
-  border: 1.5px solid var(--accent); border-radius: 10px; padding: 13px 30px;
-  font-family: var(--font-display); font-size: 1rem; font-weight: 700;
-  cursor: pointer; transition: background 0.15s;
-  text-decoration: none; letter-spacing: -0.01em;
-}
-.btn-outline:hover { background: var(--accent-dim); text-decoration: none; }
-
-/* ── STEPS BAR ─────────────────────── */
-.steps-bar {
-  display: flex; align-items: flex-start; gap: 0;
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 16px; overflow: hidden; margin-top: 4rem;
-}
-.step-item {
-  flex: 1; padding: 2rem 1.75rem; position: relative;
-  border-right: 1px solid var(--border2);
-}
-.step-item:last-child { border-right: none; }
-.step-num {
-  font-family: var(--font-display); font-size: 11px; font-weight: 700;
-  letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--accent); margin-bottom: 0.65rem; display: block;
-}
-.step-title {
-  font-family: var(--font-display); font-size: 1.05rem; font-weight: 700;
-  color: var(--text); margin-bottom: 0.5rem;
-}
-.step-desc {
-  font-size: 0.88rem; color: var(--muted); line-height: 1.6;
-}
-.step-icon {
-  font-size: 1.6rem; margin-bottom: 0.85rem; display: block;
-}
-
-/* ── EXCHANGE GRID (igual que /dashboard) ────────── */
-.ex-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: .75rem;
-  margin-top: 2.5rem;
-}
-.ex-card {
-  display: flex; align-items: center; gap: 1rem;
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 12px; padding: 1.1rem 1.25rem;
-  cursor: default; color: var(--text);
-  transition: border-color .15s, background .15s;
-}
-.ex-card:not(.disabled):hover {
-  border-color: var(--border2);
-  background: var(--surface2);
-}
-.ex-card.disabled {
-  opacity: .38; pointer-events: none;
-}
-.ex-img {
-  width: 42px; height: 42px; border-radius: 10px;
-  object-fit: contain; background: var(--surface2); flex-shrink: 0;
-}
-.ex-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.ex-name {
-  font-family: var(--font-display); font-size: .95rem; font-weight: 700;
-  letter-spacing: -.01em; white-space: nowrap;
-}
-.ex-badge {
-  font-size: 10px; font-weight: 600; text-transform: uppercase;
-  letter-spacing: .06em; color: #555;
-}
-.ex-badge.available { color: var(--accent); }
-
-/* ── FEATURES GRID ─────────────────── */
-.features-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.25rem; margin-top: 2.5rem;
-}
-.feature-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 14px; padding: 1.5rem 1.5rem;
-}
-.feature-icon {
-  font-size: 1.5rem; margin-bottom: 0.85rem; display: block;
-}
-.feature-title {
-  font-family: var(--font-display); font-size: 0.95rem; font-weight: 700;
-  color: var(--text); margin-bottom: 0.4rem;
-}
-.feature-desc {
-  font-size: 0.88rem; color: var(--muted); line-height: 1.6;
-}
-
-/* ── TIPO BADGES ────────────────────── */
-.tipo-grid {
-  display: flex; flex-wrap: wrap; gap: 0.65rem; margin-top: 2rem;
-}
-.tipo-badge {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 100px; padding: 6px 14px;
-  font-size: 13px; font-weight: 500; color: var(--text);
-}
-.tipo-badge-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--accent); flex-shrink: 0;
-}
-
-/* ── FIFO VISUAL ────────────────────── */
-.fifo-layout {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem;
-  align-items: center; margin-top: 2.5rem;
-}
-.fifo-text { }
-.fifo-text p {
-  font-size: 0.95rem; color: var(--muted); line-height: 1.75; margin-bottom: 1rem;
-}
-.fifo-text ul {
-  list-style: none; display: flex; flex-direction: column; gap: 0.65rem;
-}
-.fifo-text ul li {
-  display: flex; align-items: center; gap: 10px;
-  font-size: 0.93rem; color: var(--text);
-}
-.fifo-text ul li::before {
-  content: '✓'; flex-shrink: 0;
-  width: 20px; height: 20px; border-radius: 50%;
-  background: var(--accent-dim); border: 1px solid var(--accent-glow);
-  color: var(--accent); font-size: 10px; font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-}
-.fifo-mock {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 14px; overflow: hidden;
-}
-.fifo-mock-header {
-  background: var(--surface2); padding: 0.75rem 1rem;
-  font-size: 12px; color: var(--muted); font-weight: 600; letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.fifo-row {
-  display: grid; grid-template-columns: 1.2fr 0.7fr 0.8fr 0.9fr 0.8fr;
-  padding: 0.7rem 1rem; font-size: 13px; border-top: 1px solid var(--border);
-  align-items: center;
-}
-.fifo-row.head { color: var(--muted); font-weight: 600; font-size: 12px; }
-.badge {
-  display: inline-flex; align-items: center; justify-content: center;
-  padding: 2px 9px; border-radius: 100px; font-size: 11px; font-weight: 600;
-}
-.badge-venta  { background: rgba(229,85,85,0.15);  color: #e55; }
-.badge-compra { background: rgba(0,200,150,0.12);  color: var(--accent); }
-.badge-swap   { background: rgba(120,130,255,0.15); color: #a0a8f8; }
-.fifo-green { color: var(--accent); }
-.fifo-red   { color: #e55; }
-
-/* ── PDF FEATURES ─────────────────── */
-.pdf-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem;
-  align-items: start; margin-top: 2.5rem;
-}
-.pdf-list { display: flex; flex-direction: column; gap: 1rem; }
-.pdf-item {
-  display: flex; align-items: flex-start; gap: 14px;
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 12px; padding: 1.1rem 1.25rem;
-}
-.pdf-item-icon {
-  font-size: 1.3rem; flex-shrink: 0; margin-top: 1px;
-}
-.pdf-item-title {
-  font-weight: 700; font-size: 0.93rem; color: var(--text); margin-bottom: 2px;
-}
-.pdf-item-desc {
-  font-size: 0.85rem; color: var(--muted); line-height: 1.5;
-}
-.pdf-sample {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 14px; overflow: hidden;
-}
-.pdf-sample-bar {
-  background: var(--surface2); padding: 0.7rem 1rem;
-  font-size: 12px; color: var(--muted); letter-spacing: 0.04em;
-  display: flex; align-items: center; gap: 8px;
-}
-.pdf-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.pdf-dot-r { background: #e55; }
-.pdf-dot-y { background: #f5a623; }
-.pdf-dot-g { background: var(--accent); }
-.pdf-sample-body { padding: 1.25rem; }
-.pdf-stat-row {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;
-}
-.pdf-stat {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 10px; padding: 0.85rem 1rem;
-}
-.pdf-stat-label { font-size: 11px; color: var(--muted); margin-bottom: 3px; font-weight: 500; }
-.pdf-stat-value { font-family: var(--font-display); font-size: 1.1rem; font-weight: 700; color: var(--text); }
-.pdf-stat-value.green { color: var(--accent); }
-.pdf-stat-value.red   { color: #e55; }
-.pdf-section-label {
-  font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--muted); margin: 1rem 0 0.5rem;
-}
-.pdf-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 0.5rem 0; border-bottom: 1px solid var(--border);
-  font-size: 13px;
-}
-.pdf-row:last-child { border-bottom: none; }
-.pdf-row-label { color: var(--muted); }
-.pdf-row-value { color: var(--text); font-weight: 600; }
-
-/* ── SECURITY ────────────────────── */
-.security-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 1.25rem; margin-top: 2.5rem;
-}
-.security-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 14px; padding: 1.4rem 1.4rem;
-  display: flex; align-items: flex-start; gap: 1rem;
-}
-.security-icon {
-  font-size: 1.5rem; flex-shrink: 0;
-}
-.security-title {
-  font-family: var(--font-display); font-size: 0.93rem; font-weight: 700;
-  color: var(--text); margin-bottom: 0.3rem;
-}
-.security-desc {
-  font-size: 0.85rem; color: var(--muted); line-height: 1.55;
-}
-
-/* ── FAQ ─────────────────────────── */
-.faq-list { margin-top: 2.5rem; display: flex; flex-direction: column; gap: 0; }
-.faq-item {
-  border-bottom: 1px solid var(--border);
-}
-.faq-item:first-child { border-top: 1px solid var(--border); }
-.faq-q {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 1.2rem 0; cursor: pointer; list-style: none; gap: 1rem;
-  font-weight: 600; font-size: 0.97rem; color: var(--text);
-  user-select: none;
-}
-.faq-q::after {
-  content: '+'; font-family: var(--font-display); font-size: 1.3rem;
-  color: var(--accent); flex-shrink: 0; transition: transform 0.2s;
-}
-details[open] .faq-q::after { transform: rotate(45deg); }
-.faq-a {
-  padding: 0 0 1.2rem;
-  font-size: 0.93rem; color: var(--muted); line-height: 1.7;
-}
-.faq-a a { color: var(--accent); }
-
-/* ── CTA FINAL ───────────────────── */
-.cta-final {
-  text-align: center;
-  padding: 5rem 0 4rem;
-  border-top: 1px solid var(--border);
-}
-.cta-final h2 {
-  font-family: var(--font-display); font-size: clamp(1.8rem, 4vw, 2.6rem);
-  font-weight: 800; letter-spacing: -0.03em; line-height: 1.15;
-  margin-bottom: 1rem;
-}
-.cta-final h2 em { font-style: normal; color: var(--accent); }
-.cta-final p {
-  font-size: 1rem; color: var(--muted); max-width: 480px;
-  margin: 0 auto 2.25rem; line-height: 1.7;
-}
-.cta-buttons {
-  display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;
-}
-.cta-micro {
-  font-size: 13px; color: var(--muted); margin-top: 1rem; opacity: 0.75;
-}
-.cta-trust {
-  display: flex; justify-content: center; flex-wrap: wrap;
-  gap: 0.5rem 1.75rem; margin-bottom: 2rem;
-  list-style: none;
-}
-.cta-trust li {
-  font-size: 0.83rem; color: var(--accent); letter-spacing: 0.01em;
-}
-
-/* ── FOOTER ──────────────────────── */
-.page-footer {
-  background: var(--footer-bg);
-  border-top: 1px solid var(--border);
-  padding: 2rem 0;
-}
-.footer-inner {
-  max-width: var(--max-w); margin: 0 auto;
-  padding: 0 var(--pad-x);
-  display: flex; justify-content: space-between; align-items: center;
-  gap: 1rem; flex-wrap: wrap;
-}
-.footer-copy { font-size: 13px; color: var(--muted); }
-.footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
-.footer-links a { font-size: 13px; color: var(--muted); }
-.footer-links a:hover { color: var(--text); text-decoration: none; }
-
-/* ── RESPONSIVE ──────────────────── */
-@media (max-width: 900px) {
-  :root { --pad-x: 1.5rem; }
-  .fifo-layout  { grid-template-columns: 1fr; }
-  .pdf-grid     { grid-template-columns: 1fr; }
-  .steps-bar    { flex-direction: column; border-radius: 14px; }
-  .step-item    { border-right: none; border-bottom: 1px solid var(--border2); }
-  .step-item:last-child { border-bottom: none; }
-  .footer-inner { flex-direction: column; align-items: flex-start; }
-  .ex-grid { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 640px) {
-  .hero h1 { font-size: 2.1rem; }
-  .section-title { font-size: 1.6rem; }
-  .fifo-row { grid-template-columns: 1fr 0.6fr 0.8fr; }
-  .fifo-row > *:nth-child(4),
-  .fifo-row > *:nth-child(5) { display: none; }
-  .ex-grid { grid-template-columns: 1fr; }
-}
-
-/* ── ANIMACIÓN ENTRADA ───────────── */
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.hero { animation: fadeUp 0.45s ease both; }
-</style>
-
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "WebPage",
-  "@id": "https://marianosevilla.com/como-funciona",
-  "url": "https://marianosevilla.com/como-funciona",
-  "name": "Cómo funciona — Informe fiscal cripto en 4 pasos",
-  "description": "Descubre cómo generar tu informe fiscal FIFO para criptomonedas: sube el CSV de tu exchange, clasificación automática y PDF listo para Hacienda.",
-  "inLanguage": "es",
-  "isPartOf": { "@id": "https://marianosevilla.com/#website" }
-}
-</script>
+<link rel="stylesheet" href="/static/landing_apple.css">
+<link rel="stylesheet" href="/static/como_funciona_apple.css">
+<link rel="stylesheet" href="/static/apple_cta.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebPage","@id":"https://marianosevilla.com/como-funciona","url":"https://marianosevilla.com/como-funciona","name":"Cómo funciona el informe fiscal de criptomonedas","description":"Prepara tus archivos, revisa el cálculo FIFO y consulta el detalle de tus operaciones para preparar la información de tu declaración.","inLanguage":"es","isPartOf":{"@id":"https://marianosevilla.com/#website"}},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"¿Qué exchanges soporta la herramienta?","acceptedAnswer":{"@type":"Answer","text":"Consulta el listado de exchanges compatibles y las instrucciones de cada plataforma. El formato y los archivos necesarios pueden variar. Si tu exchange no aparece, contacta con nosotros antes de preparar los archivos."}},{"@type":"Question","name":"¿Necesito conocimientos fiscales?","acceptedAnswer":{"@type":"Answer","text":"La herramienta automatiza la lectura de los archivos compatibles y el cálculo FIFO. Debes comprobar que el historial esté completo y revisar los resultados. Las operaciones complejas y otras particularidades pueden requerir la valoración de un asesor."}},{"@type":"Question","name":"¿El informe sustituye a la declaración de la renta?","acceptedAnswer":{"@type":"Answer","text":"No. El informe sirve para revisar tus cálculos, preparar la información de tu declaración y compartirla con tu asesor. No sustituye al modelo oficial ni implica homologación de la Agencia Tributaria."}},{"@type":"Question","name":"¿Qué ocurre con los swaps?","acceptedAnswer":{"@type":"Answer","text":"Las permutas entre criptomonedas pueden generar ganancias o pérdidas patrimoniales. Revisa que estén identificadas en los archivos y comprueba el resultado del cálculo según las características de tus operaciones."}},{"@type":"Question","name":"¿Crear cuenta implica que todos los informes son gratis?","acceptedAnswer":{"@type":"Answer","text":"Crear cuenta es gratis. El registro no implica que todos los informes o servicios estén incluidos. Revisa las condiciones de acceso y descarga de cada servicio antes de utilizarlo."}},{"@type":"Question","name":"¿Qué pasa con el staking y los intereses?","acceptedAnswer":{"@type":"Answer","text":"El tratamiento fiscal del staking, los airdrops y otras recompensas depende de cómo se obtengan y de sus condiciones. Revisa su naturaleza, valoración e imputación con tu asesor antes de declarar."}},{"@type":"Question","name":"¿Funciona con operaciones de varios años?","acceptedAnswer":{"@type":"Answer","text":"El cálculo FIFO necesita el historial completo de adquisiciones y transmisiones, también las compras de ejercicios anteriores. Consulta los archivos admitidos por tu plataforma y comprueba que incluyan los datos necesarios para el ejercicio que quieres revisar."}}]}]}</script>
 </head>
-<body>
-
-<!-- ── NAV ──────────────────────────── -->
-<nav id="site-nav">
+<body class="apple-home apple-how-page">
+<a class="apple-skip" href="#contenido">Saltar al contenido</a>
+<nav id="site-nav" aria-label="Principal">
   <div class="snav-inner">
     <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
     <ul class="snav-links">
       <li><a href="/herramientas">Herramientas</a></li>
-      <li><a href="/como-funciona">Cómo funciona</a></li>
+      <li><a href="/como-funciona" aria-current="page">Cómo funciona</a></li>
       <li><a href="/recursos">Recursos</a></li>
       <li><a href="/faq">FAQ</a></li>
       <li><a href="/contacto">Contacto</a></li>
@@ -521,590 +39,180 @@ details[open] .faq-q::after { transform: rotate(45deg); }
     </div>
   </div>
 </nav>
-<script src="/static/nav.js" defer></script>
-
-<!-- ── HERO ────────────────────────── -->
-<section class="hero">
-  <div class="wrap">
-    <h1>Cómo funciona la herramienta <em>fiscal cripto</em></h1>
-
-    <p class="hero-desc">
-      Solo tienes que subir el CSV de tu exchange. La herramienta clasifica
-      automáticamente tus operaciones, aplica el método FIFO y genera el
-      informe PDF listo para la Agencia Tributaria.
-    </p>
-
-    <div class="hero-signup-block">
-      <div class="hero-signup-kicker">Empezar ahora</div>
-      <div class="hero-signup-title">¿Listo para generar tu informe fiscal?</div>
-      <p class="hero-signup-desc">Sube el CSV de tu exchange y obtén automáticamente tu informe compatible con Hacienda.</p>
-      <ul class="hero-signup-bullets">
-        <li>✓ Método FIFO automático</li>
-        <li>✓ Compatible con los principales exchanges</li>
-        <li>✓ Informe listo en minutos</li>
-      </ul>
-      <a href="/signup/" class="btn-signup-hero">Crear mi cuenta gratuita</a>
-      <p class="hero-signup-micro">Sin tarjeta · 100% online · Empieza en menos de 1 minuto</p>
-    </div>
-
-    <!-- Steps bar -->
-    <div class="steps-bar">
-      <div class="step-item">
-        <span class="step-icon">📥</span>
-        <span class="step-num">Paso 1</span>
-        <div class="step-title">Sube tu CSV</div>
-        <p class="step-desc">Exporta el historial de tu exchange y súbelo a la plataforma.</p>
+<script src="/static/nav.js"></script>
+<noscript>
+<style>
+/* Native mobile disclosure: useful in HTML viewers without JavaScript too. */
+.apple-home .snav-right{display:none}
+.apple-home .apple-noscript-menu{display:none}
+@media (min-width:1201px){
+  .apple-home #site-nav{position:static;height:auto}
+  .apple-home .snav-inner{flex-wrap:wrap;padding-block:16px;gap:16px}
+  .apple-home .snav-links{display:flex;position:static;transform:none;flex-wrap:wrap;gap:12px}
+  .apple-home .apple-intro-inner{padding-top:48px}
+}
+@media (max-width:1200px){
+  .apple-home .apple-noscript-access{display:none}
+  .apple-home .apple-noscript-menu{display:block;position:absolute;top:8px;right:var(--apple-pad);z-index:1001}
+  .apple-home .apple-noscript-menu>summary{display:flex;align-items:center;justify-content:center;width:44px;height:44px;list-style:none;border:1px solid #d8e1dd;border-radius:9px;background:#f3f6f5;color:var(--text);cursor:pointer}
+  .apple-home .apple-noscript-menu>summary::-webkit-details-marker{display:none}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon{background:transparent}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::before{transform:translateY(6px) rotate(45deg)}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::after{transform:translateY(-6px) rotate(-45deg)}
+  .apple-home .apple-noscript-panel{position:absolute;top:56px;left:auto;right:calc(-1 * var(--apple-pad));width:100vw;display:flex;flex-direction:column;gap:4px;padding:12px var(--apple-pad) 18px;max-height:calc(100vh - 64px);max-height:calc(100dvh - 64px);overflow-y:auto;overscroll-behavior:contain;background:#fff;border-top:1px solid var(--border);box-shadow:0 14px 28px rgba(20,34,30,.1)}
+  .apple-home .apple-noscript-panel>a{display:flex;align-items:center;min-height:44px;padding:11px 14px;border-radius:8px;color:var(--muted);font-size:.9375rem;line-height:1.4;text-decoration:none}
+  .apple-home .apple-noscript-panel>a:hover{background:#f1f5f3;color:var(--text)}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary{justify-content:center;min-height:48px;border-radius:999px;background:var(--accent);color:#fff;font-weight:600}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary:hover{background:#00533f}
+  .apple-home .apple-noscript-menu .snav-menu-icon{width:19px}
+  .apple-home #site-nav .snav-logo{max-width:calc(100% - 60px)}
+}
+</style>
+<details class="apple-noscript-menu">
+  <summary><span class="snav-menu-icon" aria-hidden="true"></span><span class="apple-sr-only">Menú principal</span></summary>
+  <nav class="apple-noscript-panel" aria-label="Navegación móvil">
+    <a href="/herramientas">Herramientas</a>
+    <a href="/como-funciona" aria-current="page">Cómo funciona</a>
+    <a href="/recursos">Recursos</a>
+    <a href="/faq">FAQ</a>
+    <a href="/contacto">Contacto</a>
+    <a href="/login/">Iniciar sesión</a>
+    <a href="/signup/" class="snav-mobile-link-primary">Crear cuenta</a>
+  </nav>
+</details>
+<div class="apple-noscript-access"><a href="/login/">Iniciar sesión</a><a href="/signup/">Crear cuenta</a></div>
+</noscript>
+<main id="contenido" tabindex="-1">
+<section class="how-intro" aria-labelledby="how-title"><div class="apple-container">
+<p class="apple-eyebrow">Cómo funciona</p>
+<h1 id="how-title">Cómo preparar tu informe fiscal de <em>criptomonedas.</em></h1>
+<p class="how-lead">Importa tus archivos, revisa el cálculo FIFO y consulta el detalle de tus operaciones para preparar la información de tu declaración.</p>
+<div class="how-actions"><a class="apple-button" href="/signup/">Crear cuenta</a></div>
+<p class="how-micro">Registro gratuito · Sin tarjeta · Consulta las condiciones del informe</p>
+</div></section>
+<section class="how-section" aria-labelledby="how-steps-title"><div class="apple-container">
+<div class="how-heading"><h2 id="how-steps-title">De tu historial a tu informe.</h2><p>Tres pasos para entender el proceso y saber qué revisar.</p></div>
+<div class="apple-catalog-grid how-process"><a class="apple-catalog-card" href="#sube-tu-csv"><h3>1. Importa</h3><p>Prepara el historial de tu plataforma y sube los archivos compatibles que necesitas para revisar el ejercicio.</p><span>Preparar archivos <span aria-hidden="true">↓</span></span></a><a class="apple-catalog-card" href="#calculo-fifo"><h3>2. Calcula</h3><p>La herramienta identifica las operaciones importadas y calcula las ganancias y pérdidas mediante el criterio FIFO.</p><span>Entender el cálculo <span aria-hidden="true">↓</span></span></a><a class="apple-catalog-card" href="#informe-pdf"><h3>3. Revisa</h3><p>Comprueba el resultado y consulta el informe con el detalle de tus operaciones para preparar tu declaración.</p><span>Ver el informe <span aria-hidden="true">↓</span></span></a></div>
+</div></section>
+<section class="how-section how-soft" id="sube-tu-csv" aria-labelledby="how-prepare-title"><div class="apple-container">
+<div class="how-heading"><h2 id="how-prepare-title">Prepara tu historial.</h2><p>Un cálculo útil empieza por unos archivos completos.</p></div>
+<div class="how-copy"><div><h3>Comprueba qué archivos necesitas</h3><p>Selecciona tu plataforma y consulta sus instrucciones de exportación. Según el exchange, puedes necesitar un CSV, varios archivos o un formato compatible distinto.</p><ul class="how-list"><li>Incluye las compras anteriores necesarias para calcular el coste de adquisición.</li><li>Comprueba las fechas, el ejercicio y los movimientos que contienen tus archivos.</li><li>Conserva los justificantes para revisar tus operaciones con tu asesor.</li></ul></div><div><h3>Sin dar acceso a tu exchange</h3><p>Tú exportas el historial y decides qué archivos subir. No pedimos claves API, contraseñas ni claves privadas de tus wallets.</p><p>Si utilizas varias plataformas, comprueba que dispones del historial completo. No des por consolidado automáticamente el historial de distintos exchanges.</p><p><a href="/exchanges">Consultar exchanges compatibles <span aria-hidden="true">→</span></a></p></div></div>
+<details class="how-details" id="how-exchanges"><summary>Ver guías por exchange</summary><div class="how-details-body"><p class="how-muted">Consulta las instrucciones y las condiciones de cada plataforma antes de preparar los archivos.</p><ul class="how-exchanges"><li><a href="/exchanges/binance">Binance</a></li><li><a href="/exchanges/bitvavo">Bitvavo</a></li><li><a href="/exchanges/kraken">Kraken</a></li><li><a href="/exchanges/coinbase">Coinbase</a></li><li><a href="/exchanges/bit2me">Bit2Me</a></li><li><a href="/exchanges/nexo">Nexo</a></li><li><a href="/exchanges/cryptocom">Crypto.com</a></li><li><a href="/bitget">Bitget</a></li><li><a href="/mexc">MEXC</a></li><li><a href="/kucoin">KuCoin</a></li><li><a href="/uphold">Uphold</a></li></ul><p class="how-small">Para Bybit u otra plataforma que no encuentres, revisa el listado actualizado de compatibilidad o <a href="/contacto">consúltanos</a>.</p></div></details>
+</div></section>
+<section class="how-section" id="calculo-fifo" aria-labelledby="how-calculation-title"><div class="apple-container">
+<div class="how-heading"><span id="clasificacion" class="how-anchor"></span><h2 id="how-calculation-title">Clasificación y cálculo FIFO.</h2><p>Automatiza el cálculo y conserva el contexto de tus operaciones.</p></div>
+<div class="how-copy"><div><h3>Identifica las operaciones importadas</h3><p>La herramienta lee los formatos admitidos e identifica compras, ventas, swaps, movimientos, comisiones y recompensas según los datos disponibles. Revisa las advertencias y los datos que requieran comprobación.</p><p>La cobertura puede variar según el exchange y el tipo de archivo. Los depósitos y retiradas también ayudan a revisar el historial.</p></div><div><h3>Entiende qué hace FIFO</h3><p>FIFO identifica primero las unidades adquiridas antes de una misma criptomoneda homogénea. Ese coste se utiliza para calcular la ganancia o pérdida de las unidades transmitidas.</p><p>El resultado depende del historial importado. Las posiciones abiertas, rendimientos y resúmenes disponibles deben revisarse según tu plataforma y tu caso.</p><p><a href="/metodo-fifo-criptomonedas">Ver el método FIFO y sus ejemplos <span aria-hidden="true">→</span></a></p></div></div>
+<div class="how-note"><p><strong>Las recompensas requieren contexto.</strong> El tratamiento del staking, los intereses de Earn/Savings, los airdrops y el cashback depende de cómo se obtengan y de sus condiciones. Revisa su naturaleza, valoración e imputación con tu asesor.</p></div>
+</div></section>
+<section class="how-section how-soft how-report" id="informe-pdf" aria-labelledby="how-report-title"><div class="apple-container">
+<div class="how-heading"><h2 id="how-report-title">Revisa tu informe.</h2><p>Consulta el resultado y el detalle de las operaciones antes de preparar tu declaración.</p></div>
+<div class="device-frame">
+      <div class="device-bar">
+        <span class="device-dot device-dot-r"></span>
+        <span class="device-dot device-dot-y"></span>
+        <span class="device-dot device-dot-g"></span>
+        <div class="device-url">Informe FIFO de criptomonedas</div>
       </div>
-      <div class="step-item">
-        <span class="step-icon">⚙️</span>
-        <span class="step-num">Paso 2</span>
-        <div class="step-title">Clasificación automática</div>
-        <p class="step-desc">Cada operación se identifica: compra, venta, swap, staking, rewards…</p>
-      </div>
-      <div class="step-item">
-        <span class="step-icon">📐</span>
-        <span class="step-num">Paso 3</span>
-        <div class="step-title">Cálculo FIFO</div>
-        <p class="step-desc">Se aplica el método FIFO obligatorio y se calculan las plusvalías y minusvalías.</p>
-      </div>
-      <div class="step-item">
-        <span class="step-icon">📄</span>
-        <span class="step-num">Paso 4</span>
-        <div class="step-title">Informe PDF</div>
-        <p class="step-desc">PDF profesional con bases imponibles, rendimientos y operaciones detalladas.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ── SECCIÓN 1: SUBE TU CSV ───────── -->
-<section class="section" id="sube-tu-csv">
-  <div class="wrap">
-    <span class="kicker">Paso 1</span>
-    <h2 class="section-title">Sube el CSV de tu exchange</h2>
-    <p class="section-desc">
-      Descarga el historial completo de operaciones directamente desde tu exchange.
-      No necesitas conocimientos fiscales ni técnicos. Solo el archivo CSV que te da tu plataforma.
-    </p>
-
-    <div class="ex-grid">
-
-      <!-- Disponibles (orden alfabético) -->
-      <a href="/exchanges/binance" class="ex-card">
-        <img src="/static/images/binance.jpg" alt="Binance" class="ex-img">
-        <div class="ex-info">
-          <span class="ex-name">Binance</span>
-          <span class="ex-badge available">Disponible</span>
+      <div class="device-body">
+        <div class="mock-kpis">
+          <div class="mock-kpi">
+            <div class="mock-kpi-label">Operaciones</div>
+            <div class="mock-kpi-value">47</div>
+          </div>
+          <div class="mock-kpi">
+            <div class="mock-kpi-label">Ganancias</div>
+            <div class="mock-kpi-value green">+3.241€</div>
+          </div>
+          <div class="mock-kpi">
+            <div class="mock-kpi-label">Pérdidas</div>
+            <div class="mock-kpi-value red">-890€</div>
+          </div>
+          <div class="mock-kpi">
+            <div class="mock-kpi-label">Resultado</div>
+            <div class="mock-kpi-value green">+2.351€</div>
+          </div>
         </div>
-      </a>
-
-      <div class="ex-card">
-        <img src="/static/images/bit2me.jpg" alt="Bit2Me" class="ex-img">
-        <div class="ex-info">
-          <span class="ex-name">Bit2Me</span>
-          <span class="ex-badge available">Disponible</span>
+        <p class="apple-table-hint">Desliza para ver todas las columnas <span aria-hidden="true">↔</span></p><div class="mock-table-wrap" tabindex="0" role="region" aria-label="Operaciones del informe de ejemplo. Tabla desplazable horizontalmente">
+          <table class="mock-table">
+            <caption class="apple-sr-only">Operaciones del informe de ejemplo. Datos ficticios. Importes en euros.</caption>
+            <thead><tr class="mock-table-head"><th scope="col">Fecha</th><th scope="col">Activo</th><th scope="col">Tipo</th><th scope="col">Transmisión</th><th scope="col"><span aria-hidden="true">G/P</span><span class="apple-sr-only">Ganancia o pérdida</span></th></tr></thead>
+            <tbody>
+              <tr class="mock-table-row"><td><time class="apple-example-date" datetime="2025-03-15">15/03/2025</time></td><td>BTC</td><td><span class="mock-badge mock-badge-venta">Venta</span></td><td>2.400,00</td><td class="mock-green">+1.240,00</td></tr>
+              <tr class="mock-table-row"><td><time class="apple-example-date" datetime="2025-05-02">02/05/2025</time></td><td>ETH</td><td><span class="mock-badge mock-badge-swap">Swap</span></td><td>860,50</td><td class="mock-green">+210,30</td></tr>
+              <tr class="mock-table-row"><td><time class="apple-example-date" datetime="2025-06-18">18/06/2025</time></td><td>SOL</td><td><span class="mock-badge mock-badge-venta">Venta</span></td><td>320,00</td><td class="mock-red">-88,40</td></tr>
+              <tr class="mock-table-row"><td><time class="apple-example-date" datetime="2025-09-29">29/09/2025</time></td><td>BNB</td><td><span class="mock-badge mock-badge-swap">Swap</span></td><td>540,20</td><td class="mock-green">+178,60</td></tr>
+              <tr class="mock-table-row"><td><time class="apple-example-date" datetime="2025-11-11">11/11/2025</time></td><td>BTC</td><td><span class="mock-badge mock-badge-venta">Venta</span></td><td>1.612,00</td><td class="mock-green">+800,10</td></tr>
+            </tbody>
+          </table>
         </div>
-      </div>
-
-      <div class="ex-card">
-        <img src="/static/images/bitget.png" alt="Bitget" class="ex-img">
-        <div class="ex-info">
-          <span class="ex-name">Bitget</span>
-          <span class="ex-badge available">Disponible</span>
-        </div>
-      </div>
-
-      <a href="/exchanges/bitvavo" class="ex-card">
-        <img src="/static/images/bitvavo.png" alt="Bitvavo" class="ex-img">
-        <div class="ex-info">
-          <span class="ex-name">Bitvavo</span>
-          <span class="ex-badge available">Disponible</span>
-        </div>
-      </a>
-
-      <div class="ex-card">
-        <img src="/static/images/coinbase.png" alt="Coinbase" class="ex-img">
-        <div class="ex-info">
-          <span class="ex-name">Coinbase</span>
-          <span class="ex-badge available">Disponible</span>
-        </div>
-      </div>
-
-      <div class="ex-card">
-        <img src="/static/images/crypto.png" alt="Crypto.com" class="ex-img">
-        <div class="ex-info">
-          <span class="ex-name">Crypto.com</span>
-          <span class="ex-badge available">Disponible</span>
-        </div>
-      </div>
-
-      <a href="/exchanges/kraken" class="ex-card">
-        <img src="/static/images/kraken.png" alt="Kraken" class="ex-img">
-        <div class="ex-info">
-          <span class="ex-name">Kraken</span>
-          <span class="ex-badge available">Disponible</span>
-        </div>
-      </a>
-
-      <div class="ex-card">
-        <img src="/static/images/kucoin.png" alt="KuCoin" class="ex-img">
-        <div class="ex-info">
-          <span class="ex-name">KuCoin</span>
-          <span class="ex-badge available">Disponible</span>
-        </div>
-      </div>
-
-      <div class="ex-card">
-        <img src="/static/images/mexc.png" alt="MEXC" class="ex-img">
-        <div class="ex-info">
-          <span class="ex-name">MEXC</span>
-          <span class="ex-badge available">Disponible</span>
-        </div>
-      </div>
-
-      <div class="ex-card">
-        <img src="/static/images/nexo.jpg" alt="Nexo" class="ex-img">
-        <div class="ex-info">
-          <span class="ex-name">Nexo</span>
-          <span class="ex-badge available">Disponible</span>
-        </div>
-      </div>
-
-      <div class="ex-card">
-        <img src="/static/images/uphold.png" alt="Uphold" class="ex-img">
-        <div class="ex-info">
-          <span class="ex-name">Uphold</span>
-          <span class="ex-badge available">Disponible</span>
-        </div>
-      </div>
-
-      <!-- Próximamente (orden alfabético) -->
-      <div class="ex-card disabled">
-        <img src="/static/images/bybit.jpg" alt="Bybit" class="ex-img">
-        <div class="ex-info">
-          <span class="ex-name">Bybit</span>
-          <span class="ex-badge">Próximamente</span>
-        </div>
-      </div>
-
-      <div class="ex-card disabled">
-        <div class="ex-img" style="background:#1f2d4a;display:flex;align-items:center;justify-content:center;color:#555;font-size:1.4rem;">+</div>
-        <div class="ex-info">
-          <span class="ex-name">Más exchanges</span>
-          <span class="ex-badge">En desarrollo</span>
-        </div>
-      </div>
-
-    </div>
-
-    <div class="features-grid" style="margin-top:2.5rem;">
-      <div class="feature-card">
-        <span class="feature-icon">📁</span>
-        <div class="feature-title">Solo el CSV del exchange</div>
-        <p class="feature-desc">No hacen falta claves API, contraseñas ni acceso a tu cuenta. Solo el archivo que exportas tú mismo.</p>
-      </div>
-      <div class="feature-card">
-        <span class="feature-icon">🌍</span>
-        <div class="feature-title">Múltiples exchanges</div>
-        <p class="feature-desc">Puedes combinar operaciones de <a href="/exchanges">varios exchanges</a> en el mismo informe. Todo integrado automáticamente.</p>
-      </div>
-      <div class="feature-card">
-        <span class="feature-icon">⚡</span>
-        <div class="feature-title">Procesamiento inmediato</div>
-        <p class="feature-desc">El análisis se realiza en segundos. No tienes que esperar ni configurar nada manualmente.</p>
       </div>
     </div>
-  </div>
-</section>
-
-<!-- ── SECCIÓN 2: CLASIFICACIÓN ───── -->
-<section class="section" id="clasificacion">
-  <div class="wrap">
-    <span class="kicker">Paso 2</span>
-    <h2 class="section-title">Clasificación <em>automática</em></h2>
-    <p class="section-desc">
-      La herramienta identifica el tipo de cada operación sin que tengas que
-      etiquetar nada manualmente. Compras, ventas, swaps, staking, rewards…
-      todo clasificado correctamente según criterios fiscales.
-    </p>
-
-    <div class="tipo-grid">
-      <span class="tipo-badge"><span class="tipo-badge-dot"></span>Compras</span>
-      <span class="tipo-badge"><span class="tipo-badge-dot"></span>Ventas</span>
-      <span class="tipo-badge"><span class="tipo-badge-dot"></span>Swaps</span>
-      <span class="tipo-badge"><span class="tipo-badge-dot"></span>Staking rewards</span>
-      <span class="tipo-badge"><span class="tipo-badge-dot"></span>Earn / intereses</span>
-      <span class="tipo-badge"><span class="tipo-badge-dot"></span>Cashback</span>
-      <span class="tipo-badge"><span class="tipo-badge-dot"></span>Airdrops</span>
-      <span class="tipo-badge"><span class="tipo-badge-dot"></span>Depósitos</span>
-      <span class="tipo-badge"><span class="tipo-badge-dot"></span>Retiradas</span>
-      <span class="tipo-badge"><span class="tipo-badge-dot"></span>Comisiones</span>
-    </div>
-
-    <div class="features-grid" style="margin-top:2rem;">
-      <div class="feature-card">
-        <span class="feature-icon">🏷️</span>
-        <div class="feature-title">Sin etiquetado manual</div>
-        <p class="feature-desc">El sistema detecta automáticamente el tipo de cada operación a partir de los datos del CSV.</p>
+<p class="how-small">Ejemplo con datos ficticios. No es un documento fiscal oficial.</p>
+<details class="how-details"><summary>Qué revisar en el informe PDF</summary><div class="how-details-body"><ul class="how-list"><li>Resumen de las ganancias, pérdidas y resultado del ejercicio.</li><li>Detalle de operaciones: fecha, activo, adquisición FIFO, transmisión y resultado.</li><li>Rendimientos, movimientos, posiciones y advertencias disponibles para tu plataforma.</li><li>Coherencia con tus justificantes y con el historial completo de adquisiciones.</li></ul><p class="how-small">El <a href="/modelo-721-criptomonedas">Modelo 721</a> tiene su propio alcance y condiciones. Consulta su guía para saber qué documentación necesitas preparar.</p></div></details>
+<div class="how-note"><p><strong>Información de apoyo para tu declaración.</strong> El informe ayuda a revisar tus cálculos y compartirlos con tu asesor. No sustituye al modelo oficial ni implica homologación de la Agencia Tributaria.</p></div>
+</div></section>
+<section class="apple-cta-section" aria-labelledby="how-mid-title"><div class="apple-container"><div class="apple-cta apple-cta--compact" id="how-mid-cta">
+<div class="apple-cta-copy"><h2 class="apple-cta-title" id="how-mid-title">Prepara la información de tus operaciones.</h2><p>Crea tu cuenta para empezar. Consulta las condiciones de acceso y descarga del informe.</p></div>
+<a class="apple-button" href="/signup/">Crear cuenta</a>
+</div></div></section>
+<section class="how-section" id="privacidad-seguridad" aria-labelledby="how-privacy-title"><div class="apple-container">
+<div class="how-heading"><h2 id="how-privacy-title">Tus datos, con claridad.</h2><p>Los archivos contienen información de tus operaciones. Es importante saber qué compartes.</p></div>
+<div class="how-copy"><div><h3>Archivos elegidos por ti</h3><p>No pedimos acceso a tu exchange ni claves privadas. Los archivos se procesan para preparar los cálculos y la comunicación con la web utiliza HTTPS.</p></div><div><h3>Consulta cómo tratamos los datos</h3><p>La política de privacidad explica el tratamiento y la conservación de los datos. Revisa esa información antes de subir archivos y utiliza <a href="/contacto">contacto</a> si necesitas aclaraciones.</p><p><a href="/privacidad">Leer la política de privacidad <span aria-hidden="true">→</span></a></p></div></div>
+</div></section>
+<section class="how-section how-soft" id="faq" aria-labelledby="how-faq-title"><div class="apple-container">
+<div class="how-heading"><h2 id="how-faq-title">Antes de empezar.</h2><p>Respuestas a las dudas más frecuentes sobre el proceso.</p></div>
+<div class="how-faq-list"><details class="apple-faq-item"><summary>¿Qué exchanges soporta la herramienta?</summary><div class="apple-faq-answer"><p>Consulta el listado de exchanges compatibles y las instrucciones de cada plataforma. El formato y los archivos necesarios pueden variar. Si tu exchange no aparece, contacta con nosotros antes de preparar los archivos.</p></div></details><details class="apple-faq-item"><summary>¿Necesito conocimientos fiscales?</summary><div class="apple-faq-answer"><p>La herramienta automatiza la lectura de los archivos compatibles y el cálculo FIFO. Debes comprobar que el historial esté completo y revisar los resultados. Las operaciones complejas y otras particularidades pueden requerir la valoración de un asesor.</p></div></details><details class="apple-faq-item"><summary>¿El informe sustituye a la declaración de la renta?</summary><div class="apple-faq-answer"><p>No. El informe sirve para revisar tus cálculos, preparar la información de tu declaración y compartirla con tu asesor. No sustituye al modelo oficial ni implica homologación de la Agencia Tributaria.</p></div></details><details class="apple-faq-item"><summary>¿Qué ocurre con los swaps?</summary><div class="apple-faq-answer"><p>Las permutas entre criptomonedas pueden generar ganancias o pérdidas patrimoniales. Revisa que estén identificadas en los archivos y comprueba el resultado del cálculo según las características de tus operaciones.</p></div></details><details class="apple-faq-item"><summary>¿Crear cuenta implica que todos los informes son gratis?</summary><div class="apple-faq-answer"><p>Crear cuenta es gratis. El registro no implica que todos los informes o servicios estén incluidos. Revisa las condiciones de acceso y descarga de cada servicio antes de utilizarlo.</p></div></details><details class="apple-faq-item"><summary>¿Qué pasa con el staking y los intereses?</summary><div class="apple-faq-answer"><p>El tratamiento fiscal del staking, los airdrops y otras recompensas depende de cómo se obtengan y de sus condiciones. Revisa su naturaleza, valoración e imputación con tu asesor antes de declarar.</p></div></details><details class="apple-faq-item"><summary>¿Funciona con operaciones de varios años?</summary><div class="apple-faq-answer"><p>El cálculo FIFO necesita el historial completo de adquisiciones y transmisiones, también las compras de ejercicios anteriores. Consulta los archivos admitidos por tu plataforma y comprueba que incluyan los datos necesarios para el ejercicio que quieres revisar.</p></div></details></div>
+<p class="how-small" style="margin-top:20px">Más información en las <a href="/faq">preguntas frecuentes</a> o en <a href="/contacto">contacto</a>.</p>
+</div></section>
+<section class="apple-cta-section" aria-labelledby="how-final-title"><div class="apple-container"><div class="apple-cta" id="how-final-cta">
+<p class="apple-cta-eyebrow">Tu próximo paso</p>
+<h2 class="apple-cta-title" id="how-final-title">Empieza por preparar tus archivos.</h2>
+<p class="apple-cta-description">Crea tu cuenta, consulta las instrucciones de tu plataforma y revisa las condiciones de acceso al informe.</p>
+<p class="apple-cta-notice">Si necesitas orientación, <a href="/contacto">escríbenos</a>. <strong>Presupuestos y pagos de asesoramiento temporalmente suspendidos.</strong> Puedes <a href="/pedir-asesoramiento">consultar el estado del servicio</a>.</p>
+<ul class="apple-cta-benefits"><li><span aria-hidden="true">✓ </span>Registro gratuito</li><li><span aria-hidden="true">✓ </span>Sin tarjeta</li><li><span aria-hidden="true">✓ </span>Guías por exchange</li></ul>
+<a class="apple-button" href="/signup/">Crear cuenta</a>
+</div></div></section>
+</main>
+<footer class="apple-footer">
+  <div class="apple-container">
+    <div class="apple-footer-top">
+      <div class="apple-footer-brand">
+        <a href="/" class="apple-footer-logo">mariano<span>sevilla</span>.com</a>
+        <p>Informes FIFO de criptomonedas.</p>
       </div>
-      <div class="feature-card">
-        <span class="feature-icon">📐</span>
-        <div class="feature-title">Criterio fiscal correcto</div>
-        <p class="feature-desc">Las ventas y swaps tributan como ganancias patrimoniales. Los intereses y staking, como rendimientos del capital mobiliario (casilla 0033).</p>
-      </div>
-      <div class="feature-card">
-        <span class="feature-icon">🔍</span>
-        <div class="feature-title">Detalle por operación</div>
-        <p class="feature-desc">El informe incluye cada operación individual con fecha, activo, tipo, precio de adquisición y resultado.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ── SECCIÓN 3: FIFO ────────────── -->
-<section class="section" id="calculo-fifo">
-  <div class="wrap">
-    <span class="kicker">Paso 3</span>
-    <h2 class="section-title">Cálculo <em>FIFO</em> automático</h2>
-
-    <div class="fifo-layout">
-      <div class="fifo-text">
-        <p>
-          El <a href="/metodo-fifo-criptomonedas">método FIFO</a> (<em style="font-style:normal;color:var(--text)">First In, First Out</em>) es el obligatorio
-          en España para calcular las ganancias y pérdidas patrimoniales de criptomonedas,
-          según el artículo 37.2 de la LIRPF.
-        </p>
-        <p>
-          La herramienta lo aplica automáticamente sobre todo tu historial,
-          sin que tengas que calcular nada a mano.
-        </p>
+      <nav aria-labelledby="apple-footer-explore">
+        <h2 id="apple-footer-explore">Explorar</h2>
         <ul>
-          <li>Ganancias y pérdidas patrimoniales por activo</li>
-          <li>Rendimientos del capital mobiliario separados</li>
-          <li>Posiciones abiertas y precio medio actualizado</li>
-          <li>Resumen anual consolidado</li>
-          <li>Compatible con operaciones en múltiples años</li>
+          <li><a href="/herramientas">Herramientas</a></li>
+          <li><a href="/como-funciona">Cómo funciona</a></li>
+          <li><a href="/exchanges">Exchanges compatibles</a></li>
         </ul>
-      </div>
-
-      <div class="fifo-mock">
-        <div class="fifo-mock-header">Vista previa — Tabla de operaciones</div>
-        <div class="fifo-row head">
-          <span>Fecha</span>
-          <span>Activo</span>
-          <span>Tipo</span>
-          <span>Transmisión</span>
-          <span>G / P</span>
-        </div>
-        <div class="fifo-row">
-          <span>15/03/2024</span>
-          <span>BTC</span>
-          <span><span class="badge badge-venta">Venta</span></span>
-          <span>2.400,00 €</span>
-          <span class="fifo-green">+1.240,00</span>
-        </div>
-        <div class="fifo-row">
-          <span>02/05/2024</span>
-          <span>ETH</span>
-          <span><span class="badge badge-swap">Swap</span></span>
-          <span>860,50 €</span>
-          <span class="fifo-green">+210,30</span>
-        </div>
-        <div class="fifo-row">
-          <span>18/06/2024</span>
-          <span>SOL</span>
-          <span><span class="badge badge-venta">Venta</span></span>
-          <span>320,00 €</span>
-          <span class="fifo-red">−88,40</span>
-        </div>
-        <div class="fifo-row">
-          <span>29/09/2024</span>
-          <span>BNB</span>
-          <span><span class="badge badge-swap">Swap</span></span>
-          <span>540,20 €</span>
-          <span class="fifo-green">+178,60</span>
-        </div>
-        <div class="fifo-row">
-          <span>11/11/2024</span>
-          <span>BTC</span>
-          <span><span class="badge badge-venta">Venta</span></span>
-          <span>1.612,00 €</span>
-          <span class="fifo-green">+800,10</span>
-        </div>
-      </div>
+      </nav>
+      <nav aria-labelledby="apple-footer-help">
+        <h2 id="apple-footer-help">Ayuda</h2>
+        <ul>
+          <li><a href="/faq">Preguntas frecuentes</a></li>
+          <li><a href="/contacto">Contacto</a></li>
+          <li><a href="/about">Equipo</a></li>
+        </ul>
+      </nav>
     </div>
-  </div>
-</section>
-
-<!-- ── SECCIÓN 4: INFORME PDF ───────── -->
-<section class="section" id="informe-pdf">
-  <div class="wrap">
-    <span class="kicker">Paso 4</span>
-    <h2 class="section-title">Informe <em>PDF</em> profesional</h2>
-    <p class="section-desc">
-      El resultado es un PDF estructurado, listo para entregar a tu gestor
-      o para completar tú mismo la declaración de la renta.
-    </p>
-
-    <div class="pdf-grid">
-      <div class="pdf-list">
-        <div class="pdf-item">
-          <span class="pdf-item-icon">📋</span>
-          <div>
-            <div class="pdf-item-title">Resumen ejecutivo</div>
-            <p class="pdf-item-desc">Total de ganancias, pérdidas, resultado neto y rendimientos de capital mobiliario de un vistazo.</p>
-          </div>
-        </div>
-        <div class="pdf-item">
-          <span class="pdf-item-icon">📊</span>
-          <div>
-            <div class="pdf-item-title">Bases imponibles</div>
-            <p class="pdf-item-desc">Ganancia patrimonial neta (casilla 1626) y rendimientos del capital mobiliario (casilla 0033) desglosados.</p>
-          </div>
-        </div>
-        <div class="pdf-item">
-          <span class="pdf-item-icon">🔢</span>
-          <div>
-            <div class="pdf-item-title">Operaciones detalladas</div>
-            <p class="pdf-item-desc">Tabla completa con cada operación: fecha, activo, precio de adquisición FIFO, precio de transmisión y resultado.</p>
-          </div>
-        </div>
-        <div class="pdf-item">
-          <span class="pdf-item-icon">🌐</span>
-          <div>
-            <div class="pdf-item-title">Modelo 721</div>
-            <p class="pdf-item-desc">Saldo de criptomonedas en exchanges extranjeros a 31 de diciembre, para declaración informativa de bienes en el extranjero. <a href="/modelo-721-criptomonedas">Modelo 721 de criptomonedas →</a></p>
-          </div>
-        </div>
-        <div class="pdf-item">
-          <span class="pdf-item-icon">⚠️</span>
-          <div>
-            <div class="pdf-item-title">Advertencias fiscales</div>
-            <p class="pdf-item-desc">Alertas automáticas si hay operaciones que requieren revisión o criterio especial.</p>
-          </div>
-        </div>
+    <div class="apple-footer-legal">
+      <p class="apple-footer-disclaimer">Herramienta de generación de informes FIFO para usuarios con criptomonedas. No constituye asesoramiento fiscal ni legal.</p>
+      <div class="apple-footer-bottom">
+        <p class="apple-footer-copyright">© <span class="apple-footer-year">2026</span> Mariano Sevilla</p>
+        <nav aria-label="Información legal">
+          <ul>
+            <li><a href="/privacidad">Privacidad</a></li>
+            <li><a href="/terminos">Términos</a></li>
+            <li><a href="/cookies">Cookies</a></li>
+            <li><a href="/aviso-legal">Aviso legal</a></li>
+          </ul>
+        </nav>
       </div>
-
-      <div class="pdf-sample">
-        <div class="pdf-sample-bar">
-          <span class="pdf-dot pdf-dot-r"></span>
-          <span class="pdf-dot pdf-dot-y"></span>
-          <span class="pdf-dot pdf-dot-g"></span>
-          <span style="margin-left:4px;">Informe_FIFO_2024.pdf</span>
-        </div>
-        <div class="pdf-sample-body">
-          <div class="pdf-stat-row">
-            <div class="pdf-stat">
-              <div class="pdf-stat-label">Ganancias netas</div>
-              <div class="pdf-stat-value green">+3.241,00 €</div>
-            </div>
-            <div class="pdf-stat">
-              <div class="pdf-stat-label">Pérdidas</div>
-              <div class="pdf-stat-value red">−890,40 €</div>
-            </div>
-            <div class="pdf-stat">
-              <div class="pdf-stat-label">Resultado FIFO</div>
-              <div class="pdf-stat-value green">+2.350,60 €</div>
-            </div>
-            <div class="pdf-stat">
-              <div class="pdf-stat-label">Rendimientos cap.</div>
-              <div class="pdf-stat-value">+124,00 €</div>
-            </div>
-          </div>
-          <div class="pdf-section-label">Bases imponibles</div>
-          <div class="pdf-row">
-            <span class="pdf-row-label">Ganancia patrimonial (casilla 1626)</span>
-            <span class="pdf-row-value green">+2.350,60 €</span>
-          </div>
-          <div class="pdf-row">
-            <span class="pdf-row-label">Rendimientos capital mob. (casilla 0033)</span>
-            <span class="pdf-row-value">+124,00 €</span>
-          </div>
-          <div class="pdf-row">
-            <span class="pdf-row-label">Operaciones analizadas</span>
-            <span class="pdf-row-value">47</span>
-          </div>
-          <div class="pdf-row">
-            <span class="pdf-row-label">Exchanges</span>
-            <span class="pdf-row-value">Binance · Bitvavo</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ── SECCIÓN 5: PRIVACIDAD ─────── -->
-<section class="section" id="privacidad-seguridad">
-  <div class="wrap">
-    <span class="kicker">Privacidad y seguridad</span>
-    <h2 class="section-title">Tus datos, bajo <em>tu control</em></h2>
-    <p class="section-desc">
-      Diseñada desde el principio para proteger tu privacidad.
-      No necesitas dar acceso a tu exchange ni compartir datos sensibles.
-    </p>
-
-    <div class="security-grid">
-      <div class="security-card">
-        <span class="security-icon">🚫</span>
-        <div>
-          <div class="security-title">Sin claves API</div>
-          <p class="security-desc">Solo necesitas el CSV exportado por ti. Nunca se solicitan claves de acceso a tu exchange.</p>
-        </div>
-      </div>
-      <div class="security-card">
-        <span class="security-icon">🔒</span>
-        <div>
-          <div class="security-title">Conexión HTTPS</div>
-          <p class="security-desc">Toda la comunicación está cifrada mediante TLS. Tu CSV viaja de forma segura al servidor.</p>
-        </div>
-      </div>
-      <div class="security-card">
-        <span class="security-icon">🍪</span>
-        <div>
-          <div class="security-title">Cookies seguras</div>
-          <p class="security-desc">La sesión usa cookies httpOnly y SameSite. No se exponen tokens en el navegador.</p>
-        </div>
-      </div>
-      <div class="security-card">
-        <span class="security-icon">🛡️</span>
-        <div>
-          <div class="security-title">Protección anti-abuso</div>
-          <p class="security-desc">Rate limiting por usuario y verificación Turnstile en formularios para evitar usos automatizados.</p>
-        </div>
-      </div>
-      <div class="security-card">
-        <span class="security-icon">📵</span>
-        <div>
-          <div class="security-title">Sin venta de datos</div>
-          <p class="security-desc">Tus datos no se venden, no se comparten con terceros ni se usan para publicidad.</p>
-        </div>
-      </div>
-      <div class="security-card">
-        <span class="security-icon">🗑️</span>
-        <div>
-          <div class="security-title">Sin almacenamiento permanente</div>
-          <p class="security-desc">Los archivos CSV subidos se procesan y se eliminan. No se guardan en el servidor de forma permanente.</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ── SECCIÓN 6: FAQ ────────────── -->
-<section class="section" id="faq">
-  <div class="wrap">
-    <span class="kicker">Preguntas frecuentes</span>
-    <h2 class="section-title">¿Tienes dudas?</h2>
-
-    <div class="faq-list">
-
-      <details class="faq-item">
-        <summary class="faq-q">¿Qué exchanges soporta la herramienta?</summary>
-        <p class="faq-a">
-          Consulta la <a href="/exchanges">guía completa de exchanges compatibles →</a>
-          con instrucciones de exportación para Binance, Bitvavo, Bit2Me, Coinbase, Kraken,
-          Nexo, Crypto.com, Bitget, MEXC y Uphold.
-          Si tu exchange no aparece, <a href="/contacto">contáctanos</a>.
-        </p>
-      </details>
-
-      <details class="faq-item">
-        <summary class="faq-q">¿Necesito conocimientos fiscales?</summary>
-        <p class="faq-a">
-          No. La herramienta aplica automáticamente el método FIFO y clasifica cada operación
-          según los criterios de la Agencia Tributaria española. Solo tienes que subir el CSV
-          y descargar el PDF resultante.
-        </p>
-      </details>
-
-      <details class="faq-item">
-        <summary class="faq-q">¿Es el informe válido para Hacienda?</summary>
-        <p class="faq-a">
-          El informe aplica el método FIFO según la normativa vigente (art. 37.2 LIRPF)
-          y está supervisado por economista colegiado (nº 4.579). Está diseñado para
-          ser entregado a tu gestor o para completar tú mismo la declaración de la renta.
-          Como toda herramienta fiscal, recomendamos revisarlo con un profesional.
-        </p>
-      </details>
-
-      <details class="faq-item">
-        <summary class="faq-q">¿Qué ocurre con los swaps?</summary>
-        <p class="faq-a">
-          Los swaps (intercambio de una criptomoneda por otra) tributan como
-          <strong>ganancias o pérdidas patrimoniales</strong>, igual que una venta.
-          La herramienta los detecta automáticamente y los incluye en el cálculo FIFO.
-        </p>
-      </details>
-
-      <details class="faq-item">
-        <summary class="faq-q">¿Puedo probar gratis?</summary>
-        <p class="faq-a">
-          Sí. Puedes crear una cuenta gratuita y probar la herramienta sin tarjeta de crédito.
-          <a href="/signup/">Crea tu cuenta gratis aquí</a>.
-        </p>
-      </details>
-
-      <details class="faq-item">
-        <summary class="faq-q">¿Qué pasa con el staking y los intereses?</summary>
-        <p class="faq-a">
-          Las recompensas de staking, los intereses de Earn/Savings y el cashback
-          tributan como <strong>rendimientos del capital mobiliario</strong> (casilla 0033),
-          no como ganancias patrimoniales. La herramienta los separa automáticamente.
-        </p>
-      </details>
-
-      <details class="faq-item">
-        <summary class="faq-q">¿Funciona con operaciones de varios años?</summary>
-        <p class="faq-a">
-          Sí. El método FIFO se aplica correctamente incluyendo el historial completo.
-          Puedes subir operaciones de múltiples años y la herramienta calculará
-          correctamente el coste de adquisición FIFO para cada venta.
-        </p>
-      </details>
-
-    </div>
-
-    <p style="margin-top:2rem;font-size:0.93rem;color:var(--muted);">
-      ¿Tienes más preguntas? Consulta la <a href="/faq">FAQ completa</a> o <a href="/contacto">escríbenos</a>.
-    </p>
-  </div>
-</section>
-
-<!-- ── CTA FINAL ────────────────── -->
-<section class="cta-final">
-  <div class="wrap">
-    <h2>¿Todo listo para<br><em>generar tu informe?</em></h2>
-    <p>
-      La herramienta clasifica automáticamente tus operaciones, aplica FIFO
-      y genera el informe compatible con Hacienda.
-    </p>
-    <ul class="cta-trust">
-      <li>✓ Sin tarjeta</li>
-      <li>✓ 100% online</li>
-      <li>✓ Método FIFO automático</li>
-      <li>✓ Compatible con Hacienda</li>
-    </ul>
-    <div class="cta-buttons">
-      <a href="/signup/"                class="btn-cta">Crear cuenta gratuita</a>
-      <a href="/pedir-asesoramiento"    class="btn-outline">Necesito ayuda fiscal especializada</a>
-    </div>
-  </div>
-</section>
-
-<!-- ── FOOTER ───────────────────── -->
-<footer class="page-footer">
-  <div class="footer-inner">
-    <span class="footer-copy">© 2025 marianosevilla.com — No constituye asesoramiento fiscal ni legal.</span>
-    <div class="footer-links">
-      <a href="/privacidad">Privacidad</a>
-      <a href="/terminos">Términos</a>
-      <a href="/cookies">Cookies</a>
-      <a href="/aviso-legal">Aviso legal</a>
-      <a href="/faq">FAQ</a>
     </div>
   </div>
 </footer>
-
-</body>
-</html>
+<script src="/static/landing_apple.js" defer></script>
+<script src="/static/como_funciona_apple.js" defer></script>
+</body></html>
