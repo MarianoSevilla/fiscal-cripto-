@@ -25,6 +25,11 @@ def run_herramientas_apple(browser,origin):
         assert abs(header['y'])<1 and 63<=header['height']<=65,(width,header)
         intro=page.locator('.tools-intro').bounding_box()
         assert abs(intro['y']-header['height'])<1,(width,intro)
+        assert page.locator('.tools-intro').evaluate('e=>getComputedStyle(e).backgroundColor')=='rgb(7, 60, 50)'
+        assert page.locator('#tools-title').evaluate('e=>getComputedStyle(e).color')=='rgb(255, 255, 255)'
+        for selector in ['.tools-intro .apple-eyebrow','#tools-title em']:
+            assert page.locator(selector).evaluate('e=>getComputedStyle(e).color')=='rgb(166, 237, 207)'
+        assert page.locator('.tools-lead').evaluate('e=>getComputedStyle(e).color')=='rgb(195, 219, 209)'
         assert page.locator('h1').count()==1 and page.locator('main').count()==1
         assert page.locator('h1').inner_text()=='Herramientas fiscales para criptomonedas.'
         assert page.locator('.tools-breadcrumb').count()==0
