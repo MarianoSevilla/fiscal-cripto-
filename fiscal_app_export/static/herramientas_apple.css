@@ -11,14 +11,6 @@
 .apple-tools .tools-section-heading h2 { font-size:clamp(1.625rem,2.8vw,2.25rem); line-height:1.18; }
 .apple-tools .tools-section-heading p { color:var(--muted); margin-top:8px; }
 .apple-tools .tools-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; list-style:none; padding:0; }
-.apple-tools .tools-card { min-width:0; display:flex; flex-direction:column; padding:24px; border:1px solid #b9d8cb; border-radius:20px; background:#edf5f0; }
-.apple-tools .tools-card-top { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
-.apple-tools .tools-icon { display:flex; align-items:center; justify-content:center; flex:0 0 44px; height:44px; border-radius:12px; background:#e5eeea; color:var(--accent); }
-.apple-tools .tools-category { color:var(--muted); font-size:.8125rem; font-weight:550; line-height:1.4; }
-.apple-tools .tools-card h3 { font-size:1.25rem; line-height:1.3; margin-bottom:12px; }
-.apple-tools .tools-card-description { color:var(--muted); font-size:1rem; line-height:1.6; flex:1; }
-.apple-tools .tools-card-meta { margin-block:20px 10px; color:#45584f; font-size:.8125rem; line-height:1.5; }
-.apple-tools .tools-status { padding-top:12px; border-top:1px solid #d7e0db; }
 .apple-tools :is(.tools-card-link,.tools-text-link) { display:inline-flex; align-items:center; align-self:flex-start; gap:8px; min-height:44px; color:var(--accent); font-weight:600; line-height:1.5; text-decoration:none; }
 .apple-tools :is(.tools-card-link,.tools-text-link):hover { text-decoration:underline; }
 .apple-tools :is(.tools-card-link,.tools-text-link):active { background:#e4eee9; color:#004331; }
@@ -52,9 +44,6 @@
  .apple-tools h1 { max-width:none; font-size:clamp(2rem,8.4vw,3rem); margin-bottom:16px; }
  .apple-tools .tools-lead { font-size:1rem; }
  .apple-tools .tools-grid,.apple-tools .tools-confidence-grid { grid-template-columns:minmax(0,1fr); gap:16px; }
- .apple-tools .tools-card { padding:20px; border-radius:16px; }
- .apple-tools .tools-card-top { margin-bottom:16px; }
- .apple-tools .tools-card-meta { margin-top:16px; }
  .apple-tools .tools-confidence-grid { gap:24px; }
  .apple-tools .tools-help-inner { border-radius:16px; }
  .apple-tools .tools-help .apple-button { align-self:center; width:100%; }

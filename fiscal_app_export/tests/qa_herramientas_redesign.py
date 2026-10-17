@@ -37,6 +37,8 @@ def run_herramientas_apple(browser,origin):
         for selector in ['h1','.tools-lead']:
             assert page.locator(selector).evaluate('e=>{const s=getComputedStyle(e.parentElement);return Math.abs(e.getBoundingClientRect().width-(e.parentElement.clientWidth-parseFloat(s.paddingLeft)-parseFloat(s.paddingRight)))<1}'),(width,selector)
         assert page.locator('.tools-card').count()==6
+        assert page.locator('.tools-card-top,.tools-card-meta,.tools-icon').count()==0
+        assert page.locator('.tools-card').evaluate_all("cards=>cards.every(card=>card.children.length===3&&card.children[0].tagName==='H3'&&card.children[1].tagName==='P'&&card.children[2].tagName==='A')")
         # Both catalogues must use the same shared visual component at every width.
         home=ctx.new_page();home.goto(origin+'/',wait_until='networkidle')
         def signature(target,card,description,action):
@@ -49,6 +51,7 @@ def run_herramientas_apple(browser,origin):
             }''',[card,description,action])
         assert signature(page,'.tools-card','.tools-card-description','.tools-card-link')==signature(home,'.apple-exchange-card','.apple-exchange-card>p','.apple-exchange-card>span'),width
         assert abs(page.locator('.tools-card').first.bounding_box()['width']-home.locator('.apple-exchange-card').first.bounding_box()['width'])<1,width
+        assert page.locator('.tools-card').first.bounding_box()['height']<=home.locator('.apple-exchange-card').first.bounding_box()['height']+1,('Tools card exceeds Home reference height',width)
         home.close()
         cards=page.locator('.tools-card')
         assert all(cards.nth(i).is_visible() for i in range(6))
@@ -142,4 +145,5 @@ def run_herramientas_apple(browser,origin):
     assert not errors and not violations
     ctx.close();cases+=1
     print(f'HERRAMIENTAS_APPLE_QA: PASS ({cases} synthetic browser scenarios; {len(WIDTHS)} widths)')
+
 
