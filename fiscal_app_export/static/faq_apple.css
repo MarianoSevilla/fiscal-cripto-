@@ -1,0 +1,25 @@
+/* Opt-in FAQ variant; shared Home assets stay unchanged. */
+.apple-faq-page .faq-intro{padding-block:40px 32px;background:var(--intro-bg);color:var(--intro-text)}
+.apple-faq-page .faq-intro .apple-eyebrow{color:var(--intro-accent);margin-bottom:12px}
+.apple-faq-page h1{width:100%;max-width:none;font-size:clamp(2rem,4.5vw,3.5rem);line-height:1.1;letter-spacing:-.035em;margin-bottom:20px}
+.apple-faq-page h1 em{font-style:normal;color:var(--intro-accent)}
+.apple-faq-page .faq-lead{width:100%;max-width:none;font-size:1.125rem;line-height:1.6;color:var(--intro-muted)}
+.apple-faq-page .faq-topics{padding-block:20px;border-bottom:1px solid var(--border)}
+.apple-faq-page .faq-topics ul{display:flex;flex-wrap:wrap;gap:8px 24px;list-style:none;padding:0}
+.apple-faq-page .faq-topics a{display:inline-flex;align-items:center;min-height:44px;font-weight:600;font-size:.9375rem;text-decoration:underline}
+.apple-faq-page .faq-section{padding-block:var(--apple-section-space);scroll-margin-top:24px}
+.apple-faq-page .faq-section:nth-of-type(odd){background:#f5f7f6}
+.apple-faq-page .faq-heading{margin-bottom:24px}
+.apple-faq-page .faq-heading h2{font-size:clamp(1.625rem,2.8vw,2.25rem);line-height:1.18}
+.apple-faq-page .faq-heading p{margin-top:8px;color:var(--muted)}
+.apple-faq-page .faq-list{border-top:1px solid var(--border)}
+.apple-faq-page .apple-faq-item{scroll-margin-top:24px}
+.apple-faq-page .apple-faq-item summary{padding-block:20px;gap:16px}
+.apple-faq-page .apple-faq-item[open] summary{color:var(--accent)}
+.apple-faq-page .apple-faq-answer{max-width:none;padding-bottom:20px}
+.apple-faq-page .apple-faq-answer p{margin-bottom:8px}
+.apple-faq-page .faq-answer-links{display:flex;flex-wrap:wrap;gap:4px 24px;padding:0;list-style:none}
+.apple-faq-page .faq-answer-links a{min-height:44px;align-items:center;gap:6px}
+.apple-faq-page #site-nav a[aria-current="page"]{color:var(--text);font-weight:650}
+@media(min-width:641px) and (max-width:1200px){.apple-faq-page .faq-intro{padding-top:32px}}
+@media(max-width:640px){.apple-faq-page .faq-intro{padding-block:36px 24px}.apple-faq-page h1{font-size:clamp(2rem,8.4vw,3rem);margin-bottom:16px}.apple-faq-page .faq-lead{font-size:1rem}.apple-faq-page .faq-topics ul{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 16px}.apple-faq-page .faq-topics a{font-size:.875rem}.apple-faq-page .faq-heading{margin-bottom:20px}.apple-faq-page .apple-faq-item summary{padding-block:18px}}
