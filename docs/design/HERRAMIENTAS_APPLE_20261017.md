@@ -54,3 +54,16 @@ Solo después de aprobación visual y autorización de integración: reemplazar
 herramientas.html por el HTML aprobado con política de indexación original;
 conservar la URL /herramientas y añadir sus CSS/JS. Revisar canonical/schema,
 CI completo y captura de cada dispositivo. No fusionar esta rama automáticamente.
+
+## V6 · Cabecera interior coherente con Home (17/10/2026)
+
+A petición del propietario, la introducción usa los tokens de Home: fondo
+#073c32, título blanco, énfasis y antetítulo #a6edcf y descripción #c3dbd1.
+Padding superior compartido con Home: 40 px escritorio, 32 px tablet y 36 px
+móvil. Conserva una composición compacta, título y descripción a todo el
+ancho y tarjetas sin cambios. Sin CTA adicional ni informe de ejemplo.
+
+Solo cambia el CSS aislado de Herramientas y su copia en la vista Netlify.
+La QA existente comprueba los colores calculados en los 13 anchos, además
+de geometría y ausencia de hueco tras el header. Home, header, textos,
+indexación, lógica y producción no cambian. Pendiente aprobación visual.

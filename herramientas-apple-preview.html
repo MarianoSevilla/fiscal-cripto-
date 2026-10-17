@@ -805,11 +805,11 @@ body.apple-home { padding:0; }
 </style>
 <style>/* Isolated Tools proposal. Shared Home assets remain unchanged. */
 .apple-tools { --tools-space:40px; --tools-gap:24px; }
-.apple-tools .tools-intro { padding-block:24px 32px; background:#f5f7f6; }
-.apple-tools .tools-intro .apple-eyebrow { margin-bottom:12px; }
+.apple-tools .tools-intro { padding-block:40px 32px; background:var(--intro-bg); color:var(--intro-text); }
+.apple-tools .tools-intro .apple-eyebrow { margin-bottom:12px; color:var(--intro-accent); }
 .apple-tools h1 { max-width:none; width:100%; margin-bottom:20px; font-size:clamp(2rem,4.5vw,3.5rem); line-height:1.1; text-wrap:wrap; }
-.apple-tools h1 em { color:var(--accent); }
-.apple-tools .tools-lead { max-width:none; width:100%; color:var(--muted); font-size:1.125rem; line-height:1.6; text-wrap:wrap; }
+.apple-tools .tools-intro h1 em { color:var(--intro-accent); }
+.apple-tools .tools-lead { max-width:none; width:100%; color:var(--intro-muted); font-size:1.125rem; line-height:1.6; text-wrap:wrap; }
 .apple-tools :is(.tools-catalogue,.tools-confidence,.tools-faq,.tools-help) { padding-block:var(--tools-space); }
 .apple-tools :is(.tools-confidence,.tools-faq) { border-top:1px solid var(--border); }
 .apple-tools .tools-section-heading { margin-bottom:var(--tools-gap); }
@@ -846,13 +846,14 @@ body.apple-home { padding:0; }
 .apple-tools #site-nav .snav-links a[aria-current="page"] { color:var(--text); font-weight:650; }
 @media (min-width:641px) and (max-width:1200px) {
  .apple-tools { --tools-space:32px; --tools-gap:20px; }
+ .apple-tools .tools-intro { padding-top:32px; }
  .apple-tools .tools-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
  .apple-tools .tools-confidence-grid { grid-template-columns:minmax(0,1fr); gap:24px; }
  .apple-tools .tools-lead { max-width:none; }
 }
 @media (max-width:640px) {
  .apple-tools { --tools-space:24px; --tools-gap:20px; }
- .apple-tools .tools-intro { padding-block:12px 24px; }
+ .apple-tools .tools-intro { padding-block:36px 24px; }
  .apple-tools h1 { max-width:none; font-size:clamp(2rem,8.4vw,3rem); margin-bottom:16px; }
  .apple-tools .tools-lead { font-size:1rem; }
  .apple-tools .tools-grid,.apple-tools .tools-confidence-grid { grid-template-columns:minmax(0,1fr); gap:16px; }
