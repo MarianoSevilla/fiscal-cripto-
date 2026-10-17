@@ -87,10 +87,16 @@ def test_gumroad_resources_and_visible_copy():
     assert 'Registrarse en Bitvavo' in text and 'Registrarse en Gate' in text
     assert 'Gumroad' not in text
     assert text.index('id="informes-y-guias"') < text.index('id="exchanges-colaboradores"') < text.index('id="recursos-disponibles"')
-    assert 'Recursos gratuitos.' in text and 'Informes y guías de criptomonedas.' in text
+    assert 'Recursos gratuitos.' in text and 'Informes de criptomonedas para analizar antes de invertir.' in text
     assert 'El dossier Bitcoin es gratuito y se solicita aquí.' in text
     assert 'Aportación libre desde 0 €' in text
-    assert 'el contenido y el precio antes de comprar' in text
+    assert 'construye tu propio criterio antes de invertir' in text
+    assert 'Elegir exchange' not in text
+    assert 'Dos colaboradores. Una selección con criterio.' in text
+    assert 'sujetas a sus condiciones vigentes' in text
+    assert 'https://youtu.be/J5EKVx6gSn0' in text
+    assert text.index('class="resources-audit"') < text.index('class="apple-catalog-grid resources-affiliates"')
+    assert '<iframe' not in text
     for name in ['recursos-apple-preview','recurso-apple-preview']:
         preview=(ROOT.parent/name/'index.html').read_text()
         assert 'Vista de diseño con contenido ficticio.' not in preview

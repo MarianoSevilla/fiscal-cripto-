@@ -48,7 +48,12 @@ def run_recursos_apple(browser,origin):
                 assert page.locator('.resources-paid a').filter(has_text='Comprar informe').count()==5
                 for name in ['Bitvavo','Gate']:assert page.locator('.resources-affiliates').get_by_text('Registrarse en '+name,exact=False).count()==1
                 assert page.locator('#informes-y-guias').bounding_box()['y'] < page.locator('#exchanges-colaboradores').bounding_box()['y'] < page.locator('#recursos-disponibles').bounding_box()['y']
-                for target in ['informes-y-guias','exchanges-colaboradores']:assert page.locator('.resources-hero-actions a[href="#'+target+'"]').count()==1
+                assert page.locator('.resources-intro a[href="#informes-y-guias"]').count()==1
+                assert 'Elegir exchange' not in page.locator('main').inner_text()
+                audit=page.locator('.resources-audit');assert audit.is_visible()
+                assert audit.locator('a').get_attribute('href')=='https://youtu.be/J5EKVx6gSn0'
+                assert audit.bounding_box()['y']<page.locator('.resources-affiliates').bounding_box()['y']
+                assert page.locator('iframe').count()==0
                 for card in cards.all():
                     assert card.evaluate("e=>getComputedStyle(e).backgroundColor")=='rgb(237, 245, 240)'
                     assert card.evaluate("e=>getComputedStyle(e).borderRadius")=='16px'
