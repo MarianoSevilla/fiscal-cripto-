@@ -1,0 +1,60 @@
+<body class="apple-home apple-resources-page">
+<a class="apple-skip" href="#contenido">Saltar al contenido</a>
+<nav id="site-nav" aria-label="Principal">
+  <div class="snav-inner">
+    <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
+    <ul class="snav-links">
+      <li><a href="/herramientas">Herramientas</a></li>
+      <li><a href="/como-funciona">Cómo funciona</a></li>
+      <li><a href="/recursos" aria-current="page">Recursos</a></li>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/contacto">Contacto</a></li>
+    </ul>
+    <div class="snav-right">
+      <div class="snav-skeleton" aria-hidden="true"></div>
+    </div>
+  </div>
+</nav>
+<script src="/static/nav.js"></script>
+<noscript>
+<style>
+/* Native mobile disclosure: useful in HTML viewers without JavaScript too. */
+.apple-home .snav-right{display:none}
+.apple-home .apple-noscript-menu{display:none}
+@media (min-width:1201px){
+  .apple-home #site-nav{position:static;height:auto}
+  .apple-home .snav-inner{flex-wrap:wrap;padding-block:16px;gap:16px}
+  .apple-home .snav-links{display:flex;position:static;transform:none;flex-wrap:wrap;gap:12px}
+  .apple-home .apple-intro-inner{padding-top:48px}
+}
+@media (max-width:1200px){
+  .apple-home .apple-noscript-access{display:none}
+  .apple-home .apple-noscript-menu{display:block;position:absolute;top:8px;right:var(--apple-pad);z-index:1001}
+  .apple-home .apple-noscript-menu>summary{display:flex;align-items:center;justify-content:center;width:44px;height:44px;list-style:none;border:1px solid #d8e1dd;border-radius:9px;background:#f3f6f5;color:var(--text);cursor:pointer}
+  .apple-home .apple-noscript-menu>summary::-webkit-details-marker{display:none}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon{background:transparent}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::before{transform:translateY(6px) rotate(45deg)}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::after{transform:translateY(-6px) rotate(-45deg)}
+  .apple-home .apple-noscript-panel{position:absolute;top:56px;left:auto;right:calc(-1 * var(--apple-pad));width:100vw;display:flex;flex-direction:column;gap:4px;padding:12px var(--apple-pad) 18px;max-height:calc(100vh - 64px);max-height:calc(100dvh - 64px);overflow-y:auto;overscroll-behavior:contain;background:#fff;border-top:1px solid var(--border);box-shadow:0 14px 28px rgba(20,34,30,.1)}
+  .apple-home .apple-noscript-panel>a{display:flex;align-items:center;min-height:44px;padding:11px 14px;border-radius:8px;color:var(--muted);font-size:.9375rem;line-height:1.4;text-decoration:none}
+  .apple-home .apple-noscript-panel>a:hover{background:#f1f5f3;color:var(--text)}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary{justify-content:center;min-height:48px;border-radius:999px;background:var(--accent);color:#fff;font-weight:600}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary:hover{background:#00533f}
+  .apple-home .apple-noscript-menu .snav-menu-icon{width:19px}
+  .apple-home #site-nav .snav-logo{max-width:calc(100% - 60px)}
+}
+</style>
+<details class="apple-noscript-menu">
+  <summary><span class="snav-menu-icon" aria-hidden="true"></span><span class="apple-sr-only">Menú principal</span></summary>
+  <nav class="apple-noscript-panel" aria-label="Navegación móvil">
+    <a href="/herramientas">Herramientas</a>
+    <a href="/como-funciona">Cómo funciona</a>
+    <a href="/recursos" aria-current="page">Recursos</a>
+    <a href="/faq">FAQ</a>
+    <a href="/contacto">Contacto</a>
+    <a href="/login/">Iniciar sesión</a>
+    <a href="/signup/" class="snav-mobile-link-primary">Crear cuenta</a>
+  </nav>
+</details>
+<div class="apple-noscript-access"><a href="/login/">Iniciar sesión</a><a href="/signup/">Crear cuenta</a></div>
+</noscript>
