@@ -34,7 +34,7 @@ def run_faq_apple(browser,origin):
             toggle=page.locator('#snavMenuToggle');toggle.click()
             assert page.locator('#snavMobileMenu a[aria-current="page"]').inner_text()=='FAQ'
             page.keyboard.press('Escape');assert toggle.get_attribute('aria-expanded')=='false'
-        page.screenshot(path=str(art/f'faq_apple_{width}.png'),full_page=True)
+        page.screenshot(path=str(art/f'home_faq_apple_{width}.png'),full_page=True)
         assert not errors and not violations,(width,errors,violations)
         ctx.close();cases+=1
     for width in [320,390,768,1280]:
