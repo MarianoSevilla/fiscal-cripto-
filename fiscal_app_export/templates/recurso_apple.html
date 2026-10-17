@@ -1,0 +1,97 @@
+{% set page_title = resource.title ~ ' | Mariano Sevilla' %}
+{% set page_description = resource.description or resource.subtitle or resource.title %}
+{% set page_canonical = 'https://marianosevilla.com/recursos/' ~ resource.slug %}
+{% include '_resources_apple_head.html' %}
+{% include '_resources_apple_header.html' %}
+<main id="contenido" tabindex="-1">
+<section class="resources-intro" aria-labelledby="resource-title"><div class="apple-container"><p class="apple-eyebrow">Recurso educativo</p><h1 id="resource-title">{{ (resource.headline or resource.title) | safe }}</h1>{% if resource.subtitle %}<p class="resources-lead">{{ resource.subtitle | safe }}</p>{% endif %}<a class="apple-button" href="#solicitud">{{ resource.cta_text or 'Solicitar el recurso' }}</a><p class="resources-micro">Consulta los requisitos antes de enviar tu solicitud.</p></div></section>
+<section class="resources-back"><div class="apple-container"><a href="/recursos">← Volver a los recursos</a></div></section>{% if resource.what_you_get %}<section class="resources-section" aria-labelledby="resource-what_you_get-title"><div class="apple-container"><div class="resources-heading"><h2 id="resource-what_you_get-title">Qué incluye este recurso.</h2></div><ul class="resource-points">{% for line in resource.what_you_get.splitlines() %}{% if line.strip() %}<li>{{ line.strip().lstrip('- ').lstrip('• ') }}</li>{% endif %}{% endfor %}</ul></div></section>{% endif %}{% if resource.requirements %}<section class="resources-section" aria-labelledby="resource-requirements-title"><div class="apple-container"><div class="resources-heading"><h2 id="resource-requirements-title">Requisitos de acceso.</h2></div><ul class="resource-points">{% for line in resource.requirements.splitlines() %}{% if line.strip() %}<li>{{ line.strip().lstrip('- ').lstrip('• ') }}</li>{% endif %}{% endfor %}</ul></div></section>{% endif %}<section class="resources-section resources-soft"><div class="apple-container"><p class="resources-legal">Este recurso tiene carácter exclusivamente educativo. No constituye asesoramiento financiero ni fiscal. Invertir en criptomonedas conlleva riesgo de pérdida total del capital invertido. Este contenido puede incluir referencias a servicios de afiliación.</p><section class="form-section" id="solicitud" aria-labelledby="resource-form-title">
+      <h2 id="resource-form-title">{{ resource.cta_text or 'Solicitar el recurso' }}</h2>
+      <p class="form-intro">Consulta los requisitos del recurso. Indica tu situación y tu UID para que podamos revisar tu solicitud.</p>
+
+      <noscript><p class="resources-feedback">Para enviar la solicitud necesitas activar JavaScript. También puedes <a href="/contacto">contactar con nosotros</a>.</p><style>#resource-form{display:none}</style></noscript><form id="resource-form">
+        <input type="hidden" id="resource_id" value="{{ resource.id }}">
+
+        <div class="form-grid">
+
+          <div class="form-field">
+            <label for="name">Nombre</label>
+            <input type="text" id="name" name="name" placeholder="Tu nombre" required autocomplete="name">
+          </div>
+
+          <div class="form-field">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" placeholder="tu@email.com" required autocomplete="email">
+          </div>
+
+          <div class="form-field">
+            <label for="exchange">Exchange<span class="optional">opcional</span></label>
+            <select id="exchange" name="exchange">
+              <option value="">Selecciona un exchange</option>
+              <option value="bitvavo">Bitvavo</option>
+              <option value="binance">Binance</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="bitvavo_status">Situación con Bitvavo<span class="optional">opcional</span></label>
+            <select id="bitvavo_status" name="bitvavo_status">
+              <option value="">Selecciona una opción</option>
+              <option value="registered_via_link">Me he registrado con tu enlace</option>
+              <option value="had_account">Ya tenía cuenta en Bitvavo</option>
+              <option value="no_account">Todavía no tengo cuenta</option>
+              <option value="not_sure">No estoy seguro</option>
+            </select>
+          </div>
+
+          <div class="form-field full">
+            <label for="uid">UID / Identificador de usuario</label>
+            <input type="text" id="uid" name="uid" aria-describedby="uid-helper" placeholder="Ej: 12345678">
+            <p class="uid-helper" id="uid-helper">Consulta las instrucciones de tu exchange para localizar tu UID.</p>
+          </div>
+
+          <div class="form-field full">
+            <div class="checkbox-row">
+              <input type="checkbox" id="uid_unknown" name="uid_unknown">
+              <label for="uid_unknown">No sé dónde encontrar mi UID o todavía no tengo cuenta — lo revisaremos manualmente</label>
+            </div>
+          </div>
+
+          <div class="form-field full">
+            <label for="telegram_user">Usuario de Telegram<span class="optional">opcional</span></label>
+            <input type="text" id="telegram_user" name="telegram_user" placeholder="@tunombre">
+          </div>
+
+        </div><!-- /form-grid -->
+
+        <div style="margin-top:1.25rem;display:flex;flex-direction:column;gap:.6rem;">
+          <div class="checkbox-row">
+            <input type="checkbox" id="legal_accepted" name="legal_accepted">
+            <label for="legal_accepted">
+              He leído y acepto la <a href="/privacidad" target="_blank">política de privacidad</a>.
+              Entiendo que este formulario recopila mis datos para gestionar la solicitud. <strong style="color:var(--text)">*</strong>
+            </label>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="marketing_consent" name="marketing_consent">
+            <label for="marketing_consent">
+              Acepto recibir comunicaciones del canal: novedades, recursos y contenido educativo.
+              Puedo darme de baja en cualquier momento. <strong style="color:var(--text)">*</strong>
+            </label>
+          </div>
+          <p style="font-size:.78rem;color:#415b4d;margin-top:.25rem;">* Ambas opciones son obligatorias para enviar la solicitud.</p>
+        </div>
+
+        <button type="submit" class="btn-submit" id="submit-btn" disabled>
+          {{ resource.cta_text or 'Solicitar el recurso' }}
+        </button>
+
+        
+        <p id="form-error" class="resources-feedback resources-feedback--error" role="alert" hidden></p>
+
+      </form><p id="form-success" class="resources-feedback" role="status" tabindex="-1" hidden>Solicitud recibida. Te enviaremos un email de confirmación y revisaremos tus datos. Si has indicado tu Telegram, también podremos contactarte por esa vía.</p>
+    </section></div></section><section class="apple-cta-section" aria-labelledby="resources-help-title"><div class="apple-container"><div class="apple-cta"><p class="apple-cta-eyebrow">Estamos para ayudarte</p><h2 class="apple-cta-title" id="resources-help-title">¿Necesitas ayuda para solicitar un recurso?</h2><p>Si tienes dudas sobre los requisitos o tu situación, escríbenos antes de enviar la solicitud.</p><a class="apple-button" href="/contacto">Consultar una duda</a></div></div></section></main>
+{% include '_resources_apple_footer.html' %}
+<script src="/static/landing_apple.js" defer></script>
+<script src="/static/recursos_apple.js" defer></script>
+</body></html>

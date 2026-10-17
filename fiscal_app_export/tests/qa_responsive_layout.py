@@ -11,6 +11,7 @@ from qa_responsive_nav import server
 from qa_home_redesign import run_home_redesign
 from qa_herramientas_redesign import run_herramientas_apple
 from qa_como_funciona_apple import run_como_funciona_apple
+from qa_recursos_apple import run_recursos_apple
 
 
 def main():
@@ -20,10 +21,12 @@ def main():
             run_home_redesign(browser,origin)
             run_herramientas_apple(browser,origin)
             run_como_funciona_apple(browser,origin)
+            run_recursos_apple(browser,origin)
         finally:
             browser.close()
 
 
 if __name__=='__main__':
     main()
+
 
