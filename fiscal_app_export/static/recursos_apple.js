@@ -4,6 +4,7 @@
  function current(){ if(nav)nav.querySelectorAll('a[href="/recursos"]').forEach(a=>a.setAttribute('aria-current','page')); }
  current(); if(nav)new MutationObserver(current).observe(nav,{childList:true,subtree:true});
  const form=document.getElementById('resource-form'); if(!form)return;
+ form.hidden=false;document.getElementById('resource-nojs').hidden=true;
  const byId=id=>document.getElementById(id),btn=byId('submit-btn'),success=byId('form-success'),error=byId('form-error');
  const legal=byId('legal_accepted'),marketing=byId('marketing_consent'),uid=byId('uid'),unknown=byId('uid_unknown');
  const label=btn.textContent.trim();let pending=false;

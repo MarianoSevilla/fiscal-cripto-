@@ -1,6 +1,7 @@
 {% set page_title = resource.title ~ ' | Mariano Sevilla' %}
 {% set page_description = resource.description or resource.subtitle or resource.title %}
 {% set page_canonical = 'https://marianosevilla.com/recursos/' ~ resource.slug %}
+{% set page_type = 'article' %}
 {% include '_resources_apple_head.html' %}
 {% include '_resources_apple_header.html' %}
 <main id="contenido" tabindex="-1">
@@ -9,7 +10,7 @@
       <h2 id="resource-form-title">{{ resource.cta_text or 'Solicitar el recurso' }}</h2>
       <p class="form-intro">Consulta los requisitos del recurso. Indica tu situación y tu UID para que podamos revisar tu solicitud.</p>
 
-      <noscript><p class="resources-feedback">Para enviar la solicitud necesitas activar JavaScript. También puedes <a href="/contacto">contactar con nosotros</a>.</p><style>#resource-form{display:none}</style></noscript><form id="resource-form">
+      <p id="resource-nojs" class="resources-feedback">Para enviar la solicitud necesitas activar JavaScript. También puedes <a href="/contacto">contactar con nosotros</a>.</p><form id="resource-form" hidden>
         <input type="hidden" id="resource_id" value="{{ resource.id }}">
 
         <div class="form-grid">
@@ -79,7 +80,7 @@
               Puedo darme de baja en cualquier momento. <strong style="color:var(--text)">*</strong>
             </label>
           </div>
-          <p style="font-size:.78rem;color:#415b4d;margin-top:.25rem;">* Ambas opciones son obligatorias para enviar la solicitud.</p>
+          <p style="font-size:.875rem;color:#415b4d;margin-top:.25rem;">* Ambas opciones son obligatorias para enviar la solicitud.</p>
         </div>
 
         <button type="submit" class="btn-submit" id="submit-btn" disabled>

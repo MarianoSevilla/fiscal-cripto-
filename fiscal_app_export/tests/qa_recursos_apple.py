@@ -65,7 +65,9 @@ def run_recursos_apple(browser,origin):
             assert not geometry(page,width)
             if width<=1200:
                 page.locator('.apple-noscript-menu summary').click();assert page.locator('.apple-noscript-menu a[aria-current="page"]').is_visible()
-            if kind=='detail':assert page.locator('#resource-form').is_hidden() and page.get_by_text('Para enviar la solicitud necesitas activar JavaScript.',exact=False).is_visible()
+            if kind=='detail':
+                assert page.locator('#resource-form').is_hidden()
+                assert page.locator('#resource-nojs').is_visible()
             assert not violations;ctx.close();cases+=1
         for width in [390,768,1280]:
             ctx,violations=context(browser,width=width);page,errors=open_page(ctx,origin,kind)
