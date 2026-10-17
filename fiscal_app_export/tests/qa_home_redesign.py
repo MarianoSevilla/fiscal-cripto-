@@ -178,7 +178,7 @@ def run_home_redesign(browser,origin):
         else:
             assert all(cards.nth(i).is_visible() for i in range(6))
             boxes=[cards.nth(i).bounding_box() for i in range(6)]
-            expected_columns=2 if width<=900 else 3
+            expected_columns=2 if width<=1200 else 3
             row_tops={round(box['y']) for box in boxes}
             assert len(row_tops)==6//expected_columns,('exchange rows',width,boxes)
         assert page.locator('.apple-exchange-secondary a').get_attribute('href')=='/exchanges/bit2me'
@@ -321,3 +321,4 @@ def run_home_redesign(browser,origin):
         assert not geometry(page,width)
         assert not violations;ctx.close();cases+=1
     print(f'Home integrada: {cases} synthetic browser scenarios PASS; no provider or external I/O')
+

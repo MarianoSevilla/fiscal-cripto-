@@ -25,6 +25,11 @@ def run_herramientas_apple(browser,origin):
         assert abs(header['y'])<1 and 63<=header['height']<=65,(width,header)
         intro=page.locator('.tools-intro').bounding_box()
         assert abs(intro['y']-header['height'])<1,(width,intro)
+        assert page.locator('.tools-intro').evaluate('e=>getComputedStyle(e).backgroundColor')=='rgb(7, 60, 50)'
+        assert page.locator('#tools-title').evaluate('e=>getComputedStyle(e).color')=='rgb(255, 255, 255)'
+        for selector in ['.tools-intro .apple-eyebrow','#tools-title em']:
+            assert page.locator(selector).evaluate('e=>getComputedStyle(e).color')=='rgb(166, 237, 207)'
+        assert page.locator('.tools-lead').evaluate('e=>getComputedStyle(e).color')=='rgb(195, 219, 209)'
         assert page.locator('h1').count()==1 and page.locator('main').count()==1
         assert page.locator('h1').inner_text()=='Herramientas fiscales para criptomonedas.'
         assert page.locator('.tools-breadcrumb').count()==0
@@ -32,6 +37,22 @@ def run_herramientas_apple(browser,origin):
         for selector in ['h1','.tools-lead']:
             assert page.locator(selector).evaluate('e=>{const s=getComputedStyle(e.parentElement);return Math.abs(e.getBoundingClientRect().width-(e.parentElement.clientWidth-parseFloat(s.paddingLeft)-parseFloat(s.paddingRight)))<1}'),(width,selector)
         assert page.locator('.tools-card').count()==6
+        assert page.locator('.tools-card-top,.tools-card-meta,.tools-icon').count()==0
+        assert page.locator('.tools-card').evaluate_all("cards=>cards.every(card=>card.children.length===3&&card.children[0].tagName==='H3'&&card.children[1].tagName==='P'&&card.children[2].tagName==='A')")
+        # Both catalogues must use the same shared visual component at every width.
+        home=ctx.new_page();home.goto(origin+'/',wait_until='networkidle')
+        def signature(target,card,description,action):
+            return target.evaluate('''args=>{
+              const card=document.querySelector(args[0]),p=document.querySelector(args[1]),a=document.querySelector(args[2]);
+              const s=getComputedStyle(card),h=getComputedStyle(card.querySelector('h3')),b=getComputedStyle(p),l=getComputedStyle(a);
+              return [s.backgroundColor,s.borderColor,s.borderRadius,s.padding,s.fontFamily,
+                h.fontSize,h.fontWeight,h.lineHeight,h.letterSpacing,b.fontSize,b.lineHeight,b.color,
+                l.fontSize,l.fontWeight,l.lineHeight,l.color,s.transitionDuration];
+            }''',[card,description,action])
+        assert signature(page,'.tools-card','.tools-card-description','.tools-card-link')==signature(home,'.apple-exchange-card','.apple-exchange-card>p','.apple-exchange-card>span'),width
+        assert abs(page.locator('.tools-card').first.bounding_box()['width']-home.locator('.apple-exchange-card').first.bounding_box()['width'])<1,width
+        assert page.locator('.tools-card').first.bounding_box()['height']<=home.locator('.apple-exchange-card').first.bounding_box()['height']+1,('Tools card exceeds Home reference height',width,page.locator('.tools-card').first.bounding_box(),home.locator('.apple-exchange-card').first.bounding_box())
+        home.close()
         cards=page.locator('.tools-card')
         assert all(cards.nth(i).is_visible() for i in range(6))
         if width>1200:
@@ -105,6 +126,24 @@ def run_herramientas_apple(browser,origin):
     ctx,violations=context(browser,width=390)
     page=ctx.new_page();page.emulate_media(reduced_motion='reduce');ready(page,origin)
     assert page.locator('.tools-card').first.evaluate("e=>getComputedStyle(e).animationName")=='none'
+    assert page.locator('.tools-card').first.evaluate("e=>getComputedStyle(e).transitionDuration")=='0s'
     assert not violations
     ctx.close();cases+=1
+    # Pointer and keyboard provide the same affordance; no synthetic user data leaves the server.
+    ctx,violations=context(browser,width=1280)
+    page=ctx.new_page();errors=ready(page,origin)
+    card=page.locator('.tools-card').first
+    card.hover()
+    page.wait_for_function("getComputedStyle(document.querySelector('.tools-card')).borderColor==='rgb(0, 107, 84)'")
+    link=card.locator('.tools-card-link');link.focus()
+    assert card.evaluate("e=>getComputedStyle(e).outlineStyle")=='solid'
+    # Click on the padding, away from the text link, must follow the card's existing destination.
+    requests=[]
+    page.route('**/signup/',lambda route:(requests.append(route.request.url),route.fulfill(status=200,content_type='text/html',body='<h1>Registro ficticio</h1>')))
+    card.click(position={'x':8,'y':8})
+    assert len(requests)==1 and requests[0]==origin+'/signup/'
+    assert not errors and not violations
+    ctx.close();cases+=1
     print(f'HERRAMIENTAS_APPLE_QA: PASS ({cases} synthetic browser scenarios; {len(WIDTHS)} widths)')
+
+

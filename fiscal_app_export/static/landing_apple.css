@@ -465,3 +465,51 @@ body.apple-home { padding:0; }
 
 /* Home assistance copy follows the full width of its component. */
 .apple-home .apple-assistance .asistencia-block>p { max-width:none; }
+
+/* Shared catalogue cards: Home exchanges, Tools and future catalogue pages. */
+.apple-home {
+ --catalog-card-bg:#edf5f0; --catalog-card-border:#b9d8cb;
+ --catalog-card-radius:16px; --catalog-card-padding:24px; --catalog-card-gap:16px;
+}
+.apple-home main :is(.apple-catalog-grid,.apple-exchange-grid,.apple-exchange-rest,.tools-grid) {
+ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--catalog-card-gap);
+}
+.apple-home main :is(.apple-catalog-card,.apple-exchange-card,.tools-card) {
+ position:relative; display:flex; flex-direction:column; min-width:0;
+ padding:var(--catalog-card-padding); border:1px solid var(--catalog-card-border);
+ border-radius:var(--catalog-card-radius); background:var(--catalog-card-bg);
+ color:var(--text); font-family:var(--font-body); text-decoration:none;
+ transition:border-color .15s;
+}
+.apple-home main :is(.apple-catalog-card,.apple-exchange-card,.tools-card) h3 {
+ margin-bottom:16px; font-size:1.5rem; line-height:1.3; letter-spacing:-.035em; font-weight:650;
+}
+.apple-home main :is(.apple-exchange-card>p,.tools-card-description) {
+ color:var(--muted); font-size:.9375rem; line-height:1.65; margin-bottom:20px;
+}
+.apple-home main :is(.apple-exchange-card>span,.tools-card-link) {
+ display:inline-flex; align-items:center; align-self:flex-start; min-height:44px;
+ margin-top:auto; color:var(--accent); font-size:.875rem; font-weight:600; line-height:1.5;
+ text-decoration:none;
+}
+/* One existing semantic link covers the whole Tools card, without extra tab stops. */
+.apple-home main .tools-card-link::after { content:''; position:absolute; inset:0; border-radius:var(--catalog-card-radius); }
+.apple-home main .tools-card:focus-within,
+.apple-home main .apple-exchange-card:focus-visible {
+ border-color:var(--accent); outline:3px solid #005fcc; outline-offset:4px;
+}
+.apple-home main .tools-card-link:focus-visible { outline:none; }
+@media (hover:hover) and (pointer:fine) {
+ .apple-home main :is(.apple-catalog-card,.apple-exchange-card,.tools-card):hover { border-color:var(--accent); }
+ .apple-home main .tools-card:hover .tools-card-link { text-decoration:underline; }
+}
+@media (max-width:1200px) {
+ .apple-home main :is(.apple-catalog-grid,.apple-exchange-grid,.apple-exchange-rest,.tools-grid) { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:640px) {
+ .apple-home { --catalog-card-padding:20px; }
+ .apple-home main :is(.apple-catalog-grid,.apple-exchange-grid,.apple-exchange-rest,.tools-grid) { grid-template-columns:minmax(0,1fr); }
+}
+@media (prefers-reduced-motion:reduce) {
+ .apple-home main :is(.apple-catalog-card,.apple-exchange-card,.tools-card) { transition:none; }
+}
