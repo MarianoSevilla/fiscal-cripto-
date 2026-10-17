@@ -19,11 +19,11 @@ def main():
     with server() as origin, sync_playwright() as p:
         browser=p.chromium.launch(headless=True)
         try:
+            run_faq_apple(browser,origin)
             run_home_redesign(browser,origin)
             run_herramientas_apple(browser,origin)
             run_como_funciona_apple(browser,origin)
             run_recursos_apple(browser,origin)
-            run_faq_apple(browser,origin)
         finally:
             browser.close()
 
