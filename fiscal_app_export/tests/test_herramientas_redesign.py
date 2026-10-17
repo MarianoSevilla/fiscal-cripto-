@@ -50,6 +50,12 @@ def test_header_footer_match_home_except_current_page_semantics():
     assert 'class="apple-skip"' in text
 
 
-def test_production_matches_owner_approved_v5_except_indexing():
+def test_only_the_requested_catalogue_changes_from_approved_v5():
     approved=(Path(__file__).parent/'fixtures/herramientas/approved_v5.html').read_text()
-    assert PAGE.read_text()==approved.replace('<meta name="robots" content="noindex, nofollow">','<meta name="robots" content="index, follow">')
+    actual=PAGE.read_text()
+    catalogue=r'<ul class="tools-grid" role="list">[\s\S]*?</ul>'
+    assert re.sub(catalogue,'CATALOGUE',actual).strip()==re.sub(catalogue,'CATALOGUE',approved).replace('<meta name="robots" content="noindex, nofollow">','<meta name="robots" content="index, follow">').strip()
+    cards=re.findall(r'<li class="tools-card">\s*<h3>[^<]+</h3>\s*<p class="tools-card-description">[^<]+</p>\s*<a class="tools-card-link" href="[^"]+">[^<]+<span aria-hidden="true"> →</span></a>\s*</li>',actual)
+    assert len(cards)==6
+    assert 'tools-card-meta' not in actual and 'tools-card-top' not in actual
+
