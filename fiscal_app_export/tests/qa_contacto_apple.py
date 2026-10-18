@@ -35,7 +35,7 @@ def structure(page,width):
     nav=page.locator('#site-nav').bounding_box()
     assert abs(nav['y'])<1 and 63<=nav['height']<=65,(width,nav)
     intro=page.locator('.contact-intro').bounding_box()
-    assert abs(intro['y']-64)<1,(width,intro)
+    assert abs(intro['y']-(nav['y']+nav['height']))<1,(width,intro,nav)
     assert page.locator('h1').count()==page.locator('main').count()==1
     assert page.locator('meta[name="robots"]').get_attribute('content')=='noindex, nofollow'
     assert page.locator('link[rel="canonical"]').get_attribute('href')=='https://marianosevilla.com/contacto'
