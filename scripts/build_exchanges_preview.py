@@ -18,7 +18,7 @@ EXCHANGES=[
  ('Bitvavo','Convierte tu historial de Bitvavo en un informe FIFO para preparar tu renta.','/exchanges/bitvavo','Ver cómo generar el informe'),
  ('Kraken','Genera tu informe FIFO de Kraken desde el historial Ledger.','/exchanges/kraken','Ver cómo generar el informe'),
  ('Coinbase','Calcula tus ganancias y pérdidas de Coinbase con tu historial CSV.','/exchanges/coinbase','Ver cómo generar el informe'),
- ('Bit2Me','Prepara tu informe fiscal de Bit2Me siguiendo las instrucciones de importación.','/exchanges/bit2me','Ver cómo generar el informe'),
+ ('Bit2Me','Prepara tu informe fiscal de Bit2Me con el archivo compatible.','/exchanges/bit2me','Ver cómo generar el informe'),
  ('Nexo','Organiza tus transacciones de Nexo y prepara tu informe FIFO.','/exchanges/nexo','Ver cómo generar el informe'),
  ('Crypto.com','Genera tu informe FIFO con el CSV de la App de Crypto.com.','/exchanges/cryptocom','Ver cómo generar el informe'),
  ('Bitget','Calcula tu FIFO de Bitget a partir del historial de operaciones spot.','/bitget','Preparar informe FIFO'),
