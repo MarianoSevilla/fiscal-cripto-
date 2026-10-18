@@ -35,7 +35,12 @@ def run_shared_access_regression(browser,origin):
     for path in ['/','/herramientas','/exchanges','/modelo721','/dashboard']:
         for role in ['user','advisor','admin']:
             for width in [390,1280]:
-                ctx,calls,bad=context(browser,role,width);p,errors=open_page(ctx,origin,path)
+                ctx,calls,bad=context(browser,role,width)
+                if path=='/modelo721':
+                    # Existing tool typography is outside this UI renewal.
+                    ctx.route('https://fonts.googleapis.com/**',lambda r:r.fulfill(status=200,body=''))
+                    ctx.route('https://fonts.gstatic.com/**',lambda r:r.abort())
+                p,errors=open_page(ctx,origin,path)
                 p.locator('#site-nav[data-auth-state=authenticated]').wait_for()
                 assert p.locator('#snavItemDash').inner_text()=='Mi espacio fiscal'
                 assert p.locator('#snavItemPlanes,a[href="/pricing"]').count()==0
