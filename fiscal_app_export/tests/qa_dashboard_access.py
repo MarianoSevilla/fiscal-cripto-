@@ -33,10 +33,15 @@ def test_routes_and_menu_flags_do_not_confuse_plan_and_role(role,plan):
     assert u['is_fiscal_advisor']==(role in ['admin','fiscal_advisor'])
     for route in ['/dashboard','/dashboard-apple-preview','/modelo721','/account','/pedir-asesoramiento',*('/'+x for x in TOOLS)]:
         r=c.get(route);assert r.status_code==200,(role,plan,route,r.status_code)
-    preview=c.get('/dashboard-apple-preview')
-    assert preview.headers['Cache-Control']=='no-store'
-    assert preview.headers['X-Robots-Tag']=='noindex, nofollow'
-    assert 'Persona sintética' not in preview.text and '12345678Z' not in preview.text
+    workspace=c.get('/dashboard');preview=c.get('/dashboard-apple-preview')
+    assert workspace.data==preview.data
+    assert '<h1 id="dashTitle">Mi espacio fiscal</h1>' in workspace.text
+    for response in [workspace,preview]:
+        assert response.headers['Cache-Control']=='no-store'
+        assert response.headers['X-Robots-Tag']=='noindex, nofollow'
+        assert 'Persona sintética' not in response.text and '12345678Z' not in response.text
+    assert c.get('/dashboard/').data==workspace.data
+    assert c.get('/modelo721').text.count('Ir al Dashboard')==0
     assert c.get('/static/dashboard_apple.html').status_code==404
     matrix={
       '/stats':200 if role=='admin' else 302,

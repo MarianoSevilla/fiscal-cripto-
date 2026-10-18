@@ -64,8 +64,8 @@ class Handler(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
             return
-        if path in ('/dashboard-apple-preview','/dashboard-apple-viewer','/dashboard-baseline'):
-            if path=='/dashboard-apple-preview':
+        if path in ('/dashboard','/dashboard-apple-preview','/dashboard-apple-viewer','/dashboard-baseline'):
+            if path in ('/dashboard','/dashboard-apple-preview'):
                 content=(STATIC.parent/'templates/dashboard_apple.html').read_bytes()
             elif path=='/dashboard-baseline':
                 content=(STATIC/'dashboard.html').read_bytes()
@@ -76,6 +76,9 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if path.startswith('/fiscal_app_export/static/'):
             self.path=path[len('/fiscal_app_export/static'):]
+            super().do_GET();return
+        if path=='/modelo721':
+            self.path='/modelo721.html'
             super().do_GET();return
         if path in AUTH_PAGES:
             self.path = '/' + AUTH_PAGES[path]

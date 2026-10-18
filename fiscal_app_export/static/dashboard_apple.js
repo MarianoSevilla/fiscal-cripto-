@@ -4,7 +4,7 @@
  const $=id=>document.getElementById(id),body=document.body;
  const workspace=$('dashWorkspace'),access=$('dashAccess'),retry=$('dashRetry'),resume=$('dashResume');
  const dashItem=$('snavItemDash');
- if(dashItem){dashItem.textContent='Mi espacio fiscal';dashItem.setAttribute('aria-current','page');}
+ if(dashItem)dashItem.setAttribute('aria-current','page');
  let settled=false;
  const waiting=setTimeout(()=>{
   if(settled)return;
@@ -25,15 +25,6 @@
    resume.hidden=!expired;retry.hidden=expired;
    return;
   }
-  // /pricing has no Flask route. Do not promote that dead destination here.
-  // This only changes this page's discovery, never authorization or other pages.
-  const plans=$('snavItemPlanes');
-  plans?.classList.add('snav-hidden');
-  // The mobile menu may already be open while the shared lookup resolves.
-  // Remove its existing copy too; subsequent openings use the hidden source.
-  if(plans)document.querySelectorAll('#snavMobileMenu a').forEach(link=>{
-   if(link.getAttribute('href')===plans.getAttribute('href'))link.remove();
-  });
   $('dashSearchWrap').hidden=false;
   const links=$('dashRoleLinks');
   for(const id of ['snavItemAdminAsesoria','snavItemStats','snavItemAdminComms','snavItemAdminRecursos','snavItemMisSolicitudes']){

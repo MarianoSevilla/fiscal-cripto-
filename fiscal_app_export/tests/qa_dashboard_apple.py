@@ -23,10 +23,76 @@ def context(browser,role='user',width=390,js=True,pending=None,plan='free'):
     ctx.route('**/*',route)
     return ctx,calls,bad
 
-def open_page(ctx,origin,path='/dashboard-apple-preview',wait='networkidle'):
+def open_page(ctx,origin,path='/dashboard',wait='networkidle'):
     p=ctx.new_page();errors=[];p.on('pageerror',lambda e:errors.append(str(e)))
     assert p.goto(origin+path,wait_until=wait).status==200
     return p,errors
+
+def run_shared_access_regression(browser,origin):
+    """Shared header state and naming on approved and legacy page shells."""
+    from qa_responsive_nav import check_header
+    cases=0
+    for path in ['/','/herramientas','/exchanges','/modelo721','/dashboard']:
+        for role in ['user','advisor','admin']:
+            for width in [390,1280]:
+                ctx,calls,bad=context(browser,role,width);p,errors=open_page(ctx,origin,path)
+                p.locator('#site-nav[data-auth-state=authenticated]').wait_for()
+                assert p.locator('#snavItemDash').inner_text()=='Mi espacio fiscal'
+                assert p.locator('#snavItemPlanes,a[href="/pricing"]').count()==0
+                if path=='/modelo721':
+                    assert p.locator('.result-actions a[href="/dashboard"]').inner_text()=='Mi espacio fiscal'
+                if width<=1200:
+                    p.locator('#snavMenuToggle').click()
+                    assert p.locator('#snavMobileMenu').get_by_role('link',name='Mi espacio fiscal',exact=True).is_visible()
+                    assert p.locator('#snavMobileMenu a[href="/pricing"]').count()==0
+                assert not bad and not errors,(path,role,width,bad,errors)
+                ctx.close();cases+=1
+    # HTTP failure, network failure, invalid JSON and invalid response schema
+    # must remain unknown, both in the header and inside the workspace.
+    for path in ['/','/exchanges','/dashboard']:
+        for mode in ['http','network','json','schema']:
+            for width in [320,768,1280]:
+                ctx,calls,bad=context(browser,width=width)
+                def fail(r):
+                    if mode=='network':r.abort();return
+                    r.fulfill(status=503 if mode=='http' else 200,content_type='application/json',
+                              body='not-json' if mode=='json' else '{}' if mode=='schema' else '{"error":"Synthetic unavailable"}')
+                ctx.route('**/api/me',fail)
+                p,errors=open_page(ctx,origin,path)
+                p.locator('#site-nav[data-auth-state=error]').wait_for()
+                assert p.locator('#snavAuthRetry').is_visible()
+                assert p.locator('#snavAuthStatus').inner_text()=='No podemos comprobar tu sesión. Vuelve a intentarlo.'
+                assert p.locator('#snavBtnLogin:not(.snav-hidden),#snavBtnSignup:not(.snav-hidden),#snavAvatarWrap:not(.snav-hidden)').count()==0
+                if width<=1200:
+                    p.locator('#snavMenuToggle').click()
+                    menu=p.locator('#snavMobileMenu')
+                    assert menu.locator('#snavMobileRetry').is_visible()
+                    assert menu.locator('a[href="/login/"],a[href="/signup/"],a[href="/dashboard"],a[href^="/admin/"]').count()==0
+                check_header(p,width)
+                assert not geometry(p,width),(path,mode,width,geometry(p,width))
+                if path=='/dashboard':
+                    assert not p.locator('#dashWorkspace').is_visible()
+                    assert p.locator('#dashAccessTitle').inner_text()=='No podemos comprobar tu sesión'
+                    assert not p.locator('#dashResume').is_visible()
+                assert not bad and not errors,(path,mode,width,bad,errors)
+                ctx.close();cases+=1
+    # Retrying reloads the page and recovers the existing session, without logout.
+    for path in ['/','/exchanges','/dashboard']:
+        for width in [320,1280]:
+            ctx,calls,bad=context(browser,width=width);attempts=[]
+            def recover(r):
+                attempts.append(1)
+                r.fulfill(status=503 if len(attempts)==1 else 200,content_type='application/json',
+                          body='{}' if len(attempts)==1 else '{"user":{"full_name":"Persona ficticia","is_admin":false,"is_fiscal_advisor":false}}')
+            ctx.route('**/api/me',recover);p,errors=open_page(ctx,origin,path)
+            p.locator('#snavAuthRetry').click();p.wait_for_load_state('networkidle')
+            p.locator('#site-nav[data-auth-state=authenticated]').wait_for()
+            assert len(attempts)==2 and p.url==origin+path
+            assert p.locator('#snavAvatarWrap').is_visible()
+            assert p.locator('#snavAuthRetry').is_hidden()
+            assert not bad and not errors,(path,width,bad,errors)
+            ctx.close();cases+=1
+    print(f'SHARED_ACCESS_QA: PASS ({cases} scenarios; shared name; no pricing; HTTP/network/JSON/schema failures; retry recovery)')
 
 def run_dashboard_apple(browser,origin):
     art=Path('qa-artifacts');art.mkdir(exist_ok=True);cases=0
@@ -44,7 +110,8 @@ def run_dashboard_apple(browser,origin):
             assert p.locator('#dashManagement').is_visible()==(role!='user')
             assert p.locator('#dashRoleLinks li').count()=={'user':0,'advisor':1,'admin':6}[role]
             for img in p.locator('#dashExchanges img').all():assert img.evaluate('e=>e.complete&&e.naturalWidth>0')
-            assert p.locator('#snavItemPlanes').get_attribute('class').find('snav-hidden')>=0
+            assert p.locator('#snavItemPlanes,a[href="/pricing"]').count()==0
+            assert p.locator('#snavItemDash').inner_text()=='Mi espacio fiscal'
             assert p.evaluate('async()=>Object.keys(await window.SiteNav.ready).sort()')==['is_admin','is_fiscal_advisor','state']
             assert calls==['/api/me'] and not bad and not errors,(role,width,calls,bad,errors)
             if role=='user' and width in [390,768,1280]:
@@ -99,7 +166,7 @@ def run_dashboard_apple(browser,origin):
         assert calls==['/api/me'] and not bad and not errors;ctx.close();cases+=1
     # Delayed auth never reveals privileged content and reuses the same request.
     pending=[];ctx,calls,bad=context(browser,pending=pending);p=ctx.new_page();p.clock.install()
-    p.goto(origin+'/dashboard-apple-preview',wait_until='load')
+    p.goto(origin+'/dashboard',wait_until='load')
     p.locator('#snavMenuToggle').click();p.clock.fast_forward(9000)
     assert not p.locator('#dashWorkspace').is_visible() and p.locator('#dashRetry').is_visible()
     assert len(pending)==1
@@ -137,4 +204,5 @@ def run_dashboard_apple(browser,origin):
     ctx.route('**/api/me',lambda r:r.fulfill(status=200,content_type='application/json',body='{"user":{"full_name":"Persona ficticia"}}'))
     p=ctx.new_page();p.goto(origin+'/dashboard-baseline',wait_until='networkidle')
     p.screenshot(path=str(art/'home_dashboard_baseline_1280.png'),full_page=True);ctx.close()
-    print(f'DASHBOARD_APPLE_QA: PASS ({cases} scenarios; 3 roles; 13 widths; synthetic data; original baseline; inert viewer)')
+    print(f'DASHBOARD_APPLE_QA: PASS ({cases} scenarios; 3 roles; 13 widths; synthetic data; final /dashboard route; inert viewer)')
+    run_shared_access_regression(browser,origin)

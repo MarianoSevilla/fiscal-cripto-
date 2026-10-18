@@ -1,6 +1,6 @@
 """Build a protected workspace variant and an inert, synthetic public viewer.
 
-Never overwrites static/dashboard.html or changes either fiscal engine.
+Never changes either fiscal engine. /dashboard serves the generated template.
 """
 from pathlib import Path
 import re
@@ -116,6 +116,6 @@ def main():
  viewer=viewer.replace(MOCK,'').replace('<nav id="site-nav"',MOCK+'<nav id="site-nav"',1)
  viewer=viewer.replace('</body>',notice+''.join(deferred)+'</body>')
  OUT.mkdir(exist_ok=True);(OUT/'index.html').write_text(viewer)
- print('Built protected dashboard template and inert synthetic viewer; original dashboard unchanged.')
+ print('Built protected workspace template and inert synthetic viewer; no fiscal engine changes.')
 
 if __name__=='__main__':main()

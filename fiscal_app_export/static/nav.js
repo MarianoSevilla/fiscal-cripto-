@@ -18,6 +18,8 @@
     return `
           <!-- Skeleton: visible mientras /api/me está en vuelo -->
           <div class="snav-skeleton" id="snavSkeleton" aria-hidden="true"></div>
+          <span class="snav-auth-status" id="snavAuthStatus" role="status" aria-live="polite"></span>
+          <button type="button" class="snav-auth-retry snav-hidden" id="snavAuthRetry" aria-describedby="snavAuthStatus">Reintentar</button>
 
           <!-- Estado NO autenticado (oculto hasta que /api/me resuelve) -->
           <a href="/login/"   class="snav-btn-login snav-hidden" id="snavBtnLogin">Iniciar sesión</a>
@@ -27,9 +29,8 @@
           <div class="snav-avatar-wrap snav-hidden" id="snavAvatarWrap">
             <button class="snav-avatar" id="snavAvatar" aria-label="Menú de usuario" aria-haspopup="true" aria-expanded="false">U</button>
             <div class="snav-dropdown" id="snavDropdown" role="menu">
-              <a href="/pricing"   class="snav-dd-item snav-hidden" id="snavItemPlanes"  role="menuitem">Planes</a>
               <a href="/account"   class="snav-dd-item"             id="snavItemAccount" role="menuitem">Mi cuenta</a>
-              <a href="/dashboard" class="snav-dd-item"             id="snavItemDash"    role="menuitem">Dashboard</a>
+              <a href="/dashboard" class="snav-dd-item"             id="snavItemDash"    role="menuitem">Mi espacio fiscal</a>
               <a href="/stats"     class="snav-dd-item snav-hidden" id="snavItemStats"          role="menuitem">Stats</a>
               <a href="/admin/asesoramiento"      class="snav-dd-item snav-hidden" id="snavItemAdminAsesoria"    role="menuitem">Panel asesoramiento</a>
               <a href="/admin/comunicaciones"     class="snav-dd-item snav-hidden" id="snavItemAdminComms"       role="menuitem">Comunicaciones</a>
@@ -69,7 +70,6 @@
       '/account':                   'snavItemAccount',
       '/dashboard':                 'snavItemDash',
       '/stats':                     'snavItemStats',
-      '/pricing':                   'snavItemPlanes',
       '/admin/asesoramiento':       'snavItemAdminAsesoria',
       '/admin/comunicaciones':      'snavItemAdminComms',
       '/admin/recursos':            'snavItemAdminRecursos',
@@ -205,6 +205,21 @@
           }
         });
       } else {
+        const retry = document.getElementById('snavAuthRetry');
+        if (retry && !retry.classList.contains('snav-hidden')) {
+          const status = document.createElement('p');
+          status.className = 'snav-mobile-status';
+          status.textContent = document.getElementById('snavAuthStatus').textContent;
+          menu.appendChild(status);
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.id = 'snavMobileRetry';
+          button.className = 'snav-mobile-link';
+          button.textContent = retry.textContent;
+          button.addEventListener('click', function () { retry.click(); });
+          menu.appendChild(button);
+          return;
+        }
         const login = document.getElementById('snavBtnLogin');
         const signup = document.getElementById('snavBtnSignup');
         if (login && !login.classList.contains('snav-hidden'))
@@ -250,9 +265,19 @@
 
   // ── Actualizar estado según /api/me ───────────────────────────────────────
   async function updateAuthState() {
-    // Por defecto mostramos botones (no autenticado).
-    // Se pone a false si detectamos sesión activa.
-    let authenticated = false;
+    // Unknown access is distinct from a confirmed anonymous session.
+    const nav = document.getElementById('site-nav');
+    const retry = document.getElementById('snavAuthRetry');
+    const status = document.getElementById('snavAuthStatus');
+    nav.dataset.authState = 'loading';
+    let settled = false;
+    const waiting = setTimeout(function () {
+      if (settled) return;
+      status.textContent = 'Seguimos comprobando tu sesión. Puedes esperar o reintentar.';
+      retry.classList.remove('snav-hidden');
+      document.getElementById('snavSkeleton').classList.add('snav-hidden');
+      refreshMobileMenu();
+    }, 8000);
     // Optional consumer contract. No account identifiers or personal data are
     // exposed; the existing server flags remain the only source of permissions.
     let result = { state: 'error', is_admin: false, is_fiscal_advisor: false };
@@ -262,10 +287,13 @@
 
       if (r.ok) {
         const d = await r.json();
-        result.state = d && d.user ? 'authenticated' : 'anonymous';
+        if (!d || !Object.prototype.hasOwnProperty.call(d, 'user') ||
+            (d.user !== null && (typeof d.user !== 'object' || Array.isArray(d.user)))) {
+          throw new Error('Invalid session response');
+        }
+        result.state = d.user ? 'authenticated' : 'anonymous';
 
-        if (d && d.user) {
-          authenticated = true;
+        if (d.user) {
           const user = d.user;
           result.is_admin = user.is_admin === true;
           result.is_fiscal_advisor = user.is_fiscal_advisor === true;
@@ -281,13 +309,11 @@
 
           // Mostrar items según rol
           if (user.is_admin) {
-            const planes          = document.getElementById('snavItemPlanes');
             const stats           = document.getElementById('snavItemStats');
             const adminAsesoria   = document.getElementById('snavItemAdminAsesoria');
             const adminComms      = document.getElementById('snavItemAdminComms');
             const adminRecursos   = document.getElementById('snavItemAdminRecursos');
             const misSolicitudes  = document.getElementById('snavItemMisSolicitudes');
-            if (planes)         planes.classList.remove('snav-hidden');
             if (stats)          stats.classList.remove('snav-hidden');
             if (adminAsesoria)  adminAsesoria.classList.remove('snav-hidden');
             if (adminComms)     adminComms.classList.remove('snav-hidden');
@@ -301,20 +327,33 @@
       }
 
     } catch (_) {
-      // Error de red: se muestra el estado no autenticado (comportamiento correcto)
+      // Network/HTTP/JSON failures do not establish whether a session exists.
     } finally {
+      settled = true;
+      clearTimeout(waiting);
+      const retryFocused = document.activeElement === retry ||
+        document.activeElement.id === 'snavMobileRetry';
+      nav.dataset.authState = result.state;
       // Ocultar skeleton siempre (tanto si hay sesión como si no)
       const skeleton = document.getElementById('snavSkeleton');
       if (skeleton) skeleton.classList.add('snav-hidden');
 
-      // Mostrar botones solo si no hay sesión
-      if (!authenticated) {
+      // Only an explicit {user:null} response shows anonymous account links.
+      if (result.state === 'anonymous') {
         const btnLogin  = document.getElementById('snavBtnLogin');
         const btnSignup = document.getElementById('snavBtnSignup');
         if (btnLogin)  btnLogin.classList.remove('snav-hidden');
         if (btnSignup) btnSignup.classList.remove('snav-hidden');
       }
+      status.textContent = result.state === 'error' ? 'No podemos comprobar tu sesión. Vuelve a intentarlo.' : '';
+      retry.classList.toggle('snav-hidden', result.state !== 'error');
       refreshMobileMenu();
+      if (retryFocused) {
+        const target = window.innerWidth <= 1200 ? document.getElementById('snavMenuToggle') :
+          result.state === 'authenticated' ? document.getElementById('snavAvatar') :
+          result.state === 'anonymous' ? document.getElementById('snavBtnLogin') : retry;
+        if (target) target.focus({ preventScroll: true });
+      }
     }
     return result;
   }
@@ -339,6 +378,7 @@
     initDropdown();
     initLogout();
     initMobileMenu();
+    document.getElementById('snavAuthRetry').addEventListener('click', function () { window.location.reload(); });
     window.SiteNav.ready = updateAuthState();
   }
 

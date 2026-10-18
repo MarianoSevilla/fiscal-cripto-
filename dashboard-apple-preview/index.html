@@ -212,6 +212,20 @@
 /* ── Utilidad: ocultar elementos ─────────────────── */
 .snav-hidden { display: none !important; }
 
+/* A failed lookup does not imply logout. Use the existing nav palette. */
+.snav-auth-status {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+.snav-auth-retry {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px; padding: 8px 10px; border: 1px solid var(--snav-border2);
+  border-radius: 999px; background: transparent; color: var(--snav-text);
+  font: 500 13px var(--snav-font-b); white-space: nowrap; cursor: pointer;
+}
+.snav-auth-retry:focus-visible { outline: 2px solid var(--snav-accent); outline-offset: 3px; }
+.snav-mobile-status { padding: 10px 12px; margin: 0; color: var(--snav-text); font: 400 14px/1.5 var(--snav-font-b); }
+
 /* Menú móvil: conserva el mismo diseño y los enlaces de la navegación. */
 .snav-menu-toggle {
   display: none;
@@ -946,6 +960,8 @@ body.apple-home { padding:0; }
     return `
           <!-- Skeleton: visible mientras /api/me está en vuelo -->
           <div class="snav-skeleton" id="snavSkeleton" aria-hidden="true"></div>
+          <span class="snav-auth-status" id="snavAuthStatus" role="status" aria-live="polite"></span>
+          <button type="button" class="snav-auth-retry snav-hidden" id="snavAuthRetry" aria-describedby="snavAuthStatus">Reintentar</button>
 
           <!-- Estado NO autenticado (oculto hasta que /api/me resuelve) -->
           <a href="#vista-login"   class="snav-btn-login snav-hidden" id="snavBtnLogin">Iniciar sesión</a>
@@ -955,9 +971,8 @@ body.apple-home { padding:0; }
           <div class="snav-avatar-wrap snav-hidden" id="snavAvatarWrap">
             <button class="snav-avatar" id="snavAvatar" aria-label="Menú de usuario" aria-haspopup="true" aria-expanded="false">U</button>
             <div class="snav-dropdown" id="snavDropdown" role="menu">
-              <a href="#vista-pricing"   class="snav-dd-item snav-hidden" id="snavItemPlanes"  role="menuitem">Planes</a>
               <a href="#vista-account"   class="snav-dd-item"             id="snavItemAccount" role="menuitem">Mi cuenta</a>
-              <a href="#vista-dashboard" class="snav-dd-item"             id="snavItemDash"    role="menuitem">Dashboard</a>
+              <a href="#vista-dashboard" class="snav-dd-item"             id="snavItemDash"    role="menuitem">Mi espacio fiscal</a>
               <a href="#vista-stats"     class="snav-dd-item snav-hidden" id="snavItemStats"          role="menuitem">Stats</a>
               <a href="#vista-admin-asesoramiento"      class="snav-dd-item snav-hidden" id="snavItemAdminAsesoria"    role="menuitem">Panel asesoramiento</a>
               <a href="#vista-admin-comunicaciones"     class="snav-dd-item snav-hidden" id="snavItemAdminComms"       role="menuitem">Comunicaciones</a>
@@ -997,7 +1012,6 @@ body.apple-home { padding:0; }
       '/account':                   'snavItemAccount',
       '/dashboard':                 'snavItemDash',
       '/stats':                     'snavItemStats',
-      '/pricing':                   'snavItemPlanes',
       '/admin/asesoramiento':       'snavItemAdminAsesoria',
       '/admin/comunicaciones':      'snavItemAdminComms',
       '/admin/recursos':            'snavItemAdminRecursos',
@@ -1133,6 +1147,21 @@ body.apple-home { padding:0; }
           }
         });
       } else {
+        const retry = document.getElementById('snavAuthRetry');
+        if (retry && !retry.classList.contains('snav-hidden')) {
+          const status = document.createElement('p');
+          status.className = 'snav-mobile-status';
+          status.textContent = document.getElementById('snavAuthStatus').textContent;
+          menu.appendChild(status);
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.id = 'snavMobileRetry';
+          button.className = 'snav-mobile-link';
+          button.textContent = retry.textContent;
+          button.addEventListener('click', function () { retry.click(); });
+          menu.appendChild(button);
+          return;
+        }
         const login = document.getElementById('snavBtnLogin');
         const signup = document.getElementById('snavBtnSignup');
         if (login && !login.classList.contains('snav-hidden'))
@@ -1178,9 +1207,19 @@ body.apple-home { padding:0; }
 
   // ── Actualizar estado según /api/me ───────────────────────────────────────
   async function updateAuthState() {
-    // Por defecto mostramos botones (no autenticado).
-    // Se pone a false si detectamos sesión activa.
-    let authenticated = false;
+    // Unknown access is distinct from a confirmed anonymous session.
+    const nav = document.getElementById('site-nav');
+    const retry = document.getElementById('snavAuthRetry');
+    const status = document.getElementById('snavAuthStatus');
+    nav.dataset.authState = 'loading';
+    let settled = false;
+    const waiting = setTimeout(function () {
+      if (settled) return;
+      status.textContent = 'Seguimos comprobando tu sesión. Puedes esperar o reintentar.';
+      retry.classList.remove('snav-hidden');
+      document.getElementById('snavSkeleton').classList.add('snav-hidden');
+      refreshMobileMenu();
+    }, 8000);
     // Optional consumer contract. No account identifiers or personal data are
     // exposed; the existing server flags remain the only source of permissions.
     let result = { state: 'error', is_admin: false, is_fiscal_advisor: false };
@@ -1190,10 +1229,13 @@ body.apple-home { padding:0; }
 
       if (r.ok) {
         const d = await r.json();
-        result.state = d && d.user ? 'authenticated' : 'anonymous';
+        if (!d || !Object.prototype.hasOwnProperty.call(d, 'user') ||
+            (d.user !== null && (typeof d.user !== 'object' || Array.isArray(d.user)))) {
+          throw new Error('Invalid session response');
+        }
+        result.state = d.user ? 'authenticated' : 'anonymous';
 
-        if (d && d.user) {
-          authenticated = true;
+        if (d.user) {
           const user = d.user;
           result.is_admin = user.is_admin === true;
           result.is_fiscal_advisor = user.is_fiscal_advisor === true;
@@ -1209,13 +1251,11 @@ body.apple-home { padding:0; }
 
           // Mostrar items según rol
           if (user.is_admin) {
-            const planes          = document.getElementById('snavItemPlanes');
             const stats           = document.getElementById('snavItemStats');
             const adminAsesoria   = document.getElementById('snavItemAdminAsesoria');
             const adminComms      = document.getElementById('snavItemAdminComms');
             const adminRecursos   = document.getElementById('snavItemAdminRecursos');
             const misSolicitudes  = document.getElementById('snavItemMisSolicitudes');
-            if (planes)         planes.classList.remove('snav-hidden');
             if (stats)          stats.classList.remove('snav-hidden');
             if (adminAsesoria)  adminAsesoria.classList.remove('snav-hidden');
             if (adminComms)     adminComms.classList.remove('snav-hidden');
@@ -1229,20 +1269,33 @@ body.apple-home { padding:0; }
       }
 
     } catch (_) {
-      // Error de red: se muestra el estado no autenticado (comportamiento correcto)
+      // Network/HTTP/JSON failures do not establish whether a session exists.
     } finally {
+      settled = true;
+      clearTimeout(waiting);
+      const retryFocused = document.activeElement === retry ||
+        document.activeElement.id === 'snavMobileRetry';
+      nav.dataset.authState = result.state;
       // Ocultar skeleton siempre (tanto si hay sesión como si no)
       const skeleton = document.getElementById('snavSkeleton');
       if (skeleton) skeleton.classList.add('snav-hidden');
 
-      // Mostrar botones solo si no hay sesión
-      if (!authenticated) {
+      // Only an explicit {user:null} response shows anonymous account links.
+      if (result.state === 'anonymous') {
         const btnLogin  = document.getElementById('snavBtnLogin');
         const btnSignup = document.getElementById('snavBtnSignup');
         if (btnLogin)  btnLogin.classList.remove('snav-hidden');
         if (btnSignup) btnSignup.classList.remove('snav-hidden');
       }
+      status.textContent = result.state === 'error' ? 'No podemos comprobar tu sesión. Vuelve a intentarlo.' : '';
+      retry.classList.toggle('snav-hidden', result.state !== 'error');
       refreshMobileMenu();
+      if (retryFocused) {
+        const target = window.innerWidth <= 1200 ? document.getElementById('snavMenuToggle') :
+          result.state === 'authenticated' ? document.getElementById('snavAvatar') :
+          result.state === 'anonymous' ? document.getElementById('snavBtnLogin') : retry;
+        if (target) target.focus({ preventScroll: true });
+      }
     }
     return result;
   }
@@ -1267,6 +1320,7 @@ body.apple-home { padding:0; }
     initDropdown();
     initLogout();
     initMobileMenu();
+    document.getElementById('snavAuthRetry').addEventListener('click', function () { window.location.reload(); });
     window.SiteNav.ready = updateAuthState();
   }
 
@@ -1394,77 +1448,7 @@ body.apple-home { padding:0; }
   const signup = document.getElementById('snavBtnSignup');
   if (signup) signup.textContent = 'Crear cuenta';
 
-  // A delayed session lookup must not block public navigation. This fallback
-  // adds ordinary links only; the shared script still owns session and roles.
-  const accessNav = document.getElementById('site-nav');
-  const skeleton = document.getElementById('snavSkeleton');
-  const login = document.getElementById('snavBtnLogin');
-  const accessRight = accessNav && accessNav.querySelector('.snav-right');
-  if (accessNav && skeleton && login && signup && accessRight &&
-      !skeleton.classList.contains('snav-hidden') && typeof MutationObserver !== 'undefined') {
-    const fallbacks = [];
-    let fallbackTimer;
-    let fallbackFocus = null;
-    function trackFallbackFocus(event) {
-      const entry = fallbacks.find(item => item.node.contains(event.target));
-      fallbackFocus = entry ? { entry: entry, link: event.target } : null;
-    }
-    document.addEventListener('focusin', trackFallbackFocus);
-    function attachFallbacks() {
-      const lostFocus = fallbackFocus && document.activeElement === document.body &&
-        !accessNav.contains(fallbackFocus.link) ? fallbackFocus.link : null;
-      fallbacks.forEach(function (entry) {
-        if (entry.node.parentElement !== entry.parent) entry.parent.appendChild(entry.node);
-      });
-      if (lostFocus) lostFocus.focus({ preventScroll: true });
-    }
-    const accessObserver = new MutationObserver(function () {
-      if (!skeleton.classList.contains('snav-hidden')) {
-        attachFallbacks();
-        return;
-      }
-      clearTimeout(fallbackTimer);
-      accessObserver.disconnect();
-      const focused = document.activeElement;
-      const previous = focused === document.body && fallbackFocus &&
-        !accessNav.contains(fallbackFocus.link) ? fallbackFocus : null;
-      const entry = fallbacks.find(item => item.node.contains(focused)) || (previous && previous.entry);
-      const href = entry && (previous ? previous.link : focused).getAttribute('href');
-      document.removeEventListener('focusin', trackFallbackFocus);
-      fallbacks.forEach(item => item.node.remove());
-      accessNav.classList.remove('apple-access-waiting');
-      if (entry) {
-        const panel = document.getElementById('snavAvatarWrap');
-        const authenticated = panel && !panel.classList.contains('snav-hidden');
-        let target;
-        if (authenticated) target = document.getElementById(entry.mobile ? 'snavMenuToggle' : 'snavAvatar');
-        else if (entry.mobile) {
-          target = Array.from(entry.parent.querySelectorAll('a')).find(link => link.getAttribute('href') === href);
-        } else target = href === login.getAttribute('href') ? login : signup;
-        if (target) target.focus({ preventScroll: true });
-      }
-    });
-    accessObserver.observe(accessNav, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
-    fallbackTimer = setTimeout(function () {
-      if (skeleton.classList.contains('snav-hidden')) return;
-      const mobileMenu = document.getElementById('snavMobileMenu');
-      [accessRight, mobileMenu].filter(Boolean).forEach(function (parent) {
-        const mobile = parent === mobileMenu;
-        const node = document.createElement('div');
-        node.className = 'apple-access-fallback ' + (mobile ? 'apple-access-mobile' : 'apple-access-desktop');
-        [login, signup].forEach(function (original, index) {
-          const link = document.createElement('a');
-          link.href = original.getAttribute('href');
-          link.textContent = original.textContent;
-          link.className = mobile ? 'snav-mobile-link' + (index ? ' snav-mobile-link-primary' : '') : original.className.replace('snav-hidden', '').trim();
-          node.appendChild(link);
-        });
-        fallbacks.push({ node: node, parent: parent, mobile: mobile });
-      });
-      attachFallbacks();
-      accessNav.classList.add('apple-access-waiting');
-    }, 4000);
-  }
+  // Shared nav.js owns pending/error/anonymous access states on every page.
 
   // Demonstration dates follow the previous tax year in Spain. These nodes
   // belong only to the fictitious report; no user/report data is read.
@@ -1556,7 +1540,7 @@ body.apple-home { padding:0; }
  const $=id=>document.getElementById(id),body=document.body;
  const workspace=$('dashWorkspace'),access=$('dashAccess'),retry=$('dashRetry'),resume=$('dashResume');
  const dashItem=$('snavItemDash');
- if(dashItem){dashItem.textContent='Mi espacio fiscal';dashItem.setAttribute('aria-current','page');}
+ if(dashItem)dashItem.setAttribute('aria-current','page');
  let settled=false;
  const waiting=setTimeout(()=>{
   if(settled)return;
@@ -1577,15 +1561,6 @@ body.apple-home { padding:0; }
    resume.hidden=!expired;retry.hidden=expired;
    return;
   }
-  // /pricing has no Flask route. Do not promote that dead destination here.
-  // This only changes this page's discovery, never authorization or other pages.
-  const plans=$('snavItemPlanes');
-  plans?.classList.add('snav-hidden');
-  // The mobile menu may already be open while the shared lookup resolves.
-  // Remove its existing copy too; subsequent openings use the hidden source.
-  if(plans)document.querySelectorAll('#snavMobileMenu a').forEach(link=>{
-   if(link.getAttribute('href')===plans.getAttribute('href'))link.remove();
-  });
   $('dashSearchWrap').hidden=false;
   const links=$('dashRoleLinks');
   for(const id of ['snavItemAdminAsesoria','snavItemStats','snavItemAdminComms','snavItemAdminRecursos','snavItemMisSolicitudes']){
