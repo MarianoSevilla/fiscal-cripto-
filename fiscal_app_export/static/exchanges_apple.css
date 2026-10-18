@@ -10,6 +10,10 @@
 .apple-exchanges-page .exchanges-heading { margin-bottom:24px; }
 .apple-exchanges-page .exchanges-heading h2 { font-size:clamp(1.625rem,2.8vw,2.25rem); line-height:1.18; }
 .apple-exchanges-page .exchanges-heading p { color:var(--muted); margin-top:8px; }
+.apple-exchanges-page main .apple-exchange-card .exchanges-card-heading { display:flex; align-items:center; gap:12px; margin-bottom:16px; min-width:0; }
+.apple-exchanges-page main .apple-exchange-card .exchanges-card-heading h3 { margin:0; min-width:0; overflow-wrap:anywhere; }
+.apple-exchanges-page .exchanges-logo { display:flex; align-items:center; justify-content:center; width:44px; height:44px; flex:0 0 44px; overflow:hidden; border-radius:10px; background:#fff; }
+.apple-exchanges-page .exchanges-logo img { display:block; width:44px; height:44px; object-fit:contain; }
 .apple-exchanges-page .exchanges-note { color:var(--muted); margin-top:24px; font-size:.9375rem; }
 .apple-exchanges-page :is(.exchanges-preparation,.exchanges-faq) { border-top:1px solid var(--border); }
 .apple-exchanges-page .exchanges-preparation { background:#f5f7f6; }

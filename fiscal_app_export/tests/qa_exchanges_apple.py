@@ -40,6 +40,10 @@ def structure(page,width,js=True):
     cards=page.locator('.exchanges-catalogue .apple-exchange-card')
     assert cards.count()==11
     assert all(cards.nth(i).is_visible() for i in range(11))
+    # Real same-origin brand assets must render in every responsive/test mode.
+    logos=cards.locator('.exchanges-logo img')
+    assert logos.count()==11
+    assert logos.evaluate_all('els=>els.every(e=>e.complete && e.naturalWidth>0 && e.naturalHeight>0 && e.alt==="" && e.width===44 && e.height===44)')
     names=cards.locator('h3').all_text_contents()
     assert len(set(names))==11 and 'KuCoin' in names and 'Gate' not in names
     assert 'XLS o XLSX' in cards.filter(has_text='MEXC').inner_text()

@@ -26,7 +26,13 @@ EXCHANGES=[
  ('MEXC','Excel · Historial en XLS o XLSX.','/mexc','Acceder a herramienta'),
  ('Uphold','CSV · Historial de transacciones.','/uphold','Acceder a herramienta'),
 ]
-cards='\n'.join('<a class="apple-exchange-card" href="'+url+'"><h3>'+escape(name)+'</h3><p>'+escape(desc)+'</p><span>'+action+' <span aria-hidden="true">→</span></span></a>' for name,desc,url,action in EXCHANGES)
+LOGOS={
+ 'Binance':'binance.jpg','Bitvavo':'bitvavo.png','Kraken':'kraken.png',
+ 'Coinbase':'coinbase.png','Bit2Me':'bit2me.jpg','Nexo':'nexo.jpg',
+ 'Crypto.com':'crypto.png','Bitget':'bitget.png','KuCoin':'kucoin.png',
+ 'MEXC':'mexc.png','Uphold':'uphold.png',
+}
+cards='\n'.join('<a class="apple-exchange-card" href="'+url+'"><div class="exchanges-card-heading"><span class="exchanges-logo"><img src="/static/images/'+LOGOS[name]+'" alt="" width="44" height="44" decoding="async"></span><h3>'+escape(name)+'</h3></div><p>'+escape(desc)+'</p><span>'+action+' <span aria-hidden="true">→</span></span></a>' for name,desc,url,action in EXCHANGES)
 AEAT='https://sede.agenciatributaria.gob.es/Sede/ayuda/manuales-videos-folletos/manuales-practicos/irpf-2025/c11-ganancias-perdidas-patrimoniales/monedas-virtuales/compra-venta-monedas-virtuales-tributacion-inversor.html'
 FAQS=[
  ('¿Qué archivo necesito y cómo lo exporto?', '<p>Consulta el formato de tu exchange antes de empezar: no todos los CSV contienen la misma información. Las siete guías del catálogo son públicas; las otras cuatro opciones abren la herramienta correspondiente, que requiere iniciar sesión y muestra las instrucciones.</p><p>MEXC utiliza Excel en formato XLS o XLSX, no CSV. Crypto.com utiliza el historial de la App; esta compatibilidad no equivale a unificar los archivos de la App y de Crypto.com Exchange. En Bit2Me, utiliza el formato que ofrezca la herramienta: no conviertas un Excel a CSV por tu cuenta.</p>'),
@@ -100,6 +106,7 @@ for name in ['nav.js','landing_apple.js']:
  tag=f'<script src="/static/{name}"'+(' defer' if name!='nav.js' else '')+'></script>'
  if name=='nav.js': viewer=viewer.replace(tag,'<script>'+script+'</script>')
  else: viewer=viewer.replace(tag,'').replace('</body>','<script>'+script+'</script></body>')
+viewer=viewer.replace('src="/static/images/','src="/fiscal_app_export/static/images/')
 viewer=re.sub(r'href="(/(?!/)[^"]*)"',lambda m:'href="https://marianosevilla.com'+m[1]+'"',viewer)
 v=ROOT/'exchanges-apple-preview';v.mkdir(exist_ok=True)
 (v/'index.html').write_text(viewer)
