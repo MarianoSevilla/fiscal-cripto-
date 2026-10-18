@@ -38,20 +38,22 @@
   const input=$(button.getAttribute('aria-controls')),show=input.type==='password';input.type=show?'text':'password';button.textContent=show?'Ocultar':'Mostrar';button.setAttribute('aria-pressed',String(show));
  }));
  async function post(path,payload){
-  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+  const login=path==='/api/login',controller=new AbortController();
+  const slow=login?setTimeout(()=>{status.textContent='El acceso está tardando más de lo habitual. Seguimos esperando la respuesta; no necesitas volver a pulsar.';status.hidden=false;},8000):null;
+  const timer=setTimeout(()=>controller.abort(),login?45000:15000);
   try{
    const response=await fetch(path,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});
    let data;try{data=await response.json()}catch{throw new Error('No hemos podido completar la solicitud. Inténtalo de nuevo.');}
    if(!response.ok)throw new Error(response.status===429?'Has realizado demasiados intentos. Espera antes de volver a intentarlo.':data.error||'No hemos podido completar la solicitud. Inténtalo de nuevo.');
    return data;
-  }finally{clearTimeout(timer)}
+  }finally{clearTimeout(timer);if(slow!==null){clearTimeout(slow);status.hidden=true;}}
  }
- function failure(e){message(error,e.name==='AbortError'?'La solicitud está tardando demasiado. Vuelve a intentarlo.':e instanceof TypeError?'No hemos podido conectar. Comprueba tu conexión e inténtalo de nuevo.':e.message)}
+ function failure(e){message(error,e.name==='AbortError'?(view==='login'?'No hemos podido confirmar el acceso después de 45 segundos. Comprueba tu conexión y vuelve a intentarlo.':'La solicitud está tardando demasiado. Vuelve a intentarlo.'):e instanceof TypeError?'No hemos podido conectar. Comprueba tu conexión e inténtalo de nuevo.':e.message)}
  function previewNotice(){message(status,'Esta vista previa no inicia sesiones ni crea cuentas.');}
  const google=document.querySelector('.auth-google');
  if(preview&&google)google.addEventListener('click',e=>{e.preventDefault();previewNotice()});
  if(form&&view!=='verify')form.addEventListener('submit',async e=>{
-  e.preventDefault();clear();if(!validate())return;if(preview){previewNotice();return;}
+  e.preventDefault();if(submit.disabled)return;clear();if(!validate())return;if(preview){previewNotice();return;}
   submit.disabled=true;form.setAttribute('aria-busy','true');const caption=submit.textContent;submit.textContent='Un momento';
   const email=$('authEmail')?.value.trim().toLowerCase(),password=$('authPassword')?.value;
   try{

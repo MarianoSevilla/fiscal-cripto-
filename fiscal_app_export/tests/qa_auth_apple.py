@@ -95,6 +95,37 @@ def run_auth_apple(browser,origin):
     for selector in ['.auth-google','a[href*="signup"]','a[href*="recuperar"]']:
         assert 'next=%2Fpedir-asesoramiento' in p.locator(selector).get_attribute('href')
     assert not violations and not errors;ctx.close();cases+=1
+    # A delayed login remains one request beyond the previous 15s cut-off.
+    # The virtual clock avoids waiting and no actual authentication is sent.
+    for result in ['success','error','timeout']:
+        ctx,calls,violations=context(browser)
+        p,errors=open_page(ctx,origin,'login');p.clock.install()
+        pending=[]
+        p.route('**/api/login',lambda route:pending.append(route))
+        credentials(p);p.locator('#authSubmit').click()
+        p.clock.fast_forward(9000)
+        assert p.locator('#authStatus').is_visible()
+        assert 'Seguimos esperando' in p.locator('#authStatus').inner_text()
+        assert p.locator('#authSubmit').is_disabled()
+        p.clock.fast_forward(8000)
+        assert len(pending)==1 and not p.locator('#authError').is_visible()
+        if result=='success':
+            p.screenshot(path=str(art/'home_auth_login_slow.png'),full_page=True)
+            pending[0].fulfill(status=200,content_type='application/json',body='{"redirect_to":"/dashboard"}')
+            p.wait_for_url(origin+'/dashboard')
+        elif result=='error':
+            pending[0].fulfill(status=503,content_type='application/json',body='{"error":"Servicio temporalmente no disponible"}')
+            p.locator('#authError').wait_for(state='visible')
+            assert not p.locator('#authStatus').is_visible()
+            assert p.locator('#authSubmit').is_enabled()
+        else:
+            p.clock.fast_forward(29000)
+            p.locator('#authError').wait_for(state='visible')
+            assert '45 segundos' in p.locator('#authError').inner_text()
+            assert not p.locator('#authStatus').is_visible()
+            assert p.locator('#authSubmit').is_enabled()
+        assert not calls and not violations and not errors
+        ctx.close();cases+=1
     for width in [320,768,1280]:
         ctx,calls,violations=context(browser,width);p,errors=open_page(ctx,origin,'signup')
         p.add_style_tag(content='html{font-size:200%}');p.emulate_media(reduced_motion='reduce')
