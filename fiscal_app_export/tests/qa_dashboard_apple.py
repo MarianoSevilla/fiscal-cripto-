@@ -52,15 +52,15 @@ def run_shared_access_regression(browser,origin):
                     assert p.locator('#snavMobileMenu a[href="/pricing"]').count()==0
                 assert not bad and not errors,(path,role,width,bad,errors)
                 ctx.close();cases+=1
-    # HTTP failure, network failure, invalid JSON and invalid response schema
+    # HTTP 429/503, network failure, invalid JSON and invalid response schema
     # must remain unknown, both in the header and inside the workspace.
     for path in ['/','/exchanges','/dashboard']:
-        for mode in ['http','network','json','schema']:
+        for mode in ['http','http429','network','json','schema']:
             for width in [320,768,1280]:
                 ctx,calls,bad=context(browser,width=width)
                 def fail(r):
                     if mode=='network':r.abort();return
-                    r.fulfill(status=503 if mode=='http' else 200,content_type='application/json',
+                    r.fulfill(status=429 if mode=='http429' else 503 if mode=='http' else 200,content_type='application/json',
                               body='not-json' if mode=='json' else '{}' if mode=='schema' else '{"error":"Synthetic unavailable"}')
                 ctx.route('**/api/me',fail)
                 p,errors=open_page(ctx,origin,path)
@@ -82,12 +82,12 @@ def run_shared_access_regression(browser,origin):
                 assert not bad and not errors,(path,mode,width,bad,errors)
                 ctx.close();cases+=1
     # Retrying reloads the page and recovers the existing session, without logout.
-    for path in ['/','/exchanges','/dashboard']:
+    for path,status in [(p,s) for p in ['/','/exchanges','/dashboard'] for s in [429,503]]:
         for width in [320,1280]:
             ctx,calls,bad=context(browser,width=width);attempts=[]
             def recover(r):
                 attempts.append(1)
-                r.fulfill(status=503 if len(attempts)==1 else 200,content_type='application/json',
+                r.fulfill(status=status if len(attempts)==1 else 200,content_type='application/json',
                           body='{}' if len(attempts)==1 else '{"user":{"full_name":"Persona ficticia","is_admin":false,"is_fiscal_advisor":false}}')
             ctx.route('**/api/me',recover);p,errors=open_page(ctx,origin,path)
             p.locator('#snavAuthRetry').click();p.wait_for_load_state('networkidle')
@@ -97,7 +97,7 @@ def run_shared_access_regression(browser,origin):
             assert p.locator('#snavAuthRetry').is_hidden()
             assert not bad and not errors,(path,width,bad,errors)
             ctx.close();cases+=1
-    print(f'SHARED_ACCESS_QA: PASS ({cases} scenarios; shared name; no pricing; HTTP/network/JSON/schema failures; retry recovery)')
+    print(f'SHARED_ACCESS_QA: PASS ({cases} scenarios; shared name; no pricing; HTTP 429/503/network/JSON/schema failures; retry recovery)')
 
 def run_dashboard_apple(browser,origin):
     art=Path('qa-artifacts');art.mkdir(exist_ok=True);cases=0
