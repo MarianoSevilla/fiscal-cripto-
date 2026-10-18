@@ -78,7 +78,8 @@ def test_invalid_inputs_do_not_run_or_bypass_fiscal_tools():
     c=client_for()
     for path in ['/api/analizar','/api/kucoin/analizar','/api/bitget/analizar','/api/721','/api/721/xml']:
         assert c.post(path,json={}).status_code==400,path
-    assert c.get('/api/descargar/fixture-unowned-token').status_code==403
+    assert c.get('/api/descargar/fixture-unowned-token').status_code==400
+    assert c.get('/api/descargar/fixture-unowned-token.pdf').status_code==403
 
 def test_revoked_session_cannot_reenter_workspace():
     c=client_for()
