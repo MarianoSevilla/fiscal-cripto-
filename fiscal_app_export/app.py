@@ -3616,6 +3616,9 @@ def resend_verification():
 
 
 @app.route("/api/me")
+# La navegación consulta esta lectura con frecuencia; no heredar 20/h y 100/día.
+# Mantener un límite acotado por usuario autenticado o IP anónima.
+@limiter.limit("120 per minute", override_defaults=True)
 def me():
     """Devuelve los datos del usuario autenticado, o null si no hay sesión."""
     if not current_user.is_authenticated:
