@@ -101,6 +101,7 @@ from auth import (
 )
 from security_config import build_security_config
 from auth_flow import AUTH_POST_PATHS, safe_auth_next, session_user_id
+from auth_timing import LoginTiming
 from urllib.parse import urlencode
 from sqlalchemy.exc import IntegrityError
 import hmac
@@ -3519,27 +3520,31 @@ def login():
     password = data.get("password") or ""
     remember = bool(data.get("remember", False))
 
-    # Mensaje genérico: no revelar si el email existe o no
-    user = User.query.filter_by(email=email).first()
-    if not user or not user.check_password(password):
-        return jsonify({"error": "Credenciales incorrectas."}), 401
-
-    if not user.is_active:
-        return jsonify({"error": "Cuenta desactivada. Contacta con soporte."}), 403
-
-    if not user.email_verified_at:
-        _send_verification_email(user, data.get('next'))
-        return jsonify({
-            "message": "Verifica tu correo para iniciar sesión.",
-            "pending_verification": True,
-        })
-
-    user.last_login = datetime.utcnow()
-    db.session.commit()
-    session.clear()
-    login_user(user, remember=remember)
-    return jsonify({"message": "Sesión iniciada.", "email": user.email, "plan": user.plan,
-                    "redirect_to": safe_auth_next(data.get('next'))})
+    with LoginTiming() as timing:
+        # Mensaje genérico: no revelar si el email existe o no.
+        with timing.phase('account_lookup'):
+            user = User.query.filter_by(email=email).first()
+        with timing.phase('password_check'):
+            valid = user is not None and user.check_password(password)
+        if not valid:
+            return jsonify({"error": "Credenciales incorrectas."}), 401
+        if not user.is_active:
+            return jsonify({"error": "Cuenta desactivada. Contacta con soporte."}), 403
+        if not user.email_verified_at:
+            with timing.phase('verification_email'):
+                _send_verification_email(user, data.get('next'))
+            return jsonify({
+                "message": "Verifica tu correo para iniciar sesión.",
+                "pending_verification": True,
+            })
+        with timing.phase('last_login_commit'):
+            user.last_login = datetime.utcnow()
+            db.session.commit()
+        with timing.phase('session_create'):
+            session.clear()
+            login_user(user, remember=remember)
+        return jsonify({"message": "Sesión iniciada.", "email": user.email, "plan": user.plan,
+                        "redirect_to": safe_auth_next(data.get('next'))})
 
 
 @app.route("/api/logout", methods=["POST"])
