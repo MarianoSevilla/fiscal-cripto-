@@ -79,6 +79,8 @@ if __name__=='__main__':
         viewer=viewer.replace('/static/images/','/fiscal_app_export/static/images/').replace('/static/home-apple-','/fiscal_app_export/static/home-apple-')
         mapping={'/login/':'login','/signup/':'signup','/recuperar-contrasena':'recuperar'}
         for target,name in mapping.items():viewer=viewer.replace(f'href="{target}"',f'href="/auth-apple-preview/{name}/"')
+        # Remains inert with JS disabled or when opened in a new tab.
+        viewer=viewer.replace('href="/auth/google"','href="#authHeading"')
         viewer=re.sub(r'href="(/(?!/|auth-apple-preview/)[^"]*)"',lambda m:'href="https://marianosevilla.com'+m[1]+'"',viewer)
         # Avoid offering password-manager autofill for the public static viewer.
         viewer=viewer.replace('autocomplete="current-password"','autocomplete="off"').replace('autocomplete="new-password"','autocomplete="off"')
