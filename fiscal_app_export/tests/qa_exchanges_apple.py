@@ -16,12 +16,19 @@ def open_page(ctx,origin):
     assert response.status==200
     return page,errors
 
-def structure(page,width):
+def structure(page,width,js=True):
     assert not geometry(page,width),(width,geometry(page,width))
     header=page.locator('#site-nav').bounding_box()
     assert abs(header['y'])<1 and 63<=header['height']<=65,(width,header)
     intro=page.locator('.exchanges-intro').bounding_box()
-    assert abs(intro['y']-header['height'])<1,(width,intro,header)
+    expected_top=header['height']
+    if not js and width>1200:
+        # The approved no-JS fallback exposes real login/signup links in a
+        # separate visible row; its height is content, not an empty header gap.
+        access=page.locator('.apple-noscript-access')
+        assert access.is_visible()
+        expected_top+=access.bounding_box()['height']
+    assert abs(intro['y']-expected_top)<1,(width,intro,header,expected_top)
     hero_x=page.locator('h1').bounding_box()['x']
     catalogue_x=page.locator('#catalogue-title').bounding_box()['x']
     assert abs(hero_x-catalogue_x)<1,(width,hero_x,catalogue_x)
@@ -89,7 +96,7 @@ def run_exchanges_apple(browser,origin):
         ctx.close();cases+=1
     for width in [320,390,768,1280]:
         ctx,violations=context(browser,width=width,js=False)
-        page,errors=open_page(ctx,origin);structure(page,width)
+        page,errors=open_page(ctx,origin);structure(page,width,js=False)
         page.locator('.apple-faq-item summary').first.click()
         assert page.locator('.apple-faq-answer').first.is_visible()
         if width<=1200:

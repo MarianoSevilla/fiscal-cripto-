@@ -3,7 +3,7 @@
 .apple-exchanges-page .exchanges-intro { padding-block:40px 32px; }
 .apple-exchanges-page .exchanges-intro .apple-container { padding-inline:var(--apple-pad); }
 .apple-exchanges-page .exchanges-intro .apple-eyebrow { color:var(--intro-accent); margin-bottom:12px; }
-.apple-exchanges-page h1 { width:100%; max-width:none; font-size:clamp(2rem,4.5vw,3.5rem); line-height:1.1; margin-bottom:20px; text-wrap:wrap; }
+.apple-exchanges-page h1 { width:100%; max-width:none; font-size:clamp(2rem,4.5vw,3.5rem); line-height:1.1; margin-bottom:20px; text-wrap:balance; }
 .apple-exchanges-page .exchanges-lead { max-width:none; width:100%; color:var(--intro-muted); font-size:1.125rem; line-height:1.6; }
 .apple-exchanges-page .exchanges-intro .apple-button { margin-top:24px; }
 .apple-exchanges-page .exchanges-section { padding-block:var(--exchanges-space); }
