@@ -51,7 +51,7 @@
 .apple-auth .auth-switch{text-align:center;margin-top:22px;font-size:.9375rem;color:var(--muted)}
 .apple-auth .auth-switch a{font-weight:650}
 .apple-auth .auth-legal{font-size:.8125rem;color:var(--muted);line-height:1.65;margin:18px 0 0}
-.apple-auth .auth-resend{margin-top:12px}
+.apple-auth .auth-resend{display:block;margin:12px auto;min-height:44px;padding:8px 12px;border:0;border-radius:8px;background:transparent;color:var(--accent);font:600 .9375rem/1.5 var(--font-body);cursor:pointer;text-decoration:underline;text-underline-offset:.25em}
 .apple-auth .auth-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px 24px;padding:18px var(--apple-pad);border-top:1px solid var(--border);font-size:.8125rem;color:var(--muted);width:100%;max-width:1240px;margin-inline:auto}
 .apple-auth .auth-footer nav{display:flex;gap:8px 20px;flex-wrap:wrap}
 .apple-auth .auth-footer a{color:var(--muted);min-height:32px;display:inline-flex;align-items:center}

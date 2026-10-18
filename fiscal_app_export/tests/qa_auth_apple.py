@@ -80,6 +80,8 @@ def run_auth_apple(browser,origin):
     p.locator('#authStatus').wait_for(state='visible')
     assert not p.locator('#authForm').is_visible() and not p.locator('.auth-google').is_visible()
     assert p.locator('#authResend').is_visible() and len(calls)==1 and not violations and not errors
+    assert p.locator('#authContinue').is_visible() and p.locator('#authRecovery').is_visible()
+    assert p.locator('#authPassword').input_value()==''
     ctx.close();cases+=1
     # A server reply containing an external redirect is rejected by the browser too.
     ctx,calls,violations=context(browser,reply=lambda path,data:(200,{'redirect_to':'//example.invalid'}))

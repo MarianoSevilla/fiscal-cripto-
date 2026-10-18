@@ -60,9 +60,10 @@
     location.assign(d.pending_verification?'/verify-email-result?status=pending&next='+encodeURIComponent(next):safeNext(d.redirect_to||next));
    }else if(view==='signup'){
     const d=await post('/api/register',{email,password,full_name:$('authName').value.trim(),next});
-    form.hidden=true;document.querySelectorAll('[data-auth-entry]').forEach(e=>e.hidden=true);
+    form.reset();form.hidden=true;document.querySelectorAll('[data-auth-entry]').forEach(e=>e.hidden=true);
     $('authHeading').textContent='Revisa tu correo';$('authDescription').textContent=d.message;
     $('authResend').hidden=false;$('authResend').dataset.email=email;
+    $('authContinue').hidden=false;$('authRecovery').hidden=false;
     message(status,'Revisa también la carpeta de spam. El enlace de verificación caduca en 24 horas.');
    }else if(view==='forgot'){
     const d=await post('/api/forgot-password',{email,next});form.reset();message(status,d.message);

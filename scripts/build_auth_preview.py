@@ -38,6 +38,8 @@ def make(view):
     if view=='reset':inputs+=field('authConfirm','Repetir contraseña','password','new-password')
     google=f'<div data-auth-entry><a class="auth-google" href="/auth/google" data-auth-next>{GOOGLE}Continuar con Google</a><div class="auth-divider">O utiliza tu correo</div></div>' if view in {'login','signup'} else ''
     legal='<p class="auth-legal" data-auth-entry>Al crear tu cuenta aceptas los <a href="/terminos">Términos del servicio</a>. Consulta cómo tratamos tus datos en la <a href="/privacidad">Política de privacidad</a>.</p>' if view=='signup' else ''
+    if view=='login':legal='<p class="auth-legal">Si es tu primer acceso con Google, se creará una cuenta. Consulta los <a href="/terminos">Términos del servicio</a> y la <a href="/privacidad">Política de privacidad</a>.</p>'
+    recovery='<p class="auth-switch" id="authRecovery" hidden><a href="/recuperar-contrasena" data-auth-next>Si ya tenías cuenta, puedes recuperar la contraseña</a>.</p>' if view=='signup' else ''
     switch={'login':'¿No tienes cuenta? <a href="/signup/" data-auth-next>Crear cuenta</a>','signup':'¿Ya tienes cuenta? <a href="/login/" data-auth-next>Iniciar sesión</a>'}.get(view,'<a href="/login/" data-auth-next>Volver al inicio de sesión</a>')
     path={'login':'/login','signup':'/signup','forgot':'/recuperar-contrasena','reset':'/reset-password','verify':'/verify-email-result'}[view]
     return f'''<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -54,8 +56,8 @@ def make(view):
 <section class="auth-card" aria-labelledby="authHeading"><h1 id="authHeading">{title}</h1><p id="authDescription" class="auth-description">{description}</p>{google}
 <div id="authError" class="auth-error" role="alert" tabindex="-1" hidden></div><div id="authStatus" class="auth-status" role="status" tabindex="-1" hidden></div>
 <form id="authForm" method="post" action="/api/{ {'login':'login','signup':'register','forgot':'forgot-password','reset':'reset-password','verify':'resend-verification'}[view]}" novalidate>{inputs}<button id="authSubmit" class="apple-button auth-submit" type="submit">{caption}</button></form>
-<button id="authResend" class="apple-button auth-submit auth-resend" type="button" hidden>Reenviar enlace</button>
-<a id="authContinue" class="apple-button auth-submit" href="/login/" data-auth-next hidden>Iniciar sesión</a>{legal}
+<button id="authResend" class="auth-resend" type="button" hidden>Reenviar enlace</button>
+<a id="authContinue" class="apple-button auth-submit" href="/login/" data-auth-next hidden>Iniciar sesión</a>{recovery}{legal}
 <p class="auth-switch" data-auth-entry>{switch}</p>
 <noscript><style>#authForm{{display:none}}</style><p class="auth-noscript">Activa JavaScript para utilizar el acceso y la recuperación de cuenta. Si necesitas ayuda, <a href="/contacto">contacta con nosotros</a>.</p></noscript>
 </section></main>
