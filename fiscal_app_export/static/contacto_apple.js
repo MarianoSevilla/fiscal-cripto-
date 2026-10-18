@@ -10,7 +10,7 @@
  const status=document.getElementById('contactStatus'),security=document.getElementById('contactSecurity');
  const securityNote=document.getElementById('contactSecurityNote'),retry=document.getElementById('contactSecurityRetry');
  const count=document.getElementById('contactCount');
- let sending=false,token='',widgetId=null;
+ let sending=false,token='',widgetId=null,widgetSize=null;
  function message(text){status.textContent=text;status.hidden=false;}
  function clearErrors(){summary.hidden=true;errorList.replaceChildren();fields.forEach(id=>{controls[id].removeAttribute('aria-invalid');const e=document.getElementById(id+'Error');e.textContent='';e.hidden=true;});}
  function errors(items){
@@ -36,23 +36,40 @@
  function securityState(text,canRetry=false){token='';securityNote.textContent=text;retry.hidden=!canRetry;}
  function resetSecurity(){
   if(preview)return;
+  if(window.turnstile&&widgetId!==null&&widgetSize!==securitySize()){renderSecurity();return;}
   securityState('Completando la verificación de seguridad…');
   if(window.turnstile&&widgetId!==null){try{window.turnstile.reset(widgetId);}catch{securityState('No se ha podido reiniciar la verificación. Puedes escribirnos por email.',true);}}
   else securityState('La verificación no está disponible. Recarga la página o escríbenos por email.');
  }
  retry.addEventListener('click',resetSecurity);
+ function securitySize(){return document.getElementById('contactTurnstile').clientWidth<300?'compact':'flexible';}
+ function renderSecurity(){
+  if(sending)return;
+  const size=securitySize();
+  if(widgetId!==null&&widgetSize===size)return;
+  if(widgetId!==null){window.turnstile.remove(widgetId);widgetId=null;}
+  widgetSize=size;securityState('Completando la verificación de seguridad…');
+  widgetId=window.turnstile.render('#contactTurnstile',{
+   sitekey:form.dataset.sitekey,theme:'light',size,
+   callback:value=>{token=value;securityNote.textContent='Verificación completada.';retry.hidden=true;},
+   'expired-callback':()=>securityState('La verificación ha caducado. Vuelve a verificar antes de enviar.',true),
+   'timeout-callback':()=>securityState('La verificación no ha terminado. Puedes volver a intentarlo.',true),
+   'error-callback':()=>{securityState('No se ha podido completar la verificación. Puedes reintentar o escribirnos por email.',true);return true;}
+  });
+ }
  function loadSecurity(){
   if(preview){security.hidden=true;return;}
   security.hidden=false;securityNote.textContent='Completando la verificación de seguridad…';
   const script=document.createElement('script');script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';script.async=true;script.defer=true;
   script.onerror=()=>securityState('No se ha podido cargar la verificación. Recarga la página o escríbenos por email.');
-  script.onload=()=>{try{widgetId=window.turnstile.render('#contactTurnstile',{
-   sitekey:form.dataset.sitekey,theme:'light',size:'flexible',
-   callback:value=>{token=value;securityNote.textContent='Verificación completada.';retry.hidden=true;},
-   'expired-callback':()=>securityState('La verificación ha caducado. Vuelve a verificar antes de enviar.',true),
-   'timeout-callback':()=>securityState('La verificación no ha terminado. Puedes volver a intentarlo.',true),
-   'error-callback':()=>{securityState('No se ha podido completar la verificación. Puedes reintentar o escribirnos por email.',true);return true;}
-  });}catch{securityState('La verificación no está disponible. Recarga la página o escríbenos por email.');}};
+  script.onload=()=>{try{
+   renderSecurity();
+   if(typeof ResizeObserver!=='undefined')new ResizeObserver(()=>{
+    if(!sending&&widgetSize!==securitySize()){
+     try{renderSecurity();}catch{securityState('La verificación no está disponible. Recarga la página o escríbenos por email.');}
+    }
+   }).observe(document.getElementById('contactTurnstile'));
+  }catch{securityState('La verificación no está disponible. Recarga la página o escríbenos por email.');}};
   document.head.append(script);
  }
  form.addEventListener('submit',async event=>{

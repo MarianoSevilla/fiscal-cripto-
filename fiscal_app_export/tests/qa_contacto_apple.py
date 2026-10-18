@@ -6,7 +6,8 @@ from qa_home_redesign import WIDTHS,context,geometry
 ROOT=Path(__file__).resolve().parents[1]
 MARKUP=(ROOT/'static/contacto.html').read_text()
 TURNSTILE='''window.__resets=0;window.__cfMode="%s";window.turnstile={
-render:function(target,options){window.__cfOptions=options;if(window.__cfMode!=="pending")options.callback("synthetic-token");return "synthetic-widget";},
+render:function(target,options){window.__cfOptions=options;const box=document.createElement('div');box.style.width=options.size==="compact"?"150px":"100%%";box.style.minWidth=options.size==="compact"?"150px":"300px";box.style.height=options.size==="compact"?"140px":"65px";document.querySelector(target).replaceChildren(box);if(window.__cfMode!=="pending")options.callback("synthetic-token");return "synthetic-widget";},
+remove:function(){document.querySelector('#contactTurnstile').replaceChildren();},
 reset:function(){window.__resets++;window.__cfOptions.callback("synthetic-token-"+window.__resets);}};'''
 
 def open_page(ctx,origin,live=True,cf='ready',wait='networkidle'):
@@ -170,4 +171,15 @@ def run_contacto_apple(browser,origin):
                 assert set(requests[0])=={'nombre','email','tipo_consulta','mensaje','website','ts_token'}
             assert not violations and not errors,(scenario,violations,errors)
             ctx.close();cases+=1
+    ctx,violations=context(browser,width=1280)
+    page,errors=open_page(ctx,origin)
+    assert page.evaluate('window.__cfOptions.size')=='flexible'
+    page.set_viewport_size({'width':320,'height':900})
+    page.wait_for_function('window.__cfOptions.size==="compact"')
+    assert not geometry(page,320),geometry(page,320)
+    page.set_viewport_size({'width':768,'height':900})
+    page.wait_for_function('window.__cfOptions.size==="flexible"')
+    assert not geometry(page,768),geometry(page,768)
+    assert not violations and not errors
+    ctx.close();cases+=1
     print(f'CONTACTO_APPLE_QA: PASS ({cases} scenarios; {len(WIDTHS)} widths; synthetic form and security; no external requests)')
