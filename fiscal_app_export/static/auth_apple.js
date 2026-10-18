@@ -28,7 +28,7 @@
   if(email&&(!email.value.trim()||!email.validity.valid))return invalid(email,'Introduce un correo electrónico válido.');
   if(pass){
    const min=view==='login'?1:15;
-   if(pass.value.length<min)return invalid(pass,view==='login'?'Introduce tu contraseña.':'Usa al menos 15 caracteres.');
+   if([...pass.value].length<min)return invalid(pass,view==='login'?'Introduce tu contraseña.':'Usa al menos 15 caracteres.');
    if(new TextEncoder().encode(pass.value).length>72)return invalid(pass,'La contraseña es demasiado larga. Prueba una frase más corta.');
   }
   if(confirm&&confirm.value!==pass.value)return invalid(confirm,'Las contraseñas no coinciden.');

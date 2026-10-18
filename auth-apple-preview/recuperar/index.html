@@ -553,10 +553,10 @@ body.apple-home { padding:0; }
 .apple-auth label{display:block;font-weight:600;font-size:.9375rem}
 .apple-auth .auth-label-row a{font-size:.875rem;text-decoration:none}
 .apple-auth .auth-input-wrap{position:relative}
-.apple-auth .auth-field input{display:block;width:100%;min-height:52px;border:1px solid #9eaeb0;border-radius:12px;background:#fff;color:var(--text);font:inherit;font-size:1rem;padding:12px 14px;line-height:1.5}
+.apple-auth .auth-field input{display:block;width:100%;min-height:52px;border:1px solid #7b898b;border-radius:12px;background:#fff;color:var(--text);font:inherit;font-size:1rem;padding:12px 14px;line-height:1.5}
 .apple-auth .auth-field input::placeholder{color:#68767a}
-.apple-auth .auth-input-wrap input{padding-right:86px}
-.apple-auth .auth-reveal{position:absolute;right:4px;top:4px;bottom:4px;background:transparent;border:0;border-radius:8px;min-width:72px;color:var(--accent);font:600 .875rem/1.4 var(--font-body);cursor:pointer}
+.apple-auth .auth-input-wrap input{padding-right:6rem}
+.apple-auth .auth-reveal{position:absolute;right:4px;top:4px;bottom:4px;background:transparent;border:0;border-radius:8px;min-width:4.5rem;color:var(--accent);font:600 .875rem/1.4 var(--font-body);cursor:pointer}
 .apple-auth .auth-field input[aria-invalid=true]{border:2px solid #a72c24}
 .apple-auth .auth-hint{font-size:.8125rem;color:var(--muted);line-height:1.5;margin-top:7px}
 .apple-auth .auth-field-error{font-size:.875rem;color:#a72c24;line-height:1.5;margin-top:6px}
@@ -637,7 +637,7 @@ body.apple-home { padding:0; }
   if(email&&(!email.value.trim()||!email.validity.valid))return invalid(email,'Introduce un correo electrónico válido.');
   if(pass){
    const min=view==='login'?1:15;
-   if(pass.value.length<min)return invalid(pass,view==='login'?'Introduce tu contraseña.':'Usa al menos 15 caracteres.');
+   if([...pass.value].length<min)return invalid(pass,view==='login'?'Introduce tu contraseña.':'Usa al menos 15 caracteres.');
    if(new TextEncoder().encode(pass.value).length>72)return invalid(pass,'La contraseña es demasiado larga. Prueba una frase más corta.');
   }
   if(confirm&&confirm.value!==pass.value)return invalid(confirm,'Las contraseñas no coinciden.');
