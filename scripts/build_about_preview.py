@@ -1,4 +1,4 @@
-"""Build the isolated About preview from the approved Home; no production writes."""
+"""Build the approved About page and its isolated noindex preview."""
 from pathlib import Path
 import json,re
 
@@ -52,6 +52,7 @@ main='''<main id="contenido" tabindex="-1">
 </div></div></section></main>'''
 html=head+header+main+footer+'</body></html>'
 (OUT/'about_apple.html').write_text(html)
+(OUT/'about.html').write_text(html.replace('content="noindex, nofollow"','content="index, follow"'))
 viewer=html
 for name in ['nav.css','landing_apple.css','about_apple.css']:
  viewer=viewer.replace(f'<link rel="stylesheet" href="/static/{name}">','<style>'+(BASE/name).read_text()+'</style>')
@@ -69,4 +70,4 @@ viewer=re.sub(r'href="(/(?!/)[^"]*)"',lambda m:'href="https://marianosevilla.com
 v=ROOT/'about-apple-preview';v.mkdir(exist_ok=True)
 (v/'index.html').write_text(viewer)
 (v/'session.json').write_text('{"user":null}\n')
-print('Built About source and isolated viewer. Production about.html is untouched.')
+print('Built approved production About and isolated noindex viewer.')

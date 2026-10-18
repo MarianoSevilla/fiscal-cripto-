@@ -3,16 +3,16 @@ import json
 from pathlib import Path
 from qa_home_redesign import WIDTHS,context,geometry
 
-PATH='/about-apple-preview'
+PATH='/about'
 
-def open_page(ctx,origin):
+def open_page(ctx,origin,path=PATH):
     page=ctx.new_page();errors=[]
     page.on('pageerror',lambda e:errors.append(str(e)))
-    response=page.goto(origin+PATH,wait_until='networkidle')
+    response=page.goto(origin+path,wait_until='networkidle')
     assert response.status==200
     return page,errors
 
-def structure(page,width,js=True):
+def structure(page,width,js=True,preview=False):
     assert not geometry(page,width),(width,geometry(page,width))
     nav=page.locator('#site-nav').bounding_box()
     assert abs(nav['y'])<1 and 63<=nav['height']<=65,(width,nav)
@@ -35,7 +35,7 @@ def structure(page,width,js=True):
     assert columns==(1 if width<=900 else 2)
     assert people.first.evaluate('e=>getComputedStyle(e).backgroundColor')=='rgb(237, 245, 240)'
     assert people.first.evaluate('e=>getComputedStyle(e).borderRadius')=='16px'
-    assert page.locator('meta[name="robots"]').get_attribute('content')=='noindex, nofollow'
+    assert page.locator('meta[name="robots"]').get_attribute('content')==('noindex, nofollow' if preview else 'index, follow')
     assert page.locator('link[rel="canonical"]').get_attribute('href')=='https://marianosevilla.com/about'
     assert page.locator('form,input[type="file"],table').count()==0
     assert page.locator('a:not([href]),a[href=""],a[href="#"]').count()==0
@@ -105,4 +105,10 @@ def run_about_apple(browser,origin):
         assert page.locator('#snavMobileMenu a[href="/dashboard"]').is_visible()
         assert not violations and not errors
         ctx.close();cases+=1
-    print(f'ABOUT_APPLE_QA: PASS ({cases} scenarios; {len(WIDTHS)} widths; real portraits; no-JS; enlarged text; synthetic sessions)')
+    for width in [390,1280]:
+        ctx,violations=context(browser,width=width)
+        page,errors=open_page(ctx,origin,path='/about-apple-preview')
+        structure(page,width,preview=True)
+        assert not violations and not errors
+        ctx.close();cases+=1
+    print(f'ABOUT_APPLE_QA: PASS ({cases} scenarios; {len(WIDTHS)} widths; production and preview; real portraits; no-JS; enlarged text; synthetic sessions)')

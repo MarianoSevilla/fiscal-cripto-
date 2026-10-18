@@ -1,6 +1,6 @@
-# About — preview aislado
+# About — publicación aprobada
 
-Base: main b3342c3c8058417663decdef9efe248830ca5627. Se autoriza preparar el preview después de la auditoría y la confirmación de contenido del 18/10/2026. No publicar ni fusionar sin autorización posterior.
+Base: main b3342c3c8058417663decdef9efe248830ca5627. Tras revisar el preview, el titular autoriza su publicación el 18/10/2026: «ME gusta, pásalo a producción».
 
 ## Contenido confirmado por el titular
 
@@ -18,14 +18,14 @@ Se reutilizan exclusivamente los seis WebP del Home ya presentes en el repositor
 
 Título de marca y personas; AboutPage con dos Person y funciones visibles confirmadas. Los enlaces a UPV/COEV no se presentan como verificaciones públicas individualizadas del título o la colegiación. No se usa la página general del COEV como sameAs de Rafael. YouTube es un enlace, no un embed que cargue terceros.
 
-Source y viewer permanecen noindex,nofollow y con canonical /about. La ruta pública actual /about, su plantilla, su sitemap y su contenido permanecen sin cambios. El viewer de Netlify sirve los WebP existentes desde el propio repositorio y utiliza session.json anónimo; los enlaces funcionales llevan a producción, sin formularios ni solicitudes fiscales en el preview.
+La plantilla pública about.html reproduce el diseño aprobado con index,follow y canonical /about. La ruta Flask existente no cambia. Solo se actualiza la fecha de /about en el sitemap. La variante about_apple.html y el viewer permanecen noindex,nofollow. El viewer de Netlify sirve los WebP existentes desde el propio repositorio y utiliza session.json anónimo; la plantilla pública mantiene nav.js y la sesión real, sin simulaciones.
 
 ## Archivos y verificación
 
-- static/about_apple.html, static/about_apple.css y scripts/build_about_preview.py: variante y reconstrucción.
+- static/about.html, static/about_apple.html, static/about_apple.css y scripts/build_about_preview.py: publicación, variante y reconstrucción.
 - about-apple-preview/index.html y session.json: viewer aislado para revisión.
 - tests/qa_about_apple.py, qa_responsive_nav.py y qa_responsive_layout.py: escenarios de navegador local, integración en el job existente.
 
-La suite cubre 13 anchuras, teclado, menú/Escape, ausencia de hueco superior, dos retratos decodificados, navegación sin JS, texto 200 %, movimiento reducido y sesiones sintéticas. Las solicitudes externas o de escritura fallan el test. Los resultados ejecutados se documentan en la PR; esta declaración de cobertura no anticipa su éxito.
+La suite cubre 25 escenarios: producción en 13 anchuras, teclado, menú/Escape, ausencia de hueco superior, dos retratos decodificados, navegación sin JS, texto 200 %, movimiento reducido, sesiones sintéticas y paridad con el preview en móvil/escritorio. Las solicitudes externas o de escritura fallan el test. Los resultados ejecutados se documentan en la PR; esta declaración de cobertura no anticipa su éxito.
 
 Sin cambios de lógica FIFO, Flask, datos, pagos, seguridad, variables, servicios, dependencias o workflows. Las comprobaciones no acceden a datos fiscales reales.
