@@ -109,7 +109,7 @@ def main():
    viewer=viewer.replace(f'<script src="/static/{js}" defer></script>','');deferred.append(tag)
  viewer=re.sub(r'href="([^"]+)"',inert_href,viewer)
  viewer=viewer.replace('/static/images/','/fiscal_app_export/static/images/')
- notice='<div id="dashViewerNotice" class="apple-container" role="status" hidden><p></p><button class="dash-text-button" type="button" onclick="this.parentElement.hidden=true">Cerrar aviso</button></div>'
+ notice='<div id="dashViewerNotice" role="status" hidden style="position:fixed;inset:auto 16px 80px;z-index:2000;max-width:560px;max-height:65vh;overflow:auto;margin-inline:auto;padding:20px;border:1px solid #cbd4d8;border-radius:16px;background:#fff;box-shadow:0 8px 32px #073c3220"><p></p><button class="dash-text-button" type="button" onclick="this.parentElement.hidden=true">Cerrar aviso</button></div>'
  viewer=viewer.replace('<body class="apple-home apple-dashboard"','<body class="apple-home apple-dashboard"')
  viewer=viewer.replace('<main id="contenido"',MOCK+'<main id="contenido"')
  # Mock must be in place BEFORE nav.js performs its one session request.
