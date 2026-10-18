@@ -177,8 +177,8 @@ def test_mismatched_passwords_fail(client):
     """Contraseñas distintas devuelven 400."""
     r = client.post("/api/reset-password", json={
         "token":            "any-token-does-not-matter",
-        "password":         "PassOne1234!",
-        "confirm_password": "PassTwo5678!",
+        "password":         "PassOneLongEnough1234!",
+        "confirm_password": "PassTwoLongEnough5678!",
     })
     assert r.status_code == 400
     assert "coinciden" in r.get_json()["error"].lower()
