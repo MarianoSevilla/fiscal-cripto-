@@ -1,6 +1,12 @@
-# Exchanges — preview aislado
+# Exchanges — diseño y publicación
 
-Base: main 2d5ffad00eec1f2ac0bc8117245dce3d5aa03a4d. Autorización: proceder con el preview tras auditoría de Exchanges. No fusionar ni desplegar producción sin aprobación posterior.
+Base: main 2d5ffad00eec1f2ac0bc8117245dce3d5aa03a4d. El propietario aprobó el diseño, los logos y los textos del preview y autorizó actualizar producción el 18/10/2026 a las 18:07 (Europe/Madrid).
+
+## Publicación autorizada
+
+El generador escribe static/exchanges.html con index,follow y mantiene static/exchanges_apple.html y el viewer con noindex,nofollow. La única diferencia entre las dos plantillas es esa directiva; el contenido aprobado, los logos, los enlaces, el canonical y los estilos son idénticos. La ruta Flask existente /exchanges sigue sirviendo exchanges.html y no se modifica app.py. El sitemap cambia únicamente lastmod de /exchanges al 18/10/2026. La sesión ficticia se utiliza solo en el viewer; la página real conserva nav.js con el funcionamiento habitual.
+
+La suite responsive pasa a comprobar la plantilla de producción en las 13 anchuras existentes y mantiene dos escenarios para la variante no indexable. Las pruebas finales y el despliegue se documentan en la PR una vez verificados. La autorización incluye las correcciones visuales de captions ya aprobadas en esta rama; no hay cambios de motor, endpoints, pagos, seguridad, variables o base de datos.
 
 ## Resultado
 
@@ -41,6 +47,6 @@ Contratos estáticos locales correctos: inventario de 11 enlaces, origen/viewer 
 
 La suite contempla las 13 anchuras 320–1440 px, header sin espacio superior, menú, teclado, ampliación de texto 200 %, movimiento reducido, sin JS y sesiones ficticias. La evidencia ejecutada de CI se documentará en la PR; esta declaración de cobertura no constituye un resultado anticipado.
 
-## Fuera de alcance
+## Fuera de alcance funcional
 
-Producción /exchanges, motor FIFO, endpoints de análisis, seguridad, pagos, base de datos, variables, retención y guías individuales permanecen intactos. El sitemap solo se actualizará al publicar una modificación relevante aprobada.
+Motor FIFO, endpoints de análisis, seguridad, pagos, base de datos, variables, retención y guías individuales permanecen intactos. La actualización pública se limita a la presentación y contenido de /exchanges y a las etiquetas visuales previamente aprobadas.

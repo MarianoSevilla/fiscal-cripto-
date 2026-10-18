@@ -92,6 +92,7 @@ main='''<main id="contenido" tabindex="-1">
 </div></div></section>
 </main>'''
 html=head+header+main+footer+'</body></html>'
+(OUT/'exchanges.html').write_text(html.replace('content="noindex, nofollow"','content="index, follow"'))
 (OUT/'exchanges_apple.html').write_text(html)
 viewer=html
 for name in ['nav.css','landing_apple.css','exchanges_apple.css']:

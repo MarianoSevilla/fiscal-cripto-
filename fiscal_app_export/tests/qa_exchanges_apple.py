@@ -7,16 +7,17 @@ import json
 from pathlib import Path
 from qa_home_redesign import WIDTHS,context,geometry
 
-PATH='/exchanges-apple-preview'
+PATH='/exchanges'
+PREVIEW='/exchanges-apple-preview'
 
-def open_page(ctx,origin):
+def open_page(ctx,origin,path=PATH):
     page=ctx.new_page();errors=[]
     page.on('pageerror',lambda e:errors.append(str(e)))
-    response=page.goto(origin+PATH,wait_until='networkidle')
+    response=page.goto(origin+path,wait_until='networkidle')
     assert response.status==200
     return page,errors
 
-def structure(page,width,js=True):
+def structure(page,width,js=True,preview=False):
     assert not geometry(page,width),(width,geometry(page,width))
     header=page.locator('#site-nav').bounding_box()
     assert abs(header['y'])<1 and 63<=header['height']<=65,(width,header)
@@ -55,7 +56,7 @@ def structure(page,width,js=True):
     assert cards.first.evaluate('e=>getComputedStyle(e).backgroundColor')=='rgb(237, 245, 240)'
     assert cards.first.evaluate('e=>getComputedStyle(e).borderRadius')=='16px'
     assert page.locator('.exchanges-intro .apple-button').evaluate('e=>getComputedStyle(e).borderRadius')=='999px'
-    assert page.locator('meta[name="robots"]').get_attribute('content')=='noindex, nofollow'
+    assert page.locator('meta[name="robots"]').get_attribute('content')==('noindex, nofollow' if preview else 'index, follow')
     assert page.locator('link[rel="canonical"]').get_attribute('href')=='https://marianosevilla.com/exchanges'
     assert page.locator('input[type="file"],form,table').count()==0
     assert page.locator('a:not([href]),a[href=""],a[href="#"]').count()==0
@@ -126,4 +127,11 @@ def run_exchanges_apple(browser,origin):
         assert page.locator('#snavMobileMenu a[href="/dashboard"]').is_visible()
         assert not violations and not errors
         ctx.close();cases+=1
-    print(f'EXCHANGES_APPLE_QA: PASS ({cases} scenarios; {len(WIDTHS)} widths; native disclosures; enlarged text; synthetic sessions)')
+    # Keep the isolated preview non-indexable while the public route is indexed.
+    for width in [390,1280]:
+        ctx,violations=context(browser,width=width)
+        page,errors=open_page(ctx,origin,path=PREVIEW)
+        structure(page,width,preview=True)
+        assert not violations and not errors
+        ctx.close();cases+=1
+    print(f'EXCHANGES_APPLE_QA: PASS ({cases} scenarios; {len(WIDTHS)} widths; production route; isolated preview; enlarged text; synthetic sessions)')
