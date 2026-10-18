@@ -305,7 +305,7 @@ body { padding-top: 64px; }
       <div class="detail-section">
         <div class="detail-section-title">Acciones</div>
         <div class="action-row">
-          <a href="${mailtoHref}" class="action-btn" style="display:inline-block;">✉ Responder por email</a>
+          <a href="${mailtoHref}" class="action-btn" style="display:inline-block;">Responder por email</a>
           ${!isArchived && c.estado !== 'respondido' ? `
             <button class="action-btn secondary" onclick="doAccion(${c.id},'responder')">Marcar respondido</button>
           ` : ''}
@@ -401,3 +401,4 @@ body { padding-top: 64px; }
 </script>
 </body>
 </html>
+

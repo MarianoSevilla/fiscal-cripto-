@@ -82,7 +82,7 @@ main='''<main id="contenido" tabindex="-1">
 <h2 id="help-title">¿Tu historial necesita una revisión profesional?</h2>
 <p>Si utilizas varias plataformas o tienes operaciones complejas, solicita una valoración a Rafael Ramos, economista colegiado. El servicio profesional se contrata directamente con él.</p>
 <ul class="asistencia-bullets"><li>Historial en varios exchanges</li><li>Transferencias y datos incompletos</li><li>Operaciones que requieren revisión</li></ul>
-<a class="apple-button" href="/pedir-asesoramiento">Solicitar asesoramiento fiscal <span aria-hidden="true">→</span></a>
+<a class="apple-button" href="/pedir-asesoramiento">Solicitar asesoramiento fiscal</a>
 </div></div></section>
 </main>'''
 html=head+header+main+footer+'</body></html>'

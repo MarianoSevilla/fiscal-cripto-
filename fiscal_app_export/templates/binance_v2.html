@@ -747,7 +747,7 @@ td.type-badge { font-family: var(--font-body); font-size: 10px; text-transform: 
         <span id="year-nodetect" class="year-nodetect-bar" style="display:none">Sin años detectados</span>
       </div>
       <button class="cta" id="btnAnalizar" disabled>
-        <span id="btnText">Generar informe →</span>
+        <span id="btnText">Generar informe</span>
       </button>
     </div>
 
@@ -812,7 +812,7 @@ td.type-badge { font-family: var(--font-body); font-size: 10px; text-transform: 
       <p class="done-title">Tu informe fiscal ya está listo</p>
       <p class="done-sub">Descarga el PDF y compártelo con tu gestor fiscal.</p>
       <div class="done-actions">
-        <button class="done-btn" id="doneNuevo">↩ Nuevo análisis</button>
+        <button class="done-btn" id="doneNuevo">Nuevo análisis</button>
         <a href="/dashboard" class="done-link">Analizar otro exchange →</a>
       </div>
     </div>
@@ -825,7 +825,7 @@ td.type-badge { font-family: var(--font-body); font-size: 10px; text-transform: 
     <div class="bar-file-selected" id="fileSelected">
       <span>📄</span><span id="fileName">—</span>
     </div>
-    <button class="bar-btn-nuevo" id="btnNuevo">↩ Nuevo análisis</button>
+    <button class="bar-btn-nuevo" id="btnNuevo">Nuevo análisis</button>
   </div>
 
   <!-- Instrucciones post-análisis -->
@@ -849,7 +849,7 @@ td.type-badge { font-family: var(--font-body); font-size: 10px; text-transform: 
   <div class="results-header-row">
     <h2 class="results-heading">Resultado del análisis</h2>
     <a class="btn-download-hero" id="btnDownload" href="#" download="informe_fiscal_binance.pdf">
-      ⬇ Descargar PDF
+      Descargar PDF
     </a>
   </div>
 
@@ -878,7 +878,7 @@ td.type-badge { font-family: var(--font-body); font-size: 10px; text-transform: 
     </div>
     <p class="error-desc" id="errorDesc"></p>
     <ol class="error-pasos" id="errorPasos"></ol>
-    <button class="btn-retry" id="btnRetry">← Volver a intentarlo</button>
+    <button class="btn-retry" id="btnRetry">Volver a intentarlo</button>
   </div>
 
   <div class="results-content" id="resultsContent">
@@ -1576,7 +1576,7 @@ td.type-badge { font-family: var(--font-body); font-size: 10px; text-transform: 
       fileName.textContent = '—'; btnAnalizar.disabled = true;
     } finally {
       detenerProgreso();
-      btnText.textContent = 'Generar informe →';
+      btnText.textContent = 'Generar informe';
     }
   });
 
@@ -1598,3 +1598,4 @@ td.type-badge { font-family: var(--font-body); font-size: 10px; text-transform: 
 </script>
 </body>
 </html>
+

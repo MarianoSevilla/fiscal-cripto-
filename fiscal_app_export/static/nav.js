@@ -27,16 +27,16 @@
           <div class="snav-avatar-wrap snav-hidden" id="snavAvatarWrap">
             <button class="snav-avatar" id="snavAvatar" aria-label="Menú de usuario" aria-haspopup="true" aria-expanded="false">U</button>
             <div class="snav-dropdown" id="snavDropdown" role="menu">
-              <a href="/pricing"   class="snav-dd-item snav-hidden" id="snavItemPlanes"  role="menuitem">💎&nbsp; Planes</a>
-              <a href="/account"   class="snav-dd-item"             id="snavItemAccount" role="menuitem">👤&nbsp; Mi cuenta</a>
-              <a href="/dashboard" class="snav-dd-item"             id="snavItemDash"    role="menuitem">⚡&nbsp; Dashboard</a>
-              <a href="/stats"     class="snav-dd-item snav-hidden" id="snavItemStats"          role="menuitem">📊&nbsp; Stats</a>
-              <a href="/admin/asesoramiento"      class="snav-dd-item snav-hidden" id="snavItemAdminAsesoria"    role="menuitem">🛠&nbsp; Panel asesoramiento</a>
-              <a href="/admin/comunicaciones"     class="snav-dd-item snav-hidden" id="snavItemAdminComms"       role="menuitem">📢&nbsp; Comunicaciones</a>
-              <a href="/admin/recursos"           class="snav-dd-item snav-hidden" id="snavItemAdminRecursos"    role="menuitem">📚&nbsp; Solicitudes de recursos</a>
-              <a href="/mis-solicitudes-fiscales" class="snav-dd-item snav-hidden" id="snavItemMisSolicitudes"  role="menuitem">📋&nbsp; Mis solicitudes fiscales</a>
+              <a href="/pricing"   class="snav-dd-item snav-hidden" id="snavItemPlanes"  role="menuitem">Planes</a>
+              <a href="/account"   class="snav-dd-item"             id="snavItemAccount" role="menuitem">Mi cuenta</a>
+              <a href="/dashboard" class="snav-dd-item"             id="snavItemDash"    role="menuitem">Dashboard</a>
+              <a href="/stats"     class="snav-dd-item snav-hidden" id="snavItemStats"          role="menuitem">Stats</a>
+              <a href="/admin/asesoramiento"      class="snav-dd-item snav-hidden" id="snavItemAdminAsesoria"    role="menuitem">Panel asesoramiento</a>
+              <a href="/admin/comunicaciones"     class="snav-dd-item snav-hidden" id="snavItemAdminComms"       role="menuitem">Comunicaciones</a>
+              <a href="/admin/recursos"           class="snav-dd-item snav-hidden" id="snavItemAdminRecursos"    role="menuitem">Solicitudes de recursos</a>
+              <a href="/mis-solicitudes-fiscales" class="snav-dd-item snav-hidden" id="snavItemMisSolicitudes"  role="menuitem">Mis solicitudes fiscales</a>
               <div class="snav-dd-divider"></div>
-              <button class="snav-dd-item danger" id="snavBtnLogout" role="menuitem">↩&nbsp; Cerrar sesión</button>
+              <button class="snav-dd-item danger" id="snavBtnLogout" role="menuitem">Cerrar sesión</button>
             </div>
           </div>`;
   }
@@ -362,3 +362,4 @@
   }
 
 })();
+
