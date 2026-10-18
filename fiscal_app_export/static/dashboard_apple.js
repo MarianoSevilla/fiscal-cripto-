@@ -27,7 +27,13 @@
   }
   // /pricing has no Flask route. Do not promote that dead destination here.
   // This only changes this page's discovery, never authorization or other pages.
-  $('snavItemPlanes')?.classList.add('snav-hidden');
+  const plans=$('snavItemPlanes');
+  plans?.classList.add('snav-hidden');
+  // The mobile menu may already be open while the shared lookup resolves.
+  // Remove its existing copy too; subsequent openings use the hidden source.
+  if(plans)document.querySelectorAll('#snavMobileMenu a').forEach(link=>{
+   if(link.getAttribute('href')===plans.getAttribute('href'))link.remove();
+  });
   $('dashSearchWrap').hidden=false;
   const links=$('dashRoleLinks');
   for(const id of ['snavItemAdminAsesoria','snavItemStats','snavItemAdminComms','snavItemAdminRecursos','snavItemMisSolicitudes']){

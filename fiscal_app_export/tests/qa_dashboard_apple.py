@@ -99,11 +99,14 @@ def run_dashboard_apple(browser,origin):
         assert calls==['/api/me'] and not bad and not errors;ctx.close();cases+=1
     # Delayed auth never reveals privileged content and reuses the same request.
     pending=[];ctx,calls,bad=context(browser,pending=pending);p=ctx.new_page();p.clock.install()
-    p.goto(origin+'/dashboard-apple-preview',wait_until='load');p.clock.fast_forward(9000)
+    p.goto(origin+'/dashboard-apple-preview',wait_until='load')
+    p.locator('#snavMenuToggle').click();p.clock.fast_forward(9000)
     assert not p.locator('#dashWorkspace').is_visible() and p.locator('#dashRetry').is_visible()
     assert len(pending)==1
-    pending[0].fulfill(status=200,content_type='application/json',body='{"user":{"is_admin":false,"is_fiscal_advisor":false}}')
+    pending[0].fulfill(status=200,content_type='application/json',body='{"user":{"is_admin":true,"is_fiscal_advisor":true}}')
     p.locator('body[data-dashboard-state=ready]').wait_for()
+    assert p.locator('#snavMobileMenu').get_by_role('link',name='Planes',exact=True).count()==0
+    assert p.locator('#dashRoleLinks li').count()==6
     assert calls==['/api/me'] and not bad;ctx.close();cases+=1
     for width in [320,768,1280]:
         ctx,calls,bad=context(browser,width=width);p,errors=open_page(ctx,origin)
