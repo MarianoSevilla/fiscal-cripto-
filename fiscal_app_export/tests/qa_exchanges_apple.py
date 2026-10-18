@@ -22,6 +22,9 @@ def structure(page,width):
     assert abs(header['y'])<1 and 63<=header['height']<=65,(width,header)
     intro=page.locator('.exchanges-intro').bounding_box()
     assert abs(intro['y']-header['height'])<1,(width,intro,header)
+    hero_x=page.locator('h1').bounding_box()['x']
+    catalogue_x=page.locator('#catalogue-title').bounding_box()['x']
+    assert abs(hero_x-catalogue_x)<1,(width,hero_x,catalogue_x)
     assert page.locator('main').count()==page.locator('h1').count()==1
     for selector in ['h1','.exchanges-lead']:
         box=page.locator(selector).bounding_box()
@@ -72,6 +75,8 @@ def run_exchanges_apple(browser,origin):
             entry.locator('summary').click()
             assert entry.locator('.apple-faq-answer').is_visible()
         assert not geometry(page,width),(width,geometry(page,width))
+        for entry in page.locator('.apple-faq-item').all():
+            entry.locator('summary').click()
         if width<=1200:
             page.locator('#snavMenuToggle').click()
             assert page.locator('#snavMobileMenu a[href="/herramientas"]').is_visible()
