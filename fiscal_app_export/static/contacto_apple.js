@@ -77,5 +77,5 @@
   finally{sending=false;btn.disabled=false;fieldset.disabled=false;form.removeAttribute('aria-busy');btn.textContent='Enviar mensaje';resetSecurity();}
  });
  // Listener registered before enabling fields: a failed script cannot submit via GET.
- fieldset.disabled=false;btn.disabled=false;loadSecurity();
+ fieldset.disabled=false;btn.disabled=false;document.getElementById('contactBootNotice').hidden=true;loadSecurity();
 })();

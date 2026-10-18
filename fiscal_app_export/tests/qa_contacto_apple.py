@@ -86,7 +86,7 @@ def run_contacto_apple(browser,origin):
         assert page.locator('#contactSubmit').is_disabled()
         assert page.locator('#nombre').is_disabled()
         assert page.locator('#contactForm').get_attribute('method')=='post'
-        assert page.get_by_text('Para utilizar el formulario necesitas JavaScript.',exact=False).is_visible()
+        assert page.locator('#contactBootNotice').is_visible()
         assert page.locator('.contact-fallback a[href^="mailto:"]').is_visible()
         if width<=1200:
             page.locator('.apple-noscript-menu summary').click()
