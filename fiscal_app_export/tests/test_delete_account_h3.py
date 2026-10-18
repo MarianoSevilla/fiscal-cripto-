@@ -120,8 +120,10 @@ def _login(client, email, password):
 
 def _inject_oauth_session(client, uid):
     """Inyecta sesión Flask-Login para usuario OAuth (sin pasar por /api/login)."""
+    with client.application.app_context():
+        identity = db.session.get(User, uid).get_id()
     with client.session_transaction() as sess:
-        sess["_user_id"] = str(uid)
+        sess["_user_id"] = identity
         sess["_fresh"]   = True
 
 

@@ -1,0 +1,709 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Crear cuenta | Mariano Sevilla</title><meta name="robots" content="noindex, nofollow"><link rel="canonical" href="https://marianosevilla.com/signup"><link rel="icon" href="https://marianosevilla.com/static/favicon.ico">
+<style>/* Isolated Home proposal. Never loaded by landing.html or other pages. */
+.apple-home {
+  --bg:#ffffff; --bg2:#f5f6f7; --surface:#ffffff; --surface2:#f0f3f2;
+  --text:#1d2428; --muted:#53616b; --accent:#006b54;
+  --border:#dce2e5; --border2:#cbd4d8; --footer-bg:#f5f6f7;
+  --font-display:system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-body:system-ui,-apple-system,"Segoe UI",sans-serif;
+  --apple-max:1160px; --apple-pad:clamp(20px,4vw,48px);
+  --intro-bg:#073c32; --intro-text:#ffffff; --intro-muted:#c3dbd1; --intro-accent:#a6edcf;
+  margin:0; color:var(--text); background:var(--bg);
+  font:400 1rem/1.65 var(--font-body); -webkit-font-smoothing:antialiased; overflow-wrap:anywhere;
+}
+.apple-home *, .apple-home *::before, .apple-home *::after { box-sizing:border-box; }
+.apple-home [hidden] { display:none !important; }
+.apple-home :where(h1,h2,h3,p,ul) { margin:0; }
+.apple-home :where(a,button,input,summary) { -webkit-tap-highlight-color:rgba(0,107,84,.14); }
+.apple-home a { color:var(--accent); text-underline-offset:.25em; }
+.apple-home :where(a,button,input,summary,[tabindex]):focus-visible { outline:3px solid #005fcc; outline-offset:4px; }
+.apple-home main:focus { outline:none; }
+.apple-home .apple-sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; border:0; }
+.apple-home .apple-tablet-only { display:none; }
+.apple-home .apple-report-action { display:block; }
+.apple-home :where(button,input) { font:inherit; }
+.apple-home img { display:block; max-width:100%; }
+.apple-home h2 { font-size:clamp(1.875rem,3.6vw,3.125rem); line-height:1.12; letter-spacing:-.035em; font-weight:650; }
+.apple-home h3 { font-size:1.125rem; line-height:1.4; letter-spacing:-.015em; font-weight:650; }
+.apple-home .apple-container { width:100%; max-width:var(--apple-max); margin-inline:auto; padding-inline:var(--apple-pad); }
+.apple-home .apple-section { padding-block:clamp(64px,9vw,112px); scroll-margin-top:90px; }
+.apple-home .apple-section-heading { margin-bottom:44px; }
+.apple-home .apple-eyebrow { display:block; margin-bottom:14px; color:var(--accent); font-size:.875rem; font-weight:650; letter-spacing:.025em; }
+.apple-home .apple-skip { position:fixed; left:20px; top:12px; z-index:2000; transform:translateY(-160%); background:#fff; padding:12px 18px; border-radius:8px; }
+.apple-home .apple-skip:focus { transform:none; }
+.apple-home .apple-noscript-access { display:flex; gap:20px; flex-wrap:wrap; padding:12px var(--apple-pad); }
+
+/* Shared navigation is reused unchanged; all overrides are Home-scoped. */
+.apple-home #site-nav {
+  --snav-bg:rgba(255,255,255,.96); --snav-border:#e1e6e8; --snav-border2:#cbd4d8;
+  --snav-text:#1d2428; --snav-muted:#53616b; --snav-accent:#006b54;
+  --snav-accent-dim:#e8f3ef; --snav-surface:#ffffff; --snav-surface2:#f1f5f3;
+  --snav-font-d:var(--font-display); --snav-font-b:var(--font-body);
+  min-height:64px; height:auto; backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+}
+.apple-home .snav-inner { max-width:var(--apple-max); padding:8px var(--apple-pad); min-height:64px; height:auto; }
+.apple-home .snav-logo { font-size:1rem; font-weight:750; letter-spacing:-.035em; white-space:normal; overflow-wrap:anywhere; min-width:0; flex-shrink:1; line-height:1.25; color:var(--snav-text); }
+.apple-home .snav-links { position:static; transform:none; margin-inline:auto; gap:24px; padding:0; }
+.apple-home .snav-links a { color:var(--snav-muted); }
+.apple-home .snav-links a:hover { color:var(--snav-text); }
+.apple-home :is(.snav-btn-cta,.snav-mobile-link-primary,.snav-avatar) { color:#fff; }
+.apple-home :is(.snav-btn-login,.snav-btn-cta) { min-height:40px; padding:10px 16px; border-radius:999px; }
+.apple-home .snav-avatar { width:44px; height:44px; }
+.apple-home .snav-dropdown { box-shadow:0 12px 36px rgba(20,34,30,.12); }
+.apple-home .snav-dd-item { min-height:44px; }
+/* V17: the inherited logout red was intended for a dark dropdown. */
+.apple-home #site-nav .snav-dd-item.danger { color:#b42318; }
+.apple-home #site-nav .snav-dd-item.danger:hover { background:#fff1ef; color:#b42318; }
+.apple-home #site-nav .snav-dd-item.danger:active { background:#fde4df; color:#b42318; }
+.apple-home .snav-menu-toggle { background:#f3f6f5; border-color:#d8e1dd; }
+.apple-home .snav-mobile-menu:not([hidden]) { background:#fff; box-shadow:0 14px 28px rgba(20,34,30,.1); max-height:calc(100dvh - var(--apple-nav-height,64px)); }
+/* Public links remain available if the shared session lookup is delayed. */
+.apple-home .apple-access-fallback { display:flex; gap:12px; }
+.apple-home .apple-access-mobile { flex-direction:column; gap:4px; }
+.apple-home #site-nav.apple-access-waiting .snav-skeleton { display:none; }
+@media (max-width:1200px) {
+  .apple-home .apple-access-desktop { display:none; }
+}
+
+/* V7: message and example share a stage; DOM reading order stays unchanged. */
+.apple-home .apple-intro { background:var(--intro-bg); color:var(--intro-text); }
+.apple-home .apple-intro-inner { max-width:var(--apple-max); margin-inline:auto; padding:116px var(--apple-pad) 64px; }
+.apple-home .apple-intro .apple-container { padding:0; }
+.apple-home .apple-hero { padding:0 0 40px; text-align:left; }
+.apple-home .apple-hero .apple-eyebrow { color:var(--intro-accent); }
+.apple-home .apple-intro :focus-visible { outline-color:#a6edcf; }
+.apple-home .device-frame :focus-visible { outline-color:#005fcc; }
+.apple-home h1 { max-width:21ch; margin:0 0 24px; font-size:clamp(2.25rem,5.8vw,4.75rem); line-height:1.05; letter-spacing:-.045em; font-weight:700; text-wrap:balance; overflow-wrap:anywhere; }
+.apple-home h1 em { color:var(--intro-accent); font-style:normal; }
+.apple-home .hero-desc { max-width:56ch; margin:0 0 28px; font-size:clamp(1rem,1.5vw,1.18rem); line-height:1.65; color:var(--intro-muted); text-wrap:pretty; }
+.apple-home .apple-hero-actions { display:flex; justify-content:flex-start; align-items:center; gap:12px 26px; flex-wrap:wrap; }
+.apple-home :is(.btn-primary,.apple-button,.btn-asistencia,.auth-btn-primary) { display:inline-flex; }
+.apple-home :is(.btn-primary,.apple-button,.btn-asistencia,.auth-btn-primary,.snav-btn-cta,.snav-mobile-link-primary,.snav-btn-login) { justify-content:center; align-items:center; min-height:48px; padding:11px 24px; border:1px solid var(--intro-accent); border-radius:999px; background:var(--accent); color:#fff; font:600 1rem/1.5 var(--font-body); text-align:center; text-decoration:none; cursor:pointer; transition:background .15s ease; }
+.apple-home :is(.btn-primary,.apple-button,.btn-asistencia,.auth-btn-primary,.snav-btn-cta,.snav-mobile-link-primary,.snav-btn-login):hover { background:#00533f; color:#fff; opacity:1; }
+/* Immediate press feedback without motion or layout shifts. */
+.apple-home :is(.btn-primary,.apple-button,.btn-asistencia,.auth-btn-primary,.snav-btn-cta,.snav-mobile-link-primary,.snav-btn-login,.snav-avatar):active:not(:disabled) { background:#004331; color:#fff; box-shadow:inset 0 0 0 2px rgba(0,0,0,.12); transition:none; }
+.apple-home :is(.snav-btn-login,.snav-menu-toggle,.auth-close,.auth-switch-btn,.apple-text-link,.authors-link,.snav-links a,.snav-dd-item,.snav-mobile-link,.apple-footer a):active { background-color:#e4eee9; color:#004331; transition:none; }
+.apple-home .apple-exchange-card:active { background:#edf5f1; border-color:var(--accent); transition:none; }
+.apple-home .apple-faq-item summary:active { background:#edf5f1; color:#004331; }
+.apple-home .auth-btn-primary:disabled { background:#dce4e0; color:#526359; cursor:wait; box-shadow:none; }
+.apple-home :is(.apple-text-link,.authors-link) { display:inline-flex; align-items:center; gap:8px; min-height:44px; text-decoration:none; font-weight:550; }
+.apple-home :is(.apple-text-link,.authors-link):hover { text-decoration:underline; }
+.apple-home .apple-hero .apple-text-link { color:var(--intro-text); }
+.apple-home .apple-hero .apple-text-link:active { background:#1c5847; color:#fff; }
+.apple-home .cta-micro { color:var(--intro-muted); margin:14px 0 0; font-size:.875rem; max-width:54ch; }
+.apple-home .hero-checks { list-style:none; padding:0; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:24px; color:var(--muted); font-size:.875rem; }
+.apple-home .hero-checks li { display:flex; align-items:baseline; gap:8px; text-align:left; max-width:100%; min-width:0; }
+.apple-home .hero-checks li::before { content:'✓'; color:var(--accent); font-weight:700; flex-shrink:0; }
+.apple-home .apple-demo { padding:0; min-width:0; }
+.apple-home .apple-trust { padding-block:32px; }
+.apple-home .hero-right { width:100%; max-width:940px; margin:auto; }
+.apple-home .device-frame { border:1px solid #dce4e0; border-radius:20px; overflow:hidden; background:#fff; color:var(--text); box-shadow:0 24px 64px rgba(0,20,13,.18); }
+.apple-home .device-bar { display:flex; align-items:center; gap:8px; border-bottom:1px solid #e2e9e5; padding:14px 24px; background:#f7f9f8; }
+.apple-home .device-dot { width:6px; height:6px; border-radius:50%; background:#9caaa4; }
+.apple-home .device-url { margin-left:6px; color:var(--muted); font-size:.875rem; overflow-wrap:anywhere; }
+.apple-home .device-body { padding:24px; min-width:0; }
+.apple-home .mock-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:24px; }
+.apple-home .mock-kpi { padding:16px; min-width:0; background:#f4f7f5; border-radius:12px; }
+.apple-home .mock-kpi-label { margin-bottom:6px; font-size:.875rem; color:var(--muted); }
+.apple-home .mock-kpi-value { font-size:clamp(1.125rem,2.1vw,1.75rem); line-height:1.2; letter-spacing:-.035em; font-weight:650; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.apple-home :is(.green,.mock-green) { color:#006b54; }
+.apple-home :is(.red,.mock-red) { color:#b42318; }
+.apple-home .mock-table-wrap { max-width:100%; overflow-x:auto; border:1px solid #e1e6e3; border-radius:10px; }
+.apple-home .apple-table-hint { display:block; color:var(--muted); font-size:.8125rem; margin-bottom:12px; }
+.apple-home .mock-table { width:100%; min-width:36.875rem; table-layout:fixed; border-collapse:collapse; font-size:.875rem; }
+.apple-home .mock-table :is(th,td) { padding:12px 16px; text-align:left; vertical-align:middle; }
+.apple-home .mock-table th { font-weight:600; }
+.apple-home .mock-table th:nth-child(1) { width:25%; }
+.apple-home .mock-table th:nth-child(2) { width:16%; }
+.apple-home .mock-table th:nth-child(3) { width:17%; }
+.apple-home .mock-table th:nth-child(4) { width:23%; }
+.apple-home .mock-table th:nth-child(5) { width:19%; }
+.apple-home .mock-table-head { background:#f5f7f6; color:var(--muted); }
+.apple-home .mock-table-row { border-top:1px solid #edf0ee; font-variant-numeric:tabular-nums; }
+.apple-home .mock-table :is(th,td):nth-last-child(-n+2) { text-align:right; }
+.apple-home .mock-badge { display:inline-block; padding:2px 8px; border-radius:5px; background:#edf4f0; color:#35554a; font-size:.8125rem; }
+.apple-home .mock-badge-venta { background:#f2f3f4; color:#4b5660; }
+.apple-home .apple-trust { border-bottom:1px solid var(--border); }
+.apple-home .apple-trust-link { margin-top:20px; }
+
+.apple-home .apple-how { background:#fff; }
+.apple-home .apple-steps { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:32px; }
+.apple-home .footer-step { min-width:0; border-top:1px solid var(--border); padding-top:24px; }
+.apple-home .footer-step-icon { display:none; }
+.apple-home .footer-step-num { display:block; color:var(--accent); font-size:clamp(1.5rem,2.5vw,2.25rem); line-height:1.2; letter-spacing:-.035em; font-weight:650; margin-bottom:24px; }
+.apple-home .footer-step-title { margin-bottom:12px; font-size:1.25rem; }
+.apple-home .footer-step-desc { color:var(--muted); font-size:1rem; }
+.apple-home .apple-includes { background:#f5f6f7; }
+.apple-home .apple-includes h2 { max-width:26ch; margin-bottom:44px; }
+.apple-home .apple-includes-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; margin-bottom:36px; }
+.apple-home .apple-includes-grid>div { min-width:0; padding:clamp(24px,3.5vw,40px); border:1px solid #e5e9e7; border-radius:20px; background:#fff; }
+.apple-home .apple-includes-grid h3 { margin-bottom:12px; }
+.apple-home .apple-includes-grid p { color:var(--muted); max-width:56ch; }
+.apple-home .apple-exchanges { background:#fff; }
+.apple-home .apple-exchanges h2 { max-width:26ch; margin-bottom:20px; }
+.apple-home .apple-exchanges .apple-container>p { color:var(--muted); max-width:65ch; margin-block:16px 28px; }
+.apple-home .apple-exchange-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.apple-home .apple-exchange-card { display:flex; flex-direction:column; padding:28px; background:#f5f7f6; border:1px solid #e1e7e3; border-radius:16px; text-decoration:none; color:var(--text); min-width:0; transition:border-color .15s; }
+.apple-home .apple-exchange-card:hover { border-color:var(--accent); }
+.apple-home .apple-exchange-grid h3 { margin-bottom:16px; font-size:1.5rem; letter-spacing:-.035em; }
+.apple-home .apple-exchange-grid p { color:var(--muted); font-size:.9375rem; margin-bottom:20px; }
+.apple-home .apple-exchange-grid a>span { color:var(--accent); margin-top:auto; font-size:.875rem; font-weight:600; }
+.apple-home .apple-exchange-more { grid-column:1 / -1; min-width:0; }
+.apple-home .apple-exchange-more>summary { display:none; }
+.apple-home .apple-exchange-rest { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.apple-home .apple-exchange-secondary { grid-column:1 / -1; padding-top:24px; border-top:1px solid var(--border); }
+.apple-home .apple-compatibility-copy { grid-column:1 / -1; color:var(--muted); font-size:.875rem; }
+.apple-home .apple-exchange-secondary p { max-width:none; color:var(--muted); margin-top:8px; }
+.apple-home .apple-exchanges-all { margin-top:24px; }
+.apple-home .apple-assistance { padding-bottom:0; }
+.apple-home .asistencia-block { max-width:none; margin:0; padding:clamp(28px,5vw,56px); border:1px solid #d4e5db; border-radius:20px; background:#edf5f0; }
+.apple-home .asistencia-badge { color:#006b54; font-size:.875rem; line-height:1.5; letter-spacing:.025em; margin-bottom:18px; }
+.apple-home .asistencia-block>p { color:#415b4d; max-width:64ch; }
+.apple-home .asistencia-block>p strong { display:block; font-size:clamp(1.5rem,3vw,2rem); line-height:1.2; color:#1c3227; letter-spacing:-.03em; font-weight:650; margin-bottom:14px; }
+.apple-home .asistencia-block .apple-advisory-status { margin-top:20px; color:#314a3b; font-weight:550; }
+.apple-home .asistencia-bullets { list-style:none; padding:0; display:flex; gap:8px 28px; flex-wrap:wrap; margin:20px 0 28px; color:#365745; font-size:.9375rem; }
+.apple-home .authors { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:40px; }
+.apple-home .author-card { display:flex; gap:24px; align-items:center; min-width:0; padding-block:24px; border-top:1px solid var(--border); }
+.apple-home .author-card>div { min-width:0; }
+.apple-home .author-portrait { display:block; flex:0 0 88px; width:88px; height:88px; }
+.apple-home .author-avatar { flex-shrink:0; width:88px; height:88px; border-radius:50%; object-fit:cover; background:#f0f3f1; }
+.apple-home .author-name { font-size:1.125rem; font-weight:650; margin-bottom:8px; }
+.apple-home .author-role { color:var(--muted); font-size:.9375rem; }
+.apple-home .author-colegiado { color:var(--accent); font-size:.875rem; margin-top:6px; }
+.apple-home .authors-link { margin-top:24px; }
+.apple-home .apple-editorial { border-top:1px solid var(--border); }
+.apple-home .apple-editorial-alt { background:#f5f6f7; }
+.apple-home .apple-editorial h2 { margin-bottom:32px; font-size:clamp(1.875rem,3.4vw,2.75rem); }
+.apple-home .apple-editorial p { color:var(--muted); margin-bottom:18px; }
+.apple-home .apple-editorial p:last-child { margin-bottom:0; }
+.apple-home .apple-editorial strong { color:var(--text); font-weight:600; }
+.apple-home .apple-editorial .apple-container>span { display:block; color:var(--accent); font-weight:600; font-size:.875rem; margin-bottom:16px; }
+.apple-home .apple-faq { background:#f5f6f7; }
+.apple-home .apple-faq h2 { margin-bottom:20px; }
+.apple-home .apple-faq .apple-container>p { color:var(--muted); margin-bottom:36px; }
+.apple-home .apple-faq-list { border-top:1px solid var(--border); }
+.apple-home .apple-faq-item { border-bottom:1px solid var(--border); }
+.apple-home .apple-faq-item summary { list-style:none; display:flex; gap:24px; justify-content:space-between; align-items:center; cursor:pointer; padding:24px 0; font-size:1.0625rem; font-weight:600; line-height:1.45; }
+.apple-home .apple-faq-item summary::-webkit-details-marker { display:none; }
+.apple-home .apple-faq-item summary::after { content:'+'; color:var(--accent); flex:0 0 24px; text-align:center; font-size:1.5rem; font-weight:400; }
+.apple-home .apple-faq-item[open] summary::after { content:'−'; }
+.apple-home .apple-faq-answer { padding:0 0 24px; color:var(--muted); }
+.apple-home .apple-faq-answer p { margin-bottom:12px; }
+.apple-home .apple-faq-answer a { display:inline-flex; padding-block:6px; }
+/* V18: compact footer, aligned with the same container as the approved Home. */
+.apple-home .apple-footer { padding-block:32px 24px; border-top:1px solid var(--border); background:var(--bg); color:var(--muted); font-size:.875rem; }
+.apple-home .apple-footer-top { display:grid; grid-template-columns:minmax(0,1.45fr) repeat(2,minmax(0,1fr)); gap:32px; }
+.apple-home .apple-footer-top>* { min-width:0; }
+.apple-home .apple-footer a { color:var(--muted); text-decoration:none; }
+.apple-home .apple-footer a:hover { color:var(--accent); text-decoration:underline; }
+.apple-home .apple-footer .apple-footer-logo { display:inline-block; max-width:100%; min-height:36px; padding-block:6px; color:var(--text); font-size:1.125rem; line-height:1.3; font-weight:750; letter-spacing:-.035em; }
+.apple-home .apple-footer-logo span { color:var(--accent); }
+.apple-home .apple-footer-brand p { margin-top:8px; max-width:30ch; }
+.apple-home .apple-footer h2 { margin:4px 0 8px; color:var(--text); font-size:.875rem; line-height:1.5; letter-spacing:normal; font-weight:650; }
+.apple-home .apple-footer ul { padding:0; margin:0; list-style:none; }
+.apple-home .apple-footer li a { display:flex; align-items:center; min-height:36px; padding-block:6px; }
+.apple-home .apple-footer-legal { margin-top:24px; padding-top:20px; border-top:1px solid var(--border); }
+.apple-home .apple-footer-disclaimer { font-size:.8125rem; line-height:1.6; }
+.apple-home .apple-footer-bottom { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px 24px; margin-top:12px; font-size:.8125rem; }
+.apple-home .apple-footer-bottom>* { min-width:0; }
+.apple-home .apple-footer-bottom ul { display:flex; flex-wrap:wrap; gap:0 20px; }
+
+/* V14: header actions follow their own, quieter hierarchy. Body CTA unchanged. */
+.apple-home #site-nav .snav-links a { display:inline-flex; align-items:center; min-height:44px; }
+.apple-home #site-nav .snav-right { gap:12px; }
+.apple-home #site-nav .snav-btn-login {
+  justify-content:center; align-items:center; min-height:44px; padding:10px 8px;
+  border:0; border-radius:6px; background:transparent; color:var(--snav-muted);
+  font:500 .875rem/1.4 var(--font-body); text-decoration:none; box-shadow:none;
+}
+.apple-home #site-nav .snav-btn-login:hover {
+  background:transparent; color:var(--accent); text-decoration:underline;
+  text-underline-offset:.3em; opacity:1;
+}
+.apple-home #site-nav .snav-btn-login:active { background:#edf3ef; color:#004331; box-shadow:none; }
+.apple-home #site-nav .snav-btn-cta {
+  justify-content:center; align-items:center; min-height:44px; padding:10px 18px;
+  border:1px solid transparent; border-radius:999px; background:var(--accent);
+  color:#fff; font:600 .875rem/1.4 var(--font-body); text-decoration:none;
+  box-shadow:none;
+}
+.apple-home #site-nav .snav-btn-cta:hover { background:#00533f; color:#fff; opacity:1; }
+.apple-home #site-nav .snav-btn-cta:active { background:#004331; color:#fff; box-shadow:inset 0 0 0 2px rgba(0,0,0,.12); }
+
+/* Existing auth form contract is retained, with presentation/accessibility only. */
+.apple-home .auth-dialog { border:1px solid var(--border2); border-radius:20px; max-width:min(460px,calc(100% - 32px)); width:100%; padding:28px; color:var(--text); background:#fff; }
+.apple-home .auth-dialog::backdrop { background:rgba(16,28,23,.5); }
+.apple-home .auth-header { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:20px; }
+.apple-home .auth-title { font-size:1.5rem; font-weight:650; }
+.apple-home .auth-close { width:44px; height:44px; border:0; background:#f1f4f2; border-radius:50%; cursor:pointer; font-size:1.5rem; color:var(--text); }
+.apple-home .auth-field { margin-bottom:16px; }
+.apple-home .auth-field label { display:block; margin-bottom:6px; font-size:.9375rem; }
+.apple-home .auth-field input { width:100%; min-height:48px; padding:10px 12px; border:1px solid #667085; border-radius:8px; color:var(--text); background:#fff; }
+.apple-home .auth-form :is(.auth-row,.auth-remember) { display:flex; gap:10px; align-items:center; }
+.apple-home .auth-error { padding:12px; margin:12px 0; border-radius:8px; background:#fff1ef; color:#a01b13; }
+.apple-home .auth-btn-primary { width:100%; margin-top:16px; }
+.apple-home .auth-switch { margin-top:16px; text-align:center; font-size:.9375rem; }
+.apple-home .auth-switch-btn { border:0; padding:8px; color:var(--accent); background:transparent; cursor:pointer; }
+
+@media (min-width:1201px) {
+  .apple-home #site-nav .snav-inner { display:grid; grid-template-columns:auto minmax(0,1fr) auto; column-gap:28px; }
+  .apple-home #site-nav .snav-links { justify-content:center; margin-inline:0; gap:clamp(16px,1.4vw,24px); }
+  .apple-home #site-nav .snav-right { margin-left:0; padding-left:20px; border-left:1px solid #e1e6e3; }
+  .apple-home { --apple-section-space:2.5rem; --apple-content-gap:1.5rem; --apple-card-pad:2rem; }
+  .apple-home .apple-intro-inner { display:grid; grid-template-columns:minmax(0,5fr) minmax(0,6fr); gap:40px; align-items:center; padding-top:104px; padding-bottom:var(--apple-section-space); }
+  .apple-home .apple-hero { padding:0; }
+  .apple-home h1 { font-size:clamp(3rem,4.2vw,3.75rem); max-width:none; text-wrap:pretty; }
+  .apple-home .hero-desc { font-size:1.0625rem; }
+  .apple-home .device-body { padding:20px; }
+  .apple-home .device-bar { padding:14px 20px; }
+  .apple-home .mock-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-bottom:18px; }
+  .apple-home .mock-kpi-value { font-size:1.5rem; }
+  /* V16: all five sample columns fit beside the hero at normal text size.
+     A rem minimum preserves readability and local scrolling with larger text. */
+  .apple-home .mock-table { min-width:31.25rem; }
+  .apple-home .mock-table :is(th,td) { padding-inline:8px; white-space:nowrap; }
+  .apple-home .mock-table th:nth-child(1) { width:24%; }
+  .apple-home .mock-table th:nth-child(2) { width:12%; }
+  .apple-home .mock-table th:nth-child(3) { width:14%; }
+  .apple-home .mock-table th:nth-child(4) { width:26%; }
+  .apple-home .mock-table th:nth-child(5) { width:24%; }
+  .apple-home .apple-table-hint { display:block; color:var(--muted); font-size:.8125rem; margin-bottom:12px; }
+  /* V13: the same spacing system as mobile/tablet, scaled for desktop. */
+  .apple-home .apple-section,.apple-home .apple-trust { padding-block:var(--apple-section-space); }
+  .apple-home .apple-section-heading { margin-bottom:var(--apple-card-pad); }
+  .apple-home .apple-steps { gap:var(--apple-card-pad); }
+  .apple-home .footer-step { padding-top:var(--apple-content-gap); }
+  .apple-home .footer-step-num { margin-bottom:var(--apple-content-gap); }
+  .apple-home .apple-includes h2 { margin-bottom:var(--apple-card-pad); }
+  .apple-home .apple-includes-grid { gap:var(--apple-content-gap); margin-bottom:var(--apple-content-gap); }
+  .apple-home .apple-includes-grid>div { padding:var(--apple-card-pad); }
+  .apple-home .apple-exchanges h2 { margin-bottom:var(--apple-content-gap); }
+  .apple-home .apple-exchanges .apple-container>p { margin-block:1rem var(--apple-content-gap); }
+  .apple-home .apple-exchange-card { padding:var(--apple-content-gap); }
+  .apple-home .asistencia-block { padding:var(--apple-card-pad); }
+  .apple-home .asistencia-badge { margin-bottom:1rem; }
+  .apple-home .asistencia-block>p strong { margin-bottom:1rem; }
+  .apple-home .asistencia-block .apple-advisory-status { margin-top:var(--apple-content-gap); }
+  .apple-home .asistencia-bullets { margin-block:var(--apple-content-gap); }
+  .apple-home .authors { gap:var(--apple-card-pad); }
+  .apple-home .author-card { padding-block:var(--apple-content-gap); }
+  .apple-home .authors-link { margin-top:var(--apple-content-gap); }
+  .apple-home .apple-editorial h2 { margin-bottom:var(--apple-card-pad); }
+  .apple-home .apple-editorial p:not(:last-child) { margin-bottom:1rem; }
+  .apple-home .apple-faq .apple-container>p { margin-bottom:var(--apple-card-pad); }
+  .apple-home .apple-faq-item summary { padding-block:var(--apple-content-gap); }
+  .apple-home .apple-faq-answer { padding-bottom:var(--apple-content-gap); }
+}
+@media (min-width:641px) and (max-width:1200px) {
+  .apple-home .apple-intro-inner { padding-top:120px; }
+  .apple-home .apple-hero { padding-bottom:48px; }
+  .apple-home .hero-checks { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:900px) {
+  .apple-home :is(.apple-exchange-grid,.apple-exchange-rest) { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .apple-home .apple-steps { gap:24px; }
+  .apple-home .authors { gap:28px; }
+}
+/* V11: tablet refinements; the approved mobile rules below stay unchanged. */
+@media (min-width:641px) and (max-width:1200px) {
+  .apple-home { --apple-section-space:2rem; --apple-content-gap:1.25rem; --apple-card-pad:1.5rem; }
+  .apple-home .apple-intro-inner { padding-top:96px; padding-bottom:var(--apple-section-space); }
+  .apple-home .apple-hero { padding-bottom:var(--apple-section-space); }
+  .apple-home .hero-desc { max-width:none; }
+  .apple-home .apple-hero-actions a[href="#como-funciona"] { display:none; }
+  .apple-home .cta-micro { max-width:none; font-size:clamp(.8125rem,1.55vw,.875rem); text-wrap:pretty; }
+  .apple-home .apple-tablet-only { display:inline; }
+  .apple-home .apple-section,.apple-home .apple-trust { padding-block:var(--apple-section-space); }
+  .apple-home .apple-section-heading { margin-bottom:var(--apple-card-pad); }
+  .apple-home .apple-eyebrow { margin-bottom:12px; }
+  .apple-home .apple-steps { gap:var(--apple-card-pad); }
+  .apple-home .footer-step { padding-top:var(--apple-card-pad); }
+  .apple-home .footer-step-num { margin-bottom:var(--apple-content-gap); }
+  .apple-home .apple-includes h2 { margin-bottom:var(--apple-card-pad); }
+  .apple-home .apple-includes-grid { gap:var(--apple-content-gap); margin-bottom:var(--apple-content-gap); }
+  .apple-home .apple-includes-grid>div { padding:var(--apple-card-pad); }
+  .apple-home .apple-report-action { display:flex; align-items:center; justify-content:center; padding:var(--apple-content-gap); border:1px solid #dce7e0; border-radius:16px; background:#fff; }
+  .apple-home .apple-exchanges h2 { margin-bottom:var(--apple-content-gap); }
+  .apple-home .apple-exchanges .apple-container>p { margin-block:12px var(--apple-card-pad); }
+  .apple-home .apple-exchange-card { padding:var(--apple-card-pad); }
+  .apple-home .asistencia-block { padding:var(--apple-card-pad); }
+  .apple-home .asistencia-badge { margin-bottom:12px; }
+  .apple-home .asistencia-block>p strong { margin-bottom:12px; }
+  .apple-home .asistencia-block .apple-advisory-status { margin-top:var(--apple-content-gap); }
+  .apple-home .asistencia-bullets { margin-block:var(--apple-content-gap) var(--apple-card-pad); }
+  .apple-home .authors { gap:var(--apple-card-pad); }
+  .apple-home .author-card { padding-block:var(--apple-content-gap); }
+  .apple-home .authors-link { margin-top:var(--apple-content-gap); }
+  .apple-home .apple-editorial h2 { margin-bottom:var(--apple-card-pad); }
+  .apple-home .apple-editorial p:not(:last-child) { margin-bottom:var(--apple-content-gap); }
+  .apple-home .apple-faq .apple-container>p { margin-bottom:var(--apple-card-pad); }
+  .apple-home .apple-faq-item summary { padding-block:var(--apple-content-gap); }
+  .apple-home .apple-faq-answer { padding-bottom:var(--apple-content-gap); }
+}
+@media (max-width:640px) {
+  .apple-home { --apple-pad:20px; --apple-section-space:1.5rem; --apple-content-gap:1rem; --apple-card-pad:1.25rem; }
+  .apple-home .apple-intro-inner { padding-top:100px; padding-bottom:var(--apple-section-space); }
+  .apple-home .apple-hero { padding:0 0 var(--apple-section-space); }
+  .apple-home h1 { font-size:clamp(2rem,8.4vw,3rem); letter-spacing:-.04em; line-height:1.08; margin-bottom:20px; }
+  .apple-home .hero-desc { font-size:1rem; margin-bottom:24px; }
+  .apple-home .hero-checks { display:grid; grid-template-columns:minmax(0,1fr); max-width:42ch; margin-inline:auto; gap:8px; font-size:.875rem; }
+  .apple-home .apple-hero-actions { gap:6px 16px; }
+  .apple-home .apple-hero-actions a[href="#como-funciona"] { display:none; }
+  .apple-home .cta-micro { margin-bottom:0; }
+  .apple-home .apple-demo { padding-bottom:0; }
+  .apple-home .apple-trust { padding-block:var(--apple-section-space); }
+  .apple-home .device-bar { padding:12px 16px; }
+  .apple-home .device-body { padding:16px; }
+  .apple-home .apple-table-hint { display:block; color:var(--muted); font-size:.8125rem; margin-bottom:12px; }
+  .apple-home .mock-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-bottom:16px; }
+  .apple-home .mock-kpi { padding:14px 12px; }
+  .apple-home .mock-kpi-value { font-size:1.4rem; }
+  .apple-home .device-frame { border-radius:14px; }
+  .apple-home .device-dot { display:none; }
+  .apple-home .device-url { margin:0; font-size:.8125rem; }
+  .apple-home :is(.apple-steps,.apple-includes-grid,.apple-exchange-grid,.authors) { grid-template-columns:minmax(0,1fr); }
+  .apple-home .apple-steps { gap:var(--apple-section-space); }
+  .apple-home .footer-step-num { margin-bottom:8px; }
+  .apple-home .apple-includes-grid { gap:var(--apple-content-gap); margin-bottom:var(--apple-section-space); }
+  .apple-home .apple-exchange-card { padding:var(--apple-card-pad); }
+  .apple-home .btn-primary,.apple-home .apple-includes .apple-button { width:100%; }
+  .apple-home .apple-trust-link { width:100%; margin-top:16px; }
+  .apple-home .apple-exchange-rest { grid-template-columns:minmax(0,1fr); }
+  .apple-home .apple-exchange-more>summary { list-style:none; display:flex; align-items:center; justify-content:space-between; gap:16px; min-height:48px; padding:14px 16px; border:1px solid var(--border2); border-radius:12px; color:var(--accent); font-weight:600; cursor:pointer; }
+  .apple-home .apple-exchange-more>summary::-webkit-details-marker { display:none; }
+  .apple-home .apple-exchange-more>summary>span { flex-shrink:0; font-size:1.5rem; line-height:1; }
+  .apple-home .apple-exchange-more[open]>summary>span { font-size:0; }
+  .apple-home .apple-exchange-more[open]>summary>span::after { content:'−'; font-size:1.5rem; }
+  .apple-home .apple-exchange-more>summary:active { background:#edf5f1; }
+  .apple-home .apple-exchange-more[open] .apple-exchange-rest { margin-top:16px; }
+  .apple-home .apple-exchanges-all { width:100%; margin-top:16px; }
+  .apple-home .apple-advisory-status { font-size:.9375rem; }
+  .apple-home .asistencia-bullets { flex-direction:column; }
+  .apple-home .btn-asistencia { width:100%; padding-inline:16px; }
+  .apple-home .author-card { gap:16px; }
+  .apple-home .author-avatar { width:72px; height:72px; }
+  .apple-home .author-portrait { flex-basis:72px; width:72px; height:72px; }
+  .apple-home .apple-faq-answer { padding-right:0; }
+  /* V9: one mobile spacing scale. Keep the hero's nav clearance intact. */
+  .apple-home .apple-section { padding-block:var(--apple-section-space); }
+  .apple-home .apple-section-heading { margin-bottom:var(--apple-section-space); }
+  .apple-home .apple-eyebrow { margin-bottom:12px; }
+  .apple-home .footer-step { padding-top:var(--apple-card-pad); }
+  .apple-home .apple-includes h2 { margin-bottom:var(--apple-section-space); }
+  .apple-home .apple-includes-grid>div { padding:var(--apple-card-pad); }
+  .apple-home .apple-exchanges h2 { margin-bottom:var(--apple-content-gap); }
+  .apple-home .apple-exchanges .apple-container>p { margin-block:12px var(--apple-card-pad); }
+  .apple-home .apple-exchange-grid h3 { margin-bottom:12px; }
+  .apple-home .apple-exchange-grid p { margin-bottom:var(--apple-content-gap); }
+  .apple-home .asistencia-block { padding:var(--apple-card-pad); }
+  .apple-home .asistencia-badge { margin-bottom:12px; }
+  .apple-home .asistencia-block>p strong { margin-bottom:12px; }
+  .apple-home .asistencia-block .apple-advisory-status { margin-top:var(--apple-content-gap); }
+  .apple-home .asistencia-bullets { margin-block:var(--apple-content-gap) var(--apple-card-pad); }
+  .apple-home .authors { gap:var(--apple-content-gap); }
+  .apple-home .author-card { padding-block:var(--apple-content-gap); }
+  .apple-home .authors-link { margin-top:var(--apple-content-gap); }
+  .apple-home .apple-editorial h2 { margin-bottom:var(--apple-section-space); }
+  .apple-home .apple-editorial p:not(:last-child) { margin-bottom:var(--apple-content-gap); }
+  .apple-home .apple-faq .apple-container>p { margin-bottom:var(--apple-section-space); }
+  .apple-home .apple-faq-item summary { padding-block:var(--apple-content-gap); }
+  .apple-home .apple-faq-answer { padding-bottom:var(--apple-card-pad); }
+}
+@media (max-width:1200px) {
+  .apple-home .apple-footer-top { grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px 24px; }
+  .apple-home .apple-footer-brand { grid-column:1 / -1; }
+  .apple-home .apple-footer-bottom { flex-direction:column; align-items:flex-start; }
+  .apple-home .apple-footer-bottom nav { order:0; width:100%; }
+  .apple-home .apple-footer-copyright { order:1; }
+}
+@media (max-width:640px) {
+  .apple-home .apple-footer { padding-block:24px; }
+  .apple-home .apple-footer-top { gap:20px 16px; }
+  .apple-home .apple-footer li a,.apple-home .apple-footer .apple-footer-logo { min-height:44px; }
+  .apple-home .apple-footer .apple-footer-logo { padding-block:10px; }
+  .apple-home .apple-footer-legal { margin-top:20px; }
+  .apple-home .apple-footer-bottom { gap:12px; }
+  .apple-home .apple-footer-bottom ul { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 16px; }
+}
+@media (pointer:coarse) {
+  .apple-home .apple-footer li a,.apple-home .apple-footer .apple-footer-logo { min-height:44px; }
+  .apple-home .apple-footer .apple-footer-logo { padding-block:10px; }
+}
+@media (max-width:360px) {
+  .apple-home { --apple-pad:16px; }
+  .apple-home .hero-checks { grid-template-columns:minmax(0,1fr); gap:8px; }
+  .apple-home .apple-hero-actions { flex-direction:column; }
+  .apple-home .btn-primary { width:100%; }
+  .apple-home .mock-kpi-value { font-size:1.25rem; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .apple-home *, .apple-home *::before, .apple-home *::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; }
+}
+@media (prefers-reduced-transparency:reduce) {
+  .apple-home #site-nav { background:#fff; backdrop-filter:none; -webkit-backdrop-filter:none; }
+}
+@media (prefers-contrast:more) {
+  .apple-home { --muted:#34434d; --border:#667085; }
+  .apple-home #site-nav { background:#fff; --snav-muted:#34434d; }
+}
+
+/* V24: approved V23 geometry, with the application's session-aware header. */
+.apple-home .mock-table-wrap { position:relative; }
+body.apple-home { padding:0; }
+.apple-home #site-nav { position:relative; top:auto; left:auto; right:auto; margin:0; padding:0; background:#fff; backdrop-filter:none; -webkit-backdrop-filter:none; }
+.apple-home #site-nav .snav-inner { margin-block:0; padding-block:8px; min-height:64px; height:auto; }
+.apple-home .apple-skip { position:absolute; top:0; }
+.apple-home .apple-intro-inner { padding-top:40px; }
+@media (max-width:1200px) {
+  .apple-home #site-nav .snav-inner { gap:16px; }
+  .apple-home #site-nav .snav-menu-toggle { margin-left:0; }
+  .apple-home #site-nav .snav-btn-login,.apple-home #site-nav .snav-skeleton { display:none; }
+  .apple-home .apple-intro-inner { padding-top:32px; }
+}
+@media (max-width:640px) {
+  .apple-home .apple-intro-inner { padding-top:36px; }
+}
+
+/* Home assistance copy follows the full width of its component. */
+.apple-home .apple-assistance .asistencia-block>p { max-width:none; }
+
+/* Shared catalogue cards: Home exchanges, Tools and future catalogue pages. */
+.apple-home {
+ --catalog-card-bg:#edf5f0; --catalog-card-border:#b9d8cb;
+ --catalog-card-radius:16px; --catalog-card-padding:24px; --catalog-card-gap:16px;
+}
+.apple-home main :is(.apple-catalog-grid,.apple-exchange-grid,.apple-exchange-rest,.tools-grid) {
+ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--catalog-card-gap);
+}
+.apple-home main :is(.apple-catalog-card,.apple-exchange-card,.tools-card) {
+ position:relative; display:flex; flex-direction:column; min-width:0;
+ padding:var(--catalog-card-padding); border:1px solid var(--catalog-card-border);
+ border-radius:var(--catalog-card-radius); background:var(--catalog-card-bg);
+ color:var(--text); font-family:var(--font-body); text-decoration:none;
+ transition:border-color .15s;
+}
+.apple-home main :is(.apple-catalog-card,.apple-exchange-card,.tools-card) h3 {
+ margin-bottom:16px; font-size:1.5rem; line-height:1.3; letter-spacing:-.035em; font-weight:650;
+}
+.apple-home main :is(.apple-exchange-card>p,.tools-card-description) {
+ color:var(--muted); font-size:.9375rem; line-height:1.65; margin-bottom:20px;
+}
+.apple-home main :is(.apple-exchange-card>span,.tools-card-link) {
+ display:inline-flex; align-items:center; align-self:flex-start; min-height:44px;
+ margin-top:auto; color:var(--accent); font-size:.875rem; font-weight:600; line-height:1.5;
+ text-decoration:none;
+}
+/* One existing semantic link covers the whole Tools card, without extra tab stops. */
+.apple-home main .tools-card-link::after { content:''; position:absolute; inset:0; border-radius:var(--catalog-card-radius); }
+.apple-home main .tools-card:focus-within,
+.apple-home main .apple-exchange-card:focus-visible {
+ border-color:var(--accent); outline:3px solid #005fcc; outline-offset:4px;
+}
+.apple-home main .tools-card-link:focus-visible { outline:none; }
+@media (hover:hover) and (pointer:fine) {
+ .apple-home main :is(.apple-catalog-card,.apple-exchange-card,.tools-card):hover { border-color:var(--accent); }
+ .apple-home main .tools-card:hover .tools-card-link { text-decoration:underline; }
+}
+@media (max-width:1200px) {
+ .apple-home main :is(.apple-catalog-grid,.apple-exchange-grid,.apple-exchange-rest,.tools-grid) { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:640px) {
+ .apple-home { --catalog-card-padding:20px; }
+ .apple-home main :is(.apple-catalog-grid,.apple-exchange-grid,.apple-exchange-rest,.tools-grid) { grid-template-columns:minmax(0,1fr); }
+}
+@media (prefers-reduced-motion:reduce) {
+ .apple-home main :is(.apple-catalog-card,.apple-exchange-card,.tools-card) { transition:none; }
+}
+</style><style>/* Authentication shares the approved Home palette, fonts and controls. */
+.apple-auth{min-height:100svh;display:flex;flex-direction:column;background:#fafcfb}
+.apple-auth [hidden]{display:none!important}
+.apple-auth .auth-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;padding:20px var(--apple-pad);width:100%;max-width:1240px;margin-inline:auto}
+.apple-auth .auth-brand{font-size:1.25rem;font-weight:750;letter-spacing:-.055em;text-decoration:none;color:var(--text);max-width:100%;line-height:1.3}
+.apple-auth .auth-brand span{color:var(--accent)}
+.apple-auth .auth-back{font-size:.875rem;text-decoration:none;min-height:44px;display:flex;align-items:center}
+.apple-auth .auth-layout{width:100%;max-width:1240px;margin:auto;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:clamp(32px,6vw,80px);align-items:center;padding:24px var(--apple-pad) 40px}
+.apple-auth .auth-story{position:relative;isolation:isolate;overflow:hidden;background:var(--intro-bg);color:#fff;border-radius:24px;padding:48px 40px;min-height:580px;display:flex;flex-direction:column;justify-content:center}
+.apple-auth .auth-story .apple-eyebrow{color:var(--intro-accent);position:relative}
+.apple-auth .auth-story h2{font-size:clamp(2.2rem,3.6vw,3.25rem);line-height:1.08;letter-spacing:-.045em;max-width:450px;position:relative}
+.apple-auth .auth-story h2 em{font-style:normal;color:var(--intro-accent)}
+.apple-auth .auth-story-copy{color:var(--intro-muted);max-width:380px;line-height:1.65;margin-top:20px;position:relative}
+.apple-auth .auth-person{display:flex;align-items:center;gap:14px;position:relative;margin-top:36px}
+.apple-auth .auth-person img{width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid #b3d7c8}
+.apple-auth .auth-person p{font-size:.875rem;color:var(--intro-muted);line-height:1.5}
+.apple-auth .auth-person a{color:#fff;font-weight:600}
+.apple-auth .auth-orbit{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.apple-auth .auth-orbit img{position:absolute;object-fit:contain;width:42px;height:42px;opacity:.35;animation:auth-drift 4s ease-out both;border-radius:50%;background:white;padding:4px}
+.apple-auth .auth-orbit img:nth-child(1){top:28px;left:12%;width:48px;height:48px}
+.apple-auth .auth-orbit img:nth-child(2){top:50px;right:13%;animation-delay:.2s}
+.apple-auth .auth-orbit img:nth-child(3){bottom:34px;left:10%;animation-delay:.4s}
+.apple-auth .auth-orbit img:nth-child(4){bottom:38px;right:13%;animation-delay:.3s}
+.apple-auth .auth-orbit img:nth-child(5){top:25%;right:6%;width:30px;height:30px;opacity:.2}
+@keyframes auth-drift{from{transform:translateY(12px);opacity:0}to{transform:translateY(0)}}
+.apple-auth .auth-card{width:100%;max-width:440px;justify-self:center;padding:16px 0;background:transparent}
+.apple-auth .auth-card h1{font-size:clamp(1.875rem,3vw,2.5rem);font-weight:680;line-height:1.15;letter-spacing:-.04em;margin:0 0 12px}
+.apple-auth .auth-description{color:var(--muted);margin-bottom:28px;line-height:1.6}
+.apple-auth .auth-google{display:flex;align-items:center;justify-content:center;gap:12px;border:1px solid #747775;border-radius:999px;background:#fff;min-height:48px;padding:12px 20px;text-decoration:none;color:#1f1f1f;font-size:1rem;font-weight:550;transition:background .15s}
+.apple-auth .auth-google:hover{background:#f0f4f2}
+.apple-auth .auth-google svg{flex:none}
+.apple-auth .auth-divider{display:flex;align-items:center;gap:16px;margin:22px 0;color:var(--muted);font-size:.875rem}
+.apple-auth .auth-divider:before,.apple-auth .auth-divider:after{content:'';height:1px;background:var(--border);flex:1}
+.apple-auth .auth-field{margin-bottom:18px}
+.apple-auth .auth-label-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:7px}
+.apple-auth label{display:block;font-weight:600;font-size:.9375rem}
+.apple-auth .auth-label-row a{font-size:.875rem;text-decoration:none}
+.apple-auth .auth-input-wrap{position:relative}
+.apple-auth .auth-field input{display:block;width:100%;min-height:52px;border:1px solid #7b898b;border-radius:12px;background:#fff;color:var(--text);font:inherit;font-size:1rem;padding:12px 14px;line-height:1.5}
+.apple-auth .auth-field input::placeholder{color:#68767a}
+.apple-auth .auth-input-wrap input{padding-right:6rem}
+.apple-auth .auth-reveal{position:absolute;right:4px;top:4px;bottom:4px;background:transparent;border:0;border-radius:8px;min-width:4.5rem;color:var(--accent);font:600 .875rem/1.4 var(--font-body);cursor:pointer}
+.apple-auth .auth-field input[aria-invalid=true]{border:2px solid #a72c24}
+.apple-auth .auth-hint{font-size:.8125rem;color:var(--muted);line-height:1.5;margin-top:7px}
+.apple-auth .auth-field-error{font-size:.875rem;color:#a72c24;line-height:1.5;margin-top:6px}
+.apple-auth .auth-submit{width:100%;margin-top:4px}
+.apple-auth .auth-submit:disabled{opacity:.65;cursor:wait}
+.apple-auth .auth-error,.apple-auth .auth-status{font-size:.9375rem;line-height:1.55;padding:14px 16px;border-radius:12px;margin:16px 0}
+.apple-auth .auth-error{background:#fff1ef;color:#922a23;border:1px solid #e8b5ae}
+.apple-auth .auth-status{background:#edf5f0;color:#184e3e;border:1px solid #b8d7c7}
+.apple-auth .auth-switch{text-align:center;margin-top:22px;font-size:.9375rem;color:var(--muted)}
+.apple-auth .auth-switch a{font-weight:650}
+.apple-auth .auth-legal{font-size:.8125rem;color:var(--muted);line-height:1.65;margin:18px 0 0}
+.apple-auth .auth-resend{display:block;margin:12px auto;min-height:44px;padding:8px 12px;border:0;border-radius:8px;background:transparent;color:var(--accent);font:600 .9375rem/1.5 var(--font-body);cursor:pointer;text-decoration:underline;text-underline-offset:.25em}
+.apple-auth .auth-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px 24px;padding:18px var(--apple-pad);border-top:1px solid var(--border);font-size:.8125rem;color:var(--muted);width:100%;max-width:1240px;margin-inline:auto}
+.apple-auth .auth-footer nav{display:flex;gap:8px 20px;flex-wrap:wrap}
+.apple-auth .auth-footer a{color:var(--muted);min-height:32px;display:inline-flex;align-items:center}
+.apple-auth .auth-noscript{padding:16px;border:1px solid var(--border);border-radius:12px;background:#fff;margin-top:16px}
+@media(max-width:900px){
+ .apple-auth .auth-layout{display:block;max-width:560px;padding-top:24px;padding-bottom:32px}
+ .apple-auth .auth-story{display:none}
+ .apple-auth .auth-card{max-width:none;padding:0}
+ .apple-auth .auth-header{padding-block:12px}
+ .apple-auth .auth-footer{justify-content:center;text-align:center}
+ .apple-auth .auth-footer nav{justify-content:center}
+}
+@media(max-width:480px){
+ .apple-auth .auth-layout{margin-top:12px;margin-bottom:auto;padding-top:16px}
+ .apple-auth .auth-header{gap:12px}
+ .apple-auth .auth-brand{font-size:1.125rem}
+ .apple-auth .auth-back{font-size:.8125rem}
+ .apple-auth .auth-description{margin-bottom:24px}
+ .apple-auth .auth-footer{padding-top:16px;padding-bottom:max(16px,env(safe-area-inset-bottom))}
+}
+@media(prefers-reduced-motion:reduce){.apple-auth .auth-orbit img{animation:none}.apple-auth *{transition:none!important;scroll-behavior:auto!important}}
+</style></head>
+<body class="apple-home apple-auth" data-auth-view="signup" data-auth-preview="true"><a class="apple-skip" href="#contenido">Saltar al contenido</a>
+<header class="auth-header"><a href="https://marianosevilla.com/" class="auth-brand" aria-label="marianosevilla.com">mariano<span>sevilla</span>.com</a><a href="https://marianosevilla.com/" class="auth-back">Volver al inicio</a></header>
+<main class="auth-layout" id="contenido" tabindex="-1">
+<aside class="auth-story" aria-label="Sobre el proyecto"><div class="auth-orbit" aria-hidden="true">
+<img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PGcgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIj48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxNiIgZmlsbD0iI0Y3OTMxQSIvPjxwYXRoIGZpbGw9IiNGRkYiIGZpbGwtcnVsZT0ibm9uemVybyIgZD0iTTIzLjE4OSAxNC4wMmMuMzE0LTIuMDk2LTEuMjgzLTMuMjIzLTMuNDY1LTMuOTc1bC43MDgtMi44NC0xLjcyOC0uNDMtLjY5IDIuNzY1Yy0uNDU0LS4xMTQtLjkyLS4yMi0xLjM4NS0uMzI2bC42OTUtMi43ODNMMTUuNTk2IDZsLS43MDggMi44MzljLS4zNzYtLjA4Ni0uNzQ2LS4xNy0xLjEwNC0uMjZsLjAwMi0uMDA5LTIuMzg0LS41OTUtLjQ2IDEuODQ2czEuMjgzLjI5NCAxLjI1Ni4zMTJjLjcuMTc1LjgyNi42MzguODA1IDEuMDA2bC0uODA2IDMuMjM1Yy4wNDguMDEyLjExLjAzLjE4LjA1N2wtLjE4My0uMDQ1LTEuMTMgNC41MzJjLS4wODYuMjEyLS4zMDMuNTMxLS43OTMuNDEuMDE4LjAyNS0xLjI1Ni0uMzEzLTEuMjU2LS4zMTNsLS44NTggMS45NzggMi4yNS41NjFjLjQxOC4xMDUuODI4LjIxNSAxLjIzMS4zMThsLS43MTUgMi44NzIgMS43MjcuNDMuNzA4LTIuODRjLjQ3Mi4xMjcuOTMuMjQ1IDEuMzc4LjM1N2wtLjcwNiAyLjgyOCAxLjcyOC40My43MTUtMi44NjZjMi45NDguNTU4IDUuMTY0LjMzMyA2LjA5Ny0yLjMzMy43NTItMi4xNDYtLjAzNy0zLjM4NS0xLjU4OC00LjE5MiAxLjEzLS4yNiAxLjk4LTEuMDAzIDIuMjA3LTIuNTM4em0tMy45NSA1LjUzOGMtLjUzMyAyLjE0Ny00LjE0OC45ODYtNS4zMi42OTVsLjk1LTMuODA1YzEuMTcyLjI5MyA0LjkyOS44NzIgNC4zNyAzLjExem0uNTM1LTUuNTY5Yy0uNDg3IDEuOTUzLTMuNDk1Ljk2LTQuNDcuNzE3bC44Ni0zLjQ1Yy45NzUuMjQzIDQuMTE4LjY5NiAzLjYxIDIuNzMzeiIvPjwvZz48L3N2Zz4K" alt="" width="48" height="48"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIj48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxNiIgZmlsbD0iIzIzMjkyRiIvPjxwYXRoIGQ9Ik0yMy4wNyA4aDIuODlsLTYuMDE1IDUuOTU3YTUuNjIxIDUuNjIxIDAgMDEtNy44OSAwTDYuMDM1IDhIOC45M2w0LjU3IDQuNTIzYTMuNTU2IDMuNTU2IDAgMDA0Ljk5NiAwTDIzLjA3IDh6TTguODk1IDI0LjU2M0g2bDYuMDU1LTUuOTkzYTUuNjIxIDUuNjIxIDAgMDE3Ljg5IDBMMjYgMjQuNTYyaC0yLjg5NUwxOC41IDIwYTMuNTU2IDMuNTU2IDAgMDAtNC45OTYgMGwtNC42MSA0LjU2M3oiIGZpbGw9IiNGRkYiLz48L2c+PC9zdmc+Cg==" alt="" width="42" height="42"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIj48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxNiIgZmlsbD0iIzAwMCIvPjxwYXRoIGQ9Ik0yMy4xMyA5LjI5MmwtMi40IDEuMjI0LTExLjU5OCA1LjkwN0E2LjkwOSA2LjkwOSAwIDAxMTkuMzUgOS40OThsMS4zNzQtLjcuMjA1LS4xMDVhOC40MzkgOC40MzkgMCAwMC0xMy4zNzEgNy40NzIgMS41MzUgMS41MzUgMCAwMS0uODM0IDEuNDg0bC0uNzI1LjM3djEuNzI0bDIuMTM0LTEuMDg4LjY5MS0uMzUzLjY4MS0uMzQ3IDEyLjIyNi02LjIzIDEuMzc0LS42OTkgMi44NC0xLjQ0N1Y3Ljg1NkwyMy4xMyA5LjI5MnptMi44MTYgMi4wMTJMMTAuMjAxIDE5LjMybC0xLjM3NC43TDYgMjEuNDYzdjEuNzIzbDIuODA4LTEuNDMgMi40MDEtMS4yMjQgMTEuNjEtNS45MTZhNi45MDkgNi45MDkgMCAwMS0xMC4yMjkgNi45M2wtLjA4NS4wNDUtMS40OS43NmE4LjQzOSA4LjQzOSAwIDAwMTMuMzcyLTcuNDc1IDEuNTM2IDEuNTM2IDAgMDEuODMzLTEuNDgzbC43MjYtLjM3di0xLjcxOHoiIGZpbGw9IiNGRkYiLz48L2c+PC9zdmc+Cg==" alt="" width="42" height="42"><img src="/fiscal_app_export/static/images/bitvavo.png" alt="" width="42" height="42"><img src="/fiscal_app_export/static/images/binance.jpg" alt="" width="30" height="30"></div>
+<p class="apple-eyebrow">Informes FIFO de criptomonedas</p><h2>Tus operaciones.<br><em>Una visión más clara.</em></h2>
+<p class="auth-story-copy">Organiza tu historial y prepara la información que necesitas para revisar tu fiscalidad.</p>
+<div class="auth-person"><img src="/fiscal_app_export/static/home-apple-mariano-88.webp" alt="Mariano Sevilla" width="48" height="48"><div><p>Un proyecto de Mariano Sevilla</p><a href="https://marianosevilla.com/about">Conoce quién está detrás</a></div></div></aside>
+<section class="auth-card" aria-labelledby="authHeading"><h1 id="authHeading">Crear cuenta</h1><p id="authDescription" class="auth-description">Regístrate para acceder a las herramientas fiscales de criptomonedas.</p><div data-auth-entry><a class="auth-google" href="#authHeading" data-auth-next><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>Continuar con Google</a><div class="auth-divider">O utiliza tu correo</div></div>
+<div id="authError" class="auth-error" role="alert" tabindex="-1" hidden></div><div id="authStatus" class="auth-status" role="status" tabindex="-1" hidden></div>
+<form id="authForm" method="post" action="/api/register" novalidate><div class="auth-field"><div class="auth-label-row"><label for="authName">Nombre y apellidos</label></div><input id="authName" name="full_name" type="text" autocomplete="name" required aria-describedby="authNameError" maxlength="150"><p class="auth-field-error" id="authNameError" hidden></p></div><div class="auth-field"><div class="auth-label-row"><label for="authEmail">Correo electrónico</label></div><input id="authEmail" name="email" type="email" autocomplete="email" required aria-describedby="authEmailError" maxlength="254" inputmode="email" autocapitalize="none" spellcheck="false"><p class="auth-field-error" id="authEmailError" hidden></p></div><div class="auth-field"><div class="auth-label-row"><label for="authPassword">Contraseña</label></div><div class="auth-input-wrap"><input id="authPassword" name="password" type="password" autocomplete="off" required aria-describedby="authPasswordError authPasswordHint"><button class="auth-reveal" type="button" aria-controls="authPassword" aria-pressed="false">Mostrar</button></div><p class="auth-hint" id="authPasswordHint">Al menos 15 caracteres. Puedes usar una frase con espacios.</p><p class="auth-field-error" id="authPasswordError" hidden></p></div><button id="authSubmit" class="apple-button auth-submit" type="submit">Crear cuenta</button></form>
+<button id="authResend" class="auth-resend" type="button" hidden>Reenviar enlace</button>
+<a id="authContinue" class="apple-button auth-submit" href="/auth-apple-preview/login/" data-auth-next hidden>Iniciar sesión</a><p class="auth-switch" id="authRecovery" hidden><a href="/auth-apple-preview/recuperar/" data-auth-next>Si ya tenías cuenta, puedes recuperar la contraseña</a>.</p><p class="auth-legal" data-auth-entry>Al crear tu cuenta aceptas los <a href="https://marianosevilla.com/terminos">Términos del servicio</a>. Consulta cómo tratamos tus datos en la <a href="https://marianosevilla.com/privacidad">Política de privacidad</a>.</p>
+<p class="auth-switch" data-auth-entry>¿Ya tienes cuenta? <a href="/auth-apple-preview/login/" data-auth-next>Iniciar sesión</a></p>
+<noscript><style>#authForm{display:none}</style><p class="auth-noscript">Activa JavaScript para utilizar el acceso y la recuperación de cuenta. Si necesitas ayuda, <a href="https://marianosevilla.com/contacto">contacta con nosotros</a>.</p></noscript>
+</section></main>
+<footer class="auth-footer"><p>© 2026 Mariano Sevilla</p><nav aria-label="Información legal"><a href="https://marianosevilla.com/privacidad">Privacidad</a><a href="https://marianosevilla.com/terminos">Términos</a><a href="https://marianosevilla.com/cookies">Cookies</a><a href="https://marianosevilla.com/aviso-legal">Aviso legal</a><a href="https://marianosevilla.com/contacto">Ayuda</a></nav></footer><script>'use strict';
+(() => {
+ const root=document.body,view=root.dataset.authView,preview=root.dataset.authPreview==='true';
+ const $=id=>document.getElementById(id);
+ function safeNext(value){
+  if(typeof value!=='string'||value.length>2048)return '/dashboard';
+  let decoded=value;
+  for(let i=0;i<4;i++){
+   if(!decoded.startsWith('/')||decoded.startsWith('//')||/[\\\s\u0000-\u001f\u007f]/.test(decoded))return '/dashboard';
+   let u;try{u=new URL(decoded,location.origin)}catch{return '/dashboard'}
+   if(u.origin!==location.origin||['/login','/signup','/auth/google','/auth/google/callback'].includes(u.pathname.replace(/\/$/,'')))return '/dashboard';
+   let next;try{next=decodeURIComponent(decoded)}catch{return '/dashboard'}
+   if(next===decoded)return value;decoded=next;
+  }
+  return '/dashboard';
+ }
+ const next=safeNext(new URLSearchParams(location.search).get('next'));
+ document.querySelectorAll('[data-auth-next]').forEach(a=>{
+  if(!preview){const u=new URL(a.getAttribute('href'),location.origin);u.searchParams.set('next',next);a.href=u.pathname+u.search}
+ });
+ const error=$('authError'),status=$('authStatus'),form=$('authForm'),submit=$('authSubmit');
+ function message(el,text){el.textContent=text;el.hidden=false;el.focus()}
+ function clear(){error.hidden=true;status.hidden=true;document.querySelectorAll('[aria-invalid=true]').forEach(e=>e.removeAttribute('aria-invalid'));document.querySelectorAll('.auth-field-error').forEach(e=>{e.textContent='';e.hidden=true})}
+ function invalid(input,text){input.setAttribute('aria-invalid','true');const out=$(input.id+'Error');out.textContent=text;out.hidden=false;input.focus();return false}
+ function validate(){
+  const name=$('authName'),email=$('authEmail'),pass=$('authPassword'),confirm=$('authConfirm');
+  if(name&&!name.value.trim())return invalid(name,'Introduce tu nombre y apellidos.');
+  if(email&&(!email.value.trim()||!email.validity.valid))return invalid(email,'Introduce un correo electrónico válido.');
+  if(pass){
+   const min=view==='login'?1:15;
+   if([...pass.value].length<min)return invalid(pass,view==='login'?'Introduce tu contraseña.':'Usa al menos 15 caracteres.');
+   if(new TextEncoder().encode(pass.value).length>72)return invalid(pass,'La contraseña es demasiado larga. Prueba una frase más corta.');
+  }
+  if(confirm&&confirm.value!==pass.value)return invalid(confirm,'Las contraseñas no coinciden.');
+  return true;
+ }
+ document.querySelectorAll('.auth-reveal').forEach(button=>button.addEventListener('click',()=>{
+  const input=$(button.getAttribute('aria-controls')),show=input.type==='password';input.type=show?'text':'password';button.textContent=show?'Ocultar':'Mostrar';button.setAttribute('aria-pressed',String(show));
+ }));
+ async function post(path,payload){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+  try{
+   const response=await fetch(path,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});
+   let data;try{data=await response.json()}catch{throw new Error('No hemos podido completar la solicitud. Inténtalo de nuevo.');}
+   if(!response.ok)throw new Error(response.status===429?'Has realizado demasiados intentos. Espera antes de volver a intentarlo.':data.error||'No hemos podido completar la solicitud. Inténtalo de nuevo.');
+   return data;
+  }finally{clearTimeout(timer)}
+ }
+ function failure(e){message(error,e.name==='AbortError'?'La solicitud está tardando demasiado. Vuelve a intentarlo.':e instanceof TypeError?'No hemos podido conectar. Comprueba tu conexión e inténtalo de nuevo.':e.message)}
+ function previewNotice(){message(status,'Esta vista previa no inicia sesiones ni crea cuentas.');}
+ const google=document.querySelector('.auth-google');
+ if(preview&&google)google.addEventListener('click',e=>{e.preventDefault();previewNotice()});
+ if(form&&view!=='verify')form.addEventListener('submit',async e=>{
+  e.preventDefault();clear();if(!validate())return;if(preview){previewNotice();return;}
+  submit.disabled=true;form.setAttribute('aria-busy','true');const caption=submit.textContent;submit.textContent='Un momento';
+  const email=$('authEmail')?.value.trim().toLowerCase(),password=$('authPassword')?.value;
+  try{
+   if(view==='login'){
+    const d=await post('/api/login',{email,password,next});
+    location.assign(d.pending_verification?'/verify-email-result?status=pending&next='+encodeURIComponent(next):safeNext(d.redirect_to||next));
+   }else if(view==='signup'){
+    const d=await post('/api/register',{email,password,full_name:$('authName').value.trim(),next});
+    form.reset();form.hidden=true;document.querySelectorAll('[data-auth-entry]').forEach(e=>e.hidden=true);
+    $('authHeading').textContent='Revisa tu correo';$('authDescription').textContent=d.message;
+    $('authResend').hidden=false;$('authResend').dataset.email=email;
+    $('authContinue').hidden=false;$('authRecovery').hidden=false;
+    message(status,'Revisa también la carpeta de spam. El enlace de verificación caduca en 24 horas.');
+   }else if(view==='forgot'){
+    const d=await post('/api/forgot-password',{email,next});form.reset();message(status,d.message);
+   }else if(view==='reset'){
+    const token=location.pathname.split('/').filter(Boolean).pop();
+    const d=await post('/api/reset-password',{token,password,confirm_password:$('authConfirm').value});
+    form.reset();form.hidden=true;message(status,d.message);$('authContinue').hidden=false;
+   }
+  }catch(err){failure(err)}finally{submit.disabled=false;submit.textContent=caption;form.removeAttribute('aria-busy')}
+ });
+ const resend=$('authResend');
+ if(resend)resend.addEventListener('click',async()=>{
+  clear();if(preview){previewNotice();return;}
+  let email=resend.dataset.email||$('authEmail')?.value.trim().toLowerCase();
+  if(!email){message(error,'Introduce el correo de tu cuenta para solicitar otro enlace.');return;}
+  resend.disabled=true;
+  try{const d=await post('/api/resend-verification',{email,next});message(status,d.message)}catch(e){failure(e)}finally{resend.disabled=false}
+ });
+ if(view==='verify'){
+  const state=new URLSearchParams(location.search).get('status')||'pending';
+  const texts={success:['Correo verificado','Ya puedes iniciar sesión y continuar.'],already:['Tu correo ya está verificado','Inicia sesión con tu método habitual.'],expired:['El enlace ha caducado','Solicita un nuevo enlace de verificación.'],invalid:['Este enlace no es válido','Solicita un nuevo enlace para verificar tu correo.'],pending:['Verifica tu correo','Abre el enlace que te hemos enviado. Si no lo encuentras, revisa la carpeta de spam o solicita otro.']};
+  const [title,description]=texts[state]||texts.invalid;$('authHeading').textContent=title;$('authDescription').textContent=description;
+  const done=['success','already'].includes(state);if(form)form.hidden=done;$('authContinue').hidden=!done;
+ }
+ const params=new URLSearchParams(location.search);
+ if(params.has('error'))message(error,params.get('error')==='identity_conflict'?'No se puede completar el acceso con Google. Utiliza tu método habitual o recupera la contraseña.':'No hemos podido completar el acceso con Google. Inténtalo de nuevo o utiliza tu correo y contraseña.');
+ if(view==='verify'&&form)form.addEventListener('submit',async e=>{
+  e.preventDefault();clear();if(!validate())return;if(preview){previewNotice();return;}
+  submit.disabled=true;try{const d=await post('/api/resend-verification',{email:$('authEmail').value.trim().toLowerCase(),next});message(status,d.message)}catch(err){failure(err)}finally{submit.disabled=false}
+ });
+ // Login/registration are never performed automatically in the static viewer.
+ if(!preview&&['login','signup'].includes(view))fetch('/api/me',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(d=>{if(d?.user)location.replace(next)}).catch(()=>{});
+})();
+</script></body></html>

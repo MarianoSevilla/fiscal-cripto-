@@ -1,0 +1,75 @@
+/* Authentication shares the approved Home palette, fonts and controls. */
+.apple-auth{min-height:100svh;display:flex;flex-direction:column;background:#fafcfb}
+.apple-auth [hidden]{display:none!important}
+.apple-auth .auth-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;padding:20px var(--apple-pad);width:100%;max-width:1240px;margin-inline:auto}
+.apple-auth .auth-brand{font-size:1.25rem;font-weight:750;letter-spacing:-.055em;text-decoration:none;color:var(--text);max-width:100%;line-height:1.3}
+.apple-auth .auth-brand span{color:var(--accent)}
+.apple-auth .auth-back{font-size:.875rem;text-decoration:none;min-height:44px;display:flex;align-items:center}
+.apple-auth .auth-layout{width:100%;max-width:1240px;margin:auto;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:clamp(32px,6vw,80px);align-items:center;padding:24px var(--apple-pad) 40px}
+.apple-auth .auth-story{position:relative;isolation:isolate;overflow:hidden;background:var(--intro-bg);color:#fff;border-radius:24px;padding:48px 40px;min-height:580px;display:flex;flex-direction:column;justify-content:center}
+.apple-auth .auth-story .apple-eyebrow{color:var(--intro-accent);position:relative}
+.apple-auth .auth-story h2{font-size:clamp(2.2rem,3.6vw,3.25rem);line-height:1.08;letter-spacing:-.045em;max-width:450px;position:relative}
+.apple-auth .auth-story h2 em{font-style:normal;color:var(--intro-accent)}
+.apple-auth .auth-story-copy{color:var(--intro-muted);max-width:380px;line-height:1.65;margin-top:20px;position:relative}
+.apple-auth .auth-person{display:flex;align-items:center;gap:14px;position:relative;margin-top:36px}
+.apple-auth .auth-person img{width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid #b3d7c8}
+.apple-auth .auth-person p{font-size:.875rem;color:var(--intro-muted);line-height:1.5}
+.apple-auth .auth-person a{color:#fff;font-weight:600}
+.apple-auth .auth-orbit{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.apple-auth .auth-orbit img{position:absolute;object-fit:contain;width:42px;height:42px;opacity:.35;animation:auth-drift 4s ease-out both;border-radius:50%;background:white;padding:4px}
+.apple-auth .auth-orbit img:nth-child(1){top:28px;left:12%;width:48px;height:48px}
+.apple-auth .auth-orbit img:nth-child(2){top:50px;right:13%;animation-delay:.2s}
+.apple-auth .auth-orbit img:nth-child(3){bottom:34px;left:10%;animation-delay:.4s}
+.apple-auth .auth-orbit img:nth-child(4){bottom:38px;right:13%;animation-delay:.3s}
+.apple-auth .auth-orbit img:nth-child(5){top:25%;right:6%;width:30px;height:30px;opacity:.2}
+@keyframes auth-drift{from{transform:translateY(12px);opacity:0}to{transform:translateY(0)}}
+.apple-auth .auth-card{width:100%;max-width:440px;justify-self:center;padding:16px 0;background:transparent}
+.apple-auth .auth-card h1{font-size:clamp(1.875rem,3vw,2.5rem);font-weight:680;line-height:1.15;letter-spacing:-.04em;margin:0 0 12px}
+.apple-auth .auth-description{color:var(--muted);margin-bottom:28px;line-height:1.6}
+.apple-auth .auth-google{display:flex;align-items:center;justify-content:center;gap:12px;border:1px solid #747775;border-radius:999px;background:#fff;min-height:48px;padding:12px 20px;text-decoration:none;color:#1f1f1f;font-size:1rem;font-weight:550;transition:background .15s}
+.apple-auth .auth-google:hover{background:#f0f4f2}
+.apple-auth .auth-google svg{flex:none}
+.apple-auth .auth-divider{display:flex;align-items:center;gap:16px;margin:22px 0;color:var(--muted);font-size:.875rem}
+.apple-auth .auth-divider:before,.apple-auth .auth-divider:after{content:'';height:1px;background:var(--border);flex:1}
+.apple-auth .auth-field{margin-bottom:18px}
+.apple-auth .auth-label-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:7px}
+.apple-auth label{display:block;font-weight:600;font-size:.9375rem}
+.apple-auth .auth-label-row a{font-size:.875rem;text-decoration:none}
+.apple-auth .auth-input-wrap{position:relative}
+.apple-auth .auth-field input{display:block;width:100%;min-height:52px;border:1px solid #7b898b;border-radius:12px;background:#fff;color:var(--text);font:inherit;font-size:1rem;padding:12px 14px;line-height:1.5}
+.apple-auth .auth-field input::placeholder{color:#68767a}
+.apple-auth .auth-input-wrap input{padding-right:6rem}
+.apple-auth .auth-reveal{position:absolute;right:4px;top:4px;bottom:4px;background:transparent;border:0;border-radius:8px;min-width:4.5rem;color:var(--accent);font:600 .875rem/1.4 var(--font-body);cursor:pointer}
+.apple-auth .auth-field input[aria-invalid=true]{border:2px solid #a72c24}
+.apple-auth .auth-hint{font-size:.8125rem;color:var(--muted);line-height:1.5;margin-top:7px}
+.apple-auth .auth-field-error{font-size:.875rem;color:#a72c24;line-height:1.5;margin-top:6px}
+.apple-auth .auth-submit{width:100%;margin-top:4px}
+.apple-auth .auth-submit:disabled{opacity:.65;cursor:wait}
+.apple-auth .auth-error,.apple-auth .auth-status{font-size:.9375rem;line-height:1.55;padding:14px 16px;border-radius:12px;margin:16px 0}
+.apple-auth .auth-error{background:#fff1ef;color:#922a23;border:1px solid #e8b5ae}
+.apple-auth .auth-status{background:#edf5f0;color:#184e3e;border:1px solid #b8d7c7}
+.apple-auth .auth-switch{text-align:center;margin-top:22px;font-size:.9375rem;color:var(--muted)}
+.apple-auth .auth-switch a{font-weight:650}
+.apple-auth .auth-legal{font-size:.8125rem;color:var(--muted);line-height:1.65;margin:18px 0 0}
+.apple-auth .auth-resend{display:block;margin:12px auto;min-height:44px;padding:8px 12px;border:0;border-radius:8px;background:transparent;color:var(--accent);font:600 .9375rem/1.5 var(--font-body);cursor:pointer;text-decoration:underline;text-underline-offset:.25em}
+.apple-auth .auth-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px 24px;padding:18px var(--apple-pad);border-top:1px solid var(--border);font-size:.8125rem;color:var(--muted);width:100%;max-width:1240px;margin-inline:auto}
+.apple-auth .auth-footer nav{display:flex;gap:8px 20px;flex-wrap:wrap}
+.apple-auth .auth-footer a{color:var(--muted);min-height:32px;display:inline-flex;align-items:center}
+.apple-auth .auth-noscript{padding:16px;border:1px solid var(--border);border-radius:12px;background:#fff;margin-top:16px}
+@media(max-width:900px){
+ .apple-auth .auth-layout{display:block;max-width:560px;padding-top:24px;padding-bottom:32px}
+ .apple-auth .auth-story{display:none}
+ .apple-auth .auth-card{max-width:none;padding:0}
+ .apple-auth .auth-header{padding-block:12px}
+ .apple-auth .auth-footer{justify-content:center;text-align:center}
+ .apple-auth .auth-footer nav{justify-content:center}
+}
+@media(max-width:480px){
+ .apple-auth .auth-layout{margin-top:12px;margin-bottom:auto;padding-top:16px}
+ .apple-auth .auth-header{gap:12px}
+ .apple-auth .auth-brand{font-size:1.125rem}
+ .apple-auth .auth-back{font-size:.8125rem}
+ .apple-auth .auth-description{margin-bottom:24px}
+ .apple-auth .auth-footer{padding-top:16px;padding-bottom:max(16px,env(safe-area-inset-bottom))}
+}
+@media(prefers-reduced-motion:reduce){.apple-auth .auth-orbit img{animation:none}.apple-auth *{transition:none!important;scroll-behavior:auto!important}}

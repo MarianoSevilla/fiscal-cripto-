@@ -107,9 +107,12 @@ def real_flask():
 def flask_cookie(app, user_id):
     if user_id is None:
         return None
+    from models import User, db
+    with app.app_context():
+        identity = db.session.get(User, user_id).get_id()
     with app.test_client() as client:
         with client.session_transaction() as session:
-            session["_user_id"] = str(user_id)
+            session["_user_id"] = identity
             session["_fresh"] = True
         cookie = client.get_cookie(app.config.get("SESSION_COOKIE_NAME", "session"))
         assert cookie, "Cookie de sesión no creada en test_client"
@@ -121,8 +124,11 @@ def check_back_end(app, identities):
     for role in ROLES:
         with app.test_client() as client:
             if role != "visitante":
+                from models import User, db
+                with app.app_context():
+                    identity = db.session.get(User, identities[role]).get_id()
                 with client.session_transaction() as session:
-                    session["_user_id"] = str(identities[role])
+                    session["_user_id"] = identity
                     session["_fresh"] = True
             resp = client.get("/api/me")
             assert resp.status_code == 200

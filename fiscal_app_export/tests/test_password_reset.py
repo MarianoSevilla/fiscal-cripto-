@@ -141,8 +141,8 @@ def test_expired_token_fails(_app, client, existing_user):
 
     r = client.post("/api/reset-password", json={
         "token":            token_raw,
-        "password":         "AnotherPass99!",
-        "confirm_password": "AnotherPass99!",
+        "password":         "AnotherSecurePass99!",
+        "confirm_password": "AnotherSecurePass99!",
     })
     assert r.status_code == 400
     assert "expirado" in r.get_json()["error"].lower()
@@ -163,8 +163,8 @@ def test_used_token_cannot_be_reused(_app, client, existing_user):
 
     payload = {
         "token":            token_raw,
-        "password":         "UniquePass99!",
-        "confirm_password": "UniquePass99!",
+        "password":         "UniqueSecurePass99!",
+        "confirm_password": "UniqueSecurePass99!",
     }
     r1 = client.post("/api/reset-password", json=payload)
     assert r1.status_code == 200
@@ -177,8 +177,8 @@ def test_mismatched_passwords_fail(client):
     """Contraseñas distintas devuelven 400."""
     r = client.post("/api/reset-password", json={
         "token":            "any-token-does-not-matter",
-        "password":         "PassOne1234!",
-        "confirm_password": "PassTwo5678!",
+        "password":         "PassOneLongEnough1234!",
+        "confirm_password": "PassTwoLongEnough5678!",
     })
     assert r.status_code == 400
     assert "coinciden" in r.get_json()["error"].lower()

@@ -92,11 +92,24 @@ def test_linked_sub_login_preserves_data_and_privileges(client):
     response = callback(client, token(obj.email))
     assert response.location == "/dashboard"
     with client.session_transaction() as sess:
-        assert sess["_user_id"] == str(obj.id)
+        assert sess["_user_id"] == obj.get_id()
     after = snapshot(obj)
     assert after.pop("last_login") is not None
     before.pop("last_login")
     assert after == before
+
+
+@pytest.mark.parametrize('destination,expected',[
+    ('/pedir-asesoramiento','/pedir-asesoramiento'),
+    ('//example.invalid','/dashboard'),
+])
+def test_callback_preserves_only_internal_destination(client,destination,expected):
+    obj=user()
+    with client.session_transaction() as sess:
+        sess['auth_next']=destination
+    response=callback(client,token(obj.email))
+    assert response.location==expected
+    assert client.get('/api/me').json['user']['email']==obj.email
 
 
 def test_same_email_different_sub_rejected_unchanged(client):
@@ -261,7 +274,7 @@ def test_concurrent_registration_uniqueness_and_identity(mode):
     obj = User.query.one()
     assert (obj.email, obj.google_id) in [(v["userinfo"]["email"], v["userinfo"]["sub"]) for v in values]
     assert sum(location == "/dashboard" for location, uid in results) == 1
-    assert all(uid == str(obj.id) if location == "/dashboard" else uid is None for location, uid in results)
+    assert all(uid == obj.get_id() if location == "/dashboard" else uid is None for location, uid in results)
 
 
 def test_preexisting_session_survives_rejected_callback(client):
@@ -274,7 +287,7 @@ def test_preexisting_session_survives_rejected_callback(client):
     response = callback(client, token(obj.email))
     assert "/login/?error=" in response.location
     with client.session_transaction() as sess:
-        assert sess["_user_id"] == str(obj.id)
+        assert sess["_user_id"] == obj.get_id()
     assert snapshot(obj) == before
 
 
