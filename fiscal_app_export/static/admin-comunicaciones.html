@@ -443,7 +443,7 @@ body { padding-top: 64px; }
     <div class="left-header">
       <div class="left-header-top">
         <span class="left-title">Campañas</span>
-        <button class="btn-new" onclick="newCampaign()">+ Nueva</button>
+        <button class="btn-new" onclick="newCampaign()">Nueva</button>
       </div>
       <div class="tab-row">
         <button class="tab-btn active" data-tab="all"       onclick="setTab(this,'all')">Todas</button>
@@ -513,10 +513,10 @@ body { padding-top: 64px; }
       <div class="composer-footer">
         <div class="btn-row">
           <button class="btn-secondary" id="btn-test" onclick="sendTest()" disabled>
-            ▶ Enviar test
+            Enviar test
           </button>
           <button class="btn-secondary" onclick="refreshPreview()">
-            ↺ Preview
+            Preview
           </button>
         </div>
         <button class="btn-primary" id="btn-send" onclick="openSendModal()" disabled>
@@ -524,7 +524,7 @@ body { padding-top: 64px; }
         </button>
         <div class="send-note" id="send-note">Rellena asunto y contenido para activar el envío.</div>
         <div id="delete-draft-row" style="display:none;text-align:center;">
-          <button class="btn-danger-soft" onclick="openDeleteModal()">🗑 Eliminar borrador</button>
+          <button class="btn-danger-soft" onclick="openDeleteModal()">Eliminar borrador</button>
         </div>
       </div>
     </div>
@@ -993,7 +993,7 @@ function renderDetailView(c) {
     </div>
     ${c.status !== 'sending' && c.status !== 'queued' ? `
     <div style="margin-top:26px;padding-top:14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;">
-      <button class="btn-danger-soft" onclick="openDeleteModal()">🗑 Eliminar campaña</button>
+      <button class="btn-danger-soft" onclick="openDeleteModal()">Eliminar campaña</button>
     </div>` : ''}`;
 
   // Fetch real error rows only for terminal campaigns with failures
@@ -1218,7 +1218,7 @@ async function sendTest() {
   btn.textContent = 'Enviando…';
 
   const id = await ensureDraftSaved();
-  if (!id) { btn.disabled = false; btn.textContent = '▶ Enviar test'; return; }
+  if (!id) { btn.disabled = false; btn.textContent = 'Enviar test'; return; }
 
   try {
     const res = await fetch(`/api/admin/comunicaciones/drafts/${id}/send-test`, {
@@ -1235,7 +1235,7 @@ async function sendTest() {
   }
 
   btn.disabled = false;
-  btn.textContent = '▶ Enviar test';
+  btn.textContent = 'Enviar test';
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1372,7 +1372,7 @@ async function loadFailedDeliveries(campaignId) {
     section.innerHTML = `
       <div class="errors-header">
         <span class="errors-count">${deliveries.length} error${deliveries.length !== 1 ? 'es' : ''}</span>
-        <button class="btn-copy-errors" onclick="copyErrors()">📋 Copiar errores</button>
+        <button class="btn-copy-errors" onclick="copyErrors()">Copiar errores</button>
       </div>
       <div id="errors-list">${rows}</div>`;
 
@@ -1497,3 +1497,4 @@ document.getElementById('modal-delete').addEventListener('click', function(e) {
 </script>
 </body>
 </html>
+

@@ -50,11 +50,15 @@ def test_header_footer_match_home_except_current_page_semantics():
     assert 'class="apple-skip"' in text
 
 
-def test_only_the_requested_catalogue_changes_from_approved_v5():
+def test_only_requested_catalogue_and_text_only_cta_changes_from_approved_v5():
     approved=(Path(__file__).parent/'fixtures/herramientas/approved_v5.html').read_text()
     actual=PAGE.read_text()
     catalogue=r'<ul class="tools-grid" role="list">[\s\S]*?</ul>'
-    assert re.sub(catalogue,'CATALOGUE',actual).strip()==re.sub(catalogue,'CATALOGUE',approved).replace('<meta name="robots" content="noindex, nofollow">','<meta name="robots" content="index, follow">').strip()
+    # Preserve the approved page except the catalogue, production robots and
+    # the owner's text-only button label requested on 2026-10-18.
+    expected=re.sub(catalogue,'CATALOGUE',approved).replace('<meta name="robots" content="noindex, nofollow">','<meta name="robots" content="index, follow">')
+    expected=expected.replace('Ayúdame a elegir <span aria-hidden="true">→</span>','Ayúdame a elegir')
+    assert re.sub(catalogue,'CATALOGUE',actual).strip()==expected.strip()
     cards=re.findall(r'<li class="tools-card">\s*<h3>[^<]+</h3>\s*<p class="tools-card-description">[^<]+</p>\s*<a class="tools-card-link" href="[^"]+">[^<]+<span aria-hidden="true"> →</span></a>\s*</li>',actual)
     assert len(cards)==6
     assert 'tools-card-meta' not in actual and 'tools-card-top' not in actual

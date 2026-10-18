@@ -732,7 +732,7 @@ async function openDetail(id, el) {
             Solo administradores. Elimina permanentemente la solicitud y todos sus datos asociados
             (notas, historial, archivos). <strong style="color:#f87171">Esta acción no se puede deshacer.</strong>
           </div>
-          <button class="btn-danger" data-name="${escHtml(d.full_name)}" disabled title="C1: prohibido borrar historial">🗑&nbsp; Eliminar solicitud</button>
+          <button class="btn-danger" data-name="${escHtml(d.full_name)}" disabled title="C1: prohibido borrar historial">Eliminar solicitud</button>
           <div id="deleteMsg"></div>
         </div>
         ` : ''}
@@ -925,3 +925,4 @@ loadList();
 </script>
 </body>
 </html>
+

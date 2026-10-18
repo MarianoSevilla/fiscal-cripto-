@@ -842,7 +842,7 @@
       </div>
       {% endif %}
       <button class="bar-btn" id="btnAnalizar" disabled>
-        <span id="btnText">Generar →</span>
+        <span id="btnText">Generar</span>
       </button>
     </div>
 
@@ -856,7 +856,7 @@
     <div class="bar-file-selected" id="fileSelected">
       <span>📄</span><span id="fileName">—</span>
     </div>
-    <button class="bar-btn-nuevo" id="btnNuevo">↩ Nuevo análisis</button>
+    <button class="bar-btn-nuevo" id="btnNuevo">Nuevo análisis</button>
   </div>
 
   <!-- ejercicio-error eliminado: reemplazado por chip selector -->
@@ -881,7 +881,7 @@
   <div class="results-header-row">
     <h2 class="results-heading">Resultado del análisis</h2>
     <a class="btn-download-hero" id="btnDownload" href="#" download="informe_fiscal_cripto_{{ exchange_id or 'cripto' }}.pdf">
-      ⬇ Descargar PDF
+      Descargar PDF
     </a>
   </div>
 
@@ -913,7 +913,7 @@
     </div>
     <p class="error-desc" id="errorDesc"></p>
     <ol class="error-pasos" id="errorPasos"></ol>
-    <button class="btn-retry" id="btnRetry">← Volver a intentarlo</button>
+    <button class="btn-retry" id="btnRetry">Volver a intentarlo</button>
   </div>
 
   <!-- RESULTADOS -->
@@ -2040,7 +2040,7 @@
       fileName.textContent = '—'; btnAnalizar.disabled = true;
     } finally {
       detenerProgreso();
-      btnText.textContent = 'Generar →';
+      btnText.textContent = 'Generar';
     }
   });
 
@@ -2064,3 +2064,4 @@
 </script>
 </body>
 </html>
+
