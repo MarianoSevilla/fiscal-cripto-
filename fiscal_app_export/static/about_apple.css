@@ -1,0 +1,51 @@
+/* About variant. Shared approved Home components remain unchanged. */
+.apple-about-page { --about-space:40px; }
+.apple-about-page .about-intro { padding-block:40px 32px; }
+.apple-about-page .about-intro .apple-container { padding-inline:var(--apple-pad); }
+.apple-about-page .about-intro .apple-eyebrow { color:var(--intro-accent); margin-bottom:12px; }
+.apple-about-page h1 { width:100%; max-width:none; font-size:clamp(2rem,4.5vw,3.5rem); line-height:1.1; margin-bottom:20px; text-wrap:balance; }
+.apple-about-page .about-lead { width:100%; max-width:none; color:var(--intro-muted); font-size:1.125rem; }
+.apple-about-page .about-section { padding-block:var(--about-space); }
+.apple-about-page .about-people-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--catalog-card-gap); }
+.apple-about-page .about-profile { display:flex; flex-direction:column; min-width:0; padding:var(--catalog-card-padding); background:var(--catalog-card-bg); border:1px solid var(--catalog-card-border); border-radius:var(--catalog-card-radius); }
+.apple-about-page .about-person-heading { display:grid; grid-template-columns:132px minmax(0,1fr); align-items:center; gap:20px; margin-bottom:24px; }
+.apple-about-page .about-person-identity { min-width:0; }
+.apple-about-page .about-person-heading h2 { font-size:clamp(1.375rem,2.1vw,1.75rem); line-height:1.2; }
+.apple-about-page .about-portrait { width:132px; height:132px; border-radius:50%; object-fit:contain; }
+.apple-about-page .about-role { color:var(--accent); font-size:.9375rem; font-weight:600; margin-top:8px; }
+.apple-about-page .about-bio { color:var(--muted); }
+.apple-about-page .about-bio p+p { margin-top:16px; }
+.apple-about-page .about-person-link { align-self:flex-start; margin-top:auto; padding-top:20px; min-height:64px; }
+.apple-about-page .about-scope { border-block:1px solid var(--border); }
+.apple-about-page .about-heading { margin-bottom:24px; }
+.apple-about-page .about-heading h2 { font-size:clamp(1.625rem,2.8vw,2.25rem); line-height:1.18; }
+.apple-about-page .about-heading p { color:var(--muted); margin-top:12px; }
+.apple-about-page .about-scope-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:32px; }
+.apple-about-page .about-scope-grid>div { min-width:0; }
+.apple-about-page .about-scope h3 { margin-bottom:12px; }
+.apple-about-page .about-scope-grid p { color:var(--muted); }
+.apple-about-page .about-scope-grid p+p { margin-top:16px; }
+.apple-about-page .about-help .apple-eyebrow { color:var(--accent); margin-bottom:16px; }
+.apple-about-page .about-help h2 { font-size:clamp(1.5rem,2.8vw,2rem); line-height:1.2; margin-bottom:16px; }
+.apple-about-page .about-help .asistencia-block>p { max-width:none; }
+.apple-about-page .about-help-actions { display:flex; align-items:center; flex-wrap:wrap; gap:12px 24px; margin-top:24px; }
+.apple-about-page .apple-footer a[aria-current="page"] { color:var(--accent); font-weight:650; }
+@media (min-width:641px) and (max-width:1200px) {
+ .apple-about-page { --about-space:32px; }
+ .apple-about-page .about-intro { padding-top:32px; }
+}
+@media (max-width:900px) { .apple-about-page .about-people-grid { grid-template-columns:minmax(0,1fr); } }
+@media (max-width:640px) {
+ .apple-about-page { --about-space:24px; }
+ .apple-about-page .about-intro { padding-block:36px 24px; }
+ .apple-about-page h1 { font-size:clamp(2rem,8.4vw,3rem); margin-bottom:16px; }
+ .apple-about-page .about-lead { font-size:1rem; }
+ .apple-about-page .about-person-heading { grid-template-columns:88px minmax(0,1fr); gap:16px; margin-bottom:20px; }
+ .apple-about-page .about-portrait { width:88px; height:88px; }
+ .apple-about-page .about-profile { padding:20px; }
+ .apple-about-page .about-person-heading h2 { font-size:1.375rem; }
+ .apple-about-page .about-role { font-size:.875rem; }
+ .apple-about-page .about-scope-grid { grid-template-columns:minmax(0,1fr); gap:24px; }
+ .apple-about-page .about-help-actions { margin-top:20px; }
+ .apple-about-page .about-help .apple-button { width:100%; padding-inline:16px; }
+}
