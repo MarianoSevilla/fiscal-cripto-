@@ -138,8 +138,10 @@ def test_verification_next_and_no_store():
     ('/recuperar-contrasena','forgot'),('/recuperar-contrasena/','forgot'),
     ('/reset-password/synthetic-token','reset'),('/verify-email-result','verify')])
 def test_production_auth_routes(path,view):
-    r=app.test_client().get(path)
+    r=app.test_client().get(path,follow_redirects=True)
     assert r.status_code==200
+    if path.endswith('/'):
+        assert len(r.history)==1 and r.history[0].status_code==301
     assert f'data-auth-view="{view}"' in r.text
     assert 'data-auth-preview="true"' not in r.text
     assert 'noindex, nofollow' in r.text
