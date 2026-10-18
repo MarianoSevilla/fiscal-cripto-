@@ -439,7 +439,7 @@ nav {
     const d = await r.json();
     isLoggedIn = !!d.user;
     if (isLoggedIn) {
-      document.getElementById('navAuthBtn').textContent = 'Mi cuenta';
+      document.getElementById('navAuthBtn').textContent = 'Mi espacio fiscal';
       document.getElementById('navAuthBtn').href = '/dashboard';
     } else {
       document.getElementById('navAuthBtn').href = '/login/';

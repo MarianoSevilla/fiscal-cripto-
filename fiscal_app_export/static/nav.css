@@ -210,6 +210,20 @@
 /* ── Utilidad: ocultar elementos ─────────────────── */
 .snav-hidden { display: none !important; }
 
+/* A failed lookup does not imply logout. Use the existing nav palette. */
+.snav-auth-status {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+.snav-auth-retry {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px; padding: 8px 10px; border: 1px solid var(--snav-border2);
+  border-radius: 999px; background: transparent; color: var(--snav-text);
+  font: 500 13px var(--snav-font-b); white-space: nowrap; cursor: pointer;
+}
+.snav-auth-retry:focus-visible { outline: 2px solid var(--snav-accent); outline-offset: 3px; }
+.snav-mobile-status { padding: 10px 12px; margin: 0; color: var(--snav-text); font: 400 14px/1.5 var(--snav-font-b); }
+
 /* Menú móvil: conserva el mismo diseño y los enlaces de la navegación. */
 .snav-menu-toggle {
   display: none;

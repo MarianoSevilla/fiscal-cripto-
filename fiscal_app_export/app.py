@@ -1591,8 +1591,19 @@ def preferencias():
 @login_required
 @limiter.exempt
 def dashboard():
-    """Dashboard principal: selector de exchange. Requiere autenticación."""
-    return send_from_directory("static", "dashboard.html")
+    """Mi espacio fiscal. Existing session and authorization rules are retained."""
+    response = app.make_response(render_template("dashboard_apple.html"))
+    response.headers['Cache-Control'] = 'no-store'
+    response.headers['X-Robots-Tag'] = 'noindex, nofollow'
+    return response
+
+
+@app.route("/dashboard-apple-preview", strict_slashes=False)
+@login_required
+@limiter.exempt
+def dashboard_apple_preview():
+    """Compatibility alias for review links; same authenticated workspace."""
+    return dashboard()
 
 
 @app.route("/modelo721", strict_slashes=False)

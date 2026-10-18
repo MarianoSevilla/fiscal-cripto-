@@ -257,33 +257,35 @@ def run_home_redesign(browser,origin):
             assert not violations and not errors,(violations,errors)
             ctx.close();cases+=1
 
-    # An unresolved session still offers public links. Release the same fake
-    # request later; no extra request, account mutation, or logout is needed.
+    # An unresolved session keeps public navigation and neutral retry access.
+    # Only a confirmed anonymous response may offer login/signup links.
     for role in ['visitor','user']:
         for width in [375,1280]:
             pending=[]
             ctx,violations=context(browser,role,width,pending_session=pending)
-            page=ctx.new_page();errors=[]
+            page=ctx.new_page();errors=[];page.clock.install()
             page.on('pageerror',lambda error:errors.append(str(error)))
             page.goto(origin+'/',wait_until='domcontentloaded')
-            page.locator('.apple-access-desktop').wait_for(state='attached',timeout=7000)
+            page.clock.fast_forward(8500)
+            page.locator('#snavAuthRetry').wait_for(state='visible')
             assert len(pending)==1
             if width<=1200:
                 page.locator('#snavMenuToggle').click()
-                fallback=page.locator('.apple-access-mobile')
+                retry=page.locator('#snavMobileRetry')
             else:
-                fallback=page.locator('.apple-access-desktop')
-            link=fallback.get_by_role('link',name='Iniciar sesión',exact=True)
-            assert link.is_visible()
-            assert fallback.get_by_role('link',name='Crear cuenta',exact=True).get_attribute('href')=='/signup/'
-            link.focus()
+                retry=page.locator('#snavAuthRetry')
+            assert retry.is_visible()
+            assert page.locator('#snavBtnLogin:not(.snav-hidden),#snavBtnSignup:not(.snav-hidden)').count()==0
+            assert page.locator('#snavMobileMenu a[href="/login/"],#snavMobileMenu a[href="/signup/"]').count()==0
+            assert page.locator('#snavAuthStatus').inner_text().startswith('Seguimos comprobando')
+            retry.focus()
             pending[0].fulfill(status=200,content_type='application/json',body=json.dumps(ROLES[role]))
-            page.wait_for_function("document.querySelectorAll('.apple-access-fallback').length===0")
+            page.locator('#snavAuthRetry').wait_for(state='hidden')
             if role=='user':
                 assert not page.locator('#snavAvatarWrap').evaluate("el=>el.classList.contains('snav-hidden')")
                 assert page.evaluate('document.activeElement.id')==('snavMenuToggle' if width<=1200 else 'snavAvatar')
             elif width<=1200:
-                assert page.locator('#snavMobileMenu a[href="/login/"]').evaluate('el=>el===document.activeElement')
+                assert page.evaluate('document.activeElement.id')=='snavMenuToggle'
             else:
                 assert page.evaluate('document.activeElement.id')=='snavBtnLogin'
             assert not geometry(page,width)

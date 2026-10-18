@@ -245,7 +245,13 @@ class HomeRedesignContracts(unittest.TestCase):
         for change in V20_COPY['paragraphs']:
             self.assertEqual(previous.paragraphs.count(change['before']),1)
             self.assertEqual(self.b.paragraphs.count(change['after']),1)
-        self.assertEqual((STATIC/'landing_apple.js').read_bytes(),(BASELINES/'v19.js').read_bytes())
+        # PR114: only the duplicate pending-session fallback is retired.
+        # Keep every other byte of the approved Home enhancements protected.
+        approved_js=(BASELINES/'v19.js').read_text()
+        start=approved_js.index('  // A delayed session lookup must not block public navigation.')
+        end=approved_js.index('  // Demonstration dates follow the previous tax year in Spain.',start)
+        expected_js=approved_js[:start]+'  // Shared nav.js owns pending/error/anonymous access states on every page.\n\n'+approved_js[end:]
+        self.assertEqual((STATIC/'landing_apple.js').read_text(),expected_js)
         css=(STATIC/'landing_apple.css').read_text()
         original,layout=css.split('/* V24: approved V23 geometry, with the application\'s session-aware header. */')
         self.assertEqual(original.rstrip(),(BASELINES/'v19.css').read_text().rstrip())
