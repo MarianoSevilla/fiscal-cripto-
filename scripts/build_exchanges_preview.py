@@ -14,17 +14,17 @@ footer=footer.replace('href="/exchanges"','href="/exchanges" aria-current="page"
 # One inventory supplies both the visible catalogue and structured list.
 # Four platforms have a tool route but no public exchange guide.
 EXCHANGES=[
- ('Binance','CSV · Historial de transacciones.','/exchanges/binance','Ver guía'),
- ('Bitvavo','CSV · Historial de operaciones.','/exchanges/bitvavo','Ver guía'),
- ('Kraken','CSV · Historial Ledger.','/exchanges/kraken','Ver guía'),
- ('Coinbase','CSV · Historial de transacciones.','/exchanges/coinbase','Ver guía'),
- ('Bit2Me','CSV · Consulta el formato admitido.','/exchanges/bit2me','Ver guía'),
- ('Nexo','CSV · Historial de transacciones.','/exchanges/nexo','Ver guía'),
- ('Crypto.com','CSV · Historial de la App.','/exchanges/cryptocom','Ver guía'),
- ('Bitget','CSV · Operaciones spot y movimientos.','/bitget','Acceder a herramienta'),
- ('KuCoin','CSV · Varios historiales de tu cuenta.','/kucoin','Acceder a herramienta'),
- ('MEXC','Excel · Historial en XLS o XLSX.','/mexc','Acceder a herramienta'),
- ('Uphold','CSV · Historial de transacciones.','/uphold','Acceder a herramienta'),
+ ('Binance','Prepara tu informe fiscal de Binance a partir del historial CSV.','/exchanges/binance','Ver cómo generar el informe'),
+ ('Bitvavo','Convierte tu historial de Bitvavo en un informe FIFO para preparar tu renta.','/exchanges/bitvavo','Ver cómo generar el informe'),
+ ('Kraken','Genera tu informe FIFO de Kraken desde el historial Ledger.','/exchanges/kraken','Ver cómo generar el informe'),
+ ('Coinbase','Calcula tus ganancias y pérdidas de Coinbase con tu historial CSV.','/exchanges/coinbase','Ver cómo generar el informe'),
+ ('Bit2Me','Prepara tu informe fiscal de Bit2Me siguiendo las instrucciones de importación.','/exchanges/bit2me','Ver cómo generar el informe'),
+ ('Nexo','Organiza tus transacciones de Nexo y prepara tu informe FIFO.','/exchanges/nexo','Ver cómo generar el informe'),
+ ('Crypto.com','Genera tu informe FIFO con el CSV de la App de Crypto.com.','/exchanges/cryptocom','Ver cómo generar el informe'),
+ ('Bitget','Calcula tu FIFO de Bitget a partir del historial de operaciones spot.','/bitget','Preparar informe FIFO'),
+ ('KuCoin','Reúne tus historiales de KuCoin y prepara tu informe FIFO.','/kucoin','Preparar informe FIFO'),
+ ('MEXC','Transforma tu Excel de MEXC en un informe FIFO de tus operaciones.','/mexc','Preparar informe FIFO'),
+ ('Uphold','Calcula tus ganancias y pérdidas de Uphold a partir del CSV.','/uphold','Preparar informe FIFO'),
 ]
 LOGOS={
  'Binance':'binance.jpg','Bitvavo':'bitvavo.png','Kraken':'kraken.png',
@@ -32,7 +32,7 @@ LOGOS={
  'Crypto.com':'crypto.png','Bitget':'bitget.png','KuCoin':'kucoin.png',
  'MEXC':'mexc.png','Uphold':'uphold.png',
 }
-cards='\n'.join('<a class="apple-exchange-card" href="'+url+'"><div class="exchanges-card-heading"><span class="exchanges-logo"><img src="/static/images/'+LOGOS[name]+'" alt="" width="44" height="44" decoding="async"></span><h3>'+escape(name)+'</h3></div><p>'+escape(desc)+'</p><span>'+action+' <span aria-hidden="true">→</span></span></a>' for name,desc,url,action in EXCHANGES)
+cards='\n'.join('<a class="apple-exchange-card" href="'+url+'"><div class="exchanges-card-heading"><span class="exchanges-logo"><img src="/static/images/'+LOGOS[name]+'" alt="" width="44" height="44" decoding="async"></span><h3>'+escape(name)+'</h3></div><p>'+escape(desc)+'</p><span>'+action+'</span></a>' for name,desc,url,action in EXCHANGES)
 AEAT='https://sede.agenciatributaria.gob.es/Sede/ayuda/manuales-videos-folletos/manuales-practicos/irpf-2025/c11-ganancias-perdidas-patrimoniales/monedas-virtuales/compra-venta-monedas-virtuales-tributacion-inversor.html'
 FAQS=[
  ('¿Qué archivo necesito y cómo lo exporto?', '<p>Consulta el formato de tu exchange antes de empezar: no todos los CSV contienen la misma información. Las siete guías del catálogo son públicas; las otras cuatro opciones abren la herramienta correspondiente, que requiere iniciar sesión y muestra las instrucciones.</p><p>MEXC utiliza Excel en formato XLS o XLSX, no CSV. Crypto.com utiliza el historial de la App; esta compatibilidad no equivale a unificar los archivos de la App y de Crypto.com Exchange. En Bit2Me, utiliza el formato que ofrezca la herramienta: no conviertas un Excel a CSV por tu cuenta.</p>'),

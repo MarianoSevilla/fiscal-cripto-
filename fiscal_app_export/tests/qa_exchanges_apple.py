@@ -46,7 +46,8 @@ def structure(page,width,js=True):
     assert logos.evaluate_all('els=>els.every(e=>e.complete && e.naturalWidth>0 && e.naturalHeight>0 && e.alt==="" && e.width===44 && e.height===44)')
     names=cards.locator('h3').all_text_contents()
     assert len(set(names))==11 and 'KuCoin' in names and 'Gate' not in names
-    assert 'XLS o XLSX' in cards.filter(has_text='MEXC').inner_text()
+    assert 'Excel' in cards.filter(has_text='MEXC').inner_text()
+    assert 'XLS o XLSX' in page.locator('.apple-faq-list').text_content()
     assert cards.filter(has_text='MEXC').get_attribute('href')=='/mexc'
     assert cards.filter(has_text='KuCoin').get_attribute('href')=='/kucoin'
     columns=page.locator('.apple-catalog-grid').evaluate('e=>getComputedStyle(e).gridTemplateColumns.split(" ").length')

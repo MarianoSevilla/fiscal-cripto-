@@ -14,6 +14,12 @@ Las siete guías existentes se enlazan sin registro; Bitget, KuCoin, MEXC y Upho
 
 ## Contenido y SEO
 
+Actualización aprobada de las tarjetas: 11 descripciones únicas orientadas a preparar el informe, conservando referencias útiles a CSV, Ledger, App, spot o Excel. Las siete guías utilizan «Ver cómo generar el informe»; las cuatro herramientas, «Preparar informe FIFO». No se promete una descarga directa, un informe gratuito ni cobertura fiscal adicional. Se retiran las flechas de estas llamadas a la acción. Los destinos, logos, estilos y orden permanecen.
+
+Base editorial: Search Console a través de Windsor.ai, consulta del 18/10/2026, período solicitado 01/04/2026–15/10/2026. Consultas y páginas individuales: «informe fiscal binance» 275 impresiones/0 clics; «extracto binance para hacienda» 238/0; «coinbase informe fiscal» 70/0; «informe fiscal kraken» 29/1. Son impresiones del sitio, no volúmenes mensuales de mercado. Para Nexo, Crypto.com, Bitget, KuCoin y Uphold no aparecieron consultas en los resultados recuperados; las formulaciones de esas marcas son hipótesis editoriales basadas en las capacidades verificadas. El catálogo /exchanges tiene muy pocos datos y no permite estimar un efecto de posicionamiento. Los términos por marca se desarrollan en las guías de destino; el catálogo facilita su descubrimiento. No se afirma mejora de CTR, ventas o descargas sin medición posterior.
+
+Referencia de enlaces descriptivos y naturales: https://developers.google.com/search/docs/crawling-indexing/links-crawlable . La precisión de MEXC XLS/XLSX se mantiene en la FAQ; la tarjeta resume Excel. No se suprime información de compatibilidad del documento.
+
 Se mantienen los temas útiles de las ocho FAQs anteriores, corregidos y reorganizados; se añaden preguntas sobre formatos y varios archivos. La explicación general de FIFO, obligaciones informativas y comparaciones se conserva en respuestas; se enlazan las guías de FIFO/721 y FAQ. Se elimina la descripción de prestaciones no verificadas, no funcionalidades.
 
 CollectionPage con ItemList derivado del mismo inventario que las tarjetas. Preview noindex/nofollow con canonical a /exchanges. No se promete beneficio de FAQ rich results: Google retiró esa función en mayo de 2026.
