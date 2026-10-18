@@ -1595,6 +1595,17 @@ def dashboard():
     return send_from_directory("static", "dashboard.html")
 
 
+@app.route("/dashboard-apple-preview", strict_slashes=False)
+@login_required
+@limiter.exempt
+def dashboard_apple_preview():
+    """Isolated workspace proposal; original /dashboard remains unchanged."""
+    response = app.make_response(render_template("dashboard_apple.html"))
+    response.headers['Cache-Control'] = 'no-store'
+    response.headers['X-Robots-Tag'] = 'noindex, nofollow'
+    return response
+
+
 @app.route("/modelo721", strict_slashes=False)
 @login_required
 @limiter.exempt

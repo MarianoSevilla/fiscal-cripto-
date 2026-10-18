@@ -19,12 +19,14 @@ from qa_contacto_apple import run_contacto_apple
 from qa_exchanges_apple import run_exchanges_apple
 from qa_about_apple import run_about_apple
 from qa_auth_apple import run_auth_apple
+from qa_dashboard_apple import run_dashboard_apple
 
 
 def main():
     with server() as origin, sync_playwright() as p:
         browser=p.chromium.launch(headless=True)
         try:
+            run_dashboard_apple(browser,origin)
             run_auth_apple(browser,origin)
             run_about_apple(browser,origin)
             run_exchanges_apple(browser,origin)

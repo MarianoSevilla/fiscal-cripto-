@@ -253,16 +253,22 @@
     // Por defecto mostramos botones (no autenticado).
     // Se pone a false si detectamos sesión activa.
     let authenticated = false;
+    // Optional consumer contract. No account identifiers or personal data are
+    // exposed; the existing server flags remain the only source of permissions.
+    let result = { state: 'error', is_admin: false, is_fiscal_advisor: false };
 
     try {
       const r = await fetch('/api/me', { credentials: 'include' });
 
       if (r.ok) {
         const d = await r.json();
+        result.state = d && d.user ? 'authenticated' : 'anonymous';
 
         if (d && d.user) {
           authenticated = true;
           const user = d.user;
+          result.is_admin = user.is_admin === true;
+          result.is_fiscal_advisor = user.is_fiscal_advisor === true;
 
           // Mostrar avatar con la inicial correcta
           const avatarWrap = document.getElementById('snavAvatarWrap');
@@ -310,6 +316,7 @@
       }
       refreshMobileMenu();
     }
+    return result;
   }
 
   // ── Init principal ────────────────────────────────────────────────────────
@@ -332,7 +339,7 @@
     initDropdown();
     initLogout();
     initMobileMenu();
-    updateAuthState();
+    window.SiteNav.ready = updateAuthState();
   }
 
   // ── API pública ───────────────────────────────────────────────────────────
