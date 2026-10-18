@@ -40,7 +40,9 @@ def test_routes_and_menu_flags_do_not_confuse_plan_and_role(role,plan):
         assert response.headers['Cache-Control']=='no-store'
         assert response.headers['X-Robots-Tag']=='noindex, nofollow'
         assert 'Persona sintética' not in response.text and '12345678Z' not in response.text
-    assert c.get('/dashboard/').data==workspace.data
+    canonical=c.get('/dashboard/')
+    assert canonical.status_code==301 and canonical.location=='/dashboard'
+    assert c.get('/dashboard/',follow_redirects=True).data==workspace.data
     assert c.get('/modelo721').text.count('Ir al Dashboard')==0
     assert c.get('/static/dashboard_apple.html').status_code==404
     matrix={

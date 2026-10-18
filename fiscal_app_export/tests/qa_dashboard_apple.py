@@ -45,7 +45,7 @@ def run_shared_access_regression(browser,origin):
                 assert p.locator('#snavItemDash').inner_text()=='Mi espacio fiscal'
                 assert p.locator('#snavItemPlanes,a[href="/pricing"]').count()==0
                 if path=='/modelo721':
-                    assert p.locator('.result-actions a[href="/dashboard"]').inner_text()=='Mi espacio fiscal'
+                    assert p.locator('.result-actions a[href="/dashboard"]').text_content().strip()=='Mi espacio fiscal'
                 if width<=1200:
                     p.locator('#snavMenuToggle').click()
                     assert p.locator('#snavMobileMenu').get_by_role('link',name='Mi espacio fiscal',exact=True).is_visible()
