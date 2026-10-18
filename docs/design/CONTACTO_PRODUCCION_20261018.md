@@ -2,7 +2,7 @@
 
 El usuario aprueba la preview #108 y autoriza expresamente su publicación. Entrega limpia desde main `0024383b68dd16c60f20d108ed5957442d626a04`, sin integrar rama de preview, visor, fixture o variante HTML.
 
-Ocho archivos: `fiscal_app_export/static/contacto.html`, `contacto_apple.css`, `contacto_apple.js`; `tests/qa_contacto_apple.py`, `qa_contacto_integration.py`, incorporación al runner `qa_responsive_layout.py` y a `qa_flask_navigation.py`; este documento. Assets compartidos, API/backend, modelos, datos, variables, seguridad, FIFO/721 y pagos sin modificaciones.
+Nueve archivos: `fiscal_app_export/static/contacto.html`, `contacto_apple.css`, `contacto_apple.js`; `tests/qa_contacto_apple.py`, `qa_contacto_integration.py`, incorporación al runner `qa_responsive_layout.py` y a `qa_flask_navigation.py`, mapa local /contacto en `qa_responsive_nav.py`; este documento. Assets compartidos, API/backend, modelos, datos, variables, seguridad, FIFO/721 y pagos sin modificaciones.
 
 El HTML coincide con la preview aprobada `d96c47179e7d79a2392fc6504be90db1e95f96ff` salvo robots index, follow y modo live. CSS/JS específicos idénticos a los revisados. Hero, header/footer, fuente y botones coherentes con Home. Selección de asesoramiento sin redirección, ayuda y correo alternativo visibles, errores asociados, foco y estados anunciados.
 
