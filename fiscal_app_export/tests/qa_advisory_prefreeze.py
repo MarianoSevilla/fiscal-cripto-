@@ -66,8 +66,10 @@ def setup():
 def client(uid=None):
     cli = app.test_client()
     if uid:
+        with app.app_context():
+            identity = db.session.get(User, uid).get_id()
         with cli.session_transaction() as sess:
-            sess['_user_id'] = str(uid)
+            sess['_user_id'] = identity
             sess['_fresh'] = True
     return cli
 

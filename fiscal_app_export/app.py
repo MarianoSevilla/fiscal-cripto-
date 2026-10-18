@@ -100,6 +100,10 @@ from auth import (
     require_fiscal_advisor_page,
 )
 from security_config import build_security_config
+from auth_flow import AUTH_POST_PATHS, safe_auth_next, session_user_id
+from urllib.parse import urlencode
+from sqlalchemy.exc import IntegrityError
+import hmac
 from staging_isolation import (
     validate_staging_isolation,
     staging_request_denial,
@@ -306,7 +310,13 @@ login_manager = LoginManager(app)
 
 @login_manager.user_loader
 def load_user(user_id: str):
-    return db.session.get(User, int(user_id))
+    uid = session_user_id(user_id)
+    if uid is None:
+        return None
+    user = db.session.get(User, uid)
+    if not user or not user.is_active or not hmac.compare_digest(user.get_id(), user_id):
+        return None
+    return user
 
 @login_manager.unauthorized_handler
 def unauthorized():
@@ -787,6 +797,28 @@ limiter = Limiter(
     storage_uri=os.environ.get("REDIS_URL", "memory://"),
 )
 
+@app.before_request
+def auth_request_boundary():
+    """Reject cross-origin auth writes and malformed JSON before auth handlers."""
+    if request.method != 'POST' or request.path not in AUTH_POST_PATHS:
+        return
+    origin = request.headers.get('Origin')
+    if ((origin is not None and origin.rstrip('/') != request.host_url.rstrip('/'))
+            or request.headers.get('Sec-Fetch-Site') == 'cross-site'):
+        return jsonify({'error': 'Solicitud de acceso no válida.'}), 403
+    if request.path == '/api/logout':
+        return
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({'error': 'Revisa los datos del formulario.'}), 400
+    for key in ('email', 'password', 'full_name', 'token', 'confirm_password',
+                'current_password', 'new_password', 'next'):
+        if key in data and (not isinstance(data[key], str) or len(data[key]) > 2048):
+            return jsonify({'error': 'Revisa los datos del formulario.'}), 400
+    if 'remember' in data and not isinstance(data['remember'], bool):
+        return jsonify({'error': 'Revisa los datos del formulario.'}), 400
+
+
 # ── BLOQUEO CONCURRENTE DE ANÁLISIS ───────────────────────────────────────────
 # Set de user_ids con un análisis actualmente en proceso (en este worker).
 # Evita que el mismo usuario lance varios análisis simultáneos.
@@ -883,10 +915,10 @@ def _validar_email(email: str) -> tuple[bool, str]:
 
 
 def _validar_password(password: str) -> tuple[bool, str]:
-    if not password or len(password) < 8:
-        return False, "La contraseña debe tener al menos 8 caracteres."
-    if len(password) > 128:
-        return False, "La contraseña es demasiado larga."
+    if not isinstance(password, str) or len(password) < 15:
+        return False, "Usa una contraseña de al menos 15 caracteres."
+    if len(password.encode('utf-8')) > 72:
+        return False, "La contraseña es demasiado larga. Prueba una frase más corta."
     return True, ""
 
 
@@ -1593,14 +1625,15 @@ def _confirm_verification_token(token: str):
         return None, "invalid"
 
 
-def _send_verification_email(user: User) -> bool:
+def _send_verification_email(user: User, next_path=None) -> bool:
     """Envía el email de verificación. Devuelve True si se envió correctamente."""
     if not resend.api_key:
         app.logger.warning("RESEND_API_KEY no configurada — email de verificación no enviado.")
         return False
 
     token      = _generate_verification_token(user.email)
-    verify_url = f"{_APP_BASE_URL}/verify-email?token={token}"
+    verify_url = f"{_APP_BASE_URL}/verify-email?" + urlencode({
+        'token': token, 'next': safe_auth_next(next_path)})
     html, text = verification_email(verify_url)
 
     try:
@@ -1624,7 +1657,7 @@ def _generate_reset_token() -> tuple[str, str]:
     return token, token_hash
 
 
-def _send_password_reset_email(user: User) -> bool:
+def _send_password_reset_email(user: User, next_path=None) -> bool:
     """Genera token, lo persiste en DB y envía el email. Devuelve True si el email se envió."""
     token_raw, token_hash = _generate_reset_token()
     user.password_reset_token_hash = token_hash
@@ -1635,7 +1668,7 @@ def _send_password_reset_email(user: User) -> bool:
         app.logger.warning("RESEND_API_KEY no configurada — email de reset no enviado.")
         return False
 
-    reset_url = f"{_APP_BASE_URL}/reset-password/{token_raw}"
+    reset_url = f"{_APP_BASE_URL}/reset-password/{token_raw}?" + urlencode({'next': safe_auth_next(next_path)})
     html, text = password_reset_email(reset_url)
 
     try:
@@ -1715,7 +1748,7 @@ def _send_delete_account_email(user: User) -> bool:
 def login_page():
     """Página dedicada de inicio de sesión."""
     if current_user.is_authenticated:
-        return redirect("/dashboard")
+        return redirect(safe_auth_next(request.args.get('next')))
     return send_from_directory("static", "login.html")
 
 
@@ -1724,7 +1757,7 @@ def login_page():
 def signup_page():
     """Página dedicada de registro."""
     if current_user.is_authenticated:
-        return redirect("/dashboard")
+        return redirect(safe_auth_next(request.args.get('next')))
     return send_from_directory("static", "signup.html")
 
 
@@ -1734,6 +1767,7 @@ def auth_google():
     """Inicia el flujo OAuth con Google."""
     if not _google_oauth_enabled:
         return redirect("/login/?error=google_not_configured")
+    session['auth_next'] = safe_auth_next(request.args.get('next'))
     redirect_uri = url_for("auth_google_callback", _external=True)
     return google_oauth.authorize_redirect(redirect_uri)
 
@@ -1822,8 +1856,10 @@ def auth_google_callback():
         app.logger.warning("Google OAuth persistence failed")
         return redirect("/login/?error=oauth_failed")
 
+    destination = safe_auth_next(session.pop('auth_next', None))
+    session.clear()
     login_user(user, remember=False)
-    return redirect("/dashboard")
+    return redirect(destination)
 
 @app.route("/binance")
 @login_required
@@ -3435,19 +3471,25 @@ def register():
     if not ok:
         return jsonify({"error": err}), 400
 
-    if User.query.filter_by(email=email).first():
-        return jsonify({"error": "Ya existe una cuenta con ese email."}), 409
-
     user = User(email=email, full_name=_title_case(full_name))
     user.set_password(password)
+    if User.query.filter_by(email=email).first():
+        return jsonify({"pending_verification": True,
+            "message": "Si puedes utilizar este correo, recibirás instrucciones para continuar."}), 201
     db.session.add(user)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        if not User.query.filter_by(email=email).first():
+            raise
+        return jsonify({"pending_verification": True,
+            "message": "Si puedes utilizar este correo, recibirás instrucciones para continuar."}), 201
 
-    _send_verification_email(user)
+    _send_verification_email(user, data.get('next'))
     return jsonify({
         "pending_verification": True,
-        "email": user.email,
-        "message": "Cuenta creada. Revisa tu bandeja de entrada para verificar tu email.",
+        "message": "Si puedes utilizar este correo, recibirás instrucciones para continuar.",
     }), 201
 
 
@@ -3467,21 +3509,19 @@ def login():
     if not user.is_active:
         return jsonify({"error": "Cuenta desactivada. Contacta con soporte."}), 403
 
-    user.last_login = datetime.utcnow()
-    db.session.commit()
-
-    login_user(user, remember=remember)
-
     if not user.email_verified_at:
-        _send_verification_email(user)
+        _send_verification_email(user, data.get('next'))
         return jsonify({
-            "message": "Sesión iniciada.",
-            "email": user.email,
-            "plan": user.plan,
+            "message": "Verifica tu correo para iniciar sesión.",
             "pending_verification": True,
         })
 
-    return jsonify({"message": "Sesión iniciada.", "email": user.email, "plan": user.plan})
+    user.last_login = datetime.utcnow()
+    db.session.commit()
+    session.clear()
+    login_user(user, remember=remember)
+    return jsonify({"message": "Sesión iniciada.", "email": user.email, "plan": user.plan,
+                    "redirect_to": safe_auth_next(data.get('next'))})
 
 
 @app.route("/api/logout", methods=["POST"])
@@ -3495,26 +3535,29 @@ def logout():
 @limiter.limit("10 per minute")
 def verify_email():
     """Procesa el token del enlace enviado por email."""
+    def result(status):
+        return redirect('/verify-email-result?' + urlencode({
+            'status': status, 'next': safe_auth_next(request.args.get('next'))}))
     token = request.args.get("token", "")
     if not token:
-        return redirect("/verify-email-result?status=invalid")
+        return result('invalid')
 
     email, error = _confirm_verification_token(token)
     if error == "expired":
-        return redirect("/verify-email-result?status=expired")
+        return result('expired')
     if error == "invalid" or not email:
-        return redirect("/verify-email-result?status=invalid")
+        return result('invalid')
 
     user = User.query.filter_by(email=email).first()
     if not user:
-        return redirect("/verify-email-result?status=invalid")
+        return result('invalid')
 
     if user.email_verified_at:
-        return redirect("/verify-email-result?status=already")
+        return result('already')
 
     user.email_verified_at = datetime.utcnow()
     db.session.commit()
-    return redirect("/verify-email-result?status=success")
+    return result('success')
 
 
 @app.route("/verify-email-result")
@@ -3533,11 +3576,9 @@ def resend_verification():
 
     user = User.query.filter_by(email=email).first()
     # Respuesta genérica: no revelar si el email existe
-    if not user or user.email_verified_at:
-        return jsonify({"message": "Si el email existe y no está verificado, recibirás un nuevo enlace."}), 200
-
-    _send_verification_email(user)
-    return jsonify({"message": "Email de verificación reenviado."}), 200
+    if user and user.is_active and not user.email_verified_at:
+        _send_verification_email(user, data.get('next'))
+    return jsonify({"message": "Si el email existe y no está verificado, recibirás un nuevo enlace."}), 200
 
 
 @app.route("/api/me")
@@ -3570,8 +3611,9 @@ def change_password():
     new_pw      = data.get("new_password", "")
     if not current_user.check_password(current_pw):
         return jsonify({"error": "La contraseña actual no es correcta."}), 400
-    if len(new_pw) < 8:
-        return jsonify({"error": "La nueva contraseña debe tener al menos 8 caracteres."}), 400
+    ok, err = _validar_password(new_pw)
+    if not ok:
+        return jsonify({"error": err}), 400
     current_user.set_password(new_pw)
     db.session.commit()
     return jsonify({"message": "Contraseña actualizada correctamente."})
@@ -3592,7 +3634,7 @@ def forgot_password():
 
     user = User.query.filter_by(email=email).first()
     if user and user.is_active and user.password_hash:
-        _send_password_reset_email(user)
+        _send_password_reset_email(user, data.get('next'))
 
     return jsonify({"message": _GENERIC_MSG}), 200
 
@@ -3628,9 +3670,17 @@ def reset_password_api():
     if not user.is_active:
         return jsonify({"error": "Cuenta desactivada. Contacta con soporte."}), 403
 
-    user.set_password(new_pw)
-    user.password_reset_token_hash  = None
-    user.password_reset_expires_at  = None
+    new_hash = bcrypt.generate_password_hash(new_pw, rounds=12).decode('utf-8')
+    consumed = User.query.filter_by(id=user.id, password_reset_token_hash=token_hash,
+                                   is_active=True).filter(
+        User.password_reset_expires_at >= datetime.utcnow()).update({
+            User.password_hash: new_hash,
+            User.password_reset_token_hash: None,
+            User.password_reset_expires_at: None,
+        }, synchronize_session=False)
+    if consumed != 1:
+        db.session.rollback()
+        return jsonify({'error': 'El enlace de recuperación no es válido.'}), 400
     db.session.commit()
 
     return jsonify({"message": "Contraseña actualizada correctamente. Ya puedes iniciar sesión."}), 200
@@ -4706,6 +4756,8 @@ def _api_stats_data():
 def ratelimit_error(e):
     # Rutas API: devolver JSON (consumido por JS del frontend)
     if request.path.startswith("/api/"):
+        if request.path in AUTH_POST_PATHS:
+            return jsonify({"error": "Has realizado demasiados intentos. Espera antes de volver a intentarlo."}), 429
         return jsonify({
             "error": "Has alcanzado el límite de análisis. Por favor espera 10 minutos antes de intentarlo de nuevo."
         }), 429

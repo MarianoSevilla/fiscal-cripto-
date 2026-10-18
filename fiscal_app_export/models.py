@@ -7,6 +7,8 @@ from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from flask_bcrypt import Bcrypt
+from flask import current_app
+from auth_flow import session_identity
 
 db = SQLAlchemy()
 bcrypt = Bcrypt()
@@ -36,13 +38,25 @@ class User(UserMixin, db.Model):
 
     def set_password(self, plaintext: str) -> None:
         """Hashea la contraseña con bcrypt (cost factor 12)."""
+        if not isinstance(plaintext, str) or len(plaintext.encode('utf-8')) > 72:
+            raise ValueError('Password exceeds the bcrypt input limit')
         self.password_hash = bcrypt.generate_password_hash(plaintext, rounds=12).decode("utf-8")
 
     def check_password(self, plaintext: str) -> bool:
         """Verifica la contraseña contra el hash almacenado. Devuelve False en cuentas OAuth sin password."""
         if not self.password_hash:
             return False
-        return bcrypt.check_password_hash(self.password_hash, plaintext)
+        if not isinstance(plaintext, str) or len(plaintext.encode('utf-8')) > 72:
+            return False
+        try:
+            return bcrypt.check_password_hash(self.password_hash, plaintext)
+        except (ValueError, TypeError):
+            return False
+
+    def get_id(self) -> str:
+        """Credential-bound Flask-Login identity; old numeric sessions expire."""
+        return session_identity(self.id, self.password_hash, self.google_id,
+                                current_app.config['SECRET_KEY'])
 
     def __repr__(self) -> str:
         return f"<User {self.email} plan={self.plan}>"

@@ -236,12 +236,14 @@ assert client.get('/dashboard', base_url='https://fixture.example.invalid').stat
 # Reconstruct prior production signature policy with the SAME fixture key.
 old = Flask('u02-previous-policy')
 old.config['SECRET_KEY'] = app.config['SECRET_KEY']
-old_session = old.session_interface.get_signing_serializer(old).dumps({'_user_id': str(uid), '_fresh': True})
+with app.app_context():
+    identity = db.session.get(User, uid).get_id()
+old_session = old.session_interface.get_signing_serializer(old).dumps({'_user_id': identity, '_fresh': True})
 client = app.test_client()
 client.set_cookie('session', old_session, domain='fixture.example.invalid')
 assert client.get('/dashboard', base_url='https://fixture.example.invalid').status_code == 200
 with old.app_context():
-    old_remember = encode_cookie(str(uid))
+    old_remember = encode_cookie(identity)
 client.delete_cookie('session', domain='fixture.example.invalid')
 client.set_cookie('remember_token', old_remember, domain='fixture.example.invalid')
 assert client.get('/dashboard', base_url='https://fixture.example.invalid').status_code == 200
