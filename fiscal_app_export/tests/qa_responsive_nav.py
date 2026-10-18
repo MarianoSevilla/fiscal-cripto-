@@ -18,6 +18,7 @@ from urllib.parse import urlsplit
 STATIC = Path(__file__).resolve().parents[1] / "static"
 PAGES = {
     "/": "landing.html",
+    "/exchanges-apple-preview": "exchanges_apple.html",
     "/como-funciona": "como-funciona.html",
     "/faq": "faq.html",
     "/privacidad": "privacidad.html",
@@ -215,5 +216,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 

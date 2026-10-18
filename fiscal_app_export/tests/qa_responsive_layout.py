@@ -16,12 +16,14 @@ from qa_faq_apple import run_faq_apple
 from qa_privacidad_apple import run_privacidad_apple
 from qa_terminos_apple import run_terminos_apple
 from qa_contacto_apple import run_contacto_apple
+from qa_exchanges_apple import run_exchanges_apple
 
 
 def main():
     with server() as origin, sync_playwright() as p:
         browser=p.chromium.launch(headless=True)
         try:
+            run_exchanges_apple(browser,origin)
             run_contacto_apple(browser,origin)
             run_terminos_apple(browser,origin)
             run_privacidad_apple(browser,origin)
@@ -36,6 +38,7 @@ def main():
 
 if __name__=='__main__':
     main()
+
 
 
 
