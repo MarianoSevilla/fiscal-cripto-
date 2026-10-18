@@ -32,6 +32,13 @@ PAGES = {
 WIDTHS = (320, 375, 390, 480, 520, 768, 900, 901, 1024, 1200, 1201, 1280)
 MOBILE_MAX = 1200
 AUTH_PAGES = {
+    '/login': 'login.html',
+    '/login/': 'login.html',
+    '/signup': 'signup.html',
+    '/signup/': 'signup.html',
+    '/recuperar-contrasena': 'forgot-password.html',
+    '/reset-password/synthetic-token': 'reset-password.html',
+    '/verify-email-result': 'verify-email.html',
     '/auth-preview/login': 'login_apple.html',
     '/auth-preview/signup': 'signup_apple.html',
     '/auth-preview/forgot': 'forgot_password_apple.html',

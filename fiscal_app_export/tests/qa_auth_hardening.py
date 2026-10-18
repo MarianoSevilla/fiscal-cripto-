@@ -8,6 +8,11 @@ import app as module
 from app import app,db
 from models import User
 from auth_flow import safe_auth_next
+import re
+from urllib.parse import urlsplit, parse_qs
+
+REAL_VERIFY_EMAIL=module._send_verification_email
+REAL_RESET_EMAIL=module._send_password_reset_email
 
 PASSWORD='A fictional password 2026!'
 
@@ -127,3 +132,57 @@ def test_verification_next_and_no_store():
     assert r.status_code==302 and 'next=%2Fpedir-asesoramiento' in r.location
     assert r.headers['Cache-Control']=='no-store' and r.headers['Referrer-Policy']=='no-referrer'
     assert c.get('/api/me').headers['Cache-Control']=='no-store'
+
+@pytest.mark.parametrize('path,view',[
+    ('/login','login'),('/login/','login'),('/signup','signup'),
+    ('/recuperar-contrasena','forgot'),('/recuperar-contrasena/','forgot'),
+    ('/reset-password/synthetic-token','reset'),('/verify-email-result','verify')])
+def test_production_auth_routes(path,view):
+    r=app.test_client().get(path)
+    assert r.status_code==200
+    assert f'data-auth-view="{view}"' in r.text
+    assert 'data-auth-preview="true"' not in r.text
+    assert 'noindex, nofollow' in r.text
+    assert r.headers['Cache-Control']=='no-store'
+    assert r.headers['Referrer-Policy']=='no-referrer'
+
+def test_complete_registration_verification_login_and_recovery():
+    """Exercise real routes, token builders and mail templates; intercept transport."""
+    outbox=[]
+    c=app.test_client();destination='/pedir-asesoramiento'
+    payload={'full_name':'Persona ficticia','email':'person@example.invalid',
+             'password':PASSWORD,'next':destination}
+    def local_link(mail,path):
+        url=re.search(r'https?://[^\s<>]*'+path+r'[^\s<>]*',mail['text']).group(0)
+        parsed=urlsplit(url)
+        return parsed.path+'?'+parsed.query
+    with patch.object(module,'_send_verification_email',side_effect=REAL_VERIFY_EMAIL), \
+         patch.object(module,'_send_password_reset_email',side_effect=REAL_RESET_EMAIL), \
+         patch.object(module.resend,'api_key','synthetic-not-a-real-key'), \
+         patch.object(module.resend.Emails,'send',side_effect=lambda mail:outbox.append(mail)):
+        assert c.post('/api/register',json=payload).status_code==201
+        assert len(outbox)==1 and outbox[0]['to']==[payload['email']]
+        assert c.get('/api/me').json=={'user':None}
+        verify=local_link(outbox[0],'/verify-email')
+        r=c.get(verify)
+        assert r.status_code==302 and 'status=success' in r.location
+        assert parse_qs(urlsplit(r.location).query)['next']==[destination]
+        assert c.get(r.location).status_code==200
+        assert login(c,next=destination).json['redirect_to']==destination
+        assert c.get('/api/me').json['user']['email']==payload['email']
+        assert c.get('/recuperar-contrasena').status_code==200
+        assert c.post('/api/forgot-password',json={'email':payload['email'],'next':destination}).status_code==200
+        assert len(outbox)==2
+        reset=local_link(outbox[1],'/reset-password/')
+        assert c.get(reset).status_code==200
+        assert parse_qs(urlsplit(reset).query)['next']==[destination]
+        token=urlsplit(reset).path.rsplit('/',1)[-1]
+        new_password='A replacement phrase 2026!'
+        data={'token':token,'password':new_password,'confirm_password':new_password}
+        assert c.post('/api/reset-password',json=data).status_code==200
+        assert c.get('/api/me').json=={'user':None}
+        assert c.post('/api/reset-password',json=data).status_code==400
+        assert login(c).status_code==401
+        assert login(c,new_password,next=destination).json['redirect_to']==destination
+        assert c.post('/api/logout').status_code==200
+        assert c.get('/api/me').json=={'user':None}

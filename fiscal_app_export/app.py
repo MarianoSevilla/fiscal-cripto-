@@ -1772,6 +1772,13 @@ def signup_page():
     return send_from_directory("static", "signup.html")
 
 
+@app.route("/recuperar-contrasena", strict_slashes=False)
+@limiter.exempt
+def forgot_password_page():
+    """Recuperación pública, también disponible con una sesión activa."""
+    return send_from_directory("static", "forgot-password.html")
+
+
 @app.route("/auth/google")
 @limiter.limit("20 per minute")
 def auth_google():

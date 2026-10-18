@@ -1,6 +1,6 @@
-# Acceso, registro y recuperación — preview y correcciones propuestas
+# Acceso, registro y recuperación — diseño aprobado e integración
 
-Base: main e60f49e07aafdd5d7f0e599c9eecaad5a9ed903a. El 18/10/2026 el titular autoriza preparar el preview y las correcciones tras la auditoría. No se autoriza todavía publicar ni fusionar esta propuesta.
+Base: main e60f49e07aafdd5d7f0e599c9eecaad5a9ed903a. El 18/10/2026 el titular aprueba las cinco vistas y autoriza integrarlas en las rutas definitivas y validar el flujo antes de publicar. Producción sigue pendiente de autorización.
 
 ## Diseño
 
@@ -24,9 +24,9 @@ Los tres SVG de criptomonedas proceden de spothq/cryptocurrency-icons (svg/color
 
 ## Aislamiento y publicación posterior
 
-scripts/build_auth_preview.py genera cinco *_apple.html y auth-apple-preview/ con CSS/JS inline y assets del propio origen. El viewer no inicia sesiones, no crea cuentas, no envía formularios ni abre Google: las acciones indican que es una vista previa. El autocompletado de contraseñas se desactiva solo en el viewer. Todos los viewers y variantes son noindex,nofollow. No se sobrescriben los cuatro HTML originales de autenticación.
+scripts/build_auth_preview.py genera las cinco páginas definitivas, sus variantes *_apple.html y auth-apple-preview/ con CSS/JS inline y assets del propio origen. El viewer no inicia sesiones, no crea cuentas, no envía formularios ni abre Google: las acciones indican que es una vista previa. El autocompletado de contraseñas se desactiva solo en el viewer. Todas las páginas de autenticación y viewers son noindex,nofollow.
 
-Antes de publicar, trasladar las variantes aprobadas a login.html, signup.html, reset-password.html y verify-email.html, y añadir la ruta /recuperar-contrasena para forgot_password_apple.html. Reejecutar CI y revisión de las cinco vistas y sus errores. Esta PR es borrador, no un artefacto listo para fusionar sin esa promoción. Los HTML antiguos se conservan como referencia; sus problemas de diseño/JS no se consideran publicados ni resueltos en producción por preparar esta rama.
+Promoción preparada: login.html, signup.html, forgot-password.html, reset-password.html y verify-email.html; nueva ruta pública /recuperar-contrasena. La QA de navegador utiliza ahora las rutas definitivas. Se añade una prueba integrada de registro, correo de verificación, acceso, solicitud de recuperación, consumo de token y cierre de sesión usando Flask real, plantillas de correo reales, transporte Resend interceptado y SQLite temporal sin red. CI debe pasar sobre este nuevo commit antes de solicitar publicación. La PR sigue en borrador hasta esa autorización.
 
 ## Validación y límites
 

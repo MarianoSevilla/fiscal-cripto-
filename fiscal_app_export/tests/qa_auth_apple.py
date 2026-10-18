@@ -26,7 +26,9 @@ def context(browser,width=390,js=True,reply=None):
 
 def open_page(ctx,origin,view,query=''):
     p=ctx.new_page();errors=[];p.on('pageerror',lambda e:errors.append(str(e)))
-    assert p.goto(origin+'/auth-preview/'+view+query,wait_until='networkidle').status==200
+    paths={'login':'/login','signup':'/signup','forgot':'/recuperar-contrasena',
+           'reset':'/reset-password/synthetic-token','verify':'/verify-email-result'}
+    assert p.goto(origin+paths[view]+query,wait_until='networkidle').status==200
     return p,errors
 
 def credentials(page):

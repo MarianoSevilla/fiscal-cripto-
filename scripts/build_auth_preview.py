@@ -1,7 +1,4 @@
-"""Build isolated auth variants and a provider-free review viewer.
-
-Does not overwrite login.html, signup.html, reset-password.html or verify-email.html.
-"""
+"""Build approved production auth pages and a provider-free review viewer."""
 from pathlib import Path
 import re
 
@@ -64,8 +61,11 @@ def make(view):
 <footer class="auth-footer"><p>© 2026 Mariano Sevilla</p><nav aria-label="Información legal"><a href="/privacidad">Privacidad</a><a href="/terminos">Términos</a><a href="/cookies">Cookies</a><a href="/aviso-legal">Aviso legal</a><a href="/contacto">Ayuda</a></nav></footer></body></html>'''
 
 if __name__=='__main__':
+    production={'login':'login.html','signup':'signup.html','forgot':'forgot-password.html',
+                'reset':'reset-password.html','verify':'verify-email.html'}
     for view,(filename,slug,*_) in PAGES.items():
         html=make(view);(STATIC/filename).write_text(html)
+        (STATIC/production[view]).write_text(html)
         viewer=html.replace(f'data-auth-view="{view}"',f'data-auth-view="{view}" data-auth-preview="true"')
         for css in ['landing_apple.css','auth_apple.css']:
             viewer=viewer.replace(f'<link rel="stylesheet" href="/static/{css}">','<style>'+(STATIC/css).read_text()+'</style>')
@@ -86,4 +86,4 @@ if __name__=='__main__':
         viewer=viewer.replace('autocomplete="current-password"','autocomplete="off"').replace('autocomplete="new-password"','autocomplete="off"')
         dest=OUT/slug;dest.mkdir(parents=True,exist_ok=True);(dest/'index.html').write_text(viewer)
     (OUT/'index.html').write_text((OUT/'login/index.html').read_text())
-    print('Built 5 isolated auth templates and viewers; production HTML untouched.')
+    print('Built 5 approved production auth pages and isolated viewers.')
