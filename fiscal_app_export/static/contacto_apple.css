@@ -1,0 +1,63 @@
+/* Contact-only layout; the approved shared assets remain unchanged. */
+.apple-home.apple-contact .contact-intro .apple-intro-inner{display:block;padding-block:40px;}
+.apple-home.apple-contact .contact-intro h1{width:100%;max-width:none;margin:0 0 20px;font-size:clamp(2.25rem,4.8vw,3.75rem);line-height:1.08;letter-spacing:-.045em;font-weight:650;}
+.apple-home.apple-contact .contact-intro h1 span{color:var(--intro-accent);}
+.apple-home.apple-contact .contact-intro .apple-eyebrow{color:var(--intro-accent);}
+.apple-home.apple-contact .contact-intro p{max-width:none;margin:0;color:var(--intro-muted);font-size:clamp(1.0625rem,1.5vw,1.25rem);line-height:1.65;}
+.apple-home.apple-contact .contact-section{padding-block:40px;}
+.apple-home.apple-contact .contact-layout{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:32px;align-items:start;}
+.apple-home.apple-contact .contact-form-card{min-width:0;padding:28px;border:1px solid #d8e1dd;border-radius:16px;background:#fff;}
+.apple-home.apple-contact .contact-form-card h2{margin:0 0 8px;font-size:1.5rem;line-height:1.3;letter-spacing:-.035em;font-weight:650;}
+.apple-home.apple-contact .contact-form-note{margin:0 0 24px;color:var(--muted);font-size:.9375rem;}
+.apple-home.apple-contact .contact-fields{min-width:0;margin:0;padding:0;border:0;}
+.apple-home.apple-contact .contact-field{display:flex;flex-direction:column;gap:8px;margin-bottom:20px;min-width:0;}
+.apple-home.apple-contact .contact-field label{font-size:1rem;font-weight:600;}
+.apple-home.apple-contact .contact-field :is(input,select,textarea){width:100%;min-width:0;min-height:48px;padding:11px 14px;border:1px solid #66766e;border-radius:8px;background:#fff;color:var(--text);font:400 1rem/1.5 var(--font-body);}
+.apple-home.apple-contact .contact-field textarea{min-height:160px;resize:vertical;}
+.apple-home.apple-contact .contact-field :is(input,select,textarea):focus-visible{outline:3px solid #005fcc;outline-offset:3px;border-color:#005fcc;}
+.apple-home.apple-contact .contact-field [aria-invalid=true]{border:2px solid #a32222;}
+.apple-home.apple-contact .contact-hint,.apple-home.apple-contact .contact-counter{color:var(--muted);font-size:.875rem;line-height:1.6;margin:0;}
+.apple-home.apple-contact .contact-counter{text-align:right;font-variant-numeric:tabular-nums;}
+.apple-home.apple-contact .contact-error{color:#a32222;font-size:.9375rem;line-height:1.6;margin:0;}
+.apple-home.apple-contact .contact-summary{margin-bottom:24px;padding:16px;border:1px solid #a32222;border-radius:12px;background:#fff6f5;scroll-margin-top:24px;}
+.apple-home.apple-contact .contact-summary p{margin:0 0 8px;font-weight:650;}
+.apple-home.apple-contact .contact-summary ul{padding-left:20px;margin:0;}
+.apple-home.apple-contact .contact-summary a{color:#8b1b1b;}
+.apple-home.apple-contact .contact-privacy{margin:4px 0 20px;padding-top:20px;border-top:1px solid #d8e1dd;font-size:.875rem;line-height:1.7;color:var(--muted);}
+.apple-home.apple-contact .contact-privacy p{margin:0 0 10px;}
+.apple-home.apple-contact .contact-check{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;}
+.apple-home.apple-contact .contact-check input{flex:0 0 auto;width:20px;height:20px;margin-top:3px;accent-color:var(--accent);}
+.apple-home.apple-contact .contact-check label{font-size:.9375rem;line-height:1.6;}
+.apple-home.apple-contact .contact-security{margin:0 0 20px;}
+.apple-home.apple-contact .contact-security:empty{display:none;}
+.apple-home.apple-contact .contact-security>div{max-width:100%;}
+.apple-home.apple-contact .contact-security-retry{min-height:44px;margin-top:8px;border:0;padding:8px 0;color:var(--accent);background:transparent;text-decoration:underline;font:600 .9375rem/1.5 var(--font-body);cursor:pointer;}
+.apple-home.apple-contact .contact-submit{width:100%;}
+.apple-home.apple-contact .contact-submit:disabled{background:#51635c;color:#fff;cursor:wait;}
+.apple-home.apple-contact .contact-status{margin-top:16px;padding:16px;border:1px solid #8db7a4;border-radius:12px;background:#edf5f0;color:#254d3e;scroll-margin-top:24px;}
+.apple-home.apple-contact .contact-fallback{margin:20px 0 0;font-size:.9375rem;color:var(--muted);overflow-wrap:anywhere;}
+.apple-home.apple-contact .contact-aside{display:grid;gap:24px;min-width:0;}
+.apple-home.apple-contact main .contact-advice{padding:var(--catalog-card-padding);}
+.apple-home.apple-contact .contact-advice>p{margin:0 0 16px;color:var(--muted);font-size:.9375rem;line-height:1.65;}
+.apple-home.apple-contact .contact-advice>h2{margin:0 0 16px;font-size:1.5rem;line-height:1.3;letter-spacing:-.035em;font-weight:650;}
+.apple-home.apple-contact .contact-advice>a{display:inline-flex;align-items:center;min-height:44px;margin-top:auto;font-size:.9375rem;font-weight:600;}
+.apple-home.apple-contact .contact-tips{padding-inline:4px;}
+.apple-home.apple-contact .contact-tips h2{font-size:1.125rem;line-height:1.4;letter-spacing:-.02em;margin:0 0 12px;}
+.apple-home.apple-contact .contact-tips p{font-size:.9375rem;line-height:1.7;color:var(--muted);margin:0 0 16px;}
+.apple-home.apple-contact .contact-tips a{display:inline-flex;align-items:center;min-height:44px;}
+.apple-home.apple-contact .contact-hp{display:none;}
+.apple-home.apple-contact [hidden]{display:none!important;}
+@media(max-width:1200px){
+ .apple-home.apple-contact .contact-intro .apple-intro-inner{padding-block:32px;}
+ .apple-home.apple-contact .contact-section{padding-block:32px;}
+ .apple-home.apple-contact .contact-layout{grid-template-columns:minmax(0,1fr);gap:24px;}
+ .apple-home.apple-contact .contact-aside{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;}
+}
+@media(max-width:640px){
+ .apple-home.apple-contact .contact-intro .apple-intro-inner{padding-block:28px;}
+ .apple-home.apple-contact .contact-section{padding-block:24px;}
+ .apple-home.apple-contact .contact-layout,.apple-home.apple-contact .contact-aside{grid-template-columns:minmax(0,1fr);gap:24px;}
+ .apple-home.apple-contact .contact-form-card{padding:20px;}
+ .apple-home.apple-contact .contact-form-note{margin-bottom:20px;}
+ .apple-home.apple-contact .contact-field{margin-bottom:20px;}
+}

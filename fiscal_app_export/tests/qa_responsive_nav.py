@@ -21,6 +21,7 @@ PAGES = {
     "/como-funciona": "como-funciona.html",
     "/faq": "faq.html",
     "/privacidad": "privacidad.html",
+    "/contacto": "contacto.html",
     "/terminos": "terminos.html",
     "/herramientas": "herramientas.html",
 }
@@ -214,4 +215,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 

@@ -265,8 +265,11 @@ def main():
     with real_flask() as (app, identities, origin):
         backend = check_back_end(app,identities)
         browser = check_browsers(app,identities,origin)
+        from qa_contacto_integration import check_contacto
+        check_contacto(app,origin)
     print(f"Flask real: {backend} HTTP/API checks PASS; {browser} browser checks PASS")
 
 
 if __name__ == "__main__":
     main()
+

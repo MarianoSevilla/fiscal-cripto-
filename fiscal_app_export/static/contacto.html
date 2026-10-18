@@ -1,154 +1,12 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Contacto · Soporte y consultas fiscales crypto | Mariano Sevilla</title>
-<meta name="description" content="¿Tienes alguna pregunta sobre la herramienta fiscal para criptomonedas? Escríbenos y te respondemos lo antes posible.">
-<meta name="robots" content="index, follow">
-<link rel="canonical" href="https://marianosevilla.com/contacto">
-
-<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
-<link rel="icon" href="/static/favicon.ico">
-<link rel="manifest" href="/static/site.webmanifest">
-
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/nav.css">
-<link rel="preload" href="/static/nav.js" as="script">
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-
-<style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --bg:          #0b1220;
-  --bg2:         #101829;
-  --surface:     #141f32;
-  --surface2:    #1a2540;
-  --border:      rgba(255,255,255,0.07);
-  --border2:     rgba(255,255,255,0.13);
-  --text:        #eef2ff;
-  --muted:       #7a8aa8;
-  --accent:      #00C896;
-  --accent-dim:  rgba(0,200,150,0.12);
-  --accent-glow: rgba(0,200,150,0.25);
-  --error:       #e24b4a;
-  --footer-bg:   #070e1a;
-  --max-w:       1280px;
-  --pad-x:       3rem;
-  --font-display:'Syne', sans-serif;
-  --font-body:   'DM Sans', sans-serif;
-}
-
-html { scroll-behavior: smooth; }
-body {
-  background: var(--bg); color: var(--text);
-  font-family: var(--font-body); font-size: 16px; line-height: 1.7;
-  min-height: 100vh; -webkit-font-smoothing: antialiased;
-  display: flex; flex-direction: column;
-}
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
-
-
-.page-kicker {
-  font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
-  text-transform: uppercase; color: var(--accent);
-  margin-bottom: 1rem; display: block;
-}
-.page-hero {
-  max-width: var(--max-w); margin: 0 auto;
-  padding: 6rem var(--pad-x) 2.5rem;
-}
-.page-hero h1 {
-  font-family: var(--font-display); font-size: clamp(2rem, 4.5vw, 3.4rem);
-  font-weight: 800; line-height: 1.08; letter-spacing: -0.03em; margin-bottom: 1.25rem;
-}
-.page-hero p { color: var(--muted); font-size: 1.05rem; }
-
-.form-wrap {
-  max-width: var(--max-w); margin: 0 auto;
-  padding: 0 var(--pad-x) 4rem;
-}
-.form-card {
-  max-width: 680px; margin: 0 auto;
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 16px; padding: 2.5rem;
-}
-.hp-field { display: none; }
-.field { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1.25rem; }
-.field label { font-size: 14px; font-weight: 500; color: var(--text); }
-.req { color: var(--accent); margin-left: 2px; }
-.field input, .field textarea, .field select {
-  background: var(--bg2); border: 1px solid var(--border2);
-  border-radius: 8px; padding: 10px 14px;
-  color: var(--text); font-family: var(--font-body); font-size: 15px;
-  outline: none; transition: border-color 0.15s;
-}
-.field input:focus, .field textarea:focus, .field select:focus { border-color: var(--accent); }
-.field input.invalid, .field textarea.invalid, .field select.invalid { border-color: var(--error); }
-.field textarea { resize: vertical; min-height: 140px; }
-.field select {
-  cursor: pointer; appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a8aa8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px;
-}
-.char-count { font-size: 12px; color: var(--muted); text-align: right; margin-top: 3px; }
-.char-count.over { color: var(--error); }
-
-.field-check { display: flex; align-items: flex-start; gap: 0.6rem; margin-bottom: 1.5rem; }
-.field-check input[type="checkbox"] { margin-top: 4px; accent-color: var(--accent); flex-shrink: 0; }
-.field-check label { font-size: 13px; color: var(--muted); }
-.field-check a { color: var(--accent); }
-
-.btn-submit {
-  width: 100%; background: var(--accent); color: #0a0a0a;
-  border: none; border-radius: 8px; padding: 13px 24px;
-  font-family: var(--font-display); font-size: 15px; font-weight: 700;
-  cursor: pointer; transition: opacity 0.15s;
-}
-.btn-submit:hover { opacity: 0.88; }
-.btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.form-msg { margin-top: 1rem; font-size: 14px; padding: 12px 16px; border-radius: 8px; display: none; }
-.form-msg.success { background: rgba(0,200,150,0.1); color: var(--accent); border: 1px solid rgba(0,200,150,0.25); }
-.form-msg.error { background: rgba(226,75,74,0.1); color: #e24b4a; border: 1px solid rgba(226,75,74,0.25); }
-
-.page-footer { background: var(--footer-bg); border-top: 1px solid var(--border); padding: 2rem 0; margin-top: auto; }
-.footer-inner { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x); display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
-.footer-copy { font-size: 13px; color: var(--muted); }
-.footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
-.footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; }
-.footer-links a:hover { color: var(--text); }
-
-@media (max-width: 640px) {
-  .page-hero { padding: 6rem 1.25rem 2rem; }
-  .form-wrap { padding: 0 1.25rem 3rem; }
-  .form-card { padding: 1.75rem 1.25rem; }
-}
-</style>
-
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "ContactPage",
-  "@id": "https://marianosevilla.com/contacto",
-  "url": "https://marianosevilla.com/contacto",
-  "name": "Contacto · Soporte y consultas fiscales crypto — Mariano Sevilla",
-  "description": "¿Tienes alguna pregunta sobre la herramienta fiscal para criptomonedas? Escríbenos y te respondemos lo antes posible.",
-  "inLanguage": "es",
-  "isPartOf": { "@id": "https://marianosevilla.com/#website" }
-}
-</script>
-</head>
-<body>
-
-<!-- ── NAV ── -->
-<nav id="site-nav">
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contacto y soporte de herramientas fiscales | Mariano Sevilla</title>
+<meta name="description" content="Contacta con Mariano Sevilla para resolver dudas sobre las herramientas, los informes FIFO o una incidencia. Accede también a la solicitud de asesoramiento fiscal.">
+<meta name="robots" content="index, follow"><link rel="canonical" href="https://marianosevilla.com/contacto"><link rel="icon" href="/static/favicon.ico">
+<link rel="stylesheet" href="/static/nav.css"><link rel="stylesheet" href="/static/landing_apple.css"><link rel="stylesheet" href="/static/contacto_apple.css">
+<script src="/static/landing_apple.js" defer></script><script src="/static/contacto_apple.js" defer></script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "ContactPage", "@id": "https://marianosevilla.com/contacto", "url": "https://marianosevilla.com/contacto", "name": "Contacto y soporte de herramientas fiscales | Mariano Sevilla", "description": "Contacta con Mariano Sevilla para resolver dudas sobre las herramientas, los informes FIFO o una incidencia. Accede también a la solicitud de asesoramiento fiscal.", "inLanguage": "es", "isPartOf": {"@id": "https://marianosevilla.com/#website"}}</script></head><body class="apple-home apple-contact">
+<a class="apple-skip" href="#contenido">Saltar al contenido</a>
+<nav id="site-nav" aria-label="Principal">
   <div class="snav-inner">
     <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
     <ul class="snav-links">
@@ -156,7 +14,7 @@ a:hover { text-decoration: underline; }
       <li><a href="/como-funciona">Cómo funciona</a></li>
       <li><a href="/recursos">Recursos</a></li>
       <li><a href="/faq">FAQ</a></li>
-      <li><a href="/contacto">Contacto</a></li>
+      <li><a href="/contacto" aria-current="page">Contacto</a></li>
     </ul>
     <div class="snav-right">
       <div class="snav-skeleton" aria-hidden="true"></div>
@@ -164,175 +22,118 @@ a:hover { text-decoration: underline; }
   </div>
 </nav>
 <script src="/static/nav.js"></script>
-
-<!-- ── HERO ── -->
-<div class="page-hero">
-  <span class="page-kicker">Contacto</span>
-  <h1>¿En qué podemos ayudarte?</h1>
-  <p>Responderemos lo antes posible. Para dudas rápidas, consulta antes las <a href="/faq">preguntas frecuentes</a>.</p>
+<noscript>
+<style>
+/* Native mobile disclosure: useful in HTML viewers without JavaScript too. */
+.apple-home .snav-right{display:none}
+.apple-home .apple-noscript-menu{display:none}
+@media (min-width:1201px){
+  .apple-home #site-nav{position:static;height:auto}
+  .apple-home .snav-inner{flex-wrap:wrap;padding-block:16px;gap:16px}
+  .apple-home .snav-links{display:flex;position:static;transform:none;flex-wrap:wrap;gap:12px}
+  .apple-home .apple-intro-inner{padding-top:48px}
+}
+@media (max-width:1200px){
+  .apple-home .apple-noscript-access{display:none}
+  .apple-home .apple-noscript-menu{display:block;position:absolute;top:8px;right:var(--apple-pad);z-index:1001}
+  .apple-home .apple-noscript-menu>summary{display:flex;align-items:center;justify-content:center;width:44px;height:44px;list-style:none;border:1px solid #d8e1dd;border-radius:9px;background:#f3f6f5;color:var(--text);cursor:pointer}
+  .apple-home .apple-noscript-menu>summary::-webkit-details-marker{display:none}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon{background:transparent}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::before{transform:translateY(6px) rotate(45deg)}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::after{transform:translateY(-6px) rotate(-45deg)}
+  .apple-home .apple-noscript-panel{position:absolute;top:56px;left:auto;right:calc(-1 * var(--apple-pad));width:100vw;display:flex;flex-direction:column;gap:4px;padding:12px var(--apple-pad) 18px;max-height:calc(100vh - 64px);max-height:calc(100dvh - 64px);overflow-y:auto;overscroll-behavior:contain;background:#fff;border-top:1px solid var(--border);box-shadow:0 14px 28px rgba(20,34,30,.1)}
+  .apple-home .apple-noscript-panel>a{display:flex;align-items:center;min-height:44px;padding:11px 14px;border-radius:8px;color:var(--muted);font-size:.9375rem;line-height:1.4;text-decoration:none}
+  .apple-home .apple-noscript-panel>a:hover{background:#f1f5f3;color:var(--text)}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary{justify-content:center;min-height:48px;border-radius:999px;background:var(--accent);color:#fff;font-weight:600}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary:hover{background:#00533f}
+  .apple-home .apple-noscript-menu .snav-menu-icon{width:19px}
+  .apple-home #site-nav .snav-logo{max-width:calc(100% - 60px)}
+}
+</style>
+<details class="apple-noscript-menu">
+  <summary><span class="snav-menu-icon" aria-hidden="true"></span><span class="apple-sr-only">Menú principal</span></summary>
+  <nav class="apple-noscript-panel" aria-label="Navegación móvil">
+    <a href="/herramientas">Herramientas</a>
+    <a href="/como-funciona">Cómo funciona</a>
+    <a href="/recursos">Recursos</a>
+    <a href="/faq">FAQ</a>
+    <a href="/contacto" aria-current="page">Contacto</a>
+    <a href="/login/">Iniciar sesión</a>
+    <a href="/signup/" class="snav-mobile-link-primary">Crear cuenta</a>
+  </nav>
+</details>
+<div class="apple-noscript-access"><a href="/login/">Iniciar sesión</a><a href="/signup/">Crear cuenta</a></div>
+</noscript>
+<main id="contenido" tabindex="-1">
+<section class="apple-intro contact-intro" aria-labelledby="contactTitle"><div class="apple-intro-inner">
+<span class="apple-eyebrow">Contacto</span><h1 id="contactTitle">Hablemos de <span>tu consulta.</span></h1>
+<p>¿Tienes una duda sobre las herramientas o un problema con tu informe? Cuéntanos qué ocurre para que podamos ayudarte.</p>
+</div></section>
+<section class="contact-section" aria-label="Consulta y ayuda"><div class="apple-container contact-layout">
+<div class="contact-form-card">
+<h2>Envíanos tu mensaje.</h2><p class="contact-form-note">Te responderemos por email lo antes posible. Todos los campos son obligatorios.</p>
+<p id="contactBootNotice" class="contact-status">Para utilizar el formulario necesitas JavaScript. También puedes escribir a <a href="mailto:colab.marianosevilla@gmail.com">colab.marianosevilla@gmail.com</a>.</p>
+<form id="contactForm" method="post" action="#" novalidate data-contact-mode="live" data-sitekey="0x4AAAAAADMDe-GwKKsISHHb">
+<div id="contactErrors" class="contact-summary" role="alert" tabindex="-1" hidden><p>Revisa tu mensaje</p><ul id="contactErrorList"></ul></div>
+<fieldset id="contactFields" class="contact-fields" disabled><legend class="apple-sr-only">Datos de tu consulta</legend>
+<div class="contact-hp" aria-hidden="true"><input type="text" name="website" tabindex="-1" autocomplete="off" aria-label="Dejar vacío"></div>
+<div class="contact-field"><label for="nombre">Nombre</label><input id="nombre" name="nombre" type="text" required maxlength="80" autocomplete="name" aria-describedby="nombreError"><p id="nombreError" class="contact-error" hidden></p></div>
+<div class="contact-field"><label for="email">Email</label><input id="email" name="email" type="email" required maxlength="254" autocomplete="email" spellcheck="false" autocapitalize="none" aria-describedby="emailHint emailError"><p id="emailHint" class="contact-hint">La dirección donde quieres recibir nuestra respuesta.</p><p id="emailError" class="contact-error" hidden></p></div>
+<div class="contact-field"><label for="tipo">Tipo de consulta</label><select id="tipo" name="tipo_consulta" required aria-describedby="contactAdviceHint tipoError">
+<option value="" selected disabled>Selecciona una opción</option><option value="soporte_tecnico">Soporte técnico</option><option value="informe_fifo">Informe FIFO</option><option value="asistencia_fiscal">Asistencia fiscal</option><option value="error_csv">Error en CSV</option><option value="colaboraciones">Colaboraciones</option><option value="otro">Otra consulta</option></select>
+<p id="contactAdviceHint" class="contact-hint" hidden>Si buscas una revisión profesional de tu caso, puedes <a href="/pedir-asesoramiento">solicitar asesoramiento fiscal</a>. Este formulario sigue disponible para tus preguntas generales.</p><p id="tipoError" class="contact-error" hidden></p></div>
+<div class="contact-field"><label for="mensaje">Mensaje</label><textarea id="mensaje" name="mensaje" required minlength="20" maxlength="3000" aria-describedby="mensajeHint mensajeError contactCounter"></textarea>
+<p id="mensajeHint" class="contact-hint">Entre 20 y 3000 caracteres. Si hay un error, indica la herramienta, el exchange y el ejercicio. No incluyas contraseñas, claves privadas ni documentación fiscal completa.</p><p id="contactCounter" class="contact-counter"><span id="contactCount">0</span> / 3000 caracteres</p><p id="mensajeError" class="contact-error" hidden></p></div>
+<div class="contact-privacy" id="contactPrivacy"><p><strong>Protección de datos.</strong> Mariano Sevilla Trujillo utilizará tus datos para gestionar y responder a tu consulta. La base es la gestión del servicio solicitado y, cuando corresponda, medidas precontractuales a tu petición.</p>
+<p>Intervienen proveedores de alojamiento, correo y seguridad según el canal utilizado. Puedes solicitar acceso, rectificación, supresión y otros derechos en <a href="mailto:colab.marianosevilla@gmail.com">colab.marianosevilla@gmail.com</a>. Consulta los destinatarios, la conservación y la información completa en <a href="/privacidad">Privacidad</a>.</p><p>Enviar una consulta no te suscribe a comunicaciones promocionales.</p></div>
+<div class="contact-check"><input type="checkbox" id="legal" name="legal" required aria-describedby="legalError"><label for="legal">He leído la información sobre <a href="/privacidad">protección de datos</a>.</label></div><p id="legalError" class="contact-error" hidden></p>
+</fieldset>
+<div id="contactSecurity" class="contact-security" hidden><div id="contactTurnstile"></div><p id="contactSecurityNote" class="contact-hint" role="status" aria-live="polite"></p><button id="contactSecurityRetry" class="contact-security-retry" type="button" hidden>Volver a verificar</button></div>
+<button id="contactSubmit" class="apple-button contact-submit" type="submit" disabled>Enviar mensaje</button>
+<p id="contactStatus" class="contact-status" role="status" aria-live="polite" tabindex="-1" hidden></p>
+</form>
+<p class="contact-fallback">¿Prefieres escribir directamente? <a href="mailto:colab.marianosevilla@gmail.com">colab.marianosevilla@gmail.com</a></p>
 </div>
-
-<!-- ── FORM ── -->
-<div class="form-wrap">
-  <div class="form-card">
-    <form id="contactForm" novalidate>
-
-      <!-- honeypot -->
-      <div class="hp-field" aria-hidden="true">
-        <input type="text" name="website" tabindex="-1" autocomplete="off">
+<aside class="contact-aside" aria-label="Otras formas de ayudarte">
+<div class="apple-catalog-card contact-advice"><h2>¿Necesitas asesoramiento fiscal?</h2><p>Solicita una valoración de tu caso a Rafael Ramos, economista colegiado. El servicio profesional se contrata directamente con él.</p><a href="/pedir-asesoramiento">Solicitar asesoramiento fiscal <span aria-hidden="true">→</span></a></div>
+<div class="contact-tips"><h2>Para ayudarte mejor.</h2><p>Describe qué estabas haciendo y qué mensaje de error aparece. No es necesario enviar tu archivo completo para explicar una incidencia.</p><p>Si contratas el servicio profesional, la documentación se entrega a Rafa por el canal acordado con él.</p><a href="/faq">Consultar preguntas frecuentes <span aria-hidden="true">→</span></a></div>
+</aside></div></section></main><footer class="apple-footer">
+  <div class="apple-container">
+    <div class="apple-footer-top">
+      <div class="apple-footer-brand">
+        <a href="/" class="apple-footer-logo">mariano<span>sevilla</span>.com</a>
+        <p>Informes FIFO de criptomonedas.</p>
       </div>
-
-      <div class="field">
-        <label for="nombre">Nombre<span class="req">*</span></label>
-        <input type="text" id="nombre" name="nombre" maxlength="80" placeholder="Tu nombre" autocomplete="name" required>
+      <nav aria-labelledby="apple-footer-explore">
+        <h2 id="apple-footer-explore">Explorar</h2>
+        <ul>
+          <li><a href="/herramientas">Herramientas</a></li>
+          <li><a href="/como-funciona">Cómo funciona</a></li>
+          <li><a href="/exchanges">Exchanges compatibles</a></li>
+        </ul>
+      </nav>
+      <nav aria-labelledby="apple-footer-help">
+        <h2 id="apple-footer-help">Ayuda</h2>
+        <ul>
+          <li><a href="/faq">Preguntas frecuentes</a></li>
+          <li><a href="/contacto" aria-current="page">Contacto</a></li>
+          <li><a href="/about">Equipo</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="apple-footer-legal">
+      <p class="apple-footer-disclaimer">Herramienta de generación de informes FIFO para usuarios con criptomonedas. No constituye asesoramiento fiscal ni legal.</p>
+      <div class="apple-footer-bottom">
+        <p class="apple-footer-copyright">© <span class="apple-footer-year">2026</span> Mariano Sevilla</p>
+        <nav aria-label="Información legal">
+          <ul>
+            <li><a href="/privacidad">Privacidad</a></li>
+            <li><a href="/terminos">Términos</a></li>
+            <li><a href="/cookies">Cookies</a></li>
+            <li><a href="/aviso-legal">Aviso legal</a></li>
+          </ul>
+        </nav>
       </div>
-
-      <div class="field">
-        <label for="email">Email<span class="req">*</span></label>
-        <input type="email" id="email" name="email" maxlength="254" placeholder="tu@email.com" autocomplete="email" required>
-      </div>
-
-      <div class="field">
-        <label for="tipo">Tipo de consulta<span class="req">*</span></label>
-        <select id="tipo" name="tipo_consulta" required>
-          <option value="" disabled selected>Selecciona una opción</option>
-          <option value="soporte_tecnico">Soporte técnico</option>
-          <option value="informe_fifo">Informe FIFO</option>
-          <option value="asistencia_fiscal">Asistencia fiscal</option>
-          <option value="error_csv">Error en CSV</option>
-          <option value="colaboraciones">Colaboraciones</option>
-          <option value="otro">Otro</option>
-        </select>
-      </div>
-
-      <div class="field">
-        <label for="mensaje">Mensaje<span class="req">*</span></label>
-        <textarea id="mensaje" name="mensaje" maxlength="3000" placeholder="Describe tu consulta con el mayor detalle posible..." required></textarea>
-        <div class="char-count"><span id="charCount">0</span> / 3000</div>
-      </div>
-
-      <!-- Cloudflare Turnstile -->
-      <div class="cf-turnstile" data-sitekey="0x4AAAAAADMDe-GwKKsISHHb" data-theme="dark" data-size="flexible" style="margin-bottom:1.5rem;"></div>
-
-      <div class="field-check">
-        <input type="checkbox" id="legal" name="legal" required>
-        <label for="legal">
-          He leído y acepto la <a href="/privacidad" target="_blank">Política de Privacidad</a>.
-          Entiendo que mis datos se usarán únicamente para responder a mi consulta.
-        </label>
-      </div>
-
-      <button type="submit" class="btn-submit" id="submitBtn">Enviar mensaje</button>
-
-      <div class="form-msg success" id="msgSuccess">
-        ✓ Mensaje enviado correctamente. Te responderemos lo antes posible.
-      </div>
-      <div class="form-msg error" id="msgError">
-        No se ha podido enviar el formulario. Inténtalo de nuevo.
-      </div>
-
-    </form>
-  </div>
-</div>
-
-<!-- ── FOOTER ── -->
-<footer class="page-footer">
-  <div class="footer-inner">
-    <span class="footer-copy">© 2025 marianosevilla.com — No constituye asesoramiento fiscal ni legal.</span>
-    <div class="footer-links">
-      <a href="/privacidad">Privacidad</a>
-      <a href="/terminos">Términos</a>
-      <a href="/cookies">Cookies</a>
-      <a href="/aviso-legal">Aviso legal</a>
-      <a href="/faq">FAQ</a>
     </div>
   </div>
-</footer>
-
-<script>
-// char counter
-const msg = document.getElementById('mensaje');
-const cc  = document.getElementById('charCount');
-msg.addEventListener('input', () => {
-  const n = msg.value.length;
-  cc.textContent = n;
-  cc.parentElement.classList.toggle('over', n > 3000);
-});
-
-// Si el usuario selecciona "Asistencia fiscal", redirigir al formulario dedicado
-document.getElementById('tipo').addEventListener('change', function () {
-  if (this.value === 'asistencia_fiscal') {
-    window.location.href = '/pedir-asesoramiento';
-  }
-});
-
-// form submit
-document.getElementById('contactForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const form     = e.target;
-  const btn      = document.getElementById('submitBtn');
-  const msgOk    = document.getElementById('msgSuccess');
-  const msgErr   = document.getElementById('msgError');
-
-  // hide previous messages
-  msgOk.style.display = 'none';
-  msgErr.style.display = 'none';
-
-  // basic client-side validation
-  let valid = true;
-  ['nombre','email','tipo','mensaje'].forEach(id => {
-    const el = document.getElementById(id) || form.querySelector(`[name="${id}"]`);
-    if (!el) return;
-    if (!el.value.trim()) { el.classList.add('invalid'); valid = false; }
-    else el.classList.remove('invalid');
-  });
-  if (!document.getElementById('legal').checked) { valid = false; }
-  if (!valid) {
-    msgErr.textContent = 'Por favor, completa todos los campos obligatorios.';
-    msgErr.style.display = 'block';
-    return;
-  }
-
-  btn.disabled = true;
-  btn.textContent = 'Enviando…';
-
-  // get Turnstile token
-  const tsToken = document.querySelector('[name="cf-turnstile-response"]')?.value || '';
-
-  const payload = {
-    nombre:        form.nombre.value.trim(),
-    email:         form.email.value.trim(),
-    tipo_consulta: form.tipo_consulta.value,
-    mensaje:       form.mensaje.value.trim(),
-    website:       form.website.value,     // honeypot
-    ts_token:      tsToken,
-  };
-
-  try {
-    const res = await fetch('/api/contacto', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
-    if (res.ok && data.ok) {
-      msgOk.style.display = 'block';
-      form.reset();
-      cc.textContent = '0';
-    } else {
-      msgErr.textContent = data.error || 'No se ha podido enviar el formulario. Inténtalo de nuevo.';
-      msgErr.style.display = 'block';
-    }
-  } catch {
-    msgErr.textContent = 'Error de conexión. Inténtalo de nuevo.';
-    msgErr.style.display = 'block';
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Enviar mensaje';
-  }
-});
-</script>
-
-</body>
-</html>
+</footer></body></html>
