@@ -959,12 +959,7 @@ function updateFormState() {
   } else {
     btnSubmit.disabled = !(exchange && selectedFile);
     const labelAnalizar = esMEXC ? 'Analizar XLSX' : 'Analizar CSV';
-    btnSubmit.innerHTML = `
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-           stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-      </svg>
-      ${labelAnalizar}`;
+    btnSubmit.textContent = labelAnalizar;
   }
 }
 
@@ -1014,7 +1009,7 @@ function showError(msg) {
   panelForm.style.display    = '';
   const old = btnSubmit.innerHTML;
   btnSubmit.style.background = 'var(--red)';
-  btnSubmit.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> ${escHtml(msg)}`;
+  btnSubmit.innerHTML = escHtml(msg);
   setTimeout(() => { btnSubmit.style.background = ''; btnSubmit.innerHTML = old; }, 4500);
 }
 
@@ -1399,22 +1394,22 @@ function updateXMLButton(data) {
     // Completar form activo — deshabilitado hasta rellenar
     btnXml.disabled         = true;
     btnXml.style.background = '';
-    btnXml.innerHTML        = `${_svgDownload()} Preparar y descargar XML`;
+    btnXml.textContent      = 'Preparar y descargar XML';
   } else if (data.xml && pendiente.xml_es_borrador) {
     // XML ya generado, borrador
     btnXml.disabled         = false;
     btnXml.style.background = 'var(--amber)';
-    btnXml.innerHTML        = `${_svgDownload()} Descargar XML (borrador)`;
+    btnXml.textContent      = 'Descargar XML (borrador)';
   } else if (data.xml) {
     // XML ya generado, listo
     btnXml.disabled         = false;
     btnXml.style.background = 'var(--accent)';
-    btnXml.innerHTML        = `${_svgDownload()} Descargar XML`;
+    btnXml.textContent      = 'Descargar XML';
   } else {
     // Sin XML todavía pero sin completar obligatorio (ej. solo custodio pendiente)
     btnXml.disabled         = false;
     btnXml.style.background = pendiente.xml_es_borrador ? 'var(--amber)' : 'var(--accent)';
-    btnXml.innerHTML        = `${_svgDownload()} ${pendiente.xml_es_borrador ? 'Preparar XML (borrador)' : 'Preparar XML'}`;
+    btnXml.textContent      = pendiente.xml_es_borrador ? 'Preparar XML (borrador)' : 'Preparar XML';
   }
 }
 
@@ -1466,12 +1461,7 @@ document.getElementById('btn-xml').addEventListener('click', async function hand
   const btnXml  = document.getElementById('btn-xml');
   const origHtml = btnXml.innerHTML;
   btnXml.disabled = true;
-  btnXml.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-    style="animation:spin .7s linear infinite">
-    <circle cx="12" cy="12" r="10" opacity=".3"/>
-    <path d="M12 2a10 10 0 0 1 10 10"/>
-  </svg> Generando XML…`;
+  btnXml.textContent = 'Generando XML…';
 
   // Ocultar error anterior
   const errEl = document.getElementById('xml-error-msg');
@@ -1519,8 +1509,7 @@ document.getElementById('btn-xml').addEventListener('click', async function hand
     lastAnalysisData = { ...data, xml: result.xml };
     btnXml.disabled  = false;
     btnXml.style.background = result.es_borrador ? 'var(--amber)' : 'var(--accent)';
-    btnXml.innerHTML = _svgDownload() +
-      (result.es_borrador ? ' Descargar XML (borrador)' : ' Descargar XML');
+    btnXml.textContent = result.es_borrador ? 'Descargar XML (borrador)' : 'Descargar XML';
 
   } catch (err) {
     showXMLError('Error de red. Comprueba tu conexión e inténtalo de nuevo.');
