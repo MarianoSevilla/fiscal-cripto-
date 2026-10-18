@@ -65,8 +65,9 @@ def run_contacto_apple(browser,origin):
             assert page.locator('#snavMobileMenu a[href="/herramientas"]').is_visible()
             page.keyboard.press('Escape')
             assert page.locator('#snavMenuToggle').get_attribute('aria-expanded')=='false'
-        fill(page);page.locator('#tipo').select_option('asistencia_fiscal')
-        assert page.url==origin+'/static/contacto-apple-test.html'
+        fill(page);before_selection=page.url
+        page.locator('#tipo').select_option('asistencia_fiscal')
+        assert page.url==before_selection
         assert page.locator('#nombre').input_value()=='Persona ficticia'
         assert page.locator('#contactAdviceHint').is_visible()
         page.locator('#tipo').select_option('otro')
