@@ -815,6 +815,11 @@ def auth_request_boundary():
                 'current_password', 'new_password', 'next'):
         if key in data and (not isinstance(data[key], str) or len(data[key]) > 2048):
             return jsonify({'error': 'Revisa los datos del formulario.'}), 400
+        if key in data:
+            try:
+                data[key].encode('utf-8')
+            except UnicodeEncodeError:
+                return jsonify({'error': 'Revisa los datos del formulario.'}), 400
     if 'remember' in data and not isinstance(data['remember'], bool):
         return jsonify({'error': 'Revisa los datos del formulario.'}), 400
 
@@ -873,12 +878,18 @@ def redirect_trailing_slash():
 # ── SECURITY HEADERS ──────────────────────────
 @app.after_request
 def set_security_headers(response):
+    if (request.path in AUTH_POST_PATHS or request.path.rstrip('/') in
+            {'/api/me', '/login', '/signup', '/verify-email', '/verify-email-result', '/recuperar-contrasena'}
+            or request.path.startswith('/reset-password/')):
+        response.headers['Cache-Control'] = 'no-store'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Referrer-Policy'] = 'no-referrer'
     response.headers["X-Frame-Options"]                   = "DENY"
     response.headers["X-Content-Type-Options"]             = "nosniff"
     # X-XSS-Protection: 0 — desactiva el auditor XSS del navegador (deprecated y
     # con bugs conocidos). La protección real la provee la CSP de abajo.
     response.headers["X-XSS-Protection"]                  = "0"
-    response.headers["Referrer-Policy"]                    = "strict-origin-when-cross-origin"
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers["Cross-Origin-Opener-Policy"]         = "same-origin"
     response.headers["Cross-Origin-Resource-Policy"]       = "same-origin"
     response.headers["Content-Security-Policy"] = (

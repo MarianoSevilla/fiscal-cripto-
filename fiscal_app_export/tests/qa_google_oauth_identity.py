@@ -99,6 +99,19 @@ def test_linked_sub_login_preserves_data_and_privileges(client):
     assert after == before
 
 
+@pytest.mark.parametrize('destination,expected',[
+    ('/pedir-asesoramiento','/pedir-asesoramiento'),
+    ('//example.invalid','/dashboard'),
+])
+def test_callback_preserves_only_internal_destination(client,destination,expected):
+    obj=user()
+    with client.session_transaction() as sess:
+        sess['auth_next']=destination
+    response=callback(client,token(obj.email))
+    assert response.location==expected
+    assert client.get('/api/me').json['user']['email']==obj.email
+
+
 def test_same_email_different_sub_rejected_unchanged(client):
     obj = user()
     before = snapshot(obj)

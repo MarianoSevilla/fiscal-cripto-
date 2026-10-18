@@ -46,9 +46,11 @@ class User(UserMixin, db.Model):
         """Verifica la contraseña contra el hash almacenado. Devuelve False en cuentas OAuth sin password."""
         if not self.password_hash:
             return False
-        if not isinstance(plaintext, str) or len(plaintext.encode('utf-8')) > 72:
+        if not isinstance(plaintext, str):
             return False
         try:
+            if len(plaintext.encode('utf-8')) > 72:
+                return False
             return bcrypt.check_password_hash(self.password_hash, plaintext)
         except (ValueError, TypeError):
             return False

@@ -3,6 +3,7 @@ from datetime import datetime,timedelta
 import hashlib
 from unittest.mock import patch
 import pytest
+from flask.testing import FlaskClient
 import app as module
 from app import app,db
 from models import User
@@ -10,10 +11,19 @@ from auth_flow import safe_auth_next
 
 PASSWORD='A fictional password 2026!'
 
+class FreshRequestClient(FlaskClient):
+    def open(self,*args,**kwargs):
+        # The DB fixture holds an outer app context. Flask-Login caches its user
+        # on g, so each simulated HTTP request needs its own app context, as in
+        # the real WSGI server; otherwise clients incorrectly share cached users.
+        with self.application.app_context():
+            return super().open(*args,**kwargs)
+
 @pytest.fixture(autouse=True)
 def isolate():
     assert app.config['SQLALCHEMY_DATABASE_URI'].startswith('sqlite:///')
     app.config.update(TESTING=True,RATELIMIT_ENABLED=False,SESSION_COOKIE_SECURE=False)
+    app.test_client_class=FreshRequestClient
     with app.app_context():
         db.create_all()
         with patch.object(module,'_send_verification_email',return_value=True), patch.object(module,'_send_password_reset_email',return_value=True):
@@ -95,7 +105,7 @@ def test_valid_unicode_and_oversized_login_do_not_crash():
     assert login(c,'á'*20).status_code==200
     assert login(app.test_client(),'á'*40).status_code==401
 
-@pytest.mark.parametrize('payload',[[],{'email':[]},{'password':{}},{'remember':'true'}])
+@pytest.mark.parametrize('payload',[[],{'email':[]},{'password':{}},{'remember':'true'},{'password':'\ud800'}])
 def test_malformed_payload_is_400(payload):
     assert app.test_client().post('/api/login',json=payload).status_code==400
 
@@ -109,3 +119,11 @@ def test_api_destination_is_sanitized():
     person();c=app.test_client()
     assert login(c,next='//example.invalid').json['redirect_to']=='/dashboard'
     assert login(c,next='/pedir-asesoramiento').json['redirect_to']=='/pedir-asesoramiento'
+
+def test_verification_next_and_no_store():
+    u=person(False);c=app.test_client()
+    token=module._generate_verification_token(u.email)
+    r=c.get('/verify-email',query_string={'token':token,'next':'/pedir-asesoramiento'})
+    assert r.status_code==302 and 'next=%2Fpedir-asesoramiento' in r.location
+    assert r.headers['Cache-Control']=='no-store' and r.headers['Referrer-Policy']=='no-referrer'
+    assert c.get('/api/me').headers['Cache-Control']=='no-store'
