@@ -272,7 +272,14 @@ class ClasificadorUphold:
             s = str(val).strip()
             if not s or s.lower() in ("nan", "-", ""):
                 return 0.0
-            return float(s)
+            number = float(s)
+            if not math.isfinite(number):
+                raise ValueError("Datos fiscales no seguros: Uphold contiene importe no finito.")
+            return number
+        except ValueError as exc:
+            if str(exc).startswith("Datos fiscales no seguros:"):
+                raise
+            return 0.0
         except Exception:
             return 0.0
 
