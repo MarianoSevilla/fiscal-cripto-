@@ -796,7 +796,7 @@
     <!-- Columna izquierda: drop zone + nombre/año -->
     <div class="bar-left">
       <div class="bar-dropzone" id="dropZone">
-        <input type="file" id="csvInput" accept="{% if exchange_id == 'mexc' %}.xlsx,.xls{% elif exchange_id == 'bit2me' and bit2me_excel_enabled %}.csv,.xlsx,.xls{% else %}.csv{% endif %}"{% if exchange_id in ['kucoin', 'bitget'] %} multiple{% endif %}>
+        <input type="file" id="csvInput" accept="{% if exchange_id == 'mexc' %}.xlsx,.xls{% elif exchange_id == 'bit2me' and bit2me_excel_enabled %}.csv,.xlsx,.xls{% else %}.csv{% endif %}"{% if exchange_id in ['kucoin', 'bitget', 'kraken', 'bitvavo', 'coinbase', 'uphold'] %} multiple{% endif %}>
         <span style="font-size:22px;flex-shrink:0;">📂</span>
         {% if exchange_id == 'mexc' %}
         <span class="bar-drop-text" id="dropHint">Arrastra aquí el XLS/XLSX de {{ exchange_name }} o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Solo ficheros .xls / .xlsx</span></span>
@@ -1153,8 +1153,9 @@
   const btnNuevo     = document.getElementById('btnNuevo');
 
   // Flujo MULTIARCHIVO (KuCoin y Bitget comparten el mismo patrón)
-  const MULTI_PAGES   = ['kucoin', 'bitget'];
+  const MULTI_PAGES   = ['kucoin', 'bitget', 'kraken', 'bitvavo', 'coinbase', 'uphold'];
   const isMultiPage   = MULTI_PAGES.includes(EXCHANGE_PAGE);
+  const isDedicatedMultiPage = ['kucoin', 'bitget'].includes(EXCHANGE_PAGE);
   const isKucoinPage  = isMultiPage;   // alias retrocompatible dentro de este script
   const kucoinSummary = document.getElementById('kucoinSummary');
   let   selectedFiles = [];   // multiarchivo: lista de File
@@ -1442,9 +1443,34 @@
         selectedFiles = []; actualizarBoton(); return;
       }
     }
+    if (files.length > 8) {
+      mostrarErrorArchivo('Máximo 8 CSV por análisis.');
+      selectedFiles = []; actualizarBoton(); return;
+    }
+    if (files.reduce((sum, f) => sum + f.size, 0) >= 14 * 1024 * 1024) {
+      mostrarErrorArchivo('Los CSV juntos superan el tamaño permitido por petición. Selecciona un conjunto menor.');
+      selectedFiles = []; actualizarBoton(); return;
+    }
     selectedFiles = files;
     fileName.textContent = files.length === 1 ? files[0].name : `${files.length} ficheros`;
     showFile();
+
+    if (!isDedicatedMultiPage) {
+      _fetchingAños = true;
+      actualizarBoton();
+      Promise.all(files.map(extractYearsFromCSV)).then(yearSets => {
+        detectedYears = [...new Set(yearSets.flat())].sort((a, b) => a - b);
+        renderYearChips(detectedYears);
+        _fetchingAños = false;
+        actualizarBoton();
+      }).catch(() => {
+        detectedYears = [];
+        renderYearChips([]);
+        _fetchingAños = false;
+        actualizarBoton();
+      });
+      return;
+    }
 
     // Detección de años + resumen vía backend (multiarchivo).
     _fetchingAños = true;
@@ -1993,13 +2019,13 @@
     const formData = new FormData();
     formData.append('nombre', sanitizarTexto(document.getElementById('nombre').value.trim()));
     formData.append('ejercicio', sanitizarTexto(ejercicioVal));
-    const endpoint = isMultiPage ? ('/api/' + EXCHANGE_PAGE + '/analizar') : '/api/analizar';
+    const endpoint = isDedicatedMultiPage ? ('/api/' + EXCHANGE_PAGE + '/analizar') : '/api/analizar';
     if (isMultiPage) {
       selectedFiles.forEach(f => formData.append('csv', f));
     } else {
       formData.append('csv', selectedFile);
-      formData.append('exchange', selectedExchange);
     }
+    if (!isDedicatedMultiPage) formData.append('exchange', selectedExchange);
 
     try {
       const res  = await fetch(endpoint, { method: 'POST', body: formData, credentials: 'include' });
