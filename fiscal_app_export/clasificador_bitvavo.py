@@ -314,7 +314,20 @@ class ClasificadorBitvavo:
         elif tipo in TIPOS_RENDIMIENTO:
             activo       = moneda
             cantidad_abs = abs(raw_amount)
-            valor_eur    = round(cantidad_abs * quote_price, 4) if quote_price else 0.0
+            # The income base must be denominated in EUR, not any quote coin.
+            # A non-valued reward must not silently become a zero-cost lot.
+            quote_currency = str(fila.get("Quote Currency", "")).strip().upper()
+            if quote_currency != "EUR" or not (quote_price > 0):
+                raise ValueError(
+                    "Datos fiscales no seguros: rendimiento Bitvavo sin "
+                    "valoración positiva y verificable en EUR."
+                )
+            valor_eur    = round(cantidad_abs * quote_price, 4)
+            if not (cantidad_abs > 0 and valor_eur > 0):
+                raise ValueError(
+                    "Datos fiscales no seguros: rendimiento Bitvavo con "
+                    "cantidad o valoración EUR inválida."
+                )
             self.rendimientos.append(OperacionRendimiento(
                 fecha=fecha, subtipo=tipo,
                 activo=activo, cantidad=cantidad_abs,
