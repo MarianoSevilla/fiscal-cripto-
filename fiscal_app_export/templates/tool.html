@@ -1432,7 +1432,11 @@
 
   function actualizarBoton() {
     const archivoOk   = isKucoinPage ? selectedFiles.length > 0 : !!selectedFile;
-    const ejercicioOk = !_fetchingAños && (!detectedYears.length || selectedYears.length > 0);
+    const ejercicioOk = !_fetchingAños && (
+      (isMultiPage && !isDedicatedMultiPage)
+        ? (detectedYears.length > 0 && selectedYears.length > 0)
+        : (!detectedYears.length || selectedYears.length > 0)
+    );
     btnAnalizar.disabled = !(archivoOk && ejercicioOk);
   }
 
@@ -1506,21 +1510,37 @@
     showFile();
 
     if (!isDedicatedMultiPage) {
+      // Years must be parsed with the actual exchange's timezone/column contract.
+      // Regex scanning can silently select "all" and issue a multi-year PDF.
       _fetchingAños = true;
+      yearChipsWrap.style.display = 'none';
+      yearNodetect.textContent = 'Identificando ejercicios…';
+      yearNodetect.style.display = 'block';
       actualizarBoton();
-      Promise.all(files.map(f => extractYearsFromCSV(f, true))).then(yearSets => {
-        if (version !== selectionVersion) return;
-        detectedYears = [...new Set(yearSets.flat())].sort((a, b) => a - b);
-        renderYearChips(detectedYears);
-        _fetchingAños = false;
-        actualizarBoton();
-      }).catch(() => {
-        if (version !== selectionVersion) return;
-        detectedYears = [];
-        renderYearChips([]);
-        _fetchingAños = false;
-        actualizarBoton();
-      });
+      const form = new FormData();
+      form.append('exchange', EXCHANGE_PAGE);
+      files.forEach(file => form.append('csv', file));
+      fetch('/api/fifo/anos', { method: 'POST', body: form, credentials: 'include' })
+        .then(async response => {
+          const result = await response.json();
+          if (!response.ok || !result.ok) throw new Error(result.error || 'No se pudo identificar el ejercicio.');
+          return result;
+        })
+        .then(result => {
+          if (version !== selectionVersion) return;
+          detectedYears = result.anos || [];
+          renderYearChips(detectedYears);
+          _fetchingAños = false;
+          actualizarBoton();
+        })
+        .catch(error => {
+          if (version !== selectionVersion) return;
+          _fetchingAños = false;
+          detectedYears = [];
+          renderYearChips([]);
+          mostrarErrorApi(error.message || 'No se pudo identificar el ejercicio.');
+          actualizarBoton();
+        });
       return;
     }
 
