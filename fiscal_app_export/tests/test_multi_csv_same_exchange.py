@@ -9,6 +9,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from multi_csv_same_exchange import ID_COLUMNS, MultiCsvUserError, merge_csv_same_exchange
 from clasificador_bitvavo import ClasificadorBitvavo
 from motor_fifo import MotorFIFO
+from app import procesar_bitvavo, FiscalImportError
 
 BITVAVO = ['Timezone','Date','Time','Type','Currency','Amount','Quote Currency','Quote Price',
            'Received / Paid Currency','Received / Paid Amount','Fee currency','Fee amount',
@@ -154,8 +155,12 @@ class MultiCsvTests(unittest.TestCase):
         original[1][2] = original[0][2]
         later = self.create('later.csv', BITVAVO, [original[1]])
         earlier = self.create('earlier.csv', BITVAVO, [original[0], original[2]])
-        with self.assertRaisesRegex(MultiCsvUserError, 'misma hora'):
-            self.merge('bitvavo', [later, earlier])
+        full = self.create('full.csv', BITVAVO, original)
+        self.merge('bitvavo', [later, earlier])
+        with self.assertRaisesRegex(FiscalImportError, 'orden'):
+            procesar_bitvavo(full)
+        with self.assertRaisesRegex(FiscalImportError, 'orden'):
+            procesar_bitvavo(str(self.dir / 'combined.csv'))
 
     def test_bitvavo_non_comma_and_latin1(self):
         special = [x[:] for x in B_ROWS]
