@@ -1497,11 +1497,12 @@ def _error_amigable(e: Exception) -> str:
 
 def _motor_a_json(motor) -> tuple:
     """Convierte el resultado del motor FIFO a formato JSON para la UI."""
+    motor.validar_integridad()
     resumen = motor.resumen_fiscal()
     posicion = [
         {
             "activo": p.activo,
-            "cantidad": round(p.cantidad_total, 6),
+            "cantidad": float(f"{p.cantidad_total:.15g}"),
             "precio_medio": round(p.precio_medio, 4),
             "coste_total": round(p.coste_total, 4),
         }
@@ -1512,7 +1513,7 @@ def _motor_a_json(motor) -> tuple:
             "fecha": r.fecha.strftime("%Y-%m-%d"),
             "tipo": r.tipo_operacion,
             "activo": r.activo,
-            "cantidad": round(r.cantidad_vendida, 6),
+            "cantidad": float(f"{r.cantidad_vendida:.15g}"),
             "transmision": round(r.precio_transmision, 4),
             "coste_fifo": round(r.precio_coste, 4),
             "ganancia_perdida": round(r.ganancia_perdida, 4),
@@ -1530,6 +1531,9 @@ def _rendimientos_a_json(rendimientos: list) -> list:
     from collections import defaultdict
     por_tipo = defaultdict(lambda: {"cantidad": 0.0, "operaciones": 0, "valor_eur": 0.0})
     for r in rendimientos:
+        for field in (r.cantidad, getattr(r, "valor_eur", 0.0)):
+            if not math.isfinite(float(field)):
+                raise ValueError("Datos fiscales no seguros: rendimiento no finito.")
         key = (r.subtipo, r.activo)          # ← agrupamos por tipo Y activo
         por_tipo[key]["cantidad"] += r.cantidad
         por_tipo[key]["operaciones"] += 1
@@ -1538,7 +1542,7 @@ def _rendimientos_a_json(rendimientos: list) -> list:
         {
             "subtipo": k[0],
             "activo": k[1],
-            "cantidad": round(v["cantidad"], 6),
+            "cantidad": float(f"{v['cantidad']:.15g}"),
             "operaciones": v["operaciones"],
             "valor_eur": round(v["valor_eur"], 4),
         }
