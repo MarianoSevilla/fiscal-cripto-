@@ -15,7 +15,7 @@ Formato CSV de Uphold (Transaction History):
 
 import csv
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 # ── CONSTANTES ────────────────────────────────
@@ -241,30 +241,22 @@ class ClasificadorUphold:
 
     @staticmethod
     def _parse_fecha_dt(date_str: str) -> datetime:
-        """Parsea 'Fri Sep 26 2025 23:31:25 GMT+0000' → datetime (UTC)."""
+        """Convert the complete Uphold GMT offset to naive UTC for the FIFO engine."""
         try:
-            # Split: ['Fri', 'Sep', '26', '2025', '23:31:25', 'GMT+0000']
-            parts = date_str.strip().split()
-            if len(parts) >= 6:
-                # Reconstruct without weekday and timezone: 'Sep 26 2025 23:31:25'
-                core = " ".join(parts[1:5])
-                return datetime.strptime(core, "%b %d %Y %H:%M:%S")
-        except Exception:
-            pass
-        return datetime(2000, 1, 1)
+            aware = datetime.strptime(
+                date_str.strip(), "%a %b %d %Y %H:%M:%S GMT%z"
+            )
+            return aware.astimezone(timezone.utc).replace(tzinfo=None)
+        except (ValueError, TypeError) as exc:
+            raise ValueError(
+                "Fecha Uphold no interpretable, incluido su huso horario."
+            ) from exc
 
     @staticmethod
     def _fmt_fecha(date_str: str) -> str:
-        """Convierte 'Fri Sep 26 2025 23:31:25 GMT+0000' → '2025-09-26 23:31:25'."""
-        try:
-            parts = date_str.strip().split()
-            if len(parts) >= 6:
-                core = " ".join(parts[1:5])
-                dt = datetime.strptime(core, "%b %d %Y %H:%M:%S")
-                return dt.strftime("%Y-%m-%d %H:%M:%S")
-        except Exception:
-            pass
-        return date_str[:19] if date_str else ""
+        return ClasificadorUphold._parse_fecha_dt(date_str).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
 
     @staticmethod
     def _float(val) -> float:
