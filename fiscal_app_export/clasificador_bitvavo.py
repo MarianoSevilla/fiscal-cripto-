@@ -211,7 +211,7 @@ class ClasificadorBitvavo:
         # Construir timestamp
         self.df["fecha"] = (
             self.df["Date"].astype(str) + " " +
-            self.df["Time"].astype(str).str.split(".").str[0]  # quitar milisegundos
+            self.df["Time"].astype(str)  # preservar precisión subsegundo para FIFO
         )
 
         # Solo procesar operaciones completadas
@@ -322,8 +322,9 @@ class ClasificadorBitvavo:
                     "Datos fiscales no seguros: rendimiento Bitvavo sin "
                     "valoración positiva y verificable en EUR."
                 )
-            valor_eur    = round(cantidad_abs * quote_price, 4)
-            if not (cantidad_abs > 0 and valor_eur > 0):
+            valor_eur    = cantidad_abs * quote_price
+            if not (math.isfinite(cantidad_abs) and math.isfinite(valor_eur)
+                    and cantidad_abs > 0 and valor_eur > 0):
                 raise ValueError(
                     "Datos fiscales no seguros: rendimiento Bitvavo con "
                     "cantidad o valoración EUR inválida."
