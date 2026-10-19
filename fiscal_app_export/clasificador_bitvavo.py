@@ -362,7 +362,9 @@ class ClasificadorBitvavo:
         """
         try:
             s = str(val).strip()
-            if not s or s.lower() in ("nan", "none"):
+            if s.lower() in ("nan", "inf", "+inf", "-inf", "infinity", "+infinity", "-infinity"):
+                raise ValueError("Datos fiscales no seguros: Bitvavo contiene una cantidad no finita.")
+            if not s or s.lower() == "none":
                 return 0.0
             dot_count = s.count(".")
             comma_count = s.count(",")
