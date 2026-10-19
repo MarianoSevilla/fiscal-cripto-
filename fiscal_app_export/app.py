@@ -2351,7 +2351,7 @@ def api_fifo_anos():
         )
         years = sorted({
             int(str(op.fecha)[:4]) for group in groups for op in group
-            if re.match(r"^20\\d{2}", str(op.fecha))
+            if re.match(r"^20\d{2}", str(op.fecha))
         })
         if not years:
             return jsonify({"ok": False, "error":
