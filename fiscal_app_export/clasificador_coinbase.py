@@ -14,6 +14,7 @@ Formato CSV de Coinbase (Transaction History):
 """
 
 import re
+import math
 import pandas as pd
 from dataclasses import dataclass
 
@@ -152,7 +153,74 @@ class ClasificadorCoinbase:
 
         return self
 
+    @staticmethod
+    def _validate_fiscal_number(value, field: str, *, zero_allowed: bool = False):
+        """A malformed value must never silently become a zero-cost FIFO lot."""
+        raw = str(value).strip().replace("€", "").replace(",", "")
+        if raw.startswith("$") or raw == "" or raw.lower() in ("nan", "none"):
+            raise ValueError(
+                f"Datos fiscales no seguros: importe/cantidad Coinbase sin valor EUR válido ({field})."
+            )
+        try:
+            number = float(raw)
+        except (TypeError, ValueError):
+            raise ValueError(
+                f"Datos fiscales no seguros: número Coinbase no interpretable ({field})."
+            ) from None
+        if not math.isfinite(number) or (number == 0 and not zero_allowed):
+            raise ValueError(
+                f"Datos fiscales no seguros: número Coinbase inválido o no finito ({field})."
+            )
+        return number
+
+    def _validate_fiscal_row(self, fila):
+        kind = str(fila.get("Transaction Type", "")).strip()
+        financial = (
+            "Buy", "Advanced Trade Buy", "Sell", "Advanced Trade Sell", "Convert"
+        )
+        if kind not in financial and kind not in TIPOS_RENDIMIENTO:
+            return
+        currency = str(fila.get("Price Currency", "")).strip().upper()
+        if currency != "EUR":
+            raise ValueError(
+                "Datos fiscales no seguros: Coinbase indica valoración en "
+                f"{currency or 'moneda no identificada'} y no en EUR."
+            )
+        self._validate_fiscal_number(fila.get("Quantity Transacted"), "Quantity Transacted")
+        if kind in ("Buy", "Advanced Trade Buy"):
+            self._validate_fiscal_number(
+                fila.get("Total (inclusive of fees and/or spread)"),
+                "Total (inclusive of fees and/or spread)",
+            )
+        elif kind in ("Sell", "Advanced Trade Sell"):
+            self._validate_fiscal_number(fila.get("Subtotal"), "Subtotal")
+        else:
+            total = fila.get("Total (inclusive of fees and/or spread)")
+            subtotal = fila.get("Subtotal")
+            # Conversions and rewards can quote either subtotal or total;
+            # at least one must be a positive verified finite EUR amount.
+            candidates = (subtotal, total) if kind == "Convert" else (total, subtotal)
+            if not any(
+                self._valid_positive_optional(candidate)
+                for candidate in candidates
+            ):
+                raise ValueError(
+                    "Datos fiscales no seguros: Coinbase no ofrece una "
+                    "valoración EUR positiva para esta operación."
+                )
+        fee = fila.get("Fees and/or Spread", 0)
+        if not pd.isna(fee) and str(fee).strip():
+            self._validate_fiscal_number(fee, "Fees and/or Spread", zero_allowed=True)
+
+    @classmethod
+    def _valid_positive_optional(cls, value):
+        try:
+            return cls._validate_fiscal_number(value, "valoración EUR") > 0
+        except ValueError:
+            return False
+
     def _clasificar_fila(self, fila):
+        self._validate_fiscal_row(fila)
         tipo     = str(fila.get("Transaction Type", "")).strip()
         activo   = str(fila.get("Asset", "")).strip()
         qty      = abs(self._float(fila.get("Quantity Transacted", 0)))
