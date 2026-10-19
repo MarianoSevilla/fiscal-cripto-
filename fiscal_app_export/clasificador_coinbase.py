@@ -143,8 +143,10 @@ class ClasificadorCoinbase:
 
         # Normalizar timestamp
         self.df["Timestamp"] = pd.to_datetime(
-            self.df["Timestamp"], utc=True, errors="coerce"
+            self.df["Timestamp"], utc=True, errors="coerce", format="mixed"
         )
+        if self.df["Timestamp"].isna().any():
+            raise ValueError("El CSV Coinbase contiene una fecha inválida o no interpretable.")
         self.df = self.df.sort_values("Timestamp").reset_index(drop=True)
 
         for _, fila in self.df.iterrows():
