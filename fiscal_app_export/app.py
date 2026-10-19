@@ -1080,10 +1080,10 @@ def _ejercicio_a_fiscal_year(ejercicio_str: str) -> int:
     return 0
 
 
-def _validar_csv(filepath: str, exchange: str) -> tuple[bool, str]:
+def _validar_csv(filepath: str, exchange: str, *, max_bytes: int = MAX_FILE_SIZE_BYTES) -> tuple[bool, str]:
     size = os.path.getsize(filepath)
-    if size > MAX_FILE_SIZE_BYTES:
-        return False, f"El fichero es demasiado grande. Máximo 10 MB."
+    if size > max_bytes:
+        return False, f"El fichero es demasiado grande. Máximo {max_bytes // (1024 * 1024)} MB."
     if size == 0:
         return False, "El fichero está vacío."
 
@@ -2327,7 +2327,10 @@ def analizar():
                 if not valido:
                     return jsonify({"error": error_msg}), 400
             else:
-                valido, error_msg = _validar_csv(tmp_path, exchange)
+                valido, error_msg = _validar_csv(
+                    tmp_path, exchange,
+                    max_bytes=(14 * 1024 * 1024 if len(input_files) > 1 else MAX_FILE_SIZE_BYTES),
+                )
                 if not valido:
                     return jsonify({"error": error_msg}), 400
 
