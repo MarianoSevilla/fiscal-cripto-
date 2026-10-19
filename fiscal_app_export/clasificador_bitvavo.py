@@ -376,7 +376,14 @@ class ClasificadorBitvavo:
                 # Solo coma → decimal europeo → '1018,18'
                 s = s.replace(",", ".")
             # Si solo hay un punto → decimal estándar inglés: no modificar
-            return float(s)
+            value = float(s)
+            if not math.isfinite(value):
+                raise ValueError("Datos fiscales no seguros: Bitvavo contiene una cantidad o importe no finito.")
+            return value
+        except ValueError as exc:
+            if str(exc).startswith("Datos fiscales no seguros:"):
+                raise
+            return 0.0
         except Exception:
             return 0.0
 
