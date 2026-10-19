@@ -28,7 +28,9 @@ class Model721BitvavoRegression(unittest.TestCase):
             self.assertEqual(len(ops),2,f'Parser trades: {ops!r}; warnings: {motor.advertencias!r}')
             snapshot=motor.posicion_a_fecha(datetime(2024,12,31,23,59,59))
             self.assertEqual({x.activo for x in snapshot},{'BTC','ETH'},
-                             f'Internal lots: {dict(motor.inventario)!r}')
+                             f'Internal lots: {dict(motor.inventario)!r}; '
+                             f'parser operations: {[(x.tipo, x.activo, x.cantidad, x.importe) for x in clasificador.compraventas]!r}; '
+                             f'warnings: {motor.advertencias!r}')
             data=generar_datos_modelo_721(motor,'bitvavo',2024)
             assets={a['activo'] for exchange in data['exchanges'] for a in exchange.get('activos',[])}
             self.assertEqual(assets,{'BTC','ETH'},f'721 exchanges: {data["exchanges"]!r}')
