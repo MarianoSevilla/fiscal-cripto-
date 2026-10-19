@@ -21,6 +21,7 @@ Tipos de transacción:
 - crypto_wallet_swap_* / dust_conversion_* → SWAP (par debit+credit)
 """
 
+import math
 import pandas as pd
 from dataclasses import dataclass
 
@@ -190,35 +191,45 @@ class ClasificadorCryptoCom:
         debits  = self.df[mask_debit].copy()
         credits = self.df[mask_credit].copy()
 
-        for ts, grupo_credit in credits.groupby("Timestamp (UTC)"):
+        # Examine the UNION of timestamp groups. A debit-only row is still a
+        # fiscal disposal and cannot be silently demoted to an unknown event.
+        timestamps = sorted(
+            set(debits["Timestamp (UTC)"]).union(set(credits["Timestamp (UTC)"]))
+        )
+        for ts in timestamps:
+            grupo_credit = credits[credits["Timestamp (UTC)"] == ts]
             grupo_debit = debits[debits["Timestamp (UTC)"] == ts]
-            if grupo_debit.empty:
-                continue
-
-            # Multiple debits / credits sharing an instant cannot be paired
-            # reliably using only the timestamp. The previous loop allocated
-            # the *entire* credit to every debit (artificial supply inflation).
-            if len(grupo_debit) != 1 or len(grupo_credit) != 1:
+            if grupo_debit.empty or grupo_credit.empty:
                 raise ValueError(
-                    "Datos fiscales no seguros: Crypto.com tiene un grupo "
-                    "de permuta con varias patas sin correspondencia verificable."
+                    "Datos fiscales no seguros: Crypto.com contiene patas "
+                    "de permuta sin contraparte; se necesita el historial completo."
                 )
-            recibido       = grupo_credit.iloc[0]
-            cant_recibida  = self._float(recibido["Amount"])
-            activo_recibido = str(recibido["Currency"]).strip()
 
-            for _, debit in grupo_debit.iterrows():
-                cant_entregada = abs(self._float(debit["Amount"]))
-                activo_entregado = str(debit["Currency"]).strip()
-                self.swaps.append(OperacionSwap(
-                    fecha=str(ts),
-                    activo_entregado=activo_entregado,
-                    cantidad_entregada=cant_entregada,
-                    activo_recibido=activo_recibido,
-                    cantidad_recibida=cant_recibida,
-                ))
-                procesadas.add(debit.name)
-
+            delivered = {str(x).strip() for x in grupo_debit["Currency"]}
+            received = {str(x).strip() for x in grupo_credit["Currency"]}
+            if len(delivered) != 1 or len(received) != 1:
+                raise ValueError(
+                    "Datos fiscales no seguros: Crypto.com tiene una permuta "
+                    "de varios activos sin correspondencia verificable."
+                )
+            # Multiple fills for ONE delivered and ONE received asset are
+            # economically aggregateable; do not count each credit repeatedly.
+            qty_debit = sum(abs(self._float(x)) for x in grupo_debit["Amount"])
+            qty_credit = sum(self._float(x) for x in grupo_credit["Amount"])
+            if not (math.isfinite(qty_debit) and math.isfinite(qty_credit)
+                    and qty_debit > 0 and qty_credit > 0):
+                raise ValueError(
+                    "Datos fiscales no seguros: Crypto.com contiene "
+                    "cantidades de permuta inválidas."
+                )
+            self.swaps.append(OperacionSwap(
+                fecha=str(ts),
+                activo_entregado=next(iter(delivered)),
+                cantidad_entregada=qty_debit,
+                activo_recibido=next(iter(received)),
+                cantidad_recibida=qty_credit,
+            ))
+            procesadas.update(grupo_debit.index.tolist())
             procesadas.update(grupo_credit.index.tolist())
 
         return procesadas
