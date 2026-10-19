@@ -2930,6 +2930,8 @@ def analizar_bitget():
                 )
             except Exception:
                 app.logger.exception("[ERROR_TRACKING] unexpected error calling record_processing_error_safe")
+            if isinstance(e, ValueError) and str(e).startswith("Datos fiscales no seguros:"):
+                return jsonify({"error": str(e)}), 422
             return jsonify({"error": _error_amigable(e)}), 500
 
     finally:
