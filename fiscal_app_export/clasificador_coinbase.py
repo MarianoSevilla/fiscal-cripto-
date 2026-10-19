@@ -291,7 +291,7 @@ class ClasificadorCoinbase:
             if hasattr(ts, 'tz_localize'):
                 # pandas Timestamp con timezone → normalizar a naive
                 ts = ts.tz_convert(None)
-            return ts.strftime("%Y-%m-%d %H:%M:%S")
+            return ts.strftime("%Y-%m-%d %H:%M:%S.%f") if ts.microsecond else ts.strftime("%Y-%m-%d %H:%M:%S")
         except Exception:
             return str(ts)[:19]
 
