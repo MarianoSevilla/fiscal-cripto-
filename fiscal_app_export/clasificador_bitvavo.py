@@ -20,6 +20,7 @@ Tipos de operación:
 """
 
 import logging
+import math
 import pandas as pd
 from dataclasses import dataclass
 from typing import Dict, List
@@ -387,7 +388,7 @@ class ClasificadorBitvavo:
             if str(exc).startswith("Datos fiscales no seguros:"):
                 raise
             return 0.0
-        except Exception:
+        except (TypeError, OverflowError):
             return 0.0
 
     def resumen(self) -> dict:
