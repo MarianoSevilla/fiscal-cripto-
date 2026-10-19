@@ -332,7 +332,13 @@ class ClasificadorCryptoCom:
     def _float(val) -> float:
         try:
             v = float(val)
-            return v if v == v else 0.0  # NaN != NaN → devuelve 0.0
+            if not math.isfinite(v):
+                raise ValueError("Datos fiscales no seguros: Crypto.com contiene cantidad o importe no finito.")
+            return v
+        except ValueError as exc:
+            if str(exc).startswith("Datos fiscales no seguros:"):
+                raise
+            return 0.0
         except Exception:
             return 0.0
 
