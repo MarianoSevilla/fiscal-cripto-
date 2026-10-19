@@ -541,10 +541,13 @@ class TestMultiFill:
 
     def test_cantidades_individuales(self, detalles_multi_fill):
         c = ClasificadorBitget(detalles_multi_fill).clasificar()
-        cantidades = sorted(op.cantidad for op in c.compraventas)
-        esperadas  = sorted([133.4718, 18.7671, 21.7611])
-        for got, exp in zip(cantidades, esperadas):
+        # Several fills each have their own fee in the base asset. Each
+        # accepted quantity is NET; net plus fee must reconcile to Amount.
+        brutales = sorted(op.cantidad + op.fee_cantidad for op in c.compraventas)
+        esperadas = sorted([133.4718, 18.7671, 21.7611])
+        for got, exp in zip(brutales, esperadas):
             assert abs(got - exp) < 1e-4
+        assert all(op.cantidad > 0 for op in c.compraventas)
 
     def test_mismo_activo(self, detalles_multi_fill):
         c = ClasificadorBitget(detalles_multi_fill).clasificar()
