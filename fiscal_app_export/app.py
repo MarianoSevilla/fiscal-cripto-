@@ -2577,6 +2577,10 @@ def analizar():
                 motor, rendimientos, clasificador = procesar_nexo(tmp_path)
                 _filtrar_motor_por_ejercicio(motor, ejercicio)
                 rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
+                # Nexo's USD Equivalent is NOT an EUR price. Preserve the
+                # classifier warning in both JSON and PDF; never silently
+                # present the cost-basis fallback as a verified market price.
+                motor.advertencias.extend(clasificador.advertencias)
                 resumen, posicion, operaciones = _motor_a_json(motor)
                 advertencias = motor.advertencias
                 rendimientos_json = _rendimientos_a_json(rendimientos)
