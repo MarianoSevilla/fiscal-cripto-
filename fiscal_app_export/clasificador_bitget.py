@@ -474,6 +474,10 @@ class ClasificadorBitget:
         #   Sell → Fee Coin = USDT       → fee reduce el ingreso neto.
         if tipo == "COMPRA" and fee_coin == base and fee >= amount:
             raise ValueError("Datos fiscales no seguros: comisión Bitget mayor o igual que la cantidad comprada.")
+        if fee and fee_coin not in (base, quote):
+            raise ValueError("Datos fiscales no seguros: comisión Bitget en tercera moneda sin valoración ni salida reconstruible.")
+        if fee < 0:
+            raise ValueError("Datos fiscales no seguros: comisión Bitget negativa.")
         self.compraventas.append(OperacionCompraventa(
             fecha        = fecha,
             tipo         = tipo,
@@ -483,7 +487,7 @@ class ClasificadorBitget:
             # do not reduce the received base units.
             cantidad     = float(amount - fee) if tipo == "COMPRA" and fee_coin == base else float(amount),
             contraparte  = quote,
-            importe      = float(total),
+            importe      = float(total + fee) if tipo == "COMPRA" and fee_coin == quote else float(total),
             fee_activo   = fee_coin if fee_coin else quote,
             fee_cantidad = float(fee),
         ))
@@ -554,13 +558,17 @@ class ClasificadorBitget:
 
         if action == "buy" and fee_coin == coin and fee >= qty:
             raise ValueError("Datos fiscales no seguros: comisión Bitget mayor o igual que la cantidad comprada.")
+        if fee and fee_coin not in (coin, quote):
+            raise ValueError("Datos fiscales no seguros: comisión Bitget en tercera moneda sin valoración ni salida reconstruible.")
+        if fee < 0:
+            raise ValueError("Datos fiscales no seguros: comisión Bitget negativa.")
         self.compraventas.append(OperacionCompraventa(
             fecha        = fecha,
             tipo         = "COMPRA" if action == "buy" else "VENTA",
             activo       = coin,
             cantidad     = float(qty - fee) if action == "buy" and fee_coin == coin else float(qty),
             contraparte  = quote,
-            importe      = float(total),
+            importe      = float(total + fee) if action == "buy" and fee_coin == quote else float(total),
             fee_activo   = fee_coin if fee_coin else quote,
             fee_cantidad = float(fee),
             order_id     = order_id,
@@ -744,6 +752,8 @@ class ClasificadorBitget:
 
         if buy_amt == 0 or sell_amt == 0:
             return
+        if buy_fee >= buy_amt and buy_fee > 0:
+            raise ValueError("Datos fiscales no seguros: comisión Bitget ledger supera el activo recibido.")
 
         if sell_coin in STABLES_USD and buy_coin not in STABLES_USD:
             # COMPRA: cripto ← stablecoin
@@ -752,7 +762,7 @@ class ClasificadorBitget:
                 fecha        = fecha,
                 tipo         = "COMPRA",
                 activo       = buy_coin,
-                cantidad     = float(buy_amt),
+                cantidad     = float(buy_amt - buy_fee),
                 contraparte  = sell_coin,
                 importe      = float(sell_amt),
                 fee_activo   = buy_coin,
@@ -1167,6 +1177,12 @@ class ClasificadorBitgetMulti:
             try:
                 c = ClasificadorBitget(fp).clasificar()
             except ValueError as e:
+                if str(e).startswith("Datos fiscales no seguros:"):
+                    # Never silently omit a file carrying fiscal disposals.
+                    raise BitgetUserError(
+                        "unsafe_fiscal_source",
+                        f"Datos fiscales no seguros: archivo Bitget «{fname}»: {e}",
+                    ) from e
                 self.advertencias.append(f"«{fname}»: {e}")
                 continue
 
@@ -1228,7 +1244,11 @@ class ClasificadorBitgetMulti:
         unicos = []
         for op in ops:
             oid = (getattr(op, "order_id", "") or "").strip()
-            identidad = ("ID", oid) if oid else ("VAL",) + _dedup_key(op)
+            # An order may contain several distinct fills.
+            identidad = ("ID", oid, op.fecha, *_dedup_key(op),
+                         round(op.fee_cantidad, 10), op.fee_activo) if oid else (
+                             "VAL", op.fecha, *_dedup_key(op),
+                             round(op.fee_cantidad, 10), op.fee_activo)
             if identidad in vistos:
                 self._n_dedup_intra += 1
                 continue
