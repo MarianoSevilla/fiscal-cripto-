@@ -472,11 +472,16 @@ class ClasificadorBitget:
         # Fee:
         #   Buy  → Fee Coin = Base Asset → fee reduce la cantidad neta recibida.
         #   Sell → Fee Coin = USDT       → fee reduce el ingreso neto.
+        if tipo == "COMPRA" and fee_coin == base and fee >= amount:
+            raise ValueError("Datos fiscales no seguros: comisión Bitget mayor o igual que la cantidad comprada.")
         self.compraventas.append(OperacionCompraventa(
             fecha        = fecha,
             tipo         = tipo,
             activo       = base,
-            cantidad     = float(amount),
+            # Detalles: Amount is gross executed base quantity. On BUY a
+            # base-asset fee reduces the acquired lot; other fee currencies
+            # do not reduce the received base units.
+            cantidad     = float(amount - fee) if tipo == "COMPRA" and fee_coin == base else float(amount),
             contraparte  = quote,
             importe      = float(total),
             fee_activo   = fee_coin if fee_coin else quote,
@@ -547,11 +552,13 @@ class ClasificadorBitget:
         if quote in STABLES_USD:
             self._tiene_pares_usdt = True
 
+        if action == "buy" and fee_coin == coin and fee >= qty:
+            raise ValueError("Datos fiscales no seguros: comisión Bitget mayor o igual que la cantidad comprada.")
         self.compraventas.append(OperacionCompraventa(
             fecha        = fecha,
             tipo         = "COMPRA" if action == "buy" else "VENTA",
             activo       = coin,
-            cantidad     = float(qty),
+            cantidad     = float(qty - fee) if action == "buy" and fee_coin == coin else float(qty),
             contraparte  = quote,
             importe      = float(total),
             fee_activo   = fee_coin if fee_coin else quote,
