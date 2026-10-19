@@ -160,5 +160,60 @@ class FiscalClosureRound2(unittest.TestCase):
         self.assertEqual(c.swaps[0].cantidad_entregada,1)
         self.assertEqual(c.swaps[0].cantidad_recibida,2)
 
+    def test_f03_bitget_spot_and_ledger_same_net_fill_not_duplicated(self):
+        from clasificador_bitget import OperacionCompraventa
+        def operation(quantity):
+            return OperacionCompraventa(
+                fecha='2023-01-01 10:00:00',tipo='COMPRA',
+                activo='BTC',cantidad=quantity,contraparte='USDT',
+                importe=200,fee_activo='BTC',fee_cantidad=0.02)
+        c=ClasificadorBitgetMulti([])
+        c._cv_por_fuente={'spot_trading':[operation(1.98)],
+                          'transacciones':[operation(1.98)],'detalles':[]}
+        c._consolidar_compraventas()
+        self.assertEqual(len(c.compraventas),1)
+        self.assertEqual(c.compraventas[0].cantidad,1.98)
+
+    def test_f05_cross_exchange_nonfinite_raw_numbers_rejected(self):
+        from clasificador_bitvavo import ClasificadorBitvavo
+        from clasificador_uphold import ClasificadorUphold
+        from clasificador_cryptocom import ClasificadorCryptoCom
+        from clasificador_binance_tx import ClasificadorBinanceTx
+        bitvavo=['UTC','2025-01-01','10:00:00','buy','BTC','Infinity','EUR','100',
+                 'EUR','-100','EUR','0','Completed','b1','']
+        with self.assertRaisesRegex(ValueError,'no seguros'):
+            procesar_bitvavo(self.csv('bv-inf.csv',BITVAVO,[bitvavo]))
+        with self.assertRaisesRegex(ValueError,'no seguros'):
+            ClasificadorUphold._float('Infinity')
+        with self.assertRaisesRegex(ValueError,'no seguros'):
+            ClasificadorCryptoCom._float('Infinity')
+        with self.assertRaisesRegex(ValueError,'no seguros'):
+            ClasificadorBitget._procesar_fila_detalles(
+                self._bitget_stub(), {
+                    'Date':'2023-01-01 10:00:00','Base Asset':'BTC','Quote Asset':'EUR',
+                    'Direction':'BUY','Amount':'Infinity','Total':'200','Fee':'0',
+                    'Fee Coin':'EUR'})
+        # Raw parsed BTC spend cannot survive Binance's numeric preflight.
+        from clasificador_binance_tx import ClasificadorBinanceTx
+        path=self.csv('binance-inf.csv',
+                      ['Tiempo','Cuenta','Operación','Moneda','Cambio','Observación'],
+                      [['2025-01-01 10:00:00','Spot','Transaction Spend',
+                        'BTC','-Infinity','']])
+        with self.assertRaises(ValueError):
+            ClasificadorBinanceTx(path)
+
+    @staticmethod
+    def _bitget_stub():
+        stub=ClasificadorBitget.__new__(ClasificadorBitget)
+        stub.compraventas=[]
+        stub.desconocidas=[]
+        stub._tiene_pares_usdt=False
+        return stub
+
+    def test_f01_tiny_pdf_formatter_not_zero(self):
+        from generador_pdf import _fmt_cantidad
+        self.assertNotEqual(_fmt_cantidad(0.0000004),'0.000000')
+        self.assertIn('0.0000004',_fmt_cantidad(0.0000004))
+
 if __name__ == '__main__':
     unittest.main()
