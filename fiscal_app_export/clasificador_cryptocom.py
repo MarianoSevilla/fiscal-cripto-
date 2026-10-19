@@ -195,6 +195,14 @@ class ClasificadorCryptoCom:
             if grupo_debit.empty:
                 continue
 
+            # Multiple debits / credits sharing an instant cannot be paired
+            # reliably using only the timestamp. The previous loop allocated
+            # the *entire* credit to every debit (artificial supply inflation).
+            if len(grupo_debit) != 1 or len(grupo_credit) != 1:
+                raise ValueError(
+                    "Datos fiscales no seguros: Crypto.com tiene un grupo "
+                    "de permuta con varias patas sin correspondencia verificable."
+                )
             recibido       = grupo_credit.iloc[0]
             cant_recibida  = self._float(recibido["Amount"])
             activo_recibido = str(recibido["Currency"]).strip()
