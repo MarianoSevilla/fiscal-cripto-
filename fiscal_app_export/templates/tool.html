@@ -1286,7 +1286,7 @@
 
   // Detecta años en el CSV exclusivamente desde patrones de fecha (YYYY-MM-DD o YY-MM-DD HH:mm:ss).
   // No escanea todo el texto: los importes como $2039.59 o -2028.29 NO se confunden con años.
-  async function extractYearsFromCSV(file) {
+  async function extractYearsFromCSV(file, readFullFile = false) {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -1297,6 +1297,11 @@
         // Descarta cualquier match cuyo año esté fuera del rango [2009, año actual].
         (text.match(/\b(20(?:0[9]|[12][0-9]|3[0-9]))-\d{2}-\d{2}\b/g) || []).forEach(m => {
           const yr = Number(m.substring(0, 4));
+          if (yr >= 2009 && yr <= currentYear) years.add(yr);
+        });
+        // Uphold: Fri Sep 26 2025 23:31:25 GMT+0000.
+        (text.match(/\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}\s+20\d{2}\b/g) || []).forEach(m => {
+          const yr = Number(m.match(/20\d{2}/)[0]);
           if (yr >= 2009 && yr <= currentYear) years.add(yr);
         });
         // Formato Binance TX: YY-MM-DD HH:mm:ss (ej. 24-04-30 01:44:06 → 2024)
@@ -1311,7 +1316,7 @@
         resolve(result);
       };
       reader.onerror = () => resolve([]);
-      reader.readAsText(file.slice(0, 1024 * 1024), 'utf-8');
+      reader.readAsText(readFullFile ? file : file.slice(0, 1024 * 1024), 'utf-8');
     });
   }
 
@@ -1458,7 +1463,7 @@
     if (!isDedicatedMultiPage) {
       _fetchingAños = true;
       actualizarBoton();
-      Promise.all(files.map(extractYearsFromCSV)).then(yearSets => {
+      Promise.all(files.map(f => extractYearsFromCSV(f, true))).then(yearSets => {
         detectedYears = [...new Set(yearSets.flat())].sort((a, b) => a - b);
         renderYearChips(detectedYears);
         _fetchingAños = false;
