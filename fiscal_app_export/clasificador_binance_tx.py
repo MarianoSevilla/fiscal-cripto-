@@ -19,6 +19,7 @@ Operaciones reconocidas:
 
 import re
 import logging
+import math
 import pandas as pd
 from clasificador import (
     OperacionCompraventa, OperacionSwap,
@@ -163,7 +164,10 @@ class ClasificadorBinanceTx:
         self.df = df
         self.df["Tiempo"] = _parse_tiempo(self.df["Tiempo"])
         self.df = self.df.sort_values("Tiempo").reset_index(drop=True)
-        self.df["Cambio"] = pd.to_numeric(self.df["Cambio"], errors="coerce").fillna(0.0)
+        numeric_change = pd.to_numeric(self.df["Cambio"], errors="coerce")
+        if not numeric_change.map(math.isfinite).all():
+            raise ValueError("Datos fiscales no seguros: Binance contiene cambios numéricos no finitos o inválidos.")
+        self.df["Cambio"] = numeric_change
         if "Observación" not in self.df.columns:
             self.df["Observación"] = ""
 
