@@ -115,7 +115,8 @@ class MotorFIFO:
     def registrar_swap(self, fecha: str,
                         activo_entregado: str, cantidad_entregada: float,
                         activo_recibido: str, cantidad_recibida: float,
-                        nota: str = ""):
+                        nota: str = "",
+                        precio_fmv_eur: Optional[float] = None):
         """
         Un swap es fiscalmente una venta del activo entregado
         y una compra inmediata del activo recibido.
@@ -143,7 +144,10 @@ class MotorFIFO:
             return
 
         # ── Determinar valor EUR del activo entregado ───────────────────────
-        if activo_entregado in self.STABLES or activo_entregado == "EUR":
+        if precio_fmv_eur is not None and precio_fmv_eur > 0:
+            # Explicit valuation from the fiscal classifier outranks cost-basis proxy.
+            valor_eur_entregado = precio_fmv_eur
+        elif activo_entregado in self.STABLES or activo_entregado == "EUR":
             # Stablecoin o fiat: 1 unidad ≈ 1 EUR (aproximación)
             valor_eur_entregado = cantidad_entregada
         else:
