@@ -9,6 +9,7 @@ Formato CSV de Kraken (Ledgers):
 - fee incluido en la fila spend
 """
 
+import math
 import pandas as pd
 from dataclasses import dataclass
 from collections import defaultdict
@@ -90,6 +91,11 @@ class ClasificadorKraken:
     def clasificar(self):
         self.df.columns = [c.strip() for c in self.df.columns]
         self.df["time"] = pd.to_datetime(self.df["time"])
+        for field in ("amount", "fee", "balance"):
+            if field in self.df.columns:
+                numeric = pd.to_numeric(self.df[field], errors="coerce")
+                if not numeric.map(math.isfinite).all():
+                    raise ValueError("Datos fiscales no seguros: Kraken contiene importes no finitos o inválidos.")
         self.df = self.df.sort_values("time").reset_index(drop=True)
         if self.df["type"].astype(str).str.strip().eq("trade").any():
             raise ValueError(
