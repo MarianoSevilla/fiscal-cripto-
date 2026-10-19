@@ -21,6 +21,7 @@ import time
 import json
 import secrets
 import hashlib
+import math
 import tempfile
 import traceback
 import threading
@@ -1140,6 +1141,21 @@ def _pipeline_motor(clasificador) -> MotorFIFO:
         ops.append(("cv", op.fecha, op))
     for op in clasificador.swaps:
         ops.append(("swap", op.fecha, op))
+    # Coinbase and Bitvavo record the received reward only in rendimientos.
+    # A fiscal income entry also creates one acquisition lot at its verified
+    # EUR value. Crypto.com ALREADY adds this lot in its parser: never add
+    # it again or the inventory would double.
+    if isinstance(clasificador, (ClasificadorCoinbase, ClasificadorBitvavo)):
+        for income in clasificador.rendimientos:
+            qty = income.cantidad
+            eur = income.valor_eur
+            if not (math.isfinite(qty) and math.isfinite(eur)
+                    and qty > 0 and eur > 0):
+                raise ValueError(
+                    "Datos fiscales no seguros: rendimiento sin cantidad "
+                    "y valoración EUR positivas; no puede crearse lote FIFO."
+                )
+            ops.append(("reward", income.fecha, income))
     ops.sort(key=lambda x: x[1])
     for tipo, fecha, op in ops:
         if tipo == "cv":
@@ -1163,6 +1179,12 @@ def _pipeline_motor(clasificador) -> MotorFIFO:
                 activo_recibido=op.activo_recibido,
                 cantidad_recibida=op.cantidad_recibida,
                 nota=op.nota
+            )
+        elif tipo == "reward":
+            motor.registrar_compra(
+                fecha=op.fecha, activo=op.activo, cantidad=op.cantidad,
+                importe=op.valor_eur, contraparte="EUR",
+                fee_activo="EUR", fee_cantidad=0.0,
             )
     return motor
 
@@ -2598,6 +2620,8 @@ def analizar():
                 )
             except Exception:
                 app.logger.exception("[ERROR_TRACKING] unexpected error calling record_processing_error_safe")
+            if isinstance(e, ValueError) and str(e).startswith("Datos fiscales no seguros:"):
+                return jsonify({"error": str(e)}), 422
             return jsonify({"error": _error_amigable(e)}), 500
 
     finally:
