@@ -271,7 +271,9 @@ class ClasificadorUphold:
     def _float(val) -> float:
         try:
             s = str(val).strip()
-            if not s or s.lower() in ("nan", "-", ""):
+            if s.lower() in ("nan", "inf", "+inf", "-inf", "infinity", "+infinity", "-infinity"):
+                raise ValueError("Datos fiscales no seguros: Uphold contiene una cantidad no finita.")
+            if not s or s == "-":
                 return 0.0
             number = float(s)
             if not math.isfinite(number):
