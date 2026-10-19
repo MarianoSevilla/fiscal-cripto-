@@ -104,7 +104,8 @@ def _leer_csv_bitvavo(filepath: str) -> pd.DataFrame:
     for enc in _ENCODINGS:
         for sep in _SEPARADORES:
             try:
-                df = pd.read_csv(filepath, sep=sep, encoding=enc, dtype=str)
+                df = pd.read_csv(filepath, sep=sep, encoding=enc, dtype=str,
+                                 keep_default_na=False)
                 df.columns = [c.strip() for c in df.columns]
                 df_norm = _normalizar_columnas(df)
                 missing = [c for c in _COLS_OBLIGATORIAS if c not in df_norm.columns]
