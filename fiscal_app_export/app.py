@@ -1164,7 +1164,8 @@ def _pipeline_motor(clasificador) -> MotorFIFO:
                 cantidad_entregada=op.cantidad_entregada,
                 activo_recibido=op.activo_recibido,
                 cantidad_recibida=op.cantidad_recibida,
-                nota=op.nota
+                nota=op.nota,
+                precio_fmv_eur=getattr(op, "precio_fmv_eur", None),
             )
     return motor
 
@@ -1226,12 +1227,36 @@ def procesar_bitvavo(filepath: str) -> tuple:
     return procesar_con_fifo(ClasificadorBitvavo(filepath).clasificar())
 
 
+class FiscalImportError(ValueError):
+    """Fiscal input is unsupported; never emit an apparently valid zero-result PDF."""
+    category = "unsupported_format"
+    code = "unsupported_fiscal_transactions"
+
+
 def procesar_kraken(filepath: str) -> tuple:
-    return procesar_con_fifo(ClasificadorKraken(filepath).clasificar())
+    clasificador = ClasificadorKraken(filepath).clasificar()
+    if any(str(op.subtipo).split("/")[0] == "trade" for op in clasificador.desconocidas):
+        raise FiscalImportError(
+            "El historial Kraken contiene movimientos 'trade' que esta versión no "
+            "puede calcular de forma fiable. No se ha generado un informe fiscal."
+        )
+    return procesar_con_fifo(clasificador)
 
 
 def procesar_coinbase(filepath: str) -> tuple:
-    return procesar_con_fifo(ClasificadorCoinbase(filepath).clasificar())
+    clasificador = ClasificadorCoinbase(filepath).clasificar()
+    if any(str(op.subtipo) == "Convert" for op in clasificador.desconocidas):
+        raise FiscalImportError(
+            "El historial Coinbase incluye conversiones cuyo detalle no se ha "
+            "podido interpretar. No se ha generado un informe fiscal."
+        )
+    for op in clasificador.swaps:
+        if (getattr(op, "precio_fmv_eur", 0) or 0) <= 0:
+            raise FiscalImportError(
+                "El historial Coinbase contiene una permuta sin valoración EUR "
+                "verificable. No se ha generado un informe fiscal."
+            )
+    return procesar_con_fifo(clasificador)
 
 
 def procesar_nexo(filepath: str) -> tuple:
@@ -2208,6 +2233,8 @@ def analizar():
     uid      = current_user.id
     tmp_path = None
     tmp_csv_paths = []  # additional input files for same-exchange multi-CSV
+    merge_summary = None
+    merge_filenames = []
 
     # ── bloqueo concurrente por usuario ──────────────────────────────────────
     # Aplica a todos los usuarios, incluidos admins (exentos del rate limit,
@@ -2272,8 +2299,9 @@ def analizar():
                 if not (uploaded.filename or "").lower().endswith(".csv"):
                     return jsonify({"error": "Todos los archivos deben ser CSV."}), 400
                 with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as staged:
-                    uploaded.save(staged.name)
                     tmp_csv_paths.append(staged.name)
+                    uploaded.save(staged.name)
+                merge_filenames.append(os.path.basename(uploaded.filename or "")[:100])
                 if os.path.getsize(tmp_csv_paths[-1]) > MAX_FILE_SIZE_BYTES:
                     return jsonify({"error": "Un CSV supera el límite de 10 MB."}), 400
                 valid, reason = _validar_csv(tmp_csv_paths[-1], exchange)
@@ -2282,14 +2310,14 @@ def analizar():
             with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as merged:
                 tmp_path = merged.name
             try:
-                merge_csv_same_exchange(tmp_csv_paths, exchange, tmp_path)
+                merge_summary = merge_csv_same_exchange(tmp_csv_paths, exchange, tmp_path)
             except (MultiCsvUserError, UnicodeError, csv.Error) as exc:
                 return jsonify({"error": str(exc) if isinstance(exc, MultiCsvUserError)
                                 else "No se pudo leer uno de los CSV."}), 400
         else:
             with tempfile.NamedTemporaryFile(suffix=_suffix, delete=False) as tmp:
-                archivo.save(tmp.name)
                 tmp_path = tmp.name
+                archivo.save(tmp.name)
 
         t_start   = time.time()
         csv_rows  = (_contar_filas_xlsx(tmp_path)
@@ -2573,8 +2601,15 @@ def analizar():
                 "rendimientos": rendimientos_json,
                 "advertencias": advertencias,
                 "token": token,
+                "resumen_archivos_multi": (
+                    {"nombres": merge_filenames, **merge_summary}
+                    if merge_summary else None
+                ),
                 "estimacion": bool(_bit2me_excel),   # Excel Bit2Me = informe orientativo
             })
+
+        except FiscalImportError as e:
+            return jsonify({"error": str(e)}), 422
 
         except Exception as e:
             # ── Clasificar el error semánticamente ────────────────────────────
