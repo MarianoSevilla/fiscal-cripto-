@@ -1837,7 +1837,7 @@
       const merge = data.resumen_archivos_multi;
       csvMergeSummary.style.display = merge ? 'block' : 'none';
       csvMergeSummary.textContent = merge
-        ? `CSV combinados: ${(merge.nombres || []).join(', ')}. Filas leídas: ${merge.rows_read}; operaciones únicas: ${merge.rows}; duplicados exactos descartados: ${merge.duplicates_removed}.`
+        ? `CSV combinados: ${(merge.nombres || []).join(', ')}. Filas leídas: ${merge.rows_read}; filas únicas: ${merge.rows}; duplicados exactos descartados: ${merge.duplicates_removed}.`
         : '';
     }
     añoActivo = 'todos';
