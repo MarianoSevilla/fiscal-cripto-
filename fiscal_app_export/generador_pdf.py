@@ -1203,6 +1203,8 @@ def _fmt_cantidad(q: float) -> str:
         return f"{q:,.2f}"
     elif q >= 1:
         return f"{q:,.4f}"
+    elif q != 0 and abs(q) < 0.000001:
+        return f"{q:,.15f}".rstrip("0").rstrip(".")
     else:
         return f"{q:,.6f}"
 
@@ -1348,7 +1350,7 @@ def _tabla_posicion(posiciones, styles):
     for pos in posiciones:
         rows.append([
             Paragraph(_td_safe(pos.activo, 40), styles["td"]),
-            Paragraph(f"{pos.cantidad_total:,.6f}",   styles["td_mono"]),
+            Paragraph(_fmt_cantidad(pos.cantidad_total), styles["td_mono"]),
             Paragraph(f"{pos.precio_medio:,.4f} EUR",  styles["td_mono"]),
             Paragraph(f"{pos.coste_total:,.4f} EUR",   styles["td_mono"]),
         ])
@@ -1396,7 +1398,7 @@ def _tabla_rendimientos(rendimientos: list, styles) -> object:
             Paragraph(_td_safe(activo, 40), styles["td"]),
             Paragraph(_td_safe(subtipo.replace("_", " ").capitalize(), 80), styles["td_muted"]),
             Paragraph(str(datos["ops"]), styles["td_muted_right"]),
-            Paragraph(f"{datos['cantidad']:,.6f}", styles["td_mono"]),
+            Paragraph(_fmt_cantidad(datos['cantidad']), styles["td_mono"]),
         ])
 
     col_w = [28*mm, 60*mm, 28*mm, 52*mm]
