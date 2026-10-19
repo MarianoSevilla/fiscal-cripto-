@@ -196,31 +196,9 @@ def merge_csv_same_exchange(paths: list[str], exchange: str, destination: str) -
 
     # Never let the order in which files were selected choose FIFO lots.
     records.sort(key=lambda record: record[0])
-    last_time = None
-    same_time_assets = {}
-    for dt, native_id, row in records:
-        if dt != last_time:
-            same_time_assets = {}
-            last_time = dt
-        asset = _tie_identity(exchange, header0, row)
-        if not asset:
-            continue
-        if exchange == "kraken":
-            refid = row[header0.index("refid")] if "refid" in header0 else native_id
-            key = (asset, refid)
-            prior = same_time_assets.get(asset)
-            if prior is not None and prior != refid:
-                raise MultiCsvUserError(
-                    "Operaciones Kraken de un mismo activo comparten hora sin orden verificable."
-                )
-            same_time_assets[asset] = refid
-        elif asset in same_time_assets:
-            raise MultiCsvUserError(
-                "Dos operaciones del mismo activo comparten exactamente la misma hora; "
-                "no se puede determinar su orden FIFO de forma segura."
-            )
-        else:
-            same_time_assets[asset] = native_id
+    # Fiscal ambiguity is assessed after each exchange parser has reconstructed
+    # purchases, disposals and BOTH sides of swaps. Raw rows cannot express
+    # those dependencies reliably. The same check covers single-CSV input.
 
     with open(destination, "w", encoding="utf-8", newline="") as stream:
         writer = csv.writer(stream)
