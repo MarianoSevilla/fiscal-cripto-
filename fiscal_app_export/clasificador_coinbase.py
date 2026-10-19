@@ -131,7 +131,9 @@ class ClasificadorCoinbase:
 
     def __init__(self, filepath: str):
         header_row = _detectar_fila_cabecera(filepath)
-        self.df = pd.read_csv(filepath, skiprows=header_row)
+        # Keep blank optional fee cells distinct from the literal "NaN" token.
+        # Otherwise pandas erases the difference before fiscal validation.
+        self.df = pd.read_csv(filepath, skiprows=header_row, keep_default_na=False)
         self.compraventas:  list[OperacionCompraventa] = []
         self.swaps:         list[OperacionSwap]        = []
         self.rendimientos:  list[OperacionRendimiento] = []
