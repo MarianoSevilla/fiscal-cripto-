@@ -69,6 +69,30 @@ class MotorFIFO:
     # Stablecoins — precio referencial 1:1 con su moneda base
     STABLES = {"USDC", "USDT", "BUSD", "FDUSD", "DAI"}
 
+    @staticmethod
+    def _finite(*values):
+        """Reject nonfinite input and derived values before fiscal serialization."""
+        for value in values:
+            try:
+                if not math.isfinite(float(value)):
+                    raise ValueError("Datos fiscales no seguros: cálculo con cantidad o importe no finito.")
+            except (TypeError, OverflowError) as exc:
+                raise ValueError("Datos fiscales no seguros: cantidad o importe no interpretable.") from exc
+
+    def validar_integridad(self):
+        """Final invariant applied before a successful JSON/PDF response."""
+        for lotes in self.inventario.values():
+            for l in lotes:
+                self._finite(l.cantidad_original, l.cantidad_restante,
+                             l.precio_coste_unitario,
+                             l.cantidad_restante * l.precio_coste_unitario)
+        for r in self.resultados:
+            self._finite(r.cantidad_vendida, r.precio_transmision,
+                         r.precio_coste, r.ganancia_perdida)
+            for lote in r.lotes_consumidos:
+                self._finite(lote["cantidad"], lote["precio_unitario"],
+                             lote["coste_parcial"])
+
     def __init__(self):
         # Cola FIFO por activo: {activo: [Lote, ...]} ordenada por fecha
         self.inventario: Dict[str, List[Lote]] = defaultdict(list)
@@ -87,6 +111,7 @@ class MotorFIFO:
         La comisión pagada en el propio activo reduce la cantidad recibida
         pero no el coste → sube el precio unitario.
         """
+        self._finite(cantidad, importe, fee_cantidad)
         dt = self._parsear_fecha(fecha)
 
         # Si la fee se paga en el mismo activo comprado, la cantidad neta es menor
@@ -100,6 +125,7 @@ class MotorFIFO:
         # importe == 0 es válido (ej. dust conversions, airdrops sin valor declarado)
         # → el lote entra al inventario con coste base cero
         precio_unitario = importe / cantidad_neta if cantidad_neta > 0 else 0.0
+        self._finite(precio_unitario)
 
         lote = Lote(
             fecha=dt,
@@ -133,6 +159,9 @@ class MotorFIFO:
         cantidad_recibida`, lo que asignaba las unidades del activo recibido
         como si fueran euros, produciendo costes base absurdos (p.ej. 1 EUR/BTC).
         """
+        self._finite(cantidad_entregada, cantidad_recibida)
+        if cantidad_entregada <= 0 or cantidad_recibida <= 0:
+            raise ValueError("Datos fiscales no seguros: permuta con cantidad no positiva.")
         dt = self._parsear_fecha(fecha)
 
         # Ignorar swaps donde entregado == recibido (movimiento interno)
@@ -159,6 +188,8 @@ class MotorFIFO:
                 )
                 valor_eur_entregado = 0.0
 
+        self._finite(valor_eur_entregado)
+
         # ── 1) Procesar venta del activo entregado ───────────────────────────
         resultado = self._consumir_fifo(
             dt=dt,
@@ -181,6 +212,7 @@ class MotorFIFO:
                 valor_eur_entregado / cantidad_recibida
                 if valor_eur_entregado > 0 else 0.0
             )
+            self._finite(precio_unitario_recibido)
             lote = Lote(
                 fecha=dt,
                 cantidad_original=cantidad_recibida,
@@ -197,6 +229,9 @@ class MotorFIFO:
                          importe: float, contraparte: str,
                          fee_activo: str, fee_cantidad: float):
         """Venta de cripto por stablecoin o fiat."""
+        self._finite(cantidad, importe, fee_cantidad)
+        if cantidad <= 0:
+            raise ValueError("Datos fiscales no seguros: venta con cantidad no positiva.")
         dt = self._parsear_fecha(fecha)
 
         # La fee reduce el precio de transmisión efectivo
@@ -204,6 +239,7 @@ class MotorFIFO:
         if fee_activo == contraparte:
             importe_neto = importe - fee_cantidad
 
+        self._finite(importe_neto)
         resultado = self._consumir_fifo(
             dt=dt,
             activo=activo,
@@ -235,6 +271,7 @@ class MotorFIFO:
             consumir = min(lote.cantidad_restante, pendiente)
             coste += consumir * lote.precio_coste_unitario
             pendiente -= consumir
+        self._finite(coste)
         return coste
 
     def _consumir_fifo(self, dt: datetime, activo: str, cantidad: float,
@@ -244,6 +281,7 @@ class MotorFIFO:
         Consume lotes del inventario en orden FIFO y calcula
         la ganancia o pérdida patrimonial.
         """
+        self._finite(cantidad, precio_transmision)
         cola = self.inventario.get(activo, [])
 
         if not cola:
@@ -265,6 +303,7 @@ class MotorFIFO:
 
             consumir = min(lote.cantidad_restante, cantidad_pendiente)
             coste_lote = consumir * lote.precio_coste_unitario
+            self._finite(consumir, coste_lote)
 
             lotes_consumidos.append({
                 "fecha_compra": lote.fecha.strftime("%Y-%m-%d"),
@@ -293,6 +332,7 @@ class MotorFIFO:
             )
 
         ganancia = precio_transmision - coste_total
+        self._finite(coste_total, ganancia, cantidad_pendiente)
         periodo = (dt - fecha_lote_mas_antiguo).days if fecha_lote_mas_antiguo else 0
 
         return ResultadoFIFO(
@@ -322,6 +362,7 @@ class MotorFIFO:
                 continue
             cantidad = sum(l.cantidad_restante for l in lotes_vivos)
             coste    = sum(l.cantidad_restante * l.precio_coste_unitario for l in lotes_vivos)
+            self._finite(cantidad, coste, coste / cantidad if cantidad > 0 else 0)
             resultado.append(ResumenActivo(
                 activo=activo,
                 cantidad_total=cantidad,
