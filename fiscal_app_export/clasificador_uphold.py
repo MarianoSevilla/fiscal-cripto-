@@ -14,6 +14,7 @@ Formato CSV de Uphold (Transaction History):
 """
 
 import csv
+import math
 from dataclasses import dataclass
 from datetime import datetime
 
