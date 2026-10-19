@@ -145,6 +145,45 @@ class SecondAuditFiscalOracles(unittest.TestCase):
             self.assertEqual(
                 [x.importe for x in clasificador.compraventas[:2]],[300.0,200.0])
 
+    def test_r02_nexo_usd_is_not_a_eur_fmv(self):
+        header=['Transaction','Type','Input Currency','Input Amount',
+                'Output Currency','Output Amount','USD Equivalent',
+                'Fee','Fee Currency','Details','Date / Time (UTC)']
+        rows=[
+            ['b1','Exchange','EUR','-200','BTC','2','$200','-','-',
+             'approved / Exchange','2023-01-01 10:00:00'],
+            ['s1','Exchange','BTC','-1','ETH','10','$500','-','-',
+             'approved / Exchange','2025-01-01 10:00:00'],
+        ]
+        motor,_,clasificador=procesar_nexo(self.csv('nexo.csv',header,rows))
+        self.assertTrue(any('USD' in msg for msg in clasificador.advertencias))
+        self.assertFalse(any(abs(item.precio_transmision-500)<1e-6
+                             for item in motor.resultados),
+                         '500 USD must not become 500 EUR in a fiscal result')
+
+    def test_r07_fiscal_result_uses_actual_uphold_utc_order(self):
+        second_in_real_time=[
+            'Tue Dec 31 2024 23:30:00 GMT+0000','uphold','2','BTC',
+            '','', 'b1','credit-card','200','EUR','completed','in'
+        ]
+        first_in_real_time=[
+            'Wed Jan 01 2025 00:00:00 GMT+0200','uphold','1','BTC',
+            '','', 'b2','credit-card','300','EUR','completed','in'
+        ]
+        sale=[
+            'Fri Jan 03 2025 10:00:00 GMT+0000','bank','500','EUR',
+            '','', 's1','uphold','1','BTC','completed','transfer'
+        ]
+        full=self.csv('uphold-oracle.csv',U,
+                      [second_in_real_time,first_in_real_time,sale])
+        merged=self.combined('uphold',U,
+                             [second_in_real_time,sale],[first_in_real_time])
+        for path in (full,merged):
+            motor,_,_=procesar_uphold(path)
+            self.assertEqual(len(motor.resultados),1)
+            self.assertAlmostEqual(motor.resultados[0].precio_coste,300)
+            self.assertAlmostEqual(motor.resultados[0].ganancia_perdida,200)
+
     def test_r03_backend_years_bitvavo_and_coinbase_timezone(self):
         view = inspect.unwrap(app.view_functions['api_fifo_anos'])
         first=buy_b('b1','2023-01-01','10:00:00',2,100)
