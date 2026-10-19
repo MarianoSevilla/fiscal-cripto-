@@ -856,6 +856,8 @@
     <div class="bar-file-selected" id="fileSelected">
       <span>📄</span><span id="fileName">—</span>
     </div>
+    <ul id="csvFilesList" style="display:none; margin:0.4rem 0; padding-left:1.25rem;" aria-label="Archivos CSV seleccionados"></ul>
+    <div id="csvMergeSummary" style="display:none; font-size:0.85rem; margin:0.5rem 0;" aria-live="polite"></div>
     <button class="bar-btn-nuevo" id="btnNuevo">Nuevo análisis</button>
   </div>
 
@@ -1159,14 +1161,51 @@
   const isKucoinPage  = isMultiPage;   // alias retrocompatible dentro de este script
   const kucoinSummary = document.getElementById('kucoinSummary');
   let   selectedFiles = [];   // multiarchivo: lista de File
+  let   selectionVersion = 0; // invalidate stale async year reads
+  const csvFilesList = document.getElementById('csvFilesList');
+  const csvMergeSummary = document.getElementById('csvMergeSummary');
+
+  function renderMultiFileList() {
+    if (!csvFilesList) return;
+    csvFilesList.replaceChildren();
+    csvFilesList.style.display = isMultiPage && selectedFiles.length ? '' : 'none';
+    if (!isMultiPage) return;
+    selectedFiles.forEach((file, index) => {
+      const li = document.createElement('li');
+      const label = document.createElement('span');
+      label.textContent = file.name;
+      li.appendChild(label);
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.textContent = 'Quitar';
+      remove.setAttribute('aria-label', 'Quitar ' + file.name);
+      remove.style.marginLeft = '0.6rem';
+      remove.addEventListener('click', () => {
+        const remaining = selectedFiles.filter((_, i) => i !== index);
+        csvInput.value = '';
+        if (remaining.length) handleKucoinFiles(remaining);
+        else {
+          hideFile();
+          fileName.textContent = '—';
+          detectedYears = [];
+          renderYearChips([]);
+          actualizarBoton();
+        }
+      });
+      li.appendChild(remove);
+      csvFilesList.appendChild(li);
+    });
+  }
 
   function showFile()    { fileSelected.classList.add('visible'); }
   function hideFile()    {
     fileSelected.classList.remove('visible');
+    ++selectionVersion;
     // Multiarchivo: al ocultar el chip de fichero también limpiamos la selección
     // y su resumen (todos los reseteos pasan por aquí).
     if (isMultiPage) {
       selectedFiles = [];
+      renderMultiFileList();
       if (kucoinSummary) kucoinSummary.style.display = 'none';
     }
   }
@@ -1223,6 +1262,7 @@
     document.getElementById('yearBar').style.display = 'none';
     document.getElementById('yearPills').innerHTML = '';
     allData = null;
+    if (csvMergeSummary) { csvMergeSummary.textContent = ''; csvMergeSummary.style.display = 'none'; }
     añoActivo = 'todos';
     // Reiniciar selector de ejercicio
     _fetchingAños = false;
@@ -1295,7 +1335,10 @@
         const currentYear = new Date().getFullYear();
         // Formato ISO YYYY-MM-DD: captura el año sólo cuando va seguido de -MM-DD.
         // Descarta cualquier match cuyo año esté fuera del rango [2009, año actual].
-        (text.match(/\b(20(?:0[9]|[12][0-9]|3[0-9]))-\d{2}-\d{2}\b/g) || []).forEach(m => {
+        const datesText = EXCHANGE_PAGE === 'coinbase'
+          ? (text.match(/(?:^|\r?\n)[^,\r\n]+,["']?20\d{2}-\d{2}-\d{2}T/g) || []).join('\n')
+          : text;
+        (datesText.match(/\b(20(?:0[9]|[12][0-9]|3[0-9]))-\d{2}-\d{2}(?=[T\s]|$)/g) || []).forEach(m => {
           const yr = Number(m.substring(0, 4));
           if (yr >= 2009 && yr <= currentYear) years.add(yr);
         });
@@ -1436,6 +1479,7 @@
   }
 
   function handleKucoinFiles(fileList) {
+    const version = ++selectionVersion;
     const files = Array.from(fileList || []);
     if (!files.length) return;
     for (const f of files) {
@@ -1458,17 +1502,20 @@
     }
     selectedFiles = files;
     fileName.textContent = files.length === 1 ? files[0].name : `${files.length} ficheros`;
+    renderMultiFileList();
     showFile();
 
     if (!isDedicatedMultiPage) {
       _fetchingAños = true;
       actualizarBoton();
       Promise.all(files.map(f => extractYearsFromCSV(f, true))).then(yearSets => {
+        if (version !== selectionVersion) return;
         detectedYears = [...new Set(yearSets.flat())].sort((a, b) => a - b);
         renderYearChips(detectedYears);
         _fetchingAños = false;
         actualizarBoton();
       }).catch(() => {
+        if (version !== selectionVersion) return;
         detectedYears = [];
         renderYearChips([]);
         _fetchingAños = false;
@@ -1490,6 +1537,7 @@
     fetch('/api/' + EXCHANGE_PAGE + '/anos', { method: 'POST', body: fd, credentials: 'include' })
       .then(r => r.json())
       .then(data => {
+        if (version !== selectionVersion) return;
         _fetchingAños = false;
         yearNodetect.textContent = 'Sin años detectados';
         if (!data.ok) {
@@ -1507,6 +1555,7 @@
         actualizarBoton();
       })
       .catch(() => {
+        if (version !== selectionVersion) return;
         _fetchingAños = false;
         yearNodetect.textContent = 'Sin años detectados';
         detectedYears = []; renderYearChips([]); actualizarBoton();
@@ -1516,6 +1565,7 @@
   // ── FILE SELECTION ───────────────────────
   function handleFile(file) {
     if (!file) return;
+    const version = ++selectionVersion;
     const nombre   = file.name.toLowerCase();
     const isMexc   = EXCHANGE_PAGE === 'mexc';
     const isB2MExcel = EXCHANGE_PAGE === 'bit2me' && BIT2ME_EXCEL_ENABLED;
@@ -1563,6 +1613,7 @@
       fetch(endpointAnos, { method: 'POST', body: _fd, credentials: 'include' })
         .then(r => r.json())
         .then(data => {
+          if (version !== selectionVersion) return;
           _fetchingAños = false;
           yearNodetect.textContent = 'Sin años detectados';
           if (!data.ok) {
@@ -1582,6 +1633,7 @@
           actualizarBoton();
         })
         .catch(() => {
+          if (version !== selectionVersion) return;
           _fetchingAños = false;
           yearNodetect.textContent = 'Sin años detectados';
           detectedYears = [];
@@ -1590,6 +1642,7 @@
         });
     } else {
       extractYearsFromCSV(file).then(years => {
+        if (version !== selectionVersion) return;
         detectedYears = years;
         renderYearChips(years);
         actualizarBoton();
@@ -1760,6 +1813,13 @@
   // ── RENDER COMPLETO ──────────────────────
   function renderResultados(data) {
     allData = data;
+    if (csvMergeSummary) {
+      const merge = data.resumen_archivos_multi;
+      csvMergeSummary.style.display = merge ? 'block' : 'none';
+      csvMergeSummary.textContent = merge
+        ? `CSV combinados: ${(merge.nombres || []).join(', ')}. Filas leídas: ${merge.rows_read}; operaciones únicas: ${merge.rows}; duplicados exactos descartados: ${merge.duplicates_removed}.`
+        : '';
+    }
     añoActivo = 'todos';
 
     // Selector de año (solo si hay más de un año en las operaciones)
@@ -1929,6 +1989,11 @@
     if (e.includes('límite de análisis') || e.includes('429') || e.includes('espera')) return { ...ERRORES.rateLimitado };
     if (e.includes('CSV incorrecto') || e.includes('Historial de Transacciones') || e.includes('Buy Crypto With Fiat') || e.includes('Historial de Operaciones Spot')) return { ...ERRORES.csvIncorrectoBinance };
     if (e.includes('no parece ser un CSV de')) return { ...ERRORES.exchangeEquivocado, desc: esc(e) };
+    if (e.includes('identificador de operación') || e.includes('orden FIFO') || e.includes('orden cronológico') ||
+        e.includes('operaciones Kraken') || e.includes('permutas') || e.includes('informe fiscal')) {
+      return { icono: '⚠', titulo: 'Revisar operaciones antes del informe', desc: esc(e), pasos: [] };
+    }
+
     if (e.includes('futuros') || e.includes('copy trading') || e.includes('futures')) {
       return { icono: '⚠', titulo: 'Formato no soportado', desc: esc(e), pasos: [] };
     }
