@@ -2296,6 +2296,79 @@ def api_bitget_anos():
                 pass
 
 
+@app.route("/api/fifo/anos", methods=["POST"])
+@login_required
+@limiter.limit("20 per minute")
+def api_fifo_anos():
+    """Authoritative fiscal-year detection for native-ID CSV exchange pages.
+
+    Use each exchange's real parser (including UTC normalization), not regexes
+    over arbitrary Notes or a guessed CSV column index. Do not calculate a PDF.
+    """
+    paths = []
+    merged_path = None
+    try:
+        exchange = _sanitizar_texto(
+            request.form.get("exchange", ""), max_len=20
+        ).lower()
+        if exchange not in MULTI_CSV_ID_COLUMNS:
+            return jsonify({"ok": False, "error": "Exchange no soportado."}), 400
+        files = request.files.getlist("csv")
+        if not files or len(files) > 8:
+            return jsonify({"ok": False, "error": "Selecciona entre 1 y 8 CSV."}), 400
+        for upload in files:
+            if not (upload.filename or "").lower().endswith(".csv"):
+                return jsonify({"ok": False, "error": "Solo se permiten archivos CSV."}), 400
+            with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as temp:
+                paths.append(temp.name)
+                upload.save(temp.name)
+            valid, reason = _validar_csv(paths[-1], exchange)
+            if not valid:
+                return jsonify({"ok": False, "error": reason}), 400
+        source = paths[0]
+        if len(paths) > 1:
+            with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as merged:
+                merged_path = merged.name
+            merge_csv_same_exchange(paths, exchange, merged_path)
+            source = merged_path
+        loaders = {
+            "bitvavo": ClasificadorBitvavo,
+            "kraken": ClasificadorKraken,
+            "coinbase": ClasificadorCoinbase,
+            "uphold": ClasificadorUphold,
+        }
+        clasificador = loaders[exchange](source).clasificar()
+        if exchange == "kraken" and any(
+            str(op.subtipo).split("/")[0] == "trade"
+            for op in clasificador.desconocidas
+        ):
+            raise FiscalImportError(
+                "Esta versión no admite movimientos Kraken de tipo trade."
+            )
+        groups = (
+            clasificador.compraventas, clasificador.swaps,
+            clasificador.movimientos, clasificador.rendimientos,
+        )
+        years = sorted({
+            int(str(op.fecha)[:4]) for group in groups for op in group
+            if re.match(r"^20\\d{2}", str(op.fecha))
+        })
+        if not years:
+            return jsonify({"ok": False, "error":
+                            "No hay operaciones con ejercicios identificables."}), 422
+        return jsonify({"ok": True, "anos": years})
+    except (MultiCsvUserError, FiscalImportError, ValueError, UnicodeError, csv.Error) as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"ok": False, "error": _error_amigable(exc)}), 400
+    finally:
+        for path in paths + ([merged_path] if merged_path else []):
+            try:
+                os.unlink(path)
+            except OSError:
+                pass
+
+
 @app.route("/api/analizar", methods=["POST"])
 @login_required
 @limiter.limit("3 per 10 minutes", exempt_when=_is_admin)
