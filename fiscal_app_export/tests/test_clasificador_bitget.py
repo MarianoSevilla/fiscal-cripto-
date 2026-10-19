@@ -458,9 +458,13 @@ class TestBuySpot:
         c = ClasificadorBitget(detalles_xrp_buy).clasificar()
         assert c.compraventas[0].contraparte == "USDT"
 
-    def test_cantidad_bruta(self, detalles_xrp_buy):
+    def test_cantidad_neta_de_fee_en_base(self, detalles_xrp_buy):
         c = ClasificadorBitget(detalles_xrp_buy).clasificar()
-        assert abs(c.compraventas[0].cantidad - 334.1339) < 1e-6
+        op = c.compraventas[0]
+        # Amount (334.1339 XRP) is gross; fee paid in XRP (0.3341339)
+        # is not held in inventory. The FIFO lot must be net acquired XRP.
+        assert abs(op.cantidad + op.fee_cantidad - 334.1339) < 1e-6
+        assert abs(op.cantidad - 333.7997661) < 1e-6
 
     def test_importe_total(self, detalles_xrp_buy):
         c = ClasificadorBitget(detalles_xrp_buy).clasificar()
