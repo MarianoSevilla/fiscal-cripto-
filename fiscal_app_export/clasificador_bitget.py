@@ -271,9 +271,14 @@ def _parse_decimal(valor: str) -> Decimal:
         clean = str(valor).strip().replace(",", "")
         if not clean:
             return Decimal("0")
-        return Decimal(clean)
-    except (InvalidOperation, Exception):
-        return Decimal("0")
+        value = Decimal(clean)
+        if not value.is_finite():
+            raise ValueError("Datos fiscales no seguros: Bitget contiene un importe no finito.")
+        return value
+    except ValueError:
+        raise
+    except InvalidOperation:
+        raise ValueError("Datos fiscales no seguros: Bitget contiene una cantidad no numérica.") from None
 
 
 # Epoch del número de serie de Excel (los exports UID de Bitget exportan las
