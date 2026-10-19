@@ -13,6 +13,7 @@ Normativa aplicada:
 """
 
 from dataclasses import dataclass, field
+import math
 from datetime import datetime
 from collections import defaultdict
 from typing import Dict, List, Optional
@@ -223,7 +224,7 @@ class MotorFIFO:
         Devuelve None si no existe inventario previo del activo.
         """
         cola = self.inventario.get(activo, [])
-        lotes_vivos = [l for l in cola if l.cantidad_restante > 1e-9]
+        lotes_vivos = [l for l in cola if l.cantidad_restante > 0]
         if not lotes_vivos:
             return None
         pendiente = cantidad
@@ -280,7 +281,10 @@ class MotorFIFO:
             cantidad_pendiente -= consumir
             coste_total += coste_lote
 
-        _incompleto = cantidad_pendiente > 0.0001  # True si faltan unidades por inventario insuficiente
+        # Floating-point residue is measured against the requested quantity;
+        # a fixed 0.0001 BTC threshold hides genuine small shortfalls.
+        tolerance = max(1e-15, 1e-12 * abs(cantidad))
+        _incompleto = cantidad_pendiente > tolerance
 
         if _incompleto:
             self.advertencias.append(
@@ -311,7 +315,9 @@ class MotorFIFO:
         """Devuelve la posición actual de cada activo (lotes no vendidos)."""
         resultado = []
         for activo, lotes in self.inventario.items():
-            lotes_vivos = [l for l in lotes if l.cantidad_restante > 0.0001]
+            # Aggregate all positive lots before formatting. A large position
+            # may consist entirely of small but meaningful acquisitions.
+            lotes_vivos = [l for l in lotes if l.cantidad_restante > 0]
             if not lotes_vivos:
                 continue
             cantidad = sum(l.cantidad_restante for l in lotes_vivos)
