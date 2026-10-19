@@ -22,6 +22,7 @@ import json
 import secrets
 import csv
 import hashlib
+import math
 from multi_csv_same_exchange import ID_COLUMNS as MULTI_CSV_ID_COLUMNS, merge_csv_same_exchange, MultiCsvUserError
 import tempfile
 import traceback
@@ -1134,8 +1135,53 @@ def _validar_csv(filepath: str, exchange: str, *, max_bytes: int = MAX_FILE_SIZE
 
 # ── PIPELINES ─────────────────────────────────
 
-def _pipeline_motor(clasificador) -> MotorFIFO:
+def _validar_orden_fifo_fuente(clasificador):
+    """Do not infer a fiscal event sequence from CSV/file order at equal timestamps.
+
+    A swap can *receive* an asset subsequently disposed of by another swap;
+    comparing only the delivered asset misses that dependency. Equal-time
+    acquisitions with the exact same economic terms are commutative and must
+    both be retained. This guard is applied to single- and multi-CSV flows.
+    """
+    groups = {}
+    for op in clasificador.compraventas:
+        ts = datetime.fromisoformat(op.fecha)
+        groups.setdefault(ts, []).append(("cv", op))
+    for op in clasificador.swaps:
+        ts = datetime.fromisoformat(op.fecha)
+        groups.setdefault(ts, []).append(("swap", op))
+
+    for group in groups.values():
+        for index, (kind, first) in enumerate(group):
+            a = ({first.activo} if kind == "cv"
+                 else {first.activo_entregado, first.activo_recibido})
+            for other_kind, other in group[index + 1:]:
+                b = ({other.activo} if other_kind == "cv"
+                     else {other.activo_entregado, other.activo_recibido})
+                if not a.intersection(b):
+                    continue
+                both_equivalent_buys = (
+                    kind == other_kind == "cv"
+                    and first.tipo == other.tipo == "COMPRA"
+                    and first.activo == other.activo
+                    and first.cantidad == other.cantidad
+                    and first.importe == other.importe
+                    and first.contraparte == other.contraparte
+                    and first.fee_activo == other.fee_activo
+                    and first.fee_cantidad == other.fee_cantidad
+                )
+                if not both_equivalent_buys:
+                    raise FiscalImportError(
+                        "Hay operaciones del mismo instante cuyo orden puede alterar "
+                        "el resultado FIFO. Se necesita una exportación con marcas "
+                        "temporales que permitan determinar la secuencia."
+                    )
+
+
+def _pipeline_motor(clasificador, *, validar_empates=False) -> MotorFIFO:
     """Pipeline común: clasificador → motor FIFO."""
+    if validar_empates:
+        _validar_orden_fifo_fuente(clasificador)
     motor = MotorFIFO()
     ops = []
     for op in clasificador.compraventas:
@@ -1165,17 +1211,22 @@ def _pipeline_motor(clasificador) -> MotorFIFO:
                 activo_recibido=op.activo_recibido,
                 cantidad_recibida=op.cantidad_recibida,
                 nota=op.nota,
-                precio_fmv_eur=getattr(op, "precio_fmv_eur", None),
+                # Only Coinbase has a verified EUR currency contract here.
+                # Nexo's similarly named field contains USD, not EUR.
+                precio_fmv_eur=(
+                    getattr(op, "precio_fmv_eur", None)
+                    if isinstance(clasificador, ClasificadorCoinbase) else None
+                ),
             )
     return motor
 
 
-def procesar_con_fifo(clasificador) -> tuple:
+def procesar_con_fifo(clasificador, *, validar_empates=False) -> tuple:
     """Pipeline genérico: clasificador ya instanciado → motor FIFO + rendimientos + clasificador.
     Devuelve 3-tupla (motor, rendimientos, clasificador) para permitir extracción de telemetría
     (swaps totales, movimientos, desconocidas) que solo viven en el clasificador.
     """
-    motor = _pipeline_motor(clasificador)
+    motor = _pipeline_motor(clasificador, validar_empates=validar_empates)
     rendimientos = clasificador.rendimientos if hasattr(clasificador, 'rendimientos') else []
     return motor, rendimientos, clasificador
 
@@ -1224,7 +1275,7 @@ def procesar_binance_tx(filepath: str) -> tuple:
 
 
 def procesar_bitvavo(filepath: str) -> tuple:
-    return procesar_con_fifo(ClasificadorBitvavo(filepath).clasificar())
+    return procesar_con_fifo(ClasificadorBitvavo(filepath).clasificar(), validar_empates=True)
 
 
 class FiscalImportError(ValueError):
@@ -1240,23 +1291,44 @@ def procesar_kraken(filepath: str) -> tuple:
             "El historial Kraken contiene movimientos 'trade' que esta versión no "
             "puede calcular de forma fiable. No se ha generado un informe fiscal."
         )
-    return procesar_con_fifo(clasificador)
+    return procesar_con_fifo(clasificador, validar_empates=True)
 
 
 def procesar_coinbase(filepath: str) -> tuple:
     clasificador = ClasificadorCoinbase(filepath).clasificar()
+    # A raw Coinbase price is only a EUR fair-market value when its
+    # declared currency is EUR; never silently relabel USD as EUR.
+    for _, fila in clasificador.df.iterrows():
+        if str(fila.get("Transaction Type", "")).strip() == "Convert":
+            if str(fila.get("Price Currency", "")).strip().upper() != "EUR":
+                raise FiscalImportError(
+                    "Coinbase: la conversión tiene una valoración distinta de EUR. "
+                    "No se puede calcular sin una valoración en euros verificada."
+                )
+            for column in ("Quantity Transacted", "Subtotal",
+                           "Total (inclusive of fees and/or spread)"):
+                raw = str(fila.get(column, "")).strip().replace("€", "").replace(",", "")
+                try:
+                    if not math.isfinite(float(raw)):
+                        raise ValueError("nonfinite")
+                except ValueError:
+                    raise FiscalImportError(
+                        "Coinbase: importe o cantidad no numérica o no finita "
+                        "en una conversión; no se genera el informe."
+                    ) from None
     if any(str(op.subtipo) == "Convert" for op in clasificador.desconocidas):
         raise FiscalImportError(
             "El historial Coinbase incluye conversiones cuyo detalle no se ha "
             "podido interpretar. No se ha generado un informe fiscal."
         )
     for op in clasificador.swaps:
-        if (getattr(op, "precio_fmv_eur", 0) or 0) <= 0:
+        valor = getattr(op, "precio_fmv_eur", None)
+        if valor is None or not math.isfinite(valor) or valor <= 0:
             raise FiscalImportError(
                 "El historial Coinbase contiene una permuta sin valoración EUR "
                 "verificable. No se ha generado un informe fiscal."
             )
-    return procesar_con_fifo(clasificador)
+    return procesar_con_fifo(clasificador, validar_empates=True)
 
 
 def procesar_nexo(filepath: str) -> tuple:
@@ -1268,7 +1340,7 @@ def procesar_cryptocom(filepath: str) -> tuple:
 
 
 def procesar_uphold(filepath: str) -> tuple:
-    return procesar_con_fifo(ClasificadorUphold(filepath).clasificar())
+    return procesar_con_fifo(ClasificadorUphold(filepath).clasificar(), validar_empates=True)
 
 
 def procesar_mexc(filepath: str) -> tuple:
