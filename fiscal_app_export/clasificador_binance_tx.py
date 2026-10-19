@@ -470,24 +470,16 @@ class ClasificadorBinanceTx:
                 cant_ent   = abs(float(spends_por_moneda.iloc[0]))
                 self._registrar_op_buy_spend(fecha, activo_ent, cant_ent, activo_rec, cant_rec)
 
-            elif len(buys_por_moneda) == 1:
-                # Un activo recibido, varios pagados: crear una operación por moneda pagada
-                activo_rec = buys_por_moneda.index[0]
-                cant_rec   = float(buys_por_moneda.iloc[0])
-                for activo_ent, cant_neg in spends_por_moneda.items():
-                    self._registrar_op_buy_spend(
-                        fecha, activo_ent, abs(float(cant_neg)), activo_rec, cant_rec
-                    )
-
             else:
-                # Caso ambiguo con múltiples activos recibidos: marcar como desconocido
-                for _, fila in grupo.iterrows():
-                    if fila["Operación"] != "Transaction Fee":
-                        self.desconocidas.append(OperacionDesconocida(
-                            fecha=fecha, subtipo=f"{fila['Operación']} (multi-par sin resolver)",
-                            activo=fila["Moneda"], cantidad=float(fila["Cambio"]),
-                            cuenta=str(fila.get("Cuenta", "")),
-                        ))
+                # Ambiguous group: the original implementation reused the FULL
+                # credit once per debit, manufacturing extra crypto. We cannot
+                # split value across different currencies without a native
+                # matching key, so reject the entire fiscal report.
+                raise ValueError(
+                    "Datos fiscales no seguros: Binance Transaction Buy/Spend "
+                    "contiene varios activos en el mismo segundo sin "
+                    "correspondencia verificable entre débitos y créditos."
+                )
 
     def _registrar_op_buy_spend(
         self,
