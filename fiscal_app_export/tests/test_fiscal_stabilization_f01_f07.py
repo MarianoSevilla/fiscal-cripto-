@@ -188,7 +188,7 @@ class FiscalIntegrityF01F07(unittest.TestCase):
             {'Timestamp (UTC)':date,'Transaction Kind':'dust_conversion_credited','Currency':'SOL','Amount':2},
         ])
         c.swaps=[]
-        with self.assertRaisesRegex(ValueError,"varias patas"):
+        with self.assertRaisesRegex(ValueError,"varios activos"):
             c._procesar_swaps()
 
 
