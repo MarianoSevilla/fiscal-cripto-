@@ -144,8 +144,12 @@ class ClasificadorCoinbase:
 
         # Normalizar timestamp
         self.df["Timestamp"] = pd.to_datetime(
-            self.df["Timestamp"], utc=True, errors="coerce"
+            self.df["Timestamp"], utc=True, errors="coerce", format="mixed"
         )
+        if self.df["Timestamp"].isna().any():
+            raise ValueError(
+                "Datos fiscales no seguros: Coinbase contiene una fecha inválida."
+            )
         self.df = self.df.sort_values("Timestamp").reset_index(drop=True)
 
         for _, fila in self.df.iterrows():
@@ -197,13 +201,15 @@ class ClasificadorCoinbase:
         else:
             total = fila.get("Total (inclusive of fees and/or spread)")
             subtotal = fila.get("Subtotal")
-            # Conversions and rewards can quote either subtotal or total;
-            # at least one must be a positive verified finite EUR amount.
-            candidates = (subtotal, total) if kind == "Convert" else (total, subtotal)
-            if not any(
-                self._valid_positive_optional(candidate)
-                for candidate in candidates
-            ):
+            # Validate each supplied number: a valid subtotal cannot excuse
+            # NaN/Infinity in Total later consumed by the parser.
+            candidates = (subtotal, total)
+            for value in candidates:
+                if not pd.isna(value) and str(value).strip():
+                    self._validate_fiscal_number(
+                        value, "Subtotal/Total EUR", zero_allowed=True
+                    )
+            if not any(self._valid_positive_optional(v) for v in candidates):
                 raise ValueError(
                     "Datos fiscales no seguros: Coinbase no ofrece una "
                     "valoración EUR positiva para esta operación."
@@ -293,11 +299,12 @@ class ClasificadorCoinbase:
 
         # ── RENDIMIENTOS ──────────────────────────────────────────────────────
         elif tipo in TIPOS_RENDIMIENTO:
+            valor_eur = total if total > 0 else subtotal
             self.rendimientos.append(OperacionRendimiento(
                 fecha=fecha, subtipo=tipo,
                 activo=activo, cantidad=qty,
                 cuenta="Coinbase",
-                valor_eur=total,
+                valor_eur=valor_eur,
             ))
 
         # ── MOVIMIENTOS ───────────────────────────────────────────────────────
