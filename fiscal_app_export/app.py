@@ -20,7 +20,9 @@ import sys
 import time
 import json
 import secrets
+import csv
 import hashlib
+from multi_csv_same_exchange import ID_COLUMNS as MULTI_CSV_ID_COLUMNS, merge_csv_same_exchange, MultiCsvUserError
 import tempfile
 import traceback
 import threading
@@ -2205,6 +2207,7 @@ def api_bitget_anos():
 def analizar():
     uid      = current_user.id
     tmp_path = None
+    tmp_csv_paths = []  # additional input files for same-exchange multi-CSV
 
     # ── bloqueo concurrente por usuario ──────────────────────────────────────
     # Aplica a todos los usuarios, incluidos admins (exentos del rate limit,
@@ -2222,7 +2225,8 @@ def analizar():
         if "csv" not in request.files:
             return jsonify({"error": "No se recibió ningún fichero."}), 400
 
-        archivo   = request.files["csv"]
+        input_files = request.files.getlist("csv")
+        archivo   = input_files[0]
         nombre    = _sanitizar_texto(request.form.get("nombre", ""))
         ejercicio = _sanitizar_texto(request.form.get("ejercicio", ""), max_len=40)  # "all" o "2024,2025"
         exchange  = _sanitizar_texto(request.form.get("exchange", "binance"), max_len=20).lower()
@@ -2230,6 +2234,10 @@ def analizar():
         # Validar exchange
         if exchange not in ("binance", "bit2me", "bitvavo", "kraken", "coinbase", "nexo", "cryptocom", "uphold", "mexc", "bitget"):
             return jsonify({"error": "Exchange no soportado."}), 400
+        if len(input_files) > 8:
+            return jsonify({"error": "Máximo 8 CSV por análisis."}), 400
+        if len(input_files) > 1 and exchange not in MULTI_CSV_ID_COLUMNS:
+            return jsonify({"error": "Este exchange todavía no admite varios CSV en un mismo análisis."}), 400
 
         # Validar ejercicio fiscal
         valido_ej, error_ej = _validar_ejercicio(ejercicio)
@@ -2256,9 +2264,32 @@ def analizar():
                 return jsonify({"error": "El fichero debe tener extensión .csv"}), 400
             _suffix = ".csv"
 
-        with tempfile.NamedTemporaryFile(suffix=_suffix, delete=False) as tmp:
-            archivo.save(tmp.name)
-            tmp_path = tmp.name
+        if len(input_files) > 1:
+            # Only native-ID-backed homogeneous CSV formats in this phase.
+            # Validate every input before consolidation. Never concatenate
+            # independent transactions or silently deduplicate by amount/date.
+            for uploaded in input_files:
+                if not (uploaded.filename or "").lower().endswith(".csv"):
+                    return jsonify({"error": "Todos los archivos deben ser CSV."}), 400
+                with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as staged:
+                    uploaded.save(staged.name)
+                    tmp_csv_paths.append(staged.name)
+                if os.path.getsize(tmp_csv_paths[-1]) > MAX_FILE_SIZE_BYTES:
+                    return jsonify({"error": "Un CSV supera el límite de 10 MB."}), 400
+                valid, reason = _validar_csv(tmp_csv_paths[-1], exchange)
+                if not valid:
+                    return jsonify({"error": reason}), 400
+            with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as merged:
+                tmp_path = merged.name
+            try:
+                merge_csv_same_exchange(tmp_csv_paths, exchange, tmp_path)
+            except (MultiCsvUserError, UnicodeError, csv.Error) as exc:
+                return jsonify({"error": str(exc) if isinstance(exc, MultiCsvUserError)
+                                else "No se pudo leer uno de los CSV."}), 400
+        else:
+            with tempfile.NamedTemporaryFile(suffix=_suffix, delete=False) as tmp:
+                archivo.save(tmp.name)
+                tmp_path = tmp.name
 
         t_start   = time.time()
         csv_rows  = (_contar_filas_xlsx(tmp_path)
@@ -2605,10 +2636,10 @@ def analizar():
         # independientemente de cómo terminó la petición (éxito, error, early return).
         with _analisis_lock:
             _analisis_en_curso.discard(uid)
-        if tmp_path:
+        for old_path in ([tmp_path] if tmp_path else []) + tmp_csv_paths:
             try:
-                os.unlink(tmp_path)
-            except Exception:
+                os.unlink(old_path)
+            except OSError:
                 pass
 
 
