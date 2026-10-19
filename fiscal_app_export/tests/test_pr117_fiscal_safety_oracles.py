@@ -40,9 +40,9 @@ class FiscalSafetyOracles(unittest.TestCase):
 
     def test_coinbase_convert_uses_explicit_eur_market_value(self):
         rows = [
-            ['b1','2023-01-01T10:00:00Z','Buy','2','BTC','EUR','100',
+            ['b1','2023-01-01T10:00:00Z','Buy','BTC','2','EUR','100',
              '200','200','0','','',''],
-            ['c1','2025-01-01T10:00:00Z','Convert','1','BTC','EUR','500',
+            ['c1','2025-01-01T10:00:00Z','Convert','BTC','1','EUR','500',
              '500','500','0','Converted 1 BTC to 10 ETH','',''],
         ]
         motor, _, _ = procesar_coinbase(self.save(COINBASE, rows))
@@ -55,9 +55,9 @@ class FiscalSafetyOracles(unittest.TestCase):
 
     def test_coinbase_without_eur_valuation_fails_closed(self):
         rows = [
-            ['b1','2023-01-01T10:00:00Z','Buy','2','BTC','EUR','100',
+            ['b1','2023-01-01T10:00:00Z','Buy','BTC','2','EUR','100',
              '200','200','0','','',''],
-            ['c1','2025-01-01T10:00:00Z','Convert','1','BTC','EUR','0',
+            ['c1','2025-01-01T10:00:00Z','Convert','BTC','1','EUR','0',
              '0','0','0','Converted 1 BTC to 10 ETH','',''],
         ]
         with self.assertRaisesRegex(FiscalImportError, 'valoración EUR'):
