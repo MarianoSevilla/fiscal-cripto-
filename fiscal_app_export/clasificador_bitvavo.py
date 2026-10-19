@@ -211,7 +211,7 @@ class ClasificadorBitvavo:
         # Construir timestamp
         self.df["fecha"] = (
             self.df["Date"].astype(str) + " " +
-            self.df["Time"].astype(str).str.split(".").str[0]  # quitar milisegundos
+            self.df["Time"].astype(str)  # conservar precisión subsegundo para FIFO
         )
 
         # Solo procesar operaciones completadas

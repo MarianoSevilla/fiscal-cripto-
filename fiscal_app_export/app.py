@@ -20,7 +20,10 @@ import sys
 import time
 import json
 import secrets
+import csv
 import hashlib
+import math
+from multi_csv_same_exchange import ID_COLUMNS as MULTI_CSV_ID_COLUMNS, merge_csv_same_exchange, MultiCsvUserError
 import tempfile
 import traceback
 import threading
@@ -1078,10 +1081,10 @@ def _ejercicio_a_fiscal_year(ejercicio_str: str) -> int:
     return 0
 
 
-def _validar_csv(filepath: str, exchange: str) -> tuple[bool, str]:
+def _validar_csv(filepath: str, exchange: str, *, max_bytes: int = MAX_FILE_SIZE_BYTES) -> tuple[bool, str]:
     size = os.path.getsize(filepath)
-    if size > MAX_FILE_SIZE_BYTES:
-        return False, f"El fichero es demasiado grande. Máximo 10 MB."
+    if size > max_bytes:
+        return False, f"El fichero es demasiado grande. Máximo {max_bytes // (1024 * 1024)} MB."
     if size == 0:
         return False, "El fichero está vacío."
 
@@ -1132,8 +1135,53 @@ def _validar_csv(filepath: str, exchange: str) -> tuple[bool, str]:
 
 # ── PIPELINES ─────────────────────────────────
 
-def _pipeline_motor(clasificador) -> MotorFIFO:
+def _validar_orden_fifo_fuente(clasificador):
+    """Do not infer a fiscal event sequence from CSV/file order at equal timestamps.
+
+    A swap can *receive* an asset subsequently disposed of by another swap;
+    comparing only the delivered asset misses that dependency. Equal-time
+    acquisitions with the exact same economic terms are commutative and must
+    both be retained. This guard is applied to single- and multi-CSV flows.
+    """
+    groups = {}
+    for op in clasificador.compraventas:
+        ts = datetime.fromisoformat(op.fecha)
+        groups.setdefault(ts, []).append(("cv", op))
+    for op in clasificador.swaps:
+        ts = datetime.fromisoformat(op.fecha)
+        groups.setdefault(ts, []).append(("swap", op))
+
+    for group in groups.values():
+        for index, (kind, first) in enumerate(group):
+            a = ({first.activo} if kind == "cv"
+                 else {first.activo_entregado, first.activo_recibido})
+            for other_kind, other in group[index + 1:]:
+                b = ({other.activo} if other_kind == "cv"
+                     else {other.activo_entregado, other.activo_recibido})
+                if not a.intersection(b):
+                    continue
+                both_equivalent_buys = (
+                    kind == other_kind == "cv"
+                    and first.tipo == other.tipo == "COMPRA"
+                    and first.activo == other.activo
+                    and first.cantidad == other.cantidad
+                    and first.importe == other.importe
+                    and first.contraparte == other.contraparte
+                    and first.fee_activo == other.fee_activo
+                    and first.fee_cantidad == other.fee_cantidad
+                )
+                if not both_equivalent_buys:
+                    raise FiscalImportError(
+                        "Hay operaciones del mismo instante cuyo orden puede alterar "
+                        "el resultado FIFO. Se necesita una exportación con marcas "
+                        "temporales que permitan determinar la secuencia."
+                    )
+
+
+def _pipeline_motor(clasificador, *, validar_empates=False) -> MotorFIFO:
     """Pipeline común: clasificador → motor FIFO."""
+    if validar_empates:
+        _validar_orden_fifo_fuente(clasificador)
     motor = MotorFIFO()
     ops = []
     for op in clasificador.compraventas:
@@ -1162,17 +1210,23 @@ def _pipeline_motor(clasificador) -> MotorFIFO:
                 cantidad_entregada=op.cantidad_entregada,
                 activo_recibido=op.activo_recibido,
                 cantidad_recibida=op.cantidad_recibida,
-                nota=op.nota
+                nota=op.nota,
+                # Only Coinbase has a verified EUR currency contract here.
+                # Nexo's similarly named field contains USD, not EUR.
+                precio_fmv_eur=(
+                    getattr(op, "precio_fmv_eur", None)
+                    if isinstance(clasificador, ClasificadorCoinbase) else None
+                ),
             )
     return motor
 
 
-def procesar_con_fifo(clasificador) -> tuple:
+def procesar_con_fifo(clasificador, *, validar_empates=False) -> tuple:
     """Pipeline genérico: clasificador ya instanciado → motor FIFO + rendimientos + clasificador.
     Devuelve 3-tupla (motor, rendimientos, clasificador) para permitir extracción de telemetría
     (swaps totales, movimientos, desconocidas) que solo viven en el clasificador.
     """
-    motor = _pipeline_motor(clasificador)
+    motor = _pipeline_motor(clasificador, validar_empates=validar_empates)
     rendimientos = clasificador.rendimientos if hasattr(clasificador, 'rendimientos') else []
     return motor, rendimientos, clasificador
 
@@ -1221,15 +1275,60 @@ def procesar_binance_tx(filepath: str) -> tuple:
 
 
 def procesar_bitvavo(filepath: str) -> tuple:
-    return procesar_con_fifo(ClasificadorBitvavo(filepath).clasificar())
+    return procesar_con_fifo(ClasificadorBitvavo(filepath).clasificar(), validar_empates=True)
+
+
+class FiscalImportError(ValueError):
+    """Fiscal input is unsupported; never emit an apparently valid zero-result PDF."""
+    category = "unsupported_format"
+    code = "unsupported_fiscal_transactions"
 
 
 def procesar_kraken(filepath: str) -> tuple:
-    return procesar_con_fifo(ClasificadorKraken(filepath).clasificar())
+    clasificador = ClasificadorKraken(filepath).clasificar()
+    if any(str(op.subtipo).split("/")[0] == "trade" for op in clasificador.desconocidas):
+        raise FiscalImportError(
+            "El historial Kraken contiene movimientos 'trade' que esta versión no "
+            "puede calcular de forma fiable. No se ha generado un informe fiscal."
+        )
+    return procesar_con_fifo(clasificador, validar_empates=True)
 
 
 def procesar_coinbase(filepath: str) -> tuple:
-    return procesar_con_fifo(ClasificadorCoinbase(filepath).clasificar())
+    clasificador = ClasificadorCoinbase(filepath).clasificar()
+    # A raw Coinbase price is only a EUR fair-market value when its
+    # declared currency is EUR; never silently relabel USD as EUR.
+    for _, fila in clasificador.df.iterrows():
+        if str(fila.get("Transaction Type", "")).strip() == "Convert":
+            if str(fila.get("Price Currency", "")).strip().upper() != "EUR":
+                raise FiscalImportError(
+                    "Coinbase: la conversión tiene una valoración distinta de EUR. "
+                    "No se puede calcular sin una valoración en euros verificada."
+                )
+            for column in ("Quantity Transacted", "Subtotal",
+                           "Total (inclusive of fees and/or spread)"):
+                raw = str(fila.get(column, "")).strip().replace("€", "").replace(",", "")
+                try:
+                    if not math.isfinite(float(raw)):
+                        raise ValueError("nonfinite")
+                except ValueError:
+                    raise FiscalImportError(
+                        "Coinbase: importe o cantidad no numérica o no finita "
+                        "en una conversión; no se genera el informe."
+                    ) from None
+    if any(str(op.subtipo) == "Convert" for op in clasificador.desconocidas):
+        raise FiscalImportError(
+            "El historial Coinbase incluye conversiones cuyo detalle no se ha "
+            "podido interpretar. No se ha generado un informe fiscal."
+        )
+    for op in clasificador.swaps:
+        valor = getattr(op, "precio_fmv_eur", None)
+        if valor is None or not math.isfinite(valor) or valor <= 0:
+            raise FiscalImportError(
+                "El historial Coinbase contiene una permuta sin valoración EUR "
+                "verificable. No se ha generado un informe fiscal."
+            )
+    return procesar_con_fifo(clasificador, validar_empates=True)
 
 
 def procesar_nexo(filepath: str) -> tuple:
@@ -1241,7 +1340,7 @@ def procesar_cryptocom(filepath: str) -> tuple:
 
 
 def procesar_uphold(filepath: str) -> tuple:
-    return procesar_con_fifo(ClasificadorUphold(filepath).clasificar())
+    return procesar_con_fifo(ClasificadorUphold(filepath).clasificar(), validar_empates=True)
 
 
 def procesar_mexc(filepath: str) -> tuple:
@@ -2197,6 +2296,79 @@ def api_bitget_anos():
                 pass
 
 
+@app.route("/api/fifo/anos", methods=["POST"])
+@login_required
+@limiter.limit("20 per minute")
+def api_fifo_anos():
+    """Authoritative fiscal-year detection for native-ID CSV exchange pages.
+
+    Use each exchange's real parser (including UTC normalization), not regexes
+    over arbitrary Notes or a guessed CSV column index. Do not calculate a PDF.
+    """
+    paths = []
+    merged_path = None
+    try:
+        exchange = _sanitizar_texto(
+            request.form.get("exchange", ""), max_len=20
+        ).lower()
+        if exchange not in MULTI_CSV_ID_COLUMNS:
+            return jsonify({"ok": False, "error": "Exchange no soportado."}), 400
+        files = request.files.getlist("csv")
+        if not files or len(files) > 8:
+            return jsonify({"ok": False, "error": "Selecciona entre 1 y 8 CSV."}), 400
+        for upload in files:
+            if not (upload.filename or "").lower().endswith(".csv"):
+                return jsonify({"ok": False, "error": "Solo se permiten archivos CSV."}), 400
+            with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as temp:
+                paths.append(temp.name)
+                upload.save(temp.name)
+            valid, reason = _validar_csv(paths[-1], exchange)
+            if not valid:
+                return jsonify({"ok": False, "error": reason}), 400
+        source = paths[0]
+        if len(paths) > 1:
+            with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as merged:
+                merged_path = merged.name
+            merge_csv_same_exchange(paths, exchange, merged_path)
+            source = merged_path
+        loaders = {
+            "bitvavo": ClasificadorBitvavo,
+            "kraken": ClasificadorKraken,
+            "coinbase": ClasificadorCoinbase,
+            "uphold": ClasificadorUphold,
+        }
+        clasificador = loaders[exchange](source).clasificar()
+        if exchange == "kraken" and any(
+            str(op.subtipo).split("/")[0] == "trade"
+            for op in clasificador.desconocidas
+        ):
+            raise FiscalImportError(
+                "Esta versión no admite movimientos Kraken de tipo trade."
+            )
+        groups = (
+            clasificador.compraventas, clasificador.swaps,
+            clasificador.movimientos, clasificador.rendimientos,
+        )
+        years = sorted({
+            int(str(op.fecha)[:4]) for group in groups for op in group
+            if re.match(r"^20\d{2}", str(op.fecha))
+        })
+        if not years:
+            return jsonify({"ok": False, "error":
+                            "No hay operaciones con ejercicios identificables."}), 422
+        return jsonify({"ok": True, "anos": years})
+    except (MultiCsvUserError, FiscalImportError, ValueError, UnicodeError, csv.Error) as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"ok": False, "error": _error_amigable(exc)}), 400
+    finally:
+        for path in paths + ([merged_path] if merged_path else []):
+            try:
+                os.unlink(path)
+            except OSError:
+                pass
+
+
 @app.route("/api/analizar", methods=["POST"])
 @login_required
 @limiter.limit("3 per 10 minutes", exempt_when=_is_admin)
@@ -2205,6 +2377,9 @@ def api_bitget_anos():
 def analizar():
     uid      = current_user.id
     tmp_path = None
+    tmp_csv_paths = []  # additional input files for same-exchange multi-CSV
+    merge_summary = None
+    merge_filenames = []
 
     # ── bloqueo concurrente por usuario ──────────────────────────────────────
     # Aplica a todos los usuarios, incluidos admins (exentos del rate limit,
@@ -2222,7 +2397,8 @@ def analizar():
         if "csv" not in request.files:
             return jsonify({"error": "No se recibió ningún fichero."}), 400
 
-        archivo   = request.files["csv"]
+        input_files = request.files.getlist("csv")
+        archivo   = input_files[0]
         nombre    = _sanitizar_texto(request.form.get("nombre", ""))
         ejercicio = _sanitizar_texto(request.form.get("ejercicio", ""), max_len=40)  # "all" o "2024,2025"
         exchange  = _sanitizar_texto(request.form.get("exchange", "binance"), max_len=20).lower()
@@ -2230,6 +2406,10 @@ def analizar():
         # Validar exchange
         if exchange not in ("binance", "bit2me", "bitvavo", "kraken", "coinbase", "nexo", "cryptocom", "uphold", "mexc", "bitget"):
             return jsonify({"error": "Exchange no soportado."}), 400
+        if len(input_files) > 8:
+            return jsonify({"error": "Máximo 8 CSV por análisis."}), 400
+        if len(input_files) > 1 and exchange not in MULTI_CSV_ID_COLUMNS:
+            return jsonify({"error": "Este exchange todavía no admite varios CSV en un mismo análisis."}), 400
 
         # Validar ejercicio fiscal
         valido_ej, error_ej = _validar_ejercicio(ejercicio)
@@ -2256,9 +2436,33 @@ def analizar():
                 return jsonify({"error": "El fichero debe tener extensión .csv"}), 400
             _suffix = ".csv"
 
-        with tempfile.NamedTemporaryFile(suffix=_suffix, delete=False) as tmp:
-            archivo.save(tmp.name)
-            tmp_path = tmp.name
+        if len(input_files) > 1:
+            # Only native-ID-backed homogeneous CSV formats in this phase.
+            # Validate every input before consolidation. Never concatenate
+            # independent transactions or silently deduplicate by amount/date.
+            for uploaded in input_files:
+                if not (uploaded.filename or "").lower().endswith(".csv"):
+                    return jsonify({"error": "Todos los archivos deben ser CSV."}), 400
+                with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as staged:
+                    tmp_csv_paths.append(staged.name)
+                    uploaded.save(staged.name)
+                merge_filenames.append(os.path.basename(uploaded.filename or "")[:100])
+                if os.path.getsize(tmp_csv_paths[-1]) > MAX_FILE_SIZE_BYTES:
+                    return jsonify({"error": "Un CSV supera el límite de 10 MB."}), 400
+                valid, reason = _validar_csv(tmp_csv_paths[-1], exchange)
+                if not valid:
+                    return jsonify({"error": reason}), 400
+            with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as merged:
+                tmp_path = merged.name
+            try:
+                merge_summary = merge_csv_same_exchange(tmp_csv_paths, exchange, tmp_path)
+            except (MultiCsvUserError, UnicodeError, csv.Error) as exc:
+                return jsonify({"error": str(exc) if isinstance(exc, MultiCsvUserError)
+                                else "No se pudo leer uno de los CSV."}), 400
+        else:
+            with tempfile.NamedTemporaryFile(suffix=_suffix, delete=False) as tmp:
+                tmp_path = tmp.name
+                archivo.save(tmp.name)
 
         t_start   = time.time()
         csv_rows  = (_contar_filas_xlsx(tmp_path)
@@ -2296,7 +2500,10 @@ def analizar():
                 if not valido:
                     return jsonify({"error": error_msg}), 400
             else:
-                valido, error_msg = _validar_csv(tmp_path, exchange)
+                valido, error_msg = _validar_csv(
+                    tmp_path, exchange,
+                    max_bytes=(14 * 1024 * 1024 if len(input_files) > 1 else MAX_FILE_SIZE_BYTES),
+                )
                 if not valido:
                     return jsonify({"error": error_msg}), 400
 
@@ -2370,6 +2577,10 @@ def analizar():
                 motor, rendimientos, clasificador = procesar_nexo(tmp_path)
                 _filtrar_motor_por_ejercicio(motor, ejercicio)
                 rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
+                # Nexo's USD Equivalent is NOT an EUR price. Preserve the
+                # classifier warning in both JSON and PDF; never silently
+                # present the cost-basis fallback as a verified market price.
+                motor.advertencias.extend(clasificador.advertencias)
                 resumen, posicion, operaciones = _motor_a_json(motor)
                 advertencias = motor.advertencias
                 rendimientos_json = _rendimientos_a_json(rendimientos)
@@ -2539,8 +2750,15 @@ def analizar():
                 "rendimientos": rendimientos_json,
                 "advertencias": advertencias,
                 "token": token,
+                "resumen_archivos_multi": (
+                    {"nombres": merge_filenames, **merge_summary}
+                    if merge_summary else None
+                ),
                 "estimacion": bool(_bit2me_excel),   # Excel Bit2Me = informe orientativo
             })
+
+        except FiscalImportError as e:
+            return jsonify({"error": str(e)}), 422
 
         except Exception as e:
             # ── Clasificar el error semánticamente ────────────────────────────
@@ -2605,10 +2823,10 @@ def analizar():
         # independientemente de cómo terminó la petición (éxito, error, early return).
         with _analisis_lock:
             _analisis_en_curso.discard(uid)
-        if tmp_path:
+        for old_path in ([tmp_path] if tmp_path else []) + tmp_csv_paths:
             try:
-                os.unlink(tmp_path)
-            except Exception:
+                os.unlink(old_path)
+            except OSError:
                 pass
 
 
