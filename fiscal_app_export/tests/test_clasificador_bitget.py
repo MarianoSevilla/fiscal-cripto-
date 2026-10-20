@@ -653,10 +653,13 @@ class TestCompraventasLedger:
         op = compras[0]
         assert op.activo == "XRP"
         assert op.contraparte == "USDT"
-        assert abs(op.cantidad - 40.0) < 1e-6
+        # Ledger Buy Amount=40 XRP is gross; Fee=-0.04 XRP is paid
+        # from the received units and cannot remain in FIFO inventory.
+        assert abs(op.cantidad - 39.96) < 1e-6
         assert abs(op.importe - 100.0) < 1e-6
         assert op.fee_activo == "XRP"
         assert abs(op.fee_cantidad - 0.04) < 1e-8
+        assert abs(op.cantidad + op.fee_cantidad - 40.0) < 1e-8
 
     def test_venta_simple(self, transacciones_venta_simple):
         """Par Sell XRP + Buy USDT → 1 VENTA XRP."""
@@ -680,8 +683,11 @@ class TestCompraventasLedger:
         """Cada sub-fill tiene su propia cantidad, NO la suma."""
         c = ClasificadorBitget(transacciones_multi_subfill).clasificar()
         cantidades = sorted(op.cantidad for op in c.compraventas)
-        assert abs(cantidades[0] - 0.601) < 1e-4
-        assert abs(cantidades[1] - 5.705) < 1e-4
+        assert abs(cantidades[0] - 0.600399) < 1e-8
+        assert abs(cantidades[1] - 5.699295) < 1e-8
+        gross = sorted(op.cantidad + op.fee_cantidad for op in c.compraventas)
+        assert abs(gross[0] - 0.601) < 1e-8
+        assert abs(gross[1] - 5.705) < 1e-8
 
     def test_buy_sell_en_mixto_genera_compraventa(self, transacciones_mixto):
         """El fixture mixto incluye Buy XRP + Sell USDT → debe generar 1 compraventa."""
