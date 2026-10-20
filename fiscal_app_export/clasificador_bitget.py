@@ -271,9 +271,14 @@ def _parse_decimal(valor: str) -> Decimal:
         clean = str(valor).strip().replace(",", "")
         if not clean:
             return Decimal("0")
-        return Decimal(clean)
-    except (InvalidOperation, Exception):
-        return Decimal("0")
+        value = Decimal(clean)
+        if not value.is_finite():
+            raise ValueError("Datos fiscales no seguros: Bitget contiene un importe no finito.")
+        return value
+    except ValueError:
+        raise
+    except InvalidOperation:
+        raise ValueError("Datos fiscales no seguros: Bitget contiene una cantidad no numérica.") from None
 
 
 # Epoch del número de serie de Excel (los exports UID de Bitget exportan las
@@ -472,13 +477,26 @@ class ClasificadorBitget:
         # Fee:
         #   Buy  → Fee Coin = Base Asset → fee reduce la cantidad neta recibida.
         #   Sell → Fee Coin = USDT       → fee reduce el ingreso neto.
+        if tipo == "VENTA" and fee > 0 and fee_coin == base:
+            raise ValueError(
+                "Datos fiscales no seguros: venta Bitget con comisión en activo vendido sin reconciliación FIFO."
+            )
+        if tipo == "COMPRA" and fee_coin == base and fee >= amount:
+            raise ValueError("Datos fiscales no seguros: comisión Bitget mayor o igual que la cantidad comprada.")
+        if fee and fee_coin not in (base, quote):
+            raise ValueError("Datos fiscales no seguros: comisión Bitget en tercera moneda sin valoración ni salida reconstruible.")
+        if fee < 0:
+            raise ValueError("Datos fiscales no seguros: comisión Bitget negativa.")
         self.compraventas.append(OperacionCompraventa(
             fecha        = fecha,
             tipo         = tipo,
             activo       = base,
-            cantidad     = float(amount),
+            # Detalles: Amount is gross executed base quantity. On BUY a
+            # base-asset fee reduces the acquired lot; other fee currencies
+            # do not reduce the received base units.
+            cantidad     = float(amount - fee) if tipo == "COMPRA" and fee_coin == base else float(amount),
             contraparte  = quote,
-            importe      = float(total),
+            importe      = float(total + fee) if tipo == "COMPRA" and fee_coin == quote else float(total),
             fee_activo   = fee_coin if fee_coin else quote,
             fee_cantidad = float(fee),
         ))
@@ -547,13 +565,23 @@ class ClasificadorBitget:
         if quote in STABLES_USD:
             self._tiene_pares_usdt = True
 
+        if action == "sell" and fee > 0 and fee_coin == coin:
+            raise ValueError(
+                "Datos fiscales no seguros: venta Bitget con comisión en activo vendido sin reconciliación FIFO."
+            )
+        if action == "buy" and fee_coin == coin and fee >= qty:
+            raise ValueError("Datos fiscales no seguros: comisión Bitget mayor o igual que la cantidad comprada.")
+        if fee and fee_coin not in (coin, quote):
+            raise ValueError("Datos fiscales no seguros: comisión Bitget en tercera moneda sin valoración ni salida reconstruible.")
+        if fee < 0:
+            raise ValueError("Datos fiscales no seguros: comisión Bitget negativa.")
         self.compraventas.append(OperacionCompraventa(
             fecha        = fecha,
             tipo         = "COMPRA" if action == "buy" else "VENTA",
             activo       = coin,
-            cantidad     = float(qty),
+            cantidad     = float(qty - fee) if action == "buy" and fee_coin == coin else float(qty),
             contraparte  = quote,
-            importe      = float(total),
+            importe      = float(total + fee) if action == "buy" and fee_coin == quote else float(total),
             fee_activo   = fee_coin if fee_coin else quote,
             fee_cantidad = float(fee),
             order_id     = order_id,
@@ -737,6 +765,8 @@ class ClasificadorBitget:
 
         if buy_amt == 0 or sell_amt == 0:
             return
+        if buy_fee >= buy_amt and buy_fee > 0:
+            raise ValueError("Datos fiscales no seguros: comisión Bitget ledger supera el activo recibido.")
 
         if sell_coin in STABLES_USD and buy_coin not in STABLES_USD:
             # COMPRA: cripto ← stablecoin
@@ -745,7 +775,7 @@ class ClasificadorBitget:
                 fecha        = fecha,
                 tipo         = "COMPRA",
                 activo       = buy_coin,
-                cantidad     = float(buy_amt),
+                cantidad     = float(buy_amt - buy_fee),
                 contraparte  = sell_coin,
                 importe      = float(sell_amt),
                 fee_activo   = buy_coin,
@@ -753,7 +783,15 @@ class ClasificadorBitget:
             ))
 
         elif buy_coin in STABLES_USD and sell_coin not in STABLES_USD:
-            # VENTA: cripto → stablecoin
+            # The Buy row records a received stablecoin fee separately.
+            # Without a verified gross/net convention, a fiscal report would
+            # overstate proceeds (A02). A fee on the spent crypto is also not
+            # represented as an additional FIFO disposal (A03). Fail closed.
+            if buy_fee > 0 or sell_fee > 0:
+                raise ValueError(
+                    "Datos fiscales no seguros: venta ledger Bitget con comisión no conciliada; "
+                    "sube un formato Spot/Detalles compatible."
+                )
             self._tiene_pares_usdt = True
             self.compraventas.append(OperacionCompraventa(
                 fecha        = fecha,
@@ -1160,6 +1198,12 @@ class ClasificadorBitgetMulti:
             try:
                 c = ClasificadorBitget(fp).clasificar()
             except ValueError as e:
+                if str(e).startswith("Datos fiscales no seguros:"):
+                    # Never silently omit a file carrying fiscal disposals.
+                    raise BitgetUserError(
+                        "unsafe_fiscal_source",
+                        f"Datos fiscales no seguros: archivo Bitget «{fname}»: {e}",
+                    ) from e
                 self.advertencias.append(f"«{fname}»: {e}")
                 continue
 
@@ -1221,7 +1265,11 @@ class ClasificadorBitgetMulti:
         unicos = []
         for op in ops:
             oid = (getattr(op, "order_id", "") or "").strip()
-            identidad = ("ID", oid) if oid else ("VAL",) + _dedup_key(op)
+            # An order may contain several distinct fills.
+            identidad = ("ID", oid, op.fecha, *_dedup_key(op),
+                         round(op.fee_cantidad, 10), op.fee_activo) if oid else (
+                             "VAL", op.fecha, *_dedup_key(op),
+                             round(op.fee_cantidad, 10), op.fee_activo)
             if identidad in vistos:
                 self._n_dedup_intra += 1
                 continue

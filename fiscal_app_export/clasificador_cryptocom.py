@@ -21,6 +21,7 @@ Tipos de transacción:
 - crypto_wallet_swap_* / dust_conversion_* → SWAP (par debit+credit)
 """
 
+import math
 import pandas as pd
 from dataclasses import dataclass
 
@@ -104,7 +105,9 @@ class OperacionDesconocida:
 class ClasificadorCryptoCom:
 
     def __init__(self, filepath: str):
-        self.df = pd.read_csv(filepath, encoding='utf-8-sig')
+        # Preserve empty optional CSV fields as empty strings, but retain literal
+        # "NaN"/"Infinity" text so fiscal validation can reject it.
+        self.df = pd.read_csv(filepath, encoding='utf-8-sig', keep_default_na=False)
         self.compraventas = []
         self.swaps        = []
         self.rendimientos = []
@@ -126,11 +129,31 @@ class ClasificadorCryptoCom:
             kind          = str(fila.get("Transaction Kind", "")).strip()
             fecha         = str(fila["Timestamp (UTC)"])
             moneda        = str(fila.get("Currency", "")).strip()
-            amount        = self._float(fila.get("Amount", 0))
+            # Empty optional columns are allowed, but a fiscal quantity or
+            # the EUR debit of an IBAN purchase cannot silently become zero.
+            needs_amount = (
+                kind in TIPOS_COMPRA_DIRECTA or kind in TIPOS_VENTA
+                or kind in TIPOS_EARN_INTERES or kind in TIPOS_RENDIMIENTO
+                or kind.startswith("reward.")
+                or (kind in TIPOS_COMPRA_IBAN and moneda == "EUR")
+            )
+            amount        = self._float(fila.get("Amount", ""), required=needs_amount)
             to_moneda     = str(fila.get("To Currency", "")).strip()
-            to_amount     = self._float(fila.get("To Amount", 0))
+            to_amount     = self._float(
+                fila.get("To Amount", ""), required=kind in TIPOS_COMPRA_IBAN
+            )
             native_moneda = str(fila.get("Native Currency", "")).strip()
-            native_amount = self._float(fila.get("Native Amount", 0))
+            # Native Amount (in USD) is NOT a substitute for Native Amount
+            # when the latter is used as a verified EUR valuation.
+            needs_native_eur = native_moneda == "EUR" and (
+                kind in TIPOS_COMPRA_DIRECTA or kind in TIPOS_VENTA
+                or kind in TIPOS_EARN_INTERES or kind in TIPOS_RENDIMIENTO
+                or kind.startswith("reward.")
+                or (kind in TIPOS_COMPRA_IBAN and moneda != "EUR")
+            )
+            native_amount = self._float(
+                fila.get("Native Amount", ""), required=needs_native_eur
+            )
 
             if kind in TIPOS_COMPRA_DIRECTA:
                 self._procesar_compra_directa(fecha, moneda, amount, native_moneda, native_amount, kind, fila)
@@ -190,27 +213,45 @@ class ClasificadorCryptoCom:
         debits  = self.df[mask_debit].copy()
         credits = self.df[mask_credit].copy()
 
-        for ts, grupo_credit in credits.groupby("Timestamp (UTC)"):
+        # Examine the UNION of timestamp groups. A debit-only row is still a
+        # fiscal disposal and cannot be silently demoted to an unknown event.
+        timestamps = sorted(
+            set(debits["Timestamp (UTC)"]).union(set(credits["Timestamp (UTC)"]))
+        )
+        for ts in timestamps:
+            grupo_credit = credits[credits["Timestamp (UTC)"] == ts]
             grupo_debit = debits[debits["Timestamp (UTC)"] == ts]
-            if grupo_debit.empty:
-                continue
+            if grupo_debit.empty or grupo_credit.empty:
+                raise ValueError(
+                    "Datos fiscales no seguros: Crypto.com contiene patas "
+                    "de permuta sin contraparte; se necesita el historial completo."
+                )
 
-            recibido       = grupo_credit.iloc[0]
-            cant_recibida  = self._float(recibido["Amount"])
-            activo_recibido = str(recibido["Currency"]).strip()
-
-            for _, debit in grupo_debit.iterrows():
-                cant_entregada = abs(self._float(debit["Amount"]))
-                activo_entregado = str(debit["Currency"]).strip()
-                self.swaps.append(OperacionSwap(
-                    fecha=str(ts),
-                    activo_entregado=activo_entregado,
-                    cantidad_entregada=cant_entregada,
-                    activo_recibido=activo_recibido,
-                    cantidad_recibida=cant_recibida,
-                ))
-                procesadas.add(debit.name)
-
+            delivered = {str(x).strip() for x in grupo_debit["Currency"]}
+            received = {str(x).strip() for x in grupo_credit["Currency"]}
+            if len(delivered) != 1 or len(received) != 1:
+                raise ValueError(
+                    "Datos fiscales no seguros: Crypto.com tiene una permuta "
+                    "de varios activos sin correspondencia verificable."
+                )
+            # Multiple fills for ONE delivered and ONE received asset are
+            # economically aggregateable; do not count each credit repeatedly.
+            qty_debit = sum(abs(self._float(x)) for x in grupo_debit["Amount"])
+            qty_credit = sum(self._float(x) for x in grupo_credit["Amount"])
+            if not (math.isfinite(qty_debit) and math.isfinite(qty_credit)
+                    and qty_debit > 0 and qty_credit > 0):
+                raise ValueError(
+                    "Datos fiscales no seguros: Crypto.com contiene "
+                    "cantidades de permuta inválidas."
+                )
+            self.swaps.append(OperacionSwap(
+                fecha=str(ts),
+                activo_entregado=next(iter(delivered)),
+                cantidad_entregada=qty_debit,
+                activo_recibido=next(iter(received)),
+                cantidad_recibida=qty_credit,
+            ))
+            procesadas.update(grupo_debit.index.tolist())
             procesadas.update(grupo_credit.index.tolist())
 
         return procesadas
@@ -310,12 +351,24 @@ class ClasificadorCryptoCom:
         ))
 
     @staticmethod
-    def _float(val) -> float:
+    def _float(val, *, required: bool = False) -> float:
+        if val is None or (isinstance(val, str) and not val.strip()):
+            if required:
+                raise ValueError(
+                    "Datos fiscales no seguros: Crypto.com carece de una cantidad o importe obligatorio."
+                )
+            return 0.0  # Optional empty To Amount / other fields
         try:
             v = float(val)
-            return v if v == v else 0.0  # NaN != NaN → devuelve 0.0
-        except Exception:
-            return 0.0
+            if not math.isfinite(v):
+                raise ValueError("Datos fiscales no seguros: Crypto.com contiene cantidad o importe no finito.")
+            return v
+        except ValueError as exc:
+            if str(exc).startswith("Datos fiscales no seguros:"):
+                raise
+            raise ValueError(
+                "Datos fiscales no seguros: Crypto.com contiene cantidad o importe no interpretable."
+            ) from exc
 
     def resumen(self) -> dict:
         compras = sum(1 for op in self.compraventas if op.tipo == "COMPRA")

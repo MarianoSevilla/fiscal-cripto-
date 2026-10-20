@@ -124,6 +124,9 @@ def test_columnas_minusculas(tmp_path):
 
     assert len(c.compraventas) == 1
     assert c.compraventas[0].tipo == "COMPRA"
+    # The lowercase alias must preserve fiscal EUR cost, not silently use 0.
+    assert abs(c.compraventas[0].importe - 300.0) < 1e-9
+    assert abs(c.compraventas[0].cantidad - 0.01) < 1e-12
 
 
 # ── Test 3: alias de columna Date ─────────────────────────────────────────────

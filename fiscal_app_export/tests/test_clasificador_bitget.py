@@ -458,9 +458,13 @@ class TestBuySpot:
         c = ClasificadorBitget(detalles_xrp_buy).clasificar()
         assert c.compraventas[0].contraparte == "USDT"
 
-    def test_cantidad_bruta(self, detalles_xrp_buy):
+    def test_cantidad_neta_de_fee_en_base(self, detalles_xrp_buy):
         c = ClasificadorBitget(detalles_xrp_buy).clasificar()
-        assert abs(c.compraventas[0].cantidad - 334.1339) < 1e-6
+        op = c.compraventas[0]
+        # Amount (334.1339 XRP) is gross; fee paid in XRP (0.3341339)
+        # is not held in inventory. The FIFO lot must be net acquired XRP.
+        assert abs(op.cantidad + op.fee_cantidad - 334.1339) < 1e-6
+        assert abs(op.cantidad - 333.7997661) < 1e-6
 
     def test_importe_total(self, detalles_xrp_buy):
         c = ClasificadorBitget(detalles_xrp_buy).clasificar()
@@ -537,10 +541,13 @@ class TestMultiFill:
 
     def test_cantidades_individuales(self, detalles_multi_fill):
         c = ClasificadorBitget(detalles_multi_fill).clasificar()
-        cantidades = sorted(op.cantidad for op in c.compraventas)
-        esperadas  = sorted([133.4718, 18.7671, 21.7611])
-        for got, exp in zip(cantidades, esperadas):
+        # Several fills each have their own fee in the base asset. Each
+        # accepted quantity is NET; net plus fee must reconcile to Amount.
+        brutales = sorted(op.cantidad + op.fee_cantidad for op in c.compraventas)
+        esperadas = sorted([133.4718, 18.7671, 21.7611])
+        for got, exp in zip(brutales, esperadas):
             assert abs(got - exp) < 1e-4
+        assert all(op.cantidad > 0 for op in c.compraventas)
 
     def test_mismo_activo(self, detalles_multi_fill):
         c = ClasificadorBitget(detalles_multi_fill).clasificar()
@@ -646,10 +653,13 @@ class TestCompraventasLedger:
         op = compras[0]
         assert op.activo == "XRP"
         assert op.contraparte == "USDT"
-        assert abs(op.cantidad - 40.0) < 1e-6
+        # Ledger Buy Amount=40 XRP is gross; Fee=-0.04 XRP is paid
+        # from the received units and cannot remain in FIFO inventory.
+        assert abs(op.cantidad - 39.96) < 1e-6
         assert abs(op.importe - 100.0) < 1e-6
         assert op.fee_activo == "XRP"
         assert abs(op.fee_cantidad - 0.04) < 1e-8
+        assert abs(op.cantidad + op.fee_cantidad - 40.0) < 1e-8
 
     def test_venta_simple(self, transacciones_venta_simple):
         """Par Sell XRP + Buy USDT → 1 VENTA XRP."""
@@ -673,8 +683,11 @@ class TestCompraventasLedger:
         """Cada sub-fill tiene su propia cantidad, NO la suma."""
         c = ClasificadorBitget(transacciones_multi_subfill).clasificar()
         cantidades = sorted(op.cantidad for op in c.compraventas)
-        assert abs(cantidades[0] - 0.601) < 1e-4
-        assert abs(cantidades[1] - 5.705) < 1e-4
+        assert abs(cantidades[0] - 0.600399) < 1e-8
+        assert abs(cantidades[1] - 5.699295) < 1e-8
+        gross = sorted(op.cantidad + op.fee_cantidad for op in c.compraventas)
+        assert abs(gross[0] - 0.601) < 1e-8
+        assert abs(gross[1] - 5.705) < 1e-8
 
     def test_buy_sell_en_mixto_genera_compraventa(self, transacciones_mixto):
         """El fixture mixto incluye Buy XRP + Sell USDT → debe generar 1 compraventa."""
@@ -1354,13 +1367,12 @@ class TestNoneValuesRegression:
         ]
         path = _csv_tmp(TRANSACCIONES_HEADERS, rows)
         try:
-            c = ClasificadorBitget(path).clasificar()
-            # No debe producir AttributeError; el resultado es informativo
-            assert isinstance(c, ClasificadorBitget)
-            # Hay al menos movimientos o rendimientos
-            total = (len(c.movimientos) + len(c.rendimientos) +
-                     len(c.compraventas) + len(c.desconocidas))
-            assert total > 0, "El CSV tiene 10 filas pero el clasificador no produjo nada"
+            # La venta XRP→USDT incluye Buy USDT=100, Fee=-1. Sin
+            # convención bruto/neto verificada no puede generarse un
+            # informe fiscal fiable: debe rechazar con un ValueError
+            # controlado, jamás AttributeError/500 por None.strip().
+            with pytest.raises(ValueError, match="Datos fiscales no seguros: venta ledger Bitget con comisión no conciliada"):
+                ClasificadorBitget(path).clasificar()
         except AttributeError as e:
             pytest.fail(f"Regresión ed927121 en CSV simulado de producción: {e}")
         finally:

@@ -21,6 +21,7 @@ import time
 import json
 import secrets
 import hashlib
+import math
 import tempfile
 import traceback
 import threading
@@ -1140,6 +1141,21 @@ def _pipeline_motor(clasificador) -> MotorFIFO:
         ops.append(("cv", op.fecha, op))
     for op in clasificador.swaps:
         ops.append(("swap", op.fecha, op))
+    # Coinbase and Bitvavo record the received reward only in rendimientos.
+    # A fiscal income entry also creates one acquisition lot at its verified
+    # EUR value. Crypto.com ALREADY adds this lot in its parser: never add
+    # it again or the inventory would double.
+    if isinstance(clasificador, (ClasificadorCoinbase, ClasificadorBitvavo)):
+        for income in clasificador.rendimientos:
+            qty = income.cantidad
+            eur = income.valor_eur
+            if not (math.isfinite(qty) and math.isfinite(eur)
+                    and qty > 0 and eur > 0):
+                raise ValueError(
+                    "Datos fiscales no seguros: rendimiento sin cantidad "
+                    "y valoración EUR positivas; no puede crearse lote FIFO."
+                )
+            ops.append(("reward", income.fecha, income))
     ops.sort(key=lambda x: x[1])
     for tipo, fecha, op in ops:
         if tipo == "cv":
@@ -1163,6 +1179,12 @@ def _pipeline_motor(clasificador) -> MotorFIFO:
                 activo_recibido=op.activo_recibido,
                 cantidad_recibida=op.cantidad_recibida,
                 nota=op.nota
+            )
+        elif tipo == "reward":
+            motor.registrar_compra(
+                fecha=op.fecha, activo=op.activo, cantidad=op.cantidad,
+                importe=op.valor_eur, contraparte="EUR",
+                fee_activo="EUR", fee_cantidad=0.0,
             )
     return motor
 
@@ -1475,11 +1497,12 @@ def _error_amigable(e: Exception) -> str:
 
 def _motor_a_json(motor) -> tuple:
     """Convierte el resultado del motor FIFO a formato JSON para la UI."""
+    motor.validar_integridad()
     resumen = motor.resumen_fiscal()
     posicion = [
         {
             "activo": p.activo,
-            "cantidad": round(p.cantidad_total, 6),
+            "cantidad": float(f"{p.cantidad_total:.15g}"),
             "precio_medio": round(p.precio_medio, 4),
             "coste_total": round(p.coste_total, 4),
         }
@@ -1490,7 +1513,7 @@ def _motor_a_json(motor) -> tuple:
             "fecha": r.fecha.strftime("%Y-%m-%d"),
             "tipo": r.tipo_operacion,
             "activo": r.activo,
-            "cantidad": round(r.cantidad_vendida, 6),
+            "cantidad": float(f"{r.cantidad_vendida:.15g}"),
             "transmision": round(r.precio_transmision, 4),
             "coste_fifo": round(r.precio_coste, 4),
             "ganancia_perdida": round(r.ganancia_perdida, 4),
@@ -1508,15 +1531,24 @@ def _rendimientos_a_json(rendimientos: list) -> list:
     from collections import defaultdict
     por_tipo = defaultdict(lambda: {"cantidad": 0.0, "operaciones": 0, "valor_eur": 0.0})
     for r in rendimientos:
+        for field in (r.cantidad, getattr(r, "valor_eur", 0.0)):
+            if not math.isfinite(float(field)):
+                raise ValueError("Datos fiscales no seguros: rendimiento no finito.")
         key = (r.subtipo, r.activo)          # ← agrupamos por tipo Y activo
         por_tipo[key]["cantidad"] += r.cantidad
         por_tipo[key]["operaciones"] += 1
         por_tipo[key]["valor_eur"] += getattr(r, 'valor_eur', 0.0)
+    # Individual finite income entries can overflow when accumulated.
+    for values in por_tipo.values():
+        if not math.isfinite(values["cantidad"]) or not math.isfinite(values["valor_eur"]):
+            raise ValueError(
+                "Datos fiscales no seguros: suma de rendimientos no finita."
+            )
     return [
         {
             "subtipo": k[0],
             "activo": k[1],
-            "cantidad": round(v["cantidad"], 6),
+            "cantidad": float(f"{v['cantidad']:.15g}"),
             "operaciones": v["operaciones"],
             "valor_eur": round(v["valor_eur"], 4),
         }
@@ -2598,6 +2630,8 @@ def analizar():
                 )
             except Exception:
                 app.logger.exception("[ERROR_TRACKING] unexpected error calling record_processing_error_safe")
+            if isinstance(e, ValueError) and str(e).startswith("Datos fiscales no seguros:"):
+                return jsonify({"error": str(e)}), 422
             return jsonify({"error": _error_amigable(e)}), 500
 
     finally:
@@ -2906,6 +2940,8 @@ def analizar_bitget():
                 )
             except Exception:
                 app.logger.exception("[ERROR_TRACKING] unexpected error calling record_processing_error_safe")
+            if isinstance(e, ValueError) and str(e).startswith("Datos fiscales no seguros:"):
+                return jsonify({"error": str(e)}), 422
             return jsonify({"error": _error_amigable(e)}), 500
 
     finally:

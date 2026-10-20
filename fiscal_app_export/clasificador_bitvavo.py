@@ -20,6 +20,7 @@ Tipos de operación:
 """
 
 import logging
+import math
 import pandas as pd
 from dataclasses import dataclass
 from typing import Dict, List
@@ -37,14 +38,14 @@ _COL_ALIASES: Dict[str, List[str]] = {
     "Type":                     ["Type", "type", "TYPE", "Transaction Type"],
     "Currency":                 ["Currency", "currency", "Asset", "Base Currency"],
     "Amount":                   ["Amount", "amount", "Quantity"],
-    "Quote Currency":           ["Quote Currency", "Quote currency", "quote_currency"],
-    "Quote Price":              ["Quote Price", "Quote price", "Unit Price", "Price"],
-    "Received / Paid Currency": ["Received / Paid Currency", "Received/Paid Currency",
+    "Quote Currency":           ["Quote Currency", "Quote currency", "quote currency", "quote_currency"],
+    "Quote Price":              ["Quote Price", "Quote price", "quote price", "Unit Price", "Price"],
+    "Received / Paid Currency": ["Received / Paid Currency", "Received/Paid Currency", "received / paid currency",
                                   "received_paid_currency", "Counter Currency"],
-    "Received / Paid Amount":   ["Received / Paid Amount", "Received/Paid Amount",
+    "Received / Paid Amount":   ["Received / Paid Amount", "Received/Paid Amount", "received / paid amount",
                                   "received_paid_amount", "Counter Amount"],
-    "Fee currency":             ["Fee currency", "Fee Currency", "fee_currency"],
-    "Fee amount":               ["Fee amount", "Fee Amount", "fee_amount"],
+    "Fee currency":             ["Fee currency", "Fee Currency", "fee currency", "fee_currency"],
+    "Fee amount":               ["Fee amount", "Fee Amount", "fee amount", "fee_amount"],
     "Status":                   ["Status", "status", "STATUS"],
     "Address":                  ["Address", "address", "Wallet Address"],
 }
@@ -104,7 +105,8 @@ def _leer_csv_bitvavo(filepath: str) -> pd.DataFrame:
     for enc in _ENCODINGS:
         for sep in _SEPARADORES:
             try:
-                df = pd.read_csv(filepath, sep=sep, encoding=enc, dtype=str)
+                df = pd.read_csv(filepath, sep=sep, encoding=enc, dtype=str,
+                                 keep_default_na=False)
                 df.columns = [c.strip() for c in df.columns]
                 df_norm = _normalizar_columnas(df)
                 missing = [c for c in _COLS_OBLIGATORIAS if c not in df_norm.columns]
@@ -211,7 +213,7 @@ class ClasificadorBitvavo:
         # Construir timestamp
         self.df["fecha"] = (
             self.df["Date"].astype(str) + " " +
-            self.df["Time"].astype(str).str.split(".").str[0]  # quitar milisegundos
+            self.df["Time"].astype(str)  # preservar precisión subsegundo para FIFO
         )
 
         # Solo procesar operaciones completadas
@@ -234,7 +236,12 @@ class ClasificadorBitvavo:
 
         # Received/Paid
         rec_mon   = str(fila.get("Received / Paid Currency", "")).strip()
-        rec_cant  = self._float(fila.get("Received / Paid Amount", 0))
+        # A buy/sell requires a genuine payment amount. A missing or corrupt
+        # amount must not be replaced by 0 and silently drop the acquisition.
+        rec_cant  = self._float(
+            fila.get("Received / Paid Amount", ""),
+            required=tipo in ("buy", "sell"),
+        )
 
         # Quote Price (EUR por unidad de cripto — separador decimal inglés estándar)
         quote_price = self._float(fila.get("Quote Price", 0))
@@ -314,7 +321,21 @@ class ClasificadorBitvavo:
         elif tipo in TIPOS_RENDIMIENTO:
             activo       = moneda
             cantidad_abs = abs(raw_amount)
-            valor_eur    = round(cantidad_abs * quote_price, 4) if quote_price else 0.0
+            # The income base must be denominated in EUR, not any quote coin.
+            # A non-valued reward must not silently become a zero-cost lot.
+            quote_currency = str(fila.get("Quote Currency", "")).strip().upper()
+            if quote_currency != "EUR" or not (quote_price > 0):
+                raise ValueError(
+                    "Datos fiscales no seguros: rendimiento Bitvavo sin "
+                    "valoración positiva y verificable en EUR."
+                )
+            valor_eur    = cantidad_abs * quote_price
+            if not (math.isfinite(cantidad_abs) and math.isfinite(valor_eur)
+                    and cantidad_abs > 0 and valor_eur > 0):
+                raise ValueError(
+                    "Datos fiscales no seguros: rendimiento Bitvavo con "
+                    "cantidad o valoración EUR inválida."
+                )
             self.rendimientos.append(OperacionRendimiento(
                 fecha=fecha, subtipo=tipo,
                 activo=activo, cantidad=cantidad_abs,
@@ -337,7 +358,7 @@ class ClasificadorBitvavo:
                 ))
 
     @staticmethod
-    def _float(val) -> float:
+    def _float(val, *, required: bool = False) -> float:
         """Parsea un número en formato europeo (punto=miles, coma=decimal).
 
         Ejemplos de Bitvavo:
@@ -348,7 +369,13 @@ class ClasificadorBitvavo:
         """
         try:
             s = str(val).strip()
-            if not s or s.lower() in ("nan", "none"):
+            if s.lower() in ("nan", "inf", "+inf", "-inf", "infinity", "+infinity", "-infinity"):
+                raise ValueError("Datos fiscales no seguros: Bitvavo contiene una cantidad no finita.")
+            if not s or s.lower() == "none":
+                if required:
+                    raise ValueError(
+                        "Datos fiscales no seguros: Bitvavo carece de un importe obligatorio."
+                    )
                 return 0.0
             dot_count = s.count(".")
             comma_count = s.count(",")
@@ -362,9 +389,20 @@ class ClasificadorBitvavo:
                 # Solo coma → decimal europeo → '1018,18'
                 s = s.replace(",", ".")
             # Si solo hay un punto → decimal estándar inglés: no modificar
-            return float(s)
-        except Exception:
-            return 0.0
+            value = float(s)
+            if not math.isfinite(value):
+                raise ValueError("Datos fiscales no seguros: Bitvavo contiene una cantidad o importe no finito.")
+            return value
+        except ValueError as exc:
+            if str(exc).startswith("Datos fiscales no seguros:"):
+                raise
+            raise ValueError(
+                "Datos fiscales no seguros: Bitvavo contiene una cantidad o importe no interpretable."
+            ) from exc
+        except (TypeError, OverflowError) as exc:
+            raise ValueError(
+                "Datos fiscales no seguros: Bitvavo contiene una cantidad o importe no interpretable."
+            ) from exc
 
     def resumen(self) -> dict:
         return {
