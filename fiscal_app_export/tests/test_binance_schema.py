@@ -188,18 +188,17 @@ def test_fecha_invalida_error_tipificado(tmp_path):
     assert exc_info.value.category == "parser_error"
 
 
-# ── 10 · Cantidad no numérica (comportamiento actual, pendiente de gobierno) ─
+# ── 10 · Cantidad no numérica: contrato de integridad F05 ───────────────
 
-def test_cantidad_invalida_comportamiento_actual(tmp_path):
-    """Documenta el comportamiento vigente: Cambio no numérico → 0.0 silencioso.
+def test_cantidad_invalida_se_rechaza_sin_inventar_cero(tmp_path):
+    """F05: una cantidad textual inválida no puede convertirse silenciosamente en 0.
 
-    Cambiarlo (bloquear o advertir) altera qué archivos generan informe y está
-    pendiente de decisión de gobierno (Regla 1, CLAUDE.md §2). Este test fija
-    el comportamiento actual para que cualquier cambio futuro sea deliberado.
+    Cambio de contrato deliberado y sujeto a la auditoría F01–F07 de PR #119.
+    La entrada debe corregirse antes de emitir un informe fiscal.
     """
     csv = HEADER_ES + "12345678,2024-03-01 10:00:00,Spot,Deposit,EUR,no-numerico,\n"
-    c = ClasificadorBinanceTx(_csv(tmp_path, csv))
-    assert float(c.df["Cambio"].iloc[0]) == 0.0
+    with pytest.raises(ValueError, match="Datos fiscales no seguros"):
+        ClasificadorBinanceTx(_csv(tmp_path, csv))
 
 
 # ── 11 · Operación desconocida ───────────────────────────────────────────────
