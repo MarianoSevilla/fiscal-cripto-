@@ -115,8 +115,13 @@ class ClasificadorUphold:
         origin      = row.get("Origin", "").strip()
         origin_cur  = row.get("Origin Currency", "").strip()
         dest_cur    = row.get("Destination Currency", "").strip()
-        origin_amt  = self._float(row.get("Origin Amount", "0"))
-        dest_amt    = self._float(row.get("Destination Amount", "0"))
+        completed = status == "completed"
+        # Only fiscal legs need mandatory amounts. Failed and unsupported
+        # status rows must not block an otherwise valid export.
+        purchase = completed and tipo == "in" and origin in ORIGINS_COMPRA and origin_cur == "EUR"
+        exchange = completed and tipo == "transfer" and origin_cur != dest_cur
+        origin_amt  = self._float(row.get("Origin Amount", ""), required=purchase or exchange)
+        dest_amt    = self._float(row.get("Destination Amount", ""), required=purchase or exchange)
         fee_amt     = self._float(row.get("Fee Amount", ""))
         fee_cur     = row.get("Fee Currency", "").strip()
         tx_id       = row.get("Id", "").strip()
@@ -268,12 +273,16 @@ class ClasificadorUphold:
         return date_str[:19] if date_str else ""
 
     @staticmethod
-    def _float(val) -> float:
+    def _float(val, *, required: bool = False) -> float:
         try:
             s = str(val).strip()
             if s.lower() in ("nan", "inf", "+inf", "-inf", "infinity", "+infinity", "-infinity"):
                 raise ValueError("Datos fiscales no seguros: Uphold contiene una cantidad no finita.")
             if not s or s == "-":
+                if required:
+                    raise ValueError(
+                        "Datos fiscales no seguros: Uphold carece de un importe obligatorio."
+                    )
                 return 0.0
             number = float(s)
             if not math.isfinite(number):
@@ -282,9 +291,9 @@ class ClasificadorUphold:
         except ValueError as exc:
             if str(exc).startswith("Datos fiscales no seguros:"):
                 raise
-            return 0.0
-        except Exception:
-            return 0.0
+            raise ValueError(
+                "Datos fiscales no seguros: Uphold contiene un importe no interpretable."
+            ) from exc
 
     def resumen(self) -> dict:
         return {
