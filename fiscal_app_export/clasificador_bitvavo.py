@@ -236,7 +236,12 @@ class ClasificadorBitvavo:
 
         # Received/Paid
         rec_mon   = str(fila.get("Received / Paid Currency", "")).strip()
-        rec_cant  = self._float(fila.get("Received / Paid Amount", 0))
+        # A buy/sell requires a genuine payment amount. A missing or corrupt
+        # amount must not be replaced by 0 and silently drop the acquisition.
+        rec_cant  = self._float(
+            fila.get("Received / Paid Amount", ""),
+            required=tipo in ("buy", "sell"),
+        )
 
         # Quote Price (EUR por unidad de cripto — separador decimal inglés estándar)
         quote_price = self._float(fila.get("Quote Price", 0))
@@ -353,7 +358,7 @@ class ClasificadorBitvavo:
                 ))
 
     @staticmethod
-    def _float(val) -> float:
+    def _float(val, *, required: bool = False) -> float:
         """Parsea un número en formato europeo (punto=miles, coma=decimal).
 
         Ejemplos de Bitvavo:
@@ -367,6 +372,10 @@ class ClasificadorBitvavo:
             if s.lower() in ("nan", "inf", "+inf", "-inf", "infinity", "+infinity", "-infinity"):
                 raise ValueError("Datos fiscales no seguros: Bitvavo contiene una cantidad no finita.")
             if not s or s.lower() == "none":
+                if required:
+                    raise ValueError(
+                        "Datos fiscales no seguros: Bitvavo carece de un importe obligatorio."
+                    )
                 return 0.0
             dot_count = s.count(".")
             comma_count = s.count(",")
@@ -387,9 +396,13 @@ class ClasificadorBitvavo:
         except ValueError as exc:
             if str(exc).startswith("Datos fiscales no seguros:"):
                 raise
-            return 0.0
-        except (TypeError, OverflowError):
-            return 0.0
+            raise ValueError(
+                "Datos fiscales no seguros: Bitvavo contiene una cantidad o importe no interpretable."
+            ) from exc
+        except (TypeError, OverflowError) as exc:
+            raise ValueError(
+                "Datos fiscales no seguros: Bitvavo contiene una cantidad o importe no interpretable."
+            ) from exc
 
     def resumen(self) -> dict:
         return {
