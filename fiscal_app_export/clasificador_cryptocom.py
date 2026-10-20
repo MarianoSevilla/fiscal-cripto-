@@ -129,9 +129,19 @@ class ClasificadorCryptoCom:
             kind          = str(fila.get("Transaction Kind", "")).strip()
             fecha         = str(fila["Timestamp (UTC)"])
             moneda        = str(fila.get("Currency", "")).strip()
-            amount        = self._float(fila.get("Amount", 0))
+            # Empty optional columns are allowed, but a fiscal quantity or
+            # the EUR debit of an IBAN purchase cannot silently become zero.
+            needs_amount = (
+                kind in TIPOS_COMPRA_DIRECTA or kind in TIPOS_VENTA
+                or kind in TIPOS_EARN_INTERES or kind in TIPOS_RENDIMIENTO
+                or kind.startswith("reward.")
+                or (kind in TIPOS_COMPRA_IBAN and moneda == "EUR")
+            )
+            amount        = self._float(fila.get("Amount", ""), required=needs_amount)
             to_moneda     = str(fila.get("To Currency", "")).strip()
-            to_amount     = self._float(fila.get("To Amount", 0))
+            to_amount     = self._float(
+                fila.get("To Amount", ""), required=kind in TIPOS_COMPRA_IBAN
+            )
             native_moneda = str(fila.get("Native Currency", "")).strip()
             # Native Amount (in USD) is NOT a substitute for Native Amount
             # when the latter is used as a verified EUR valuation.
@@ -139,6 +149,7 @@ class ClasificadorCryptoCom:
                 kind in TIPOS_COMPRA_DIRECTA or kind in TIPOS_VENTA
                 or kind in TIPOS_EARN_INTERES or kind in TIPOS_RENDIMIENTO
                 or kind.startswith("reward.")
+                or (kind in TIPOS_COMPRA_IBAN and moneda != "EUR")
             )
             native_amount = self._float(
                 fila.get("Native Amount", ""), required=needs_native_eur
@@ -344,7 +355,7 @@ class ClasificadorCryptoCom:
         if val is None or (isinstance(val, str) and not val.strip()):
             if required:
                 raise ValueError(
-                    "Datos fiscales no seguros: Crypto.com carece de un importe EUR obligatorio."
+                    "Datos fiscales no seguros: Crypto.com carece de una cantidad o importe obligatorio."
                 )
             return 0.0  # Optional empty To Amount / other fields
         try:
