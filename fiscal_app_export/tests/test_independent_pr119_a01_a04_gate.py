@@ -75,7 +75,7 @@ def bitget():
 @pytest.mark.parametrize("fee_location", ["received", "spent"])
 def test_a02_bitget_ledger_fee_is_not_treated_as_net_verified(fee_location):
     source = bitget()
-    received = {"Coin": "EUR", "Amount": "400", "Fee": "-2" if fee_location == "received" else "0"}
+    received = {"Coin": "USDT", "Amount": "400", "Fee": "-2" if fee_location == "received" else "0"}
     spent = {"Coin": "BTC", "Amount": "-1", "Fee": "-0.01" if fee_location == "spent" else "0"}
     with pytest.raises(ValueError, match="Datos fiscales no seguros"):
         source._reconstruir_compraventa("2025-01-01 10:00:00", received, spent)
