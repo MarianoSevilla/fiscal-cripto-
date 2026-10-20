@@ -1538,6 +1538,12 @@ def _rendimientos_a_json(rendimientos: list) -> list:
         por_tipo[key]["cantidad"] += r.cantidad
         por_tipo[key]["operaciones"] += 1
         por_tipo[key]["valor_eur"] += getattr(r, 'valor_eur', 0.0)
+    # Individual finite income entries can overflow when accumulated.
+    for values in por_tipo.values():
+        if not math.isfinite(values["cantidad"]) or not math.isfinite(values["valor_eur"]):
+            raise ValueError(
+                "Datos fiscales no seguros: suma de rendimientos no finita."
+            )
     return [
         {
             "subtipo": k[0],
