@@ -153,7 +153,7 @@ def test_on_anos_detecta_2025(client, usuario, flag_on):
 def test_on_analizar_acepta_xlsx_y_devuelve_resumen_motor(client, usuario, flag_on):
     _login(client)
     r = client.post("/api/analizar",
-                    data={"csv": (_xlsx(_ROWS), "bit2me.xlsx"), "exchange": "bit2me",
+                    data={"csv": (_xlsx(_ROWS[:2]), "bit2me.xlsx"), "exchange": "bit2me",
                           "ejercicio": "2025", "nombre": "B"},
                     content_type="multipart/form-data")
     assert r.status_code == 200
@@ -164,7 +164,7 @@ def test_on_analizar_acepta_xlsx_y_devuelve_resumen_motor(client, usuario, flag_
     assert any("ORIENTATIVO" in a for a in body["advertencias"])
     assert "operaciones_con_resultado" in body["resumen"]
 
-def test_on_permuta_no_genera_ganancia_por_carryover(client, usuario, flag_on):
+def test_on_permuta_sin_valor_mercado_no_entrega_informe(client, usuario, flag_on):
     _login(client)
     # Solo una permuta: el swap cristaliza ganancia 0 (coste se traspasa)
     rows = [_row("Trade", 100, "XRP", 100, "ALGO", fecha="2025-03-01 10:00")]
@@ -173,9 +173,9 @@ def test_on_permuta_no_genera_ganancia_por_carryover(client, usuario, flag_on):
                           "ejercicio": "2025", "nombre": "B"},
                     content_type="multipart/form-data")
     body = r.get_json()
-    assert body["ok"] is True
-    assert body["resumen"]["ganancias_brutas"] == 0
-    assert body["resumen"]["perdidas_brutas"] == 0
+    assert r.status_code == 422
+    assert "Datos fiscales no seguros" in body["error"]
+    assert "token" not in body
 
 def test_on_rechaza_extension_no_soportada(client, usuario, flag_on):
     _login(client)
