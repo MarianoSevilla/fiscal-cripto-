@@ -1540,7 +1540,7 @@ def _preparar_motor_fiscal_irpf(motor, clasificador, ejercicio=None):
                     "transmisión fiscal. No se genera informe definitivo."
                 )
         nota = str(getattr(op, "nota", "") or "").strip()
-        if re.match(r"^fee:\\s*[+]?(?:[1-9]|0*[.,]0*[1-9])", nota, re.I):
+        if re.match(r"^fee:\s*[+]?(?:[1-9]|0*[.,]0*[1-9])", nota, re.I):
             raise ValueError(
                 "Datos fiscales no seguros: la permuta registra una comisión "
                 "no reconciliada en el historial. Requiere valoración fiscal."
