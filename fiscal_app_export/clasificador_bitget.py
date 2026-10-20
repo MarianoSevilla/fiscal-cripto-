@@ -477,6 +477,10 @@ class ClasificadorBitget:
         # Fee:
         #   Buy  → Fee Coin = Base Asset → fee reduce la cantidad neta recibida.
         #   Sell → Fee Coin = USDT       → fee reduce el ingreso neto.
+        if tipo == "VENTA" and fee > 0 and fee_coin == base:
+            raise ValueError(
+                "Datos fiscales no seguros: venta Bitget con comisión en activo vendido sin reconciliación FIFO."
+            )
         if tipo == "COMPRA" and fee_coin == base and fee >= amount:
             raise ValueError("Datos fiscales no seguros: comisión Bitget mayor o igual que la cantidad comprada.")
         if fee and fee_coin not in (base, quote):
@@ -561,6 +565,10 @@ class ClasificadorBitget:
         if quote in STABLES_USD:
             self._tiene_pares_usdt = True
 
+        if action == "sell" and fee > 0 and fee_coin == coin:
+            raise ValueError(
+                "Datos fiscales no seguros: venta Bitget con comisión en activo vendido sin reconciliación FIFO."
+            )
         if action == "buy" and fee_coin == coin and fee >= qty:
             raise ValueError("Datos fiscales no seguros: comisión Bitget mayor o igual que la cantidad comprada.")
         if fee and fee_coin not in (coin, quote):
@@ -775,7 +783,15 @@ class ClasificadorBitget:
             ))
 
         elif buy_coin in STABLES_USD and sell_coin not in STABLES_USD:
-            # VENTA: cripto → stablecoin
+            # The Buy row records a received stablecoin fee separately.
+            # Without a verified gross/net convention, a fiscal report would
+            # overstate proceeds (A02). A fee on the spent crypto is also not
+            # represented as an additional FIFO disposal (A03). Fail closed.
+            if buy_fee > 0 or sell_fee > 0:
+                raise ValueError(
+                    "Datos fiscales no seguros: venta ledger Bitget con comisión no conciliada; "
+                    "sube un formato Spot/Detalles compatible."
+                )
             self._tiene_pares_usdt = True
             self.compraventas.append(OperacionCompraventa(
                 fecha        = fecha,
