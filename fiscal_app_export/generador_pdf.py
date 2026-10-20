@@ -1836,13 +1836,14 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
         for fl in _separador_bloque():
             story.append(fl)
         story.append(KeepTogether([
-            Paragraph("Advertencias — Operaciones que Requieren Revisión Manual", styles["section"]),
+            Paragraph("Valoraciones y advertencias del cálculo", styles["section"]),
             Paragraph(
-                "Las siguientes situaciones requieren comprobación manual. "
-                "<b>No son errores del sistema</b>: indican operaciones cuya valoración no puede "
-                "determinarse automáticamente porque el CSV no contiene el historial completo "
-                "(p.ej. activos adquiridos fuera del período del CSV, swaps con cripto sin compra previa registrada). "
-                "El coste base de estos lotes ha quedado en cero y debe corregirse con los datos reales.",
+                "Este apartado documenta las fuentes y fechas de las valoraciones "
+                "automáticas utilizadas y, cuando corresponda, situaciones que requieren "
+                "revisión. Una cotización documentada no implica inventario incompleto "
+                "ni coste de adquisición cero. Revisa cada anotación según su contenido. "
+                "Datos proporcionados por CoinGecko cuando se indique dicha fuente "
+                "(https://www.coingecko.com/en/api).",
                 styles["body_muted"]
             ),
             Spacer(1, 3*mm),
