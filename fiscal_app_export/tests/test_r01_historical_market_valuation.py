@@ -145,3 +145,53 @@ def test_r01_resolver_caches_provider_response_for_same_hour(monkeypatch):
 def test_r01_bad_timestamp_rejected(bad):
     with pytest.raises(ValueError, match="Datos fiscales no seguros"):
         _fecha_utc(bad)
+
+
+def test_r01_real_http_swap_200_only_when_both_eur_prices_available(monkeypatch, tmp_path):
+    """Complete JSON/PDF/token path with independent synthetic market quotes."""
+    import io
+    import app as application
+    import flask_login.utils as login_utils
+    mock_prices(monkeypatch)
+    c = data()
+    # Direct HTTP parser stub keeps classification real and SQL writes mocked:
+    # exact pipeline, historical quotes, and generation order are exercised.
+    fake_user = SimpleNamespace(
+        id=93111, email="synthetic@example.invalid", role="user",
+        is_authenticated=True, is_active=True,
+    )
+    monkeypatch.setattr(login_utils, "_get_user", lambda: fake_user)
+    monkeypatch.setattr(application, "_validar_csv", lambda *args, **kwargs: (True, ""))
+    monkeypatch.setattr(
+        application, "procesar_bitvavo", lambda _path: (_pipeline_motor(c), [], c)
+    )
+    writes, tokens, pdf_calls = [], [], []
+    def pdf(motor, *args, **kwargs):
+        pdf_calls.append(motor.resumen_fiscal()["resultado_neto"])
+        assert len(motor.permutas_valoradas) == 1
+        return b"%PDF-SYNTHETIC"
+    monkeypatch.setattr(application, "generar_pdf", pdf)
+    monkeypatch.setattr(application, "_registrar_informe",
+                        lambda **kw: writes.append(kw) or 101)
+    monkeypatch.setattr(application, "record_processing_error_safe",
+                        lambda **kw: None)
+    monkeypatch.setattr(application, "_guardar_token_pdf",
+                        lambda *args: tokens.append(args))
+    output = tmp_path / "market-valued.pdf"
+    monkeypatch.setattr(application, "_derivar_ruta_pdf", lambda _path: str(output))
+    with application.app.test_client() as client:
+        response = client.post(
+            "/api/analizar", data={
+                "csv": (io.BytesIO(b"Date,Operation\\n2025-01-01,synthetic\\n"),
+                        "synthetic.csv"),
+                "exchange": "bitvavo", "nombre": "Synthetic",
+                "ejercicio": "2025",
+            },
+            content_type="multipart/form-data",
+        )
+    assert response.status_code == 200, response.get_data(as_text=True)[:350]
+    assert response.json["resumen"]["resultado_neto"] == 255
+    assert response.json["token"] == "market-valued.pdf"
+    assert output.read_bytes() == b"%PDF-SYNTHETIC"
+    assert pdf_calls == [255] and len(tokens) == 1
+    assert writes and writes[0].get("status", "generated") == "generated"
