@@ -141,7 +141,7 @@ class ValoradorPermutasEUR:
         return CotizacionEUR(price, f"CoinGecko/{cg_id}", t)
 
     def resolver(self, swap, clasificador) -> PermutaValorada:
-        fecha = _fecha_utc(swap.fecha)
+        fecha = _fecha_utc(getattr(swap, "fecha", None))
         ent = str(swap.activo_entregado).upper().strip()
         rec = str(swap.activo_recibido).upper().strip()
         if not ent or not rec or ent == rec:
