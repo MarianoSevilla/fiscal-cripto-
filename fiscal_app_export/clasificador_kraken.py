@@ -48,6 +48,8 @@ class OperacionSwap:
     cantidad_recibida: float
     nota: str = ""
     precio_fmv_eur: float = 0.0   # valor de mercado EUR del activo recibido en el momento del swap
+    fee_activo: str = ""
+    fee_cantidad: float = 0.0
 
 @dataclass
 class OperacionRendimiento:
@@ -200,7 +202,9 @@ class ClasificadorKraken:
                     fecha=fecha,
                     activo_entregado=asset_spent, cantidad_entregada=amount_spent,
                     activo_recibido=asset_recv,   cantidad_recibida=amount_recv,
-                    precio_fmv_eur=fmv_eur
+                    precio_fmv_eur=fmv_eur,
+                    fee_activo=fee_asset,
+                    fee_cantidad=fee_amount,
                 ))
             else:
                 # Fiat → fiat: movimiento (ej. conversión USD→EUR ya capturada arriba)
