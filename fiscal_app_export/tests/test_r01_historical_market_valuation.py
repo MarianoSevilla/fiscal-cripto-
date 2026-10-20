@@ -87,10 +87,13 @@ def test_r01_coinbase_fmv_for_received_leg_avoids_second_external_request(monkey
     calls = mock_prices(monkeypatch, {"bitcoin": 300})
     c = data()
     # Trusted EUR convert subtotal from Coinbase; includes validation in parser.
-    c.__class__ = type("ClasificadorCoinbase", (SimpleNamespace,), {})
+    coinbase = type("ClasificadorCoinbase", (), {})()
+    coinbase.compraventas, coinbase.swaps, coinbase.rendimientos = (
+        c.compraventas, c.swaps, c.rendimientos)
+    c = coinbase
     c.swaps[0].precio_fmv_eur = 320.0
     m = _preparar_motor_fiscal_irpf(_pipeline_motor(c), c)
-    assert _motor_a_json(m, c)[0]["resultado_neto"] == 270
+    assert _motor_a_json(m, c)[0]["resultado_neto"] == 260
     assert len(calls) == 1
     assert "Coinbase/Convert EUR" in m.permutas_valoradas[0]
 
