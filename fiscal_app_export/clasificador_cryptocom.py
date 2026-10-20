@@ -105,7 +105,9 @@ class OperacionDesconocida:
 class ClasificadorCryptoCom:
 
     def __init__(self, filepath: str):
-        self.df = pd.read_csv(filepath, encoding='utf-8-sig')
+        # Preserve empty optional CSV fields as empty strings, but retain literal
+        # "NaN"/"Infinity" text so fiscal validation can reject it.
+        self.df = pd.read_csv(filepath, encoding='utf-8-sig', keep_default_na=False)
         self.compraventas = []
         self.swaps        = []
         self.rendimientos = []
@@ -330,6 +332,8 @@ class ClasificadorCryptoCom:
 
     @staticmethod
     def _float(val) -> float:
+        if val is None or (isinstance(val, str) and not val.strip()):
+            return 0.0  # Optional empty To Amount / Native Amount columns
         try:
             v = float(val)
             if not math.isfinite(v):
