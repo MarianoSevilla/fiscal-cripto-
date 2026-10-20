@@ -234,7 +234,7 @@ def test_r01_generated_pdf_contains_both_price_sources_and_no_false_zero_basis(m
     assert payload.startswith(b"%PDF")
     with pdfplumber.open(io.BytesIO(payload)) as pdf:
         extracted = " ".join(page.extract_text() or "" for page in pdf.pages)
-    text = re.sub(r"\\s+", " ", extracted)
+    text = re.sub(r"\s+", " ", extracted)
     assert "CoinGecko/bitcoin" in text, text[-2200:]
     assert "CoinGecko/ethereum" in text
     assert "2025-01-01T10:00:00" in text
