@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from clasificador_cryptocom import ClasificadorCryptoCom
 
 
-HEADER = "Timestamp (UTC),Transaction Description,Transaction Kind,Currency,Amount,To Currency,To Amount,Native Currency,Native Amount (in USD),Transaction Hash\n"
+HEADER = "Timestamp (UTC),Transaction Description,Transaction Kind,Currency,Amount,To Currency,To Amount,Native Currency,Native Amount,Native Amount (in USD),Transaction Hash\n"
 
 
 def _write_csv(tmp_path, content: str, encoding: str = "utf-8", filename: str = "cc.csv") -> str:
@@ -26,17 +26,17 @@ def _write_csv(tmp_path, content: str, encoding: str = "utf-8", filename: str = 
 CSV_COMPRA_NORMAL = (
     HEADER
     + "2024-03-15 10:00:00,Buy BTC,crypto_purchase,BTC,0.01,,,"
-    + "EUR,650.00,\n"
+    + "EUR,650.00,650.00,\n"
 )
 
 CSV_TIMESTAMP_MALFORMADO = (
     HEADER
-    + "FECHA_ROTA,Buy BTC,crypto_purchase,BTC,0.01,,,USD,650.00,\n"
+    + "FECHA_ROTA,Buy BTC,crypto_purchase,BTC,0.01,,,USD,650.00,650.00,\n"
 )
 
 CSV_TIMESTAMP_VACIO = (
     HEADER
-    + ",Buy BTC,crypto_purchase,BTC,0.01,,,USD,650.00,\n"
+    + ",Buy BTC,crypto_purchase,BTC,0.01,,,USD,650.00,650.00,\n"
 )
 
 
@@ -78,6 +78,8 @@ def test_cryptocom_csv_normal_clasifica_compra(tmp_path):
     clf = ClasificadorCryptoCom(filepath).clasificar()
     assert len(clf.compraventas) == 1
     assert clf.compraventas[0].activo == "BTC"
+    # UTF-8 regression must not silently classify an acquisition at EUR 0.
+    assert clf.compraventas[0].importe == 650.0
 
 
 def test_cryptocom_bom_con_timestamp_malformado(tmp_path):
