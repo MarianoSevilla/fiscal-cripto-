@@ -218,3 +218,26 @@ def test_r01_year_filter_preserved_after_replaying_full_fifo(monkeypatch):
     # 1 ETH of two sold for 200 with basis 155 => gain45. Total 265.
     assert m.resumen_fiscal()["resultado_neto"] == 265
     assert len(m.resultados) == 2
+
+
+def test_r01_generated_pdf_contains_both_price_sources_and_no_false_zero_basis(monkeypatch):
+    """Examine actual PDF text, not merely the PDF signature."""
+    import io
+    import re
+    import pdfplumber
+    from generador_pdf import generar_pdf
+    mock_prices(monkeypatch, {"bitcoin": 300, "ethereum": 155})
+    c = data()
+    motor = _preparar_motor_fiscal_irpf(
+        _pipeline_motor(c), c, ejercicio="2025")
+    payload = generar_pdf(motor, "Usuario sintético", "2025", "Bitvavo", [])
+    assert payload.startswith(b"%PDF")
+    with pdfplumber.open(io.BytesIO(payload)) as pdf:
+        extracted = " ".join(page.extract_text() or "" for page in pdf.pages)
+    text = re.sub(r"\\s+", " ", extracted)
+    assert "CoinGecko/bitcoin" in text, text[-2200:]
+    assert "CoinGecko/ethereum" in text
+    assert "2025-01-01T10:00:00" in text
+    assert "Datos proporcionados por CoinGecko" in text
+    assert "Valoraciones y advertencias del" in text
+    assert "El coste base de estos lotes ha quedado en cero" not in text
