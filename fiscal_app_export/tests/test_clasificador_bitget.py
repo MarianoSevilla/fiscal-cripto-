@@ -1367,13 +1367,12 @@ class TestNoneValuesRegression:
         ]
         path = _csv_tmp(TRANSACCIONES_HEADERS, rows)
         try:
-            c = ClasificadorBitget(path).clasificar()
-            # No debe producir AttributeError; el resultado es informativo
-            assert isinstance(c, ClasificadorBitget)
-            # Hay al menos movimientos o rendimientos
-            total = (len(c.movimientos) + len(c.rendimientos) +
-                     len(c.compraventas) + len(c.desconocidas))
-            assert total > 0, "El CSV tiene 10 filas pero el clasificador no produjo nada"
+            # La venta XRP→USDT incluye Buy USDT=100, Fee=-1. Sin
+            # convención bruto/neto verificada no puede generarse un
+            # informe fiscal fiable: debe rechazar con un ValueError
+            # controlado, jamás AttributeError/500 por None.strip().
+            with pytest.raises(ValueError, match="Datos fiscales no seguros: venta ledger Bitget con comisión no conciliada"):
+                ClasificadorBitget(path).clasificar()
         except AttributeError as e:
             pytest.fail(f"Regresión ed927121 en CSV simulado de producción: {e}")
         finally:
