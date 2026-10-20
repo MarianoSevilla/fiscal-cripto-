@@ -83,19 +83,20 @@ def test_r01_automatic_two_leg_prices_correct_fifo_and_future_sale(monkeypatch):
     assert len(calls) == 2
 
 
-def test_r01_coinbase_fmv_for_received_leg_avoids_second_external_request(monkeypatch):
-    calls = mock_prices(monkeypatch, {"bitcoin": 300})
+def test_r01_coinbase_subtotal_not_misidentified_as_received_market_value(monkeypatch):
+    calls = mock_prices(monkeypatch, {"bitcoin": 300, "ethereum": 155})
     c = data()
-    # Trusted EUR convert subtotal from Coinbase; includes validation in parser.
+    # EUR subtotal alone does not certify the market value of received ETH.
     coinbase = type("ClasificadorCoinbase", (), {})()
     coinbase.compraventas, coinbase.swaps, coinbase.rendimientos = (
         c.compraventas, c.swaps, c.rendimientos)
     c = coinbase
     c.swaps[0].precio_fmv_eur = 320.0
     m = _preparar_motor_fiscal_irpf(_pipeline_motor(c), c)
-    assert _motor_a_json(m, c)[0]["resultado_neto"] == 260
-    assert len(calls) == 1
-    assert "Coinbase/Convert EUR" in m.permutas_valoradas[0]
+    assert _motor_a_json(m, c)[0]["resultado_neto"] == 255
+    assert len(calls) == 2
+    assert "CoinGecko/ethereum" in m.permutas_valoradas[0]
+    assert "Coinbase/Convert EUR" not in m.permutas_valoradas[0]
 
 
 @pytest.mark.parametrize("status,offset", [(429, 0), (200, 31 * 60)])
