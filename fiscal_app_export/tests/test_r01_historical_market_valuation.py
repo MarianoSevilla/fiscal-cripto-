@@ -241,3 +241,18 @@ def test_r01_generated_pdf_contains_both_price_sources_and_no_false_zero_basis(m
     assert "Datos proporcionados por CoinGecko" in text
     assert "Valoraciones y advertencias del" in text
     assert "El coste base de estos lotes ha quedado en cero" not in text
+
+
+@pytest.mark.parametrize("fee_field, fee_value", [
+    ("fee_eur", 1.5),
+    ("fee_cantidad", 0.01),
+    ("nota", "fee: 0.0007 BTC | synthetic-id"),
+])
+def test_r01_fee_bearing_swap_not_silently_omitted(monkeypatch, fee_field, fee_value):
+    """Fail closed: neither Coinbase EUR nor Kraken/Uphold crypto fees are lost."""
+    calls = mock_prices(monkeypatch)
+    c = data()
+    setattr(c.swaps[0], fee_field, fee_value)
+    with pytest.raises(ValueError, match="comisi[oó]n"):
+        _preparar_motor_fiscal_irpf(_pipeline_motor(c), c, ejercicio="2025")
+    assert calls == [], "Fee rejection must precede paid price API requests"
