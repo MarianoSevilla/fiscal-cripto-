@@ -164,7 +164,12 @@ def test_on_analizar_acepta_xlsx_y_devuelve_resumen_motor(client, usuario, flag_
     assert any("ORIENTATIVO" in a for a in body["advertencias"])
     assert "operaciones_con_resultado" in body["resumen"]
 
-def test_on_permuta_sin_valor_mercado_no_entrega_informe(client, usuario, flag_on):
+def test_on_permuta_sin_valor_mercado_no_entrega_informe(client, usuario, flag_on, monkeypatch):
+    import valoracion_permutas
+    class NoHistoricData:
+        status_code = 429
+    monkeypatch.setattr(valoracion_permutas.requests, "get",
+                        lambda *args, **kwargs: NoHistoricData())
     _login(client)
     # Solo una permuta: el swap cristaliza ganancia 0 (coste se traspasa)
     rows = [_row("Trade", 100, "XRP", 100, "ALGO", fecha="2025-03-01 10:00")]
