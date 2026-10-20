@@ -195,3 +195,25 @@ def test_r01_real_http_swap_200_only_when_both_eur_prices_available(monkeypatch,
     assert output.read_bytes() == b"%PDF-SYNTHETIC"
     assert pdf_calls == [255] and len(tokens) == 1
     assert writes and writes[0].get("status", "generated") == "generated"
+
+
+def test_r01_year_filter_preserved_after_replaying_full_fifo(monkeypatch):
+    """A 2025 report must not include 2024 gains, but must keep 2024 lots."""
+    mock_prices(monkeypatch)
+    c = data()
+    sale_2024 = SimpleNamespace(
+        fecha="2024-07-01 10:00:00", tipo="VENTA", activo="BTC",
+        cantidad=0.1, importe=50, contraparte="EUR",
+        fee_activo="EUR", fee_cantidad=0,
+    )
+    # An earlier sale changes cost available for the 2025 swap. Use 0.9 BTC.
+    c.compraventas.append(sale_2024)
+    c.swaps[0].cantidad_entregada = 0.9
+    m = _preparar_motor_fiscal_irpf(_pipeline_motor(c), c, ejercicio="2025")
+    years = {r.fecha.year for r in m.resultados}
+    assert years == {2025}
+    # Original 2024 acquired 1 BTC for 100; sold 0.1 for 50, leaves 0.9
+    # cost 90. BTC swap value 0.9*300=270; ETH side 310 wins => gain220.
+    # 1 ETH of two sold for 200 with basis 155 => gain45. Total 265.
+    assert m.resumen_fiscal()["resultado_neto"] == 265
+    assert len(m.resultados) == 2
