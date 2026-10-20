@@ -76,6 +76,7 @@ def build(mode):
 for mode in ("swap", "nexo", "none", "partial", "uphold", "valid"):
     exchange = "nexo" if mode == "nexo" else "uphold" if mode == "uphold" else "bitvavo"
     setattr(app_module, "procesar_"+exchange, lambda _path, m=mode: build(m))
+    app_module.limiter.reset()  # no shared throttling across synthetic E2E cases
     with app.test_client() as client:
         resp = client.post("/api/analizar", data={
             "csv": (io.BytesIO(b"Date,Value\n2025-01-01,1\n"), "synthetic.csv"),
