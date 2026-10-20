@@ -26,7 +26,7 @@ from motor_fifo import MotorFIFO
 from clasificador_nexo import ClasificadorNexo
 from clasificador_uphold import ClasificadorUphold
 
-app.config["TESTING"] = True
+app.config.update(TESTING=True, RATELIMIT_ENABLED=False)
 with app.app_context():
     db.create_all()
     user = User(email="isolated-user@example.invalid", full_name="Synthetic", role="user",
