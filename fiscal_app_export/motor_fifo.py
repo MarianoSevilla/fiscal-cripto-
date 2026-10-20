@@ -440,6 +440,9 @@ class MotorFIFO:
                 e["cantidad_restante"] * e["lote"].precio_coste_unitario
                 for e in vivos
             )
+            # The annual 721 snapshot must not serialize a nonfinite
+            # aggregate even when every individual lot is finite.
+            self._finite(cantidad, coste, coste / cantidad if cantidad > 0 else 0)
             # Nuevos objetos Lote con la cantidad_restante correcta a fecha_corte.
             # El motor original no se toca: lote.cantidad_restante permanece intacto.
             lotes_corte = [
@@ -470,6 +473,9 @@ class MotorFIFO:
         total_g    = sum(r.ganancia_perdida for r in ganancias)
         total_p    = sum(r.ganancia_perdida for r in perdidas)
         neto       = total_g + total_p
+        # Even a sum of individually finite FIFO gains can overflow a float.
+        # This boundary runs before success JSON/PDF/report registration.
+        self._finite(total_g, total_p, neto)
 
         return {
             "operaciones_con_resultado": len(self.resultados),
