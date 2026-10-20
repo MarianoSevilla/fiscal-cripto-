@@ -147,20 +147,14 @@ class ValoradorPermutasEUR:
         if not ent or not rec or ent == rec:
             raise ValueError("Datos fiscales no seguros: permuta sin dos activos distintos.")
 
-        # A native Coinbase Convert has an EUR-valued transaction subtotal
-        # for the received leg; validated by its parser Price Currency=EUR.
-        # Kraken's nearest trade quote is NOT trusted here: it has no maximum
-        # age, so we request timestamp-bound independent historical data.
-        native_rec = None
-        if type(clasificador).__name__ == "ClasificadorCoinbase":
-            try:
-                amount = _decimal_positivo(getattr(swap, "precio_fmv_eur", None))
-                native_rec = CotizacionEUR(amount, "Coinbase/Convert EUR", fecha)
-            except ValueError:
-                pass
-
+        # R01: valor de mercado de ambas patas, no una aproximación basada
+        # en subtotal del CSV. El campo Coinbase "Subtotal" está denominado
+        # en EUR, pero NO identifica de forma inequívoca el mercado del activo
+        # recibido. Kraken tampoco acredita la frescura de su precio cercano.
+        # Hasta verificar documentalmente su procedencia, ninguna de esas
+        # cifras sustituye una cotización de ambas patas en el instante.
         quoted_ent = self.precio(ent, fecha)
-        quoted_rec = native_rec or self.precio(rec, fecha)
+        quoted_rec = self.precio(rec, fecha)
         if quoted_ent is None or quoted_rec is None:
             missing = ", ".join(
                 [name for name, quote in ((ent, quoted_ent), (rec, quoted_rec))
@@ -173,9 +167,9 @@ class ValoradorPermutasEUR:
             )
         qty_ent = _decimal_positivo(swap.cantidad_entregada)
         qty_rec = _decimal_positivo(swap.cantidad_recibida)
-        # A native transaction value is a total; historical prices are EUR/unit.
+        # Ambos precios corresponden a EUR por unidad del activo.
         total_ent = quoted_ent.valor_eur * qty_ent
-        total_rec = quoted_rec.valor_eur if native_rec else quoted_rec.valor_eur * qty_rec
+        total_rec = quoted_rec.valor_eur * qty_rec
         _decimal_positivo(total_ent)
         _decimal_positivo(total_rec)
         return PermutaValorada(
