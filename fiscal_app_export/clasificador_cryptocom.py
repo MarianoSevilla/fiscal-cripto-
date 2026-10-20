@@ -133,7 +133,16 @@ class ClasificadorCryptoCom:
             to_moneda     = str(fila.get("To Currency", "")).strip()
             to_amount     = self._float(fila.get("To Amount", 0))
             native_moneda = str(fila.get("Native Currency", "")).strip()
-            native_amount = self._float(fila.get("Native Amount", 0))
+            # Native Amount (in USD) is NOT a substitute for Native Amount
+            # when the latter is used as a verified EUR valuation.
+            needs_native_eur = native_moneda == "EUR" and (
+                kind in TIPOS_COMPRA_DIRECTA or kind in TIPOS_VENTA
+                or kind in TIPOS_EARN_INTERES or kind in TIPOS_RENDIMIENTO
+                or kind.startswith("reward.")
+            )
+            native_amount = self._float(
+                fila.get("Native Amount", ""), required=needs_native_eur
+            )
 
             if kind in TIPOS_COMPRA_DIRECTA:
                 self._procesar_compra_directa(fecha, moneda, amount, native_moneda, native_amount, kind, fila)
@@ -331,9 +340,13 @@ class ClasificadorCryptoCom:
         ))
 
     @staticmethod
-    def _float(val) -> float:
+    def _float(val, *, required: bool = False) -> float:
         if val is None or (isinstance(val, str) and not val.strip()):
-            return 0.0  # Optional empty To Amount / Native Amount columns
+            if required:
+                raise ValueError(
+                    "Datos fiscales no seguros: Crypto.com carece de un importe EUR obligatorio."
+                )
+            return 0.0  # Optional empty To Amount / other fields
         try:
             v = float(val)
             if not math.isfinite(v):
@@ -342,9 +355,9 @@ class ClasificadorCryptoCom:
         except ValueError as exc:
             if str(exc).startswith("Datos fiscales no seguros:"):
                 raise
-            return 0.0
-        except Exception:
-            return 0.0
+            raise ValueError(
+                "Datos fiscales no seguros: Crypto.com contiene cantidad o importe no interpretable."
+            ) from exc
 
     def resumen(self) -> dict:
         compras = sum(1 for op in self.compraventas if op.tipo == "COMPRA")
