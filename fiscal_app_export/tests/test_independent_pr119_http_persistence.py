@@ -7,7 +7,36 @@ import sys
 APP_ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(APP_ROOT))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from qa_flask_navigation import real_flask
+from contextlib import contextmanager
+from tempfile import TemporaryDirectory
+import os
+
+@contextmanager
+def real_flask():
+    with TemporaryDirectory(prefix="ms-audit-fiscal-") as directory:
+        os.environ["FLASK_ENV"] = "testing"
+        os.environ["DATABASE_URL"] = "sqlite:///" + str(pathlib.Path(directory) / "audit.sqlite")
+        os.environ["SECRET_KEY"] = "ci-fiscal-audit-only-secret"
+        os.environ["ADMIN_EMAILS"] = ""
+        os.environ["FISCAL_ADVISOR_EMAILS"] = ""
+        os.environ["RESEND_API_KEY"] = ""
+        from app import app, db, limiter
+        from models import User
+        assert app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite:///")
+        app.config.update(TESTING=True, RATELIMIT_ENABLED=False)
+        limiter.enabled = False
+        with app.app_context():
+            db.create_all()
+            user = User(email="audit-user@example.invalid", full_name="Synthetic Audit", role="user", is_active=True)
+            db.session.add(user)
+            db.session.commit()
+            user_id = user.id
+        try:
+            yield app, {"usuario": user_id}, None
+        finally:
+            with app.app_context():
+                db.session.remove()
+                db.drop_all()
 
 
 def csv_bytes(cols, row):
