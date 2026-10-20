@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 # Historical points sampled >30 min away may be very different for volatile
 # crypto-assets. Record the actual timestamp; never accept daily proxy prices.
 _MAX_DISTANCE_SECONDS = 30 * 60
-_MAX_REQUESTS = 16
-_TIMEOUT_SECONDS = 4
+_MAX_REQUESTS = 8
+_TIMEOUT_SECONDS = 2.5
 _BASE = "https://pro-api.coingecko.com/api/v3" if os.getenv("COINGECKO_API_KEY") else "https://api.coingecko.com/api/v3"
 
 
@@ -129,7 +129,7 @@ class ValoradorPermutasEUR:
                         except (ValueError, OSError, OverflowError):
                             continue
                     self.cache[cache_key] = tuple(prices)
-            except (requests.RequestException, ValueError, TypeError, KeyError) as exc:
+            except (requests.RequestException, ValueError, TypeError, KeyError, AttributeError) as exc:
                 logger.info("Fallo de precio histórico %s: %s", cg_id, type(exc).__name__)
                 self.cache[cache_key] = ()
         values = self.cache[cache_key]
