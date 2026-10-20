@@ -1518,6 +1518,33 @@ def _preparar_motor_fiscal_irpf(motor, clasificador, ejercicio=None):
     ] if clasificador is not None else []
     if not swaps:
         return motor
+    # Conservador: el motor actual no contabiliza comisiones específicas de
+    # permuta. Preservar la evidencia del parser y rechazar estos casos hasta
+    # disponer de un tratamiento fiscal comprobado por activo y moneda de fee.
+    import re
+    for op in swaps:
+        for campo in ("fee_eur", "fee_cantidad"):
+            fee = getattr(op, campo, 0)
+            try:
+                fee_num = float(fee)
+            except (ValueError, TypeError, OverflowError):
+                fee_num = float("nan")
+            if not math.isfinite(fee_num) or fee_num < 0:
+                raise ValueError(
+                    "Datos fiscales no seguros: comisión de permuta inválida."
+                )
+            if fee_num > 0:
+                raise ValueError(
+                    "Datos fiscales no seguros: la permuta incluye comisiones "
+                    "que aún no pueden reconciliarse con el coste y la "
+                    "transmisión fiscal. No se genera informe definitivo."
+                )
+        nota = str(getattr(op, "nota", "") or "").strip()
+        if re.match(r"^fee:\\s*[+]?(?:[1-9]|0*[.,]0*[1-9])", nota, re.I):
+            raise ValueError(
+                "Datos fiscales no seguros: la permuta registra una comisión "
+                "no reconciliada en el historial. Requiere valoración fiscal."
+            )
     from valoracion_permutas import ValoradorPermutasEUR
     resolver = ValoradorPermutasEUR()
     valores = {id(op): resolver.resolver(op, clasificador) for op in swaps}
