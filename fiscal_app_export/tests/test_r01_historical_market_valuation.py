@@ -289,3 +289,44 @@ def test_r01_does_not_guess_utc_for_csv_with_dropped_timezone(monkeypatch, parse
     with pytest.raises(ValueError, match="huso horario verificable"):
         _preparar_motor_fiscal_irpf(_pipeline_motor(typed), typed, ejercicio="2025")
     assert calls == []  # Never value at an unverified timestamp.
+
+
+def test_r01_uphold_real_csv_preserves_fee_and_blocks_report_before_quote(tmp_path, monkeypatch):
+    """Verify parsing of a real-shaped Uphold CSV, not only synthetic objects."""
+    import csv
+    from clasificador_uphold import ClasificadorUphold
+    path = tmp_path / "uphold-fee-synthetic.csv"
+    cols = ["Date", "Status", "Type", "Origin", "Origin Currency",
+            "Destination Currency", "Origin Amount", "Destination Amount",
+            "Fee Amount", "Fee Currency", "Id"]
+    with path.open("w", newline="", encoding="utf-8") as stream:
+        w = csv.DictWriter(stream, fieldnames=cols)
+        w.writeheader()
+        w.writerow({
+            "Date": "Fri Jan 10 2025 10:00:00 GMT+0000",
+            "Status": "completed", "Type": "transfer",
+            "Origin": "", "Origin Currency": "BTC",
+            "Destination Currency": "ETH", "Origin Amount": "1",
+            "Destination Amount": "2", "Fee Amount": "0.001",
+            "Fee Currency": "BTC", "Id": "synthetic-transaction",
+        })
+    c = ClasificadorUphold(str(path)).clasificar()
+    assert len(c.swaps) == 1
+    swap = c.swaps[0]
+    assert swap.fee_activo == "BTC"
+    assert swap.fee_cantidad == 0.001
+    calls = mock_prices(monkeypatch)
+    with pytest.raises(ValueError, match="comisiones"):
+        _preparar_motor_fiscal_irpf(_pipeline_motor(c), c)
+    assert not calls
+
+
+def test_r01_zero_fee_is_not_a_false_positive(monkeypatch):
+    """The conservative fee guard must not block a fee-free swap."""
+    calls = mock_prices(monkeypatch)
+    c = data()
+    c.swaps[0].fee_eur = 0
+    c.swaps[0].fee_cantidad = 0
+    m = _preparar_motor_fiscal_irpf(_pipeline_motor(c), c)
+    assert _motor_a_json(m, c)[0]["resultado_neto"] == 255
+    assert len(calls) == 2
