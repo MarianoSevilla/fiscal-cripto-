@@ -139,3 +139,32 @@ def test_http_valid_eur_200_json_pdf_and_success_record(monkeypatch, tmp_path):
     assert path.read_bytes() == b"%PDF-TEST"
     assert pdf_calls == [1] and len(tokens) == 1
     assert reports and all(row.get("status", "generated") == "generated" for row in reports)
+
+
+def test_legacy_bit2me_fiscal_csv_guard_distinguishes_swap_from_eur_sale():
+    """Legacy precomputed Bit2Me results bypass MotorFIFO and need R01 gate."""
+    from app import _validar_aceptacion_bit2me_fiscal
+    from types import SimpleNamespace
+    _validar_aceptacion_bit2me_fiscal(SimpleNamespace(
+        resultados=[SimpleNamespace(tipo_op="venta")]))
+    with pytest.raises(ValueError, match="Bit2Me contiene permutas"):
+        _validar_aceptacion_bit2me_fiscal(SimpleNamespace(
+            resultados=[SimpleNamespace(tipo_op="swap")]))
+
+
+def test_r01_independent_market_oracle_is_not_fifo_carryover_even_if_fmv_supplied():
+    """Known PR #121 discrepancy: 100 EUR BTC cost vs 300 EUR market.
+
+    Expected taxable gain=200 and received ETH basis=300; the unpatched
+    motor gives gain=0 and ETH basis=100. Containment must refuse that
+    report (it does not attempt to implement the valuation).
+    """
+    m = MotorFIFO()
+    m.registrar_compra("2024-01-01", "BTC", 1, 100, "EUR", "EUR", 0)
+    m.registrar_swap("2025-01-01", "BTC", 1, "ETH", 2)
+    assert m.resumen_fiscal()["resultado_neto"] == 0
+    assert next(p.coste_total for p in m.posicion_actual() if p.activo == "ETH") == 100
+    c = _classifier("swap")
+    assert c.swaps[0].precio_fmv_eur == 300
+    with pytest.raises(ValueError, match="permutas"):
+        _motor_a_json(m, c)
