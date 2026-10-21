@@ -1495,8 +1495,84 @@ def _error_amigable(e: Exception) -> str:
     return "No se ha podido procesar el fichero. Comprueba que es el archivo exportado desde tu exchange y vuelve a intentarlo."
 
 
-def _motor_a_json(motor) -> tuple:
-    """Convierte el resultado del motor FIFO a formato JSON para la UI."""
+def _validar_aceptacion_fifo(motor, clasificador=None) -> None:
+    """R01–R04: no emitir IRPF cuando falta base fiscal acreditada.
+
+    Se llama únicamente desde el recorrido IRPF antes de JSON/PDF/token;
+    no modifica el motor, el clasificador ni los recorridos Modelo 721.
+    """
+    # R01: los swaps entre activos distintos se están valorando con coste
+    # histórico FIFO o paridad 1:1, no con ambos precios de mercado en EUR.
+    # Incluso un único precio FMV del CSV no demuestra el máximo exigible.
+    swaps = getattr(clasificador, "swaps", ()) if clasificador is not None else ()
+    if any(
+        getattr(op, "activo_entregado", None) != getattr(op, "activo_recibido", None)
+        for op in swaps
+    ) or any(r.tipo_operacion == "swap" for r in motor.resultados):
+        raise ValueError(
+            "Datos fiscales no seguros: existen permutas entre criptomonedas "
+            "sin valoración suficiente de mercado en EUR para ambos activos. "
+            "No se puede emitir el informe FIFO de este historial."
+        )
+
+    # R02: Nexo usa el USD Equivalent como importe, sin convertirlo a EUR.
+    if isinstance(clasificador, ClasificadorNexo) and (
+        any(
+            str(getattr(op, "contraparte", "")).upper() == "USD"
+            for op in clasificador.compraventas
+        ) or any(
+            "almacenado en USD" in str(aviso)
+            for aviso in clasificador.advertencias
+        )
+    ):
+        raise ValueError(
+            "Datos fiscales no seguros: el historial Nexo incluye importes "
+            "USD sin conversión EUR acreditada a la fecha de la operación."
+        )
+
+    # R04: Uphold crea rendimientos Brave Rewards y lotes con EUR=0.
+    if isinstance(clasificador, ClasificadorUphold) and any(
+        getattr(op, "cantidad", 0) > 0
+        and getattr(op, "valor_eur", 0) <= 0
+        for op in clasificador.rendimientos
+    ):
+        raise ValueError(
+            "Datos fiscales no seguros: Uphold incluye recompensas sin "
+            "valoración EUR verificable. No se puede declarar coste cero."
+        )
+
+    # R03: no aceptar disposiciones omitidas o con base FIFO parcial.
+    if any(getattr(r, "inventario_incompleto", False) for r in motor.resultados):
+        raise ValueError(
+            "Datos fiscales no seguros: inventario FIFO insuficiente para "
+            "calcular una o varias ventas. Importa todo el historial."
+        )
+    if any(
+        "no hay lotes de compra previos" in str(aviso)
+        or "inventario insuficiente" in str(aviso)
+        for aviso in motor.advertencias
+    ):
+        raise ValueError(
+            "Datos fiscales no seguros: faltan adquisiciones previas para "
+            "calcular una transmisión. Importa todo el historial."
+        )
+
+
+def _validar_aceptacion_bit2me_fiscal(clasificador) -> None:
+    """R01: protege la ruta CSV fiscal legacy, ajena a MotorFIFO."""
+    if any(
+        str(getattr(r, "tipo_op", "")).lower() == "swap"
+        for r in clasificador.resultados
+    ):
+        raise ValueError(
+            "Datos fiscales no seguros: el CSV fiscal Bit2Me contiene permutas "
+            "sin justificación separada de ambos valores de mercado EUR."
+        )
+
+
+def _motor_a_json(motor, clasificador=None) -> tuple:
+    """Convierte el resultado del motor FIFO validado a JSON para la UI."""
+    _validar_aceptacion_fifo(motor, clasificador)
     motor.validar_integridad()
     resumen = motor.resumen_fiscal()
     posicion = [
@@ -2342,7 +2418,7 @@ def analizar():
                 motor, rendimientos, clasificador = procesar_bit2me_excel(tmp_path)
                 _filtrar_motor_por_ejercicio(motor, ejercicio)
                 rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-                resumen, posicion, operaciones = _motor_a_json(motor)
+                resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
                 advertencias = motor.advertencias
                 rendimientos_json = _rendimientos_a_json(rendimientos)
                 pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Bit2Me", rendimientos)
@@ -2350,6 +2426,7 @@ def analizar():
             elif exchange == "bit2me":
                 clasificador, _r, _ops = procesar_bit2me(tmp_path)
                 _filtrar_bit2me_por_ejercicio(clasificador, ejercicio)
+                _validar_aceptacion_bit2me_fiscal(clasificador)
                 clasificador.rendimientos = _filtrar_rendimientos_por_ejercicio(
                     clasificador.rendimientos, ejercicio)
                 resumen = clasificador.resumen_fiscal()
@@ -2375,7 +2452,7 @@ def analizar():
                 motor, rendimientos, clasificador = procesar_bitvavo(tmp_path)
                 _filtrar_motor_por_ejercicio(motor, ejercicio)
                 rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-                resumen, posicion, operaciones = _motor_a_json(motor)
+                resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
                 advertencias = motor.advertencias
                 rendimientos_json = _rendimientos_a_json(rendimientos)
                 pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Bitvavo", rendimientos)
@@ -2384,7 +2461,7 @@ def analizar():
                 motor, rendimientos, clasificador = procesar_kraken(tmp_path)
                 _filtrar_motor_por_ejercicio(motor, ejercicio)
                 rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-                resumen, posicion, operaciones = _motor_a_json(motor)
+                resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
                 advertencias = motor.advertencias
                 rendimientos_json = _rendimientos_a_json(rendimientos)
                 pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Kraken", rendimientos)
@@ -2393,7 +2470,7 @@ def analizar():
                 motor, rendimientos, clasificador = procesar_coinbase(tmp_path)
                 _filtrar_motor_por_ejercicio(motor, ejercicio)
                 rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-                resumen, posicion, operaciones = _motor_a_json(motor)
+                resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
                 advertencias = motor.advertencias
                 rendimientos_json = _rendimientos_a_json(rendimientos)
                 pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Coinbase", rendimientos)
@@ -2402,7 +2479,7 @@ def analizar():
                 motor, rendimientos, clasificador = procesar_nexo(tmp_path)
                 _filtrar_motor_por_ejercicio(motor, ejercicio)
                 rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-                resumen, posicion, operaciones = _motor_a_json(motor)
+                resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
                 advertencias = motor.advertencias
                 rendimientos_json = _rendimientos_a_json(rendimientos)
                 pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Nexo", rendimientos)
@@ -2411,7 +2488,7 @@ def analizar():
                 motor, rendimientos, clasificador = procesar_cryptocom(tmp_path)
                 _filtrar_motor_por_ejercicio(motor, ejercicio)
                 rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-                resumen, posicion, operaciones = _motor_a_json(motor)
+                resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
                 advertencias = motor.advertencias
                 rendimientos_json = _rendimientos_a_json(rendimientos)
                 pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Crypto.com", rendimientos)
@@ -2420,7 +2497,7 @@ def analizar():
                 motor, rendimientos, clasificador = procesar_uphold(tmp_path)
                 _filtrar_motor_por_ejercicio(motor, ejercicio)
                 rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-                resumen, posicion, operaciones = _motor_a_json(motor)
+                resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
                 # Uphold no provee FMV en EUR: las advertencias fiscales viven en el clasificador
                 # (el motor no las genera porque siempre hay inventario previo de compras EUR).
                 # Fusionamos ambas listas para que aparezcan en la UI y en el PDF.
@@ -2432,7 +2509,7 @@ def analizar():
                 motor, rendimientos, clasificador = procesar_mexc(tmp_path)
                 _filtrar_motor_por_ejercicio(motor, ejercicio)
                 rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-                resumen, posicion, operaciones = _motor_a_json(motor)
+                resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
                 # MEXC puede tener advertencias sobre pares USDT en el clasificador.
                 # Las fusionamos igual que Uphold para que aparezcan en UI y PDF.
                 advertencias = motor.advertencias + (clasificador.advertencias if clasificador else [])
@@ -2443,7 +2520,7 @@ def analizar():
                 motor, rendimientos, clasificador = procesar_bitget(tmp_path)
                 _filtrar_motor_por_ejercicio(motor, ejercicio)
                 rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-                resumen, posicion, operaciones = _motor_a_json(motor)
+                resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
                 # Bitget puede tener advertencias sobre pares USDT en el clasificador.
                 advertencias = motor.advertencias + (clasificador.advertencias if clasificador else [])
                 rendimientos_json = _rendimientos_a_json(rendimientos)
@@ -2491,7 +2568,7 @@ def analizar():
                     _clasificador_stats  = None
                 _filtrar_motor_por_ejercicio(motor, ejercicio)
                 rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-                resumen, posicion, operaciones = _motor_a_json(motor)
+                resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
                 advertencias = motor.advertencias
                 rendimientos_json = _rendimientos_a_json(rendimientos)
                 pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Binance", rendimientos,
@@ -2702,7 +2779,7 @@ def analizar_kucoin():
             motor, rendimientos, clasificador = procesar_kucoin(tmp_paths, filenames)
             _filtrar_motor_por_ejercicio(motor, ejercicio)
             rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-            resumen, posicion, operaciones = _motor_a_json(motor)
+            resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
             # Las advertencias fiscales de KuCoin (ambigüedades, productos no cubiertos,
             # pares USD) viven en el clasificador; las fusionamos con las del motor.
             advertencias = motor.advertencias + (clasificador.advertencias if clasificador else [])
@@ -2856,7 +2933,7 @@ def analizar_bitget():
             motor, rendimientos, clasificador = procesar_bitget_multi(tmp_paths, filenames)
             _filtrar_motor_por_ejercicio(motor, ejercicio)
             rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-            resumen, posicion, operaciones = _motor_a_json(motor)
+            resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
             advertencias = motor.advertencias + (clasificador.advertencias if clasificador else [])
             rendimientos_json = _rendimientos_a_json(rendimientos)
             pdf_bytes = generar_pdf_bitget(motor, nombre, ejercicio, rendimientos)
