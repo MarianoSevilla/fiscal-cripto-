@@ -96,7 +96,9 @@ class ValoradorPermutasEUR:
         cg_id = COINGECKO_IDS.get(ticker)
         if not cg_id:
             return None
-        cache_key = (cg_id, fecha.replace(minute=0, second=0, microsecond=0))
+        # 30-minute windows avoid reusing a 10:00-centered range for
+        # a distinct 10:59 operation without a nearby 11:00 quote.
+        cache_key = (cg_id, int(fecha.timestamp()) // 1800)
         if cache_key not in self.cache:
             if self.requests >= _MAX_REQUESTS:
                 return None
@@ -108,7 +110,7 @@ class ValoradorPermutasEUR:
                 response = self.http_get(
                     f"{_BASE}/coins/{cg_id}/market_chart/range",
                     params={"vs_currency": "eur", "from": unix - 3600,
-                            "to": unix + 3600},
+                            "to": unix + 3600, "interval": "hourly"},
                     headers=headers, timeout=_TIMEOUT_SECONDS,
                 )
                 if response.status_code != 200:
