@@ -168,3 +168,66 @@ def test_r01_independent_market_oracle_is_not_fifo_carryover_even_if_fmv_supplie
     assert c.swaps[0].precio_fmv_eur == 300
     with pytest.raises(ValueError, match="permutas"):
         _motor_a_json(m, c)
+
+
+def _csv_121(tmp_path, name, columns, rows):
+    """Exact synthetic input form used by PR #121 characterizations."""
+    import csv
+    path = tmp_path / name
+    with path.open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=columns)
+        writer.writeheader()
+        writer.writerows(rows)
+    return str(path)
+
+
+def test_r02_original_nexo_csv_usd_equivalent_rejected_before_report(tmp_path):
+    """PR #121: 200 USD proceeds are NOT 200 EUR taxable proceeds."""
+    from app import _pipeline_motor
+    cols = ["Date / Time (UTC)", "Type", "Input Currency", "Output Currency",
+            "Input Amount", "Output Amount", "USD Equivalent", "Fee",
+            "Fee Currency", "Details"]
+    rows = [
+        {"Date / Time (UTC)": "2024-01-01 10:00:00", "Type": "Exchange",
+         "Input Currency": "EURX", "Output Currency": "BTC",
+         "Input Amount": "-100", "Output Amount": "1",
+         "USD Equivalent": "110", "Fee": "0", "Fee Currency": "",
+         "Details": "Synthetic acquisition"},
+        {"Date / Time (UTC)": "2025-01-01 10:00:00", "Type": "Exchange",
+         "Input Currency": "BTC", "Output Currency": "USDT",
+         "Input Amount": "-1", "Output Amount": "200",
+         "USD Equivalent": "200", "Fee": "0", "Fee Currency": "",
+         "Details": "Synthetic disposal"},
+    ]
+    c = ClasificadorNexo(_csv_121(tmp_path, "nexo-synthetic.csv", cols, rows)).clasificar()
+    m = _pipeline_motor(c)
+    assert m.resumen_fiscal()["resultado_neto"] == 100  # unsafe USD==EUR proxy
+    assert any("almacenado en USD" in a for a in c.advertencias)
+    with pytest.raises(ValueError, match="Datos fiscales no seguros:.*USD"):
+        _motor_a_json(m, c)
+
+
+def test_r04_original_uphold_brave_reward_zero_basis_rejected(tmp_path):
+    """PR #121: a €10 receipt has 0 EUR income and a 0 EUR FIFO lot."""
+    from app import _pipeline_motor
+    cols = ["Date", "Status", "Type", "Origin", "Origin Currency",
+            "Destination Currency", "Origin Amount", "Destination Amount",
+            "Fee Amount", "Fee Currency", "Id"]
+    rows = [
+        {"Date": "Fri Jan 10 2025 10:00:00 GMT+0000",
+         "Status": "completed", "Type": "in", "Origin": "uphold",
+         "Origin Currency": "BAT", "Destination Currency": "BAT",
+         "Origin Amount": "1", "Destination Amount": "1",
+         "Fee Amount": "0", "Fee Currency": "BAT", "Id": "synthetic-reward"},
+        {"Date": "Sat Jan 11 2025 10:00:00 GMT+0000",
+         "Status": "completed", "Type": "transfer", "Origin": "",
+         "Origin Currency": "BAT", "Destination Currency": "EUR",
+         "Origin Amount": "1", "Destination Amount": "25",
+         "Fee Amount": "0", "Fee Currency": "EUR", "Id": "synthetic-sale"},
+    ]
+    c = ClasificadorUphold(_csv_121(tmp_path, "uphold-synthetic.csv", cols, rows)).clasificar()
+    m = _pipeline_motor(c)
+    assert len(c.rendimientos) == 1 and c.rendimientos[0].valor_eur == 0
+    assert m.resumen_fiscal()["resultado_neto"] == 25  # zero basis is unsafe
+    with pytest.raises(ValueError, match="Datos fiscales no seguros:.*Uphold"):
+        _motor_a_json(m, c)
