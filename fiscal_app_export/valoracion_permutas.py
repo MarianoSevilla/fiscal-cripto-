@@ -143,6 +143,19 @@ class ValoradorPermutasEUR:
         return CotizacionEUR(price, f"CoinGecko/{cg_id}", t)
 
     def resolver(self, swap, clasificador) -> PermutaValorada:
+        # Bitget UID exports may contain UTC+8, and KuCoin conveys its
+        # timezone in the CSV HEADER; their parsers currently discard that
+        # offset and emit naive timestamps. Guessing UTC would choose a market
+        # quotation for the wrong hour. Until timezone provenance survives
+        # parsing, reject these swaps rather than silently misvalue IRPF.
+        if type(clasificador).__name__ in {
+            "ClasificadorBitget", "ClasificadorBitgetMulti", "ClasificadorKuCoin"
+        }:
+            raise ValueError(
+                "Datos fiscales no seguros: el CSV de este exchange no conserva "
+                "el huso horario verificable de la permuta. No puede valorarse "
+                "con precios históricos sin corregir primero la fecha UTC."
+            )
         fecha = _fecha_utc(getattr(swap, "fecha", None))
         ent = str(swap.activo_entregado).upper().strip()
         rec = str(swap.activo_recibido).upper().strip()
