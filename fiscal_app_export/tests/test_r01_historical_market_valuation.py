@@ -330,3 +330,46 @@ def test_r01_zero_fee_is_not_a_false_positive(monkeypatch):
     m = _preparar_motor_fiscal_irpf(_pipeline_motor(c), c)
     assert _motor_a_json(m, c)[0]["resultado_neto"] == 255
     assert len(calls) == 2
+
+
+def test_r01_kraken_receive_leg_fee_prevents_unpriced_swap(monkeypatch):
+    """The ledger receive fee may be nonzero even when spend fee is zero."""
+    calls = mock_prices(monkeypatch)
+    c = data()
+    c.swaps[0].fee_activo = "BTC"
+    c.swaps[0].fee_cantidad = 0
+    c.swaps[0].fee_recibida_activo = "ETH"
+    c.swaps[0].fee_recibida_cantidad = 0.02
+    with pytest.raises(ValueError, match="comisiones"):
+        _preparar_motor_fiscal_irpf(_pipeline_motor(c), c, ejercicio="2025")
+    assert calls == []
+
+
+def test_r01_kraken_real_shaped_ledger_keeps_receive_fee(tmp_path, monkeypatch):
+    """Kraken: a fee is denominated in the asset of its own ledger row."""
+    import csv
+    from clasificador_kraken import ClasificadorKraken
+    path = tmp_path / "synthetic-ledger.csv"
+    columns = ["txid", "refid", "time", "type", "subtype",
+               "aclass", "asset", "amount", "fee", "balance"]
+    rows = [
+        dict(txid="t1", refid="paired", time="2025-01-01 10:00:00",
+             type="spend", subtype="", aclass="currency", asset="BTC",
+             amount="-1", fee="0", balance="0"),
+        dict(txid="t2", refid="paired", time="2025-01-01 10:00:00",
+             type="receive", subtype="", aclass="currency", asset="ETH",
+             amount="2", fee="0.02", balance="1.98"),
+    ]
+    with path.open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=columns)
+        writer.writeheader()
+        writer.writerows(rows)
+    c = ClasificadorKraken(str(path)).clasificar()
+    assert len(c.swaps) == 1
+    assert c.swaps[0].fee_cantidad == 0
+    assert c.swaps[0].fee_recibida_activo == "ETH"
+    assert c.swaps[0].fee_recibida_cantidad == 0.02
+    calls = mock_prices(monkeypatch)
+    with pytest.raises(ValueError, match="comisiones"):
+        _preparar_motor_fiscal_irpf(_pipeline_motor(c), c)
+    assert not calls
