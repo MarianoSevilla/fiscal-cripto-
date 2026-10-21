@@ -65,7 +65,6 @@ from clasificador_nexo import ClasificadorNexo
 from clasificador_uphold import ClasificadorUphold
 
 app.config.update(TESTING=True, RATELIMIT_ENABLED=False)
-assert db.engine.dialect.name == "postgresql" if False else True
 with app.app_context():
     assert db.engine.dialect.name == "postgresql"
     db.create_all()
