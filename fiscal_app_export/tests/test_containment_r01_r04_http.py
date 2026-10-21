@@ -56,9 +56,9 @@ def _classifier(mode):
 
 @pytest.mark.parametrize("mode,why", [
     ("swap", "permutas"), ("nexo", "USD"),
-    ("none", "historial de adquisiciones"),
+    ("none", "adquisiciones previas"),
     ("partial", "inventario FIFO insuficiente"),
-    ("uphold", "rendimiento Uphold"),
+    ("uphold", "Uphold incluye recompensas"),
 ])
 def test_r01_r04_unsafe_fiscal_reports_blocked_before_success_json(mode, why):
     m = _motor("swap" if mode == "swap" else "none" if mode == "none" else "partial" if mode == "partial" else "valid")
