@@ -27,10 +27,6 @@ from clasificador_nexo import ClasificadorNexo
 from clasificador_uphold import ClasificadorUphold
 
 app.config.update(TESTING=True, RATELIMIT_ENABLED=False)
-import valoracion_permutas
-class NoHistoricQuote:
-    status_code = 429
-valoracion_permutas.requests.get = lambda *args, **kwargs: NoHistoricQuote()
 with app.app_context():
     db.create_all()
     user = User(email="isolated-user@example.invalid", full_name="Synthetic", role="user",
