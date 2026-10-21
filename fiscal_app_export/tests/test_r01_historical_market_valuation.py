@@ -274,3 +274,18 @@ def test_r01_price_cache_not_reused_across_distant_minutes_of_same_hour(monkeypa
     assert early.fecha_fuente_utc == origin
     assert later.fecha_fuente_utc == origin + timedelta(minutes=59)
     assert len(calls) == 2
+
+
+@pytest.mark.parametrize("parser_class", [
+    "ClasificadorBitget", "ClasificadorBitgetMulti", "ClasificadorKuCoin"
+])
+def test_r01_does_not_guess_utc_for_csv_with_dropped_timezone(monkeypatch, parser_class):
+    """Real parsers preserve naive local times (often UTC+8); fail closed."""
+    calls = mock_prices(monkeypatch)
+    c = data()
+    typed = type(parser_class, (), {})()
+    typed.compraventas, typed.swaps, typed.rendimientos = (
+        c.compraventas, c.swaps, c.rendimientos)
+    with pytest.raises(ValueError, match="huso horario verificable"):
+        _preparar_motor_fiscal_irpf(_pipeline_motor(typed), typed, ejercicio="2025")
+    assert calls == []  # Never value at an unverified timestamp.
