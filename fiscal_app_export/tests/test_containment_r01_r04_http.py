@@ -93,11 +93,6 @@ def test_http_422_no_token_no_pdf_no_generated_record(monkeypatch, tmp_path, mod
                            is_authenticated=True, is_active=True)
     monkeypatch.setattr(login_utils, "_get_user", lambda: user)
     monkeypatch.setattr(application, "_validar_csv", lambda *args, **kwargs: (True, ""))
-    # External price provider is mocked. Historical failure must produce HTTP 422.
-    import valoracion_permutas
-    class NoQuote:
-        status_code = 429
-    monkeypatch.setattr(valoracion_permutas.requests, "get", lambda *args, **kwargs: NoQuote())
     m = _motor("swap" if mode == "swap" else "none" if mode == "none" else "partial" if mode == "partial" else "valid")
     c = _classifier(mode)
     processor = {"nexo": "procesar_nexo", "uphold": "procesar_uphold"}.get(exchange, "procesar_bitvavo")
@@ -126,11 +121,6 @@ def test_http_valid_eur_200_json_pdf_and_success_record(monkeypatch, tmp_path):
                            is_authenticated=True, is_active=True)
     monkeypatch.setattr(login_utils, "_get_user", lambda: user)
     monkeypatch.setattr(application, "_validar_csv", lambda *args, **kwargs: (True, ""))
-    # External price provider is mocked. Historical failure must produce HTTP 422.
-    import valoracion_permutas
-    class NoQuote:
-        status_code = 429
-    monkeypatch.setattr(valoracion_permutas.requests, "get", lambda *args, **kwargs: NoQuote())
     monkeypatch.setattr(application, "procesar_bitvavo", lambda p: (_motor("valid"), [], _classifier("valid")))
     reports, tokens, pdf_calls = [], [], []
     monkeypatch.setattr(application, "_registrar_informe", lambda **kw: reports.append(kw) or 123)
