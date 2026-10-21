@@ -1523,7 +1523,7 @@ def _preparar_motor_fiscal_irpf(motor, clasificador, ejercicio=None):
     # disponer de un tratamiento fiscal comprobado por activo y moneda de fee.
     import re
     for op in swaps:
-        for campo in ("fee_eur", "fee_cantidad"):
+        for campo in ("fee_eur", "fee_cantidad", "fee_recibida_cantidad"):
             fee = getattr(op, campo, 0)
             try:
                 fee_num = float(fee)
