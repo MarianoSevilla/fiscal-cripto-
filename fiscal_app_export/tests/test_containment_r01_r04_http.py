@@ -1,0 +1,233 @@
+"""R01-R04: containment regression on current production main.
+
+No real CSV, user account or external database; all facts are synthetic.
+R01 market valuation follows AEAT IRPF 2025 art. 37.1.h.
+"""
+import io
+from types import SimpleNamespace
+
+import pytest
+
+from app import app, _motor_a_json, _validar_aceptacion_fifo
+from clasificador_nexo import ClasificadorNexo
+from clasificador_uphold import ClasificadorUphold
+from motor_fifo import MotorFIFO
+
+
+def _motor(mode):
+    m = MotorFIFO()
+    if mode != "none":
+        m.registrar_compra("2024-01-01", "BTC", 1, 100, "EUR", "EUR", 0)
+    if mode == "swap":
+        m.registrar_swap("2025-01-01", "BTC", 1, "ETH", 2)
+    elif mode == "partial":
+        m.registrar_venta("2025-01-01", "BTC", 2, 400, "EUR", "EUR", 0)
+    elif mode == "none":
+        m.registrar_venta("2025-01-01", "BTC", 1, 300, "EUR", "EUR", 0)
+    elif mode == "valid":
+        m.registrar_venta("2025-01-01", "BTC", 1, 150, "EUR", "EUR", 0)
+    return m
+
+
+def _classifier(mode):
+    c = SimpleNamespace(
+        swaps=[], compraventas=[], rendimientos=[],
+        movimientos=[], desconocidas=[], advertencias=[],
+    )
+    if mode == "swap":
+        c.swaps = [SimpleNamespace(
+            activo_entregado="BTC", activo_recibido="ETH",
+            cantidad_entregada=1, cantidad_recibida=2, precio_fmv_eur=300,
+        )]
+    elif mode == "nexo":
+        c = ClasificadorNexo.__new__(ClasificadorNexo)
+        c.swaps, c.compraventas, c.rendimientos = [], [
+            SimpleNamespace(contraparte="USD", importe=200)], []
+        c.movimientos, c.desconocidas = [], []
+        c.advertencias = ["Compraventa en USDT: importe almacenado en USD. Convierte manualmente."]
+    elif mode == "uphold":
+        c = ClasificadorUphold.__new__(ClasificadorUphold)
+        c.swaps, c.compraventas = [], []
+        c.rendimientos = [SimpleNamespace(cantidad=1, valor_eur=0, subtipo="Brave Rewards")]
+        c.movimientos, c.desconocidas = [], []
+        c.advertencias = ["Brave Rewards no provee valor EUR"]
+    return c
+
+
+@pytest.mark.parametrize("mode,why", [
+    ("swap", "permutas"), ("nexo", "USD"),
+    ("none", "adquisiciones previas"),
+    ("partial", "inventario FIFO insuficiente"),
+    ("uphold", "Uphold incluye recompensas"),
+])
+def test_r01_r04_unsafe_fiscal_reports_blocked_before_success_json(mode, why):
+    m = _motor("swap" if mode == "swap" else "none" if mode == "none" else "partial" if mode == "partial" else "valid")
+    c = _classifier(mode)
+    with pytest.raises(ValueError, match="Datos fiscales no seguros") as e:
+        _motor_a_json(m, c)
+    assert why in str(e.value)
+
+
+def test_valid_eur_sale_retains_correct_gain_without_warning():
+    m = _motor("valid")
+    summary, _positions, operations = _motor_a_json(m, _classifier("valid"))
+    assert summary["resultado_neto"] == 50.0
+    assert operations[0]["ganancia_perdida"] == 50.0
+
+
+def test_r01_even_valid_looking_positive_fmv_does_not_override_required_two_sided_market_pricing():
+    m = _motor("swap")
+    with pytest.raises(ValueError, match="permutas"):
+        _validar_aceptacion_fifo(m, _classifier("swap"))
+
+
+@pytest.mark.parametrize("mode,exchange", [
+    ("swap", "bitvavo"), ("nexo", "nexo"),
+    ("none", "bitvavo"), ("partial", "bitvavo"),
+    ("uphold", "uphold"),
+])
+def test_http_422_no_token_no_pdf_no_generated_record(monkeypatch, tmp_path, mode, exchange):
+    import app as application
+    import flask_login.utils as login_utils
+    user = SimpleNamespace(id=730011, role="user", email="synthetic@example.invalid",
+                           is_authenticated=True, is_active=True)
+    monkeypatch.setattr(login_utils, "_get_user", lambda: user)
+    monkeypatch.setattr(application, "_validar_csv", lambda *args, **kwargs: (True, ""))
+    m = _motor("swap" if mode == "swap" else "none" if mode == "none" else "partial" if mode == "partial" else "valid")
+    c = _classifier(mode)
+    processor = {"nexo": "procesar_nexo", "uphold": "procesar_uphold"}.get(exchange, "procesar_bitvavo")
+    monkeypatch.setattr(application, processor, lambda _path: (m, [], c))
+    reports, pdf_calls, tokens = [], [], []
+    monkeypatch.setattr(application, "_registrar_informe", lambda **kw: reports.append(kw) or 1)
+    monkeypatch.setattr(application, "record_processing_error_safe", lambda **kw: None)
+    monkeypatch.setattr(application, "_guardar_token_pdf", lambda *a: tokens.append(a))
+    monkeypatch.setattr(application, "generar_pdf", lambda *a, **kw: pdf_calls.append(1) or b"%PDF")
+    with app.test_client() as client:
+        resp = client.post("/api/analizar", data={
+            "csv": (io.BytesIO(b"Date,Test\\n2025-01-01,1\\n"), "synthetic.csv"),
+            "exchange": exchange, "nombre": "synthetic", "ejercicio": "2025",
+        }, content_type="multipart/form-data")
+    assert resp.status_code == 422, resp.get_data(as_text=True)[:350]
+    assert resp.json and "Datos fiscales no seguros" in resp.json["error"]
+    assert "token" not in resp.json and "resumen" not in resp.json
+    assert not pdf_calls and not tokens
+    assert reports and all(row.get("status") == "failed" for row in reports)
+
+
+def test_http_valid_eur_200_json_pdf_and_success_record(monkeypatch, tmp_path):
+    import app as application
+    import flask_login.utils as login_utils
+    user = SimpleNamespace(id=730012, role="user", email="synthetic@example.invalid",
+                           is_authenticated=True, is_active=True)
+    monkeypatch.setattr(login_utils, "_get_user", lambda: user)
+    monkeypatch.setattr(application, "_validar_csv", lambda *args, **kwargs: (True, ""))
+    monkeypatch.setattr(application, "procesar_bitvavo", lambda p: (_motor("valid"), [], _classifier("valid")))
+    reports, tokens, pdf_calls = [], [], []
+    monkeypatch.setattr(application, "_registrar_informe", lambda **kw: reports.append(kw) or 123)
+    monkeypatch.setattr(application, "_guardar_token_pdf", lambda *a: tokens.append(a))
+    monkeypatch.setattr(application, "generar_pdf", lambda *a, **kw: pdf_calls.append(1) or b"%PDF-TEST")
+    path = tmp_path / "synthetic-report.pdf"
+    monkeypatch.setattr(application, "_derivar_ruta_pdf", lambda _p: str(path))
+    with app.test_client() as client:
+        resp = client.post("/api/analizar", data={
+            "csv": (io.BytesIO(b"Date,Test\\n2025-01-01,1\\n"), "synthetic.csv"),
+            "exchange": "bitvavo", "nombre": "synthetic", "ejercicio": "2025",
+        }, content_type="multipart/form-data")
+    assert resp.status_code == 200, resp.get_data(as_text=True)[:350]
+    assert resp.json["resumen"]["resultado_neto"] == 50
+    assert resp.json["token"] == "synthetic-report.pdf"
+    assert path.read_bytes() == b"%PDF-TEST"
+    assert pdf_calls == [1] and len(tokens) == 1
+    assert reports and all(row.get("status", "generated") == "generated" for row in reports)
+
+
+def test_legacy_bit2me_fiscal_csv_guard_distinguishes_swap_from_eur_sale():
+    """Legacy precomputed Bit2Me results bypass MotorFIFO and need R01 gate."""
+    from app import _validar_aceptacion_bit2me_fiscal
+    from types import SimpleNamespace
+    _validar_aceptacion_bit2me_fiscal(SimpleNamespace(
+        resultados=[SimpleNamespace(tipo_op="venta")]))
+    with pytest.raises(ValueError, match="Bit2Me contiene permutas"):
+        _validar_aceptacion_bit2me_fiscal(SimpleNamespace(
+            resultados=[SimpleNamespace(tipo_op="swap")]))
+
+
+def test_r01_independent_market_oracle_is_not_fifo_carryover_even_if_fmv_supplied():
+    """Known PR #121 discrepancy: 100 EUR BTC cost vs 300 EUR market.
+
+    Expected taxable gain=200 and received ETH basis=300; the unpatched
+    motor gives gain=0 and ETH basis=100. Containment must refuse that
+    report (it does not attempt to implement the valuation).
+    """
+    m = MotorFIFO()
+    m.registrar_compra("2024-01-01", "BTC", 1, 100, "EUR", "EUR", 0)
+    m.registrar_swap("2025-01-01", "BTC", 1, "ETH", 2)
+    assert m.resumen_fiscal()["resultado_neto"] == 0
+    assert next(p.coste_total for p in m.posicion_actual() if p.activo == "ETH") == 100
+    c = _classifier("swap")
+    assert c.swaps[0].precio_fmv_eur == 300
+    with pytest.raises(ValueError, match="permutas"):
+        _motor_a_json(m, c)
+
+
+def _csv_121(tmp_path, name, columns, rows):
+    """Exact synthetic input form used by PR #121 characterizations."""
+    import csv
+    path = tmp_path / name
+    with path.open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=columns)
+        writer.writeheader()
+        writer.writerows(rows)
+    return str(path)
+
+
+def test_r02_original_nexo_csv_usd_equivalent_rejected_before_report(tmp_path):
+    """PR #121: 200 USD proceeds are NOT 200 EUR taxable proceeds."""
+    from app import _pipeline_motor
+    cols = ["Date / Time (UTC)", "Type", "Input Currency", "Output Currency",
+            "Input Amount", "Output Amount", "USD Equivalent", "Fee",
+            "Fee Currency", "Details"]
+    rows = [
+        {"Date / Time (UTC)": "2024-01-01 10:00:00", "Type": "Exchange",
+         "Input Currency": "EURX", "Output Currency": "BTC",
+         "Input Amount": "-100", "Output Amount": "1",
+         "USD Equivalent": "110", "Fee": "0", "Fee Currency": "",
+         "Details": "Synthetic acquisition"},
+        {"Date / Time (UTC)": "2025-01-01 10:00:00", "Type": "Exchange",
+         "Input Currency": "BTC", "Output Currency": "USDT",
+         "Input Amount": "-1", "Output Amount": "200",
+         "USD Equivalent": "200", "Fee": "0", "Fee Currency": "",
+         "Details": "Synthetic disposal"},
+    ]
+    c = ClasificadorNexo(_csv_121(tmp_path, "nexo-synthetic.csv", cols, rows)).clasificar()
+    m = _pipeline_motor(c)
+    assert m.resumen_fiscal()["resultado_neto"] == 100  # unsafe USD==EUR proxy
+    assert any("almacenado en USD" in a for a in c.advertencias)
+    with pytest.raises(ValueError, match="Datos fiscales no seguros:.*USD"):
+        _motor_a_json(m, c)
+
+
+def test_r04_original_uphold_brave_reward_zero_basis_rejected(tmp_path):
+    """PR #121: a €10 receipt has 0 EUR income and a 0 EUR FIFO lot."""
+    from app import _pipeline_motor
+    cols = ["Date", "Status", "Type", "Origin", "Origin Currency",
+            "Destination Currency", "Origin Amount", "Destination Amount",
+            "Fee Amount", "Fee Currency", "Id"]
+    rows = [
+        {"Date": "Fri Jan 10 2025 10:00:00 GMT+0000",
+         "Status": "completed", "Type": "in", "Origin": "uphold",
+         "Origin Currency": "BAT", "Destination Currency": "BAT",
+         "Origin Amount": "1", "Destination Amount": "1",
+         "Fee Amount": "0", "Fee Currency": "BAT", "Id": "synthetic-reward"},
+        {"Date": "Sat Jan 11 2025 10:00:00 GMT+0000",
+         "Status": "completed", "Type": "transfer", "Origin": "",
+         "Origin Currency": "BAT", "Destination Currency": "EUR",
+         "Origin Amount": "1", "Destination Amount": "25",
+         "Fee Amount": "0", "Fee Currency": "EUR", "Id": "synthetic-sale"},
+    ]
+    c = ClasificadorUphold(_csv_121(tmp_path, "uphold-synthetic.csv", cols, rows)).clasificar()
+    m = _pipeline_motor(c)
+    assert len(c.rendimientos) == 1 and c.rendimientos[0].valor_eur == 0
+    assert m.resumen_fiscal()["resultado_neto"] == 25  # zero basis is unsafe
+    with pytest.raises(ValueError, match="Datos fiscales no seguros:.*Uphold"):
+        _motor_a_json(m, c)
