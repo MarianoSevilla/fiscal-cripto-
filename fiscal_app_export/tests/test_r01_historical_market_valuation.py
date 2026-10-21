@@ -52,6 +52,7 @@ def mock_prices(monkeypatch, prices=None, offset_seconds=0, status=200):
         calls.append(url)
         assert url.startswith("https://") and timeout <= 4
         assert params["vs_currency"] == "eur"
+        assert params["interval"] == "hourly"  # Explicit request for historical timestamps
         coin = url.rsplit("/", 3)[1]  # /coins/{id}/market_chart/range
         # URL ends in range. Extract by segment instead.
         coin = url.split("/coins/", 1)[1].split("/", 1)[0]
@@ -256,3 +257,20 @@ def test_r01_fee_bearing_swap_not_silently_omitted(monkeypatch, fee_field, fee_v
     with pytest.raises(ValueError, match="comisi[oó]n"):
         _preparar_motor_fiscal_irpf(_pipeline_motor(c), c, ejercicio="2025")
     assert calls == [], "Fee rejection must precede paid price API requests"
+
+
+def test_r01_price_cache_not_reused_across_distant_minutes_of_same_hour(monkeypatch):
+    """10:00 and 10:59 must not share a stale 10:00 quotation.
+
+    The old one-hour cache key returned no quote for the later swap because
+    its saved observation was over 30 minutes from the later execution.
+    """
+    calls = mock_prices(monkeypatch)
+    v = ValoradorPermutasEUR()
+    origin = datetime(2025, 1, 1, 10, 0, tzinfo=timezone.utc)
+    early = v.precio("BTC", origin)
+    later = v.precio("BTC", origin + timedelta(minutes=59))
+    assert early is not None and later is not None
+    assert early.fecha_fuente_utc == origin
+    assert later.fecha_fuente_utc == origin + timedelta(minutes=59)
+    assert len(calls) == 2
