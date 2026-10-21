@@ -49,6 +49,8 @@ class OperacionSwap:
     cantidad_recibida: float
     nota: str = ""
     precio_fmv_eur: float = 0.0
+    fee_activo: str = ""
+    fee_cantidad: float = 0.0
 
 @dataclass
 class OperacionRendimiento:
@@ -190,6 +192,8 @@ class ClasificadorUphold:
                 cantidad_recibida=dest_amt,
                 nota=nota,
                 precio_fmv_eur=0.0,
+                fee_activo=fee_activo,
+                fee_cantidad=fee_qty,
             ))
             return
 
