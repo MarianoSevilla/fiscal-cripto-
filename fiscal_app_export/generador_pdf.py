@@ -1437,7 +1437,9 @@ def _bloque_estado_analisis(clasificador_stats: dict, motor, rendimientos: list,
     n_rend    = clasificador_stats.get("rendimientos", 0)
     n_mov     = clasificador_stats.get("movimientos", 0)
     n_desc    = clasificador_stats.get("desconocidas", 0)
-    n_adv     = len(motor.advertencias) if motor.advertencias else 0
+    n_adv     = sum(not str(a).startswith("Valoración de mercado utilizada:")
+                    for a in motor.advertencias)
+    n_valoradas = len(getattr(motor, "permutas_valoradas", ()))
 
     th   = ParagraphStyle("ea_th",   fontName="Helvetica-Bold", fontSize=8,
                            textColor=TEXT, leading=11)
@@ -1473,6 +1475,12 @@ def _bloque_estado_analisis(clasificador_stats: dict, motor, rendimientos: list,
         Paragraph(_fmt(n_adv),               td_warn if n_adv > 0 else td_r),
         Paragraph("⚠ Revisar" if n_adv > 0 else "", td_warn),
     ])
+    if n_valoradas:
+        filas.append([
+            Paragraph("Permutas valoradas con cotización", td),
+            Paragraph(_fmt(n_valoradas), td_r),
+            Paragraph("Ver fuentes en el informe", td),
+        ])
     filas.append([
         Paragraph(f"<b>Total filas CSV</b>", th),
         Paragraph(f"<b>{_fmt(total)}</b>",   ParagraphStyle("ea_tot", fontName="Helvetica-Bold",
@@ -1516,12 +1524,10 @@ def _bloque_estado_analisis(clasificador_stats: dict, motor, rendimientos: list,
             textColor=TEXT_MUTED, leading=11, spaceBefore=4
         )
         elems.append(Paragraph(
-            f"<b>Nota sobre las {_fmt(n_adv)} advertencias de inventario:</b> "
-            "Cuando el CSV no contiene el historial completo de compras de un activo entregado en un swap, "
-            "el sistema no puede determinar su coste FIFO. En ese caso el activo recibido entra al inventario "
-            "con coste base cero y la operación queda marcada para revisión manual. "
-            "Esto <b>no es un error del sistema</b>: refleja una limitación de los datos aportados. "
-            "Consulta la sección «Advertencias» al final del informe para el detalle.",
+            f"<b>Nota sobre las {_fmt(n_adv)} incidencias del historial:</b> "
+            "Revisa los mensajes específicos al final del informe. "
+            "Un historial sin adquisiciones suficientes no debe considerarse "
+            "fiscalmente completo, y no se presenta como cálculo definitivo.",
             nota_adv
         ))
     return elems
@@ -1741,7 +1747,7 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
                 story.append(_fl)
         # Aviso específico cuando el exchange no aporta FMV en EUR (p.ej. Uphold):
         # los swaps muestran G/P = 0 porque se usa coste FIFO como proxy.
-        if exchange == "Uphold":
+        if exchange == "Uphold" and not getattr(motor, "permutas_valoradas", ()):
             _n_swaps_sin_fmv = sum(
                 1 for r in motor.resultados
                 if r.tipo_operacion == "swap" and abs(r.ganancia_perdida) < 0.001
@@ -1836,13 +1842,14 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
         for fl in _separador_bloque():
             story.append(fl)
         story.append(KeepTogether([
-            Paragraph("Advertencias — Operaciones que Requieren Revisión Manual", styles["section"]),
+            Paragraph("Valoraciones y advertencias del cálculo", styles["section"]),
             Paragraph(
-                "Las siguientes situaciones requieren comprobación manual. "
-                "<b>No son errores del sistema</b>: indican operaciones cuya valoración no puede "
-                "determinarse automáticamente porque el CSV no contiene el historial completo "
-                "(p.ej. activos adquiridos fuera del período del CSV, swaps con cripto sin compra previa registrada). "
-                "El coste base de estos lotes ha quedado en cero y debe corregirse con los datos reales.",
+                "Este apartado documenta las fuentes y fechas de las valoraciones "
+                "automáticas utilizadas y, cuando corresponda, situaciones que requieren "
+                "revisión. Una cotización documentada no implica inventario incompleto "
+                "ni coste de adquisición cero. Revisa cada anotación según su contenido. "
+                "Datos proporcionados por CoinGecko cuando se indique dicha fuente "
+                "(https://www.coingecko.com/en/api).",
                 styles["body_muted"]
             ),
             Spacer(1, 3*mm),
@@ -1881,16 +1888,17 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
         ("Comisiones de venta\nreducción del valor de transmisión",
          "Las comisiones pagadas al vender un criptoactivo reducen el valor de transmisión declarado. "
          "Esto reduce la ganancia o aumenta la pérdida resultante de la operación."),
-        ("Swaps entre criptoactivos\nhecho imponible",
-         "El intercambio directo entre dos criptoactivos distintos se considera una transmisión a efectos "
-         "del IRPF. Genera una ganancia o pérdida patrimonial calculada como la diferencia entre el valor "
-         "de mercado del activo recibido y el coste FIFO del activo entregado. "
-         "El activo recibido entra en el inventario con un coste base igual al valor EUR del activo entregado: "
-         "si el entregado es una stablecoin o EUR, se toma su importe directamente (1:1); "
-         "si es un criptoactivo, se usa el coste FIFO acumulado de los lotes consumidos. "
-         "<b>Cuando el CSV no contiene el historial completo de compras de un activo entregado en un swap, "
-         "el sistema no puede determinar su coste FIFO y el activo recibido entra al inventario con coste "
-         "base cero. La operación queda marcada en la sección de advertencias para revisión manual.</b>"),
+        ("Swaps entre criptoactivos\\nhecho imponible",
+         "La permuta entre dos criptomonedas distintas constituye una transmisión con posible "
+         "ganancia o pérdida patrimonial. Conforme al art. 37.1.h LIRPF, "
+         "su valor de transmisión es el mayor entre el valor de mercado de la criptomoneda "
+         "entregada y el de la recibida en el momento de la permuta. "
+         "La ganancia o pérdida se obtiene restando el coste FIFO de la moneda entregada, "
+         "y el activo recibido adquiere como coste fiscal el valor de transmisión anterior. "
+         "Las comisiones justificadas se tratan conforme a su naturaleza. "
+         "No es correcto sustituir el valor de mercado por el coste histórico FIFO. "
+         "Si faltan cotizaciones o adquisiciones necesarias, se debe completar la información "
+         "antes de generar un informe definitivo."),
         ("Depósitos y retiradas\nno generan hecho imponible",
          "Los movimientos de criptoactivos entre wallets propias o entre exchanges del mismo titular no "
          "constituyen transmisión patrimonial. Es importante conservar los registros para acreditar "

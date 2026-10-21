@@ -1133,8 +1133,8 @@ def _validar_csv(filepath: str, exchange: str) -> tuple[bool, str]:
 
 # ── PIPELINES ─────────────────────────────────
 
-def _pipeline_motor(clasificador) -> MotorFIFO:
-    """Pipeline común: clasificador → motor FIFO."""
+def _pipeline_motor(clasificador, *, valores_permutas=None) -> MotorFIFO:
+    """Pipeline común: clasificador → motor FIFO; valoraciones sólo para IRPF."""
     motor = MotorFIFO()
     ops = []
     for op in clasificador.compraventas:
@@ -1172,13 +1172,24 @@ def _pipeline_motor(clasificador) -> MotorFIFO:
                     fee_activo=op.fee_activo, fee_cantidad=op.fee_cantidad
                 )
         elif tipo == "swap":
+            valoracion = (valores_permutas or {}).get(id(op))
             motor.registrar_swap(
                 fecha=op.fecha,
                 activo_entregado=op.activo_entregado,
                 cantidad_entregada=op.cantidad_entregada,
                 activo_recibido=op.activo_recibido,
                 cantidad_recibida=op.cantidad_recibida,
-                nota=op.nota
+                nota=op.nota,
+                valor_mercado_entregado_eur=(
+                    float(valoracion.valor_entregado_eur) if valoracion else None
+                ),
+                valor_mercado_recibido_eur=(
+                    float(valoracion.valor_recibido_eur) if valoracion else None
+                ),
+                fuente_valoracion=(
+                    valoracion.detalle(op.activo_entregado, op.activo_recibido)
+                    if valoracion else ""
+                ),
             )
         elif tipo == "reward":
             motor.registrar_compra(
@@ -1495,8 +1506,122 @@ def _error_amigable(e: Exception) -> str:
     return "No se ha podido procesar el fichero. Comprueba que es el archivo exportado desde tu exchange y vuelve a intentarlo."
 
 
-def _motor_a_json(motor) -> tuple:
-    """Convierte el resultado del motor FIFO a formato JSON para la UI."""
+def _preparar_motor_fiscal_irpf(motor, clasificador, ejercicio=None):
+    """Reprocesa cronológicamente el FIFO con cotizaciones EUR contrastadas.
+
+    Modelo 721 no llama esta función y no se consulta al proveedor si no hay
+    permutas. Si una cotización falta, se rechaza la solicitud antes del PDF.
+    """
+    swaps = [
+        s for s in getattr(clasificador, "swaps", ())
+        if s.activo_entregado != s.activo_recibido
+    ] if clasificador is not None else []
+    if not swaps:
+        return motor
+    # Conservador: el motor actual no contabiliza comisiones específicas de
+    # permuta. Preservar la evidencia del parser y rechazar estos casos hasta
+    # disponer de un tratamiento fiscal comprobado por activo y moneda de fee.
+    import re
+    for op in swaps:
+        for campo in ("fee_eur", "fee_cantidad", "fee_recibida_cantidad"):
+            fee = getattr(op, campo, 0)
+            try:
+                fee_num = float(fee)
+            except (ValueError, TypeError, OverflowError):
+                fee_num = float("nan")
+            if not math.isfinite(fee_num) or fee_num < 0:
+                raise ValueError(
+                    "Datos fiscales no seguros: comisión de permuta inválida."
+                )
+            if fee_num > 0:
+                raise ValueError(
+                    "Datos fiscales no seguros: la permuta incluye comisiones "
+                    "que aún no pueden reconciliarse con el coste y la "
+                    "transmisión fiscal. No se genera informe definitivo."
+                )
+        nota = str(getattr(op, "nota", "") or "").strip()
+        if re.match(r"^fee:\s*[+]?(?:[1-9]|0*[.,]0*[1-9])", nota, re.I):
+            raise ValueError(
+                "Datos fiscales no seguros: la permuta registra una comisión "
+                "no reconciliada en el historial. Requiere valoración fiscal."
+            )
+    from valoracion_permutas import ValoradorPermutasEUR
+    resolver = ValoradorPermutasEUR()
+    valores = {id(op): resolver.resolver(op, clasificador) for op in swaps}
+    recalculado = _pipeline_motor(clasificador, valores_permutas=valores)
+    # Reconstruir inventario con todo el histórico; solo DESPUÉS recortar los
+    # resultados al ejercicio solicitado. No alterar el coste de lotes FIFO.
+    if ejercicio is not None:
+        _filtrar_motor_por_ejercicio(recalculado, ejercicio)
+    return recalculado
+
+
+def _validar_aceptacion_fifo(motor, clasificador=None) -> None:
+    """Fail-closed IRPF reports for R01-R04; not used by Modelo 721.
+
+    These controls deliberately do not invent EUR prices or acquisition costs.
+    They run before the success JSON, PDF, token and report registration.
+    """
+    # R01: never mark unvalued legacy swaps as accepted IRPF calculations.
+    swaps = [
+        op for op in getattr(clasificador, "swaps", ())
+        if getattr(op, "activo_entregado", "") != getattr(op, "activo_recibido", "")
+    ] if clasificador is not None else []
+    if len(getattr(motor, "permutas_valoradas", ())) != len(swaps) or (
+        not swaps and any(r.tipo_operacion == "swap" for r in motor.resultados)
+    ):
+        raise ValueError(
+            "Datos fiscales no seguros: permutas sin valores de mercado "
+            "EUR contrastados para ambas criptomonedas."
+        )
+
+    # R02: Nexo's USD Equivalent must not be serialized as an EUR tax value.
+    if isinstance(clasificador, ClasificadorNexo):
+        if any(
+            str(getattr(op, "contraparte", "")).upper() == "USD"
+            for op in clasificador.compraventas
+        ) or any(
+            "almacenado en USD" in str(aviso)
+            for aviso in clasificador.advertencias
+        ):
+            raise ValueError(
+                "Datos fiscales no seguros: Nexo contiene importes en USD "
+                "sin conversión EUR verificable a fecha de operación."
+            )
+
+    # R04: a reward with no EUR FMV must not create an apparently valid
+    # taxable income of 0 and a zero-basis FIFO acquisition lot.
+    if isinstance(clasificador, ClasificadorUphold) and any(
+        getattr(op, "cantidad", 0) > 0
+        and getattr(op, "valor_eur", 0) <= 0
+        for op in clasificador.rendimientos
+    ):
+        raise ValueError(
+            "Datos fiscales no seguros: rendimiento Uphold sin valoración "
+            "EUR verificable; no puede declararse ingreso y coste FIFO cero."
+        )
+
+    # R03: don't issue a PDF that omits a disposition with no acquisition
+    # history or uses only a partial acquisition basis.
+    if any(getattr(r, "inventario_incompleto", False) for r in motor.resultados):
+        raise ValueError(
+            "Datos fiscales no seguros: inventario FIFO insuficiente para "
+            "calcular una o varias transmisiones. Importa el historial completo."
+        )
+    if any(
+        "no hay lotes de compra previos" in str(aviso)
+        or "inventario insuficiente" in str(aviso)
+        for aviso in motor.advertencias
+    ):
+        raise ValueError(
+            "Datos fiscales no seguros: falta el historial de adquisiciones "
+            "para una transmisión. No es posible generar un informe fiable."
+        )
+
+
+def _motor_a_json(motor, clasificador=None) -> tuple:
+    """Convierte resultados FIFO validados a JSON antes de emitir un PDF."""
+    _validar_aceptacion_fifo(motor, clasificador)
     motor.validar_integridad()
     resumen = motor.resumen_fiscal()
     posicion = [
@@ -2342,7 +2467,8 @@ def analizar():
                 motor, rendimientos, clasificador = procesar_bit2me_excel(tmp_path)
                 _filtrar_motor_por_ejercicio(motor, ejercicio)
                 rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-                resumen, posicion, operaciones = _motor_a_json(motor)
+                motor = _preparar_motor_fiscal_irpf(motor, clasificador, ejercicio)
+                resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
                 advertencias = motor.advertencias
                 rendimientos_json = _rendimientos_a_json(rendimientos)
                 pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Bit2Me", rendimientos)
@@ -2375,7 +2501,8 @@ def analizar():
                 motor, rendimientos, clasificador = procesar_bitvavo(tmp_path)
                 _filtrar_motor_por_ejercicio(motor, ejercicio)
                 rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-                resumen, posicion, operaciones = _motor_a_json(motor)
+                motor = _preparar_motor_fiscal_irpf(motor, clasificador, ejercicio)
+                resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
                 advertencias = motor.advertencias
                 rendimientos_json = _rendimientos_a_json(rendimientos)
                 pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Bitvavo", rendimientos)
@@ -2384,7 +2511,8 @@ def analizar():
                 motor, rendimientos, clasificador = procesar_kraken(tmp_path)
                 _filtrar_motor_por_ejercicio(motor, ejercicio)
                 rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-                resumen, posicion, operaciones = _motor_a_json(motor)
+                motor = _preparar_motor_fiscal_irpf(motor, clasificador, ejercicio)
+                resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
                 advertencias = motor.advertencias
                 rendimientos_json = _rendimientos_a_json(rendimientos)
                 pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Kraken", rendimientos)
@@ -2393,7 +2521,8 @@ def analizar():
                 motor, rendimientos, clasificador = procesar_coinbase(tmp_path)
                 _filtrar_motor_por_ejercicio(motor, ejercicio)
                 rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-                resumen, posicion, operaciones = _motor_a_json(motor)
+                motor = _preparar_motor_fiscal_irpf(motor, clasificador, ejercicio)
+                resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
                 advertencias = motor.advertencias
                 rendimientos_json = _rendimientos_a_json(rendimientos)
                 pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Coinbase", rendimientos)
@@ -2402,7 +2531,8 @@ def analizar():
                 motor, rendimientos, clasificador = procesar_nexo(tmp_path)
                 _filtrar_motor_por_ejercicio(motor, ejercicio)
                 rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-                resumen, posicion, operaciones = _motor_a_json(motor)
+                motor = _preparar_motor_fiscal_irpf(motor, clasificador, ejercicio)
+                resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
                 advertencias = motor.advertencias
                 rendimientos_json = _rendimientos_a_json(rendimientos)
                 pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Nexo", rendimientos)
@@ -2411,7 +2541,8 @@ def analizar():
                 motor, rendimientos, clasificador = procesar_cryptocom(tmp_path)
                 _filtrar_motor_por_ejercicio(motor, ejercicio)
                 rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-                resumen, posicion, operaciones = _motor_a_json(motor)
+                motor = _preparar_motor_fiscal_irpf(motor, clasificador, ejercicio)
+                resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
                 advertencias = motor.advertencias
                 rendimientos_json = _rendimientos_a_json(rendimientos)
                 pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Crypto.com", rendimientos)
@@ -2420,7 +2551,8 @@ def analizar():
                 motor, rendimientos, clasificador = procesar_uphold(tmp_path)
                 _filtrar_motor_por_ejercicio(motor, ejercicio)
                 rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-                resumen, posicion, operaciones = _motor_a_json(motor)
+                motor = _preparar_motor_fiscal_irpf(motor, clasificador, ejercicio)
+                resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
                 # Uphold no provee FMV en EUR: las advertencias fiscales viven en el clasificador
                 # (el motor no las genera porque siempre hay inventario previo de compras EUR).
                 # Fusionamos ambas listas para que aparezcan en la UI y en el PDF.
@@ -2432,7 +2564,8 @@ def analizar():
                 motor, rendimientos, clasificador = procesar_mexc(tmp_path)
                 _filtrar_motor_por_ejercicio(motor, ejercicio)
                 rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-                resumen, posicion, operaciones = _motor_a_json(motor)
+                motor = _preparar_motor_fiscal_irpf(motor, clasificador, ejercicio)
+                resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
                 # MEXC puede tener advertencias sobre pares USDT en el clasificador.
                 # Las fusionamos igual que Uphold para que aparezcan en UI y PDF.
                 advertencias = motor.advertencias + (clasificador.advertencias if clasificador else [])
@@ -2443,7 +2576,8 @@ def analizar():
                 motor, rendimientos, clasificador = procesar_bitget(tmp_path)
                 _filtrar_motor_por_ejercicio(motor, ejercicio)
                 rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-                resumen, posicion, operaciones = _motor_a_json(motor)
+                motor = _preparar_motor_fiscal_irpf(motor, clasificador, ejercicio)
+                resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
                 # Bitget puede tener advertencias sobre pares USDT en el clasificador.
                 advertencias = motor.advertencias + (clasificador.advertencias if clasificador else [])
                 rendimientos_json = _rendimientos_a_json(rendimientos)
@@ -2491,7 +2625,8 @@ def analizar():
                     _clasificador_stats  = None
                 _filtrar_motor_por_ejercicio(motor, ejercicio)
                 rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-                resumen, posicion, operaciones = _motor_a_json(motor)
+                motor = _preparar_motor_fiscal_irpf(motor, clasificador, ejercicio)
+                resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
                 advertencias = motor.advertencias
                 rendimientos_json = _rendimientos_a_json(rendimientos)
                 pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Binance", rendimientos,
@@ -2702,7 +2837,8 @@ def analizar_kucoin():
             motor, rendimientos, clasificador = procesar_kucoin(tmp_paths, filenames)
             _filtrar_motor_por_ejercicio(motor, ejercicio)
             rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-            resumen, posicion, operaciones = _motor_a_json(motor)
+            motor = _preparar_motor_fiscal_irpf(motor, clasificador, ejercicio)
+            resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
             # Las advertencias fiscales de KuCoin (ambigüedades, productos no cubiertos,
             # pares USD) viven en el clasificador; las fusionamos con las del motor.
             advertencias = motor.advertencias + (clasificador.advertencias if clasificador else [])
@@ -2788,6 +2924,8 @@ def analizar_kucoin():
                 )
             except Exception:
                 app.logger.exception("[ERROR_TRACKING] unexpected error calling record_processing_error_safe")
+            if isinstance(e, ValueError) and str(e).startswith("Datos fiscales no seguros:"):
+                return jsonify({"error": str(e)}), 422
             return jsonify({"error": _error_amigable(e)}), 500
 
     finally:
@@ -2856,7 +2994,8 @@ def analizar_bitget():
             motor, rendimientos, clasificador = procesar_bitget_multi(tmp_paths, filenames)
             _filtrar_motor_por_ejercicio(motor, ejercicio)
             rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-            resumen, posicion, operaciones = _motor_a_json(motor)
+            motor = _preparar_motor_fiscal_irpf(motor, clasificador, ejercicio)
+            resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
             advertencias = motor.advertencias + (clasificador.advertencias if clasificador else [])
             rendimientos_json = _rendimientos_a_json(rendimientos)
             pdf_bytes = generar_pdf_bitget(motor, nombre, ejercicio, rendimientos)

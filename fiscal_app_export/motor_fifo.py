@@ -100,6 +100,8 @@ class MotorFIFO:
         self.resultados: List[ResultadoFIFO] = []
         # Operaciones que no se pudieron procesar
         self.advertencias: List[str] = []
+        # Traceable valuations used for IRPF swaps (never inferred from FIFO cost).
+        self.permutas_valoradas: list[str] = []
 
     # ── ENTRADA: registrar una compra ─────────
 
@@ -142,7 +144,10 @@ class MotorFIFO:
     def registrar_swap(self, fecha: str,
                         activo_entregado: str, cantidad_entregada: float,
                         activo_recibido: str, cantidad_recibida: float,
-                        nota: str = ""):
+                        nota: str = "",
+                        valor_mercado_entregado_eur=None,
+                        valor_mercado_recibido_eur=None,
+                        fuente_valoracion: str = ""):
         """
         Un swap es fiscalmente una venta del activo entregado
         y una compra inmediata del activo recibido.
@@ -172,8 +177,37 @@ class MotorFIFO:
             )
             return
 
-        # ── Determinar valor EUR del activo entregado ───────────────────────
-        if activo_entregado in self.STABLES or activo_entregado == "EUR":
+        # ── Cotizaciones de mercado verificadas para IRPF ──────────────────
+        valoracion_verificada = (
+            valor_mercado_entregado_eur is not None
+            or valor_mercado_recibido_eur is not None
+        )
+        if valoracion_verificada:
+            if (valor_mercado_entregado_eur is None
+                    or valor_mercado_recibido_eur is None):
+                raise ValueError(
+                    "Datos fiscales no seguros: faltan cotizaciones EUR de ambas "
+                    "criptomonedas para determinar una permuta."
+                )
+            self._finite(valor_mercado_entregado_eur, valor_mercado_recibido_eur)
+            if valor_mercado_entregado_eur <= 0 or valor_mercado_recibido_eur <= 0:
+                raise ValueError(
+                    "Datos fiscales no seguros: valoración de permuta EUR no positiva."
+                )
+            valor_eur_entregado = max(
+                valor_mercado_entregado_eur, valor_mercado_recibido_eur
+            )
+            # Evidence included in the generated PDF's warning / notes section.
+            detalle = fuente_valoracion or (
+                f"PERMUTA {activo_entregado}/{activo_recibido}: "
+                f"mercado EUR entregado {valor_mercado_entregado_eur}; "
+                f"mercado EUR recibido {valor_mercado_recibido_eur}"
+            )
+            self.permutas_valoradas.append(detalle)
+            self.advertencias.append("Valoración de mercado utilizada: " + detalle)
+        # Legacy method retained exclusively for existing internal callers,
+        # including Modelo 721. IRPF reports reject this unvalued path.
+        elif activo_entregado in self.STABLES or activo_entregado == "EUR":
             # Stablecoin o fiat: 1 unidad ≈ 1 EUR (aproximación)
             valor_eur_entregado = cantidad_entregada
         else:

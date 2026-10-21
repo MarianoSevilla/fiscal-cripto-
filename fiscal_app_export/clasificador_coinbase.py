@@ -70,6 +70,7 @@ class OperacionSwap:
     cantidad_recibida: float
     nota: str = ""
     precio_fmv_eur: float = 0.0
+    fee_eur: float = 0.0  # no calcular IRPF como si no existiera la comisión
 
 @dataclass
 class OperacionRendimiento:
@@ -303,6 +304,7 @@ class ClasificadorCoinbase:
                     cantidad_recibida=recibida_qty,
                     nota=notas,
                     precio_fmv_eur=round(fmv_eur, 6),
+                    fee_eur=fees,
                 ))
             else:
                 # No se pudo parsear la nota
