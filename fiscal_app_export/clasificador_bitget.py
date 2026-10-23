@@ -764,6 +764,9 @@ class ClasificadorBitget:
         sell_fee  = abs(_parse_decimal(sell_fila.get("Fee", "0")))
 
         if buy_amt == 0 or sell_amt == 0:
+            # Un par contabilizado pero incompleto no puede desaparecer del FIFO.
+            self._add_desconocida(buy_fila, fecha)
+            self._add_desconocida(sell_fila, fecha)
             return
         if buy_fee >= buy_amt and buy_fee > 0:
             raise ValueError("Datos fiscales no seguros: comisión Bitget ledger supera el activo recibido.")
