@@ -148,6 +148,36 @@ def test_real_mexc_xlsx_eur_and_non_eur_and_unknown(tmp_path):
         _motor_a_json(m, c)
 
 
+BITGET_HEADERS = [
+    "Date", "Trading pair", "Base Asset", "Quote Asset", "Direction",
+    "Price", "Amount", "Total", "Fee", "Fee Coin", "",
+]
+
+
+def test_real_bitget_csv_eur_and_usdt_are_distinguished(tmp_path):
+    p = tmp_path / "bitget_synthetic.csv"
+    def write(quote):
+        with p.open("w", newline="", encoding="utf-8-sig") as stream:
+            writer = csv.writer(stream)
+            writer.writerow(BITGET_HEADERS)
+            for date, direction, price in (
+                ("2024-01-01 10:00:00", "Buy", 100),
+                ("2025-01-01 10:00:00", "Sell", 150),
+            ):
+                writer.writerow([date, "BTC/" + quote, "BTC", quote,
+                                 direction, price, 1, price, 0, quote, ""])
+
+    write("EUR")
+    motor, _, classifier = procesar_bitget(str(p))
+    summary, _, _ = _motor_a_json(motor, classifier)
+    assert summary["resultado_neto"] == 50
+
+    write("USDT")
+    motor, _, classifier = procesar_bitget(str(p))
+    with pytest.raises(ValueError, match="valoración histórica"):
+        _motor_a_json(motor, classifier)
+
+
 LEDGER_HEADER = (
     "UID,Account Type,Currency,Side,Amount,Fee,"
     "Time(UTC+02:00),Remark,Type"
