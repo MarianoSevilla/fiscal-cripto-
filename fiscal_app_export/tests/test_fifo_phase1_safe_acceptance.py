@@ -204,3 +204,94 @@ def test_http_rejection_does_not_emit_pdf_token_or_generated_record(monkeypatch)
     assert "token" not in resp.json and "resumen" not in resp.json
     assert not tokens and not pdf_calls
     assert reports and all(r["status"] == "failed" for r in reports)
+
+
+def test_sqlite_real_persistence_rejection_and_valid_eur(tmp_path):
+    """Isolated DB, synthetic user; verify 422 -> failed and 200 -> generated."""
+    import os
+    import subprocess
+    import sys
+    import textwrap
+    from pathlib import Path
+
+    app_dir = Path(__file__).resolve().parents[1]
+    db_file = tmp_path / "phase1.sqlite"
+    pdf_file = tmp_path / "valid.pdf"
+    program = r'''
+import io
+from pathlib import Path
+from types import SimpleNamespace
+import flask_login.utils as login_utils
+import app as api
+from app import app
+from models import db, User, FifoReport
+from motor_fifo import MotorFIFO
+from clasificador_bitget import ClasificadorBitget
+
+app.config.update(TESTING=True, RATELIMIT_ENABLED=False)
+with app.app_context():
+    db.create_all()
+    user = User(email="phase1@example.invalid", is_active=True, role="user", plan="free")
+    db.session.add(user)
+    db.session.commit()
+    uid = user.id
+
+login_utils._get_user = lambda: SimpleNamespace(
+    id=uid, role="user", email="phase1@example.invalid",
+    is_authenticated=True, is_active=True,
+)
+api._validar_csv = lambda *a, **kw: (True, "")
+api.record_processing_error_safe = lambda **kw: None
+pdf = Path(PDF_FILE)
+api._derivar_ruta_pdf = lambda *a: str(pdf)
+api.generar_pdf_bitget = lambda *a, **kw: b"%PDF-TEST"
+api._guardar_token_pdf = lambda *a: None
+
+def scenario(quote):
+    motor = MotorFIFO()
+    motor.registrar_compra("2024-01-01", "BTC", 1, 100, "EUR", "EUR", 0)
+    motor.registrar_venta("2025-01-01", "BTC", 1, 150, "EUR", "EUR", 0)
+    c = ClasificadorBitget.__new__(ClasificadorBitget)
+    c.compraventas = [SimpleNamespace(contraparte=quote)]
+    c.swaps, c.movimientos, c.rendimientos, c.desconocidas = [], [], [], []
+    c.advertencias = ["Aviso exclusivamente informativo"]
+    return motor, [], c
+
+for index, quote in enumerate(("USDT", "EUR")):
+    if pdf.exists():
+        pdf.unlink()
+    api.procesar_bitget = lambda path, q=quote: scenario(q)
+    with app.test_client() as client:
+        response = client.post("/api/analizar", data={
+            "csv": (io.BytesIO(b"Date,Test\n2025-01-01,1\n"), "synthetic.csv"),
+            "exchange": "bitget", "nombre": "Synthetic", "ejercicio": "2025",
+        }, content_type="multipart/form-data")
+    assert response.status_code == (422 if index == 0 else 200)
+    if index == 0:
+        assert "token" not in response.json
+        assert not pdf.exists()
+    else:
+        assert response.json["resumen"]["resultado_neto"] == 50
+        assert response.json["token"] == pdf.name
+        assert pdf.read_bytes() == b"%PDF-TEST"
+    with app.app_context():
+        reports = FifoReport.query.order_by(FifoReport.id).all()
+        assert len(reports) == index + 1
+        assert reports[-1].status == ("failed" if index == 0 else "generated")
+print("P0_PHASE1_SQLITE: PASS 422 failed / 200 generated")
+'''
+    program = program.replace("PDF_FILE", repr(str(pdf_file)))
+    env = {
+        "FLASK_ENV": "testing",
+        "DATABASE_URL": "sqlite:///" + str(db_file),
+        "PYTHONPATH": str(app_dir),
+        "PATH": os.environ.get("PATH", ""),
+        "HOME": str(tmp_path),
+        "PYTHONDONTWRITEBYTECODE": "1",
+    }
+    result = subprocess.run(
+        [sys.executable, "-c", textwrap.dedent(program)],
+        cwd=app_dir, env=env, capture_output=True, text=True, timeout=60,
+    )
+    assert result.returncode == 0, (result.stdout + "\n" + result.stderr)[-4500:]
+    assert "P0_PHASE1_SQLITE: PASS" in result.stdout
