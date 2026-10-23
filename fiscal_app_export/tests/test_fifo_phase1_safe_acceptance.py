@@ -325,3 +325,84 @@ print("P0_PHASE1_SQLITE: PASS 422 failed / 200 generated")
     )
     assert result.returncode == 0, (result.stdout + "\n" + result.stderr)[-4500:]
     assert "P0_PHASE1_SQLITE: PASS" in result.stdout
+
+
+# PR #125 cierre adversarial: un export identificado pero ignorado no es
+# evidencia suficiente para producir un informe fiscal vacío.
+def test_bitget_auxiliary_only_fails_closed_with_real_synthetic_csv(tmp_path):
+    import csv
+    from clasificador_bitget import ClasificadorBitgetMulti, BitgetUserError
+    cases = {
+        "historial": ["Date", "Type", "Order Id", "Trading pair", "Base Asset",
+                      "Quote Asset", "Direction", "Price", "Order amount",
+                      "Executed", "Average Price", "Trading volume", "Status"],
+        "financial_record": ["Order no.", "Coin", "Type", "Action", "Quantity", "Amount (USDT)"],
+    }
+    for kind, headers in cases.items():
+        path = tmp_path / (kind + ".csv")
+        with path.open("w", newline="", encoding="utf-8-sig") as stream:
+            writer = csv.writer(stream)
+            writer.writerow(headers)
+            writer.writerow(["synthetic"] * len(headers))
+        with pytest.raises(BitgetUserError, match="historial de operaciones spot procesable") as exc:
+            ClasificadorBitgetMulti([str(path)], [path.name]).clasificar()
+        assert exc.value.code == "insufficient_fifo_source"
+
+
+def test_bitget_auxiliary_with_valid_spot_eur_is_allowed(tmp_path):
+    import csv
+    from clasificador_bitget import ClasificadorBitgetMulti
+    auxiliary = tmp_path / "financial_record.csv"
+    with auxiliary.open("w", newline="", encoding="utf-8-sig") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(["Order no.", "Coin", "Type", "Action", "Quantity", "Amount (USDT)"])
+        writer.writerow(["123", "BTC", "ORDER_FROZEN", "OUT", "1", "100"])
+    spot = tmp_path / "spot_eur.csv"
+    with spot.open("w", newline="", encoding="utf-8-sig") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(BITGET_HEADERS)
+        writer.writerow(["2024-01-01 10:00:00", "BTC/EUR", "BTC", "EUR",
+                         "Buy", 100, 1, 100, 0, "EUR", ""])
+        writer.writerow(["2025-01-01 10:00:00", "BTC/EUR", "BTC", "EUR",
+                         "Sell", 150, 1, 150, 0, "EUR", ""])
+    classifier = ClasificadorBitgetMulti(
+        [str(auxiliary), str(spot)], [auxiliary.name, spot.name]
+    ).clasificar()
+    assert len(classifier.compraventas) == 2
+    assert not classifier.desconocidas
+    assert any("Financial Record" in warning for warning in classifier.advertencias)
+
+
+def test_bitget_recognized_auxiliary_only_http_no_pdf_or_token(monkeypatch, tmp_path):
+    import csv
+    import app as api
+    import flask_login.utils as login_utils
+    from clasificador_bitget import ClasificadorBitgetMulti
+    headers = ["Order no.", "Coin", "Type", "Action", "Quantity", "Amount (USDT)"]
+    file_path = tmp_path / "financial.csv"
+    with file_path.open("w", newline="", encoding="utf-8-sig") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(headers)
+        writer.writerow(["12", "BTC", "ORDER_FROZEN", "OUT", "1", "100"])
+    user = SimpleNamespace(id=970012, role="user", email="test@example.invalid",
+                           is_authenticated=True, is_active=True)
+    monkeypatch.setattr(login_utils, "_get_user", lambda: user)
+    monkeypatch.setattr(api, "_validar_csv", lambda *a, **kw: (True, ""))
+    reports, tokens, pdf_calls = [], [], []
+    monkeypatch.setattr(api, "_registrar_informe",
+                        lambda **kw: reports.append(kw) or 1)
+    monkeypatch.setattr(api, "_guardar_token_pdf",
+                        lambda *a: tokens.append(a))
+    monkeypatch.setattr(api, "generar_pdf_bitget",
+                        lambda *a, **kw: pdf_calls.append(1) or b"%PDF")
+    monkeypatch.setattr(api, "record_processing_error_safe", lambda **kw: None)
+    app.config.update(TESTING=True, RATELIMIT_ENABLED=False)
+    with app.test_client() as client:
+        response = client.post("/api/bitget/analizar", data={
+            "csv": [(io.BytesIO(file_path.read_bytes()), file_path.name)],
+            "ejercicio": "2025", "nombre": "Synthetic",
+        }, content_type="multipart/form-data")
+    assert response.status_code == 422
+    assert "token" not in response.get_json()
+    assert not tokens and not pdf_calls
+    assert not any(r.get("status") == "generated" for r in reports)
