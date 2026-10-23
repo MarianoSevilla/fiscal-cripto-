@@ -830,12 +830,13 @@ class TestTiposConocidosNoUsados:
         c = ClasificadorBitget(transacciones_fiat).clasificar()
         assert len(c.compraventas) == 0
 
-    def test_transaction_fee_deduct_ignorado(self, transacciones_fee_deduct):
-        """Transaction fee deduct no genera movimiento, compraventa ni desconocida."""
+    def test_transaction_fee_deduct_sin_conciliar_se_marca_desconocida(self, transacciones_fee_deduct):
+        """Una comisión material no puede descartarse sin conciliación fiscal."""
         c = ClasificadorBitget(transacciones_fee_deduct).clasificar()
         assert len(c.compraventas) == 0
         assert len(c.movimientos) == 0
-        assert len(c.desconocidas) == 0
+        assert len(c.desconocidas) == 1
+        assert c.desconocidas[0].subtipo == "transaction fee deduct sin conciliar"
 
     def test_financial_genera_movimiento_transfer(self, transacciones_financial_redemption):
         """Financial (bloqueo earn) → movimiento Transfer."""
