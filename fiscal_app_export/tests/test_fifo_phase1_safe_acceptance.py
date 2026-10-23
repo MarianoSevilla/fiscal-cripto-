@@ -406,3 +406,15 @@ def test_bitget_recognized_auxiliary_only_http_no_pdf_or_token(monkeypatch, tmp_
     assert "token" not in response.get_json()
     assert not tokens and not pdf_calls
     assert not any(r.get("status") == "generated" for r in reports)
+
+
+def test_bitget_zero_sided_ledger_pair_is_not_silently_ignored():
+    c = _classifier("bitget")
+    c._reconstruir_compraventa(
+        "2025-01-01 10:00:00",
+        {"Coin": "BTC", "Amount": "1", "Fee": "0", "Type": "buy"},
+        {"Coin": "EUR", "Amount": "0", "Fee": "0", "Type": "sell"},
+    )
+    assert len(c.desconocidas) == 2
+    with pytest.raises(ValueError, match="operaciones no interpretadas"):
+        _motor_a_json(_motor_eur(), c)
