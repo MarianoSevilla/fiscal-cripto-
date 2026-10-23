@@ -1495,12 +1495,76 @@ def _error_amigable(e: Exception) -> str:
     return "No se ha podido procesar el fichero. Comprueba que es el archivo exportado desde tu exchange y vuelve a intentarlo."
 
 
+def _validar_aceptacion_fuentes_fifo(clasificador) -> None:
+    """P0: distinguir advertencias informativas de datos fiscales incompletos.
+
+    Sólo MEXC, Bitget (ambas rutas) y KuCoin. Ninguna advertencia genérica
+    causa bloqueo: se inspeccionan operaciones, divisas y omisiones tipadas.
+    No se realizan conversiones aproximadas ni llamadas a proveedores.
+    """
+    if not isinstance(clasificador, (
+        ClasificadorMEXC, ClasificadorBitget, ClasificadorBitgetMulti,
+        ClasificadorKuCoin,
+    )):
+        return
+
+    if getattr(clasificador, "desconocidas", ()):
+        raise ValueError(
+            "Datos fiscales no seguros: hay operaciones no interpretadas "
+            "que podrían afectar al cálculo FIFO. Revisa el historial."
+        )
+    if getattr(clasificador, "_no_reconocidos", ()):
+        raise ValueError(
+            "Datos fiscales no seguros: uno o varios archivos no se han "
+            "podido interpretar. No se puede emitir un informe parcial."
+        )
+    if getattr(clasificador, "_fuentes_materiales_omitidas", ()):
+        raise ValueError(
+            "Datos fiscales no seguros: se omitieron archivos con "
+            "operaciones potencialmente relevantes para el IRPF."
+        )
+
+    # El importe del MotorFIFO se interpreta como euros. Sin cotización
+    # histórica acreditada no puede pasar un total USDT/USD u otra divisa.
+    for op in getattr(clasificador, "compraventas", ()):
+        if str(getattr(op, "contraparte", "")).upper() != "EUR":
+            raise ValueError(
+                "Datos fiscales no seguros: existen compraventas sin "
+                "valoración histórica acreditada en EUR."
+            )
+
+    # Bitget recoge Interest/Earn como cantidad de cripto sin valor_eur.
+    # El rendimiento puede además alterar el coste de adquisición futuro.
+    for op in getattr(clasificador, "rendimientos", ()):
+        if (getattr(op, "cantidad", 0) > 0
+                and not (isinstance(getattr(op, "valor_eur", None), (int, float))
+                         and math.isfinite(op.valor_eur) and op.valor_eur > 0)):
+            raise ValueError(
+                "Datos fiscales no seguros: existen rendimientos sin "
+                "valoración EUR acreditada ni coste FIFO verificable."
+            )
+
+    # Estos movimientos no son simples traspasos: el clasificador registra
+    # una adquisición/conversión pendiente, sin integrar su base fiscal.
+    for op in getattr(clasificador, "movimientos", ()):
+        subtipo = str(getattr(op, "subtipo", "")).lower()
+        observacion = str(getattr(op, "observacion", "")).lower()
+        if ("convert dust (revisar)" in subtipo
+                or "valoración eur no disponible" in observacion):
+            raise ValueError(
+                "Datos fiscales no seguros: existe una adquisición o "
+                "permuta sin reconstrucción fiscal y valoración EUR."
+            )
+
+
 def _validar_aceptacion_fifo(motor, clasificador=None) -> None:
     """R01–R04: no emitir IRPF cuando falta base fiscal acreditada.
 
     Se llama únicamente desde el recorrido IRPF antes de JSON/PDF/token;
     no modifica el motor, el clasificador ni los recorridos Modelo 721.
     """
+    _validar_aceptacion_fuentes_fifo(clasificador)
+
     # R01: los swaps entre activos distintos se están valorando con coste
     # histórico FIFO o paridad 1:1, no con ambos precios de mercado en EUR.
     # Incluso un único precio FMV del CSV no demuestra el máximo exigible.
