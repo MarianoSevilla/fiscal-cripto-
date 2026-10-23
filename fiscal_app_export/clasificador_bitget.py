@@ -979,7 +979,12 @@ class ClasificadorBitget:
         # ── Comisión de plataforma en BGB ─────────────────────────────────────
         # Amount típicamente 0; Fee = −x BGB. Importe mínimo, ignorar.
         elif tipo_lower == "transaction fee deduct":
-            pass
+            if fee != 0 or amount != 0:
+                self.desconocidas.append(OperacionDesconocida(
+                    fecha=fecha, subtipo="transaction fee deduct sin conciliar",
+                    activo=coin or "?", cantidad=float(abs(fee) + abs(amount)),
+                    cuenta="Bitget",
+                ))
 
         # ── Tipo no reconocido ────────────────────────────────────────────────
         else:
@@ -1132,6 +1137,7 @@ class ClasificadorBitgetMulti:
         # Buffers de compraventas por fuente (para deduplicar tras leer todo)
         self._cv_por_fuente = {"spot_trading": [], "detalles": [], "transacciones": []}
         self._no_reconocidos: list = []
+        self._fuentes_materiales_omitidas: list = []
         self._tiene_pares_usdt = False
 
         self._sec = {
@@ -1174,6 +1180,7 @@ class ClasificadorBitgetMulti:
 
             if tipo == "futures_orders":
                 algun_reconocido = True   # es un fichero de Bitget, pero futuros no soportados
+                self._fuentes_materiales_omitidas.append(fname)
                 self.advertencias.append(
                     f"«{fname}»: Los futuros de Bitget no están soportados todavía. "
                     "Requieren revisión fiscal específica. Se ha ignorado."
@@ -1204,6 +1211,7 @@ class ClasificadorBitgetMulti:
                         "unsafe_fiscal_source",
                         f"Datos fiscales no seguros: archivo Bitget «{fname}»: {e}",
                     ) from e
+                self._fuentes_materiales_omitidas.append(fname)
                 self.advertencias.append(f"«{fname}»: {e}")
                 continue
 
