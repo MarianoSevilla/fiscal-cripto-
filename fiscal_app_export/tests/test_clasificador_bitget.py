@@ -2133,10 +2133,44 @@ class TestMultiarchivoWithdrawalRecords:
              "280.9962", "Internal address", "\t1384960154", "Successful"],
         ])
 
+    @staticmethod
+    def _spot_compra_eur():
+        """Una compra sintética procesable, necesaria para emitir FIFO multiarchivo."""
+        return _csv_tmp(DETALLES_HEADERS, [
+            ["2024-01-01 10:00:00", "BTC/EUR", "BTC", "EUR",
+             "Buy", "100", "1", "100", "0", "EUR", ""],
+        ])
+
+    def _clasificar_con_spot(self, wr, extras=None, nombres_extras=None):
+        """Comprueba consolidación auxiliar junto a una fuente fiscal válida."""
+        spot = self._spot_compra_eur()
+        extras = extras or []
+        try:
+            return ClasificadorBitgetMulti(
+                [wr, spot] + extras,
+                ["wr.csv", "spot.csv"] + (nombres_extras or []),
+            ).clasificar()
+        finally:
+            os.unlink(spot)
+
+    def test_solo_withdrawal_records_no_genera_informe_fifo(self):
+        path = self._wr_simple()
+        try:
+            # La clasificación aislada sigue siendo útil para conciliación.
+            c = ClasificadorBitget(path).clasificar()
+            assert len(c.movimientos) == 2
+            assert not c.compraventas
+            # Sin operaciones spot no se debe emitir un informe fiscal.
+            with pytest.raises(BitgetUserError) as exc:
+                ClasificadorBitgetMulti([path]).clasificar()
+            assert exc.value.code == "insufficient_fifo_source"
+        finally:
+            os.unlink(path)
+
     def test_seccion_deposit_withdrawal_detectada(self):
         path = self._wr_simple()
         try:
-            c = ClasificadorBitgetMulti([path]).clasificar()
+            c = self._clasificar_con_spot(path)
             assert c.resumen_archivos["deposit_withdrawal"]["detectado"] is True
             assert c.resumen_archivos["deposit_withdrawal"]["registros"] == 2
         finally:
@@ -2145,7 +2179,7 @@ class TestMultiarchivoWithdrawalRecords:
     def test_movimientos_consolidados(self):
         path = self._wr_simple()
         try:
-            c = ClasificadorBitgetMulti([path]).clasificar()
+            c = self._clasificar_con_spot(path)
             assert len(c.movimientos) == 2
             subtipos = sorted(m.subtipo for m in c.movimientos)
             assert subtipos == ["Deposit", "Withdrawal"]
@@ -2155,7 +2189,7 @@ class TestMultiarchivoWithdrawalRecords:
     def test_no_genera_compraventas(self):
         path = self._wr_simple()
         try:
-            c = ClasificadorBitgetMulti([path]).clasificar()
+            c = self._clasificar_con_spot(path)
             assert len(c.compraventas) == 0
         finally:
             os.unlink(path)
@@ -2168,8 +2202,9 @@ class TestMultiarchivoWithdrawalRecords:
              "HYPEUSDT", "GTC", "Limit", "25", "25", "1", "1", "25", "0", "0", "fully executed"],
         ])
         try:
-            c = ClasificadorBitgetMulti([wr, fut], ["wr.csv", "fut.csv"]).clasificar()
+            c = self._clasificar_con_spot(wr, [fut], ["fut.csv"])
             assert "fut.csv" not in c.resumen_archivos["no_reconocidos"]
+            assert "fut.csv" in c._fuentes_materiales_omitidas
             assert any("futuros" in a.lower() for a in c.advertencias)
         finally:
             os.unlink(wr); os.unlink(fut)
@@ -2178,7 +2213,11 @@ class TestMultiarchivoWithdrawalRecords:
         """Si se sube el mismo withdrawal_records dos veces, los movimientos se deduplican."""
         path = self._wr_simple()
         try:
-            c = ClasificadorBitgetMulti([path, path]).clasificar()
+            spot = self._spot_compra_eur()
+            try:
+                c = ClasificadorBitgetMulti([path, path, spot]).clasificar()
+            finally:
+                os.unlink(spot)
             assert len(c.movimientos) == 2   # no 4
         finally:
             os.unlink(path)
@@ -2250,20 +2289,18 @@ class TestArchivosRealesDesktop:
 
     def test_multiarchivo_tres_archivos_desktop(self):
         """Los 3 archivos del desktop procesados juntos: WR reconocido, los otros con advertencia."""
-        c = ClasificadorBitgetMulti(
-            [_WR_REAL, _FUT_REAL, _SPOT_OH_REAL],
-            ["withdrawal_records.csv", "futures.csv", "spot_order_history.csv"],
-        ).clasificar()
-        assert c.resumen_archivos["deposit_withdrawal"]["detectado"] is True
-        assert c.resumen_archivos["deposit_withdrawal"]["registros"] == 19
-        assert len(c.resumen_archivos["no_reconocidos"]) == 0
-        assert any("futuros" in a.lower() for a in c.advertencias)
-        assert any("canceladas" in a.lower() for a in c.advertencias)
+        with pytest.raises(BitgetUserError) as exc:
+            ClasificadorBitgetMulti(
+                [_WR_REAL, _FUT_REAL, _SPOT_OH_REAL],
+                ["withdrawal_records.csv", "futures.csv", "spot_order_history.csv"],
+            ).clasificar()
+        assert exc.value.code == "insufficient_fifo_source"
 
     def test_multiarchivo_compraventas_cero(self):
         """Ninguno de los 3 archivos del desktop genera compraventas."""
-        c = ClasificadorBitgetMulti([_WR_REAL, _FUT_REAL, _SPOT_OH_REAL]).clasificar()
-        assert len(c.compraventas) == 0
+        with pytest.raises(BitgetUserError) as exc:
+            ClasificadorBitgetMulti([_WR_REAL, _FUT_REAL, _SPOT_OH_REAL]).clasificar()
+        assert exc.value.code == "insufficient_fifo_source"
 
 
 @pytest.mark.skipif(not _VICENTE_DISPONIBLE,
