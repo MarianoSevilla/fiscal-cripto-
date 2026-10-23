@@ -2186,11 +2186,14 @@ class TestMultiarchivoWithdrawalRecords:
         finally:
             os.unlink(path)
 
-    def test_no_genera_compraventas(self):
+    def test_withdrawal_records_no_anade_compraventas(self):
         path = self._wr_simple()
         try:
+            solo_movimientos = ClasificadorBitget(path).clasificar()
+            assert len(solo_movimientos.compraventas) == 0
             c = self._clasificar_con_spot(path)
-            assert len(c.compraventas) == 0
+            assert len(c.compraventas) == 1  # solo compra EUR del spot añadido
+            assert c.compraventas[0].tipo == "COMPRA"
         finally:
             os.unlink(path)
 
