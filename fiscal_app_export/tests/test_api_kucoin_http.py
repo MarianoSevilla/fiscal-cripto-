@@ -130,32 +130,51 @@ def test_anos_fichero_no_reconocido(client, usuario):
 
 # ── /api/kucoin/analizar ───────────────────────────────────────────────────────
 
-def test_analizar_multiarchivo_ok(client, usuario):
+_LEDGER_SYNTH = "UID,Account Type,Currency,Side,Amount,Fee,Time(UTC+02:00),Remark,Type\n"
+
+
+def test_analizar_multiarchivo_usdt_rechazado_sin_token(client, usuario):
+    """Dos ledger sintéticos; USDT no es EUR y no debe producir PDF."""
     _login(client)
-    r = client.post("/api/kucoin/analizar",
-                    data={"csv": [_file(F_TRADING), _file(F_FINANC),
-                                  _file(F_FIAT_ORD), _file(F_VACIO)],
-                          "ejercicio": "all", "nombre": "K"},
-                    content_type="multipart/form-data")
-    assert r.status_code == 200
-    body = r.get_json()
+    eur = (
+        _LEDGER_SYNTH
+        + "1,m,BTC,Deposit,1,0,2024-01-01 10:00:00,,Spot\n"
+        + "1,m,EUR,Withdrawal,100,0,2024-01-01 10:00:00,,Spot\n"
+    ).encode("utf-8")
+    usdt = (
+        _LEDGER_SYNTH
+        + "1,m,ETH,Deposit,1,0,2025-01-01 10:00:00,,Spot\n"
+        + "1,m,USDT,Withdrawal,150,0,2025-01-01 10:00:00,,Spot\n"
+    ).encode("utf-8")
+    response = client.post("/api/kucoin/analizar", data={
+        "csv": [(io.BytesIO(eur), "trading.csv"),
+                (io.BytesIO(usdt), "finance.csv")],
+        "ejercicio": "2025", "nombre": "Synthetic",
+    }, content_type="multipart/form-data")
+    assert response.status_code == 422
+    assert "Datos fiscales no seguros" in response.get_json()["error"]
+    assert "token" not in response.get_json()
+
+
+def test_analizar_un_solo_fichero_eur_valido(client, usuario):
+    """Compras y ventas EUR sin avisos materiales siguen generando informe."""
+    _login(client)
+    csv_bytes = (
+        _LEDGER_SYNTH
+        + "1,m,BTC,Deposit,1,0,2024-01-01 10:00:00,,Spot\n"
+        + "1,m,EUR,Withdrawal,100,0,2024-01-01 10:00:00,,Spot\n"
+        + "1,m,BTC,Withdrawal,1,0,2025-01-01 10:00:00,,Spot\n"
+        + "1,m,EUR,Deposit,150,0,2025-01-01 10:00:00,,Spot\n"
+    ).encode("utf-8")
+    response = client.post("/api/kucoin/analizar", data={
+        "csv": [(io.BytesIO(csv_bytes), "trading.csv")],
+        "ejercicio": "2025", "nombre": "Synthetic",
+    }, content_type="multipart/form-data")
+    assert response.status_code == 200, response.get_data(as_text=True)[:300]
+    body = response.get_json()
     assert body["ok"] is True
-    assert "token" in body and body["token"]
-    assert "resumen" in body and "resultado_neto" in body["resumen"]
-    assert "resumen_archivos" in body
-    assert body["resumen_archivos"]["trading"]["detectado"] is True
-    assert isinstance(body["advertencias"], list)
-    # Aviso de productos no cubiertos siempre presente
-    assert any("staking" in a.lower() for a in body["advertencias"])
-
-
-def test_analizar_un_solo_fichero(client, usuario):
-    _login(client)
-    r = client.post("/api/kucoin/analizar",
-                    data={"csv": [_file(F_TRADING)], "ejercicio": "all"},
-                    content_type="multipart/form-data")
-    assert r.status_code == 200
-    assert r.get_json()["ok"] is True
+    assert body["resumen"]["resultado_neto"] == 50
+    assert body["token"]
 
 
 def test_analizar_solo_vacio_no_rompe(client, usuario):
