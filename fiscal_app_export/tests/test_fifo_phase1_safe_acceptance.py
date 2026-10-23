@@ -418,3 +418,82 @@ def test_bitget_zero_sided_ledger_pair_is_not_silently_ignored():
     assert len(c.desconocidas) == 2
     with pytest.raises(ValueError, match="operaciones no interpretadas"):
         _motor_a_json(_motor_eur(), c)
+
+
+# PR #125: a valid CSV signature without processed trades cannot justify a PDF.
+_BITGET_SPOT_HEADERS = [
+    "Order no.", "Trading pair", "Coin", "Action", "Executed price",
+    "Quantity", "Transacted amount", "Fee", "Fee deducted in", "Date",
+]
+
+
+def _bitget_spot_bytes(*, with_purchase=False):
+    stream = io.StringIO()
+    writer = csv.writer(stream)
+    writer.writerow(_BITGET_SPOT_HEADERS)
+    if with_purchase:
+        writer.writerow([
+            "synthetic-buy-1", "BTCEUR", "BTC", "Buy", "100",
+            "1", "100", "0", "EUR", "2024-01-01 10:00:00",
+        ])
+    return stream.getvalue().encode("utf-8-sig")
+
+
+def test_bitget_empty_spot_header_only_fails_closed(tmp_path):
+    from clasificador_bitget import BitgetUserError, detect_bitget_file_type
+    path = tmp_path / "spot_header_only.csv"
+    path.write_bytes(_bitget_spot_bytes())
+    assert detect_bitget_file_type(str(path)) == "spot_trading"
+    with pytest.raises(BitgetUserError, match="historial de operaciones spot procesable") as exc:
+        ClasificadorBitgetMulti([str(path)], [path.name]).clasificar()
+    assert exc.value.code == "insufficient_fifo_source"
+
+
+def test_bitget_purchase_only_remains_valid_even_with_empty_spot_supplement(tmp_path):
+    from app import procesar_con_fifo
+    valid = tmp_path / "spot_purchase_only.csv"
+    blank = tmp_path / "spot_header_only.csv"
+    valid.write_bytes(_bitget_spot_bytes(with_purchase=True))
+    blank.write_bytes(_bitget_spot_bytes())
+
+    # An empty later file of the same kind marks section 'vacio' but must
+    # not mask actual purchases from another properly parsed spot export.
+    c = ClasificadorBitgetMulti(
+        [str(valid), str(blank)], [valid.name, blank.name]
+    ).clasificar()
+    assert c._sec["spot_trading"].registros == 1
+    assert c._sec["spot_trading"].vacio is True
+    assert len(c.compraventas) == 1 and c.compraventas[0].tipo == "COMPRA"
+    motor, _, classified = procesar_con_fifo(c)
+    summary, _, operations = _motor_a_json(motor, classified)
+    assert summary["operaciones_con_resultado"] == 0
+    assert not operations
+    assert motor.inventario["BTC"][0].cantidad_restante == 1
+
+
+def test_bitget_empty_spot_header_only_http_422_without_pdf_token_or_success(monkeypatch):
+    import app as api
+    import flask_login.utils as login_utils
+
+    user = SimpleNamespace(id=970013, role="user", email="test@example.invalid",
+                           is_authenticated=True, is_active=True)
+    monkeypatch.setattr(login_utils, "_get_user", lambda: user)
+    reports, tokens, pdf_calls = [], [], []
+    monkeypatch.setattr(api, "_registrar_informe",
+                        lambda **kw: reports.append(kw) or 1)
+    monkeypatch.setattr(api, "_guardar_token_pdf",
+                        lambda *a: tokens.append(a))
+    monkeypatch.setattr(api, "generar_pdf_bitget",
+                        lambda *a, **kw: pdf_calls.append(1) or b"%PDF")
+    monkeypatch.setattr(api, "record_processing_error_safe", lambda **kw: None)
+    app.config.update(TESTING=True, RATELIMIT_ENABLED=False)
+    with app.test_client() as client:
+        response = client.post("/api/bitget/analizar", data={
+            "csv": [(io.BytesIO(_bitget_spot_bytes()), "spot_header_only.csv")],
+            "ejercicio": "2025", "nombre": "Synthetic",
+        }, content_type="multipart/form-data")
+    assert response.status_code == 422
+    assert "Datos fiscales no seguros" in response.get_json()["error"]
+    assert "token" not in response.get_json()
+    assert not tokens and not pdf_calls
+    assert reports and all(report.get("status") == "failed" for report in reports)
