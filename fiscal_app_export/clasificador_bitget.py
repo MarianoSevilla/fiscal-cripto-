@@ -1229,11 +1229,11 @@ class ClasificadorBitgetMulti:
                 "tienes, el «Historial de depósitos y retiros».",
             )
 
-        # Un export reconocido no equivale a una fuente FIFO suficiente:
-        # historial de órdenes y financial record son auxiliares omitidos.
-        # Exigir al menos una fuente spot procesada, incluso si no hay ventas.
-        # Los archivos auxiliares pueden acompañarla sin bloquearla.
-        if not any(self._sec[k].detectado for k in ("spot_trading", "detalles", "transacciones")):
+        # Un formato reconocido (o un CSV spot sin filas útiles) no acredita
+        # operaciones FIFO. Los registros cuentan compraventas procesables,
+        # incluidas compras sin ventas; no basarse en la marca "detectado".
+        # Una fuente auxiliar puede acompañar a otra spot válida.
+        if not any(self._sec[k].registros > 0 for k in ("spot_trading", "detalles", "transacciones")):
             raise BitgetUserError(
                 "insufficient_fifo_source",
                 "Datos fiscales no seguros: los archivos aportados no incluyen "
