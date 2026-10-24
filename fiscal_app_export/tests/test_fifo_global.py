@@ -750,3 +750,42 @@ def test_fase4_no_genera_informes_ni_archivos_adicionales(tmp_path):
     assert rev.vinculos
     assert sorted(x.name for x in tmp_path.iterdir()) == ["binance.csv", "bitvavo.csv"]
     assert not rev.apto_informe_fiscal_publico
+
+
+def test_fase4_rechaza_cuenta_binance_raw_cambiada_con_sha_recalculado(tmp_path):
+    b, v = _sources(tmp_path)
+    original = _calculate(b, v)
+    data = (tmp_path / "binance.csv").read_bytes().replace(b"Spot", b"Funding", 1)
+    assert data != (tmp_path / "binance.csv").read_bytes()
+    b = replace(b, archivo_sha256=hashlib.sha256(data).hexdigest())
+    with pytest.raises(FifoGlobalError, match="campo original Binance"):
+        verificar_origen_fifo_global(original, (b, v), {
+            "b1": data, "v1": (tmp_path / "bitvavo.csv").read_bytes()})
+
+
+def test_fase4_rechaza_precio_bitvavo_raw_que_redondea_a_misma_cantidad(tmp_path):
+    b, v = _sources(tmp_path)
+    original = _calculate(b, v)
+    data = (tmp_path / "bitvavo.csv").read_bytes().replace(
+        b"30000.0", b"30000.0000000001", 1)
+    assert data != (tmp_path / "bitvavo.csv").read_bytes()
+    v = replace(v, archivo_sha256=hashlib.sha256(data).hexdigest())
+    with pytest.raises(FifoGlobalError, match="campo original Bitvavo"):
+        verificar_origen_fifo_global(original, (b, v), {
+            "b1": (tmp_path / "binance.csv").read_bytes(), "v1": data})
+
+
+def test_fase4_rechaza_direccion_bitvavo_raw_cambiada_con_sha_nuevo(tmp_path):
+    b, v = _sources(tmp_path)
+    original = _calculate(b, v)
+    path = tmp_path / "bitvavo.csv"
+    with path.open(encoding="utf-8-sig", newline="") as file:
+        rows = list(csv.reader(file))
+    rows[1][-1] = "0xADDRESS_THAT_PARSER_DID_NOT_READ"
+    out = __import__("io").StringIO()
+    csv.writer(out).writerows(rows)
+    data = out.getvalue().encode("utf-8-sig")
+    v = replace(v, archivo_sha256=hashlib.sha256(data).hexdigest())
+    with pytest.raises(FifoGlobalError, match="campo original Bitvavo"):
+        verificar_origen_fifo_global(original, (b, v), {
+            "b1": (tmp_path / "binance.csv").read_bytes(), "v1": data})
