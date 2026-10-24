@@ -764,6 +764,9 @@ class ClasificadorBitget:
         sell_fee  = abs(_parse_decimal(sell_fila.get("Fee", "0")))
 
         if buy_amt == 0 or sell_amt == 0:
+            # Un par contabilizado pero incompleto no puede desaparecer del FIFO.
+            self._add_desconocida(buy_fila, fecha)
+            self._add_desconocida(sell_fila, fecha)
             return
         if buy_fee >= buy_amt and buy_fee > 0:
             raise ValueError("Datos fiscales no seguros: comisión Bitget ledger supera el activo recibido.")
@@ -979,7 +982,12 @@ class ClasificadorBitget:
         # ── Comisión de plataforma en BGB ─────────────────────────────────────
         # Amount típicamente 0; Fee = −x BGB. Importe mínimo, ignorar.
         elif tipo_lower == "transaction fee deduct":
-            pass
+            if fee != 0 or amount != 0:
+                self.desconocidas.append(OperacionDesconocida(
+                    fecha=fecha, subtipo="transaction fee deduct sin conciliar",
+                    activo=coin or "?", cantidad=float(abs(fee) + abs(amount)),
+                    cuenta="Bitget",
+                ))
 
         # ── Tipo no reconocido ────────────────────────────────────────────────
         else:
@@ -1132,6 +1140,7 @@ class ClasificadorBitgetMulti:
         # Buffers de compraventas por fuente (para deduplicar tras leer todo)
         self._cv_por_fuente = {"spot_trading": [], "detalles": [], "transacciones": []}
         self._no_reconocidos: list = []
+        self._fuentes_materiales_omitidas: list = []
         self._tiene_pares_usdt = False
 
         self._sec = {
@@ -1174,6 +1183,7 @@ class ClasificadorBitgetMulti:
 
             if tipo == "futures_orders":
                 algun_reconocido = True   # es un fichero de Bitget, pero futuros no soportados
+                self._fuentes_materiales_omitidas.append(fname)
                 self.advertencias.append(
                     f"«{fname}»: Los futuros de Bitget no están soportados todavía. "
                     "Requieren revisión fiscal específica. Se ha ignorado."
@@ -1204,6 +1214,7 @@ class ClasificadorBitgetMulti:
                         "unsafe_fiscal_source",
                         f"Datos fiscales no seguros: archivo Bitget «{fname}»: {e}",
                     ) from e
+                self._fuentes_materiales_omitidas.append(fname)
                 self.advertencias.append(f"«{fname}»: {e}")
                 continue
 
@@ -1216,6 +1227,18 @@ class ClasificadorBitgetMulti:
                 "Ninguno de los ficheros se reconoce como un export de Bitget. "
                 "Sube el «Historial de operaciones en spot» (recomendado) y, si lo "
                 "tienes, el «Historial de depósitos y retiros».",
+            )
+
+        # Un formato reconocido (o un CSV spot sin filas útiles) no acredita
+        # operaciones FIFO. Los registros cuentan compraventas procesables,
+        # incluidas compras sin ventas; no basarse en la marca "detectado".
+        # Una fuente auxiliar puede acompañar a otra spot válida.
+        if not any(self._sec[k].registros > 0 for k in ("spot_trading", "detalles", "transacciones")):
+            raise BitgetUserError(
+                "insufficient_fifo_source",
+                "Datos fiscales no seguros: los archivos aportados no incluyen "
+                "un historial de operaciones spot procesable para calcular FIFO. "
+                "Descarga el Historial de operaciones en spot de Bitget.",
             )
 
         self._consolidar_compraventas()
