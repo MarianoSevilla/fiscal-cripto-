@@ -260,6 +260,10 @@ def _verificar_bitvavo(fuente: FuenteGlobal, filas, operaciones):
         unidades_originales = _numero(amount_normalizado, "Amount Bitvavo")
         if unidades_originales == 0:
             raise FifoGlobalError("Evidencia de origen: Amount Bitvavo sin cantidad")
+        # Contrato conservador del CSV clásico: las compras reciben activo
+        # y las ventas lo entregan. No extrapolar el signo de la API trades.
+        if (tipo == "buy" and unidades_originales <= 0) or (tipo == "sell" and unidades_originales >= 0):
+            raise FifoGlobalError("Evidencia de origen: signo Amount Bitvavo incompatible")
         # No aceptar un margen porcentual arbitrario. La cota de error
         # procede de la precision decimal publicada en el CSV: media
         # unidad de la ultima cifra del precio y del importe EUR, mas
