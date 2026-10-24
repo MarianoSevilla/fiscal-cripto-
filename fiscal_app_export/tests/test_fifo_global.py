@@ -339,3 +339,262 @@ def test_global_offset_coherente_con_zona_declarada(tmp_path):
     b = replace(b, zona_horaria="UTC+02:00")
     result = _calculate(b, v)
     assert result.operaciones[0].fecha_utc.hour == 8
+
+
+# Fase 3 — auditoría de procedencia (sin tocar el cálculo ni emitir PDFs).
+from fifo_global_trazabilidad import auditar_fifo_global
+
+
+def test_fase3_lotes_interexchange_y_fuente_bitvavo(tmp_path):
+    b, v = _sources(tmp_path)
+    resultado = _calculate(b, v)
+    audit = auditar_fifo_global(resultado, (b, v))
+    assert len(audit.ventas) == 1
+    assert audit.ventas[0].ganancia_perdida_eur == 20000
+    assert audit.ventas[0].consumos[0].adquisicion_id == "b1:cv:0"
+    assert audit.ventas[0].consumos[0].venta_id == "v1:cv:1"
+    assert len(audit.fuentes) == 3
+    assert audit.fuentes[0].archivo_sha256 == b.archivo_sha256
+    assert audit.fuentes[0].tipo_vinculo == "indice_clasificador"
+    assert audit.fuentes[1].tipo_vinculo == "fila_parseada_bitvavo"
+    assert audit.fuentes[1].id_nativo == "2"
+    assert audit.fuentes[2].id_nativo == "3"
+    assert audit.historial_exhaustivo_acreditado is False
+    assert audit.apto_informe_fiscal_publico is False
+    assert audit.limitaciones
+
+
+def test_fase3_dos_lotes_binance_distintos_mismo_valor(tmp_path):
+    b, v = _sources(
+        tmp_path,
+        binance_rows=_buy("2023-01-01 10:00:00", qty=0.5, eur=10000)
+                     + _buy("2023-01-02 10:00:00", qty=0.5, eur=10000),
+        bitvavo_rows=[_bt_row("2025-01-01", "10:00:00", "sell", eur="40000")],
+    )
+    audit = auditar_fifo_global(_calculate(b, v), (b, v))
+    consumes = audit.ventas[0].consumos
+    assert [x.adquisicion_id for x in consumes] == ["b1:cv:0", "b1:cv:1"]
+    assert [x.cantidad for x in consumes] == [0.5, 0.5]
+    assert [x.coste_eur for x in consumes] == [10000, 10000]
+
+
+def test_fase3_solo_ventas_del_ejercicio_sin_perder_historico(tmp_path):
+    b, v = _sources(tmp_path)
+    audit = auditar_fifo_global(_calculate(b, v, ejercicio=2024), (b, v))
+    assert len(audit.ventas) == 1
+    assert audit.ventas_ejercicio == ()
+
+
+def test_fase3_comisiones_eur_y_coste_adquisicion_trazados(tmp_path):
+    b, v = _sources(tmp_path, bitvavo_rows=[
+        _bt_row("2024-01-01", "10:00:00", "buy", eur="30000", fee="-15", tid="bfee"),
+        _bt_row("2025-01-01", "10:00:00", "sell", eur="40000", fee="-20", tid="sfee"),
+    ])
+    # A venta uses oldest Binance lot; fee on the later Bitvavo buy stays
+    # attached to that non-consumed inventory lot.
+    audit = auditar_fifo_global(_calculate(b, v), (b, v))
+    assert audit.ventas[0].transmision_neta_eur == 39980
+    assert audit.ventas[0].coste_fifo_eur == 20000
+    assert audit.ventas[0].ganancia_perdida_eur == 19980
+
+
+def test_fase3_transferencia_confirmada_preserva_origen_lote(tmp_path):
+    b, v = _with_transfer(tmp_path)
+    pair = TransferenciaConfirmada("b1:movement:0", "v1:movement:0", True)
+    audit = auditar_fifo_global(_calculate(b, v, transferencias=(pair,)), (b, v))
+    assert audit.ventas[0].consumos[0].adquisicion_id == "b1:cv:0"
+    assert audit.ventas[0].coste_fifo_eur == 10000
+    assert any("booleano" in x for x in audit.limitaciones)
+    assert not audit.apto_informe_fiscal_publico
+
+
+def test_fase3_detecta_id_nativo_bitvavo_duplicado(tmp_path):
+    b, v = _sources(tmp_path, bitvavo_rows=[
+        _bt_row("2024-01-01", "10:00:00", "buy", eur="30000", tid="duplicate"),
+        _bt_row("2025-01-01", "10:00:00", "sell", eur="40000", tid="duplicate"),
+    ])
+    with pytest.raises(FifoGlobalError, match="Transaction ID Bitvavo duplicado"):
+        auditar_fifo_global(_calculate(b, v), (b, v))
+
+
+def test_fase3_sin_id_nativo_no_inventa_evidencia(tmp_path):
+    b, v = _sources(tmp_path, bitvavo_rows=[
+        _bt_row("2024-01-01", "10:00:00", "buy", eur="30000", tid=""),
+        _bt_row("2025-01-01", "10:00:00", "sell", eur="40000", tid=""),
+    ])
+    audit = auditar_fifo_global(_calculate(b, v), (b, v))
+    assert audit.fuentes[1].id_nativo is None
+    assert any("sin identificador nativo" in x for x in audit.limitaciones)
+
+
+def test_fase3_doble_fila_identica_sin_id_nativo_bloqueada(tmp_path):
+    b, v = _sources(tmp_path, bitvavo_rows=[
+        _bt_row("2024-01-01", "10:00:00", "buy", eur="30000", tid=""),
+        _bt_row("2024-01-01", "10:00:00", "buy", eur="30000", tid=""),
+        _bt_row("2025-01-01", "10:00:00", "sell", eur="40000", tid="sale"),
+    ])
+    with pytest.raises(FifoGlobalError, match="fila Bitvavo repetida"):
+        auditar_fifo_global(_calculate(b, v), (b, v))
+
+
+def test_fase3_rechaza_detalle_lotes_del_motor_manipulado(tmp_path):
+    b, v = _sources(tmp_path)
+    result = _calculate(b, v)
+    result.motor.resultados[0].lotes_consumidos[0]["coste_parcial"] += 1
+    with pytest.raises(FifoGlobalError, match="coste de lote"):
+        auditar_fifo_global(result, (b, v))
+
+
+def test_fase3_rechaza_plusvalia_alterada(tmp_path):
+    b, v = _sources(tmp_path)
+    result = _calculate(b, v)
+    result.motor.resultados[0].ganancia_perdida += 9
+    with pytest.raises(FifoGlobalError, match="ganancia patrimonial"):
+        auditar_fifo_global(result, (b, v))
+
+
+def test_fase3_rechaza_fila_bitvavo_desincronizada(tmp_path):
+    b, v = _sources(tmp_path)
+    result = _calculate(b, v)
+    fila = v.clasificador.df.index[0]
+    v.clasificador.df.at[fila, "Received / Paid Amount"] = "-999"
+    with pytest.raises(FifoGlobalError, match="importe de fila Bitvavo"):
+        auditar_fifo_global(result, (b, v))
+
+
+def test_fase3_rechaza_fuente_modificada_tras_calculo(tmp_path):
+    b, v = _sources(tmp_path)
+    result = _calculate(b, v)
+    v.clasificador.compraventas[0].importe += 900
+    with pytest.raises(FifoGlobalError, match="fuentes alteradas"):
+        auditar_fifo_global(result, (b, v))
+
+
+def test_fase3_no_certifica_historial_aunque_tenga_inventario(tmp_path):
+    b, v = _sources(tmp_path)
+    result = _calculate(b, v)
+    audit = auditar_fifo_global(result, (b, v))
+    assert result.motor.advertencias == []
+    assert any("No se acredita" in x for x in audit.limitaciones)
+    assert not audit.historial_exhaustivo_acreditado
+    assert not audit.apto_informe_fiscal_publico
+
+
+def test_fase3_rendimiento_bitvavo_vinculado_sin_duplicar_lote(tmp_path):
+    b, v = _sources(tmp_path, bitvavo_rows=[
+        _bt_row("2024-01-01", "10:00:00", "staking", "ETH", "0.1", "100", tid="stake")])
+    audit = auditar_fifo_global(_calculate(b, v, ejercicio=2024), (b, v))
+    rewards = [e for e in audit.fuentes if e.operacion_id == "v1:reward:0"]
+    assert len(rewards) == 1
+    assert rewards[0].id_nativo == "stake"
+    assert audit.ventas == ()
+
+
+# Casos adversariales de cierre: evidencia de origen y metadatos de lotes.
+def test_fase3_no_inventa_linea_fisica_csv_tras_salto_vacio(tmp_path):
+    b, v = _sources(tmp_path)
+    path = tmp_path / "bitvavo.csv"
+    lines = path.read_text(encoding="utf-8-sig").splitlines()
+    # pandas.read_csv omite líneas vacías: índice DF+2 NO equivale a línea CSV.
+    path.write_text("\n".join([lines[0], lines[1], "", *lines[2:]]) + "\n",
+                    encoding="utf-8-sig")
+    v = replace(v,
+        archivo_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
+        clasificador=ClasificadorBitvavo(str(path)).clasificar())
+    audit = auditar_fifo_global(_calculate(b, v), (b, v))
+    sell = next(e for e in audit.fuentes if e.operacion_id == "v1:cv:1")
+    assert sell.indice_fila_parseada == 1
+    assert sell.fila_csv is None  # La fila física real es 4; no acreditada.
+    assert sell.id_nativo == "3"
+
+
+def test_fase3_rechaza_precio_raw_alterado_antes_del_calculo(tmp_path):
+    b, v = _sources(tmp_path)
+    # El clasificador ya ha almacenado la cantidad; Fase 2 solo ve que
+    # el nuevo Quote Price es positivo. Fase 3 debe verificar cantidad.
+    v.clasificador.df.at[v.clasificador.df.index[0], "Quote Price"] = "15000"
+    result = _calculate(b, v)
+    with pytest.raises(FifoGlobalError, match="cantidad de operación Bitvavo"):
+        auditar_fifo_global(result, (b, v))
+
+
+def test_fase3_rechaza_valoracion_reward_inconsistente_con_precio_raw(tmp_path):
+    b, v = _sources(tmp_path, bitvavo_rows=[
+        _bt_row("2024-01-01", "10:00:00", "staking", "ETH", "0.1", "100",
+                tid="stake")
+    ])
+    v.clasificador.df.at[v.clasificador.df.index[0], "Quote Price"] = "2000"
+    with pytest.raises(FifoGlobalError, match="valor EUR de rendimiento"):
+        auditar_fifo_global(_calculate(b, v), (b, v))
+
+
+def test_fase3_rechaza_reward_fee_original_ignorada(tmp_path):
+    b, v = _sources(tmp_path, bitvavo_rows=[
+        _bt_row("2024-01-01", "10:00:00", "staking", "ETH", "0.1", "100",
+                tid="stake")
+    ])
+    v.clasificador.df.at[v.clasificador.df.index[0], "Fee amount"] = "-2"
+    with pytest.raises(FifoGlobalError, match="comisión de rendimiento"):
+        auditar_fifo_global(_calculate(b, v), (b, v))
+
+
+def test_fase3_rechaza_precio_unitario_lote_alterado(tmp_path):
+    b, v = _sources(tmp_path)
+    result = _calculate(b, v)
+    result.motor.resultados[0].lotes_consumidos[0]["precio_unitario"] += 100
+    with pytest.raises(FifoGlobalError, match="precio unitario de lote"):
+        auditar_fifo_global(result, (b, v))
+
+
+def test_fase3_rechaza_contraparte_lote_alterada(tmp_path):
+    b, v = _sources(tmp_path)
+    result = _calculate(b, v)
+    result.motor.resultados[0].lotes_consumidos[0]["contraparte"] = "USDT"
+    with pytest.raises(FifoGlobalError, match="contraparte del lote"):
+        auditar_fifo_global(result, (b, v))
+
+
+def test_fase3_rechaza_saldo_residual_adulterado(tmp_path):
+    b, v = _sources(tmp_path)
+    result = _calculate(b, v)
+    # Las ventas siguen con el mismo coste y ganancia, pero una posición
+    # superviviente queda inflada. Antes no se auditaba el inventario final.
+    result.motor.inventario["BTC"][1].cantidad_restante += 0.5
+    with pytest.raises(FifoGlobalError, match="cantidad restante residual"):
+        auditar_fifo_global(result, (b, v))
+
+
+def test_fase3_rechaza_coste_unitario_residual_adulterado(tmp_path):
+    b, v = _sources(tmp_path)
+    result = _calculate(b, v)
+    result.motor.inventario["BTC"][1].precio_coste_unitario += 100
+    with pytest.raises(FifoGlobalError, match="coste unitario residual"):
+        auditar_fifo_global(result, (b, v))
+
+
+def test_fase3_compra_simultanea_coste_distinto_no_inventa_precedencia(tmp_path):
+    # Binance y Bitvavo adquieren BTC en el mismo instante UTC.
+    # Orden por source_id decide qué base se atribuye a la venta parcial.
+    b, v = _sources(tmp_path,
+        binance_rows=_buy("2024-01-01 10:00:00", eur=20000),
+        bitvavo_rows=[
+            _bt_row("2024-01-01", "10:00:00", "buy", eur="30000", tid="buy"),
+            _bt_row("2025-01-01", "10:00:00", "sell", eur="40000", tid="sell"),
+        ])
+    # El núcleo previo produce un resultado definido por la clave técnica;
+    # la capa de evidencia debe impedir tratarlo como FIFO inequívoco.
+    resultado = _calculate(b, v)
+    assert resultado.resultados_ejercicio[0].precio_coste == pytest.approx(20000)
+    with pytest.raises(FifoGlobalError, match="adquisiciones simultáneas"):
+        auditar_fifo_global(resultado, (b, v))
+
+
+def test_fase3_compras_simultaneas_igual_coste_no_bloqueadas(tmp_path):
+    b, v = _sources(tmp_path,
+        binance_rows=_buy("2024-01-01 10:00:00", eur=20000),
+        bitvavo_rows=[
+            _bt_row("2024-01-01", "10:00:00", "buy", eur="20000", tid="buy"),
+            _bt_row("2025-01-01", "10:00:00", "sell", eur="40000", tid="sell"),
+        ])
+    audit = auditar_fifo_global(_calculate(b, v), (b, v))
+    assert audit.ventas[0].ganancia_perdida_eur == 20000
