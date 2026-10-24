@@ -570,3 +570,31 @@ def test_fase3_rechaza_coste_unitario_residual_adulterado(tmp_path):
     result.motor.inventario["BTC"][1].precio_coste_unitario += 100
     with pytest.raises(FifoGlobalError, match="coste unitario residual"):
         auditar_fifo_global(result, (b, v))
+
+
+def test_fase3_compra_simultanea_coste_distinto_no_inventa_precedencia(tmp_path):
+    # Binance y Bitvavo adquieren BTC en el mismo instante UTC.
+    # Orden por source_id decide qué base se atribuye a la venta parcial.
+    b, v = _sources(tmp_path,
+        binance_rows=_buy("2024-01-01 10:00:00", eur=20000),
+        bitvavo_rows=[
+            _bt_row("2024-01-01", "10:00:00", "buy", eur="30000", tid="buy"),
+            _bt_row("2025-01-01", "10:00:00", "sell", eur="40000", tid="sell"),
+        ])
+    # El núcleo previo produce un resultado definido por la clave técnica;
+    # la capa de evidencia debe impedir tratarlo como FIFO inequívoco.
+    resultado = _calculate(b, v)
+    assert resultado.resultados_ejercicio[0].precio_coste == pytest.approx(20000)
+    with pytest.raises(FifoGlobalError, match="adquisiciones simultáneas"):
+        auditar_fifo_global(resultado, (b, v))
+
+
+def test_fase3_compras_simultaneas_igual_coste_no_bloqueadas(tmp_path):
+    b, v = _sources(tmp_path,
+        binance_rows=_buy("2024-01-01 10:00:00", eur=20000),
+        bitvavo_rows=[
+            _bt_row("2024-01-01", "10:00:00", "buy", eur="20000", tid="buy"),
+            _bt_row("2025-01-01", "10:00:00", "sell", eur="40000", tid="sell"),
+        ])
+    audit = auditar_fifo_global(_calculate(b, v), (b, v))
+    assert audit.ventas[0].ganancia_perdida_eur == 20000
