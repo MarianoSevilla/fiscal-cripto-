@@ -356,7 +356,7 @@ def test_fase3_lotes_interexchange_y_fuente_bitvavo(tmp_path):
     assert len(audit.fuentes) == 3
     assert audit.fuentes[0].archivo_sha256 == b.archivo_sha256
     assert audit.fuentes[0].tipo_vinculo == "indice_clasificador"
-    assert audit.fuentes[1].tipo_vinculo == "fila_bitvavo"
+    assert audit.fuentes[1].tipo_vinculo == "fila_parseada_bitvavo"
     assert audit.fuentes[1].id_nativo == "2"
     assert audit.fuentes[2].id_nativo == "3"
     assert audit.historial_exhaustivo_acreditado is False
@@ -488,3 +488,67 @@ def test_fase3_rendimiento_bitvavo_vinculado_sin_duplicar_lote(tmp_path):
     assert len(rewards) == 1
     assert rewards[0].id_nativo == "stake"
     assert audit.ventas == ()
+
+
+# Casos adversariales de cierre: evidencia de origen y metadatos de lotes.
+def test_fase3_no_inventa_linea_fisica_csv_tras_salto_vacio(tmp_path):
+    b, v = _sources(tmp_path)
+    path = tmp_path / "bitvavo.csv"
+    lines = path.read_text(encoding="utf-8-sig").splitlines()
+    # pandas.read_csv omite líneas vacías: índice DF+2 NO equivale a línea CSV.
+    path.write_text("\n".join([lines[0], lines[1], "", *lines[2:]]) + "\n",
+                    encoding="utf-8-sig")
+    v = replace(v,
+        archivo_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
+        clasificador=ClasificadorBitvavo(str(path)).clasificar())
+    audit = auditar_fifo_global(_calculate(b, v), (b, v))
+    sell = next(e for e in audit.fuentes if e.operacion_id == "v1:cv:1")
+    assert sell.indice_fila_parseada == 1
+    assert sell.fila_csv is None  # La fila física real es 4; no acreditada.
+    assert sell.id_nativo == "3"
+
+
+def test_fase3_rechaza_precio_raw_alterado_antes_del_calculo(tmp_path):
+    b, v = _sources(tmp_path)
+    # El clasificador ya ha almacenado la cantidad; Fase 2 solo ve que
+    # el nuevo Quote Price es positivo. Fase 3 debe verificar cantidad.
+    v.clasificador.df.at[v.clasificador.df.index[0], "Quote Price"] = "15000"
+    result = _calculate(b, v)
+    with pytest.raises(FifoGlobalError, match="cantidad de operación Bitvavo"):
+        auditar_fifo_global(result, (b, v))
+
+
+def test_fase3_rechaza_valoracion_reward_inconsistente_con_precio_raw(tmp_path):
+    b, v = _sources(tmp_path, bitvavo_rows=[
+        _bt_row("2024-01-01", "10:00:00", "staking", "ETH", "0.1", "100",
+                tid="stake")
+    ])
+    v.clasificador.df.at[v.clasificador.df.index[0], "Quote Price"] = "2000"
+    with pytest.raises(FifoGlobalError, match="valor EUR de rendimiento"):
+        auditar_fifo_global(_calculate(b, v), (b, v))
+
+
+def test_fase3_rechaza_reward_fee_original_ignorada(tmp_path):
+    b, v = _sources(tmp_path, bitvavo_rows=[
+        _bt_row("2024-01-01", "10:00:00", "staking", "ETH", "0.1", "100",
+                tid="stake")
+    ])
+    v.clasificador.df.at[v.clasificador.df.index[0], "Fee amount"] = "-2"
+    with pytest.raises(FifoGlobalError, match="comisión de rendimiento"):
+        auditar_fifo_global(_calculate(b, v), (b, v))
+
+
+def test_fase3_rechaza_precio_unitario_lote_alterado(tmp_path):
+    b, v = _sources(tmp_path)
+    result = _calculate(b, v)
+    result.motor.resultados[0].lotes_consumidos[0]["precio_unitario"] += 100
+    with pytest.raises(FifoGlobalError, match="precio unitario de lote"):
+        auditar_fifo_global(result, (b, v))
+
+
+def test_fase3_rechaza_contraparte_lote_alterada(tmp_path):
+    b, v = _sources(tmp_path)
+    result = _calculate(b, v)
+    result.motor.resultados[0].lotes_consumidos[0]["contraparte"] = "USDT"
+    with pytest.raises(FifoGlobalError, match="contraparte del lote"):
+        auditar_fifo_global(result, (b, v))
