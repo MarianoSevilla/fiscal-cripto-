@@ -598,3 +598,154 @@ def test_fase3_compras_simultaneas_igual_coste_no_bloqueadas(tmp_path):
         ])
     audit = auditar_fifo_global(_calculate(b, v), (b, v))
     assert audit.ventas[0].ganancia_perdida_eur == 20000
+
+
+# Fase 4 — verificación independiente de los bytes fuente (solo laboratorio).
+from fifo_global_evidencia_origen import verificar_origen_fifo_global
+
+
+def _verificar_origen(tmp_path, b, v, resultado=None):
+    resultado = resultado or _calculate(b, v)
+    return verificar_origen_fifo_global(
+        resultado, (b, v),
+        {"b1": (tmp_path / "binance.csv").read_bytes(),
+         "v1": (tmp_path / "bitvavo.csv").read_bytes()},
+    )
+
+
+def test_fase4_sha_real_vincula_filas_binance_y_bitvavo(tmp_path):
+    b, v = _sources(tmp_path)
+    rev = _verificar_origen(tmp_path, b, v)
+    assert [link.operacion_id for link in rev.vinculos] == [
+        "b1:cv:0", "v1:cv:0", "v1:cv:1"]
+    assert rev.vinculos[0].filas_origen == (2, 3)
+    assert rev.vinculos[1].linea_final_csv == 2
+    assert rev.vinculos[2].linea_final_csv == 3
+    assert rev.vinculos[2].id_nativo == "3"
+    assert rev.hashes_comprobados_con_bytes
+    assert not rev.historial_exhaustivo_acreditado
+    assert not rev.titularidad_acreditada
+    assert not rev.apto_informe_fiscal_publico
+    assert len(rev.intervalos) == 2
+
+
+def test_fase4_archivo_modificado_con_sha_original_bloqueado(tmp_path):
+    b, v = _sources(tmp_path)
+    data = (tmp_path / "binance.csv").read_bytes().replace(b"20000", b"90000")
+    with pytest.raises(FifoGlobalError, match="SHA-256"):
+        verificar_origen_fifo_global(
+            _calculate(b, v), (b, v),
+            {"b1": data, "v1": (tmp_path / "bitvavo.csv").read_bytes()})
+
+
+def test_fase4_recalcular_sha_no_oculta_importe_binance_desincronizado(tmp_path):
+    b, v = _sources(tmp_path)
+    result = _calculate(b, v)
+    data = (tmp_path / "binance.csv").read_bytes().replace(b"-20000", b"-23000")
+    b = replace(b, archivo_sha256=hashlib.sha256(data).hexdigest())
+    with pytest.raises(FifoGlobalError, match="importe Binance"):
+        verificar_origen_fifo_global(result, (b, v),
+            {"b1": data, "v1": (tmp_path / "bitvavo.csv").read_bytes()})
+
+
+def test_fase4_rechaza_id_nativo_bitvavo_mutado_en_bytes(tmp_path):
+    b, v = _sources(tmp_path)
+    result = _calculate(b, v)
+    data = (tmp_path / "bitvavo.csv").read_bytes().replace(b",3,", b",other_id,")
+    v = replace(v, archivo_sha256=hashlib.sha256(data).hexdigest())
+    with pytest.raises(FifoGlobalError, match="ID nativo"):
+        verificar_origen_fifo_global(result, (b, v),
+            {"b1": (tmp_path / "binance.csv").read_bytes(), "v1": data})
+
+
+def test_fase4_rechaza_precio_original_bitvavo_distinto_del_clasificador(tmp_path):
+    b, v = _sources(tmp_path)
+    result = _calculate(b, v)
+    path = tmp_path / "bitvavo.csv"
+    with path.open(encoding="utf-8-sig", newline="") as f:
+        filas = list(csv.reader(f))
+    filas[1][7] = "15000"
+    out = __import__("io").StringIO()
+    writer = csv.writer(out)
+    writer.writerows(filas)
+    data = out.getvalue().encode("utf-8-sig")
+    v = replace(v, archivo_sha256=hashlib.sha256(data).hexdigest())
+    with pytest.raises(FifoGlobalError, match="cantidad Bitvavo"):
+        verificar_origen_fifo_global(result, (b, v),
+            {"b1": (tmp_path / "binance.csv").read_bytes(), "v1": data})
+
+
+def test_fase4_archivos_no_coincidentes_o_faltantes_bloqueados(tmp_path):
+    b, v = _sources(tmp_path)
+    with pytest.raises(FifoGlobalError, match="archivos y fuentes"):
+        verificar_origen_fifo_global(
+            _calculate(b, v), (b, v),
+            {"b1": (tmp_path / "binance.csv").read_bytes()})
+    with pytest.raises(FifoGlobalError, match="bytes inválidos"):
+        verificar_origen_fifo_global(
+            _calculate(b, v), (b, v),
+            {"b1": b"", "v1": (tmp_path / "bitvavo.csv").read_bytes()})
+
+
+def test_fase4_formato_binance_con_grupos_sin_orden_acreditado_bloqueado(tmp_path):
+    b, v = _sources(tmp_path, binance_rows=(
+        _buy("2023-01-01 10:00:00", qty=0.5, eur=10000) +
+        _buy("2023-01-01 10:00:00", qty=0.5, eur=10000)))
+    # El clasificador anterior agrupa por timestamp y escoge iloc[0].
+    # La auditoría de origen no puede atribuir dos pares a una adquisición.
+    with pytest.raises(FifoGlobalError, match="emparejamiento Binance ambiguo"):
+        _verificar_origen(tmp_path, b, v)
+
+
+def test_fase4_binance_venta_directa_con_coste_historico(tmp_path):
+    b, v = _sources(tmp_path,
+        binance_rows=(_buy("2023-01-01 10:00:00") +
+                      _sell("2025-01-02 10:00:00", qty=0.5, eur=20000)),
+        bitvavo_rows=[_bt_row("2024-01-01", "10:00:00", "buy", eur="30000", tid="x")])
+    result = _calculate(b, v)
+    audit = _verificar_origen(tmp_path, b, v, result)
+    assert set(link.operacion_id for link in audit.vinculos) == {
+        "b1:cv:0", "b1:cv:1", "v1:cv:0"}
+    assert result.resultados_ejercicio[0].ganancia_perdida == pytest.approx(10000)
+
+
+def test_fase4_bitvavo_y_binance_hueco_entre_fechas_no_cobertura(tmp_path):
+    b, v = _sources(tmp_path)
+    output = _verificar_origen(tmp_path, b, v)
+    assert output.intervalos[0].primera_operacion_utc.year == 2023
+    assert output.intervalos[1].ultima_operacion_utc.year == 2025
+    assert any("no demuestran cobertura" in x for x in output.limitaciones)
+    assert not output.historial_exhaustivo_acreditado
+
+
+def test_fase4_transferencias_no_silenciadas_si_no_hay_filas_atribuibles(tmp_path):
+    b, v = _with_transfer(tmp_path)
+    pair = TransferenciaConfirmada("b1:movement:0", "v1:movement:0", True)
+    result = _calculate(b, v, transferencias=(pair,))
+    with pytest.raises(FifoGlobalError, match="tipo Binance fuera"):
+        _verificar_origen(tmp_path, b, v, result)
+
+
+def test_fase4_rechaza_filas_bitvavo_no_aceptadas_por_contrato(tmp_path):
+    b, v = _sources(tmp_path, bitvavo_rows=[
+        _bt_row("2024-01-01", "10:00:00", "staking", "ETH", "0.1", "100", tid="stake")])
+    with pytest.raises(FifoGlobalError, match="evento Bitvavo"):
+        _verificar_origen(tmp_path, b, v, _calculate(b, v))
+
+
+def test_fase4_separador_csv_desconocido_rechazado(tmp_path):
+    b, v = _sources(tmp_path)
+    result = _calculate(b, v)
+    raw = (tmp_path / "binance.csv").read_bytes().replace(b",", b";")
+    b = replace(b, archivo_sha256=hashlib.sha256(raw).hexdigest())
+    with pytest.raises(FifoGlobalError, match="esquema CSV"):
+        verificar_origen_fifo_global(result, (b, v), {
+            "b1": raw, "v1": (tmp_path / "bitvavo.csv").read_bytes()})
+
+
+def test_fase4_no_genera_informes_ni_archivos_adicionales(tmp_path):
+    b, v = _sources(tmp_path)
+    rev = _verificar_origen(tmp_path, b, v)
+    assert rev.vinculos
+    assert sorted(x.name for x in tmp_path.iterdir()) == ["binance.csv", "bitvavo.csv"]
+    assert not rev.apto_informe_fiscal_publico
