@@ -208,6 +208,40 @@ def test_recompensa_bitvavo_eur_crea_un_unico_lote(tmp_path):
     assert len([o for o in result.operaciones if o.tipo == "RENDIMIENTO"]) == 1
 
 
+def test_bitvavo_fee_en_btc_omitida_por_parser_no_pasa_al_global(tmp_path):
+    b, v = _sources(tmp_path)
+    # El parser individual convierte esta comisión en fee_eur=0.
+    fila = v.clasificador.df.loc[v.clasificador.df["Type"] == "sell"].index[0]
+    v.clasificador.df.at[fila, "Fee currency"] = "BTC"
+    v.clasificador.df.at[fila, "Fee amount"] = "-0.0001"
+    with pytest.raises(FifoGlobalError, match="comisión material en cripto"):
+        _calculate(b, v)
+
+
+def test_bitvavo_precio_en_usdt_aunque_pague_eur_rechazado(tmp_path):
+    b, v = _sources(tmp_path)
+    fila = v.clasificador.df.index[0]
+    v.clasificador.df.at[fila, "Quote Currency"] = "USDT"
+    with pytest.raises(FifoGlobalError, match="precio de compraventa"):
+        _calculate(b, v)
+
+
+def test_bitvavo_fallback_cantidad_sin_precio_no_es_seguro(tmp_path):
+    b, v = _sources(tmp_path)
+    fila = v.clasificador.df.index[0]
+    v.clasificador.df.at[fila, "Quote Price"] = "0"
+    with pytest.raises(FifoGlobalError, match="precio EUR unitario"):
+        _calculate(b, v)
+
+
+def test_bitvavo_fee_excesiva_no_se_descarta_en_silencio(tmp_path):
+    b, v = _sources(tmp_path)
+    fila = v.clasificador.df.index[0]
+    v.clasificador.df.at[fila, "Fee amount"] = "-90000"
+    with pytest.raises(FifoGlobalError, match="comisión EUR implausible"):
+        _calculate(b, v)
+
+
 def test_bitvavo_con_timezone_no_utc_rechazado(tmp_path):
     b, v = _sources(tmp_path,
         bitvavo_rows=[_bt_row("2025-01-01", "10:00:00", "sell", tz="CET")])
