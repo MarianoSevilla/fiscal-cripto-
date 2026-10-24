@@ -260,10 +260,18 @@ def _verificar_bitvavo(fuente: FuenteGlobal, filas, operaciones):
         unidades_originales = _numero(amount_normalizado, "Amount Bitvavo")
         if unidades_originales == 0:
             raise FifoGlobalError("Evidencia de origen: Amount Bitvavo sin cantidad")
-        # Los precios de cotización pueden estar redondeados: no exigir una
-        # igualdad imposible, pero impedir diferencias sustanciales (>1 %).
-        discrepancia = abs(abs(unidades_originales) - op.cantidad)
-        if discrepancia > max(Decimal("0.00000001"), op.cantidad * Decimal("0.01")):
+        # No aceptar un margen porcentual arbitrario. La cota de error
+        # procede de la precision decimal publicada en el CSV: media
+        # unidad de la ultima cifra del precio y del importe EUR, mas
+        # el redondeo a 10 decimales del clasificador legado.
+        paso_precio = Decimal(1).scaleb(price.as_tuple().exponent)
+        paso_eur = Decimal(1).scaleb(raw_paid.as_tuple().exponent)
+        margen_eur = (
+            abs(unidades_originales) * paso_precio / 2
+            + paso_eur / 2
+            + price * Decimal("0.00000000005")
+        )
+        if abs(abs(unidades_originales) * price - eur) > margen_eur:
             raise FifoGlobalError(
                 "Evidencia de origen: Amount Bitvavo contradice cantidad EUR/precio"
             )
