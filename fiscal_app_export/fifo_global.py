@@ -133,6 +133,26 @@ def _validar_fuente(fuente: FuenteGlobal, titular_id: int) -> None:
                 or df.empty or
                 not df["Timezone"].astype(str).str.strip().eq("UTC").all()):
             raise FifoGlobalError("Bitvavo: exportación sin zona UTC acreditada por fila")
+        # El clasificador individual descarta determinadas fees en cripto
+        # (_fee_eur -> 0) y puede recurrir a Amount si falta Quote Price.
+        # En el global no se admiten bases/fees deducidas sin evidencia.
+        for _, fila in df.iterrows():
+            if str(fila.get("Type", "")).strip().lower() not in ("buy", "sell"):
+                continue
+            if str(fila.get("Status", "")).strip() not in ("Completed", "Distributed"):
+                continue
+            if str(fila.get("Quote Currency", "")).strip().upper() != "EUR":
+                raise FifoGlobalError("Bitvavo: precio de compraventa no acreditado en EUR")
+            price = ClasificadorBitvavo._float(fila.get("Quote Price", ""), required=True)
+            if price <= 0:
+                raise FifoGlobalError("Bitvavo: precio EUR unitario ausente o no positivo")
+            raw_fee = ClasificadorBitvavo._float(fila.get("Fee amount", "0"))
+            if raw_fee and str(fila.get("Fee currency", "")).strip().upper() != "EUR":
+                raise FifoGlobalError("Bitvavo: comisión material en cripto sin valoración EUR")
+            paid = ClasificadorBitvavo._float(
+                fila.get("Received / Paid Amount", ""), required=True)
+            if raw_fee and abs(raw_fee) > abs(paid) * 2:
+                raise FifoGlobalError("Bitvavo: comisión EUR implausible que el parser omitiría")
     else:
         raise FifoGlobalError("Exchange no incluido en el núcleo global inicial")
     _zona(fuente.zona_horaria)
