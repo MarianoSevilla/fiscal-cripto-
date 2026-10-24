@@ -38,7 +38,15 @@ Esta **primera implementación** solo acepta:
   así como otros movimientos y formatos Binance TX recientes, se rechaza.
 - **Bitvavo CSV:** encabezado conocido; `Timezone=UTC`, estado
   `Completed`/`Distributed`; compraventas `buy`/`sell` con contraparte y
-  precio en EUR, comisión en EUR. Los rendimientos, transferencias, órdenes
+  precio en EUR, comisión en EUR. Dentro del contrato **CSV clásico**
+  se exige `Amount` positivo en compras y negativo en ventas; el importe
+  `Received / Paid Amount` tiene sentido opuesto. Se contrasta que la
+  cantidad original y el producto cantidad × precio sean coherentes con
+  el importe EUR, con tolerancia derivada de la precisión decimal textual
+  del archivo y el redondeo del clasificador a 10 decimales; no se usa
+  un porcentaje arbitrario. Se rechazan formatos numéricos ambiguos,
+  sin asumir compatibilidad universal con exportaciones históricas.
+  Los rendimientos, transferencias, órdenes
   canceladas y otros eventos quedan **fuera de este subconjunto acreditado**;
   no se procesan silenciosamente.
 
