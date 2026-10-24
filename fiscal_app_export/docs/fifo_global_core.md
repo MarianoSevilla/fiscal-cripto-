@@ -21,7 +21,10 @@ ejercicio sin borrar lotes ni resultados históricos del cálculo base.
 - Solo Binance y Bitvavo, una fuente de historial por exchange en esta primera entrega.
 - Solo compraventas con importe **EUR** explícito; comisiones no EUR, swaps y
   rendimientos sin EUR acreditado son incompatibles con emitir resultado.
-- El export Bitvavo debe declarar `Timezone=UTC` en todas las filas.
+- El export Bitvavo debe declarar `Timezone=UTC` en todas las filas;
+  además se comprueban las columnas originales de cada trade para rechazar
+  `Quote Currency` distinta de EUR, precios ausentes y comisiones en cripto
+  o implausibles que el parser individual podría haber descartado.
   Binance exige un dato de zona conocido y explícito (UTC u offset fijo).
   Fechas sin hora fiable o con un desfase estacional no demostrado requieren
   rechazo o revisión antes de integrarse.
