@@ -313,6 +313,35 @@ def auditar_fifo_global(resultado: ResultadoGlobal,
                 op.id, op.activo, op.fecha_utc, transmision,
                 coste_fifo, ganancia, tuple(detalle),
             ))
+    # Un resultado de ventas coherente no basta si el saldo restante ha sido
+    # alterado: verificar por separado cada lote vivo y su coste histórico.
+    inventario_esperado = {
+        activo: [l for l in cola if l.restante > _MAX_QTY_DIFF]
+        for activo, cola in pendientes.items()
+    }
+    inventario_real = {
+        activo: [l for l in cola if _dec(l.cantidad_restante, "saldo") > _MAX_QTY_DIFF]
+        for activo, cola in resultado.motor.inventario.items()
+    }
+    inventario_esperado = {a: lotes for a, lotes in inventario_esperado.items() if lotes}
+    inventario_real = {a: lotes for a, lotes in inventario_real.items() if lotes}
+    if inventario_esperado.keys() != inventario_real.keys():
+        raise FifoGlobalError("Integridad FIFO: activos del inventario residual diferentes")
+    for activo, lotes in inventario_esperado.items():
+        reales = inventario_real[activo]
+        if len(lotes) != len(reales):
+            raise FifoGlobalError("Integridad FIFO: lotes residuales diferentes")
+        for lot, real in zip(lotes, reales):
+            _igual_decimal(real.cantidad_original, lot.cantidad_original,
+                           _MAX_QTY_DIFF, "cantidad original residual")
+            _igual_decimal(real.cantidad_restante, lot.restante,
+                           _MAX_QTY_DIFF, "cantidad restante residual")
+            _igual_decimal(real.precio_coste_unitario,
+                           lot.coste_eur / lot.cantidad_original,
+                           _MAX_EUR_DIFF, "coste unitario residual")
+            if (real.fecha.replace(tzinfo=timezone.utc) != lot.fecha_utc
+                    or real.contraparte != "EUR"):
+                raise FifoGlobalError("Integridad FIFO: procedencia del saldo residual incompatible")
     if next(engine_sales, None) is not None:
         raise FifoGlobalError("Integridad FIFO: transmisiones adicionales en el motor")
     if tuple(resultado.resultados_ejercicio) != tuple(
