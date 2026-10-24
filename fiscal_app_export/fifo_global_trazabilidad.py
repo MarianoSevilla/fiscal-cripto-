@@ -242,6 +242,25 @@ def auditar_fifo_global(resultado: ResultadoGlobal,
     if len(links) != len(originales):
         raise FifoGlobalError("Integridad FIFO: fuentes no vinculadas en su totalidad")
 
+    # Ordenar por source_id no prueba el orden económico de dos compras
+    # simultáneas del mismo activo. Con costes distintos, la identificación
+    # del lote vendido podría alterar la ganancia atribuida a cada venta.
+    adquisiciones_simultaneas = defaultdict(list)
+    for op in resultado.operaciones:
+        if op.tipo in ("COMPRA", "RENDIMIENTO"):
+            adquisiciones_simultaneas[(op.activo, op.fecha_utc)].append(op)
+    for grupo in adquisiciones_simultaneas.values():
+        if len(grupo) > 1:
+            precios = {(op.importe_eur + op.fee_eur) / op.cantidad for op in grupo}
+            if len(precios) > 1 and any(
+                op.tipo == "VENTA" and op.activo == grupo[0].activo
+                and op.fecha_utc > grupo[0].fecha_utc for op in resultado.operaciones
+            ):
+                raise FifoGlobalError(
+                    "Integridad FIFO: adquisiciones simultáneas con costes distintos "
+                    "sin orden económico acreditado"
+                )
+
     engine_sales = iter(resultado.motor.resultados)
     pendientes = defaultdict(deque)
     ventas = []
