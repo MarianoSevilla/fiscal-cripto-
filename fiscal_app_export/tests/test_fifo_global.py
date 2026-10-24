@@ -317,3 +317,25 @@ def test_no_crea_pdf_ni_registra_informe(tmp_path):
     r = _calculate(b, v)
     assert r.motor.resultados
     assert list(tmp_path.glob("*.pdf")) == []
+
+
+def test_global_fecha_sin_hora_no_inventa_medianoche(tmp_path):
+    b, v = _sources(tmp_path)
+    b.clasificador.compraventas[0].fecha = "2023-01-01"
+    with pytest.raises(FifoGlobalError, match="sin hora"):
+        _calculate(b, v)
+
+
+def test_global_offset_contradictorio_no_ignora_zona_acreditada(tmp_path):
+    b, v = _sources(tmp_path)
+    b.clasificador.compraventas[0].fecha = "2023-01-01T10:00:00+04:00"
+    with pytest.raises(FifoGlobalError, match="Desfase UTC incompatible"):
+        _calculate(b, v)
+
+
+def test_global_offset_coherente_con_zona_declarada(tmp_path):
+    b, v = _sources(tmp_path)
+    b.clasificador.compraventas[0].fecha = "2023-01-01T10:00:00+02:00"
+    b = replace(b, zona_horaria="UTC+02:00")
+    result = _calculate(b, v)
+    assert result.operaciones[0].fecha_utc.hour == 8
