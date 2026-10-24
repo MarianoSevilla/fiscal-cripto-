@@ -15,6 +15,13 @@ solo en memoria y sin efectos externos** después de la Fase 3:
 - Contrasta activo, fecha UTC, sentido de la operación, cantidad, importe EUR
   y comisión con el cálculo normalizado. En Bitvavo coteja además el
   `Transaction ID` del archivo con la evidencia de Fase 3.
+- Contrasta **todas las columnas originales de Bitvavo** con la tabla cargada
+  por el clasificador, incluso aquellas que no modifican la cantidad FIFO,
+  como Address o diferencias de Quote Price ocultas por redondeo. En Binance
+  compara el multiconjunto de filas originales contra el DataFrame parseado,
+  incluyendo Cuenta, Observación, tipo, moneda, fecha y cambio. No permite
+  tratar un hash recalculado sobre otro CSV como si fuese el origen de las
+  operaciones clasificadas.
 - Devuelve la primera y última fecha observadas **por fuente**, sin inferir
   que el intervalo intermedio esté completo.
 - Reejecuta la auditoría de lotes de Fase 3 y nunca modifica el cálculo.
