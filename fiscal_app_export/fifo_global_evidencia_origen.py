@@ -8,7 +8,7 @@ No se guardan archivos ni se valida la exhaustividad histórica o titularidad.
 import csv
 import hashlib
 import io
-from collections import defaultdict
+from collections import Counter, defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
@@ -111,8 +111,39 @@ def _operaciones_por_fuente(resultado: ResultadoGlobal, source_id: str):
     return operaciones
 
 
+def _campo_binance_parseado(valor):
+    """Normaliza solo el vacío que pandas representa como NaN."""
+    if valor is None or (isinstance(valor, float) and valor != valor):
+        return ""
+    return str(valor)
+
+
 def _verificar_binance(fuente: FuenteGlobal, filas, operaciones):
     """Solo parejas inequívocas en un instante; no inventar IDs de Binance."""
+    # También contrastar los registros originales contra las filas cargadas.
+    # La clave es un multiconjunto: dos filas iguales no se confunden con una.
+    df = getattr(fuente.clasificador, "df", None)
+    if df is None or len(df) != len(filas):
+        raise FifoGlobalError("Evidencia de origen: filas Binance originales no coinciden")
+    originals = Counter(
+        (_fecha_utc(f["Tiempo"], fuente.zona_horaria), f["Operación"],
+         f["Moneda"], _numero(f["Cambio"], "Cambio Binance"),
+         f["Cuenta"], f["Observación"])
+        for f, _ in filas
+    )
+    classified = Counter(
+        (_fecha_utc(str(f["Tiempo"]), fuente.zona_horaria),
+         _campo_binance_parseado(f["Operación"]),
+         _campo_binance_parseado(f["Moneda"]),
+         _numero(f["Cambio"], "Cambio Binance clasificado"),
+         _campo_binance_parseado(f["Cuenta"]),
+         _campo_binance_parseado(f["Observación"]))
+        for _, f in df.iterrows()
+    )
+    if originals != classified:
+        raise FifoGlobalError(
+            "Evidencia de origen: campo original Binance difiere del clasificador"
+        )
     grupos = defaultdict(list)
     for fila, linea in filas:
         tipo = fila["Operación"]
@@ -169,8 +200,19 @@ def _verificar_binance(fuente: FuenteGlobal, filas, operaciones):
 
 
 def _verificar_bitvavo(fuente: FuenteGlobal, filas, operaciones):
+    df = getattr(fuente.clasificador, "df", None)
+    if df is None or len(df) != len(filas):
+        raise FifoGlobalError("Evidencia de origen: filas Bitvavo originales no coinciden")
     vinculados, n = [], 0
-    for fila, linea in filas:
+    for index, (fila, linea) in enumerate(filas):
+        # Amount, Quote Price, Address, estado y demás campos originales
+        # deben coincidir también, aunque el resultado FIFO sea idéntico.
+        parsed = df.iloc[index]
+        if any(column not in parsed.index
+               or str(parsed[column]) != fila[column] for column in _BITVAVO_HEADER):
+            raise FifoGlobalError(
+                "Evidencia de origen: campo original Bitvavo difiere del clasificador"
+            )
         if fila["Timezone"].strip() != "UTC":
             raise FifoGlobalError("Evidencia de origen: zona Bitvavo no acreditada")
         if fila["Status"].strip() not in ("Completed", "Distributed"):
