@@ -66,3 +66,10 @@ referencias es un justificante fiscal independiente.**
   CI completa sobre su HEAD, revisión adversarial independiente y autorización
   expresa del propietario; nunca desplegar ni activar informes globales
   sin autorización adicional.
+
+
+## Auditoría adversarial independiente (24-10-2026)
+
+Hallazgo fiscal reproducible por construcción de fuentes sintéticas: Binance compra 1 BTC por 20.000 EUR y Bitvavo compra 1 BTC por 30.000 EUR en **el mismo instante UTC**; una venta posterior de 1 BTC por 40.000 EUR se atribuye al lote escogido por el desempate técnico del núcleo, no por un orden intrasegundo documentado. La plusvalía resultante puede ser 20.000 o 10.000 EUR. La capa de auditoría ahora **rechaza** adquisiciones simultáneas del mismo activo con bases unitarias distintas y ventas posteriores, sin modificar el motor o clasificadores (`3f78eb699c40c15b8344992a201cb03d91f5403c`). Se añade test adversarial y test positivo de igual base (`f6e2397d32ac07d518ce38815ec22611d418ec33`). La regla es conservadora: puede rechazar operaciones legítimas de instante idéntico si su secuencia real no está acreditada. Las compras simultáneas de igual base siguen aceptándose, aunque el vínculo a una fila individual no tenga precedencia nativa demostrada.
+
+No se reclasifican operaciones ni se alteran las herramientas individuales. La batería histórica en CI del HEAD inicial fue satisfactoria, pero **no valida automáticamente el HEAD correctivo**. Deben confirmarse los tres controles obligatorios sobre el nuevo commit. Los datos reales, la prueba externa de hashes y titularidad, y la exhaustividad temporal permanecen fuera del alcance.
