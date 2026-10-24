@@ -149,7 +149,7 @@ def _bitvavo_evidencias(fuente: FuenteGlobal, operaciones: dict[str, OperacionGl
                        != op.fecha_utc):
                 raise FifoGlobalError("Integridad FIFO: operación Bitvavo no coincide con fila original")
             if tipo_entrada == "trade":
-                if op.tipo != raw_type.upper():
+                if op.tipo != {"buy": "COMPRA", "sell": "VENTA"}[raw_type]:
                     raise FifoGlobalError("Integridad FIFO: dirección Bitvavo incompatible")
                 raw_eur = abs(ClasificadorBitvavo._float(
                     raw["Received / Paid Amount"], required=True))
