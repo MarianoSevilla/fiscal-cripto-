@@ -245,6 +245,28 @@ def _verificar_bitvavo(fuente: FuenteGlobal, filas, operaciones):
         # ClasificadorBitvavo redondea cantidades a 10 decimales.
         qty = round(float(eur) / float(price), 10)
         _cotejar(op.cantidad, Decimal(str(qty)), _QTY_TOL, "cantidad Bitvavo")
+        # El campo Amount representa unidades del activo, no euros. El
+        # clasificador heredado no lo usa para compraventas: impedir que
+        # EUR/precio oculte contradicciones materiales del CSV original.
+        # La escala con múltiples puntos es ambigua en históricos Bitvavo,
+        # así que se rechaza conservadoramente en vez de inventar unidades.
+        raw_amount = fila["Amount"].strip()
+        if raw_amount.count(".") > 1 or raw_amount.count(",") > 1:
+            raise FifoGlobalError("Evidencia de origen: formato Amount Bitvavo ambiguo")
+        if "," in raw_amount and "." in raw_amount:
+            amount_normalizado = raw_amount.replace(".", "").replace(",", ".")
+        else:
+            amount_normalizado = raw_amount.replace(",", ".")
+        unidades_originales = _numero(amount_normalizado, "Amount Bitvavo")
+        if unidades_originales == 0:
+            raise FifoGlobalError("Evidencia de origen: Amount Bitvavo sin cantidad")
+        # Los precios de cotización pueden estar redondeados: no exigir una
+        # igualdad imposible, pero impedir diferencias sustanciales (>1 %).
+        discrepancia = abs(abs(unidades_originales) - op.cantidad)
+        if discrepancia > max(Decimal("0.00000001"), op.cantidad * Decimal("0.01")):
+            raise FifoGlobalError(
+                "Evidencia de origen: Amount Bitvavo contradice cantidad EUR/precio"
+            )
         _cotejar(op.fee_eur, abs(fee), _EUR_TOL, "comisión Bitvavo")
         native = fila["Transaction ID"].strip()
         vinculados.append(VinculoOriginal(
