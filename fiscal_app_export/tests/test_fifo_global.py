@@ -789,3 +789,40 @@ def test_fase4_rechaza_direccion_bitvavo_raw_cambiada_con_sha_nuevo(tmp_path):
     with pytest.raises(FifoGlobalError, match="campo original Bitvavo"):
         verificar_origen_fifo_global(original, (b, v), {
             "b1": (tmp_path / "binance.csv").read_bytes(), "v1": data})
+
+
+def test_fase4_rechaza_amount_bitvavo_compra_contradiccion_interna(tmp_path):
+    """El valor EUR/precio da 1 BTC, Amount declara 2 BTC."""
+    b, v = _sources(tmp_path, bitvavo_rows=[
+        _bt_row("2024-01-01", "10:00:00", "buy", qty="2", eur="30000", tid="buy"),
+        _bt_row("2025-01-01", "10:00:00", "sell", qty="1", eur="40000", tid="sell"),
+    ])
+    # Corrupción interna: precio ahora sugiere una cantidad diferente
+    # de la registrada en Amount; el clasificador usa sólo EUR/precio.
+    v.clasificador.df.at[0, "Quote Price"] = "30000"
+    path = tmp_path / "bitvavo.csv"
+    with path.open(encoding="utf-8-sig", newline="") as stream:
+        filas = list(csv.reader(stream))
+    filas[1][7] = "30000"
+    with path.open("w", encoding="utf-8-sig", newline="") as stream:
+        csv.writer(stream).writerows(filas)
+    v = replace(v, archivo_sha256=hashlib.sha256(path.read_bytes()).hexdigest())
+    # Vuelve a clasificar como haría el servicio a partir del mismo archivo.
+    v = replace(v, clasificador=ClasificadorBitvavo(str(path)).clasificar())
+    with pytest.raises(FifoGlobalError, match="Amount Bitvavo"):
+        _verificar_origen(tmp_path, b, v)
+
+
+def test_fase4_rechaza_amount_bitvavo_venta_contradiccion_interna(tmp_path):
+    """La cantidad original de la venta no puede ignorarse."""
+    b, v = _sources(tmp_path)
+    path = tmp_path / "bitvavo.csv"
+    with path.open(encoding="utf-8-sig", newline="") as stream:
+        filas = list(csv.reader(stream))
+    filas[2][5] = "-2"
+    with path.open("w", encoding="utf-8-sig", newline="") as stream:
+        csv.writer(stream).writerows(filas)
+    v = replace(v, archivo_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
+                clasificador=ClasificadorBitvavo(str(path)).clasificar())
+    with pytest.raises(FifoGlobalError, match="Amount Bitvavo"):
+        _verificar_origen(tmp_path, b, v)
