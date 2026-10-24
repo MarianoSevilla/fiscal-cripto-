@@ -34,7 +34,8 @@ class EvidenciaOperacion:
     indice_clasificador: int
     fila_csv: int | None
     id_nativo: str | None
-    tipo_vinculo: str  # fila_bitvavo | indice_clasificador
+    tipo_vinculo: str  # fila_parseada_bitvavo | indice_clasificador
+    indice_fila_parseada: int | None = None  # 0-based; nunca es número de línea CSV
 
 
 @dataclass(frozen=True)
@@ -102,7 +103,7 @@ def _bitvavo_evidencias(fuente: FuenteGlobal, operaciones: dict[str, OperacionGl
     para_mismo_segundo = set()
     sin_id_nativo = False
 
-    for i, fila in df.iterrows():
+    for posicion, (_, fila) in enumerate(df.iterrows()):
         if str(fila.get("Status", "")).strip() not in ("Completed", "Distributed"):
             continue
         tipo = str(fila.get("Type", "")).strip().lower()
@@ -124,7 +125,9 @@ def _bitvavo_evidencias(fuente: FuenteGlobal, operaciones: dict[str, OperacionGl
             if signature in para_mismo_segundo:
                 raise FifoGlobalError("Integridad FIFO: fila Bitvavo repetida sin ID nativo")
             para_mismo_segundo.add(signature)
-        record = (int(i) + 2, fila, id_nativo)
+        # pandas omite líneas vacías y puede parsear campos multilinea;
+        # su índice no constituye una línea física del CSV original.
+        record = (posicion, fila, id_nativo)
         if tipo in ("buy", "sell"):
             trades.append(record)
         else:
@@ -141,7 +144,7 @@ def _bitvavo_evidencias(fuente: FuenteGlobal, operaciones: dict[str, OperacionGl
     for tipo_entrada, rows, ops in (
         ("trade", trades, expected_trades), ("reward", rewards, expected_rewards)
     ):
-        for n, ((linea, raw, native), op) in enumerate(zip(rows, ops)):
+        for n, ((posicion, raw, native), op) in enumerate(zip(rows, ops)):
             raw_type = str(raw["Type"]).strip().lower()
             if (op.exchange != "bitvavo"
                     or op.activo != str(raw["Currency"]).strip().upper()
@@ -155,6 +158,14 @@ def _bitvavo_evidencias(fuente: FuenteGlobal, operaciones: dict[str, OperacionGl
                     raw["Received / Paid Amount"], required=True))
                 _igual_decimal(op.importe_eur, _dec(raw_eur, "importe"),
                                _MAX_EUR_DIFF, "importe de fila Bitvavo")
+                raw_price = ClasificadorBitvavo._float(raw.get("Quote Price", ""), required=True)
+                if raw_price <= 0:
+                    raise FifoGlobalError("Integridad FIFO: precio original Bitvavo no positivo")
+                # El parser calcula cantidad mediante importe/precio, redondeando
+                # a 10 decimales; cotejarla evita asociar un lote a otra cuantía.
+                raw_qty = round(raw_eur / raw_price, 10)
+                _igual_decimal(op.cantidad, _dec(raw_qty, "cantidad"),
+                               _MAX_QTY_DIFF, "cantidad de operación Bitvavo")
                 fee = abs(ClasificadorBitvavo._float(raw.get("Fee amount", "0")))
                 _igual_decimal(op.fee_eur, _dec(fee, "comisión"),
                                _MAX_EUR_DIFF, "comisión de fila Bitvavo")
@@ -164,9 +175,20 @@ def _bitvavo_evidencias(fuente: FuenteGlobal, operaciones: dict[str, OperacionGl
                 raw_qty = abs(ClasificadorBitvavo._float(raw["Amount"]))
                 _igual_decimal(op.cantidad, _dec(raw_qty, "cantidad"),
                                _MAX_QTY_DIFF, "cantidad de rendimiento Bitvavo")
+                if str(raw.get("Quote Currency", "")).strip().upper() != "EUR":
+                    raise FifoGlobalError("Integridad FIFO: rendimiento sin precio original EUR")
+                raw_price = ClasificadorBitvavo._float(raw.get("Quote Price", ""), required=True)
+                if raw_price <= 0:
+                    raise FifoGlobalError("Integridad FIFO: rendimiento sin precio positivo")
+                _igual_decimal(op.importe_eur,
+                               _dec(raw_qty, "cantidad") * _dec(raw_price, "precio"),
+                               _MAX_EUR_DIFF, "valor EUR de rendimiento Bitvavo")
+                if ClasificadorBitvavo._float(raw.get("Fee amount", "0")) != 0:
+                    raise FifoGlobalError("Integridad FIFO: comisión de rendimiento sin imputar")
             links[op.id] = EvidenciaOperacion(
                 op.id, op.exchange, fuente.source_id,
-                fuente.archivo_sha256.lower(), n, linea, native, "fila_bitvavo",
+                fuente.archivo_sha256.lower(), n, None, native,
+                "fila_parseada_bitvavo", indice_fila_parseada=posicion,
             )
     return links, sin_id_nativo
 
@@ -267,6 +289,11 @@ def auditar_fifo_global(resultado: ResultadoGlobal,
                                "cantidad de lote")
                 _igual_decimal(orig["coste_parcial"], traced.coste_eur, _MAX_EUR_DIFF,
                                "coste de lote")
+                expected_unit = (adq.importe_eur + adq.fee_eur) / adq.cantidad
+                _igual_decimal(orig["precio_unitario"], expected_unit,
+                               _MAX_EUR_DIFF, "precio unitario de lote")
+                if orig["contraparte"] != "EUR":
+                    raise FifoGlobalError("Integridad FIFO: contraparte del lote modificada")
                 if orig["fecha_compra"] != adq.fecha_utc.strftime("%Y-%m-%d"):
                     raise FifoGlobalError("Integridad FIFO: fecha de lote distinta")
             coste_fifo = sum((d.coste_eur for d in detalle), Decimal(0))
@@ -296,6 +323,8 @@ def auditar_fifo_global(resultado: ResultadoGlobal,
         "operaciones y ejercicios anteriores del titular.",
         "Binance carece aquí de vínculo auditado a las filas/IDs nativos; "
         "el índice del clasificador no sustituye el justificante original.",
+        "El índice de fila parseada de Bitvavo no demuestra la línea física "
+        "del CSV; fila_csv queda sin acreditar hasta revisar los bytes originales.",
         "El SHA-256 ha sido declarado por el llamante, no recalculado "
         "contra los bytes del CSV por esta capa.",
         "El motor de referencia usa float; la concordancia Decimal se "
