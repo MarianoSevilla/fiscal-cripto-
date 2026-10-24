@@ -38,7 +38,7 @@ def _binance(tmp_path, entries, *, timezone="UTC", titular=10):
 def _bt_row(date, time, kind, asset="BTC", qty="1", eur="30000", fee="0", tz="UTC", tid="a"):
     price = str(float(eur) / float(qty)) if qty != "0" else "0"
     return [
-        tz, date, time, kind, asset, qty, "EUR", price, "EUR",
+        tz, date, time, kind, asset, (str(-float(qty)) if kind == "sell" else qty), "EUR", price, "EUR",
         str(-float(eur) if kind == "buy" else float(eur)) if kind in ("buy", "sell") else "",
         "EUR", fee, "Completed", tid, "",
     ]
@@ -789,3 +789,83 @@ def test_fase4_rechaza_direccion_bitvavo_raw_cambiada_con_sha_nuevo(tmp_path):
     with pytest.raises(FifoGlobalError, match="campo original Bitvavo"):
         verificar_origen_fifo_global(original, (b, v), {
             "b1": (tmp_path / "binance.csv").read_bytes(), "v1": data})
+
+
+def test_fase4_rechaza_amount_bitvavo_compra_contradiccion_interna(tmp_path):
+    """El valor EUR/precio da 1 BTC, Amount declara 2 BTC."""
+    b, v = _sources(tmp_path, bitvavo_rows=[
+        _bt_row("2024-01-01", "10:00:00", "buy", qty="2", eur="30000", tid="buy"),
+        _bt_row("2025-01-01", "10:00:00", "sell", qty="1", eur="40000", tid="sell"),
+    ])
+    # Corrupción interna: precio ahora sugiere una cantidad diferente
+    # de la registrada en Amount; el clasificador usa sólo EUR/precio.
+    v.clasificador.df.at[0, "Quote Price"] = "30000"
+    path = tmp_path / "bitvavo.csv"
+    with path.open(encoding="utf-8-sig", newline="") as stream:
+        filas = list(csv.reader(stream))
+    filas[1][7] = "30000"
+    with path.open("w", encoding="utf-8-sig", newline="") as stream:
+        csv.writer(stream).writerows(filas)
+    v = replace(v, archivo_sha256=hashlib.sha256(path.read_bytes()).hexdigest())
+    # Vuelve a clasificar como haría el servicio a partir del mismo archivo.
+    v = replace(v, clasificador=ClasificadorBitvavo(str(path)).clasificar())
+    with pytest.raises(FifoGlobalError, match="Amount Bitvavo"):
+        _verificar_origen(tmp_path, b, v)
+
+
+def test_fase4_rechaza_amount_bitvavo_venta_contradiccion_interna(tmp_path):
+    """La cantidad original de la venta no puede ignorarse."""
+    b, v = _sources(tmp_path)
+    path = tmp_path / "bitvavo.csv"
+    with path.open(encoding="utf-8-sig", newline="") as stream:
+        filas = list(csv.reader(stream))
+    filas[2][5] = "-2"
+    with path.open("w", encoding="utf-8-sig", newline="") as stream:
+        csv.writer(stream).writerows(filas)
+    v = replace(v, archivo_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
+                clasificador=ClasificadorBitvavo(str(path)).clasificar())
+    with pytest.raises(FifoGlobalError, match="Amount Bitvavo"):
+        _verificar_origen(tmp_path, b, v)
+
+
+def test_fase4_rechaza_discrepancia_amount_inferior_al_uno_por_ciento(tmp_path):
+    """Una desviacion material del 0,5% no debe quedar autorizada."""
+    b, v = _sources(tmp_path)
+    path = tmp_path / "bitvavo.csv"
+    with path.open(encoding="utf-8-sig", newline="") as stream:
+        filas = list(csv.reader(stream))
+    filas[1][5] = "1.005"
+    with path.open("w", encoding="utf-8-sig", newline="") as stream:
+        csv.writer(stream).writerows(filas)
+    v = replace(v, archivo_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
+                clasificador=ClasificadorBitvavo(str(path)).clasificar())
+    with pytest.raises(FifoGlobalError, match="Amount Bitvavo"):
+        _verificar_origen(tmp_path, b, v)
+
+
+def test_fase4_rechaza_signo_amount_bitvavo_compra_invertido(tmp_path):
+    b, v = _sources(tmp_path)
+    path = tmp_path / "bitvavo.csv"
+    with path.open(encoding="utf-8-sig", newline="") as stream:
+        rows = list(csv.reader(stream))
+    rows[1][5] = "-1"
+    with path.open("w", encoding="utf-8-sig", newline="") as stream:
+        csv.writer(stream).writerows(rows)
+    v = replace(v, archivo_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
+                clasificador=ClasificadorBitvavo(str(path)).clasificar())
+    with pytest.raises(FifoGlobalError, match="signo Amount Bitvavo"):
+        _verificar_origen(tmp_path, b, v)
+
+
+def test_fase4_rechaza_signo_amount_bitvavo_venta_invertido(tmp_path):
+    b, v = _sources(tmp_path)
+    path = tmp_path / "bitvavo.csv"
+    with path.open(encoding="utf-8-sig", newline="") as stream:
+        rows = list(csv.reader(stream))
+    rows[2][5] = "1"
+    with path.open("w", encoding="utf-8-sig", newline="") as stream:
+        csv.writer(stream).writerows(rows)
+    v = replace(v, archivo_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
+                clasificador=ClasificadorBitvavo(str(path)).clasificar())
+    with pytest.raises(FifoGlobalError, match="signo Amount Bitvavo"):
+        _verificar_origen(tmp_path, b, v)
