@@ -38,7 +38,7 @@ def _binance(tmp_path, entries, *, timezone="UTC", titular=10):
 def _bt_row(date, time, kind, asset="BTC", qty="1", eur="30000", fee="0", tz="UTC", tid="a"):
     price = str(float(eur) / float(qty)) if qty != "0" else "0"
     return [
-        tz, date, time, kind, asset, qty, "EUR", price, "EUR",
+        tz, date, time, kind, asset, (str(-float(qty)) if kind == "sell" else qty), "EUR", price, "EUR",
         str(-float(eur) if kind == "buy" else float(eur)) if kind in ("buy", "sell") else "",
         "EUR", fee, "Completed", tid, "",
     ]
@@ -840,4 +840,32 @@ def test_fase4_rechaza_discrepancia_amount_inferior_al_uno_por_ciento(tmp_path):
     v = replace(v, archivo_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
                 clasificador=ClasificadorBitvavo(str(path)).clasificar())
     with pytest.raises(FifoGlobalError, match="Amount Bitvavo"):
+        _verificar_origen(tmp_path, b, v)
+
+
+def test_fase4_rechaza_signo_amount_bitvavo_compra_invertido(tmp_path):
+    b, v = _sources(tmp_path)
+    path = tmp_path / "bitvavo.csv"
+    with path.open(encoding="utf-8-sig", newline="") as stream:
+        rows = list(csv.reader(stream))
+    rows[1][5] = "-1"
+    with path.open("w", encoding="utf-8-sig", newline="") as stream:
+        csv.writer(stream).writerows(rows)
+    v = replace(v, archivo_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
+                clasificador=ClasificadorBitvavo(str(path)).clasificar())
+    with pytest.raises(FifoGlobalError, match="signo Amount Bitvavo"):
+        _verificar_origen(tmp_path, b, v)
+
+
+def test_fase4_rechaza_signo_amount_bitvavo_venta_invertido(tmp_path):
+    b, v = _sources(tmp_path)
+    path = tmp_path / "bitvavo.csv"
+    with path.open(encoding="utf-8-sig", newline="") as stream:
+        rows = list(csv.reader(stream))
+    rows[2][5] = "1"
+    with path.open("w", encoding="utf-8-sig", newline="") as stream:
+        csv.writer(stream).writerows(rows)
+    v = replace(v, archivo_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
+                clasificador=ClasificadorBitvavo(str(path)).clasificar())
+    with pytest.raises(FifoGlobalError, match="signo Amount Bitvavo"):
         _verificar_origen(tmp_path, b, v)
