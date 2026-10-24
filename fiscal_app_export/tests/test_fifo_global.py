@@ -697,16 +697,17 @@ def test_fase4_formato_binance_con_grupos_sin_orden_acreditado_bloqueado(tmp_pat
         _verificar_origen(tmp_path, b, v)
 
 
-def test_fase4_binance_venta_directa_con_coste_historico(tmp_path):
+def test_fase4_dos_compras_binance_con_venta_bitvavo(tmp_path):
     b, v = _sources(tmp_path,
-        binance_rows=(_buy("2023-01-01 10:00:00") +
-                      _sell("2025-01-02 10:00:00", qty=0.5, eur=20000)),
-        bitvavo_rows=[_bt_row("2024-01-01", "10:00:00", "buy", eur="30000", tid="x")])
+        binance_rows=(_buy("2023-01-01 10:00:00", qty=0.5, eur=10000) +
+                      _buy("2023-01-02 10:00:00", qty=0.5, eur=15000)),
+        bitvavo_rows=[_bt_row("2025-01-01", "10:00:00", "sell",
+                              eur="40000", tid="sale")])
     result = _calculate(b, v)
     audit = _verificar_origen(tmp_path, b, v, result)
     assert set(link.operacion_id for link in audit.vinculos) == {
         "b1:cv:0", "b1:cv:1", "v1:cv:0"}
-    assert result.resultados_ejercicio[0].ganancia_perdida == pytest.approx(10000)
+    assert result.resultados_ejercicio[0].ganancia_perdida == pytest.approx(15000)
 
 
 def test_fase4_bitvavo_y_binance_hueco_entre_fechas_no_cobertura(tmp_path):
