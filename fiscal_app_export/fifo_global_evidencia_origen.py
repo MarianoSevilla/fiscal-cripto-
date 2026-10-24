@@ -245,6 +245,40 @@ def _verificar_bitvavo(fuente: FuenteGlobal, filas, operaciones):
         # ClasificadorBitvavo redondea cantidades a 10 decimales.
         qty = round(float(eur) / float(price), 10)
         _cotejar(op.cantidad, Decimal(str(qty)), _QTY_TOL, "cantidad Bitvavo")
+        # El campo Amount representa unidades del activo, no euros. El
+        # clasificador heredado no lo usa para compraventas: impedir que
+        # EUR/precio oculte contradicciones materiales del CSV original.
+        # La escala con múltiples puntos es ambigua en históricos Bitvavo,
+        # así que se rechaza conservadoramente en vez de inventar unidades.
+        raw_amount = fila["Amount"].strip()
+        if raw_amount.count(".") > 1 or raw_amount.count(",") > 1:
+            raise FifoGlobalError("Evidencia de origen: formato Amount Bitvavo ambiguo")
+        if "," in raw_amount and "." in raw_amount:
+            amount_normalizado = raw_amount.replace(".", "").replace(",", ".")
+        else:
+            amount_normalizado = raw_amount.replace(",", ".")
+        unidades_originales = _numero(amount_normalizado, "Amount Bitvavo")
+        if unidades_originales == 0:
+            raise FifoGlobalError("Evidencia de origen: Amount Bitvavo sin cantidad")
+        # Contrato conservador del CSV clásico: las compras reciben activo
+        # y las ventas lo entregan. No extrapolar el signo de la API trades.
+        if (tipo == "buy" and unidades_originales <= 0) or (tipo == "sell" and unidades_originales >= 0):
+            raise FifoGlobalError("Evidencia de origen: signo Amount Bitvavo incompatible")
+        # No aceptar un margen porcentual arbitrario. La cota de error
+        # procede de la precision decimal publicada en el CSV: media
+        # unidad de la ultima cifra del precio y del importe EUR, mas
+        # el redondeo a 10 decimales del clasificador legado.
+        paso_precio = Decimal(1).scaleb(price.as_tuple().exponent)
+        paso_eur = Decimal(1).scaleb(raw_paid.as_tuple().exponent)
+        margen_eur = (
+            abs(unidades_originales) * paso_precio / 2
+            + paso_eur / 2
+            + price * Decimal("0.00000000005")
+        )
+        if abs(abs(unidades_originales) * price - eur) > margen_eur:
+            raise FifoGlobalError(
+                "Evidencia de origen: Amount Bitvavo contradice cantidad EUR/precio"
+            )
         _cotejar(op.fee_eur, abs(fee), _EUR_TOL, "comisión Bitvavo")
         native = fila["Transaction ID"].strip()
         vinculados.append(VinculoOriginal(
