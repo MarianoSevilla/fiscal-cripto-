@@ -552,3 +552,21 @@ def test_fase3_rechaza_contraparte_lote_alterada(tmp_path):
     result.motor.resultados[0].lotes_consumidos[0]["contraparte"] = "USDT"
     with pytest.raises(FifoGlobalError, match="contraparte del lote"):
         auditar_fifo_global(result, (b, v))
+
+
+def test_fase3_rechaza_saldo_residual_adulterado(tmp_path):
+    b, v = _sources(tmp_path)
+    result = _calculate(b, v)
+    # Las ventas siguen con el mismo coste y ganancia, pero una posición
+    # superviviente queda inflada. Antes no se auditaba el inventario final.
+    result.motor.inventario["BTC"][1].cantidad_restante += 0.5
+    with pytest.raises(FifoGlobalError, match="cantidad restante residual"):
+        auditar_fifo_global(result, (b, v))
+
+
+def test_fase3_rechaza_coste_unitario_residual_adulterado(tmp_path):
+    b, v = _sources(tmp_path)
+    result = _calculate(b, v)
+    result.motor.inventario["BTC"][1].precio_coste_unitario += 100
+    with pytest.raises(FifoGlobalError, match="coste unitario residual"):
+        auditar_fifo_global(result, (b, v))
