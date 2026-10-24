@@ -826,3 +826,18 @@ def test_fase4_rechaza_amount_bitvavo_venta_contradiccion_interna(tmp_path):
                 clasificador=ClasificadorBitvavo(str(path)).clasificar())
     with pytest.raises(FifoGlobalError, match="Amount Bitvavo"):
         _verificar_origen(tmp_path, b, v)
+
+
+def test_fase4_rechaza_discrepancia_amount_inferior_al_uno_por_ciento(tmp_path):
+    """Una desviacion material del 0,5% no debe quedar autorizada."""
+    b, v = _sources(tmp_path)
+    path = tmp_path / "bitvavo.csv"
+    with path.open(encoding="utf-8-sig", newline="") as stream:
+        filas = list(csv.reader(stream))
+    filas[1][5] = "1.005"
+    with path.open("w", encoding="utf-8-sig", newline="") as stream:
+        csv.writer(stream).writerows(filas)
+    v = replace(v, archivo_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
+                clasificador=ClasificadorBitvavo(str(path)).clasificar())
+    with pytest.raises(FifoGlobalError, match="Amount Bitvavo"):
+        _verificar_origen(tmp_path, b, v)
