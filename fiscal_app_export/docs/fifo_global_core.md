@@ -56,3 +56,11 @@ fuentes repetidas, transferencias confirmadas y bloqueos materiales.
 
 **No habilitar** descarga, JSON de éxito ni UI global por esta PR. No
 fusionar/desplegar sin autorización expresa y CI completa sobre su HEAD.
+
+
+## Auditoría adversarial independiente — 2026-10-24
+
+- **UTC P0 corregido:** `_fecha_utc` admitía una fecha ISO sin hora, inventando medianoche al normalizar. También admitía un timestamp con offset propio distinto del offset explicitado por la fuente. Ambos supuestos quedan rechazados en el núcleo experimental (`8ec14dabe80657eef9759f8a00c8526dbbfafcd9`).
+- **Regresión:** tres pruebas sintéticas añadidas (fecha sin hora, offset contradictorio y offset coincidente como control positivo) en `2b52ea9c05c3ca19a31a46fb278395fcd53ba526`. El resultado definitivo depende de la CI sobre ese commit; no debe extrapolarse el PASS del commit anterior.
+- **Límites fiscales:** el nombre de la zona Binance aún depende de acreditación por controlador; no hay validación de horario estacional o exhaustividad histórica. Los IDs por índice son referencias internas, no identificadores nativos inmutables de operación. La coincidencia de titulares en transferencias es una afirmación de entrada que el módulo valida como booleano, sin acceso a prueba documental.
+- **Uso permitido:** exclusivamente laboratorio, sin informe global certificable ni nuevos endpoints. Integración sujeta a GO independiente sobre la CI final y autorización expresa.
