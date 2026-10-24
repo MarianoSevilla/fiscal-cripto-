@@ -28,7 +28,9 @@ datos de producción. No existe endpoint que invoque este nuevo módulo.
   los lectores pueden omitir líneas vacías o interpretar campos multilinea.
   Recalcula la cantidad de compraventa a partir de su importe y precio EUR
   originales, el valor EUR de recompensas, sus comisiones y coteja además el
-  precio unitario y la contraparte de cada lote consumido.
+  precio unitario y la contraparte de cada lote consumido. Contrasta además
+  cada lote residual del inventario con su coste histórico independiente, para
+  no aceptar un saldo posterior a la venta adulterado.
   Si se repite un `Transaction ID` entre filas materiales, el proceso se
   bloquea. Filas idénticas sin ID no se deduplican: se **rechazan por ambigüedad**.
   Compras distintas con importes iguales y fecha/ID distinguibles se conservan.
