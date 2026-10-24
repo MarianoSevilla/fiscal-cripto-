@@ -109,8 +109,15 @@ def _fecha_utc(value, zona_horaria: str) -> datetime:
         dt = datetime.fromisoformat(str(value).strip().replace("Z", "+00:00"))
     except ValueError as exc:
         raise FifoGlobalError("Fecha de operación inválida o ambigua") from exc
+    # Una fecha sin hora inventaría una medianoche fiscal inexistente.
+    # Una hora aware contradictoria con la zona acreditada tampoco es válida.
+    if not re.search(r"[T ]\\d{2}:\\d{2}", str(value).strip()):
+        raise FifoGlobalError("Fecha sin hora de operación acreditada")
+    zona = _zona(zona_horaria)
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=_zona(zona_horaria))
+        dt = dt.replace(tzinfo=zona)
+    elif dt.utcoffset() != zona.utcoffset(None):
+        raise FifoGlobalError("Desfase UTC incompatible con la zona horaria acreditada")
     return dt.astimezone(timezone.utc)
 
 
