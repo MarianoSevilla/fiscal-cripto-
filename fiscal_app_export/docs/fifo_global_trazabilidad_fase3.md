@@ -23,7 +23,12 @@ datos de producción. No existe endpoint que invoque este nuevo módulo.
   El módulo **no recalcula** el SHA contra el CSV físico. Debe hacerlo un
   controlador posterior desde bytes originales si algún día se expone.
 - Para Bitvavo correlaciona cada compra, venta y rendimiento con su **fila
-  en el DataFrame parseado** y su `Transaction ID`, cuando existe.
+  en el DataFrame parseado** y su `Transaction ID`, cuando existe. Nunca
+  presenta ese índice como línea física del CSV (`fila_csv=None`), porque
+  los lectores pueden omitir líneas vacías o interpretar campos multilinea.
+  Recalcula la cantidad de compraventa a partir de su importe y precio EUR
+  originales, el valor EUR de recompensas, sus comisiones y coteja además el
+  precio unitario y la contraparte de cada lote consumido.
   Si se repite un `Transaction ID` entre filas materiales, el proceso se
   bloquea. Filas idénticas sin ID no se deduplican: se **rechazan por ambigüedad**.
   Compras distintas con importes iguales y fecha/ID distinguibles se conservan.
@@ -41,7 +46,8 @@ cobertura temporal contrastable por exchange, posibles movimientos externos
 y corroboración de titularidad, y el motor heredado usa float.
 
 La correlación de fila Bitvavo se hace contra la tabla parseada que existe en
-memoria, no contra bytes originales conservados de forma inmutable. Binance
+memoria, no contra bytes originales conservados de forma inmutable. El
+`indice_fila_parseada` es una posición de lectura, no una línea CSV probatoria. Binance
 sigue identificando lotes por operación clasificada, sin trazabilidad nativa
 autenticada de las filas que originaron la operación. **Ninguna de esas
 referencias es un justificante fiscal independiente.**
