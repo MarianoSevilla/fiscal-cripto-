@@ -643,7 +643,7 @@ def test_fase4_recalcular_sha_no_oculta_importe_binance_desincronizado(tmp_path)
     result = _calculate(b, v)
     data = (tmp_path / "binance.csv").read_bytes().replace(b"-20000", b"-23000")
     b = replace(b, archivo_sha256=hashlib.sha256(data).hexdigest())
-    with pytest.raises(FifoGlobalError, match="importe Binance"):
+    with pytest.raises(FifoGlobalError, match="campo original Binance"):
         verificar_origen_fifo_global(result, (b, v),
             {"b1": data, "v1": (tmp_path / "bitvavo.csv").read_bytes()})
 
@@ -653,7 +653,7 @@ def test_fase4_rechaza_id_nativo_bitvavo_mutado_en_bytes(tmp_path):
     result = _calculate(b, v)
     data = (tmp_path / "bitvavo.csv").read_bytes().replace(b",3,", b",other_id,")
     v = replace(v, archivo_sha256=hashlib.sha256(data).hexdigest())
-    with pytest.raises(FifoGlobalError, match="ID nativo"):
+    with pytest.raises(FifoGlobalError, match="campo original Bitvavo"):
         verificar_origen_fifo_global(result, (b, v),
             {"b1": (tmp_path / "binance.csv").read_bytes(), "v1": data})
 
@@ -670,7 +670,7 @@ def test_fase4_rechaza_precio_original_bitvavo_distinto_del_clasificador(tmp_pat
     writer.writerows(filas)
     data = out.getvalue().encode("utf-8-sig")
     v = replace(v, archivo_sha256=hashlib.sha256(data).hexdigest())
-    with pytest.raises(FifoGlobalError, match="cantidad Bitvavo"):
+    with pytest.raises(FifoGlobalError, match="campo original Bitvavo"):
         verificar_origen_fifo_global(result, (b, v),
             {"b1": (tmp_path / "binance.csv").read_bytes(), "v1": data})
 
