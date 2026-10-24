@@ -256,6 +256,13 @@ def verificar_origen_fifo_global(
         links.extend(evidencias)
     if {link.operacion_id for link in links} != {op.id for op in resultado.operaciones}:
         raise FifoGlobalError("Evidencia de origen: hay operaciones sin vínculo único")
+    evidencia_clasificada = {e.operacion_id: e for e in auditoria.fuentes}
+    for link in links:
+        fase3 = evidencia_clasificada.get(link.operacion_id)
+        if fase3 is None or fase3.archivo_sha256 != link.archivo_sha256:
+            raise FifoGlobalError("Evidencia de origen: enlace fase 3 y SHA incoherentes")
+        if fase3.exchange == "bitvavo" and fase3.id_nativo != link.id_nativo:
+            raise FifoGlobalError("Evidencia de origen: ID nativo distinto del CSV original")
     by_id = {link.operacion_id: link for link in links}
     if len(by_id) != len(links):
         raise FifoGlobalError("Evidencia de origen: fila vinculada más de una vez")
