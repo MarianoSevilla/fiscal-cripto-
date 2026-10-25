@@ -54,7 +54,6 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                     violations = []
                     errors = []
                     analysis_attempt = [0]
-                    downloads = []
                     first_error = width == 375
 
                     def guard(route):
@@ -75,10 +74,8 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                                           }}))
                             return
                         if uri.path.startswith("/api/descargar/"):
-                            downloads.append(uri.path + ("?" + uri.query if uri.query else ""))
-                            route.fulfill(status=200, body=b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF",
-                                          headers={"Content-Type": "application/pdf",
-                                                   "Content-Disposition": "attachment; filename=synthetic-fifo.pdf"})
+                            violations.append("unexpected download GET " + uri.path)
+                            route.abort()
                             return
                         if req.method != "GET":
                             writes.append((req.method, uri.path,
@@ -213,13 +210,24 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                         page.keyboard.press("ArrowRight")
                         assert page.locator('[data-tab="activos"]').get_attribute("aria-selected") == "true"
                         if width == 375:
-                            with page.expect_download() as event:
-                                page.locator("#btnDownload").click()
-                            download = event.value
-                            assert download.suggested_filename
-                            assert downloads and downloads[-1].startswith(
-                                "/api/descargar/synthetic-ui-token?exchange="
+                            # Verificar la acción sin cursar siquiera un GET a la
+                            # ruta de descarga: Playwright/Chromium puede iniciar
+                            # downloads sin notificar las rutas interceptadas.
+                            page.evaluate("""() => {
+                                const link = document.getElementById('btnDownload');
+                                link.addEventListener('click', e => {
+                                    e.preventDefault();
+                                    window.__syntheticDownloadClicked = link.getAttribute('href');
+                                }, {once:true});
+                            }""")
+                            page.locator("#btnDownload").click()
+                            assert page.evaluate("window.__syntheticDownloadClicked") == (
+                                "/api/descargar/synthetic-ui-token?exchange=" +
+                                ("binance" if name == "fiscal" else name)
                             )
+                            assert page.locator("#btnDownload").get_attribute(
+                                "download"
+                            ).endswith(".pdf")
                         page.screenshot(path=str(output / f"home_fifo_{name}_{width}.png"), full_page=True)
                         assert page.evaluate("""() => document.documentElement.scrollWidth <= innerWidth + 1"""), (name,width,"page overflow")
                         assert page.locator(".upload-bar").evaluate(
