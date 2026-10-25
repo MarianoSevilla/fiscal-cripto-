@@ -75,7 +75,7 @@
     {
       "@type": "HowTo",
       "name": "Cómo exportar el CSV de Bitvavo paso a paso",
-      "description": "Pasos para obtener el CSV de Bitvavo y generar el informe fiscal FIFO con el historial completo.",
+      "description": "Pasos para obtener el CSV de Bitvavo y revisar si hay adquisiciones anteriores fuera de la plataforma antes de utilizar el informe FIFO.",
       "totalTime": "PT10M",
       "step": [
         {
@@ -105,8 +105,8 @@
         {
           "@type": "HowToStep",
           "position": 5,
-          "name": "Sube todos los archivos al generador FIFO",
-          "text": "Reúne el CSV de Bitvavo y los historiales de origen si los hay, y súbelos al generador en el mismo proceso. El sistema consolida el historial completo y aplica el FIFO sobre el conjunto global de cada activo. Puedes ver cómo funciona el proceso de cálculo en la guía de la herramienta."
+          "name": "Importa el CSV de Bitvavo y revisa los historiales de origen",
+          "text": "Sube el CSV de Bitvavo a su herramienta específica. Si existen compras anteriores en otros exchanges o wallets, conserva sus historiales para comprobar su origen y coste. La herramienta pública no permite importar conjuntamente archivos de distintos exchanges ni calcula automáticamente un FIFO global. Consulta la guía de la herramienta para conocer sus límites."
         }
       ]
     },
@@ -116,7 +116,7 @@
         {
           "@type": "Question",
           "name": "¿Es suficiente con el CSV de Bitvavo si también he operado en Binance?",
-          "acceptedAnswer": { "@type": "Answer", "text": "No. Si has transferido criptomonedas desde Binance a Bitvavo, el coste de adquisición de esos activos está registrado en Binance, no en Bitvavo. Para calcular el FIFO correctamente necesitas los historiales de ambas plataformas. El generador los consolida automáticamente si subes los dos archivos en el mismo proceso." }
+          "acceptedAnswer": { "@type": "Answer", "text": "No necesariamente. Si compraste criptomonedas en Binance y las transferiste a Bitvavo, el CSV de Bitvavo puede no reflejar su coste de adquisición original. Conserva el historial de Binance para verificarlo. La herramienta pública de Bitvavo procesa su CSV por separado: no admite subir ambos historiales juntos ni consolida automáticamente un FIFO global. No consideres completo un cálculo al que le falten adquisiciones anteriores." }
         },
         {
           "@type": "Question",
@@ -131,7 +131,7 @@
         {
           "@type": "Question",
           "name": "He movido criptos desde mi wallet personal a Bitvavo para venderlas. ¿Es un problema?",
-          "acceptedAnswer": { "@type": "Answer", "text": "El movimiento de una wallet a Bitvavo no es en sí mismo un hecho imponible, pero cuando vendas esos activos necesitarás poder acreditar cuánto pagaste por ellos originalmente. Si los compraste en otro exchange, ese historial es necesario para calcular correctamente la ganancia." }
+          "acceptedAnswer": { "@type": "Answer", "text": "El movimiento de una wallet a Bitvavo no es en sí mismo un hecho imponible, pero cuando vendas esos activos necesitarás poder acreditar cuánto pagaste por ellos originalmente. Si los compraste en otro exchange, conserva ese historial para acreditar las adquisiciones anteriores y revisar el cálculo; la herramienta de Bitvavo no importa esos archivos conjuntamente." }
         },
         {
           "@type": "Question",
@@ -631,9 +631,7 @@ details[open] .faq-q::after { transform: rotate(45deg); }
         </p>
 
         <p>
-          Para el usuario que ha operado exclusivamente en Bitvavo desde el primer día,
-          ese es el único archivo que necesita. Para quien ha movido activos desde otras
-          plataformas, hay una trampa que no se ve hasta que se genera el informe.
+          Para quien ha operado exclusivamente en Bitvavo desde el primer día, el CSV puede ser suficiente si incluye todas sus operaciones. Si hay activos procedentes de otros exchanges o wallets, ese CSV puede no reflejar adquisiciones anteriores.
         </p>
 
         <h3>Un solo CSV cubre todo el historial</h3>
@@ -655,20 +653,14 @@ details[open] .faq-q::after { transform: rotate(45deg); }
         </p>
 
         <p>
-          Ejemplo concreto: compras 1 ETH en Binance por 1.800 € en 2021, lo
-          transftieres a Bitvavo y lo vendes por 2.400 € en 2023. El CSV de Bitvavo
-          solo ve una venta de 1 ETH a 2.400 €. Sin el historial de Binance, el sistema
-          asigna coste cero y puedes terminar declarando una ganancia de 2.400 €
-          cuando la ganancia real es 600 €. Con los dos historiales, el generador
-          FIFO lo calcula correctamente de forma automática.
+          Ejemplo ilustrativo: compras 1 ETH en Binance por 1.800 € en 2021, lo transfieres a Bitvavo y lo vendes allí por 2.400 € en 2023. El CSV de Bitvavo refleja la venta, pero no acredita por sí solo el coste original. No debe asignarse automáticamente un coste cero ni darse por completo el FIFO sin revisar las adquisiciones anteriores. Suponiendo que fue la única compra y que no hubo otros movimientos ni gastos, la diferencia aritmética sería de 600 €; ese importe no puede deducirse solo desde el CSV de Bitvavo. La herramienta pública no permite combinar el historial de Binance y Bitvavo en una misma importación.
         </p>
 
         <div class="warning-box">
           <span class="warning-icon">⚠️</span>
           <div class="warning-text">
             <strong>Si has transferido criptos desde otro exchange a Bitvavo</strong>,
-            necesitas también el historial completo de ese exchange de origen. El
-            depósito en Bitvavo no transporta el coste de adquisición.
+            conserva también el historial de ese exchange de origen para acreditar adquisiciones anteriores. El depósito en Bitvavo no transporta el coste de adquisición y el generador público no consolida automáticamente historiales de diferentes exchanges.
           </div>
         </div>
 
@@ -766,8 +758,7 @@ details[open] .faq-q::after { transform: rotate(45deg); }
               <div class="step-desc">
                 Descarga el archivo. Este único CSV incluye todos los tipos de operaciones:
                 compras, ventas, depósitos, retiradas, staking y órdenes recurrentes.
-                Si has operado exclusivamente en Bitvavo, este es el único archivo que
-                necesitas.
+                Si solo has operado en Bitvavo, comprueba que el CSV contenga todas tus operaciones antes de utilizarlo.
               </div>
             </div>
           </li>
@@ -787,13 +778,9 @@ details[open] .faq-q::after { transform: rotate(45deg); }
           <li class="step-item">
             <div class="step-num">5</div>
             <div class="step-body">
-              <div class="step-title">Sube todos los archivos al generador FIFO</div>
+              <div class="step-title">Importa el CSV de Bitvavo y revisa los historiales de origen</div>
               <div class="step-desc">
-                Reúne el CSV de Bitvavo y los historiales de origen si los hay, y súbelos
-                en el mismo proceso. El sistema consolida el historial completo y aplica
-                el FIFO sobre el conjunto global de cada activo. Puedes ver cómo funciona
-                el proceso de cálculo en la
-                <a href="/como-funciona">guía de la herramienta</a>.
+                Sube el CSV de Bitvavo a su herramienta específica. Si adquiriste activos en otro exchange o wallet, conserva también sus historiales para comprobar las adquisiciones anteriores. Actualmente no se pueden importar conjuntamente archivos de distintos exchanges ni obtener un FIFO global automático. Consulta la <a href="/como-funciona">guía de la herramienta</a> para conocer sus límites.
               </div>
             </div>
           </li>
@@ -815,9 +802,7 @@ details[open] .faq-q::after { transform: rotate(45deg); }
               El depósito en Bitvavo registra la entrada del activo, pero no su coste de
               adquisición — porque esa compra ocurrió fuera de la plataforma.
               <br><br>
-              Sin ese dato, puedes terminar declarando una ganancia superior a la real
-              si no puedes justificar el coste de adquisición. Con los historiales de
-              origen, el generador FIFO lo resuelve automáticamente.
+              Sin ese dato, no es seguro determinar el coste y la ganancia correspondientes: no debe presumirse coste cero por faltar información. Conserva los historiales de origen para revisar adquisiciones anteriores; el generador público de Bitvavo no importa estos archivos conjuntamente ni resuelve esos costes automáticamente.
             </div>
           </div>
 
@@ -964,11 +949,7 @@ details[open] .faq-q::after { transform: rotate(45deg); }
           <details class="faq-item">
             <summary class="faq-q">¿Es suficiente con el CSV de Bitvavo si también he operado en Binance?</summary>
             <p class="faq-a">
-              No. Si has transferido criptomonedas desde <a href="/exchanges/binance">Binance</a>
-              a Bitvavo, el coste de adquisición de esos activos está registrado en Binance,
-              no en Bitvavo. Para calcular el FIFO correctamente necesitas los historiales de
-              ambas plataformas. El generador los consolida automáticamente si subes los dos
-              archivos en el mismo proceso.
+              No necesariamente. Si compraste criptomonedas en <a href="/exchanges/binance">Binance</a> y las transferiste a Bitvavo, el CSV de Bitvavo puede no reflejar su coste de adquisición original. Conserva el historial de Binance para verificarlo. La herramienta pública de Bitvavo procesa su CSV por separado: no admite subir ambos historiales juntos ni consolida automáticamente un FIFO global. No consideres completo un cálculo al que le falten adquisiciones anteriores.
             </p>
           </details>
 
@@ -999,7 +980,7 @@ details[open] .faq-q::after { transform: rotate(45deg); }
               El movimiento desde una wallet a Bitvavo no es en sí mismo un hecho imponible.
               Pero cuando vendas esos activos en Bitvavo necesitarás poder acreditar cuánto
               pagaste por ellos originalmente. Si los compraste en otro exchange, ese historial
-              es necesario para que el generador calcule correctamente la ganancia. Si los
+              sirve para acreditar las adquisiciones anteriores al revisar el cálculo; la herramienta de Bitvavo no importa esos historiales conjuntamente. Si los
               compraste fuera de plataformas registradas, el coste puede ser más difícil de
               documentar.
             </p>
@@ -1043,7 +1024,7 @@ details[open] .faq-q::after { transform: rotate(45deg); }
           <ul class="sidebar-steps">
             <li data-n="1">Exportar Transaction History completo desde el origen</li>
             <li data-n="2">Si has transferido criptos: obtener historiales de origen</li>
-            <li data-n="3">Subir todos los archivos al generador</li>
+            <li data-n="3">Subir el CSV de Bitvavo a su herramienta</li>
             <li data-n="4">Descargar informe PDF para Hacienda</li>
           </ul>
           <a href="/bitvavo" class="sidebar-cta">Generar informe de Bitvavo</a>
@@ -1077,7 +1058,7 @@ details[open] .faq-q::after { transform: rotate(45deg); }
       <div class="content-main">
         <div class="cta-mid">
           <h3 class="cta-mid-title">Genera tu informe fiscal de Bitvavo hoy</h3>
-          <p>Sube tus archivos de Bitvavo, revisa tus operaciones y descarga un informe FIFO preparado para Hacienda.</p>
+          <p>Sube el CSV de Bitvavo, revisa tus operaciones y descarga el informe FIFO cuando los datos permitan un cálculo suficiente.</p>
           <ul class="cta-benefits">
             <li>CSV de Bitvavo</li>
             <li>Método FIFO automático</li>
