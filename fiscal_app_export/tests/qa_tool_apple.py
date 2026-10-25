@@ -172,6 +172,7 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                                      "buffer": b"fecha,activo,valor\n2024-03-01,BTC,1\n2025-03-04,BTC,2"}
                                     for i in range(count)
                                 ]
+                            count = len(inputs)
                             picker.set_input_files(inputs)
                             page.locator("#btnAnalizar").wait_for(state="visible")
                             expect(page.locator("#btnAnalizar")).to_be_enabled(timeout=12000)
