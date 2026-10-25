@@ -271,6 +271,10 @@ def main():
     with real_flask() as (app, identities, origin):
         backend = check_back_end(app,identities)
         browser = check_browsers(app,identities,origin)
+        # 01-B: mock all account mutations in Chromium; fixture SQLite only.
+        from qa_account_apple import run_account_apple
+        run_account_apple(origin, app.config.get("SESSION_COOKIE_NAME", "session"),
+                          flask_cookie(app, identities["usuario"]))
         from qa_contacto_integration import check_contacto
         check_contacto(app,origin)
     print(f"Flask real: {backend} HTTP/API checks PASS; {browser} browser checks PASS")
