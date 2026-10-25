@@ -199,6 +199,12 @@ def run_account_apple(origin, cookie_name, cookie_value):
                                   body='{"error":"Synthetic unavailable"}' if mode == "error"
                                        else '{"user":null}')
                 ctx.route("**/api/me", fail_me)
+                # Una sesión simulada como caducada no debe reautenticarse por
+                # la cookie del usuario de prueba al abrir /login/.
+                if mode == "expired":
+                    ctx.route("**/login/", lambda route: route.fulfill(
+                        status=200, content_type="text/html",
+                        body="<main>Login sintético</main>"))
                 page = ctx.new_page()
                 try:
                     page.goto(origin + "/account", wait_until="domcontentloaded")
