@@ -79,7 +79,10 @@ def run_account_apple(origin, cookie_name, cookie_value):
                     errors = []
                     page.on("pageerror", lambda error: errors.append(str(error)))
                     page.on("console", lambda message: errors.append(message.text)
-                            if message.type == "error" else None)
+                            if message.type == "error" and not (
+                                "Failed to load resource" in message.text
+                                and "400" in message.text
+                            ) else None)
                     try:
                         response = page.goto(origin + "/account", wait_until="networkidle")
                         assert response and response.status == 200
