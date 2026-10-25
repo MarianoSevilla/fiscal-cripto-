@@ -3,216 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mi cuenta — Herramienta Fiscal Cripto</title>
-<meta name="robots" content="noindex">
+<title>Mi cuenta | Mariano Sevilla</title>
+<meta name="robots" content="noindex, nofollow">
 <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
 <link rel="icon" href="/static/favicon.ico">
 <link rel="manifest" href="/static/site.webmanifest">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/nav.css">
+<link rel="stylesheet" href="/static/landing_apple.css">
+<link rel="stylesheet" href="/static/account_apple.css">
 <link rel="preload" href="/static/nav.js" as="script">
-<style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-:root {
-  --black:      #0b1220;
-  --surface:    #141f32;
-  --surface2:   #1a2540;
-  --surface3:   #1f2d4a;
-  --border:     rgba(255,255,255,0.07);
-  --border-hover: rgba(255,255,255,0.15);
-  --text:       #f0f0f0;
-  --muted:      #888888;
-  --muted2:     #555555;
-  --accent:     #00C896;
-  --accent-dim: rgba(0,200,150,0.10);
-  --red:        #E24B4A;
-  --red-dim:    rgba(226,75,74,0.10);
-  --red-brd:    rgba(226,75,74,0.22);
-  --max:        720px;
-  --r:          12px;
-  --font-d:     'Syne', sans-serif;
-  --font-b:     'DM Sans', sans-serif;
-  --footer-bg: #070e1a;
-  --max-w:     1280px;
-  --pad-x:     3rem;
-}
-
-html, body {
-  min-height: 100%; background: var(--black);
-  font-family: var(--font-b); color: var(--text);
-  font-size: 16px; line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
-}
-a { color: inherit; text-decoration: none; }
-
-/* ── MAIN ── */
-main {
-  max-width: var(--max);
-  margin: 0 auto;
-  padding: 104px 2rem 4rem;
-}
-
-.page-title {
-  font-family: var(--font-d); font-size: 1.8rem; font-weight: 800;
-  letter-spacing: -0.03em; margin-bottom: 0.4rem;
-}
-.page-sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 2.5rem; }
-
-/* ── SECTIONS ── */
-.section {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 1.75rem;
-  margin-bottom: 1.25rem;
-}
-.section-title {
-  font-family: var(--font-d); font-size: 0.75rem; font-weight: 700;
-  letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--muted); margin-bottom: 1.25rem;
-}
-
-/* ── ROWS ── */
-.row {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 1rem;
-  padding: 0.85rem 0;
-  border-bottom: 1px solid var(--border);
-}
-.row:last-child { border-bottom: none; padding-bottom: 0; }
-.row:first-of-type { padding-top: 0; }
-.row-label { font-size: 13px; color: var(--muted); }
-.row-value { font-size: 14px; font-weight: 500; }
-.row-value.accent { color: var(--accent); }
-
-/* ── BADGE ── */
-.badge {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 11.5px; font-weight: 600; padding: 3px 9px;
-  border-radius: 20px; letter-spacing: 0.02em;
-}
-.badge-free { background: var(--surface3); color: var(--muted); }
-.badge-pro  { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(0,200,150,.25); }
-.badge-verified   { background: rgba(0,200,150,0.10); color: var(--accent); }
-.badge-unverified { background: var(--red-dim); color: var(--red); border: 1px solid var(--red-brd); }
-
-/* ── BUTTONS ── */
-.btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
-  cursor: pointer; border: none; transition: opacity .15s;
-}
-.btn:hover { opacity: .85; }
-.btn:disabled { opacity: .4; cursor: not-allowed; }
-.btn-danger {
-  background: var(--red-dim); color: var(--red);
-  border: 1px solid var(--red-brd);
-}
-.btn-muted {
-  background: var(--surface3); color: var(--muted);
-  border: 1px solid var(--border);
-}
-.btn-accent { background: var(--accent); color: #0a0a0a; }
-
-/* ── PROFILE FORM ── */
-.profile-form { display: flex; flex-direction: column; gap: 1.1rem; }
-.profile-field { display: flex; flex-direction: column; gap: .35rem; }
-.profile-field label { font-size: 12.5px; font-weight: 500; color: var(--muted); }
-.profile-field input {
-  width: 100%; background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 8px; color: var(--text); font-family: var(--font-b);
-  font-size: 14px; padding: 11px 14px; outline: none;
-  transition: border-color .2s;
-}
-.profile-field input:focus { border-color: var(--accent); }
-.profile-field input::placeholder { color: var(--muted2); }
-.field-hint { font-size: 11.5px; color: var(--muted2); margin-top: .1rem; }
-
-/* ── CHANGE PASSWORD FORM ── */
-.pw-form { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
-.pw-form input {
-  width: 100%; background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 8px; color: var(--text); font-family: var(--font-b);
-  font-size: 14px; padding: 11px 14px; outline: none;
-  transition: border-color .2s;
-}
-.pw-form input:focus { border-color: var(--accent); }
-.pw-form input::placeholder { color: var(--muted2); }
-.form-msg { font-size: 12.5px; margin-top: 2px; }
-.form-msg.ok  { color: var(--accent); }
-.form-msg.err { color: var(--red); }
-
-/* ── DANGER ZONE ── */
-.danger-zone {
-  background: var(--red-dim);
-  border: 1px solid var(--red-brd);
-  border-radius: 16px;
-  padding: 1.5rem 1.75rem;
-  margin-bottom: 1.25rem;
-}
-.danger-zone .section-title { color: var(--red); }
-.danger-desc { font-size: 13px; color: var(--muted); margin-bottom: 1rem; }
-
-@media (max-width: 480px) {
-  main { padding: 88px 1.25rem 3rem; }
-  .page-title { font-size: 1.5rem; }
-  .row { flex-direction: column; align-items: flex-start; gap: 0.4rem; }
-}
-
-/* ── DELETE MODAL ── */
-.del-backdrop {
-  display: none; position: fixed; inset: 0; z-index: 1000;
-  background: rgba(0,0,0,.65); backdrop-filter: blur(4px);
-  align-items: center; justify-content: center; padding: 1rem;
-}
-.del-backdrop.open { display: flex; }
-.del-dialog {
-  background: var(--surface); border: 1px solid var(--red-brd);
-  border-radius: 16px; padding: 2rem; width: 100%; max-width: 420px;
-  display: flex; flex-direction: column; gap: 1.25rem;
-}
-.del-title {
-  font-family: var(--font-d); font-size: 1.15rem; font-weight: 800;
-  color: var(--red);
-}
-.del-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
-.del-input {
-  width: 100%; background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 8px; color: var(--text); font-family: var(--font-b);
-  font-size: 14px; padding: 11px 14px; outline: none;
-  transition: border-color .2s;
-}
-.del-input:focus { border-color: var(--red); }
-.del-input::placeholder { color: var(--muted2); }
-.del-error { font-size: 12.5px; color: var(--red); display: none; }
-.del-actions { display: flex; gap: .75rem; justify-content: flex-end; flex-wrap: wrap; }
-
-/* ── FOOTER ─────────────────────── */
-.page-footer { background: var(--footer-bg); border-top: 1px solid var(--border); padding: 2rem 0; margin-top: auto; }
-.footer-inner { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x); display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
-.footer-copy { font-size: 13px; color: var(--muted); }
-.footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
-.footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; }
-.footer-links a:hover { color: var(--text); }
-@media (max-width: 640px) {
-  .footer-inner { flex-direction: column; align-items: flex-start; }
-  :root { --pad-x: 1.5rem; }
-}
-</style>
 </head>
-<body>
+<body class="apple-home apple-account">
+<a class="apple-skip" href="#contenido">Saltar al contenido</a>
 
 <!-- ── NAV ── -->
 <nav id="site-nav">
   <div class="snav-inner">
     <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
     <ul class="snav-links">
+      <li><a href="/herramientas">Herramientas</a></li>
       <li><a href="/como-funciona">Cómo funciona</a></li>
       <li><a href="/recursos">Recursos</a></li>
       <li><a href="/faq">FAQ</a></li>
@@ -226,15 +38,24 @@ main {
 <script src="/static/nav.js"></script>
 
 <!-- ── MAIN ── -->
-<main>
-  <h1 class="page-title">Mi cuenta</h1>
-  <p class="page-sub">Gestiona tu perfil y preferencias.</p>
+<main id="contenido" tabindex="-1">
+  <header class="account-intro"><div class="account-intro-inner">
+    <p class="account-eyebrow">Tu perfil</p>
+    <h1 class="page-title">Mi cuenta</h1>
+    <p class="page-sub">Consulta tu información y gestiona tus datos de acceso con seguridad.</p>
+  </div></header>
+  <div class="account-container">
+    <div class="account-loading" id="accountLoading" role="status" aria-live="polite">
+      <p id="accountStatusText">Comprobando tu sesión y cargando tus datos de cuenta…</p>
+      <button type="button" class="btn btn-muted" id="accountRetry" hidden>Volver a comprobar</button>
+    </div>
+    <div id="accountContent" hidden>
 
   <!-- Información de cuenta -->
   <div class="section">
-    <p class="section-title">Información de cuenta</p>
+    <h2 class="section-title">Información de cuenta</h2>
     <div class="row">
-      <span class="row-label">Email</span>
+      <span class="row-label">Correo electrónico</span>
       <span class="row-value" id="infoEmail">—</span>
     </div>
     <div class="row">
@@ -253,58 +74,65 @@ main {
 
   <!-- Datos personales (nombre + NIF unificados) -->
   <div class="section">
-    <p class="section-title">Datos personales</p>
+    <h2 class="section-title">Datos personales</h2>
     <div class="profile-form">
       <div class="profile-field">
         <label for="nameInput">Nombre y apellidos</label>
-        <input type="text" id="nameInput" placeholder="Mariano Sevilla Trujillo"
+        <input type="text" id="nameInput" placeholder="Nombre y apellidos"
                autocomplete="name" maxlength="150">
       </div>
       <div class="profile-field">
         <label for="nifInput">NIF / NIE / CIF</label>
-        <input type="text" id="nifInput" placeholder="12345678Z" autocomplete="off"
+        <input type="text" id="nifInput" aria-describedby="nifHint" placeholder="12345678Z" autocomplete="off"
                maxlength="20" spellcheck="false" style="text-transform:uppercase;">
-        <span class="field-hint">Necesario para preparar borradores del Modelo 721 y futuros documentos fiscales.</span>
+        <span class="field-hint" id="nifHint">Necesario para preparar borradores del Modelo 721 y futuros documentos fiscales.</span>
       </div>
       <div>
         <button class="btn btn-accent" id="profileBtn">Guardar cambios</button>
-        <p class="form-msg" id="profileMsg" hidden></p>
+        <p class="form-msg" id="profileMsg" role="status" aria-live="polite" hidden></p>
       </div>
     </div>
   </div>
 
   <!-- Cambiar contraseña (solo cuentas email, no OAuth) -->
   <div class="section" id="sectionPassword" hidden>
-    <p class="section-title">Contraseña</p>
+    <h2 class="section-title">Contraseña</h2>
     <div class="pw-form" id="pwForm">
-      <input type="password" id="pwCurrent" placeholder="Contraseña actual" autocomplete="current-password">
-      <input type="password" id="pwNew"     placeholder="Nueva contraseña (mín. 8 caracteres)" autocomplete="new-password">
-      <input type="password" id="pwConfirm" placeholder="Confirmar nueva contraseña" autocomplete="new-password">
+      <div class="profile-field"><label for="pwCurrent">Contraseña actual</label>
+        <input type="password" id="pwCurrent" placeholder="Contraseña actual" autocomplete="current-password"></div>
+      <div class="profile-field"><label for="pwNew">Nueva contraseña</label>
+        <input type="password" id="pwNew" placeholder="Al menos 8 caracteres" autocomplete="new-password"></div>
+      <div class="profile-field"><label for="pwConfirm">Confirmar nueva contraseña</label>
+        <input type="password" id="pwConfirm" placeholder="Repite la nueva contraseña" autocomplete="new-password"></div>
       <div>
         <button class="btn btn-accent" id="pwBtn">Cambiar contraseña</button>
-        <p class="form-msg" id="pwMsg" hidden></p>
+        <p class="form-msg" id="pwMsg" role="status" aria-live="polite" hidden></p>
       </div>
     </div>
   </div>
 
   <!-- Zona de peligro -->
   <div class="danger-zone">
-    <p class="section-title">Zona de peligro</p>
-    <p class="danger-desc">Al eliminar tu cuenta se borrarán permanentemente todos tus datos. Esta acción no se puede deshacer.</p>
+    <h2 class="section-title">Zona de peligro</h2>
+    <p class="danger-desc">Al eliminar tu cuenta, esta se desactivará y se retirarán tus principales datos de identificación. Algunos registros del servicio pueden conservarse según nuestra <a href="/privacidad#conservacion">Política de privacidad</a>. Esta acción no se puede deshacer.</p>
     <button class="btn btn-danger" id="btnDeleteAccount">Eliminar mi cuenta</button>
+  </div>
+    </div>
   </div>
 </main>
 
 <!-- ── MODAL ELIMINACIÓN DE CUENTA ── -->
-<div class="del-backdrop" id="deleteModal" role="dialog" aria-modal="true" aria-labelledby="delTitle">
+<div class="del-backdrop" id="deleteModal" role="dialog" aria-modal="true" aria-labelledby="delTitle" aria-describedby="delHelp">
   <div class="del-dialog">
-    <p class="del-title" id="delTitle">Eliminar cuenta</p>
+    <h2 class="del-title" id="delTitle">Eliminar cuenta</h2>
+    <p class="apple-sr-only" id="delHelp">Esta acción requiere confirmar tu identidad y no se puede deshacer.</p>
 
     <!-- Usuarios con contraseña -->
     <div id="delPanelPassword">
       <p class="del-desc">Para confirmar la eliminación introduce tu contraseña actual. Esta acción no se puede deshacer.</p>
+      <label class="del-label" for="delPasswordInput">Contraseña actual</label>
       <input class="del-input" type="password" id="delPasswordInput"
-             placeholder="Contraseña actual" autocomplete="current-password" style="margin-top:.5rem">
+             placeholder="Contraseña actual" autocomplete="current-password">
     </div>
 
     <!-- Usuarios OAuth — paso 1: solicitar código -->
@@ -315,12 +143,13 @@ main {
     <!-- Usuarios OAuth — paso 2: introducir código -->
     <div id="delPanelOAuthStep2" hidden>
       <p class="del-desc">Introduce el código que hemos enviado a tu email.</p>
+      <label class="del-label" for="delTokenInput">Código de confirmación</label>
       <input class="del-input" type="text" id="delTokenInput"
              placeholder="Código de confirmación" autocomplete="one-time-code"
-             spellcheck="false" style="margin-top:.5rem;letter-spacing:.1em">
+             spellcheck="false" inputmode="text">
     </div>
 
-    <p class="del-error" id="delError"></p>
+    <p class="del-error" id="delError" role="alert" aria-live="assertive"></p>
 
     <div class="del-actions">
       <button class="btn btn-muted" id="delBtnCancel">Cancelar</button>
@@ -330,10 +159,12 @@ main {
 </div>
 
 <script>
-// ── Cargar datos de usuario ─────────────────────
+// ── Comprobación inicial de cuenta ─────────────────────
+document.getElementById('accountRetry').addEventListener('click', () => window.location.reload());
 (async () => {
   try {
     const r = await fetch('/api/me', { credentials: 'include' });
+    if (!r.ok) throw new Error('No se ha podido comprobar tu sesión.');
     const d = await r.json();
     if (!d.user) { window.location.replace('/login/'); return; }
 
@@ -377,8 +208,12 @@ main {
 
     // Exponer tipo de cuenta para el modal de eliminación
     document.body.dataset.isGoogle = u.is_google ? 'true' : 'false';
+    document.getElementById('accountContent').hidden = false;
+    document.getElementById('accountLoading').hidden = true;
   } catch {
-    window.location.replace('/login/');
+    document.getElementById('accountStatusText').textContent =
+      'No podemos comprobar tu sesión en este momento. Vuelve a intentarlo.';
+    document.getElementById('accountRetry').hidden = false;
   }
 })();
 
@@ -508,6 +343,7 @@ document.getElementById('pwBtn').addEventListener('click', async () => {
       setTimeout(() => pwInput.focus(), 80);
     }
     modal.classList.add('open');
+    (_isOAuth ? btnConfirm : pwInput).focus();
   }
 
   function closeModal() {
@@ -517,12 +353,23 @@ document.getElementById('pwBtn').addEventListener('click', async () => {
     clearError();
     btnConfirm.disabled = false;
     btnConfirm.textContent = _isOAuth && _oauthStep === 1 ? 'Enviar código' : 'Eliminar cuenta';
+    btnOpen.focus();
   }
 
   btnOpen.addEventListener('click', openModal);
   btnCancel.addEventListener('click', closeModal);
   modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.classList.contains('open')) closeModal(); });
+  document.addEventListener('keydown', (e) => {
+    if (!modal.classList.contains('open')) return;
+    if (e.key === 'Escape') { e.preventDefault(); closeModal(); return; }
+    if (e.key !== 'Tab') return;
+    const controls = Array.from(modal.querySelectorAll('button:not([disabled]), input:not([disabled])'))
+      .filter(el => el.getClientRects().length > 0);
+    if (!controls.length) return;
+    const first = controls[0], last = controls[controls.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
 
   btnConfirm.addEventListener('click', async () => {
     clearError();
@@ -599,7 +446,7 @@ document.getElementById('pwBtn').addEventListener('click', async () => {
 <!-- ── FOOTER ───────────────────── -->
 <footer class="page-footer">
   <div class="footer-inner">
-    <span class="footer-copy">© 2025 marianosevilla.com — No constituye asesoramiento fiscal ni legal.</span>
+    <span class="footer-copy">© 2026 marianosevilla.com — No constituye asesoramiento fiscal ni legal.</span>
     <div class="footer-links">
       <a href="/privacidad">Privacidad</a>
       <a href="/terminos">Términos</a>

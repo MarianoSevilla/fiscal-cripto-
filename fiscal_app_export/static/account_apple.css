@@ -1,0 +1,154 @@
+/* 01-B · Mi cuenta. Reutiliza los tokens y la cabecera Apple publicados.
+   Estilos exclusivos de /account: no modifica nav.js ni otras páginas. */
+.apple-account {
+  min-height: 100vh;
+  background: #f7f9f8;
+  color: var(--text);
+}
+.apple-account #contenido { min-height: calc(100vh - 64px); padding-top: 64px; }
+.apple-account .account-intro {
+  background: var(--intro-bg);
+  color: var(--intro-text);
+  padding: clamp(30px, 5vw, 48px) var(--apple-pad);
+}
+.apple-account .account-intro-inner { width:100%; max-width: 800px; margin: 0 auto; }
+.apple-account .account-eyebrow { color: var(--intro-accent); font-size: .875rem; font-weight: 650; margin-bottom: 10px; }
+.apple-account #contenido .page-title {
+  max-width: none;
+  margin: 0 0 12px;
+  font-size: clamp(2rem, 4.6vw, 3.25rem);
+  line-height: 1.13; letter-spacing: -.04em; font-weight: 680;
+  color: var(--intro-text);
+}
+.apple-account .page-sub { max-width: 58ch; margin: 0; color: var(--intro-muted); font-size: 1rem; line-height: 1.6; }
+.apple-account .account-container { width: 100%; max-width: 848px; margin: 0 auto; padding: 40px var(--apple-pad) 72px; }
+.apple-account .account-loading {
+  padding: 25px 28px; border: 1px solid var(--border); border-radius: 16px;
+  background: #fff; color: var(--muted); margin-bottom: 22px;
+}
+.apple-account .account-loading p { margin:0 0 8px; }
+.apple-account .account-loading .btn { margin-top: 14px; }
+.apple-account .section {
+  background: #fff; border: 1px solid #e1e7e3; border-radius: 18px;
+  padding: clamp(22px, 3.8vw, 32px); margin-bottom: 20px;
+}
+.apple-account .section-title {
+  margin: 0 0 20px; color: var(--text);
+  font-size: 1.25rem; line-height: 1.3; letter-spacing: -.02em;
+  font-weight: 650; text-transform: none;
+}
+.apple-account .row {
+  display:flex; justify-content:space-between; align-items:baseline;
+  gap: 8px 24px; padding: 17px 0; border-bottom: 1px solid #edf1ee;
+}
+.apple-account .row:last-child { border: 0; padding-bottom:0; }
+.apple-account .row:first-of-type { padding-top:0; }
+.apple-account .row-label { color: var(--muted); font-size:.9375rem; line-height:1.5; }
+.apple-account .row-value { color: var(--text); text-align:right; font-size:1rem; font-weight: 600; overflow-wrap:anywhere; min-width:0; }
+.apple-account .badge {
+  display:inline-flex; align-items:center; gap:5px; border-radius:999px;
+  padding: 5px 11px; font-size: .8125rem; font-weight: 600; line-height:1.4;
+}
+.apple-account .badge-free { background:#eff2f1; color:#46564e; }
+.apple-account .badge-pro { background:#e8f3ef; color:#00533f; }
+.apple-account .badge-verified { background:#e7f3ec; color:#145c42; }
+.apple-account .badge-unverified { background:#fff1ef; color:#9a2920; border:1px solid #f5d5cf; }
+
+.apple-account .profile-form,
+.apple-account .pw-form { display:flex; flex-direction:column; gap:20px; }
+.apple-account .profile-field { display:flex; flex-direction:column; gap:8px; min-width:0; }
+.apple-account .profile-field label,
+.apple-account .del-label {
+  display:block; color:var(--text); font-size:.9375rem;
+  font-weight:600; line-height:1.45;
+}
+.apple-account .profile-field :is(input),
+.apple-account .pw-form input,
+.apple-account .del-input {
+  display:block; width:100%; min-width:0; min-height:48px; padding:11px 14px;
+  border:1px solid #82918e; border-radius:10px;
+  background:#fff; color:var(--text);
+  font:400 1rem/1.5 var(--font-body);
+  transition:border-color .15s, box-shadow .15s;
+}
+.apple-account .profile-field input::placeholder,
+.apple-account .pw-form input::placeholder,
+.apple-account .del-input::placeholder { color:#64746f; opacity:1; }
+.apple-account .profile-field input:focus,
+.apple-account .pw-form input:focus,
+.apple-account .del-input:focus { border-color:var(--accent); box-shadow:0 0 0 2px #e2f3ec; }
+.apple-account .field-hint { color:var(--muted); font-size:.8125rem; line-height:1.5; }
+.apple-account .pw-form { margin-top: 0; }
+.apple-account .btn {
+  display:inline-flex; align-items:center; justify-content:center;
+  min-height: 48px; padding: 11px 22px; border-radius:999px;
+  border:1px solid transparent; font:600 1rem/1.4 var(--font-body);
+  text-align:center; cursor:pointer; transition:background .15s,border-color .15s;
+}
+.apple-account .btn-accent { background:var(--accent); color:#fff; border-color:var(--accent); }
+.apple-account .btn-accent:hover { background:#00533f; border-color:#00533f; }
+.apple-account .btn-muted { background:#fff; border-color:#a7b8b0; color:#25372e; }
+.apple-account .btn-muted:hover { background:#f2f6f4; }
+.apple-account .btn-danger { background:#fff; border-color:#b42318; color:#a2271d; }
+.apple-account .btn-danger:hover { background:#fff1ef; }
+.apple-account .btn:disabled { background:#e1e7e3; border-color:#e1e7e3; color:#536660; opacity:1; cursor:wait; }
+.apple-account .btn:active:not(:disabled) { filter:brightness(.94); }
+.apple-account .form-msg {
+  margin: 12px 0 0; border-radius:10px; padding: 10px 14px;
+  font-size:.9375rem; line-height:1.55; overflow-wrap:anywhere;
+}
+.apple-account .form-msg.ok { background:#e7f3ec; border:1px solid #b6dcca; color:#145c42; }
+.apple-account .form-msg.err { background:#fff1ef; border:1px solid #f2c4bc; color:#9a2920; }
+.apple-account .danger-zone {
+  border: 1px solid #e7c8c3; border-radius:18px; padding: clamp(22px,3.8vw,32px);
+  background:#fff; margin: 0;
+}
+.apple-account .danger-zone .section-title { color:#90251e; margin-bottom:12px; }
+.apple-account .danger-desc { color:#5b5352; font-size:.9375rem; line-height:1.65; margin:0 0 20px; max-width:65ch; }
+
+/* Dialog above shared header; focus and background controls remain native. */
+.apple-account .del-backdrop {
+  position:fixed; inset:0; z-index:1300; display:none;
+  align-items:center; justify-content:center; padding:20px;
+  background:rgba(13,32,24,.56);
+}
+.apple-account .del-backdrop.open { display:flex; }
+.apple-account .del-dialog {
+  display:flex; flex-direction:column; gap:20px;
+  width:100%; max-width:460px; max-height:calc(100dvh - 40px);
+  overflow-y:auto; padding:clamp(24px,4vw,32px);
+  border:1px solid #e1e7e3; border-radius:18px;
+  background:#fff; color:var(--text); box-shadow:0 28px 80px rgba(11,30,22,.2);
+}
+.apple-account .del-title { margin:0; font-size:1.5rem; font-weight:650; line-height:1.25; letter-spacing:-.025em; color:#90251e; }
+.apple-account .del-desc { font-size:.9375rem; line-height:1.6; color:var(--muted); margin:0 0 14px; }
+.apple-account .del-label { margin-bottom:8px; }
+.apple-account .del-error { color:#9a2920; background:#fff1ef; border:1px solid #f2c4bc; border-radius:10px; padding:10px 12px; font-size:.9375rem; line-height:1.5; display:none; }
+.apple-account .del-actions { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:12px; }
+.apple-account .del-actions .btn { flex:0 0 auto; }
+.apple-account .page-footer {
+  border-top:1px solid var(--border); padding:28px 0;
+  margin-top:auto; background:var(--footer-bg); color:var(--muted);
+}
+.apple-account .footer-inner { width:100%; max-width:var(--apple-max); margin:auto; padding:0 var(--apple-pad); display:flex; gap:14px 36px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+.apple-account .footer-copy { color:var(--muted); font-size:.875rem; }
+.apple-account .footer-links { display:flex; flex-wrap:wrap; gap:8px 24px; }
+.apple-account .footer-links a { display:inline-flex; align-items:center; min-height:44px; color:var(--muted); font-size:.875rem; text-decoration:none; }
+.apple-account .footer-links a:hover { color:var(--accent); text-decoration:underline; }
+@media (max-width:768px) {
+ .apple-account .account-container { padding-top:28px; padding-bottom:48px; }
+ .apple-account .row { align-items:flex-start; }
+}
+@media (max-width:480px) {
+ .apple-account .account-intro { padding-block:28px; }
+ .apple-account .account-container { padding:24px 20px 48px; }
+ .apple-account .row { flex-direction:column; gap:4px; }
+ .apple-account .row-value { text-align:left; }
+ .apple-account .btn { width:100%; }
+ .apple-account .del-actions { flex-direction:column-reverse; }
+ .apple-account .del-actions .btn { width:100%; }
+ .apple-account .footer-inner { align-items:flex-start; flex-direction:column; }
+}
+@media (prefers-reduced-motion:reduce) {
+ .apple-account .btn, .apple-account input { transition:none; }
+}
