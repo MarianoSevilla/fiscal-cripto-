@@ -133,6 +133,12 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                         assert page.locator('footer a[href="/terminos"]').count() == 1
                         assert page.locator('meta[name="robots"]').count() == 1
                         assert page.locator("#nombre").input_value() == "Persona ficticia"
+                        # No sustituir las instrucciones de estos exchanges por
+                        # la cadena por defecto de Binance al cargar el DOM.
+                        if name in ("nexo", "uphold", "kucoin"):
+                            hint = page.locator("#dropHint").inner_text().lower()
+                            assert name in hint, (name, width, hint)
+                            assert "binance" not in hint, (name, width, hint)
                         assert page.locator("#csvInput").evaluate(
                             "e => parseFloat(getComputedStyle(e).fontSize)"
                         ) >= 16 or page.locator("#csvInput").evaluate(
