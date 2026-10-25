@@ -115,6 +115,7 @@ def run_account_apple(origin, cookie_name, cookie_value):
                             assert "no coinciden" in page.locator("#pwMsg").inner_text()
                             page.locator("#pwConfirm").fill("new-synthetic-123")
                             page.locator("#pwBtn").click()
+                            page.get_by_text("¡Contraseña actualizada correctamente!").wait_for(state="visible")
                             assert "actualizada" in page.locator("#pwMsg").inner_text()
                             assert any(p == "/api/change-password" for p, _ in calls)
 
@@ -126,6 +127,7 @@ def run_account_apple(origin, cookie_name, cookie_value):
                         page.locator("#nameInput").fill("Persona Editada")
                         page.locator("#nifInput").fill("x1234567l")
                         page.locator("#profileBtn").click()
+                        page.get_by_text("¡Cambios guardados correctamente!").wait_for(state="visible")
                         assert page.locator("#nameInput").input_value() == "Persona Editada"
                         assert page.locator("#nifInput").input_value() == "X1234567L"
                         assert "guardados" in page.locator("#profileMsg").inner_text()
@@ -150,10 +152,12 @@ def run_account_apple(origin, cookie_name, cookie_value):
                         opener.click()
                         if google:
                             page.locator("#delBtnConfirm").click()
+                            page.locator("#delPanelOAuthStep2").wait_for(state="visible")
                             assert page.locator("#delPanelOAuthStep2").is_visible()
                             assert any(p == "/api/delete-account/request" for p, _ in calls)
                             page.locator("#delTokenInput").fill("FAKE-CODE")
                             page.locator("#delBtnConfirm").click()
+                            page.locator("#delError").wait_for(state="visible")
                             assert page.locator("#delError").is_visible()
                             assert any(p == "/api/delete-account" and data == {
                                 "token": "FAKE-CODE"
@@ -164,6 +168,7 @@ def run_account_apple(origin, cookie_name, cookie_value):
                             assert page.evaluate("document.activeElement.id") == "delBtnConfirm"
                             page.locator("#delPasswordInput").fill("fake-pass")
                             page.locator("#delBtnConfirm").click()
+                            page.locator("#delError").wait_for(state="visible")
                             assert page.locator("#delError").is_visible()
                             assert any(p == "/api/delete-account" and data == {
                                 "password": "fake-pass"
