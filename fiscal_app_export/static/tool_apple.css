@@ -666,7 +666,7 @@
 }
 .apple-tool .bar-drop-text { font-size:.9375rem; line-height:1.6; color:var(--text); }
 .apple-tool .bar-drop-text span { color:var(--muted); }
-.apple-tool .bar-field label { color:var(--text); font-size:.9375rem; font-weight:600; }
+.apple-tool .bar-field label,.apple-tool .tool-year-label { display:block; color:var(--text); font-size:.9375rem; font-weight:600; }
 .apple-tool .bar-input {
   min-height:48px; background:#fff; border:1px solid #80958c;
   border-radius:10px; padding:12px 14px; font-size:1rem;
