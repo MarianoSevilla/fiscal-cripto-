@@ -996,16 +996,30 @@
   });
 
   // ── TABS ─────────────────────────────────
+  function activarPestana(btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-selected', 'false');
+      b.tabIndex = -1;
+    });
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    btn.setAttribute('aria-selected', 'true');
+    btn.tabIndex = 0;
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  }
   document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.tab-btn').forEach(b => {
-        b.classList.remove('active');
-        b.setAttribute('aria-selected', 'false');
-      });
-      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-      btn.classList.add('active');
-      btn.setAttribute('aria-selected', 'true');
-      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    btn.tabIndex = btn.classList.contains('active') ? 0 : -1;
+    btn.addEventListener('click', () => activarPestana(btn));
+    btn.addEventListener('keydown', (e) => {
+      if (!['ArrowRight','ArrowLeft','Home','End'].includes(e.key)) return;
+      e.preventDefault();
+      const tabs = [...document.querySelectorAll('.tab-btn')];
+      const index = tabs.indexOf(btn);
+      const next = e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1
+        : (index + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+      activarPestana(tabs[next]);
+      tabs[next].focus();
     });
   });
 
@@ -1244,10 +1258,7 @@
     // Si no hay operaciones FIFO pero sí advertencias, ir directamente al tab de advertencias
     // para que el usuario vea el motivo (p.ej. CSV de transacciones de Bitget).
     if ((data.operaciones || []).length === 0 && warns.length > 0) {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-      document.querySelector('[data-tab="advertencias"]').classList.add('active');
-      document.getElementById('tab-advertencias').classList.add('active');
+      activarPestana(document.querySelector('[data-tab="advertencias"]'));
     }
   }
 
