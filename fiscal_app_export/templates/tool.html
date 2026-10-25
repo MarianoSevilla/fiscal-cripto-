@@ -535,6 +535,9 @@
     cryptocom: {
       hint: 'Arrastra aquí el CSV de Crypto.com o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">crypto_transactions_record_*.csv · solo ficheros .csv</span>',
     },
+    uphold: {
+      hint: 'Arrastra aquí el CSV de Uphold o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Historial de movimientos · solo ficheros .csv</span>',
+    },
     mexc: {
       hint: 'Arrastra aquí el XLS/XLSX de MEXC o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Trade Records · solo ficheros .xls / .xlsx</span>',
     },
@@ -674,13 +677,14 @@
     const zona = document.getElementById('dropZone');
     zona.classList.add('error-zone');
     const hint = document.getElementById('dropHint');
+    const previousHint = hint.innerHTML;
     hint.textContent = msg;
     hint.style.color = 'var(--red)';
     setTimeout(() => {
       zona.classList.remove('error-zone');
       hint.style.color = '';
-      const info = instrucciones[selectedExchange] || instrucciones.binance;
-      hint.innerHTML = info.hint;
+      const info = instrucciones[selectedExchange];
+      hint.innerHTML = info ? info.hint : previousHint;
     }, 4000);
   }
 
