@@ -120,6 +120,14 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                         assert response and response.status == 200, (name, width, response.status if response else None)
                         assert page.locator("body").get_attribute("class") == "apple-home apple-tool"
                         assert page.locator("#site-nav").is_visible()
+                        if name != "fiscal":
+                            badge_image = page.locator(".bar-exchange img")
+                            assert badge_image.count() == 1
+                            assert badge_image.evaluate(
+                                "image => image.complete && image.naturalWidth > 0"
+                            ), (name, width, "exchange logo unavailable")
+                            if name == "kucoin":
+                                assert badge_image.get_attribute("src") == "/static/images/kucoin.png"
                         assert page.locator("main#contenido").count() == 1
                         assert page.locator("h1").count() == 1
                         assert page.locator("#emptyState").is_visible()
