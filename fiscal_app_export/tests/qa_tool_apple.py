@@ -7,7 +7,7 @@ called or written. The server is the temporary SQLite Flask fixture.
 import json
 from pathlib import Path
 from urllib.parse import urlsplit
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import expect, sync_playwright
 
 TOOLS = ("fiscal", "bitvavo", "bit2me", "kraken", "coinbase", "nexo",
          "cryptocom", "uphold", "mexc", "bitget", "kucoin")
@@ -174,7 +174,7 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                                 ]
                             picker.set_input_files(inputs)
                             page.locator("#btnAnalizar").wait_for(state="visible")
-                            page.wait_for_function("!document.getElementById('btnAnalizar').disabled")
+                            expect(page.locator("#btnAnalizar")).to_be_enabled(timeout=12000)
                             assert page.locator("#year-chips-wrap").is_visible()
                             assert page.locator('.year-chip[data-year="2025"]').count() == 1
                             return count
