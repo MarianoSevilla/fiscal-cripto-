@@ -551,9 +551,10 @@
     document.getElementById('dropHint').innerHTML = info.hint;
   }
 
-  // Si es página de exchange específico, actualizar hint al cargar
-  if (EXCHANGE_PAGE) {
-    const info = instrucciones[EXCHANGE_PAGE] || instrucciones.binance;
+  // Solo sustituir el texto del servidor si existe una instrucción
+  // específica: Nexo, Uphold y KuCoin conservan el hint Jinja correcto.
+  if (EXCHANGE_PAGE && instrucciones[EXCHANGE_PAGE]) {
+    const info = instrucciones[EXCHANGE_PAGE];
     document.addEventListener('DOMContentLoaded', () => {
       const hintEl = document.getElementById('dropHint');
       if (hintEl) hintEl.innerHTML = info.hint;
