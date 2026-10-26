@@ -151,6 +151,17 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                                 assert badge_image.get_attribute("src") == "/static/images/kucoin.png"
                         assert page.locator("main#contenido").count() == 1
                         assert page.locator("h1").count() == 1
+                        # El distintivo y el título deben comenzar en el mismo eje.
+                        # El antiguo inline-flex dejaba el distintivo pegado al borde.
+                        label_left = page.locator(".hero .hero-label").evaluate(
+                            "el => el.getBoundingClientRect().left"
+                        )
+                        title_left = page.locator(".hero h1").evaluate(
+                            "el => el.getBoundingClientRect().left"
+                        )
+                        assert abs(label_left - title_left) <= 1, (
+                            name, width, "hero label misaligned", label_left, title_left
+                        )
                         assert page.locator("#emptyState").is_visible()
                         assert not page.locator("#resultsContent").is_visible()
                         assert page.locator("#btnAnalizar").is_disabled()

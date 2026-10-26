@@ -606,6 +606,7 @@
 }
 .apple-tool .hero > * { max-width:var(--apple-max); margin-inline:auto; }
 .apple-tool .hero .hero-label {
+  display:flex;
   color:var(--intro-accent); font-size:.875rem; text-transform:none;
   letter-spacing:0; font-weight:650; margin-bottom:12px;
 }
