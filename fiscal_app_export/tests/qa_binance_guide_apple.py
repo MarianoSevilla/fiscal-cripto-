@@ -1,4 +1,4 @@
-"""04-A: public Binance editorial guide — Apple style, SEO, navigation and layout."""
+"""04-B1: public Binance editorial guide — Apple style, SEO, navigation and layout."""
 import json
 from pathlib import Path
 from urllib.parse import urlsplit
