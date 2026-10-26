@@ -26,9 +26,6 @@
 <link rel="icon" href="/static/favicon.ico">
 <link rel="manifest" href="/static/site.webmanifest">
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/nav.css">
 <link rel="preload" href="/static/nav.js" as="script">
 
@@ -644,14 +641,18 @@ details[open] .faq-q::after { transform: rotate(45deg); }
   to   { opacity: 1; transform: translateY(0); }
 }
 </style>
+<link rel="stylesheet" href="/static/landing_apple.css">
+<link rel="stylesheet" href="/static/exchange_guide_apple.css">
 </head>
-<body>
+<body class="apple-home apple-exchange-guide apple-guide-binance">
+<a class="apple-skip" href="#contenido">Saltar al contenido</a>
 
 <!-- ── NAV ──────────────────────────── -->
-<nav id="site-nav">
+<nav id="site-nav" aria-label="Principal">
   <div class="snav-inner">
     <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
     <ul class="snav-links">
+      <li><a href="/herramientas">Herramientas</a></li>
       <li><a href="/como-funciona">Cómo funciona</a></li>
       <li><a href="/recursos">Recursos</a></li>
       <li><a href="/faq">FAQ</a></li>
@@ -665,6 +666,7 @@ details[open] .faq-q::after { transform: rotate(45deg); }
 <script src="/static/nav.js" defer></script>
 
 <!-- ── HERO ──────────────────────────── -->
+<main id="contenido" tabindex="-1">
 <section class="hero">
   <div class="wrap">
 
@@ -688,22 +690,6 @@ details[open] .faq-q::after { transform: rotate(45deg); }
       criptomonedas en España.
     </p>
 
-    <div class="asistencia-block">
-      <div class="asistencia-badge">INFORME FIFO BINANCE</div>
-      <p>
-        <strong>Genera tu informe FIFO de Binance</strong>
-        Sube los CSV de Binance y obtén un PDF fiscal listo para revisar.
-      </p>
-      <ul class="asistencia-bullets">
-        <li>✓ Spot, Earn y conversiones</li>
-        <li>✓ Método FIFO automático</li>
-        <li>✓ PDF descargable para Hacienda</li>
-      </ul>
-      <a href="/binance" class="btn-asistencia">
-        Generar informe fiscal de Binance
-      </a>
-    </div>
-
   </div>
 </section>
 
@@ -714,6 +700,22 @@ details[open] .faq-q::after { transform: rotate(45deg); }
 
       <!-- ── CONTENIDO PRINCIPAL ─────── -->
       <div class="content-main prose">
+
+        <div class="asistencia-block">
+          <div class="asistencia-badge">INFORME FIFO BINANCE</div>
+          <p>
+            <strong>Genera tu informe FIFO de Binance</strong>
+            Sube los CSV de Binance y obtén un PDF fiscal listo para revisar.
+          </p>
+          <ul class="asistencia-bullets">
+            <li>✓ Spot, Earn y conversiones</li>
+            <li>✓ Método FIFO automático</li>
+            <li>✓ PDF descargable para Hacienda</li>
+          </ul>
+          <a href="/binance" class="btn-asistencia">
+            Generar informe fiscal de Binance
+          </a>
+        </div>
 
         <h2>Por qué el CSV de Binance es diferente al de otros exchanges</h2>
 
@@ -1142,6 +1144,8 @@ details[open] .faq-q::after { transform: rotate(45deg); }
     </div>
   </div>
 </section>
+
+</main>
 
 <!-- ── FOOTER (legal-bar, igual que la home) ──────────── -->
 <div class="legal-bar">
