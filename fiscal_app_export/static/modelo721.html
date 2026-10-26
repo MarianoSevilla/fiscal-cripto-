@@ -858,17 +858,23 @@ function restoreDraftFormValues(draft) {
   }
 })();
 
-// ── EJERCICIOS ─────────────────────────────────────────────────────────────
+// ── EJERCICIOS: Orden HFP/886/2023; el corte 31/12 debe haber pasado ─────
+function ultimoEjercicioDeclarable721(fecha = new Date()) {
+  // La referencia fiscal es España, incluso si el navegador está en otro huso.
+  const anioEspaña = new Intl.DateTimeFormat('en-GB', {
+    year: 'numeric', timeZone: 'Europe/Madrid'
+  }).format(fecha);
+  return Number(anioEspaña) - 1;
+}
+
 (function populateEjercicios() {
-  const sel   = document.getElementById('sel-ejercicio');
-  const hoy   = new Date();
-  const max   = hoy.getFullYear() + 1;
-  const desde = 2022;
-  const defaultYear = hoy.getFullYear() - 1;
-  for (let y = max; y >= desde; y--) {
+  const sel = document.getElementById('sel-ejercicio');
+  const ultimo = ultimoEjercicioDeclarable721();
+  const primerEjercicio = 2023;  // Primera declaración: ejercicio 2023.
+  for (let y = ultimo; y >= primerEjercicio; y--) {
     const opt = document.createElement('option');
-    opt.value = y; opt.textContent = y;
-    if (y === defaultYear) opt.selected = true;
+    opt.value = String(y);
+    opt.textContent = String(y);
     sel.appendChild(opt);
   }
 })();
