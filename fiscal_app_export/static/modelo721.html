@@ -10,10 +10,8 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
 <link rel="icon" href="/static/favicon.ico">
 <link rel="manifest" href="/static/site.webmanifest">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/nav.css">
+<link rel="stylesheet" href="/static/landing_apple.css">
 <link rel="preload" href="/static/nav.js" as="script">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -393,14 +391,17 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
   .btn-download, .btn-secondary { width: 100%; justify-content: center; }
 }
 </style>
+<link rel="stylesheet" href="/static/modelo721_apple.css">
 </head>
-<body>
+<body class="apple-home apple-modelo721">
+<a class="apple-skip" href="#contenido">Saltar al contenido</a>
 
 <!-- ── NAV ── -->
 <nav id="site-nav">
   <div class="snav-inner">
     <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
     <ul class="snav-links">
+      <li><a href="/herramientas">Herramientas</a></li>
       <li><a href="/como-funciona">Cómo funciona</a></li>
       <li><a href="/recursos">Recursos</a></li>
       <li><a href="/faq">FAQ</a></li>
@@ -413,7 +414,7 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
 </nav>
 <script src="/static/nav.js"></script>
 
-<main>
+<main id="contenido" tabindex="-1">
 
   <!-- ── BANNER: BORRADOR GUARDADO ── -->
   <div id="draft-banner" style="display:none;" class="draft-banner">
@@ -439,12 +440,14 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
   <!-- ── PANEL: FORMULARIO ── -->
   <div id="panel-form">
 
-    <div class="page-badge">
-      <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><circle cx="5" cy="5" r="5"/></svg>
-      Modelo 721
+    <div class="m721-hero">
+      <div class="page-badge">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><circle cx="5" cy="5" r="5"/></svg>
+        Modelo 721
+      </div>
+      <h1 class="page-title">Criptomonedas en el extranjero</h1>
+      <p class="page-sub">Genera el borrador del Modelo 721 a partir de tu historial de operaciones. Sube el CSV de tu exchange, selecciona el ejercicio y obtén los datos estructurados.</p>
     </div>
-    <h1 class="page-title">Criptomonedas en el extranjero</h1>
-    <p class="page-sub">Genera el borrador del Modelo 721 a partir de tu historial de operaciones. Sube el CSV de tu exchange, selecciona el ejercicio y obtén los datos estructurados.</p>
 
     <!-- Exchange + ejercicio -->
     <div class="card">
@@ -496,7 +499,7 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
           </div>
           <div class="drop-filename" id="drop-filename" style="display:none;"></div>
         </div>
-        <p class="field-hint" id="csv-hint">El archivo nunca se almacena — se procesa en el servidor y se descarta inmediatamente.</p>
+        <p class="field-hint" id="csv-hint">Utilizamos tu archivo para preparar el análisis e intentamos eliminar los temporales al finalizar. Algunos registros pueden conservarse. <a href="/privacidad#conservacion">Política de privacidad</a>.</p>
       </div>
     </div>
 
@@ -518,7 +521,7 @@ select:focus, input[type="text"]:focus, input[type="number"]:focus {
             <input type="text" id="inp-nombre" placeholder="Apellido1 Apellido2, Nombre" maxlength="120" autocomplete="name">
           </div>
         </div>
-        <p class="field-hint" style="margin-top:-.5rem;">Sin estos datos puedes obtener el resumen orientativo, pero el XML para la AEAT no se generará. <strong>No se guardan</strong> en ningún momento.</p>
+        <p class="field-hint" style="margin-top:-.5rem;">Sin estos datos puedes obtener el resumen orientativo, pero el XML para la AEAT no se generará. Los datos facilitados se utilizan para preparar el análisis y pueden conservarse en un borrador de este navegador.</p>
       </div>
     </div>
 
@@ -930,12 +933,14 @@ function updateFormState() {
       document.getElementById('csv-label').textContent = 'Archivo XLS / XLSX';
       document.getElementById('csv-hint').innerHTML =
         'MEXC exporta en formato XLS/XLSX desde <strong>Órdenes → Historial de operaciones → Exportar</strong>. ' +
-        'El archivo nunca se almacena — se descarta inmediatamente tras el análisis.';
+        'Intentamos eliminar los archivos temporales al finalizar el análisis. Algunos registros pueden conservarse. ' +
+        '<a href="/privacidad#conservacion">Política de privacidad</a>.';
     } else {
       fileInput.accept = '.csv,.txt';
       document.getElementById('csv-label').textContent = 'Archivo CSV';
-      document.getElementById('csv-hint').textContent =
-        'El archivo nunca se almacena — se procesa en el servidor y se descarta inmediatamente.';
+      document.getElementById('csv-hint').innerHTML =
+        'Utilizamos tu archivo para preparar el análisis e intentamos eliminar los temporales al finalizar. ' +
+        'Algunos registros pueden conservarse. <a href="/privacidad#conservacion">Política de privacidad</a>.';
     }
 
     // Si había un archivo seleccionado de otro tipo, limpiarlo
