@@ -63,14 +63,14 @@
   max-width:75ch; margin:0 0 32px;
   color:#c3dbd1; font-size:1.0625rem; line-height:1.7;
 }
-.apple-exchange-guide .hero .asistencia-block {
-  max-width:650px; margin:0;
-  background:#fff; color:var(--text);
+.apple-exchange-guide .content-main > .asistencia-block {
+  max-width:none; margin:0 0 36px;
+  background:#f5f8f6; color:var(--text);
   border:1px solid #d7e3dd; border-radius:16px;
   padding:clamp(20px,3vw,30px);
-  box-shadow:0 12px 36px rgba(0,22,14,.12);
+  box-shadow:none;
 }
-.apple-exchange-guide .hero .asistencia-badge {
+.apple-exchange-guide .content-main > .asistencia-block .asistencia-badge {
   padding:0; margin-bottom:12px;
   border:0; border-radius:0;
   color:#006b54; font:.875rem/1.4 var(--font-body);
@@ -116,7 +116,7 @@
 .apple-exchange-guide .hero a:focus-visible {
   outline-color:#a6edcf;
 }
-.apple-exchange-guide .hero .asistencia-block a:focus-visible { outline-color:#005fcc; }
+.apple-exchange-guide .content-main > .asistencia-block a:focus-visible { outline-color:#005fcc; }
 .apple-exchange-guide .hero + .section { padding-top:48px; }
 .apple-exchange-guide .section { padding:48px 0 64px; }
 .apple-exchange-guide .section + .section { border-color:var(--border); }
@@ -303,7 +303,7 @@
   .apple-exchange-guide .step-item { gap:12px; }
   .apple-exchange-guide .error-card { padding:20px; }
   .apple-exchange-guide .hero .asistencia-block { padding:22px; }
-  .apple-exchange-guide .hero .btn-asistencia { width:100%; }
+  .apple-exchange-guide .content-main > .asistencia-block .btn-asistencia { width:100%; }
   .apple-exchange-guide .cta-buttons { flex-direction:column; align-items:stretch; }
   .apple-exchange-guide .cta-buttons a { width:100%; }
   .apple-exchange-guide .cta-final { padding:44px 0 60px; }
