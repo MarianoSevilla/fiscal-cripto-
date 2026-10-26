@@ -276,7 +276,16 @@ def test_c04_ejercicios_cerrados_aceptados(client, user_sin_nif, ejercicio):
         assert "ejercicio" not in data.get("error", "").lower(), data
 
 
-def test_c05_limite_anual_avanza_en_enero():
+def test_c05_bit2me_no_omite_validacion_fechas(client, user_sin_nif):
+    """La excepción informativa de Bit2Me no abre años futuros vía API."""
+    _login(client, "api721_sinnif@example.com")
+    with patch("app._721_ultimo_ejercicio", return_value=2025):
+        res = _post_721(client, ejercicio="2027", exchange="bit2me")
+    assert res.status_code == 400, res.get_json()
+    assert "2025" in res.get_json()["error"]
+
+
+def test_c06_limite_anual_avanza_en_enero():
     """Cambio de ejercicio el 1 de enero, tomando huso Europe/Madrid."""
     from datetime import timezone
     from app import _721_ultimo_ejercicio
