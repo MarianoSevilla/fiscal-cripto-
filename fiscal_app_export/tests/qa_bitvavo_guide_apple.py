@@ -132,10 +132,30 @@ def run_bitvavo_guide_apple(origin, cookie_name, cookie_value):
                         assert page.locator("#snavMobileMenu").is_visible()
                         page.locator("#snavMenuToggle").click()
 
-                    # Only the table itself can scroll horizontally on phone sizes.
-                    assert page.evaluate(
-                        "() => document.documentElement.scrollWidth <= innerWidth + 1"
-                    ), (width, "document horizontal overflow")
+                    # Diagnóstico de desbordamiento: registrar los elementos exactos
+                    # sin enmascarar un posible error de diseño con overflow-x:hidden.
+                    overflow = page.evaluate("""() => {
+                        const root = document.documentElement;
+                        const vw = innerWidth;
+                        const elems = [...document.querySelectorAll('body *')];
+                        const offenders = elems.map(el => {
+                            const r = el.getBoundingClientRect();
+                            const cs = getComputedStyle(el);
+                            return {tag: el.tagName, cls: String(el.className).slice(0,90),
+                                right: Math.round(r.right), left: Math.round(r.left),
+                                width: Math.round(r.width), scroll: el.scrollWidth,
+                                client: el.clientWidth, overflowX: cs.overflowX};
+                        }).filter(x => x.right > vw + 1 && x.width > 0)
+                          .sort((a,b) => b.right - a.right).slice(0,22);
+                        return {viewport: vw, document: root.scrollWidth,
+                                body: document.body.scrollWidth, offenders};
+                    }""")
+                    if overflow["document"] > width + 1:
+                        print("BITVAVO_GUIDE_OVERFLOW_DIAGNOSTIC:",
+                              json.dumps(overflow, ensure_ascii=False), flush=True)
+                    assert overflow["document"] <= width + 1, (
+                        width, "document horizontal overflow", overflow
+                    )
                     if width == 375:
                         assert page.locator(".files-table-wrap").evaluate(
                             "el => el.scrollWidth > el.clientWidth"
