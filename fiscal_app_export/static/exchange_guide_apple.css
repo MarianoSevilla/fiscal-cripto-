@@ -1,0 +1,311 @@
+/* 04-A · Guías de exchanges. Hoja opt-in para el diseño Apple.
+   Unicamente la guía Bitvavo lleva la clase apple-exchange-guide en esta fase.
+   Mantiene el contenido, sus enlaces y los metadatos SEO originales. */
+.apple-exchange-guide {
+  --accent:#006b54;
+  --accent-dim:#e8f3ef;
+  --accent-glow:#b5dccc;
+  --bg:#ffffff;
+  --bg2:#f5f7f6;
+  --surface:#ffffff;
+  --surface2:#f3f6f5;
+  --text:#1d2428;
+  --muted:#53616b;
+  --border:#dce2e5;
+  --border2:#cbd4d8;
+  --footer-bg:#f5f7f6;
+  --max-w:1160px;
+  --pad-x:clamp(20px,4vw,48px);
+  --font-display:system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-body:system-ui,-apple-system,"Segoe UI",sans-serif;
+  background:#fff;
+  color:var(--text);
+  font:400 1rem/1.65 var(--font-body);
+}
+.apple-exchange-guide .wrap {
+  max-width:var(--max-w);
+  margin-inline:auto;
+  padding-inline:var(--pad-x);
+  min-width:0;
+}
+.apple-exchange-guide .hero {
+  padding:108px 0 68px;
+  background:#073c32;
+  color:#fff;
+  animation:none;
+}
+.apple-exchange-guide .hero .wrap { min-width:0; }
+.apple-exchange-guide .breadcrumb {
+  display:flex; flex-wrap:wrap; align-items:center;
+  gap:7px; margin-bottom:34px;
+  color:#c3dbd1; font-size:.875rem; line-height:1.5;
+}
+.apple-exchange-guide .breadcrumb a { color:#dcebe5; text-decoration:underline; }
+.apple-exchange-guide .breadcrumb a:hover { color:#fff; }
+.apple-exchange-guide .breadcrumb-sep { color:#a6cbbd; }
+.apple-exchange-guide .hero-badge {
+  display:inline-flex; padding:0; border:0; border-radius:0;
+  background:none; color:#a6edcf; box-shadow:none;
+  font:.65rem/1.5 var(--font-body);
+  font-weight:650; letter-spacing:.015em;
+  text-transform:none; margin-bottom:14px;
+}
+.apple-exchange-guide .hero-badge::before { box-shadow:none; background:#a6edcf; }
+.apple-exchange-guide .hero h1 {
+  max-width:27ch; margin:0 0 24px;
+  font:700 clamp(2.125rem,4.7vw,3.65rem)/1.1 var(--font-display);
+  letter-spacing:-.043em;
+  text-wrap:balance; overflow-wrap:normal;
+  color:#fff;
+}
+.apple-exchange-guide .hero h1 em { color:#a6edcf; }
+.apple-exchange-guide .hero-desc {
+  max-width:75ch; margin:0 0 32px;
+  color:#c3dbd1; font-size:1.0625rem; line-height:1.7;
+}
+.apple-exchange-guide .hero .asistencia-block {
+  max-width:650px; margin:0;
+  background:#fff; color:var(--text);
+  border:1px solid #d7e3dd; border-radius:16px;
+  padding:clamp(20px,3vw,30px);
+  box-shadow:0 12px 36px rgba(0,22,14,.12);
+}
+.apple-exchange-guide .hero .asistencia-badge {
+  padding:0; margin-bottom:12px;
+  border:0; border-radius:0;
+  color:#006b54; font:.875rem/1.4 var(--font-body);
+  font-weight:650; letter-spacing:0; text-transform:none;
+}
+.apple-exchange-guide .asistencia-block p {
+  color:var(--muted); font-size:.9375rem; line-height:1.6; margin-bottom:12px;
+}
+.apple-exchange-guide .asistencia-block p strong {
+  display:block; color:var(--text); font-size:1.125rem;
+  font-weight:650; line-height:1.4; margin-bottom:4px;
+}
+.apple-exchange-guide .asistencia-bullets { gap:7px; margin:0 0 18px; }
+.apple-exchange-guide .asistencia-bullets li {
+  color:var(--muted); font-size:.9rem; letter-spacing:0;
+}
+.apple-exchange-guide :is(.btn-asistencia,.btn-cta,.sidebar-cta) {
+  display:inline-flex; justify-content:center; align-items:center;
+  min-height:48px; padding:12px 24px; width:auto;
+  border:1px solid #006b54; border-radius:999px;
+  background:#006b54; color:#fff;
+  font:650 1rem/1.4 var(--font-body);
+  text-align:center; text-decoration:none;
+  box-shadow:none; opacity:1; transform:none;
+}
+.apple-exchange-guide :is(.btn-asistencia,.btn-cta,.sidebar-cta):hover {
+  background:#00533f; color:#fff; opacity:1; text-decoration:none;
+}
+.apple-exchange-guide :is(.btn-outline) {
+  display:inline-flex; align-items:center; justify-content:center;
+  min-height:48px; padding:12px 24px;
+  border:1px solid #a9c4b8; border-radius:999px;
+  background:#fff; color:#006b54;
+  font:650 1rem/1.4 var(--font-body);
+  text-decoration:none;
+}
+.apple-exchange-guide .btn-outline:hover {
+  background:#edf5f1; color:#004b3a; text-decoration:none;
+}
+.apple-exchange-guide :is(.btn-asistencia,.btn-cta,.btn-outline,.sidebar-cta):focus-visible {
+  outline:3px solid #005fcc; outline-offset:4px;
+}
+.apple-exchange-guide .hero a:focus-visible {
+  outline-color:#a6edcf;
+}
+.apple-exchange-guide .hero .asistencia-block a:focus-visible { outline-color:#005fcc; }
+.apple-exchange-guide .hero + .section { padding-top:48px; }
+.apple-exchange-guide .section { padding:48px 0 64px; }
+.apple-exchange-guide .section + .section { border-color:var(--border); }
+.apple-exchange-guide .content-grid {
+  display:grid; grid-template-columns:minmax(0,1fr) 278px;
+  gap:clamp(28px,4vw,56px); align-items:start; min-width:0;
+}
+.apple-exchange-guide .content-main { min-width:0; }
+.apple-exchange-guide .prose h2 {
+  font:650 clamp(1.625rem,2.8vw,2.2rem)/1.2 var(--font-display);
+  letter-spacing:-.03em; margin:44px 0 18px; color:var(--text);
+  scroll-margin-top:96px;
+}
+.apple-exchange-guide .prose h2:first-child { margin-top:0; }
+.apple-exchange-guide .prose h3 {
+  font:650 1.25rem/1.32 var(--font-display);
+  letter-spacing:-.015em; margin:28px 0 10px; color:var(--text);
+}
+.apple-exchange-guide .prose p {
+  font:400 1rem/1.78 var(--font-body);
+  color:var(--muted); margin:0 0 18px;
+}
+.apple-exchange-guide .prose :is(strong,b) { color:var(--text); font-weight:650; }
+.apple-exchange-guide .prose :not(.btn-cta):not(.btn-outline) > a { color:#006b54; text-underline-offset:.2em; }
+.apple-exchange-guide .sidebar { position:sticky; top:88px; gap:16px; }
+.apple-exchange-guide .sidebar-card {
+  padding:24px; border:1px solid var(--border);
+  background:#f6f8f7; border-radius:16px;
+  box-shadow:none;
+}
+.apple-exchange-guide .sidebar-card-title {
+  font:650 1rem/1.4 var(--font-display);
+  margin-bottom:16px; color:var(--text);
+}
+.apple-exchange-guide .sidebar-steps { gap:12px; margin-bottom:20px; }
+.apple-exchange-guide .sidebar-steps li {
+  font-size:.875rem; color:var(--muted);
+}
+.apple-exchange-guide .sidebar-steps li::before {
+  width:22px; height:22px;
+  border:0; color:#006b54; background:#e0eee7;
+  font-size:.75rem;
+}
+.apple-exchange-guide .sidebar-cta { width:100%; padding-inline:14px; font-size:.875rem; }
+.apple-exchange-guide .sidebar-note { margin-top:12px; font-size:.8rem; opacity:1; }
+.apple-exchange-guide .sidebar-links { gap:10px; }
+.apple-exchange-guide .sidebar-links a { color:#425c51; font-size:.875rem; line-height:1.5; }
+.apple-exchange-guide .sidebar-links a:hover { color:#004b3a; text-decoration:underline; }
+.apple-exchange-guide .files-table-wrap {
+  max-width:100%; overflow-x:auto;
+  border:1px solid var(--border);
+  border-radius:14px; margin:24px 0;
+  background:#fff;
+}
+.apple-exchange-guide .files-table {
+  min-width:620px; border-collapse:collapse;
+  font-size:.875rem; line-height:1.5;
+}
+.apple-exchange-guide .files-table th {
+  padding:14px 16px; color:#40554b;
+  background:#f3f6f5; border-color:var(--border);
+  font-size:.78rem; letter-spacing:0; text-transform:none;
+}
+.apple-exchange-guide .files-table td {
+  padding:13px 16px; color:var(--text);
+  border-color:#e8eeeb; vertical-align:top;
+}
+.apple-exchange-guide .files-table tr:hover td { background:#f8faf9; }
+.apple-exchange-guide .files-table .tag-muted {
+  background:#f3f6f5; color:#53616b; border-color:var(--border);
+}
+.apple-exchange-guide .files-table .tag-green {
+  background:#e8f3ef; color:#005b47; border-color:#c5dfd4;
+}
+.apple-exchange-guide .steps-list { gap:18px; margin:22px 0 32px; }
+.apple-exchange-guide .step-item { gap:15px; }
+.apple-exchange-guide .step-num {
+  width:36px; height:36px; margin-top:0;
+  background:#e7f2ec; border:0;
+  color:#006b54; font:700 .95rem/36px var(--font-body);
+}
+.apple-exchange-guide .step-title {
+  font:650 1rem/1.45 var(--font-display);
+  margin-bottom:6px; color:var(--text);
+}
+.apple-exchange-guide .step-desc { font-size:.9375rem; line-height:1.7; color:var(--muted); }
+.apple-exchange-guide .step-note {
+  padding:4px 10px; border:1px solid #c4ddd1;
+  background:#eff7f2; border-radius:8px; color:#005d49;
+}
+.apple-exchange-guide .error-list { gap:14px; }
+.apple-exchange-guide .error-card {
+  padding:22px 24px; border:1px solid var(--border);
+  background:#fff; border-radius:14px;
+}
+.apple-exchange-guide .error-num {
+  background:#fff1ef; border:1px solid #f1c4bd; color:#b42318;
+}
+.apple-exchange-guide .error-title {
+  font:650 1rem/1.45 var(--font-display); color:var(--text);
+}
+.apple-exchange-guide .error-body { font-size:.9375rem; color:var(--muted); line-height:1.7; }
+.apple-exchange-guide .highlight-box {
+  padding:20px 24px; border:1px solid #c5dfd4;
+  border-left:3px solid #006b54;
+  border-radius:12px; background:#f4faf6;
+  color:var(--muted);
+}
+.apple-exchange-guide .warning-box {
+  background:#fff7f3; border:1px solid #f0d3c8;
+  border-radius:12px; padding:20px 24px;
+}
+.apple-exchange-guide .warning-text { color:#644137; font-size:.9375rem; }
+.apple-exchange-guide .warning-text strong { color:#9d321f; }
+.apple-exchange-guide .info-box {
+  background:#eef8f3; border:1px solid #c5dfd4;
+  border-radius:12px; padding:20px 24px;
+}
+.apple-exchange-guide .info-text { color:#31534a; font-size:.9375rem; }
+.apple-exchange-guide .info-text a { color:#005a46; }
+.apple-exchange-guide .faq-list { margin-top:20px; }
+.apple-exchange-guide .faq-item { border-color:var(--border); }
+.apple-exchange-guide .faq-q {
+  min-height:60px; padding:18px 0;
+  color:var(--text); font-size:1rem; font-weight:650;
+}
+.apple-exchange-guide .faq-q::after { color:#006b54; }
+.apple-exchange-guide .faq-a { font-size:.95rem; color:var(--muted); line-height:1.7; padding-bottom:20px; }
+.apple-exchange-guide .cta-mid {
+  background:#f3f7f5; border:1px solid #d5e4dd;
+  border-radius:18px; padding:clamp(22px,3vw,36px);
+  margin:36px 0; text-align:left;
+}
+.apple-exchange-guide .cta-mid-title {
+  color:var(--text); font:650 clamp(1.25rem,2vw,1.625rem)/1.3 var(--font-display);
+  letter-spacing:-.025em;
+}
+.apple-exchange-guide .cta-mid p { font-size:1rem; color:var(--muted); }
+.apple-exchange-guide .cta-benefits { gap:8px; margin:12px 0 20px; }
+.apple-exchange-guide .cta-benefits li { color:#425a50; font-size:.9375rem; }
+.apple-exchange-guide .cta-benefits li::before { color:#006b54; }
+.apple-exchange-guide .cta-buttons { gap:12px; }
+.apple-exchange-guide .cta-final {
+  padding:56px 0 72px; border-top:1px solid var(--border);
+  background:#fff; text-align:left;
+}
+.apple-exchange-guide .cta-final .content-grid {
+  grid-template-columns:minmax(0,1fr);
+}
+.apple-exchange-guide .cta-final .content-main { width:100%; max-width:840px; margin-inline:auto; }
+.apple-exchange-guide .cta-final .cta-mid { margin:0; }
+.apple-exchange-guide .cta-final .cta-mid .cta-micro {
+  color:var(--muted); opacity:1; margin-top:22px;
+  font-size:.875rem;
+}
+.apple-exchange-guide .cta-final .cta-mid p:not(.cta-micro) { max-width:none; }
+.apple-exchange-guide .legal-bar {
+  max-width:none; padding:22px max(var(--pad-x),calc((100% - var(--max-w))/2 + var(--pad-x)));
+  background:#f5f7f6; color:var(--muted);
+  border-top:1px solid var(--border);
+  gap:12px 24px; font-size:.8125rem;
+}
+.apple-exchange-guide .legal-bar-links { gap:12px 20px; flex-wrap:wrap; }
+.apple-exchange-guide .legal-bar-links a { color:#425a50; font-size:.8125rem; }
+.apple-exchange-guide .legal-bar-links a:hover { color:#004d3c; text-decoration:underline; }
+@media(max-width:1024px){
+  .apple-exchange-guide .content-grid { grid-template-columns:minmax(0,1fr); }
+  .apple-exchange-guide .sidebar {
+    position:static; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px;
+  }
+}
+@media(max-width:720px){
+  .apple-exchange-guide .hero { padding:100px 0 48px; }
+  .apple-exchange-guide .hero h1 { max-width:none; font-size:clamp(2rem,8vw,2.8rem); }
+  .apple-exchange-guide .hero-desc { font-size:1rem; }
+  .apple-exchange-guide .section { padding:36px 0 48px; }
+  .apple-exchange-guide .sidebar { grid-template-columns:minmax(0,1fr); }
+  .apple-exchange-guide .files-table { min-width:590px; }
+  .apple-exchange-guide .step-item { gap:12px; }
+  .apple-exchange-guide .error-card { padding:20px; }
+  .apple-exchange-guide .hero .asistencia-block { padding:22px; }
+  .apple-exchange-guide .hero .btn-asistencia { width:100%; }
+  .apple-exchange-guide .cta-buttons { flex-direction:column; align-items:stretch; }
+  .apple-exchange-guide .cta-buttons a { width:100%; }
+  .apple-exchange-guide .cta-final { padding:44px 0 60px; }
+  .apple-exchange-guide .legal-bar { padding:24px var(--pad-x); }
+}
+@media(prefers-reduced-motion:reduce){
+  .apple-exchange-guide :is(.hero,.faq-q::after,.btn-cta,.btn-asistencia,.btn-outline,.sidebar-cta) {
+    animation:none; transition:none;
+  }
+}
