@@ -275,6 +275,10 @@ def main():
         from qa_account_apple import run_account_apple
         run_account_apple(origin, app.config.get("SESSION_COOKIE_NAME", "session"),
                           flask_cookie(app, identities["usuario"]))
+        # 02-A: eleven real Flask views, synthetic CSV/Excel/results/downloads.
+        from qa_tool_apple import run_tool_apple
+        run_tool_apple(origin, app.config.get("SESSION_COOKIE_NAME", "session"),
+                       flask_cookie(app, identities["usuario"]))
         from qa_contacto_integration import check_contacto
         check_contacto(app,origin)
     print(f"Flask real: {backend} HTTP/API checks PASS; {browser} browser checks PASS")
