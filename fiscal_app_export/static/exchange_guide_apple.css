@@ -140,7 +140,7 @@
   color:var(--muted); margin:0 0 18px;
 }
 .apple-exchange-guide .prose :is(strong,b) { color:var(--text); font-weight:650; }
-.apple-exchange-guide .prose :not(.btn-cta):not(.btn-outline) > a { color:#006b54; text-underline-offset:.2em; }
+.apple-exchange-guide .prose a:not(.btn-cta):not(.btn-outline):not(.btn-asistencia) { color:#006b54; text-underline-offset:.2em; }
 .apple-exchange-guide .sidebar { position:sticky; top:88px; gap:16px; }
 .apple-exchange-guide .sidebar-card {
   padding:24px; border:1px solid var(--border);
