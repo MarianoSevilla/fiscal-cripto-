@@ -2067,14 +2067,16 @@ def auth_google_callback():
 @login_required
 @limiter.exempt
 def page_binance():
-    return render_template("binance_v2.html")
+    # 02-B: todos los exchanges usan la misma interfaz y lógica de presentación.
+    return render_template("tool.html", **EXCHANGE_PAGES["binance"])
 
 
 @app.route("/binance-v2")
 @login_required
 @limiter.exempt
 def page_binance_v2():
-    return render_template("binance_v2.html")
+    # Alias histórico: conservar URL, sesión y contrato de importación.
+    return render_template("tool.html", **EXCHANGE_PAGES["binance"])
 
 
 @app.route("/bitvavo")

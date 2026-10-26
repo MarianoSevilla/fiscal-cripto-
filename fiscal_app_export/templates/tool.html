@@ -24,7 +24,7 @@
 <title>{{ page_title }}</title>
 <meta name="description" content="{{ page_meta_desc }}">
 <meta name="author" content="Mariano Sevilla">
-<meta name="robots" content="index, follow">
+<meta name="robots" content="{% if exchange_id == 'binance' %}noindex, nofollow{% else %}index, follow{% endif %}">
 <link rel="canonical" href="{{ page_canonical }}">
 <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
@@ -140,6 +140,9 @@
     </div>
     {% endfor %}
   </div>
+  {% if exchange_id == 'binance' %}
+  <p style="margin-top:16px"><a class="also-link" href="https://www.youtube.com/watch?v=VabS6OsZ-1E" target="_blank" rel="noopener noreferrer">Ver vídeo para descargar el CSV (2 min)</a></p>
+  {% endif %}
   {% if aviso_extra %}
   <p class="how-to-aviso" style="margin-top:16px;padding:12px 14px;border-left:3px solid #b8860b;background:rgba(184,134,11,0.06);font-size:13px;line-height:1.5;border-radius:4px;">
     <strong>⚠ Importante:</strong> {{ aviso_extra }}
