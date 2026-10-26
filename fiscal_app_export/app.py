@@ -26,6 +26,7 @@ import tempfile
 import traceback
 import threading
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from flask import Flask, request, jsonify, send_file, send_from_directory, redirect, url_for, render_template, session, abort
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -945,8 +946,14 @@ AÑO_MIN = 2009
 AÑO_MAX = datetime.now().year + 1
 
 # ── MODELO 721: exchanges ──────────────────────────────────────────────────────
-# Primer ejercicio obligatorio del Modelo 721 (Ley 10/2021, DA decimocuarta LIRPF).
-_721_PRIMER_EJERCICIO = 2022
+# Orden HFP/886/2023 (DF 2.ª): primer ejercicio declarable, 2023.
+_721_PRIMER_EJERCICIO = 2023
+
+
+def _721_ultimo_ejercicio(ahora=None) -> int:
+    """Último ejercicio cerrado a 31/12 en España, también al cambiar de año."""
+    momento = ahora if ahora is not None else datetime.now(ZoneInfo("Europe/Madrid"))
+    return momento.astimezone(ZoneInfo("Europe/Madrid")).year - 1
 # Exchanges con MotorFIFO → pueden generar snapshot 31/12 via posicion_a_fecha().
 _721_EXCHANGES_CON_MOTOR = frozenset({
     "binance", "bitvavo", "kraken", "coinbase", "nexo", "cryptocom", "uphold", "mexc", "bitget"
@@ -3113,7 +3120,7 @@ def api_modelo_721():
     y un bloque 'pendiente' con lo que falta para el XML AEAT (Fase 3B).
 
     Diferencias clave respecto a /api/analizar:
-      · Ejercicio: entero único ≥ 2022 (no acepta 'all' ni multi-año).
+      · Ejercicio: entero único desde 2023 hasta el último año cerrado (no 'all').
       · No llama a _filtrar_motor_por_ejercicio (lógica IRPF).
         La fecha de corte la gestiona motor.posicion_a_fecha(31/12/ejercicio).
       · No genera PDF ni calcula ganancias/pérdidas patrimoniales.
@@ -3122,7 +3129,7 @@ def api_modelo_721():
     Body: multipart/form-data
       csv:      CSV del exchange (mismo fichero que /api/analizar)
       exchange: binance, bitvavo, kraken, coinbase, nexo, cryptocom, uphold
-      ejercicio: año fiscal único ≥ 2022  (ej. "2024")
+      ejercicio: año fiscal cerrado desde 2023 (ej. "2024")
 
     TODO Fase 3B: aceptar report_id de FifoReport cuando se implemente
     serialización del motor, para evitar re-procesar el CSV.
@@ -3179,6 +3186,33 @@ def api_modelo_721():
                 )
             }), 400
 
+        # ── 3. Validar ejercicio: desde 2023 y solo ejercicios cerrados ──────
+        if not ejercicio_raw or not ejercicio_raw.strip().isdigit():
+            return jsonify({
+                "error": (
+                    "El ejercicio debe ser un año en formato numérico (ej. 2024). "
+                    "El Modelo 721 no acepta 'all' ni rangos multi-año: "
+                    "cada ejercicio se declara por separado."
+                )
+            }), 400
+
+        ejercicio = int(ejercicio_raw.strip())
+        if ejercicio < _721_PRIMER_EJERCICIO:
+            return jsonify({
+                "error": (
+                    f"El Modelo 721 se aplica desde el ejercicio {_721_PRIMER_EJERCICIO} "
+                    f"(Orden HFP/886/2023). No se puede generar para {ejercicio}."
+                )
+            }), 400
+        ultimo_ejercicio = _721_ultimo_ejercicio()
+        if ejercicio > ultimo_ejercicio:
+            return jsonify({
+                "error": (
+                    f"El ejercicio {ejercicio} todavía no ha finalizado o es futuro. "
+                    f"El último ejercicio declarable del Modelo 721 es {ultimo_ejercicio}."
+                )
+            }), 400
+
         # Bit2Me y otras entidades españolas: no sujetas al 721 — respuesta
         # informativa, no un error. El usuario debe saberlo explícitamente.
         if exchange in _721_EXCHANGES_ES:
@@ -3213,29 +3247,6 @@ def api_modelo_721():
                     "completo":           True,
                 },
             }), 200
-
-        # ── 3. Validar ejercicio: único, ≥ 2022, ≤ AÑO_MAX ───────────────────
-        if not ejercicio_raw or not ejercicio_raw.strip().isdigit():
-            return jsonify({
-                "error": (
-                    "El ejercicio debe ser un año en formato numérico (ej. 2024). "
-                    "El Modelo 721 no acepta 'all' ni rangos multi-año: "
-                    "cada ejercicio se declara por separado."
-                )
-            }), 400
-
-        ejercicio = int(ejercicio_raw.strip())
-        if ejercicio < _721_PRIMER_EJERCICIO:
-            return jsonify({
-                "error": (
-                    f"El Modelo 721 aplica desde el ejercicio {_721_PRIMER_EJERCICIO} "
-                    f"(Ley 10/2021). No se puede generar para {ejercicio}."
-                )
-            }), 400
-        if ejercicio > AÑO_MAX:
-            return jsonify({
-                "error": f"El ejercicio no puede ser posterior a {AÑO_MAX}."
-            }), 400
 
         # ── 4. Validar fichero — MEXC usa XLS/XLSX, resto CSV ────────────────────
         filename = archivo.filename or ""
@@ -3438,6 +3449,22 @@ def api_721_xml():
     if not isinstance(datos, dict) or "exchanges" not in datos:
         return jsonify({
             "error": "Falta el campo 'datos' con el resultado del análisis."
+        }), 400
+
+    # El XML también recibe JSON aportado por el cliente: no confiar solo
+    # en el selector ni en la validación previa de /api/721.
+    ejercicio_xml_raw = datos.get("ejercicio")
+    if not isinstance(ejercicio_xml_raw, (str, int)) or not (
+        str(ejercicio_xml_raw).isdigit()
+    ):
+        return jsonify({"error": "El ejercicio del Modelo 721 debe ser numérico."}), 400
+    ejercicio_xml = int(ejercicio_xml_raw)
+    if ejercicio_xml < _721_PRIMER_EJERCICIO or ejercicio_xml > _721_ultimo_ejercicio():
+        return jsonify({
+            "error": (
+                f"El Modelo 721 solo admite ejercicios cerrados desde "
+                f"{_721_PRIMER_EJERCICIO} hasta {_721_ultimo_ejercicio()}."
+            )
         }), 400
 
     # Sanidad básica: máx. 50 exchanges y 200 activos total para evitar payloads

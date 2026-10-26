@@ -82,7 +82,21 @@ def run_modelo721_apple(origin, cookie_name, cookie_value):
                         "el => el.getBoundingClientRect().left"
                     )
                     assert abs(badge_left - title_left) <= 1, (width, badge_left, title_left)
-                    assert page.locator("#sel-ejercicio option").count() >= 1
+                    # Los años deben coincidir con la AEAT, sin 2022, año
+                    # abierto ni futuros, incluso si cambia el año en Madrid.
+                    ultimo = page.evaluate("ultimoEjercicioDeclarable721()")
+                    values = page.locator("#sel-ejercicio option").evaluate_all(
+                        "els => els.map(el => Number(el.value))"
+                    )
+                    assert values == list(range(ultimo, 2022, -1)), (width, values)
+                    assert page.locator("#sel-ejercicio").input_value() == str(ultimo)
+                    assert 2022 not in values
+                    assert page.evaluate(
+                        "ultimoEjercicioDeclarable721(new Date('2026-12-31T22:59:00Z'))"
+                    ) == 2025
+                    assert page.evaluate(
+                        "ultimoEjercicioDeclarable721(new Date('2026-12-31T23:00:00Z'))"
+                    ) == 2026
                     assert page.locator("#csv-hint a").get_attribute("href") == (
                         "/privacidad#conservacion"
                     )

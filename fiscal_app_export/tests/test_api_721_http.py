@@ -236,13 +236,13 @@ def test_b02_bit2me_bloqueantes_explica_entidad_espanola(client, user_sin_nif):
 # C. Validación de ejercicio
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def test_c01_ejercicio_anterior_a_2022(client, user_sin_nif):
-    """Ejercicio < 2022 → 400 con mensaje de año mínimo."""
+def test_c01_primer_ejercicio_modelo721_2023(client, user_sin_nif):
+    """La orden HFP/886/2023 establece 2023 como primer ejercicio."""
     _login(client, "api721_sinnif@example.com")
-    res = _post_721(client, ejercicio="2021")
-    data = res.get_json()
-    assert res.status_code == 400, data
-    assert "2022" in data.get("error", "")
+    for anio in ("2021", "2022"):
+        res = _post_721(client, ejercicio=anio)
+        assert res.status_code == 400, res.get_json()
+        assert "2023" in res.get_json()["error"]
 
 
 def test_c02_ejercicio_no_numerico(client, user_sin_nif):
@@ -254,26 +254,45 @@ def test_c02_ejercicio_no_numerico(client, user_sin_nif):
     assert "all" in data.get("error", "").lower() or "numérico" in data.get("error", "").lower()
 
 
-def test_c03_ejercicio_superior_al_maximo(client, user_sin_nif):
-    """Ejercicio > año_actual + 1 → 400."""
+@pytest.mark.parametrize("ejercicio", ("2026", "2027", "2031"))
+def test_c03_ejercicio_no_cerrado_rechazado(client, user_sin_nif, ejercicio):
+    """Con último ejercicio 2025, rechaza actual y posteriores en API."""
     _login(client, "api721_sinnif@example.com")
-    año_futuro = str(datetime.now().year + 5)
-    res = _post_721(client, ejercicio=año_futuro)
-    assert res.status_code == 400
+    with patch("app._721_ultimo_ejercicio", return_value=2025):
+        res = _post_721(client, ejercicio=ejercicio)
+    assert res.status_code == 400, res.get_json()
+    assert "2025" in res.get_json()["error"]
 
 
-def test_c04_ejercicio_rango_aceptado(client, user_sin_nif):
-    """Ejercicio 2022–año_max es aceptado (no falla por ejercicio)."""
+@pytest.mark.parametrize("ejercicio", ("2023", "2024", "2025"))
+def test_c04_ejercicios_cerrados_aceptados(client, user_sin_nif, ejercicio):
+    """Ejercicios 2023–2025 no se rechazan por validación del año."""
     _login(client, "api721_sinnif@example.com")
-    # Solo comprobamos que el ejercicio no sea el problema de un 400 de ejercicio;
-    # el error puede venir del CSV, pero no por el ejercicio.
-    res = _post_721(client, ejercicio="2022", csv_content=BITVAVO_CSV,
-                    filename="bitvavo.csv", exchange="bitvavo")
+    with patch("app._721_ultimo_ejercicio", return_value=2025):
+        res = _post_721(client, ejercicio=ejercicio, csv_content=BITVAVO_CSV,
+                        filename="bitvavo.csv", exchange="bitvavo")
     data = res.get_json()
-    # No debe fallar con error de ejercicio
     if res.status_code == 400:
-        assert "2022" not in data.get("error", ""), \
-            "No debe fallar por el ejercicio 2022"
+        assert "ejercicio" not in data.get("error", "").lower(), data
+
+
+def test_c05_bit2me_no_omite_validacion_fechas(client, user_sin_nif):
+    """La excepción informativa de Bit2Me no abre años futuros vía API."""
+    _login(client, "api721_sinnif@example.com")
+    with patch("app._721_ultimo_ejercicio", return_value=2025):
+        res = _post_721(client, ejercicio="2027", exchange="bit2me")
+    assert res.status_code == 400, res.get_json()
+    assert "2025" in res.get_json()["error"]
+
+
+def test_c06_limite_anual_avanza_en_enero():
+    """Cambio de ejercicio el 1 de enero, tomando huso Europe/Madrid."""
+    from datetime import timezone
+    from app import _721_ultimo_ejercicio
+    antes = datetime(2026, 12, 31, 22, 59, tzinfo=timezone.utc)
+    despues = datetime(2026, 12, 31, 23, 0, tzinfo=timezone.utc)
+    assert _721_ultimo_ejercicio(antes) == 2025
+    assert _721_ultimo_ejercicio(despues) == 2026
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
