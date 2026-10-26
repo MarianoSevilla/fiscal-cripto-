@@ -156,6 +156,10 @@ def run_bitvavo_guide_apple(origin, cookie_name, cookie_value):
                     assert overflow["document"] <= width + 1, (
                         width, "document horizontal overflow", overflow
                     )
+                    legal_links = page.locator(".legal-bar-links")
+                    assert legal_links.evaluate(
+                        "el => el.getBoundingClientRect().right <= innerWidth + 1"
+                    ), (width, "footer legal links overflow")
                     if width == 375:
                         assert page.locator(".files-table-wrap").evaluate(
                             "el => el.scrollWidth > el.clientWidth"
