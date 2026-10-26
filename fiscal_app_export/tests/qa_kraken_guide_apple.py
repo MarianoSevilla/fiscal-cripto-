@@ -175,9 +175,11 @@ def run_kraken_guide_apple(origin, cookie_name, cookie_value):
                         "el => el.getBoundingClientRect().right <= innerWidth + 1"
                     ), (width, "footer legal links overflow")
                     if width == 375:
-                        assert page.locator(".files-table-wrap").evaluate(
-                            "el => el.scrollWidth > el.clientWidth"
-                        ), "Table should scroll inside its wrapper, not expand the page"
+                        assert page.locator(".files-table-wrap").count() == 3
+                        assert any(
+                            wrapper.evaluate("el => el.scrollWidth > el.clientWidth")
+                            for wrapper in page.locator(".files-table-wrap").all()
+                        ), "At least one CSV table should scroll within its wrapper"
                     assert not blocked_external and not unexpected_writes and not errors, (
                         width, blocked_external, unexpected_writes, errors
                     )
