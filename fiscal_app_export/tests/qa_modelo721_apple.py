@@ -106,7 +106,7 @@ def run_modelo721_apple(origin, cookie_name, cookie_value):
                     assert page.locator("#btn-submit").inner_text() == "Ver explicación"
                     page.locator("#btn-submit").click()
                     assert page.locator("#panel-result").is_visible()
-                    assert page.locator("#estado-texto").inner_text() == "No aplica"
+                    assert page.locator("#estado-texto").text_content().strip() == "No aplica"
                     assert page.locator("#bit2me-result").is_visible()
                     assert not mocked_posts
                     page.locator("#btn-nuevo").click()
