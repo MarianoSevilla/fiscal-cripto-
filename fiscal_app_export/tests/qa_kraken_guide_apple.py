@@ -109,7 +109,10 @@ def run_kraken_guide_apple(origin, cookie_name, cookie_value):
 
                     # Preserve editorial components and four CTAs to the same FIFO tool.
                     assert page.locator(".steps-list > li").count() == 5
-                    assert page.locator(".files-table tbody tr").count() == 6
+                    assert page.locator(".files-table").count() == 3
+                    assert page.locator(".files-table tbody tr").count() == 18
+                    for table in page.locator(".files-table").all():
+                        assert table.locator("tbody tr").count() == 6
                     assert page.locator(".error-card").count() == 3
                     assert page.locator(".faq-item").count() == 6
                     assert page.locator('a[href="/kraken"]').count() == 4
@@ -191,4 +194,4 @@ def run_kraken_guide_apple(origin, cookie_name, cookie_value):
 
     assert passed == len(WIDTHS)
     print("KRAKEN_GUIDE_04B2: PASS (3 responsive viewports, SEO, 5 steps, "
-          "6 CSV rows, 6 FAQ, navigation, 4 conversion links; no fiscal API calls)")
+          "3 CSV tables with 6 rows each, 6 FAQ, navigation, 4 conversion links; no fiscal API calls)")
