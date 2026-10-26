@@ -198,6 +198,31 @@ _XML_MUESTRA = '<?xml version="1.0" encoding="UTF-8"?>\n<ddiiD:Declaracion/>'
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
+@pytest.mark.parametrize("ejercicio", (2022, 2026, 2027))
+def test_xml_rechaza_ejercicios_no_declarables(client, user_con_nif, ejercicio):
+    """Ni un JSON manipulado puede generar XML de 2022 o de años sin cerrar."""
+    _login(client, "xml721_connif@example.com")
+    datos = dict(_DATOS_CON_PRECIO, ejercicio=ejercicio)
+    with patch("app._721_ultimo_ejercicio", return_value=2025), \
+         patch("app.generar_xml_721") as generador:
+        res = client.post("/api/721/xml", json={"datos": datos})
+    assert res.status_code == 400, res.get_json()
+    assert "2023" in res.get_json()["error"]
+    assert "2025" in res.get_json()["error"]
+    generador.assert_not_called()
+
+
+def test_xml_permite_ejercicio_2026_una_vez_cerrado(client, user_con_nif):
+    """2026 se podrá preparar a partir del 1 de enero de 2027."""
+    _login(client, "xml721_connif@example.com")
+    datos = dict(_DATOS_CON_PRECIO, ejercicio=2026)
+    with patch("app._721_ultimo_ejercicio", return_value=2026), \
+         patch("app.generar_xml_721", return_value=(_XML_MUESTRA, _MOCK_GENERABLE)) as generador:
+        res = client.post("/api/721/xml", json={"datos": datos})
+    assert res.status_code == 200, res.get_json()
+    generador.assert_called_once()
+
+
 # 1. Sin autenticación
 def test_sin_auth_redirige(client):
     """Sin cookie de sesión, /api/721/xml devuelve 401 o 302."""
