@@ -3186,6 +3186,33 @@ def api_modelo_721():
                 )
             }), 400
 
+        # ── 3. Validar ejercicio: desde 2023 y solo ejercicios cerrados ──────
+        if not ejercicio_raw or not ejercicio_raw.strip().isdigit():
+            return jsonify({
+                "error": (
+                    "El ejercicio debe ser un año en formato numérico (ej. 2024). "
+                    "El Modelo 721 no acepta 'all' ni rangos multi-año: "
+                    "cada ejercicio se declara por separado."
+                )
+            }), 400
+
+        ejercicio = int(ejercicio_raw.strip())
+        if ejercicio < _721_PRIMER_EJERCICIO:
+            return jsonify({
+                "error": (
+                    f"El Modelo 721 se aplica desde el ejercicio {_721_PRIMER_EJERCICIO} "
+                    f"(Orden HFP/886/2023). No se puede generar para {ejercicio}."
+                )
+            }), 400
+        ultimo_ejercicio = _721_ultimo_ejercicio()
+        if ejercicio > ultimo_ejercicio:
+            return jsonify({
+                "error": (
+                    f"El ejercicio {ejercicio} todavía no ha finalizado o es futuro. "
+                    f"El último ejercicio declarable del Modelo 721 es {ultimo_ejercicio}."
+                )
+            }), 400
+
         # Bit2Me y otras entidades españolas: no sujetas al 721 — respuesta
         # informativa, no un error. El usuario debe saberlo explícitamente.
         if exchange in _721_EXCHANGES_ES:
@@ -3220,33 +3247,6 @@ def api_modelo_721():
                     "completo":           True,
                 },
             }), 200
-
-        # ── 3. Validar ejercicio: desde 2023 y solo ejercicios cerrados ──────
-        if not ejercicio_raw or not ejercicio_raw.strip().isdigit():
-            return jsonify({
-                "error": (
-                    "El ejercicio debe ser un año en formato numérico (ej. 2024). "
-                    "El Modelo 721 no acepta 'all' ni rangos multi-año: "
-                    "cada ejercicio se declara por separado."
-                )
-            }), 400
-
-        ejercicio = int(ejercicio_raw.strip())
-        if ejercicio < _721_PRIMER_EJERCICIO:
-            return jsonify({
-                "error": (
-                    f"El Modelo 721 se aplica desde el ejercicio {_721_PRIMER_EJERCICIO} "
-                    f"(Orden HFP/886/2023). No se puede generar para {ejercicio}."
-                )
-            }), 400
-        ultimo_ejercicio = _721_ultimo_ejercicio()
-        if ejercicio > ultimo_ejercicio:
-            return jsonify({
-                "error": (
-                    f"El ejercicio {ejercicio} todavía no ha finalizado o es futuro. "
-                    f"El último ejercicio declarable del Modelo 721 es {ultimo_ejercicio}."
-                )
-            }), 400
 
         # ── 4. Validar fichero — MEXC usa XLS/XLSX, resto CSV ────────────────────
         filename = archivo.filename or ""
