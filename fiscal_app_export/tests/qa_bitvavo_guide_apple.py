@@ -119,7 +119,20 @@ def run_bitvavo_guide_apple(origin, cookie_name, cookie_value):
                     assert page.locator('.sidebar a[href="/exchanges/binance"]').count() == 1
                     assert page.locator('a[href="/modelo-721-criptomonedas"]').count() >= 1
                     assert page.locator('a[href="/privacidad"]').count() == 1
-                    assert page.locator('.hero .btn-asistencia').evaluate(
+                    # 04-A1: el hero verde contiene solo textos editoriales;
+                    # el bloque CTA está en el área blanca anterior al artículo.
+                    assert page.locator(".hero .asistencia-block").count() == 0
+                    assert page.locator(".content-main > .asistencia-block").count() == 1
+                    assert page.locator(".content-main > .asistencia-block").is_visible()
+                    assert page.locator(".hero .hero-desc").count() == 1
+                    assert page.locator(".content-main > .asistencia-block").evaluate(
+                        "el => el.getBoundingClientRect().top >= "
+                        "document.querySelector('.hero').getBoundingClientRect().bottom"
+                    ), (width, "CTA dentro de franja verde")
+                    assert page.locator(".content-main > .asistencia-block").evaluate(
+                        "el => getComputedStyle(el).backgroundColor"
+                    ) == "rgb(245, 248, 246)"
+                    assert page.locator('.content-main > .asistencia-block .btn-asistencia').evaluate(
                         "el => getComputedStyle(el).color"
                     ) == "rgb(255, 255, 255)"
 
