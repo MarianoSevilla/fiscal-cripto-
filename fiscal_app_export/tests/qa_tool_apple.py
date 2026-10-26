@@ -120,6 +120,27 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                         assert response and response.status == 200, (name, width, response.status if response else None)
                         assert page.locator("body").get_attribute("class") == "apple-home apple-tool"
                         assert page.locator("#site-nav").is_visible()
+                        # Dirección 02-A: el mismo aviso para CSV y Excel
+                        # en las once rutas, sin garantía absoluta de borrado/RGPD.
+                        privacy_notice = page.locator(".upload-bar-wrap > .bar-privacy").first
+                        assert privacy_notice.is_visible(), (name, width)
+                        privacy_text = privacy_notice.locator("span").nth(1).inner_text()
+                        assert privacy_text == (
+                            "Tratamiento de archivos Utilizamos tu archivo para generar "
+                            "el informe e intentamos eliminar los archivos temporales "
+                            "al finalizar el procesamiento. Algunos registros del análisis "
+                            "pueden conservarse. Consulta nuestra Política de privacidad."
+                        ), (name, width, privacy_text)
+                        privacy_link = privacy_notice.get_by_role(
+                            "link", name="Política de privacidad", exact=True
+                        )
+                        assert privacy_link.count() == 1, (name, width)
+                        assert privacy_link.get_attribute("href") == "/privacidad#conservacion"
+                        for false_claim in ("no se almacena", "se procesa en memoria",
+                                            "se elimina automáticamente", "Cumplimiento RGPD"):
+                            assert false_claim.lower() not in privacy_text.lower(), (
+                                name, width, false_claim
+                            )
                         if name != "fiscal":
                             badge_image = page.locator(".bar-exchange img")
                             assert badge_image.count() == 1
