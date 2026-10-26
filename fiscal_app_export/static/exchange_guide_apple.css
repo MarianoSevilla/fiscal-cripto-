@@ -279,7 +279,12 @@
   border-top:1px solid var(--border);
   gap:12px 24px; font-size:.8125rem;
 }
-.apple-exchange-guide .legal-bar-links { gap:12px 20px; flex-wrap:wrap; }
+/* La regla heredada usa flex-shrink:0 y desborda 16px a 375px.
+   Permitir que la fila de enlaces se contraiga y distribuya sus enlaces. */
+.apple-exchange-guide .legal-bar-links {
+  gap:12px 20px; flex-wrap:wrap;
+  flex-shrink:1; min-width:0; max-width:100%;
+}
 .apple-exchange-guide .legal-bar-links a { color:#425a50; font-size:.8125rem; }
 .apple-exchange-guide .legal-bar-links a:hover { color:#004d3c; text-decoration:underline; }
 @media(max-width:1024px){
