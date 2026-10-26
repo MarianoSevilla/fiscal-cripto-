@@ -302,7 +302,7 @@
   .apple-exchange-guide .files-table { min-width:590px; }
   .apple-exchange-guide .step-item { gap:12px; }
   .apple-exchange-guide .error-card { padding:20px; }
-  .apple-exchange-guide .hero .asistencia-block { padding:22px; }
+  .apple-exchange-guide .content-main > .asistencia-block { padding:22px; }
   .apple-exchange-guide .content-main > .asistencia-block .btn-asistencia { width:100%; }
   .apple-exchange-guide .cta-buttons { flex-direction:column; align-items:stretch; }
   .apple-exchange-guide .cta-buttons a { width:100%; }
