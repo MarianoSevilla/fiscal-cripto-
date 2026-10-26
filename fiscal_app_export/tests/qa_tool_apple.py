@@ -1,4 +1,4 @@
-"""02-A. Chromium/Flask UI regression for all 11 shared FIFO pages.
+"""02-A/02-B. Chromium/Flask UI regression for all shared FIFO pages.
 
 All content is fictitious. Analysis, year-detection and PDF download requests
 are fulfilled in the browser; no parser, tax engine, provider or real record is
@@ -9,7 +9,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 from playwright.sync_api import expect, sync_playwright
 
-TOOLS = ("fiscal", "bitvavo", "bit2me", "kraken", "coinbase", "nexo",
+TOOLS = ("fiscal", "binance", "bitvavo", "bit2me", "kraken", "coinbase", "nexo",
          "cryptocom", "uphold", "mexc", "bitget", "kucoin")
 WIDTHS = (375, 768, 1440)
 MULTI = {"bitget", "kucoin"}
@@ -281,15 +281,48 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                             "(e) => e.getBoundingClientRect().right <= innerWidth + 1"
                         ), (name,width,"upload overflow")
                         assert not violations and not errors,(name,width,violations,errors)
+                        if name == "binance":
+                            # Conservar robots y tutorial de la plantilla histórica.
+                            assert page.locator('meta[name="robots"]').get_attribute(
+                                "content"
+                            ) == "noindex, nofollow"
+                            tutorial = page.get_by_role(
+                                "link", name="Ver vídeo para descargar el CSV (2 min)"
+                            )
+                            assert tutorial.get_attribute("href") == (
+                                "https://www.youtube.com/watch?v=VabS6OsZ-1E"
+                            )
+                            assert tutorial.get_attribute("target") == "_blank"
+                            # /binance-v2 debe servir exactamente la misma interfaz.
+                            alias = page.goto(origin + "/binance-v2", wait_until="networkidle")
+                            assert alias and alias.status == 200
+                            assert page.locator("body").get_attribute("class") == "apple-home apple-tool"
+                            assert "Binance" in page.locator("h1").inner_text()
+                            assert page.locator('meta[name="robots"]').get_attribute(
+                                "content"
+                            ) == "noindex, nofollow"
+                            assert page.locator("#csvInput").get_attribute("accept") == ".csv"
+                            assert page.locator("#btnAnalizar").is_disabled()
+                            assert page.locator("#emptyState").is_visible()
+                            page.screenshot(
+                                path=str(output / f"home_fifo_binance_v2_{width}.png"),
+                                full_page=True
+                            )
+                            assert page.evaluate(
+                                "() => document.documentElement.scrollWidth <= innerWidth + 1"
+                            ), ("binance-v2", width, "page overflow")
+                            assert not violations and not errors, (
+                                "binance-v2", width, violations, errors
+                            )
                         results.append((name,width,"PASS",len(analysis),count))
                     finally:
                         ctx.close()
         finally:
             browser.close()
-    assert len(results) == 33, results
+    assert len(results) == 36, results
     for name in TOOLS:
         each = [x for x in results if x[0] == name]
         assert len(each) == 3
-        print("FIFO_TOOL_02A:", name, "PASS", [x[1] for x in each], "mocked API", flush=True)
-    print("FIFO_TOOL_02A: PASS (33 route/viewport scenarios, 11 routes, synthetic uploads,"
+        print("FIFO_TOOL_APPLE:", name, "PASS", [x[1] for x in each], "mocked API", flush=True)
+    print("FIFO_TOOL_APPLE: PASS (36 route/viewport scenarios, 12 routes + Binance alias, synthetic uploads,"
           " synthetic PDF tokens, no actual fiscal calculation or write)")
