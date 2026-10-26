@@ -6,7 +6,7 @@ FASE 2 — Lógica interna. Sin PDF, sin XML AEAT.
 FASE 3A — Snapshot 31/12 correcto via posicion_a_fecha().
 
 Referencia normativa:
-  - Modelo 721 (procedimiento GI55), ejercicios desde 2022
+  - Modelo 721 (procedimiento GI55), primer ejercicio 2023 (Orden HFP/886/2023)
   - XSD oficiales AEAT: Declaracion721.xsd, DeclaracionInformativa721.xsd
   - Ley 10/2021, DA decimocuarta LIRPF (modificada Ley 11/2021)
 
