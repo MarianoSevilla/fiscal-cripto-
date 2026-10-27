@@ -297,6 +297,9 @@ def main():
         from qa_coinbase_guide_apple import run_coinbase_guide_apple
         run_coinbase_guide_apple(origin, app.config.get("SESSION_COOKIE_NAME", "session"),
                                  flask_cookie(app, identities["usuario"]))
+        from qa_bit2me_guide_apple import run_bit2me_guide_apple
+        run_bit2me_guide_apple(origin, app.config.get("SESSION_COOKIE_NAME", "session"),
+                               flask_cookie(app, identities["usuario"]))
         from qa_contacto_integration import check_contacto
         check_contacto(app,origin)
     print(f"Flask real: {backend} HTTP/API checks PASS; {browser} browser checks PASS")
