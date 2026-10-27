@@ -127,6 +127,12 @@ class HomeRedesignContracts(unittest.TestCase):
         for old_value,new_value in {**APPROVED_PRESENTATION_LABELS,**APPROVED_EXAMPLE_DATES}.items():
             self.assertEqual(expected_text.count(old_value),1)
             expected_text=expected_text.replace(old_value,new_value)
+        # 05-B1: explicitly approved correction to the misleading CSV retention claim.
+        privacy_old='Privacidad y seguridad — tu CSV no se almacena'
+        privacy_new='Consulta cómo tratamos tus archivos en nuestra Política de privacidad'
+        self.assertEqual(expected_text.count(privacy_old),1)
+        expected_text=expected_text.replace(privacy_old,privacy_new)
+        self.assertEqual(normal(' '.join(self.b.text)).count(privacy_new),1)
         old=Counter(expected_text.split())
         new=Counter(normal(' '.join(self.b.text)).split())
         self.assertFalse(old-new,dict(old-new))
