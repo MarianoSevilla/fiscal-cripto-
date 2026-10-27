@@ -266,8 +266,15 @@ class HomeRedesignContracts(unittest.TestCase):
         self.assertNotIn('position:fixed',layout)
         self.assertEqual(previous.ids,self.b.ids)
         without_noscript=lambda text: re.sub(r'<noscript>[\s\S]*?</noscript>','',text)
-        self.assertEqual(Document(without_noscript((BASELINES/'v19.html').read_text())).links,
-                         Document(without_noscript(self.new)).links)
+        expected_links=Document(without_noscript((BASELINES/'v19.html').read_text())).links
+        actual_links=Document(without_noscript(self.new)).links
+        # 05-B1 adds exactly one retention-policy link after the hero trust checklist.
+        privacy_link='/privacidad#conservacion'
+        self.assertNotIn(privacy_link,expected_links)
+        self.assertEqual(actual_links.count(privacy_link),1)
+        self.assertIn('/exchanges',expected_links)
+        expected_links.insert(expected_links.index('/exchanges'),privacy_link)
+        self.assertEqual(expected_links,actual_links)
         items=re.findall(r'<details class="apple-faq-item"><summary>(.*?)</summary><div class="apple-faq-answer"><p>([\s\S]*?)</p>',self.new)
         from html import unescape
         faq=self.b.schemas[1]['mainEntity']
