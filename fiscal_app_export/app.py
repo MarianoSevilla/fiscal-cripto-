@@ -366,6 +366,12 @@ def _guardar_token_pdf(token: str, report_id=None) -> None:
     session["pdf_token_uid"]   = current_user.id
     session["pdf_token_exp"]   = time.time() + _PDF_TTL
     session["pdf_report_id"]   = report_id
+    # Alinear el mtime con el inicio real del TTL, después de registrar el informe.
+    # Así la limpieza no adelanta una caducidad si la BD tarda en responder.
+    try:
+        os.utime(os.path.join(tempfile.gettempdir(), token), None)
+    except OSError:
+        app.logger.warning("fifo_pdf_touch_failed")
 
 def _validar_token_pdf(token: str):
     """Comprueba propiedad y TTL sin consumir el token ante fallos de E/S."""
