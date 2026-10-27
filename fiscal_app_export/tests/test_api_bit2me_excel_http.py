@@ -211,3 +211,35 @@ def test_smoke_excel_real(client, usuario, flag_on):
     assert body["ok"] is True and body["estimacion"] is True
     assert body["token"]
     assert len(body["operaciones"]) > 0
+
+
+def test_synthetic_csv_end_to_end_real_pdf_download_once(client, usuario, flag_off):
+    """Registered synthetic account -> real Bit2Me CSV parser -> PDF -> one-time download.
+
+    No mocked processor, report generator or token endpoints; isolated test DB only.
+    """
+    _login(client)
+    analysis = client.post(
+        "/api/analizar",
+        data={
+            "csv": (io.BytesIO(_CSV_INFORME.encode("utf-8")), "synthetic-fiscal.csv"),
+            "exchange": "bit2me", "ejercicio": "2024", "nombre": "Prueba sintética",
+        },
+        content_type="multipart/form-data",
+    )
+    assert analysis.status_code == 200, analysis.get_data(as_text=True)[:350]
+    body = analysis.get_json()
+    assert body["ok"] is True and body.get("estimacion") is False
+    assert body["resumen"]["operaciones_con_resultado"] == 1
+    token = body["token"]
+    assert token.endswith(".pdf")
+    # Download is a real HTTP request using the token generated for this same session.
+    response = client.get("/api/descargar/" + token + "?exchange=bit2me")
+    assert response.status_code == 200, response.get_data(as_text=True)[:250] if response.mimetype != "application/pdf" else ""
+    assert response.mimetype == "application/pdf"
+    assert response.data.startswith(b"%PDF-")
+    assert len(response.data) > 1000
+    assert "attachment" in response.headers.get("Content-Disposition", "")
+    # Tokens must be single-use, irrespective of eventual filesystem deletion.
+    replay = client.get("/api/descargar/" + token + "?exchange=bit2me")
+    assert replay.status_code == 403
