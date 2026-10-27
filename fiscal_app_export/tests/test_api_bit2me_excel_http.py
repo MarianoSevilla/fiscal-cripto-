@@ -218,9 +218,6 @@ def test_synthetic_csv_end_to_end_real_pdf_download_once(client, usuario, flag_o
 
     No mocked processor, report generator or token endpoints; isolated test DB only.
     """
-    from pathlib import Path
-    import tempfile
-
     _login(client)
     analysis = client.post(
         "/api/analizar",
