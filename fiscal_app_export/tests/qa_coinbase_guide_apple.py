@@ -85,7 +85,8 @@ def run_coinbase_guide_apple(origin, cookie_name, cookie_value):
                     assert "HowTo" not in kinds
                     assert len(kinds["FAQPage"]["mainEntity"]) == 6
                     assert kinds["Article"]["datePublished"] == "2026-06-06"
-                    assert "Rafael Ramos Martínez" == kinds["Article"]["author"]["name"]
+                    assert kinds["Article"]["author"]["@id"] == kinds["Person"]["@id"]
+                    assert kinds["Person"]["name"] == "Rafael Ramos Martínez"
 
                     h1 = page.locator(".hero h1")
                     assert h1.count() == 1
