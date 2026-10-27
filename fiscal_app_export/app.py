@@ -3655,7 +3655,7 @@ def api_721_xml():
 def descargar(token):
     """Sirve un PDF de un solo uso desde memoria, sin borrar en mitad del envío."""
     _pdf_lifecycle.purge_expired_pdfs()
-    if not re.fullmatch(r"[a-zA-Z0-9_\\-]+\\.pdf", token):
+    if not re.fullmatch(r"[a-zA-Z0-9_-]+[.]pdf", token):
         return jsonify({"error": "Token inválido."}), 400
 
     pdf_path = os.path.join(tempfile.gettempdir(), token)
