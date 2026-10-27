@@ -127,6 +127,12 @@ class HomeRedesignContracts(unittest.TestCase):
         for old_value,new_value in {**APPROVED_PRESENTATION_LABELS,**APPROVED_EXAMPLE_DATES}.items():
             self.assertEqual(expected_text.count(old_value),1)
             expected_text=expected_text.replace(old_value,new_value)
+        # 05-B1: explicitly approved correction to the misleading CSV retention claim.
+        privacy_old='Privacidad y seguridad — tu CSV no se almacena'
+        privacy_new='Consulta cómo tratamos tus archivos en nuestra Política de privacidad'
+        self.assertEqual(expected_text.count(privacy_old),1)
+        expected_text=expected_text.replace(privacy_old,privacy_new)
+        self.assertEqual(normal(' '.join(self.b.text)).count(privacy_new),1)
         old=Counter(expected_text.split())
         new=Counter(normal(' '.join(self.b.text)).split())
         self.assertFalse(old-new,dict(old-new))
@@ -260,8 +266,15 @@ class HomeRedesignContracts(unittest.TestCase):
         self.assertNotIn('position:fixed',layout)
         self.assertEqual(previous.ids,self.b.ids)
         without_noscript=lambda text: re.sub(r'<noscript>[\s\S]*?</noscript>','',text)
-        self.assertEqual(Document(without_noscript((BASELINES/'v19.html').read_text())).links,
-                         Document(without_noscript(self.new)).links)
+        expected_links=Document(without_noscript((BASELINES/'v19.html').read_text())).links
+        actual_links=Document(without_noscript(self.new)).links
+        # 05-B1 adds exactly one retention-policy link after the hero trust checklist.
+        privacy_link='/privacidad#conservacion'
+        self.assertNotIn(privacy_link,expected_links)
+        self.assertEqual(actual_links.count(privacy_link),1)
+        self.assertIn('/exchanges',expected_links)
+        expected_links.insert(expected_links.index('/exchanges'),privacy_link)
+        self.assertEqual(expected_links,actual_links)
         items=re.findall(r'<details class="apple-faq-item"><summary>(.*?)</summary><div class="apple-faq-answer"><p>([\s\S]*?)</p>',self.new)
         from html import unescape
         faq=self.b.schemas[1]['mainEntity']
@@ -276,6 +289,11 @@ class HomeRedesignContracts(unittest.TestCase):
         baseline=(BASELINES/'v20.html').read_text().replace(
             '<meta name="robots" content="noindex, nofollow">',
             '<meta name="robots" content="index, follow">')
+        # 05-B1: preserve the V21 HTML contract apart from the approved privacy sentence/link.
+        old_privacy='<li>Privacidad y seguridad — tu CSV no se almacena</li>'
+        new_privacy='<li>Consulta cómo tratamos tus archivos en nuestra <a href="/privacidad#conservacion">Política de privacidad</a></li>'
+        self.assertEqual(baseline.count(old_privacy),1)
+        baseline=baseline.replace(old_privacy,new_privacy)
         pattern=r'<noscript>[\s\S]*?</noscript>'
         self.assertEqual(re.sub(pattern,'',baseline),re.sub(pattern,'',self.new))
         fallback=re.search(pattern,self.new).group(0)
