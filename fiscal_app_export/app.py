@@ -23,6 +23,8 @@ import secrets
 import hashlib
 import math
 import tempfile
+from io import BytesIO
+import fifo_pdf_lifecycle as _pdf_lifecycle
 import traceback
 import threading
 from datetime import datetime, timedelta
@@ -355,7 +357,7 @@ if _google_oauth_enabled:
 # El token se guarda en la sesión Flask (cookie firmada), que viaja con el
 # usuario independientemente del worker de Gunicorn que atienda la petición.
 # Esto evita el problema de dicts en memoria que no se comparten entre workers.
-_PDF_TTL = 300  # segundos
+_PDF_TTL = _pdf_lifecycle.PDF_TTL_SECONDS  # segundos
 
 def _guardar_token_pdf(token: str, report_id=None) -> None:
     """Guarda el token en la sesión del usuario con su TTL."""
@@ -365,8 +367,8 @@ def _guardar_token_pdf(token: str, report_id=None) -> None:
     session["pdf_token_exp"]   = time.time() + _PDF_TTL
     session["pdf_report_id"]   = report_id
 
-def _consumir_token_pdf(token: str):
-    """Valida propiedad, elimina el token de la sesión y devuelve el report_id (o None)."""
+def _validar_token_pdf(token: str):
+    """Comprueba propiedad y TTL sin consumir el token ante fallos de E/S."""
     from flask import session
     if session.get("pdf_token") != token:
         return None
@@ -375,11 +377,18 @@ def _consumir_token_pdf(token: str):
     if time.time() > session.get("pdf_token_exp", 0):
         return None
     report_id = session.get("pdf_report_id")
-    session.pop("pdf_token",     None)
-    session.pop("pdf_token_uid", None)
-    session.pop("pdf_token_exp", None)
-    session.pop("pdf_report_id", None)
     return report_id if report_id is not None else -1
+
+
+def _consumir_token_pdf(token: str):
+    """Invalida el token solo después de preparar una descarga válida."""
+    from flask import session
+    report_id = _validar_token_pdf(token)
+    if report_id is None:
+        return None
+    for key in ("pdf_token", "pdf_token_uid", "pdf_token_exp", "pdf_report_id"):
+        session.pop(key, None)
+    return report_id
 
 
 def _contar_csv_rows(filepath: str) -> int:
@@ -468,6 +477,13 @@ def _derivar_ruta_pdf(tmp_path: str) -> str:
     extensión (.csv, .xls, .xlsx). El token de descarga es el basename de esta
     ruta y debe terminar en .pdf para pasar la validación de /api/descargar."""
     return os.path.splitext(tmp_path)[0] + ".pdf"
+
+
+def _guardar_pdf_temporal(tmp_path: str, pdf_bytes: bytes) -> str:
+    """Almacena el PDF con permisos privados y limpieza temporal independiente."""
+    pdf_tmp = _derivar_ruta_pdf(tmp_path)
+    _pdf_lifecycle.write_private_pdf(pdf_tmp, pdf_bytes)
+    return pdf_tmp
 
 
 def _registrar_informe(
@@ -2281,7 +2297,7 @@ def _guardar_csvs_multi(archivos, max_files: int, label: str) -> tuple:
                 except OSError:
                     pass
             raise ValueError(f"Todos los ficheros de {label} deben tener extensión .csv")
-        with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(prefix=_pdf_lifecycle.PDF_PREFIX, suffix=".csv", delete=False) as tmp:
             archivo.save(tmp.name)
             tmp_paths.append(tmp.name)
             filenames.append(fn)
@@ -2437,7 +2453,7 @@ def analizar():
                 return jsonify({"error": "El fichero debe tener extensión .csv"}), 400
             _suffix = ".csv"
 
-        with tempfile.NamedTemporaryFile(suffix=_suffix, delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(prefix=_pdf_lifecycle.PDF_PREFIX, suffix=_suffix, delete=False) as tmp:
             archivo.save(tmp.name)
             tmp_path = tmp.name
 
@@ -2689,9 +2705,7 @@ def analizar():
             _tel_years = (ejercicio or "")[:50]
             # ────────────────────────────────────────────────────────────────────
 
-            pdf_tmp = _derivar_ruta_pdf(tmp_path)
-            with open(pdf_tmp, "wb") as f:
-                f.write(pdf_bytes)
+            pdf_tmp = _guardar_pdf_temporal(tmp_path, pdf_bytes)
 
             report_id = _registrar_informe(
                 exchange          = exchange,
@@ -2867,9 +2881,7 @@ def analizar_kucoin():
             _tel_mov   = len(clasificador.movimientos) if clasificador is not None else 0
             _tel_desc  = len(clasificador.desconocidas) if clasificador is not None else 0
 
-            pdf_tmp = _derivar_ruta_pdf(tmp_paths[0])
-            with open(pdf_tmp, "wb") as f:
-                f.write(pdf_bytes)
+            pdf_tmp = _guardar_pdf_temporal(tmp_paths[0], pdf_bytes)
 
             report_id = _registrar_informe(
                 exchange          = "kucoin",
@@ -3021,9 +3033,7 @@ def analizar_bitget():
             _tel_mov   = len(clasificador.movimientos) if clasificador is not None else 0
             _tel_desc  = len(clasificador.desconocidas) if clasificador is not None else 0
 
-            pdf_tmp = _derivar_ruta_pdf(tmp_paths[0])
-            with open(pdf_tmp, "wb") as f:
-                f.write(pdf_bytes)
+            pdf_tmp = _guardar_pdf_temporal(tmp_paths[0], pdf_bytes)
 
             report_id = _registrar_informe(
                 exchange          = "bitget",
@@ -3643,50 +3653,54 @@ def api_721_xml():
 @login_required
 @limiter.limit("5 per minute")
 def descargar(token):
-    """Sirve el PDF y lo borra inmediatamente después."""
-    if not re.match(r"^[a-zA-Z0-9_\-]+\.pdf$", token):
+    """Sirve un PDF de un solo uso desde memoria, sin borrar en mitad del envío."""
+    _pdf_lifecycle.purge_expired_pdfs()
+    if not re.fullmatch(r"[a-zA-Z0-9_\\-]+\\.pdf", token):
         return jsonify({"error": "Token inválido."}), 400
 
     pdf_path = os.path.join(tempfile.gettempdir(), token)
-    if not os.path.realpath(pdf_path).startswith(os.path.realpath(tempfile.gettempdir())):
+    if os.path.commonpath((os.path.realpath(pdf_path), os.path.realpath(tempfile.gettempdir()))) != os.path.realpath(tempfile.gettempdir()):
         return jsonify({"error": "Token inválido."}), 400
 
-    # RLS: solo el usuario que generó el PDF puede descargarlo
-    report_id = _consumir_token_pdf(token)
+    # Validar sesión/usuario ANTES de comprobar la existencia del fichero.
+    # La autorización no se consume si el disco o la preparación del HTTP fallan.
+    report_id = _validar_token_pdf(token)
     if report_id is None:
         return jsonify({"error": "Token inválido o expirado."}), 403
 
-    if not os.path.exists(pdf_path):
+    download_name = (
+        "informe_fiscal_cripto_"
+        + re.sub(r"[^a-z0-9]", "", (request.args.get("exchange", "") or "cripto").lower())
+        + ".pdf"
+    )
+    try:
+        response = _pdf_lifecycle.prepare_one_use_download(
+            pdf_path,
+            lambda pdf_bytes: send_file(
+                BytesIO(pdf_bytes),
+                mimetype="application/pdf",
+                as_attachment=True,
+                download_name=download_name,
+            ),
+        )
+    except FileNotFoundError:
         return jsonify({"error": "Informe no encontrado o ya descargado."}), 404
+    except OSError:
+        app.logger.warning("fifo_pdf_download_io_failed")
+        return jsonify({"error": "No se pudo preparar la descarga. Inténtalo de nuevo."}), 503
 
-    # Registrar descarga
+    # Ya existe un cuerpo HTTP independiente del fichero físico.
+    _consumir_token_pdf(token)
     if report_id and report_id > 0:
         try:
-            report = db.session.get(FifoReport, report_id)
+            report = FifoReport.query.filter_by(id=report_id, user_id=current_user.id).first()
             if report:
                 report.downloaded_at = datetime.utcnow()
                 db.session.commit()
         except Exception:
             db.session.rollback()
-
-    # Borrar el PDF en un hilo separado tras servir la respuesta
-    def borrar_pdf():
-        import time
-        time.sleep(2)  # pequeño margen para que el envío termine
-        try:
-            os.unlink(pdf_path)
-        except Exception:
-            pass
-
-    threading.Thread(target=borrar_pdf, daemon=True).start()
-
-    return send_file(
-        pdf_path,
-        mimetype="application/pdf",
-        as_attachment=True,
-        download_name=f"informe_fiscal_cripto_{re.sub(r'[^a-z0-9]', '', (request.args.get('exchange', '') or 'cripto').lower())}.pdf"
-    )
-
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 # ── RUTAS AUTH ────────────────────────────────
 
