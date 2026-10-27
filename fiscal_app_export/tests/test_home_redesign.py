@@ -289,6 +289,11 @@ class HomeRedesignContracts(unittest.TestCase):
         baseline=(BASELINES/'v20.html').read_text().replace(
             '<meta name="robots" content="noindex, nofollow">',
             '<meta name="robots" content="index, follow">')
+        # 05-B1: preserve the V21 HTML contract apart from the approved privacy sentence/link.
+        old_privacy='<li>Privacidad y seguridad — tu CSV no se almacena</li>'
+        new_privacy='<li>Consulta cómo tratamos tus archivos en nuestra <a href="/privacidad#conservacion">Política de privacidad</a></li>'
+        self.assertEqual(baseline.count(old_privacy),1)
+        baseline=baseline.replace(old_privacy,new_privacy)
         pattern=r'<noscript>[\s\S]*?</noscript>'
         self.assertEqual(re.sub(pattern,'',baseline),re.sub(pattern,'',self.new))
         fallback=re.search(pattern,self.new).group(0)
