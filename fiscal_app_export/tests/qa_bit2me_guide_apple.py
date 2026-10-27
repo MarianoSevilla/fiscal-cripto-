@@ -90,7 +90,7 @@ def run_bit2me_guide_apple(origin, cookie_name, cookie_value):
                     h1 = page.locator(".hero h1")
                     assert h1.count() == 1
                     assert "Bit2me" in h1.inner_text()
-                    assert "FIFO" in h1.inner_text()
+                    assert "español" in h1.inner_text()
                     assert page.locator(".hero").evaluate(
                         "el => getComputedStyle(el).backgroundColor"
                     ) == "rgb(7, 60, 50)"
