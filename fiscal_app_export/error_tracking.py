@@ -630,8 +630,8 @@ def _do_record(
             try:
                 db.session.commit()
                 logger.info(
-                    "[ERROR_TRACKING] auto-email sent error_id=%s to=%s",
-                    record.id, email,
+                    "[ERROR_TRACKING] auto-email sent error_id=%s",
+                    record.id,
                 )
             except Exception:
                 db.session.rollback()
