@@ -243,7 +243,7 @@ def test_verified_incident_reply_can_contact_nonregistered_recipient(
         assert db.session.get(CommunicationCampaign, campaign_id).status == "sent"
         delivery = CommunicationDelivery.query.filter_by(campaign_id=campaign_id).one()
         assert delivery.user_id is None and delivery.status == "sent"
-        assert db.session.get(ProcessingError, incident.id).auto_email_sent is True
+        assert db.session.get(ProcessingError, incident_id).auto_email_sent is True
     assert len(mail_stub) == 1 and mail_stub[0]["to"] == [address]
     assert "Desuscribirse" not in mail_stub[0]["html"]
 
