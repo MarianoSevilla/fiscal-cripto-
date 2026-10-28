@@ -529,7 +529,6 @@
 <script>
   const EXCHANGE_PAGE = '{{ exchange_id }}';
   const CSV_DIAG_ENABLED = {{ 'true' if config.get('CSV_DIAGNOSTIC_SUPPORT_ENABLED', False) else 'false' }};
-  const DIAG_EXCHANGE = '{{ exchange_id }}' || 'binance';
   let failedDiagnosticFiles = [];
   const BIT2ME_EXCEL_ENABLED = {{ 'true' if bit2me_excel_enabled else 'false' }};
   let selectedExchange = EXCHANGE_PAGE || 'binance';
@@ -1439,7 +1438,7 @@
     if (!CSV_DIAG_ENABLED || !check.checked || !failedDiagnosticFiles[idx]) return;
     const form = new FormData();
     form.append('archivo', failedDiagnosticFiles[idx]);
-    form.append('exchange', DIAG_EXCHANGE);
+    form.append('exchange', selectedExchange);
     form.append('consentimiento', 'ACEPTO_ENVIO_DIAGNOSTICO_V1');
     send.disabled = true;
     feedback.textContent = 'Enviando el archivo autorizado…';
