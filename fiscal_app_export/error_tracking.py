@@ -391,7 +391,7 @@ def _upsert_incident(
         db_session.commit()
 
     except Exception as exc:
-        logger.error("[INCIDENT] upsert failed fingerprint=%s: %s", fingerprint, exc)
+        logger.error("[INCIDENT] upsert failed fingerprint=%s exception=%s", fingerprint, type(exc).__name__)
         try:
             db_session.rollback()
         except Exception:
@@ -581,7 +581,7 @@ def _do_record(
         )
     except Exception as db_exc:
         db.session.rollback()
-        logger.error("[ERROR_TRACKING] DB save failed: %s", db_exc)
+        logger.error("[ERROR_TRACKING] DB save failed exception=%s", type(db_exc).__name__)
         return  # Can't save → don't attempt email
 
     # ── Upsert incident — groups this event under its root cause ─────────────
@@ -597,7 +597,7 @@ def _do_record(
             event_created_at = record.created_at or datetime.utcnow(),
         )
     except Exception:
-        logger.exception("[INCIDENT] unexpected error calling _upsert_incident — ignoring")
+        logger.error("[INCIDENT] unexpected error calling _upsert_incident; no content logged")
 
     # ── Feature flag check ────────────────────────────────────────────────────
     if os.environ.get("PROCESSING_ERROR_EMAILS_ENABLED", "false").lower() != "true":
@@ -693,4 +693,4 @@ def record_processing_error_safe(
             csv_context=csv_context,
         )
     except Exception:
-        logger.exception("[ERROR_TRACKING] unexpected failure in record_processing_error_safe — ignoring")
+        logger.error("[ERROR_TRACKING] unexpected failure in record_processing_error_safe; no content logged")
