@@ -984,7 +984,7 @@ td.type-badge { font-family: var(--font-body); font-size: 10px; text-transform: 
 
 
 <script>
-  const CSV_DIAG_ENABLED = {{ 'true' if config.get('CSV_DIAGNOSTIC_SUPPORT_ENABLED', False) else 'false' }};
+  const CSV_DIAG_ENABLED = {{ 'true' if csv_diag_allowed else 'false' }};
   let failedDiagnosticFiles = [];
   // ── CONSTANTES ───────────────────────────────
   const EXCHANGE_PAGE = 'binance';
