@@ -74,3 +74,31 @@ def test_same_origin_is_not_blocked_by_new_boundary(client):
     assert response.get_json(silent=True) != {"error": "Origen de solicitud no válido."}
     # Authorization (not CSRF) must still prevent an anonymous write.
     assert response.status_code in (401, 302, 403)
+
+
+@pytest.mark.parametrize("method,path", [
+    ("POST", "/api/admin/recursos/solicitudes/1/estado"),
+    ("PATCH", "/api/admin/contactos/1"),
+])
+def test_same_site_other_subdomain_is_rejected(client, method, path):
+    """SameSite cookie policy does not stop a different same-site origin."""
+    response = client.open(
+        path, method=method,
+        headers={"Origin": "https://other.marianosevilla.com", "Sec-Fetch-Site": "same-site"},
+        json={"status": "approved", "accion": "archivar"},
+    )
+    assert response.status_code == 403
+    assert response.get_json()["error"] == "Origen de solicitud no válido."
+
+
+def test_missing_origin_and_fetch_metadata_is_not_claimed_as_csrf_protection(client):
+    """Record residual risk: headers absent do not trigger the boundary.
+
+    No authenticated write is attempted; authentication must still deny
+    this anonymous request. This is NOT a proof of authenticated CSRF safety.
+    """
+    response = client.patch(
+        "/api/admin/contactos/1", json={"accion": "archivar"},
+    )
+    assert response.get_json(silent=True) != {"error": "Origen de solicitud no válido."}
+    assert response.status_code in (401, 302, 403)
