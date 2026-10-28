@@ -4017,15 +4017,25 @@ def delete_account_request():
 
 
 def _anonymize_user(user: User) -> None:
-    """Anonimiza PII del usuario. Se llama tras verificar identidad."""
+    """Desactiva y desidentifica la cuenta tras verificar su identidad.
+
+    No equivale a borrar los expedientes ni a anonimizar registros vinculados
+    por user_id u otros identificadores; su conservación se decide aparte.
+    """
     uid = user.id
-    user.email             = f"deleted_{uid}@deleted"
-    user.password_hash     = None
-    user.google_id         = None
-    user.full_name         = None
-    user.nif               = None
-    user.is_active         = False
-    user.email_verified_at = None
+    user.email                    = f"deleted_{uid}@deleted"
+    user.password_hash            = None
+    user.google_id                = None
+    user.full_name                = None
+    user.nif                      = None
+    user.is_active                = False
+    user.email_verified_at        = None
+    # Los tokens y el último acceso ya no son necesarios para una cuenta
+    # desactivada. No tocar registros fiscales, pagos ni expedientes asociados.
+    user.comms_unsubscribe_token   = None
+    user.password_reset_token_hash = None
+    user.password_reset_expires_at = None
+    user.last_login                = None
     db.session.commit()
 
 
