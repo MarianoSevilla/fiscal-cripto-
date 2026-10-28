@@ -632,3 +632,14 @@ def test_privacy_unsafe_exceptions_never_persist_argument_or_traceback():
             assert private not in (row.csv_context or "")
             assert row.csv_filename is None
             assert row.fingerprint
+
+
+
+def test_privacy_logging_does_not_include_unexpected_exception_arguments(caplog):
+    private = "SECRET-TEMPORARY-CSV-LINE-345"
+    with patch("error_tracking._do_record", side_effect=RuntimeError(private)):
+        record_processing_error_safe(
+            user_id=2, email="demo@example.invalid", exchange="kraken",
+            stage="classify", exc=ValueError(private),
+        )
+    assert private not in caplog.text
