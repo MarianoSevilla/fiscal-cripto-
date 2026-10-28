@@ -212,7 +212,8 @@ def test_verified_incident_reply_to_opted_out_user_is_not_marketing(
     with isolated_app.app_context():
         user = _user(email=address, opted_out=True)
         incident = _incident(address, user.id)
-        campaign_id = _draft(address, incident_id=incident.id)
+        incident_id = incident.id
+        campaign_id = _draft(address, incident_id=incident_id)
     accepted = _start(admin_client, campaign_id)
     assert accepted.status_code == 200, accepted.get_data(as_text=True)[:250]
     assert dispatch_stub == [campaign_id]
@@ -221,7 +222,7 @@ def test_verified_incident_reply_to_opted_out_user_is_not_marketing(
         assert db.session.get(CommunicationCampaign, campaign_id).status == "sent"
         user = User.query.filter_by(email=address).one()
         assert user.comms_opted_out and user.comms_unsubscribe_token is None
-        assert db.session.get(ProcessingError, incident.id).auto_email_sent is True
+        assert db.session.get(ProcessingError, incident_id).auto_email_sent is True
     assert len(mail_stub) == 1
     assert mail_stub[0]["to"] == [address]
     assert "headers" not in mail_stub[0]
@@ -234,7 +235,8 @@ def test_verified_incident_reply_can_contact_nonregistered_recipient(
     address = "incident-external-sec5@example.invalid"
     with isolated_app.app_context():
         incident = _incident(address)
-        campaign_id = _draft(address, incident_id=incident.id)
+        incident_id = incident.id
+        campaign_id = _draft(address, incident_id=incident_id)
     assert _start(admin_client, campaign_id).status_code == 200
     with isolated_app.app_context():
         comms._execute_campaign(campaign_id)
@@ -262,10 +264,11 @@ def test_incident_link_revalidated_when_dispatch_runs(
     address = "incident-edited-sec5@example.invalid"
     with isolated_app.app_context():
         incident = _incident(address)
-        campaign_id = _draft(address, incident_id=incident.id)
+        incident_id = incident.id
+        campaign_id = _draft(address, incident_id=incident_id)
     assert _start(admin_client, campaign_id).status_code == 200
     with isolated_app.app_context():
-        incident = db.session.get(ProcessingError, incident.id)
+        incident = db.session.get(ProcessingError, incident_id)
         incident.email = "changed-sec5@example.invalid"
         db.session.commit()
         comms._execute_campaign(campaign_id)
