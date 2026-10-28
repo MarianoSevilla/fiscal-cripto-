@@ -497,7 +497,7 @@ def _do_record(
                     clean["file_type"] = raw_context["file_type"]
                 if raw_context.get("encoding") in ("utf-8", "latin-1"):
                     clean["encoding"] = raw_context["encoding"]
-                if raw_context.get("separator") in (",", ";", "\\t", "|"):
+                if raw_context.get("separator") in (",", ";", "\t", "|"):
                     clean["separator"] = raw_context["separator"]
                 n = raw_context.get("n_columns")
                 if type(n) is int and 0 < n <= 10000:
