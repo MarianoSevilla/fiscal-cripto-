@@ -28,3 +28,20 @@ def test_retention_matrix_explicitly_rejects_global_erasure_claim():
     assert "no representa una supresión exhaustiva" in matrix
     assert "Bloqueo y acceso" in matrix
     assert "no política de retención aprobada" in matrix
+
+
+def test_decision_proposal_covers_existing_tables_and_remains_non_executable():
+    """Document every ORM table and preserve the explicit approval gate."""
+    source = (ROOT / "models.py").read_text(encoding="utf-8")
+    policy = (
+        ROOT.parent / "docs" / "security" / "SEC5_PRIV_011_013_DECISION_PROPOSAL.md"
+    ).read_text(encoding="utf-8")
+    tables = set(re.findall(
+        r'^\\s+__tablename__\\s*=\\s*"([a-z0-9_]+)"',
+        source, flags=re.M
+    ))
+    rows = set(re.findall(r'^\\| \\x60([a-z0-9_]+)\\x60 \\|', policy, flags=re.M))
+    assert tables == rows, (sorted(tables - rows), sorted(rows - tables))
+    assert "BORRADOR PARA DECISIÓN" in policy
+    assert "No aprobado, no aplicado en producción" in policy
+    assert "Ninguna nueva purga se autoriza" in policy
