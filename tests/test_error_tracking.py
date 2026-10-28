@@ -595,7 +595,7 @@ def test_privacy_multifile_context_retains_shape_without_private_values():
     private = "hidden-customer-iban"
     source = [
         {"file_type": "csv", "encoding": "utf-8",
-         "separator": "\\t", "n_columns": 3,
+         "separator": "\t", "n_columns": 3,
          "headers": [private], "sha256": "f" * 64},
         {"file_type": "csv", "encoding": "latin-1",
          "separator": ";", "n_columns": 4, "untrusted": private},
@@ -605,7 +605,7 @@ def test_privacy_multifile_context_retains_shape_without_private_values():
     assert isinstance(decoded, list) and len(decoded) == 2
     assert decoded[0]["n_columns"] == 3
     assert decoded[1]["n_columns"] == 4
-    assert decoded[0]["separator"] == "\\t"
+    assert decoded[0]["separator"] == "\t"
     assert private not in safe
     assert "sha256" not in safe and "headers" not in safe
     assert len(json.loads(_minimize_csv_context(json.dumps(source * 15)))) == 10
