@@ -422,60 +422,34 @@ _PARSER_CLASS_MAP = {
 
 
 def _capturar_evidencia(filepath: str, *, exchange: str = None, is_xlsx: bool = False) -> dict:
-    """Captura contexto técnico del archivo para diagnóstico posterior.
-
-    Best-effort: nunca lanza excepciones. Devuelve dict vacío si falla todo.
-    El llamador serializa a JSON y pasa como csv_context a record_processing_error_safe().
-    """
+    """Recoge solo metadatos técnicos; nunca contenido, cabeceras ni hash del fichero."""
     import csv as _csv
-    ctx: dict = {}
+    ctx = {"file_type": "xlsx" if is_xlsx else "csv"}
+    if is_xlsx:
+        return ctx
     try:
-        # SHA256 del archivo completo (máx. 10 MB garantizado por validación previa)
-        with open(filepath, "rb") as f:
-            ctx["sha256"] = hashlib.sha256(f.read()).hexdigest()
-
-        if is_xlsx:
-            ctx["file_type"] = "xlsx"
-            return ctx
-
-        ctx["file_type"] = "csv"
-
-        # Detección de encoding: UTF-8 estricto primero, latin-1 como fallback
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 f.read(8192)
             ctx["encoding"] = "utf-8"
         except UnicodeDecodeError:
             ctx["encoding"] = "latin-1"
-        except Exception:
-            pass
 
-        # Cabeceras y separador
-        enc = ctx.get("encoding", "utf-8")
-        try:
-            with open(filepath, "r", encoding=enc, errors="replace") as f:
-                first_line = f.readline().strip()
-            if first_line:
-                for sep in (",", ";", "\t", "|"):
-                    cols = next(_csv.reader([first_line], delimiter=sep), [])
-                    if len(cols) > 1:
-                        ctx["separator"] = sep
-                        ctx["headers"]   = cols[:50]   # máx. 50 columnas en evidencia
-                        ctx["n_columns"] = len(cols)
-                        break
-        except Exception:
-            pass
-
-        # Variante de formato Binance (detectada aquí para evitar doble lectura)
+        with open(filepath, "r", encoding=ctx.get("encoding", "utf-8"), errors="replace") as f:
+            first_line = f.readline().strip()
+        for sep in (",", ";", "\\t", "|"):
+            columns = next(_csv.reader([first_line], delimiter=sep), [])
+            if len(columns) > 1:
+                ctx["separator"] = sep
+                ctx["n_columns"] = len(columns)
+                break
         if exchange == "binance":
             try:
                 ctx["exchange_format_variant"] = _detectar_formato_binance(filepath)
             except Exception:
                 pass
-
     except Exception:
         pass
-
     return ctx
 
 
