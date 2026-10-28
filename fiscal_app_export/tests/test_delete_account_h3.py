@@ -170,7 +170,8 @@ def test_sin_sesion_devuelve_401(client, _app):
 def test_pw_user_contrasena_correcta(client, _app):
     """Caso 2: elimina credenciales/tokens, no solo la identidad visible."""
     uid = _make_pw_user(_app, "h3_pw_ok@test.com", "Correct-Pass-123!")
-    _login(client, "h3_pw_ok@test.com", "Correct-Pass-123!")
+    # Populate the DB before login so the synthetic cached current_user
+    # does not retain a stale NIF across the two test-client requests.
     with _app.app_context():
         db.session.remove()
         u = db.session.get(User, uid)
@@ -181,6 +182,7 @@ def test_pw_user_contrasena_correcta(client, _app):
         u.last_login = datetime.utcnow()
         db.session.commit()
         db.session.remove()
+    _login(client, "h3_pw_ok@test.com", "Correct-Pass-123!")
 
     r = client.post("/api/delete-account",
                     json={"password": "Correct-Pass-123!"},
