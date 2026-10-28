@@ -1,6 +1,6 @@
 # 05-C3b · CSV-DIAG-CONSENT-001 — Envío voluntario de archivos fallidos
 
-Estado: propuesta técnica en PR en borrador. No publicado ni habilitado.
+Estado: PR #155 integrada en main y desplegada; envío público desactivado. Prueba de una sola cuenta preparada en rama aislada y pendiente de integrar.
 
 ## Objetivo
 
@@ -14,6 +14,16 @@ Permitir que una persona autenticada cuyo informe FIFO haya fallado comparta **v
 - El servidor no copia deliberadamente el archivo a una tabla ni lo añade a la telemetría existente; `request.close()` intenta cerrar y liberar los archivos multipart (incluido posible spool temporal de Werkzeug) tanto si el envío funciona como si falla; lo transporta mediante la API de Resend exclusivamente a `colab.marianosevilla@gmail.com`, sin destinatario configurable por petición ni entorno. El nombre del adjunto es genérico.
 - La respuesta no expone el archivo, claves, dirección de soporte ni detalles de terceros. No se reintenta automáticamente si se desconoce si Resend recibió la solicitud.
 - En entornos sin configuración de correo o con el flag desactivado, el envío falla de forma cerrada.
+
+## Prueba de envío limitada a una sola cuenta (pendiente de integración)
+
+- Mantener `CSV_DIAGNOSTIC_SUPPORT_ENABLED=false`: el envío público continúa cerrado.
+- Definir **solo para el periodo de prueba** `CSV_DIAGNOSTIC_TEST_EMAIL=<correo exacto de la cuenta registrada que hará el ensayo>`, tras comprobar que existe y que puede iniciar sesión. No usar el correo del buzón de soporte como cuenta de prueba salvo que también sea la cuenta registrada con la que se inicia sesión en marianosevilla.com.
+- El servidor coteja el email del usuario **autenticado** con el único email autorizado, sin distinguir mayúsculas; una coincidencia exacta permite el endpoint y muestra el consentimiento en la herramienta. Para el resto de usuarios, el botón no aparece después del error y la API devuelve 404, sin invocar Resend.
+- Nunca se envía nada sin consentimiento explícito por petición. Las verificaciones de tipo/tamaño/origen, rate limit y liberación de temporales permanecen inalteradas.
+- Efectuar una prueba manual usando **solo un CSV ficticio** con una importación fallida, verificar la recepción en Gmail y el borrado definitivo del correo desde Gmail/Papelera. La respuesta `200` de Resend solo acredita aceptación por el proveedor, no entrega final en Gmail.
+- Al finalizar, **vaciar `CSV_DIAGNOSTIC_TEST_EMAIL`** y comprobar el despliegue de restauración. No activar el flag público sin una decisión posterior explícita.
+- La restricción requiere una nueva PR y despliegue previamente autorizados; no está vigente en el commit de producción de la PR #155.
 
 ## Política de conservación aprobada: opción A — Gmail 30 días
 
