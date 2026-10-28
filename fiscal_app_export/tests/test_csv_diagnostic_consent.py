@@ -109,7 +109,7 @@ def test_cross_origin_is_blocked(authenticated_client):
 @pytest.mark.parametrize("filename,content,status", [
     ("bad.exe", b"contents", 400),
     ("bad.csv", b"", 413),
-    ("bad.csv", b"A\\x00B", 400),
+    ("bad.csv", b"A\x00B", 400),
     ("bad.xlsx", b"not-a-zip", 400),
     ("bad.xls", b"not-an-xls", 400),
     ("big.csv", b"X" * (8 * 1024 * 1024 + 1), 413),
