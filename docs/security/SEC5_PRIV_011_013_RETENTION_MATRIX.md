@@ -4,7 +4,7 @@
 **Fecha de corte:** 28/10/2026.  
 **Repositorio base:** `MarianoSevilla/fiscal-cripto-`, `main@2b360475f2ec2bb9c7a2e032a6db8efc57161d66`.  
 **Fuentes del código:** `fiscal_app_export/models.py`, `app.py::_anonymize_user`, `static/privacidad.html#conservacion`, `communications/`, `fifo_pdf_lifecycle.py`.  
-**Alcance de la comprobación:** modelo ORM (16 tablas), comportamiento de la función de eliminación y texto publicado. **No** auditoría de todas las tablas físicas, copias de seguridad o datos de producción.
+**Alcance de la comprobación:** modelo ORM (17 tablas), comportamiento de la función de eliminación y texto publicado. **No** auditoría de todas las tablas físicas, copias de seguridad o datos de producción.
 
 ## 1. Conclusión sobre «Eliminar mi cuenta»
 
@@ -19,7 +19,7 @@ La función **desactiva y desidentifica parcialmente** la fila de `users`, **no*
 
 El mensaje de la página `/privacidad#conservacion` ya advierte que la eliminación no borra automáticamente todas las filas relacionadas. No cambiar su texto para prometer borrado global.
 
-## 2. Matriz de las 16 tablas del modelo ORM
+## 2. Matriz de las 17 tablas del modelo ORM
 
 **Lectura:** «Actual» es lo que hace el código al eliminar una cuenta. «Acordar» es una decisión pendiente antes de programar una limpieza. No se fijan plazos legales hipotéticos.
 
@@ -43,7 +43,7 @@ El mensaje de la página `/privacidad#conservacion` ya advierte que la eliminaci
 | `resources` | Catálogo de contenido, ubicación de almacenamiento | Permanece; no es fila personal por defecto | Ciclo editorial independiente; revisar solo campos libres que puedan incorporar datos |
 | `resource_requests` | **Nombre/email**, UID de exchange, Telegram, IP, notas y `marketing_consent`, sin FK a usuario | Permanece por separado; no afectada por eliminar cuenta | Separar entrega del recurso, consentimiento y afiliación; plazos y prueba del consentimiento |
 
-**Observación de alcance:** las tres tablas `s01_*` forman parte de esta matriz, pero el inventario considera 17 tablas de negocio en total. La enumeración debe mantenerse sincronizada con `models.py` mediante una prueba de regresión. En caso de nuevas migraciones, comparar también con el esquema PostgreSQL real antes de actualizar la política.
+**Observación de alcance:** las 17 tablas declaradas en el ORM se comparan con esta matriz mediante una prueba de regresión. Si se incorporan nuevas migraciones, comparar también con el esquema PostgreSQL real antes de actualizar la política.
 
 ## 3. Datos fuera de estas tablas
 
