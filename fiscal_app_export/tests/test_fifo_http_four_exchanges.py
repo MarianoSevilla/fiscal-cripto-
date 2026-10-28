@@ -245,13 +245,20 @@ def test_token_cannot_be_used_by_another_authenticated_account(client, isolated_
         stranger.set_password("other-fixture-password")
         db.session.add(stranger)
         db.session.commit()
-    with isolated_app.test_client() as other:
-        login = other.post("/api/login", json={
-            "email": "other-05c2-user@example.invalid",
-            "password": "other-fixture-password",
-        })
-        assert login.status_code == 200
-        assert other.get("/api/descargar/" + token).status_code == 403
+    # Avoid a nested FlaskClient context: a second preserved request context
+    # can shadow the owner's current_user during the later request.
+    other = isolated_app.test_client()
+    login = other.post("/api/login", json={
+        "email": "other-05c2-user@example.invalid",
+        "password": "other-fixture-password",
+    })
+    assert login.status_code == 200
+    denied = other.get("/api/descargar/" + token)
+    assert denied.status_code == 403, denied.get_data(as_text=True)[:200]
+
+    # A rejected cross-user attempt must not consume the owner's token.
+    with client.session_transaction() as session:
+        assert session.get("pdf_token") == token
     owner = client.get("/api/descargar/" + token)
-    assert owner.status_code == 200
+    assert owner.status_code == 200, owner.get_data(as_text=True)[:200] if owner.mimetype != "application/pdf" else ""
     assert owner.data.startswith(b"%PDF-")
