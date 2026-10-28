@@ -131,13 +131,15 @@ def isolated_app():
 
 @pytest.fixture
 def client(isolated_app):
-    with isolated_app.test_client() as client:
-        response = client.post("/api/login", json={
-            "email": "four-exchanges-05c2@example.invalid",
-            "password": "test-fixture-only",
-        })
-        assert response.status_code == 200, response.get_data(as_text=True)[:200]
-        yield client
+    # Avoid preserving the previous request's app context between calls:
+    # separate clients must not reuse flask.g's cached current_user.
+    client = isolated_app.test_client()
+    response = client.post("/api/login", json={
+        "email": "four-exchanges-05c2@example.invalid",
+        "password": "test-fixture-only",
+    })
+    assert response.status_code == 200, response.get_data(as_text=True)[:200]
+    yield client
 
 
 def _analyse(client, exchange, *, with_purchase):
