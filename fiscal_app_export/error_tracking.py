@@ -8,6 +8,7 @@ Feature flag: PROCESSING_ERROR_EMAILS_ENABLED=true/false (default false)
 Rate limit:   PROCESSING_ERROR_MAX_EMAILS_PER_HOUR (default 100)
 """
 import os
+import json
 import re
 import hashlib
 import logging
@@ -51,8 +52,9 @@ def _sanitize(text: str, max_len: int) -> str:
 
 def _extract_traceback_short(exc: Exception) -> str:
     try:
-        raw = "".join(tb.format_exception(type(exc), exc, exc.__traceback__))
-        return _sanitize(raw, _MAX_TRACEBACK_LEN)
+        # Never persist exception arguments, paths, source lines or uploaded CSV values.
+        frames = tb.extract_tb(exc.__traceback__) if exc.__traceback__ else []
+        return " > ".join(frame.name for frame in frames[-8:])[:_MAX_TRACEBACK_LEN]
     except Exception:
         return ""
 
@@ -473,7 +475,9 @@ def _do_record(
     from models import db, ProcessingError
 
     error_type      = type(exc).__name__
-    message_short   = _sanitize(str(exc), _MAX_MESSAGE_LEN)
+    # Exception arguments frequently embed CSV rows, identifiers or user filenames.
+    # Store a bounded technical category rather than their raw text.
+    message_short   = f"{error_type} at {stage or 'processing'}"[:_MAX_MESSAGE_LEN]
     # Only capture traceback for real parser bugs — not for expected unsupported formats
     traceback_short = (
         _extract_traceback_short(exc)
@@ -481,7 +485,26 @@ def _do_record(
         else ""
     )
     fingerprint     = build_processing_error_fingerprint(exchange, stage, error_type, message_short)
-    safe_filename   = (os.path.basename(csv_filename)[:255] if csv_filename else None)
+    safe_filename   = None  # Original filenames may contain personal identifiers.
+    # Reject arbitrary caller-supplied diagnostics, including raw headers and hashes.
+    safe_context = None
+    if csv_context:
+        try:
+            raw_context = json.loads(csv_context) if isinstance(csv_context, str) else csv_context
+            if isinstance(raw_context, dict):
+                clean = {}
+                if raw_context.get("file_type") in ("csv", "xlsx"):
+                    clean["file_type"] = raw_context["file_type"]
+                if raw_context.get("encoding") in ("utf-8", "latin-1"):
+                    clean["encoding"] = raw_context["encoding"]
+                if raw_context.get("separator") in (",", ";", "\\t", "|"):
+                    clean["separator"] = raw_context["separator"]
+                n = raw_context.get("n_columns")
+                if type(n) is int and 0 < n <= 10000:
+                    clean["n_columns"] = n
+                safe_context = json.dumps(clean) if clean else None
+        except (ValueError, TypeError):
+            pass
 
     record = ProcessingError(
         user_id         = user_id,
@@ -497,7 +520,7 @@ def _do_record(
         fingerprint     = fingerprint,
         csv_filename    = safe_filename,
         csv_size        = csv_size,
-        csv_context     = csv_context,
+        csv_context     = safe_context,
         auto_email_sent = False,
     )
 
