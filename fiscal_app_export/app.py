@@ -2388,6 +2388,23 @@ def api_bitget_anos():
     key_func=lambda: str(current_user.id) if current_user.is_authenticated else "anonymous",
 )
 def diagnostico_archivo_voluntario():
+    """One explicitly authorized transfer; always close multipart file streams.
+
+    Werkzeug can spool large multipart uploads to disk. A close on every exit
+    releases these temporary resources, regardless of provider delivery outcome.
+    This does NOT delete the email attachment retained by Resend or Gmail.
+    """
+    try:
+        return _diagnostico_archivo_voluntario_impl()
+    finally:
+        try:
+            request.close()
+        except Exception:
+            # Do not log an exception that may contain an uploaded filename.
+            app.logger.warning("[CSV_DIAGNOSTIC_SUPPORT] request-file cleanup failed")
+
+
+def _diagnostico_archivo_voluntario_impl():
     """Optional support-only transfer. Never invoked by FIFO processing itself.
 
     Transport-only: no report generation, DB blob, attachment on an error record,
@@ -2443,9 +2460,9 @@ def diagnostico_archivo_voluntario():
     if original_extension == ".csv" and b"\x00" in data[:2048]:
         return jsonify({"error": "El archivo no parece un CSV de texto."}), 400
 
-    support_email = os.environ.get("CSV_DIAGNOSTIC_SUPPORT_EMAIL", "").strip()
+    support_email = "colab.marianosevilla@gmail.com"
     api_key = os.environ.get("RESEND_API_KEY", "")
-    if not support_email or not api_key:
+    if not api_key:
         return jsonify({"error": "El canal de soporte no está disponible."}), 503
 
     # Never forward the user-supplied filename or arbitrary error text.
