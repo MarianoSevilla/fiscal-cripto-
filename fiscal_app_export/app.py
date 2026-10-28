@@ -243,6 +243,10 @@ _RESEND_FROM_DISPLAY = (
     _RESEND_FROM if "<" in _RESEND_FROM else f"Mariano Sevilla <{_RESEND_FROM}>"
 )
 _APP_BASE_URL  = os.environ.get("APP_BASE_URL", "https://www.marianosevilla.com")
+# Deliberately disabled until the support mailbox has an approved deletion policy.
+app.config["CSV_DIAGNOSTIC_SUPPORT_ENABLED"] = (
+    os.environ.get("CSV_DIAGNOSTIC_SUPPORT_ENABLED", "false").lower() == "true"
+)
 
 from email_templates import (  # noqa: E402
     verification_email,
@@ -2373,6 +2377,119 @@ def api_bitget_anos():
                 os.unlink(p)
             except OSError:
                 pass
+
+
+# ── VOLUNTARY DIAGNOSTIC FILE SUBMISSION (opt-in, fail-closed) ───────────────
+
+@app.route("/api/diagnostico-archivo", methods=["POST"])
+@login_required
+@limiter.limit(
+    "2 per day",
+    key_func=lambda: str(current_user.id) if current_user.is_authenticated else "anonymous",
+)
+def diagnostico_archivo_voluntario():
+    """Optional support-only transfer. Never invoked by FIFO processing itself.
+
+    Transport-only: no report generation, DB blob, attachment on an error record,
+    or server-side copy after the HTTP request. The receiving mailbox and Resend
+    DO retain copies; the feature must remain disabled until retention is approved.
+    """
+    import base64 as _base64
+    import requests as _requests
+
+    if not app.config.get("CSV_DIAGNOSTIC_SUPPORT_ENABLED"):
+        return jsonify({"error": "Envío voluntario no habilitado."}), 404
+
+    # Browser POSTs must come from the platform, never another site with a cookie.
+    origin = request.headers.get("Origin", "")
+    permitted = {"https://marianosevilla.com", "https://www.marianosevilla.com"}
+    if app.config.get("TESTING"):
+        permitted.add("http://localhost")
+    if origin not in permitted:
+        return jsonify({"error": "Origen de solicitud no autorizado."}), 403
+
+    if not request.content_type or not request.content_type.lower().startswith("multipart/form-data;"):
+        return jsonify({"error": "Solicitud de archivo no válida."}), 415
+
+    # An explicit, independent acknowledgment is required for every submission.
+    if request.form.get("consentimiento") != "ACEPTO_ENVIO_DIAGNOSTICO_V1":
+        return jsonify({"error": "Debes autorizar expresamente el envío."}), 400
+
+    exchange = (request.form.get("exchange") or "").strip().lower()
+    if exchange not in {
+        "binance", "bitvavo", "kraken", "coinbase", "bit2me", "mexc",
+        "kucoin", "bitget", "nexo", "cryptocom", "uphold",
+    }:
+        return jsonify({"error": "Exchange no válido."}), 400
+
+    attachments = request.files.getlist("archivo")
+    if len(attachments) != 1 or not attachments[0].filename:
+        return jsonify({"error": "Selecciona un único archivo para soporte."}), 400
+
+    original_extension = os.path.splitext(attachments[0].filename.lower())[1]
+    if original_extension not in {".csv", ".xlsx", ".xls"}:
+        return jsonify({"error": "Solo se aceptan CSV y Excel."}), 400
+
+    max_bytes = 8 * 1024 * 1024
+    data = attachments[0].stream.read(max_bytes + 1)
+    if not data or len(data) > max_bytes:
+        return jsonify({"error": "El archivo debe tener entre 1 byte y 8 MB."}), 413
+
+    # Reject obvious disguised executables; do not parse untrusted workbooks.
+    if original_extension == ".xlsx" and not data.startswith(b"PK"):
+        return jsonify({"error": "Archivo Excel no reconocido."}), 400
+    if original_extension == ".xls" and not data.startswith(bytes.fromhex("D0CF11E0A1B11AE1")):
+        return jsonify({"error": "Archivo Excel no reconocido."}), 400
+    if original_extension == ".csv" and b"\\x00" in data[:2048]:
+        return jsonify({"error": "El archivo no parece un CSV de texto."}), 400
+
+    support_email = os.environ.get("CSV_DIAGNOSTIC_SUPPORT_EMAIL", "").strip()
+    api_key = os.environ.get("RESEND_API_KEY", "")
+    if not support_email or not api_key:
+        return jsonify({"error": "El canal de soporte no está disponible."}), 503
+
+    # Never forward the user-supplied filename or arbitrary error text.
+    attachment_name = f"diagnostico_{exchange}{original_extension}"
+    payload = {
+        "from": _RESEND_FROM_DISPLAY,
+        "to": [support_email],
+        "subject": f"Archivo enviado voluntariamente para diagnostico — {exchange}",
+        "text": (
+            "Archivo enviado voluntariamente a soporte para revisar un error "
+            "de importación. Consentimiento independiente: "
+            "ACEPTO_ENVIO_DIAGNOSTICO_V1. "
+            f"Cuenta: {current_user.id}. Email: {current_user.email}. "
+            f"Exchange: {exchange}. Archivo adjunto: {attachment_name}. "
+            "Tratar como documentación fiscal confidencial. "
+            "Eliminar según la política de conservación del buzón y proveedor."
+        ),
+        "attachments": [{
+            "filename": attachment_name,
+            "content": _base64.b64encode(data).decode("ascii"),
+        }],
+    }
+
+    try:
+        response = _requests.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": "Bearer " + api_key, "Content-Type": "application/json"},
+            json=payload,
+            timeout=12,
+        )
+        if response.status_code not in (200, 201):
+            app.logger.warning(
+                "[CSV_DIAGNOSTIC_SUPPORT] delivery rejected status=%d", response.status_code
+            )
+            return jsonify({"error": "No ha sido posible entregar el archivo."}), 502
+    except _requests.RequestException as exc:
+        # Unknown delivery outcome: do not automatically retry or log payloads.
+        app.logger.warning(
+            "[CSV_DIAGNOSTIC_SUPPORT] delivery uncertain exception=%s", type(exc).__name__
+        )
+        return jsonify({"error": "No se puede confirmar la entrega. Contacta con soporte antes de repetir."}), 502
+
+    app.logger.info("[CSV_DIAGNOSTIC_SUPPORT] sent account_id=%s exchange=%s", current_user.id, exchange)
+    return jsonify({"ok": True, "message": "Archivo enviado voluntariamente a soporte."}), 200
 
 
 @app.route("/api/analizar", methods=["POST"])
