@@ -807,6 +807,29 @@ limiter = Limiter(
 )
 
 @app.before_request
+def sensitive_admin_origin_boundary():
+    """Deny explicit cross-site writes to administrative resource/contact APIs.
+
+    Read-only and provider webhook endpoints are intentionally unaffected.
+    Browsers send Origin and/or Sec-Fetch-Site; legacy clients with neither
+    header retain their existing authentication/authorization requirements.
+    """
+    if request.method not in {'POST', 'PATCH', 'PUT', 'DELETE'}:
+        return
+    protected = (
+        request.path.startswith('/api/admin/recursos/solicitudes/')
+        or request.path.startswith('/api/admin/contactos/')
+    )
+    if not protected:
+        return
+    origin = request.headers.get('Origin')
+    site = request.headers.get('Sec-Fetch-Site')
+    if ((origin is not None and origin.rstrip('/') != request.host_url.rstrip('/'))
+            or site == 'cross-site'):
+        return jsonify({'error': 'Origen de solicitud no válido.'}), 403
+
+
+@app.before_request
 def auth_request_boundary():
     """Reject cross-origin auth writes and malformed JSON before auth handlers."""
     if request.method != 'POST' or request.path not in AUTH_POST_PATHS:
