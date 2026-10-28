@@ -118,7 +118,7 @@ class HomeRedesignContracts(unittest.TestCase):
         old_label,new_label=APPROVED_LINK_LABEL
         self.assertEqual(expected_text.count(old_label),1)
         expected_text=expected_text.replace(old_label,new_label)
-        self.assertEqual(normal(' '.join(self.b.text)).count(new_label),2)
+        self.assertEqual(normal(' '.join(self.b.text)).count(new_label),1)
         old_cta,new_cta=APPROVED_REPORT_CTA
         self.assertEqual(expected_text.count(old_cta),1)
         expected_text=expected_text.replace(old_cta,new_cta)
@@ -127,12 +127,14 @@ class HomeRedesignContracts(unittest.TestCase):
         for old_value,new_value in {**APPROVED_PRESENTATION_LABELS,**APPROVED_EXAMPLE_DATES}.items():
             self.assertEqual(expected_text.count(old_value),1)
             expected_text=expected_text.replace(old_value,new_value)
-        # 05-B1: explicitly approved correction to the misleading CSV retention claim.
-        privacy_old='Privacidad y seguridad — tu CSV no se almacena'
-        privacy_new='Consulta cómo tratamos tus archivos en nuestra Política de privacidad'
-        self.assertEqual(expected_text.count(privacy_old),1)
-        expected_text=expected_text.replace(privacy_old,privacy_new)
-        self.assertEqual(normal(' '.join(self.b.text)).count(privacy_new),1)
+        # Owner-approved October 28 restoration: remove only the old four-item
+        # trust list. Its unsafe privacy claim is not reintroduced elsewhere.
+        removed_copy=('Método FIFO Compatible con los principales exchanges '
+                      'Privacidad y seguridad — tu CSV no se almacena '
+                      '100% online, sin instalación')
+        self.assertEqual(expected_text.count(removed_copy),1)
+        expected_text=expected_text.replace(removed_copy,'')
+        self.assertNotIn('Consulta cómo tratamos tus archivos en nuestra',self.new)
         old=Counter(expected_text.split())
         new=Counter(normal(' '.join(self.b.text)).split())
         self.assertFalse(old-new,dict(old-new))
@@ -221,9 +223,14 @@ class HomeRedesignContracts(unittest.TestCase):
     def test_home_is_exactly_approved_v24_with_original_indexing_policy(self):
         approved=(BASELINES/'approved_v24.html').read_text()
         self.assertEqual(approved.count('<meta name="robots" content="noindex, nofollow">'),1)
-        self.assertEqual(self.new,approved.replace(
+        expected=approved.replace(
             '<meta name="robots" content="noindex, nofollow">',
-            '<meta name="robots" content="index, follow">'))
+            '<meta name="robots" content="index, follow">')
+        # Only the redundant trust strip below the green hero is removed.
+        trust=r'<section class="apple-trust"[\s\S]*?</section>\n'
+        self.assertEqual(len(re.findall(trust,expected)),1)
+        expected=re.sub(trust,'',expected,count=1)
+        self.assertEqual(self.new,expected)
     def test_local_assets_and_source_anchors_exist(self):
         for href in self.b.links:
             if href.startswith('#'):self.assertIn(href[1:],self.b.ids)
@@ -266,14 +273,15 @@ class HomeRedesignContracts(unittest.TestCase):
         self.assertNotIn('position:fixed',layout)
         self.assertEqual(previous.ids,self.b.ids)
         without_noscript=lambda text: re.sub(r'<noscript>[\s\S]*?</noscript>','',text)
-        expected_links=Document(without_noscript((BASELINES/'v19.html').read_text())).links
+        previous_html=(BASELINES/'v19.html').read_text()
+        trust=r'<section class="apple-trust"[\s\S]*?</section>\n'
+        self.assertEqual(len(re.findall(trust,previous_html)),1)
+        previous_html=re.sub(trust,'',previous_html,count=1)
+        expected_links=Document(without_noscript(previous_html)).links
         actual_links=Document(without_noscript(self.new)).links
-        # 05-B1 adds exactly one retention-policy link after the hero trust checklist.
-        privacy_link='/privacidad#conservacion'
-        self.assertNotIn(privacy_link,expected_links)
-        self.assertEqual(actual_links.count(privacy_link),1)
-        self.assertIn('/exchanges',expected_links)
-        expected_links.insert(expected_links.index('/exchanges'),privacy_link)
+        self.assertNotIn('/privacidad#conservacion',actual_links)
+        self.assertIn('/exchanges',actual_links)  # Still linked from the exchange section.
+        self.assertIn('/privacidad',actual_links)  # Privacy remains in the footer.
         self.assertEqual(expected_links,actual_links)
         items=re.findall(r'<details class="apple-faq-item"><summary>(.*?)</summary><div class="apple-faq-answer"><p>([\s\S]*?)</p>',self.new)
         from html import unescape
@@ -289,11 +297,10 @@ class HomeRedesignContracts(unittest.TestCase):
         baseline=(BASELINES/'v20.html').read_text().replace(
             '<meta name="robots" content="noindex, nofollow">',
             '<meta name="robots" content="index, follow">')
-        # 05-B1: preserve the V21 HTML contract apart from the approved privacy sentence/link.
-        old_privacy='<li>Privacidad y seguridad — tu CSV no se almacena</li>'
-        new_privacy='<li>Consulta cómo tratamos tus archivos en nuestra <a href="/privacidad#conservacion">Política de privacidad</a></li>'
-        self.assertEqual(baseline.count(old_privacy),1)
-        baseline=baseline.replace(old_privacy,new_privacy)
+        # The entire V21 trust band is removed, not reverted to its unsafe copy.
+        trust=r'<section class="apple-trust"[\s\S]*?</section>\n'
+        self.assertEqual(len(re.findall(trust,baseline)),1)
+        baseline=re.sub(trust,'',baseline,count=1)
         pattern=r'<noscript>[\s\S]*?</noscript>'
         self.assertEqual(re.sub(pattern,'',baseline),re.sub(pattern,'',self.new))
         fallback=re.search(pattern,self.new).group(0)
