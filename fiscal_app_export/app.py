@@ -2743,7 +2743,12 @@ def analizar():
 
             # Solo imprimir traceback para bugs reales del parser
             if _err_category == "parser_error":
-                traceback.print_exc()
+                # Error arguments and stack locals may contain personal CSV values.
+                app.logger.warning(
+                    "[CSV_DIAGNOSTICS] parser failed exchange=%s exception=%s",
+                    exchange if "exchange" in locals() else "multi-file",
+                    type(e).__name__,
+                )
 
             _registrar_informe(
                 exchange        = exchange,
@@ -2903,7 +2908,12 @@ def analizar_kucoin():
                 _err_category = e.category
                 _err_code     = e.code
             if _err_category == "parser_error":
-                traceback.print_exc()
+                # Error arguments and stack locals may contain personal CSV values.
+                app.logger.warning(
+                    "[CSV_DIAGNOSTICS] parser failed exchange=%s exception=%s",
+                    exchange if "exchange" in locals() else "multi-file",
+                    type(e).__name__,
+                )
 
             _registrar_informe(
                 exchange        = "kucoin",
@@ -3055,7 +3065,12 @@ def analizar_bitget():
                 _err_category = e.category
                 _err_code     = e.code
             if _err_category == "parser_error":
-                traceback.print_exc()
+                # Error arguments and stack locals may contain personal CSV values.
+                app.logger.warning(
+                    "[CSV_DIAGNOSTICS] parser failed exchange=%s exception=%s",
+                    exchange if "exchange" in locals() else "multi-file",
+                    type(e).__name__,
+                )
 
             _registrar_informe(
                 exchange        = "bitget",
