@@ -49,3 +49,9 @@ def test_decision_proposal_covers_existing_tables_and_remains_non_executable():
     assert "BORRADOR PARA DECISIÓN" in policy
     assert "No aprobado, no aplicado en producción" in policy
     assert "Ninguna nueva purga se autoriza" in policy
+    assert "Criterios técnicos aceptados para DISEÑO (no ejecución)" in policy
+    assert "calendario de **evaluación y propuesta de supresión**" in policy
+    assert "nunca borrado ciego de incidencias abiertas" in policy
+    assert "derechos de acceso a informes comprados" in policy
+    assert "retención de expedientes económicos" in policy
+    assert "no equivalen a plazos legales" not in policy or "NO mínimos ni máximos legales" in policy
