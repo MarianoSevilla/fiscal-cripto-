@@ -1,6 +1,7 @@
 # SEC5-PRIV-011/012/013 — Propuesta de decisiones de conservación y supresión
 
 **Estado: BORRADOR PARA DECISIÓN DEL RESPONSABLE. No aprobado, no aplicado en producción.**  
+**Acuerdo de dirección (28/10/2026):** aprobados **solo como hipótesis operativas de diseño** los criterios técnicos del apartado A; **no** constituyen todavía política de retención definitiva, orden de ejecución de purgas ni habilitación para tocar datos reales. Los plazos se someten a verificación técnica, derechos del usuario, necesidades de soporte, derechos de descarga y excepciones documentadas.  
 **Corte técnico-jurídico:** 28 de octubre de 2026. Base `main@c95b91dadf28583d8167850ba3fcaae8509d6009`.  
 **Ámbito:** los 17 modelos ORM inventariados en `SEC5_PRIV_011_013_RETENTION_MATRIX.md`, archivos locales, Gmail/Resend, pagos y respaldos. Sin inspección de datos personales reales ni configuración de retención de los proveedores.
 
@@ -69,7 +70,17 @@ Las duraciones **30/90/180 días** que aparecen abajo son **propuestas de polít
 
 ## 6. Decisiones solicitadas y puertas de seguridad
 
-**A. Política orientativa de datos técnicos (requiere aprobación):** 90 días para registros individualizados de FIFO; 30 días tras resolución, máximo ordinario 90 días para errores; 180 días tras cierre para consultas; 90 días tras entrega para recursos; siempre sujeto a revisión de justificación y excepciones.
+**A. Criterios técnicos aceptados para DISEÑO (no ejecución):** 90 días para registros individualizados de FIFO desde la generación o última descarga legítima, previa comprobación de que no se perjudican derechos de acceso a informes comprados; errores: revisión a los 30 días de resolverse y umbral ordinario de 90 días desde el evento para evaluar minimización/supresión, **nunca borrado ciego de incidencias abiertas**; consultas ordinarias: revisión a los 180 días del cierre; solicitudes de recursos: revisión a los 90 días de envío/rechazo; registros técnicos de comunicaciones: revisión a los 90 días. Es un calendario de **evaluación y propuesta de supresión**, no una autorización para conservar todo el plazo ni una garantía de borrado al día N. Todo registro sin finalidad vigente debe entrar antes en el procedimiento legal de supresión/bloqueo que corresponda. 
+
+**Condiciones para convertir A en política ejecutable:**
+- Definir por cada grupo el evento inicial inequívoco (UTC, resolución real, nueva interacción del interesado), el responsable, la finalidad, la base jurídica y las excepciones específicas; evitar que un simple acceso interno reinicie el reloj.
+- Separar y minimizar los datos personales: en FIFO conservar métricas solo tras anonimización verificable; en errores priorizar email, CSV contextual, traceback y nombre del archivo; en recursos eliminar UID, IP, Telegram y mensajes cuando no hagan falta.
+- Proteger solicitudes activas, derechos de descarga y tickets abiertos; no usar una duración de diseño para denegar al usuario un servicio o una reclamación.
+- Ante supresión o rectificación, valorar y aplicar el **bloqueo legal del art. 32 LOPDGDD cuando corresponda**; ninguna marca de estado equivale por sí sola a un bloqueo efectivo.
+- La evidencia mínima de consentimiento/oposición al marketing no sigue automáticamente la retención de logs de entrega; revisar legitimación y duración por separado.
+- No cambiar el texto público de privacidad hasta disponer del tratamiento implementado y comprobado.
+
+**Decisiones aún no aprobadas:** política definitiva por tabla, plazos exigibles por ley, retención de expedientes económicos y archivos de terceros, mecanismo de bloqueo, migraciones, tareas de purga y ejecución sobre datos productivos.
 
 **B. Expedientes económicos (requiere revisión de rol y obligaciones):** distinguir solicitud no pagada, servicio prestado, facturación y disputa. Aplicar plazos mercantiles/tributarios **solo a los documentos y responsables a los que correspondan** y considerar inicios/interrupciones reales, no una regla global de cuatro/seis años.
 
@@ -79,4 +90,4 @@ Las duraciones **30/90/180 días** que aparecen abajo son **propuestas de polít
 
 ### Criterio de cierre de la fase
 
-La fase solo se considerará cerrada cuando: (1) el responsable apruebe criterios por finalidad y excepciones; (2) se documenten plazos/soportes externos con evidencia suficiente; (3) cualquier implementación de bloqueo/supresión se pruebe con datos sintéticos y autorización separada; (4) el contenido legal publicado coincida con capacidades verificadas. **Esta PR es solo un borrador de decisión**, sin cambios de Flask, PostgreSQL, Railway ni datos reales.
+La fase solo se considerará cerrada cuando: (1) los criterios de diseño orientativos ya aceptados se concreten en una política definitiva por finalidad, responsable, excepciones y fecha de inicio; (2) se documenten plazos/soportes externos con evidencia suficiente; (3) cualquier implementación de bloqueo/supresión se pruebe con datos sintéticos y autorización separada; (4) el contenido legal publicado coincida con capacidades verificadas. **Esta PR documenta únicamente el acuerdo de diseño y los pendientes, sin cambios de Flask, PostgreSQL, Railway ni datos reales.**
