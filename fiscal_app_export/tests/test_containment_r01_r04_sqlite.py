@@ -13,7 +13,7 @@ import textwrap
 def test_isolated_sqlite_fiscal_fail_closed_persists_only_failed_records(tmp_path):
     app_dir = Path(__file__).resolve().parents[1]
     db_path = tmp_path / "acceptance.sqlite"
-    pdf_path = tmp_path / "valid-fifo.pdf"
+    pdf_path = tmp_path / "fifo_report_valid_fifo.pdf"
     code = r'''
 import io
 from pathlib import Path
