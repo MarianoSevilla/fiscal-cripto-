@@ -2778,8 +2778,11 @@ def analizar():
                     error_code     = _err_code,
                     csv_context    = _evidencia_json,
                 )
-            except Exception:
-                app.logger.exception("[ERROR_TRACKING] unexpected error calling record_processing_error_safe")
+            except Exception as tracking_exc:
+                app.logger.error(
+                    "[ERROR_TRACKING] diagnostic recording failed exception=%s",
+                    type(tracking_exc).__name__,
+                )
             if isinstance(e, ValueError) and str(e).startswith("Datos fiscales no seguros:"):
                 return jsonify({"error": str(e)}), 422
             return jsonify({"error": _error_amigable(e)}), 500
@@ -2939,8 +2942,11 @@ def analizar_kucoin():
                     error_code     = _err_code,
                     csv_context    = _evidencia_json,
                 )
-            except Exception:
-                app.logger.exception("[ERROR_TRACKING] unexpected error calling record_processing_error_safe")
+            except Exception as tracking_exc:
+                app.logger.error(
+                    "[ERROR_TRACKING] diagnostic recording failed exception=%s",
+                    type(tracking_exc).__name__,
+                )
             if isinstance(e, ValueError) and str(e).startswith("Datos fiscales no seguros:"):
                 return jsonify({"error": str(e)}), 422
             return jsonify({"error": _error_amigable(e)}), 500
@@ -3096,8 +3102,11 @@ def analizar_bitget():
                     error_code     = _err_code,
                     csv_context    = _evidencia_json,
                 )
-            except Exception:
-                app.logger.exception("[ERROR_TRACKING] unexpected error calling record_processing_error_safe")
+            except Exception as tracking_exc:
+                app.logger.error(
+                    "[ERROR_TRACKING] diagnostic recording failed exception=%s",
+                    type(tracking_exc).__name__,
+                )
             if isinstance(e, ValueError) and str(e).startswith("Datos fiscales no seguros:"):
                 return jsonify({"error": str(e)}), 422
             return jsonify({"error": _error_amigable(e)}), 500
