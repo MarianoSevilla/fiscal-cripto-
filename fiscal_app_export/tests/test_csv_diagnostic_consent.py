@@ -5,6 +5,7 @@ import os
 import sys
 import tempfile
 from unittest.mock import MagicMock, patch
+from datetime import datetime
 
 import pytest
 
@@ -30,7 +31,7 @@ def authenticated_client(monkeypatch):
     })
     with flask_app.app_context():
         db.create_all()
-        user = User(email="diag-consent-fixture@example.invalid", full_name="Diag Test")
+        user = User(email="diag-consent-fixture@example.invalid", full_name="Diag Test", email_verified_at=datetime.utcnow())
         user.set_password("csv-diagnostic-fixture-password")
         db.session.add(user)
         db.session.commit()
