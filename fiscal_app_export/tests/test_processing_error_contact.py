@@ -310,7 +310,7 @@ def test_privacy_evidence_csv_never_captures_column_values_or_file_hash(tmp_path
     from app import _capturar_evidencia
     private = "PERSONAL-TRANSACTION-REF-777"
     csv_file = tmp_path / "sensitive.csv"
-    csv_file.write_text(f"Date,{private},Amount\\n2025-01-01,secret,10\\n", encoding="utf-8")
+    csv_file.write_text(f"Date,{private},Amount\n2025-01-01,secret,10\n", encoding="utf-8")
     evidence = _capturar_evidencia(str(csv_file), exchange="bitvavo")
     assert evidence["file_type"] == "csv"
     assert evidence["encoding"] == "utf-8"
