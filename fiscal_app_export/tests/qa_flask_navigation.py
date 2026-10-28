@@ -291,6 +291,10 @@ def main():
         from qa_binance_guide_apple import run_binance_guide_apple
         run_binance_guide_apple(origin, app.config.get("SESSION_COOKIE_NAME", "session"),
                                 flask_cookie(app, identities["usuario"]))
+        # Tutorial de Binance: misma tarjeta editorial que /recursos.
+        from qa_binance_video_card import run_binance_video_card
+        run_binance_video_card(origin, app.config.get("SESSION_COOKIE_NAME", "session"),
+                               flask_cookie(app, identities["usuario"]))
         from qa_kraken_guide_apple import run_kraken_guide_apple
         run_kraken_guide_apple(origin, app.config.get("SESSION_COOKIE_NAME", "session"),
                                flask_cookie(app, identities["usuario"]))

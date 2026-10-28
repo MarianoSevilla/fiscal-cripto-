@@ -141,7 +141,20 @@
     {% endfor %}
   </div>
   {% if exchange_id == 'binance' %}
-  <p style="margin-top:16px"><a class="also-link" href="https://www.youtube.com/watch?v=VabS6OsZ-1E" target="_blank" rel="noopener noreferrer">Ver vídeo para descargar el CSV (2 min)</a></p>
+  <aside class="tool-video" aria-labelledby="tool-video-title">
+    <div class="tool-video-mark" aria-hidden="true">
+      <svg viewBox="0 0 48 48" width="48" height="48" focusable="false">
+        <circle cx="24" cy="24" r="22" fill="none" stroke="currentColor" stroke-width="2"/>
+        <path d="M19 14 35 24 19 34Z" fill="currentColor"/>
+      </svg>
+    </div>
+    <div class="tool-video-copy">
+      <p class="tool-video-eyebrow">Tutorial de Binance · Vídeo del canal</p>
+      <h3 id="tool-video-title">Cómo descargar el historial de transacciones de Binance en CSV</h3>
+      <p>Consulta el vídeo para localizar y exportar tu historial de transacciones antes de importarlo en la herramienta.</p>
+      <a class="tool-video-link" href="https://www.youtube.com/watch?v=VabS6OsZ-1E" target="_blank" rel="noopener noreferrer">Ver tutorial de Binance en YouTube <span aria-hidden="true">↗</span><span class="apple-sr-only"> (se abre en otra pestaña)</span></a>
+    </div>
+  </aside>
   {% endif %}
   {% if aviso_extra %}
   <p class="how-to-aviso" style="margin-top:16px;padding:12px 14px;border-left:3px solid #b8860b;background:rgba(184,134,11,0.06);font-size:13px;line-height:1.5;border-radius:4px;">
