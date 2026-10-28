@@ -2440,7 +2440,7 @@ def diagnostico_archivo_voluntario():
         return jsonify({"error": "Archivo Excel no reconocido."}), 400
     if original_extension == ".xls" and not data.startswith(bytes.fromhex("D0CF11E0A1B11AE1")):
         return jsonify({"error": "Archivo Excel no reconocido."}), 400
-    if original_extension == ".csv" and b"\\x00" in data[:2048]:
+    if original_extension == ".csv" and b"\x00" in data[:2048]:
         return jsonify({"error": "El archivo no parece un CSV de texto."}), 400
 
     support_email = os.environ.get("CSV_DIAGNOSTIC_SUPPORT_EMAIL", "").strip()
