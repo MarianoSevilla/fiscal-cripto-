@@ -1536,7 +1536,7 @@ td.type-badge { font-family: var(--font-body); font-size: 10px; text-transform: 
     const box = document.getElementById('diagConsent');
     if (!CSV_DIAG_ENABLED) return;
     failedDiagnosticFiles = (files || []).filter(f => f && f.size > 0 &&
-      f.size <= 8 * 1024 * 1024 && /\\.(csv|xlsx|xls)$/i.test(f.name));
+      f.size <= 8 * 1024 * 1024 && /\.(csv|xlsx|xls)$/i.test(f.name));
     if (!failedDiagnosticFiles.length) return;
     const select = document.getElementById('diagChoice');
     select.replaceChildren();
