@@ -456,6 +456,70 @@ def backfill_incidents_from_processing_errors() -> tuple:
     return inserted, skipped
 
 
+# ── PRIVACY-SAFE DIAGNOSTIC LABELS ─────────────────────────────────────────────
+
+def _safe_error_kind(error_type: str, raw_message: str) -> str:
+    """Classify an error without retaining exception arguments or CSV values."""
+    msg = (raw_message or "").lower()
+    if any(p in msg for p in ("does not match format", "time data", "strptime")):
+        return "date_format"
+    if error_type in ("UnicodeDecodeError", "UnicodeError") or any(
+        p in msg for p in ("codec", "encoding")
+    ):
+        return "encoding"
+    if error_type == "EmptyDataError" or "no columns" in msg:
+        return "empty_data"
+    if error_type == "ParserError" or any(
+        p in msg for p in ("tokenize", "expected", "delimiter")
+    ):
+        return "csv_structure"
+    if error_type == "KeyError" or any(
+        p in msg for p in ("missing column", "column not found")
+    ):
+        return "missing_column"
+    if "could not convert" in msg or "invalid literal" in msg:
+        return "value_conversion"
+    return "other"
+
+
+def _minimize_csv_context(csv_context):
+    """Whitelist technical fields for one file or a bounded multi-file batch."""
+    if not csv_context:
+        return None
+    try:
+        raw = json.loads(csv_context) if isinstance(csv_context, str) else csv_context
+        def compact(item):
+            if not isinstance(item, dict):
+                return {}
+            safe = {}
+            if item.get("file_type") in ("csv", "xlsx"):
+                safe["file_type"] = item["file_type"]
+            if item.get("encoding") in ("utf-8", "latin-1"):
+                safe["encoding"] = item["encoding"]
+            if item.get("separator") in (",", ";", "\\t", "|"):
+                safe["separator"] = item["separator"]
+            n = item.get("n_columns")
+            if type(n) is int and 0 < n <= 10000:
+                safe["n_columns"] = n
+            if item.get("exchange_format_variant") in (
+                "tx", "spot", "fiat_deposit", "spot_orders",
+                "crypto_deposits", "altered_csv",
+            ):
+                safe["exchange_format_variant"] = item["exchange_format_variant"]
+            return safe
+
+        if isinstance(raw, dict):
+            reduced = compact(raw)
+            return json.dumps(reduced) if reduced else None
+        if isinstance(raw, list):
+            # Keep multi-file diagnostic shape while never copying untrusted fields.
+            reduced = [compact(x) for x in raw[:10]]
+            return json.dumps(reduced) if reduced else None
+    except (ValueError, TypeError):
+        pass
+    return None
+
+
 # ── INTERNAL IMPLEMENTATION ───────────────────────────────────────────────────
 
 def _do_record(
@@ -476,36 +540,19 @@ def _do_record(
 
     error_type      = type(exc).__name__
     raw_message = str(exc)  # Used transiently for classification, never persisted.
-    # Exception arguments frequently embed CSV rows, identifiers or user filenames.
-    # Store a bounded technical category rather than their raw text.
-    message_short   = f"{error_type} at {stage or 'processing'}"[:_MAX_MESSAGE_LEN]
-    # Only capture traceback for real parser bugs — not for expected unsupported formats
+    # Exception arguments may embed user content. Persist only a known category.
+    kind = _safe_error_kind(error_type, raw_message)
+    message_short = f"{error_type}: {kind}"[:_MAX_MESSAGE_LEN]
     traceback_short = (
         _extract_traceback_short(exc)
         if (error_category or "parser_error") == "parser_error"
         else ""
     )
-    fingerprint     = build_processing_error_fingerprint(exchange, stage, error_type, message_short)
-    safe_filename   = None  # Original filenames may contain personal identifiers.
-    # Reject arbitrary caller-supplied diagnostics, including raw headers and hashes.
-    safe_context = None
-    if csv_context:
-        try:
-            raw_context = json.loads(csv_context) if isinstance(csv_context, str) else csv_context
-            if isinstance(raw_context, dict):
-                clean = {}
-                if raw_context.get("file_type") in ("csv", "xlsx"):
-                    clean["file_type"] = raw_context["file_type"]
-                if raw_context.get("encoding") in ("utf-8", "latin-1"):
-                    clean["encoding"] = raw_context["encoding"]
-                if raw_context.get("separator") in (",", ";", "\t", "|"):
-                    clean["separator"] = raw_context["separator"]
-                n = raw_context.get("n_columns")
-                if type(n) is int and 0 < n <= 10000:
-                    clean["n_columns"] = n
-                safe_context = json.dumps(clean) if clean else None
-        except (ValueError, TypeError):
-            pass
+    fingerprint = build_processing_error_fingerprint(
+        exchange, stage, error_type, f"{error_category or 'parser_error'}:{error_code or ''}:{kind}"
+    )
+    safe_filename = None
+    safe_context = _minimize_csv_context(csv_context)
 
     record = ProcessingError(
         user_id         = user_id,
@@ -629,7 +676,7 @@ def record_processing_error_safe(
 
     error_category: "parser_error" | "unsupported_format" | "user_error" | None
     error_code:     exchange-specific code, e.g. "futures", "staking", "wrong_file"
-    csv_context:    JSON string with file evidence (encoding, headers, sha256, etc.)
+    csv_context:    JSON string with technical metadata; raw values are discarded.
     """
     try:
         _do_record(
