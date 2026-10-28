@@ -54,4 +54,4 @@ def test_decision_proposal_covers_existing_tables_and_remains_non_executable():
     assert "nunca borrado ciego de incidencias abiertas" in policy
     assert "derechos de acceso a informes comprados" in policy
     assert "retención de expedientes económicos" in policy
-    assert "no equivalen a plazos legales" not in policy or "NO mínimos ni máximos legales" in policy
+    assert "NO mínimos ni máximos legales" in policy
