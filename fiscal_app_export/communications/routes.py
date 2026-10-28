@@ -16,6 +16,7 @@ from .service import (
     delete_campaign,
     send_test_email,
     dispatch_campaign,
+    resolve_individual_recipient,
 )
 from . import comms_bp
 from auth import _role_is_admin
@@ -303,11 +304,16 @@ def api_send_campaign(campaign_id):
         return jsonify({"error": "Se requiere confirmación explícita (confirm: true)."}), 400
 
     seg = campaign.recipient_segment or "all"
-    if seg == "individual" and not campaign.individual_email:
-        return jsonify({"error": "Esta campaña individual no tiene email de destinatario."}), 400
-    recipient_count = count_eligible_recipients(seg)
-    if recipient_count == 0 and seg != "individual":
-        return jsonify({"error": "No hay destinatarios elegibles para el segmento seleccionado."}), 400
+    if seg == "individual":
+        if resolve_individual_recipient(campaign) is None:
+            return jsonify({
+                "error": "Destinatario individual no elegible para este envío."
+            }), 400
+        recipient_count = 1
+    else:
+        recipient_count = count_eligible_recipients(seg)
+        if recipient_count == 0:
+            return jsonify({"error": "No hay destinatarios elegibles para el segmento seleccionado."}), 400
 
     # Transition to queued before launching thread — prevents double dispatch
     campaign.status           = "queued"
@@ -342,8 +348,6 @@ def api_unsubscribe():
     user.comms_opted_out = True
     db.session.commit()
 
-    return jsonify({
-        "ok":      True,
-        "message": "Desuscripción confirmada.",
-        "email":   user.email,
-    })
+    # Identical response for valid and unknown tokens: the token must never
+    # reveal a registered email address through the public API.
+    return jsonify({"ok": True, "message": "Desuscripción procesada."})
