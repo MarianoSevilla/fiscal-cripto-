@@ -22,12 +22,14 @@ def authenticated_client(monkeypatch):
     config_keys = (
         "TESTING", "RATELIMIT_ENABLED", "WTF_CSRF_ENABLED",
         "SESSION_COOKIE_SECURE", "CSV_DIAGNOSTIC_SUPPORT_ENABLED",
+        "CSV_DIAGNOSTIC_TEST_EMAIL",
     )
     previous = {k: flask_app.config.get(k) for k in config_keys}
     flask_app.config.update({
         "TESTING": True, "RATELIMIT_ENABLED": False,
         "WTF_CSRF_ENABLED": False, "SESSION_COOKIE_SECURE": False,
         "CSV_DIAGNOSTIC_SUPPORT_ENABLED": True,
+        "CSV_DIAGNOSTIC_TEST_EMAIL": "",
     })
     with flask_app.app_context():
         db.create_all()
@@ -229,3 +231,84 @@ def test_privacy_and_consent_copy_disclose_gmail_retention():
     assert "eliminación anticipada" in privacy
     assert "borrado definitivo" in privacy
     assert "Resend" in privacy
+
+
+def test_single_account_smoke_test_is_enabled_without_public_flag(authenticated_client):
+    """One allowlisted, authenticated address may test while the public flag is OFF."""
+    flask_app.config["CSV_DIAGNOSTIC_SUPPORT_ENABLED"] = False
+    flask_app.config["CSV_DIAGNOSTIC_TEST_EMAIL"] = "  DIAG-CONSENT-FIXTURE@example.INVALID  "
+    page = authenticated_client.get("/binance")
+    assert page.status_code == 200
+    assert b"const CSV_DIAG_ENABLED = true;" in page.data
+
+    with patch("requests.post", return_value=MagicMock(status_code=200)) as provider:
+        res = send(authenticated_client)
+    assert res.status_code == 200
+    assert provider.call_count == 1
+
+
+def test_smoke_test_closed_for_other_authenticated_accounts(authenticated_client):
+    """Email allowlist cannot be bypassed by a signed-in second user."""
+    flask_app.config["CSV_DIAGNOSTIC_SUPPORT_ENABLED"] = False
+    flask_app.config["CSV_DIAGNOSTIC_TEST_EMAIL"] = "diag-consent-fixture@example.invalid"
+    with flask_app.app_context():
+        other = User(
+            email="another-diagnostic-user@example.invalid",
+            full_name="Another Test",
+            email_verified_at=datetime.utcnow(),
+        )
+        other.set_password("another-csv-test-password")
+        db.session.add(other)
+        db.session.commit()
+        other_id = other.id
+        db.session.remove()
+    try:
+        other_client = flask_app.test_client()
+        login = other_client.post("/api/login", json={
+            "email": "another-diagnostic-user@example.invalid",
+            "password": "another-csv-test-password",
+        })
+        assert login.status_code == 200
+        page = other_client.get("/binance")
+        assert page.status_code == 200
+        assert b"const CSV_DIAG_ENABLED = false;" in page.data
+        with patch("requests.post") as provider:
+            response = send(other_client)
+        assert response.status_code == 404
+        provider.assert_not_called()
+    finally:
+        with flask_app.app_context():
+            db.session.remove()
+            db.session.query(User).filter_by(id=other_id).delete()
+            db.session.commit()
+            db.session.remove()
+
+
+def test_empty_smoke_test_email_never_exposes_upload(authenticated_client):
+    flask_app.config["CSV_DIAGNOSTIC_SUPPORT_ENABLED"] = False
+    flask_app.config["CSV_DIAGNOSTIC_TEST_EMAIL"] = "   "
+    page = authenticated_client.get("/binance")
+    assert page.status_code == 200
+    assert b"const CSV_DIAG_ENABLED = false;" in page.data
+    with patch("requests.post") as provider:
+        response = send(authenticated_client)
+    assert response.status_code == 404
+    provider.assert_not_called()
+
+
+def test_anonymous_cannot_see_test_mode_or_upload(authenticated_client):
+    flask_app.config["CSV_DIAGNOSTIC_SUPPORT_ENABLED"] = False
+    flask_app.config["CSV_DIAGNOSTIC_TEST_EMAIL"] = "diag-consent-fixture@example.invalid"
+    anonymous = flask_app.test_client()
+    with patch("requests.post") as provider:
+        response = send(anonymous)
+    assert response.status_code == 401
+    provider.assert_not_called()
+
+
+def test_public_flag_retains_original_behavior(authenticated_client):
+    flask_app.config["CSV_DIAGNOSTIC_SUPPORT_ENABLED"] = True
+    flask_app.config["CSV_DIAGNOSTIC_TEST_EMAIL"] = ""
+    page = authenticated_client.get("/binance")
+    assert page.status_code == 200
+    assert b"const CSV_DIAG_ENABLED = true;" in page.data

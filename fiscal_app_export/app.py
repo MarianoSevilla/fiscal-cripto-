@@ -243,9 +243,14 @@ _RESEND_FROM_DISPLAY = (
     _RESEND_FROM if "<" in _RESEND_FROM else f"Mariano Sevilla <{_RESEND_FROM}>"
 )
 _APP_BASE_URL  = os.environ.get("APP_BASE_URL", "https://www.marianosevilla.com")
-# Deliberately disabled until the support mailbox has an approved deletion policy.
+# Public diagnostic upload stays OFF unless explicitly enabled.
 app.config["CSV_DIAGNOSTIC_SUPPORT_ENABLED"] = (
     os.environ.get("CSV_DIAGNOSTIC_SUPPORT_ENABLED", "false").lower() == "true"
+)
+# Optional single-account smoke test, independent of the public flag.
+# Empty by default: no authenticated user can send while public flag is OFF.
+app.config["CSV_DIAGNOSTIC_TEST_EMAIL"] = (
+    os.environ.get("CSV_DIAGNOSTIC_TEST_EMAIL", "").strip().lower()
 )
 
 from email_templates import (  # noqa: E402
@@ -2381,6 +2386,21 @@ def api_bitget_anos():
 
 # ── VOLUNTARY DIAGNOSTIC FILE SUBMISSION (opt-in, fail-closed) ───────────────
 
+def _csv_diagnostic_allowed(user):
+    """Gate both the UI and transport; restrict smoke tests to one account."""
+    if not user.is_authenticated:
+        return False
+    if app.config.get("CSV_DIAGNOSTIC_SUPPORT_ENABLED"):
+        return True
+    test_email = (app.config.get("CSV_DIAGNOSTIC_TEST_EMAIL") or "").strip().lower()
+    return bool(test_email and (user.email or "").strip().lower() == test_email)
+
+
+@app.context_processor
+def _csv_diagnostic_template_context():
+    return {"csv_diag_allowed": _csv_diagnostic_allowed(current_user)}
+
+
 @app.route("/api/diagnostico-archivo", methods=["POST"])
 @login_required
 @limiter.limit(
@@ -2414,7 +2434,7 @@ def _diagnostico_archivo_voluntario_impl():
     import base64 as _base64
     import requests as _requests
 
-    if not app.config.get("CSV_DIAGNOSTIC_SUPPORT_ENABLED"):
+    if not _csv_diagnostic_allowed(current_user):
         return jsonify({"error": "Envío voluntario no habilitado."}), 404
 
     # Browser POSTs must come from the platform, never another site with a cookie.

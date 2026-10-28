@@ -528,7 +528,7 @@
 
 <script>
   const EXCHANGE_PAGE = '{{ exchange_id }}';
-  const CSV_DIAG_ENABLED = {{ 'true' if config.get('CSV_DIAGNOSTIC_SUPPORT_ENABLED', False) else 'false' }};
+  const CSV_DIAG_ENABLED = {{ 'true' if csv_diag_allowed else 'false' }};
   let failedDiagnosticFiles = [];
   const BIT2ME_EXCEL_ENABLED = {{ 'true' if bit2me_excel_enabled else 'false' }};
   let selectedExchange = EXCHANGE_PAGE || 'binance';
