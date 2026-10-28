@@ -358,6 +358,7 @@ if _google_oauth_enabled:
 # usuario independientemente del worker de Gunicorn que atienda la petición.
 # Esto evita el problema de dicts en memoria que no se comparten entre workers.
 _PDF_TTL = _pdf_lifecycle.PDF_TTL_SECONDS  # segundos
+_pdf_lifecycle.start_pdf_reaper()  # recupera temporales caducados tras reiniciar un worker
 
 def _guardar_token_pdf(token: str, report_id=None) -> None:
     """Guarda el token en la sesión del usuario con su TTL."""
