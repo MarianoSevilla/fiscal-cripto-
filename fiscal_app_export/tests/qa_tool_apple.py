@@ -282,17 +282,26 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                         ), (name,width,"upload overflow")
                         assert not violations and not errors,(name,width,violations,errors)
                         if name == "binance":
-                            # Conservar robots y tutorial de la plantilla histórica.
+                            # Conservar robots y enlace original, con tarjeta editorial
+                            # como /recursos, sin desbordamiento en móvil.
                             assert page.locator('meta[name="robots"]').get_attribute(
                                 "content"
                             ) == "noindex, nofollow"
-                            tutorial = page.get_by_role(
-                                "link", name="Ver vídeo para descargar el CSV (2 min)"
-                            )
+                            card = page.locator(".tool-video")
+                            assert card.count() == 1 and card.is_visible()
+                            assert card.locator(".tool-video-mark svg").count() == 1
+                            assert "Binance" in card.locator("h3").inner_text()
+                            assert card.evaluate(
+                                "(el) => el.getBoundingClientRect().right <= innerWidth + 1"
+                            ), ("binance", width, "video overflow")
+                            tutorial = card.locator(".tool-video-link")
+                            assert tutorial.is_visible()
+                            assert "Ver tutorial de Binance en YouTube" in tutorial.inner_text()
                             assert tutorial.get_attribute("href") == (
                                 "https://www.youtube.com/watch?v=VabS6OsZ-1E"
                             )
                             assert tutorial.get_attribute("target") == "_blank"
+                            assert "noopener" in tutorial.get_attribute("rel")
                             # /binance-v2 debe servir exactamente la misma interfaz.
                             alias = page.goto(origin + "/binance-v2", wait_until="networkidle")
                             assert alias and alias.status == 200
@@ -304,6 +313,10 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                             assert page.locator("#csvInput").get_attribute("accept") == ".csv"
                             assert page.locator("#btnAnalizar").is_disabled()
                             assert page.locator("#emptyState").is_visible()
+                            assert page.locator(".tool-video").count() == 1
+                            assert page.locator(".tool-video-link").get_attribute("href") == (
+                                "https://www.youtube.com/watch?v=VabS6OsZ-1E"
+                            )
                             page.screenshot(
                                 path=str(output / f"home_fifo_binance_v2_{width}.png"),
                                 full_page=True
@@ -314,6 +327,8 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                             assert not violations and not errors, (
                                 "binance-v2", width, violations, errors
                             )
+                        if name not in ("binance",):
+                            assert page.locator(".tool-video").count() == 0
                         results.append((name,width,"PASS",len(analysis),count))
                     finally:
                         ctx.close()
