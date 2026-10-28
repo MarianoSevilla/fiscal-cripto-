@@ -108,6 +108,36 @@ def run_account_apple(origin, cookie_name, cookie_value):
                         assert page.locator("#nifInput").input_value() == "12345678Z"
                         assert page.locator("#sectionPassword").is_visible() == (not google)
                         assert page.locator("#site-nav").is_visible()
+                        # The account green hero must touch the shared header:
+                        # guard against a duplicate top offset at all tested
+                        # widths for both email and Google sessions.
+                        geometry = page.evaluate("""() => {
+                            const nav = document.querySelector('#site-nav');
+                            const hero = document.querySelector('.account-intro');
+                            const main = document.querySelector('#contenido');
+                            const firstCard = document.querySelector('#accountContent .section');
+                            const n = nav.getBoundingClientRect();
+                            const h = hero.getBoundingClientRect();
+                            const card = firstCard.getBoundingClientRect();
+                            return {
+                                navBottom: n.bottom, heroTop: h.top,
+                                heroBottom: h.bottom, cardTop: card.top,
+                                mainPaddingTop: parseFloat(getComputedStyle(main).paddingTop),
+                                heroColor: getComputedStyle(hero).backgroundColor,
+                            };
+                        }""")
+                        assert abs(geometry["heroTop"] - geometry["navBottom"]) <= 1, (
+                            "gap or overlap between header and account hero", width, google, geometry
+                        )
+                        assert geometry["mainPaddingTop"] == 0, (
+                            "unexpected top padding on account main", width, google, geometry
+                        )
+                        assert geometry["heroColor"] == "rgb(7, 60, 50)", (
+                            "account green hero changed unexpectedly", width, google, geometry
+                        )
+                        assert geometry["cardTop"] > geometry["heroBottom"], (
+                            "account details overlap green header", width, google, geometry
+                        )
                         assert page.locator('a[href="/herramientas"]').count() > 0
                         assert page.locator('a[href="/privacidad"]').count() > 0
                         assert page.locator('a[href="/terminos"]').count() > 0
