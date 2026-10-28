@@ -303,3 +303,26 @@ class TestModalCount:
         assert "unverified" in data
         # individual no está en el bulk counts endpoint
         assert "individual" not in data
+
+
+
+def test_privacy_evidence_csv_never_captures_column_values_or_file_hash(tmp_path):
+    from app import _capturar_evidencia
+    private = "PERSONAL-TRANSACTION-REF-777"
+    csv_file = tmp_path / "sensitive.csv"
+    csv_file.write_text(f"Date,{private},Amount\n2025-01-01,secret,10\n", encoding="utf-8")
+    evidence = _capturar_evidencia(str(csv_file), exchange="bitvavo")
+    assert evidence["file_type"] == "csv"
+    assert evidence["encoding"] == "utf-8"
+    assert evidence["separator"] == ","
+    assert evidence["n_columns"] == 3
+    assert private not in str(evidence)
+    assert "headers" not in evidence and "sha256" not in evidence
+
+
+def test_privacy_evidence_xlsx_does_not_read_file_payload(tmp_path):
+    from app import _capturar_evidencia
+    # Fake data is sufficient because XLSX evidence is metadata-only.
+    excel_file = tmp_path / "sensitive.xlsx"
+    excel_file.write_bytes(b"PII-SHOULD-NOT-BE-READ")
+    assert _capturar_evidencia(str(excel_file), is_xlsx=True) == {"file_type": "xlsx"}

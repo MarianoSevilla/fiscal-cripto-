@@ -422,60 +422,34 @@ _PARSER_CLASS_MAP = {
 
 
 def _capturar_evidencia(filepath: str, *, exchange: str = None, is_xlsx: bool = False) -> dict:
-    """Captura contexto técnico del archivo para diagnóstico posterior.
-
-    Best-effort: nunca lanza excepciones. Devuelve dict vacío si falla todo.
-    El llamador serializa a JSON y pasa como csv_context a record_processing_error_safe().
-    """
+    """Recoge solo metadatos técnicos; nunca contenido, cabeceras ni hash del fichero."""
     import csv as _csv
-    ctx: dict = {}
+    ctx = {"file_type": "xlsx" if is_xlsx else "csv"}
+    if is_xlsx:
+        return ctx
     try:
-        # SHA256 del archivo completo (máx. 10 MB garantizado por validación previa)
-        with open(filepath, "rb") as f:
-            ctx["sha256"] = hashlib.sha256(f.read()).hexdigest()
-
-        if is_xlsx:
-            ctx["file_type"] = "xlsx"
-            return ctx
-
-        ctx["file_type"] = "csv"
-
-        # Detección de encoding: UTF-8 estricto primero, latin-1 como fallback
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 f.read(8192)
             ctx["encoding"] = "utf-8"
         except UnicodeDecodeError:
             ctx["encoding"] = "latin-1"
-        except Exception:
-            pass
 
-        # Cabeceras y separador
-        enc = ctx.get("encoding", "utf-8")
-        try:
-            with open(filepath, "r", encoding=enc, errors="replace") as f:
-                first_line = f.readline().strip()
-            if first_line:
-                for sep in (",", ";", "\t", "|"):
-                    cols = next(_csv.reader([first_line], delimiter=sep), [])
-                    if len(cols) > 1:
-                        ctx["separator"] = sep
-                        ctx["headers"]   = cols[:50]   # máx. 50 columnas en evidencia
-                        ctx["n_columns"] = len(cols)
-                        break
-        except Exception:
-            pass
-
-        # Variante de formato Binance (detectada aquí para evitar doble lectura)
+        with open(filepath, "r", encoding=ctx.get("encoding", "utf-8"), errors="replace") as f:
+            first_line = f.readline().strip()
+        for sep in (",", ";", "\t", "|"):
+            columns = next(_csv.reader([first_line], delimiter=sep), [])
+            if len(columns) > 1:
+                ctx["separator"] = sep
+                ctx["n_columns"] = len(columns)
+                break
         if exchange == "binance":
             try:
                 ctx["exchange_format_variant"] = _detectar_formato_binance(filepath)
             except Exception:
                 pass
-
     except Exception:
         pass
-
     return ctx
 
 
@@ -2769,7 +2743,12 @@ def analizar():
 
             # Solo imprimir traceback para bugs reales del parser
             if _err_category == "parser_error":
-                traceback.print_exc()
+                # Error arguments and stack locals may contain personal CSV values.
+                app.logger.warning(
+                    "[CSV_DIAGNOSTICS] parser failed exchange=%s exception=%s",
+                    exchange if "exchange" in locals() else "multi-file",
+                    type(e).__name__,
+                )
 
             _registrar_informe(
                 exchange        = exchange,
@@ -2799,8 +2778,11 @@ def analizar():
                     error_code     = _err_code,
                     csv_context    = _evidencia_json,
                 )
-            except Exception:
-                app.logger.exception("[ERROR_TRACKING] unexpected error calling record_processing_error_safe")
+            except Exception as tracking_exc:
+                app.logger.error(
+                    "[ERROR_TRACKING] diagnostic recording failed exception=%s",
+                    type(tracking_exc).__name__,
+                )
             if isinstance(e, ValueError) and str(e).startswith("Datos fiscales no seguros:"):
                 return jsonify({"error": str(e)}), 422
             return jsonify({"error": _error_amigable(e)}), 500
@@ -2929,7 +2911,12 @@ def analizar_kucoin():
                 _err_category = e.category
                 _err_code     = e.code
             if _err_category == "parser_error":
-                traceback.print_exc()
+                # Error arguments and stack locals may contain personal CSV values.
+                app.logger.warning(
+                    "[CSV_DIAGNOSTICS] parser failed exchange=%s exception=%s",
+                    exchange if "exchange" in locals() else "multi-file",
+                    type(e).__name__,
+                )
 
             _registrar_informe(
                 exchange        = "kucoin",
@@ -2955,8 +2942,11 @@ def analizar_kucoin():
                     error_code     = _err_code,
                     csv_context    = _evidencia_json,
                 )
-            except Exception:
-                app.logger.exception("[ERROR_TRACKING] unexpected error calling record_processing_error_safe")
+            except Exception as tracking_exc:
+                app.logger.error(
+                    "[ERROR_TRACKING] diagnostic recording failed exception=%s",
+                    type(tracking_exc).__name__,
+                )
             if isinstance(e, ValueError) and str(e).startswith("Datos fiscales no seguros:"):
                 return jsonify({"error": str(e)}), 422
             return jsonify({"error": _error_amigable(e)}), 500
@@ -3081,7 +3071,12 @@ def analizar_bitget():
                 _err_category = e.category
                 _err_code     = e.code
             if _err_category == "parser_error":
-                traceback.print_exc()
+                # Error arguments and stack locals may contain personal CSV values.
+                app.logger.warning(
+                    "[CSV_DIAGNOSTICS] parser failed exchange=%s exception=%s",
+                    exchange if "exchange" in locals() else "multi-file",
+                    type(e).__name__,
+                )
 
             _registrar_informe(
                 exchange        = "bitget",
@@ -3107,8 +3102,11 @@ def analizar_bitget():
                     error_code     = _err_code,
                     csv_context    = _evidencia_json,
                 )
-            except Exception:
-                app.logger.exception("[ERROR_TRACKING] unexpected error calling record_processing_error_safe")
+            except Exception as tracking_exc:
+                app.logger.error(
+                    "[ERROR_TRACKING] diagnostic recording failed exception=%s",
+                    type(tracking_exc).__name__,
+                )
             if isinstance(e, ValueError) and str(e).startswith("Datos fiscales no seguros:"):
                 return jsonify({"error": str(e)}), 422
             return jsonify({"error": _error_amigable(e)}), 500

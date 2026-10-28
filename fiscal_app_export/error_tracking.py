@@ -8,6 +8,7 @@ Feature flag: PROCESSING_ERROR_EMAILS_ENABLED=true/false (default false)
 Rate limit:   PROCESSING_ERROR_MAX_EMAILS_PER_HOUR (default 100)
 """
 import os
+import json
 import re
 import hashlib
 import logging
@@ -51,8 +52,9 @@ def _sanitize(text: str, max_len: int) -> str:
 
 def _extract_traceback_short(exc: Exception) -> str:
     try:
-        raw = "".join(tb.format_exception(type(exc), exc, exc.__traceback__))
-        return _sanitize(raw, _MAX_TRACEBACK_LEN)
+        # Never persist exception arguments, paths, source lines or uploaded CSV values.
+        frames = tb.extract_tb(exc.__traceback__) if exc.__traceback__ else []
+        return " > ".join(frame.name for frame in frames[-8:])[:_MAX_TRACEBACK_LEN]
     except Exception:
         return ""
 
@@ -389,7 +391,7 @@ def _upsert_incident(
         db_session.commit()
 
     except Exception as exc:
-        logger.error("[INCIDENT] upsert failed fingerprint=%s: %s", fingerprint, exc)
+        logger.error("[INCIDENT] upsert failed fingerprint=%s exception=%s", fingerprint, type(exc).__name__)
         try:
             db_session.rollback()
         except Exception:
@@ -454,6 +456,70 @@ def backfill_incidents_from_processing_errors() -> tuple:
     return inserted, skipped
 
 
+# ── PRIVACY-SAFE DIAGNOSTIC LABELS ─────────────────────────────────────────────
+
+def _safe_error_kind(error_type: str, raw_message: str) -> str:
+    """Classify an error without retaining exception arguments or CSV values."""
+    msg = (raw_message or "").lower()
+    if any(p in msg for p in ("does not match format", "time data", "strptime")):
+        return "date_format"
+    if error_type in ("UnicodeDecodeError", "UnicodeError") or any(
+        p in msg for p in ("codec", "encoding")
+    ):
+        return "encoding"
+    if error_type == "EmptyDataError" or "no columns" in msg:
+        return "empty_data"
+    if error_type == "ParserError" or any(
+        p in msg for p in ("tokenize", "expected", "delimiter")
+    ):
+        return "csv_structure"
+    if error_type == "KeyError" or any(
+        p in msg for p in ("missing column", "column not found")
+    ):
+        return "missing_column"
+    if "could not convert" in msg or "invalid literal" in msg:
+        return "value_conversion"
+    return "other"
+
+
+def _minimize_csv_context(csv_context):
+    """Whitelist technical fields for one file or a bounded multi-file batch."""
+    if not csv_context:
+        return None
+    try:
+        raw = json.loads(csv_context) if isinstance(csv_context, str) else csv_context
+        def compact(item):
+            if not isinstance(item, dict):
+                return {}
+            safe = {}
+            if item.get("file_type") in ("csv", "xlsx"):
+                safe["file_type"] = item["file_type"]
+            if item.get("encoding") in ("utf-8", "latin-1"):
+                safe["encoding"] = item["encoding"]
+            if item.get("separator") in (",", ";", "\t", "|"):
+                safe["separator"] = item["separator"]
+            n = item.get("n_columns")
+            if type(n) is int and 0 < n <= 10000:
+                safe["n_columns"] = n
+            if item.get("exchange_format_variant") in (
+                "tx", "spot", "fiat_deposit", "spot_orders",
+                "crypto_deposits", "altered_csv",
+            ):
+                safe["exchange_format_variant"] = item["exchange_format_variant"]
+            return safe
+
+        if isinstance(raw, dict):
+            reduced = compact(raw)
+            return json.dumps(reduced) if reduced else None
+        if isinstance(raw, list):
+            # Keep multi-file diagnostic shape while never copying untrusted fields.
+            reduced = [compact(x) for x in raw[:10]]
+            return json.dumps(reduced) if reduced else None
+    except (ValueError, TypeError):
+        pass
+    return None
+
+
 # ── INTERNAL IMPLEMENTATION ───────────────────────────────────────────────────
 
 def _do_record(
@@ -473,15 +539,20 @@ def _do_record(
     from models import db, ProcessingError
 
     error_type      = type(exc).__name__
-    message_short   = _sanitize(str(exc), _MAX_MESSAGE_LEN)
-    # Only capture traceback for real parser bugs — not for expected unsupported formats
+    raw_message = str(exc)  # Used transiently for classification, never persisted.
+    # Exception arguments may embed user content. Persist only a known category.
+    kind = _safe_error_kind(error_type, raw_message)
+    message_short = f"{error_type}: {kind}"[:_MAX_MESSAGE_LEN]
     traceback_short = (
         _extract_traceback_short(exc)
         if (error_category or "parser_error") == "parser_error"
         else ""
     )
-    fingerprint     = build_processing_error_fingerprint(exchange, stage, error_type, message_short)
-    safe_filename   = (os.path.basename(csv_filename)[:255] if csv_filename else None)
+    fingerprint = build_processing_error_fingerprint(
+        exchange, stage, error_type, f"{error_category or 'parser_error'}:{error_code or ''}:{kind}"
+    )
+    safe_filename = None
+    safe_context = _minimize_csv_context(csv_context)
 
     record = ProcessingError(
         user_id         = user_id,
@@ -497,7 +568,7 @@ def _do_record(
         fingerprint     = fingerprint,
         csv_filename    = safe_filename,
         csv_size        = csv_size,
-        csv_context     = csv_context,
+        csv_context     = safe_context,
         auto_email_sent = False,
     )
 
@@ -510,7 +581,7 @@ def _do_record(
         )
     except Exception as db_exc:
         db.session.rollback()
-        logger.error("[ERROR_TRACKING] DB save failed: %s", db_exc)
+        logger.error("[ERROR_TRACKING] DB save failed exception=%s", type(db_exc).__name__)
         return  # Can't save → don't attempt email
 
     # ── Upsert incident — groups this event under its root cause ─────────────
@@ -526,7 +597,7 @@ def _do_record(
             event_created_at = record.created_at or datetime.utcnow(),
         )
     except Exception:
-        logger.exception("[INCIDENT] unexpected error calling _upsert_incident — ignoring")
+        logger.error("[INCIDENT] unexpected error calling _upsert_incident; no content logged")
 
     # ── Feature flag check ────────────────────────────────────────────────────
     if os.environ.get("PROCESSING_ERROR_EMAILS_ENABLED", "false").lower() != "true":
@@ -535,7 +606,7 @@ def _do_record(
     if not email:
         return
 
-    if not is_actionable_processing_error(error_type, stage, message_short, error_category):
+    if not is_actionable_processing_error(error_type, stage, raw_message, error_category):
         logger.info(
             "[ERROR_TRACKING] auto-email skipped (non-actionable) error_type=%s stage=%s category=%s",
             error_type, stage, error_category or "—",
@@ -549,7 +620,7 @@ def _do_record(
         )
         return
 
-    user_friendly_msg = make_user_friendly_message(error_type, stage, message_short)
+    user_friendly_msg = make_user_friendly_message(error_type, stage, raw_message)
 
     try:
         sent = send_processing_error_email(email, exchange, record.id, user_friendly_msg)
@@ -559,8 +630,8 @@ def _do_record(
             try:
                 db.session.commit()
                 logger.info(
-                    "[ERROR_TRACKING] auto-email sent error_id=%s to=%s",
-                    record.id, email,
+                    "[ERROR_TRACKING] auto-email sent error_id=%s",
+                    record.id,
                 )
             except Exception:
                 db.session.rollback()
@@ -570,7 +641,7 @@ def _do_record(
                 record.id,
             )
     except Exception as email_exc:
-        err_str = str(email_exc)[:500]
+        err_str = type(email_exc).__name__  # Provider messages may include addresses or tokens.
         logger.error(
             "[ERROR_TRACKING] auto-email failed error_id=%s: %s", record.id, err_str
         )
@@ -605,7 +676,7 @@ def record_processing_error_safe(
 
     error_category: "parser_error" | "unsupported_format" | "user_error" | None
     error_code:     exchange-specific code, e.g. "futures", "staking", "wrong_file"
-    csv_context:    JSON string with file evidence (encoding, headers, sha256, etc.)
+    csv_context:    JSON string with technical metadata; raw values are discarded.
     """
     try:
         _do_record(
@@ -622,4 +693,4 @@ def record_processing_error_safe(
             csv_context=csv_context,
         )
     except Exception:
-        logger.exception("[ERROR_TRACKING] unexpected failure in record_processing_error_safe — ignoring")
+        logger.error("[ERROR_TRACKING] unexpected failure in record_processing_error_safe; no content logged")
