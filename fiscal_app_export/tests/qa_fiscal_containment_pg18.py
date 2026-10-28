@@ -159,7 +159,7 @@ def main():
                 "GITHUB_ACTIONS": "true", "CI": "true", "FLASK_ENV": "testing",
                 "DATABASE_URL": url,
                 "PYTHONPATH": str(ROOT), "PATH": os.environ.get("PATH", ""),
-                "HOME": temp, "FISCAL_CI_PDF_PATH": str(Path(temp) / "report.pdf"),
+                "HOME": temp, "FISCAL_CI_PDF_PATH": str(Path(temp) / "fifo_report_r01_r04.pdf"),
                 "PYTHONDONTWRITEBYTECODE": "1",
             }
             proc = subprocess.run(
