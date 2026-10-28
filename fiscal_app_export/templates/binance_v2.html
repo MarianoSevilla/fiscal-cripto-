@@ -880,7 +880,7 @@ td.type-badge { font-family: var(--font-body); font-size: 10px; text-transform: 
     <ol class="error-pasos" id="errorPasos"></ol>
         <div id="diagConsent" style="display:none;margin:16px 0;padding:14px;border:1px solid #d9dfe5;border-radius:12px;text-align:left;">
       <strong>¿Quieres compartir el archivo con soporte?</strong>
-      <p style="font-size:13px;line-height:1.5;">Es opcional y no afecta a tu cuenta. El archivo puede incluir operaciones y datos fiscales. Se enviará por Resend al buzón privado de soporte, donde pueden conservarse copias hasta su eliminación. Consulta la <a href="/privacidad#archivos-e-informes">Política de privacidad</a>.</p>
+      <p style="font-size:13px;line-height:1.5;">Es opcional y no afecta a tu cuenta. Solo se ofrecen archivos de hasta 8 MB. El archivo puede incluir operaciones y datos fiscales. Se enviará por Resend al buzón privado de soporte, donde pueden conservarse copias hasta su eliminación. Consulta la <a href="/privacidad#archivos-e-informes">Política de privacidad</a>.</p>
       <label for="diagChoice" style="display:block;font-size:13px;margin-top:8px;">Archivo que deseas compartir</label>
       <select id="diagChoice" style="width:100%;max-width:100%;padding:8px;margin:6px 0 12px;"></select>
       <label style="display:flex;align-items:flex-start;gap:9px;font-size:13px;line-height:1.5;">
@@ -1572,7 +1572,7 @@ td.type-badge { font-family: var(--font-body); font-size: 10px; text-transform: 
       });
       const data = await response.json();
       feedback.textContent = response.ok
-        ? 'Archivo entregado a soporte. Gracias por compartirlo.'
+        ? 'El proveedor de correo ha aceptado el envío. Gracias por compartirlo.'
         : (data.error || 'No se ha podido confirmar la entrega.');
       if (response.ok) {
         failedDiagnosticFiles = [];
