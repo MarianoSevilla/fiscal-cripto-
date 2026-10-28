@@ -36,11 +36,15 @@ def test_decision_proposal_covers_existing_tables_and_remains_non_executable():
     policy = (
         ROOT.parent / "docs" / "security" / "SEC5_PRIV_011_013_DECISION_PROPOSAL.md"
     ).read_text(encoding="utf-8")
-    tables = set(re.findall(
-        r'^\\s+__tablename__\\s*=\\s*"([a-z0-9_]+)"',
-        source, flags=re.M
-    ))
-    rows = set(re.findall(r'^\\| \\x60([a-z0-9_]+)\\x60 \\|', policy, flags=re.M))
+    tables = {
+        line.split('"')[1] for line in source.splitlines()
+        if "__tablename__" in line and '"' in line
+    }
+    rows = {
+        line.split("|")[1].strip().strip(chr(96))
+        for line in policy.splitlines()
+        if line.startswith("| " + chr(96))
+    }
     assert tables == rows, (sorted(tables - rows), sorted(rows - tables))
     assert "BORRADOR PARA DECISIÓN" in policy
     assert "No aprobado, no aplicado en producción" in policy
