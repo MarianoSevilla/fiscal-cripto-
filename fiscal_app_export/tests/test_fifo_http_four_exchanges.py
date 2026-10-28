@@ -120,7 +120,11 @@ def isolated_app():
         user.set_password("test-fixture-only")
         db.session.add(user)
         db.session.commit()
-        yield flask_app
+    # Do not hold an app context across the test module. Otherwise Flask's
+    # g._login_user cache leaks from one HTTP client into another, unlike real
+    # requests with independent application contexts.
+    yield flask_app
+    with flask_app.app_context():
         db.session.remove()
         db.drop_all()
 
