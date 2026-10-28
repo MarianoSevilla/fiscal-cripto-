@@ -22,7 +22,7 @@ def test_home_removes_posthero_trust_strip_without_losing_privacy_footer():
 
 def test_home_follows_green_hero_with_how_it_works():
     home = (STATIC / "landing.html").read_text(encoding="utf-8")
-    assert '</div></div>\n\n<section class="apple-section apple-how"' in home
+    assert '</div></div>\n<section class="apple-section apple-how"' in home
     assert home.count('class="apple-section apple-how"') == 1
     assert "Método FIFO</li>" not in home
     assert "100% online, sin instalación</li>" not in home
