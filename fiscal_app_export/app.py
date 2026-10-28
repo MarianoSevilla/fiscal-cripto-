@@ -437,7 +437,7 @@ def _capturar_evidencia(filepath: str, *, exchange: str = None, is_xlsx: bool = 
 
         with open(filepath, "r", encoding=ctx.get("encoding", "utf-8"), errors="replace") as f:
             first_line = f.readline().strip()
-        for sep in (",", ";", "\\t", "|"):
+        for sep in (",", ";", "\t", "|"):
             columns = next(_csv.reader([first_line], delimiter=sep), [])
             if len(columns) > 1:
                 ctx["separator"] = sep
