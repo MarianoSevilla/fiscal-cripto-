@@ -878,6 +878,18 @@ td.type-badge { font-family: var(--font-body); font-size: 10px; text-transform: 
     </div>
     <p class="error-desc" id="errorDesc"></p>
     <ol class="error-pasos" id="errorPasos"></ol>
+        <div id="diagConsent" style="display:none;margin:16px 0;padding:14px;border:1px solid #d9dfe5;border-radius:12px;text-align:left;">
+      <strong>¿Quieres compartir el archivo con soporte?</strong>
+      <p style="font-size:13px;line-height:1.5;">Es opcional y no afecta a tu cuenta. Solo se ofrecen archivos de hasta 8 MB. El archivo puede incluir operaciones y datos fiscales. Al autorizarlo, el archivo se enviará mediante Resend a <strong>colab.marianosevilla@gmail.com</strong>. La web cerrará los archivos temporales al terminar el intento. En Gmail conservaremos el adjunto solo mientras sea necesario para revisar la incidencia, con un plazo máximo previsto de 30 días; lo eliminaremos antes si termina el análisis. Resend puede conservar sus propias copias según sus plazos. Consulta la <a href="/privacidad#archivos-e-informes">Política de privacidad</a>.</p>
+      <label for="diagChoice" style="display:block;font-size:13px;margin-top:8px;">Archivo que deseas compartir</label>
+      <select id="diagChoice" style="width:100%;max-width:100%;padding:8px;margin:6px 0 12px;"></select>
+      <label style="display:flex;align-items:flex-start;gap:9px;font-size:13px;line-height:1.5;">
+        <input type="checkbox" id="diagConsentCheck" style="margin-top:4px;">
+        <span>Autorizo expresamente el envío de este archivo a colab.marianosevilla@gmail.com a través de Resend para investigar el error. Sé que contiene posiblemente datos personales o fiscales y que el envío es voluntario.</span>
+      </label>
+      <button type="button" id="diagSend" disabled style="margin-top:12px;padding:10px 15px;border-radius:8px;">Enviar archivo a soporte</button>
+      <p id="diagResult" role="status" aria-live="polite" style="font-size:13px;margin-top:8px;"></p>
+    </div>
     <button class="btn-retry" id="btnRetry">Volver a intentarlo</button>
   </div>
 
@@ -972,6 +984,8 @@ td.type-badge { font-family: var(--font-body); font-size: 10px; text-transform: 
 
 
 <script>
+  const CSV_DIAG_ENABLED = {{ 'true' if config.get('CSV_DIAGNOSTIC_SUPPORT_ENABLED', False) else 'false' }};
+  let failedDiagnosticFiles = [];
   // ── CONSTANTES ───────────────────────────────
   const EXCHANGE_PAGE = 'binance';
 
@@ -1067,6 +1081,10 @@ td.type-badge { font-family: var(--font-body); font-size: 10px; text-transform: 
     emptyState.style.display     = state === 'empty'   ? 'block' : 'none';
     loadingState.style.display   = state === 'loading' ? 'block' : 'none';
     errorState.style.display     = state === 'error'   ? 'block' : 'none';
+    if (state !== 'error') {
+      document.getElementById('diagConsent').style.display = 'none';
+      failedDiagnosticFiles = [];
+    }
     resultsContent.style.display = state === 'results' ? 'block' : 'none';
   }
   showState('empty');
@@ -1512,6 +1530,61 @@ td.type-badge { font-family: var(--font-body); font-size: 10px; text-transform: 
     }
   }
 
+  // Archivo de soporte: nunca se envía automáticamente ni al producirse un error.
+  function offerDiagnostic(files) {
+    const box = document.getElementById('diagConsent');
+    if (!CSV_DIAG_ENABLED) return;
+    failedDiagnosticFiles = (files || []).filter(f => f && f.size > 0 &&
+      f.size <= 8 * 1024 * 1024 && /\.(csv|xlsx|xls)$/i.test(f.name));
+    if (!failedDiagnosticFiles.length) return;
+    const select = document.getElementById('diagChoice');
+    select.replaceChildren();
+    failedDiagnosticFiles.forEach((f, i) => {
+      const option = document.createElement('option');
+      option.value = String(i);
+      option.textContent = f.name;
+      select.appendChild(option);
+    });
+    const check = document.getElementById('diagConsentCheck');
+    check.checked = false;
+    document.getElementById('diagSend').disabled = true;
+    document.getElementById('diagResult').textContent = '';
+    box.style.display = 'block';
+  }
+  document.getElementById('diagConsentCheck').addEventListener('change', e => {
+    document.getElementById('diagSend').disabled = !e.target.checked || !failedDiagnosticFiles.length;
+  });
+  document.getElementById('diagSend').addEventListener('click', async () => {
+    const check = document.getElementById('diagConsentCheck');
+    const send = document.getElementById('diagSend');
+    const feedback = document.getElementById('diagResult');
+    const idx = Number(document.getElementById('diagChoice').value);
+    if (!CSV_DIAG_ENABLED || !check.checked || !failedDiagnosticFiles[idx]) return;
+    const form = new FormData();
+    form.append('archivo', failedDiagnosticFiles[idx]);
+    form.append('exchange', 'binance');
+    form.append('consentimiento', 'ACEPTO_ENVIO_DIAGNOSTICO_V1');
+    send.disabled = true;
+    feedback.textContent = 'Enviando el archivo autorizado…';
+    try {
+      const response = await fetch('/api/diagnostico-archivo', {
+        method: 'POST', credentials: 'same-origin', body: form,
+      });
+      const data = await response.json();
+      feedback.textContent = response.ok
+        ? 'El proveedor de correo ha aceptado el envío. Gracias por compartirlo.'
+        : (data.error || 'No se ha podido confirmar la entrega.');
+      if (response.ok) {
+        failedDiagnosticFiles = [];
+        check.checked = false;
+      } else {
+        send.disabled = false;
+      }
+    } catch (_) {
+      feedback.textContent = 'No se puede confirmar la entrega. Contacta con soporte antes de repetir el envío.';
+    }
+  });
+
   // ── SUBMIT ────────────────────────────────────
   btnAnalizar.addEventListener('click', async () => {
     if (!selectedFile) return;
@@ -1553,6 +1626,9 @@ td.type-badge { font-family: var(--font-body); font-size: 10px; text-transform: 
       if (!res.ok || !data.ok) {
         mostrarErrorApi(data.error);
         showState('error');
+        if (![401, 403, 409, 413, 429].includes(res.status)) {
+          offerDiagnostic([selectedFile]);
+        }
         selectedFile = null; csvInput.value = ''; hideFile();
         fileName.textContent = '—'; btnAnalizar.disabled = true;
         return;
