@@ -126,7 +126,7 @@ def test_http_valid_eur_200_json_pdf_and_success_record(monkeypatch, tmp_path):
     monkeypatch.setattr(application, "_registrar_informe", lambda **kw: reports.append(kw) or 123)
     monkeypatch.setattr(application, "_guardar_token_pdf", lambda *a: tokens.append(a))
     monkeypatch.setattr(application, "generar_pdf", lambda *a, **kw: pdf_calls.append(1) or b"%PDF-TEST")
-    path = tmp_path / "synthetic-report.pdf"
+    path = tmp_path / "fifo_report_synthetic.pdf"
     monkeypatch.setattr(application, "_derivar_ruta_pdf", lambda _p: str(path))
     with app.test_client() as client:
         resp = client.post("/api/analizar", data={
@@ -135,7 +135,7 @@ def test_http_valid_eur_200_json_pdf_and_success_record(monkeypatch, tmp_path):
         }, content_type="multipart/form-data")
     assert resp.status_code == 200, resp.get_data(as_text=True)[:350]
     assert resp.json["resumen"]["resultado_neto"] == 50
-    assert resp.json["token"] == "synthetic-report.pdf"
+    assert resp.json["token"] == "fifo_report_synthetic.pdf"
     assert path.read_bytes() == b"%PDF-TEST"
     assert pdf_calls == [1] and len(tokens) == 1
     assert reports and all(row.get("status", "generated") == "generated" for row in reports)

@@ -10,6 +10,7 @@ import csv
 import io
 import os
 import tempfile
+import time
 from datetime import datetime
 
 import pdfplumber
@@ -119,20 +120,26 @@ def isolated_app():
         user.set_password("test-fixture-only")
         db.session.add(user)
         db.session.commit()
-        yield flask_app
+    # Do not hold an app context across the test module. Otherwise Flask's
+    # g._login_user cache leaks from one HTTP client into another, unlike real
+    # requests with independent application contexts.
+    yield flask_app
+    with flask_app.app_context():
         db.session.remove()
         db.drop_all()
 
 
 @pytest.fixture
 def client(isolated_app):
-    with isolated_app.test_client() as client:
-        response = client.post("/api/login", json={
-            "email": "four-exchanges-05c2@example.invalid",
-            "password": "test-fixture-only",
-        })
-        assert response.status_code == 200, response.get_data(as_text=True)[:200]
-        yield client
+    # Avoid preserving the previous request's app context between calls:
+    # separate clients must not reuse flask.g's cached current_user.
+    client = isolated_app.test_client()
+    response = client.post("/api/login", json={
+        "email": "four-exchanges-05c2@example.invalid",
+        "password": "test-fixture-only",
+    })
+    assert response.status_code == 200, response.get_data(as_text=True)[:200]
+    yield client
 
 
 def _analyse(client, exchange, *, with_purchase):
@@ -170,6 +177,7 @@ def test_csv_fifo_pdf_download_and_replay_rejected(client, exchange):
     assert download.data.startswith(b"%PDF-")
     assert len(download.data) > 1000
     assert "attachment" in download.headers.get("Content-Disposition", "")
+    assert not os.path.exists(os.path.join(tempfile.gettempdir(), token))
     with pdfplumber.open(io.BytesIO(download.data)) as pdf:
         text = "\n".join(page.extract_text() or "" for page in pdf.pages)
     assert "BTC" in text, (exchange, text[:350])
@@ -186,3 +194,77 @@ def test_sale_without_acquisition_is_rejected_without_pdf_token(client, exchange
     assert "Datos fiscales no seguros" in data["error"]
     assert "token" not in data
     assert "resumen" not in data
+
+
+def test_missing_pdf_preserves_session_token_until_response_is_ready(client):
+    analysis = _analyse(client, "bitvavo", with_purchase=True)
+    assert analysis.status_code == 200
+    token = analysis.get_json()["token"]
+    path = os.path.join(tempfile.gettempdir(), token)
+    with open(path, "rb") as stream:
+        pdf_bytes = stream.read()
+    os.unlink(path)
+    try:
+        missing = client.get("/api/descargar/" + token)
+        assert missing.status_code == 404
+        with client.session_transaction() as session:
+            assert session.get("pdf_token") == token
+        # Simulate a transient storage disappearance before successful delivery.
+        with open(path, "wb") as stream:
+            stream.write(pdf_bytes)
+        ok = client.get("/api/descargar/" + token)
+        assert ok.status_code == 200
+        assert ok.data.startswith(b"%PDF-")
+        assert not os.path.exists(path)
+        assert client.get("/api/descargar/" + token).status_code == 403
+    finally:
+        if os.path.exists(path):
+            os.unlink(path)
+
+
+def test_expired_pdf_token_rejects_without_serving_file(client):
+    analysis = _analyse(client, "bitvavo", with_purchase=True)
+    assert analysis.status_code == 200
+    token = analysis.get_json()["token"]
+    path = os.path.join(tempfile.gettempdir(), token)
+    try:
+        with client.session_transaction() as session:
+            session["pdf_token_exp"] = time.time() - 1
+        response = client.get("/api/descargar/" + token)
+        assert response.status_code == 403
+        assert os.path.exists(path)  # physical expiry is handled by the reaper
+    finally:
+        if os.path.exists(path):
+            os.unlink(path)
+
+
+def test_token_cannot_be_used_by_another_authenticated_account(client, isolated_app):
+    analysis = _analyse(client, "bitvavo", with_purchase=True)
+    assert analysis.status_code == 200
+    token = analysis.get_json()["token"]
+    with isolated_app.app_context():
+        stranger = User(
+            email="other-05c2-user@example.invalid",
+            full_name="Other synthetic account",
+            email_verified_at=datetime.utcnow(),
+        )
+        stranger.set_password("other-fixture-password")
+        db.session.add(stranger)
+        db.session.commit()
+    # Avoid a nested FlaskClient context: a second preserved request context
+    # can shadow the owner's current_user during the later request.
+    other = isolated_app.test_client()
+    login = other.post("/api/login", json={
+        "email": "other-05c2-user@example.invalid",
+        "password": "other-fixture-password",
+    })
+    assert login.status_code == 200
+    denied = other.get("/api/descargar/" + token)
+    assert denied.status_code == 403, denied.get_data(as_text=True)[:200]
+
+    # A rejected cross-user attempt must not consume the owner's token.
+    with client.session_transaction() as session:
+        assert session.get("pdf_token") == token
+    owner = client.get("/api/descargar/" + token)
+    assert owner.status_code == 200, owner.get_data(as_text=True)[:200] if owner.mimetype != "application/pdf" else ""
+    assert owner.data.startswith(b"%PDF-")

@@ -246,7 +246,7 @@ def test_sqlite_real_persistence_rejection_and_valid_eur(tmp_path):
 
     app_dir = Path(__file__).resolve().parents[1]
     db_file = tmp_path / "phase1.sqlite"
-    pdf_file = tmp_path / "valid.pdf"
+    pdf_file = tmp_path / "fifo_report_valid.pdf"
     program = r'''
 import io
 from pathlib import Path
