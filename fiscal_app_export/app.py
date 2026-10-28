@@ -2470,7 +2470,7 @@ def _diagnostico_archivo_voluntario_impl():
     payload = {
         "from": _RESEND_FROM_DISPLAY,
         "to": [support_email],
-        "subject": f"Archivo enviado voluntariamente para diagnostico — {exchange}",
+        "subject": f"[CSV-DIAG] Archivo consentido — {exchange}",
         "text": (
             "Archivo enviado voluntariamente a soporte para revisar un error "
             "de importación. Consentimiento independiente: "
@@ -2478,7 +2478,9 @@ def _diagnostico_archivo_voluntario_impl():
             f"Cuenta: {current_user.id}. Email: {current_user.email}. "
             f"Exchange: {exchange}. Archivo adjunto: {attachment_name}. "
             "Tratar como documentación fiscal confidencial. "
-            "Eliminar según la política de conservación del buzón y proveedor."
+            "Conservación en Gmail: borrar tras estudiar la incidencia y como máximo "
+            "a los 30 días de recepción; eliminar también definitivamente de Papelera. "
+            "Resend mantiene su propia retención técnica, independiente del buzón."
         ),
         "attachments": [{
             "filename": attachment_name,
