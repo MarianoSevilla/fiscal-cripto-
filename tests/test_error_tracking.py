@@ -179,7 +179,7 @@ class TestExtractTraceback:
         except ValueError as e:
             result = _extract_traceback_short(e)
         assert isinstance(result, str)
-        assert "ValueError" in result
+        assert "test error" not in result
 
     def test_respects_max_length(self):
         try:
@@ -297,7 +297,7 @@ class TestRecordSafe:
         assert record.error_type == "KeyError"
         assert record.csv_size == 1024
         # Filename stored as basename only, no full path
-        assert record.csv_filename == "tmpABC123.csv"
+        assert record.csv_filename is None
         # No raw CSV data stored
         assert record.traceback_short is not None
         assert len(record.traceback_short) <= _MAX_TRACEBACK_LEN + 20
@@ -544,3 +544,32 @@ class TestEmailHelpers:
         assert "Subject" not in SUPPORT_FOOTER_HTML
         assert "From:" not in SUPPORT_FOOTER_HTML
         assert "To:" not in SUPPORT_FOOTER_HTML
+
+def test_sec5_priv_telemetry_excludes_user_content():
+    import json
+    from models import db, ProcessingError
+    app = TestRecordSafe()._make_app()
+    private = "client-secret-123456"
+    with app.app_context():
+        record_processing_error_safe(
+            user_id=17, email="demo@example.invalid", exchange="binance",
+            stage="processing", exc=ValueError(private),
+            csv_filename="/tmp/" + private + ".csv",
+            csv_context=json.dumps({
+                "sha256": "a" * 64, "headers": [private],
+                "file_type": "csv", "encoding": "utf-8",
+                "separator": ",", "n_columns": 3,
+                "untrusted": private,
+            }),
+        )
+        row = db.session.query(ProcessingError).first()
+        assert row is not None
+        assert private not in (row.message_short or "")
+        assert private not in (row.traceback_short or "")
+        assert row.csv_filename is None
+        assert row.csv_context == json.dumps({
+            "file_type": "csv", "encoding": "utf-8",
+            "separator": ",", "n_columns": 3,
+        })
+        assert "sha256" not in row.csv_context
+        assert "headers" not in row.csv_context
