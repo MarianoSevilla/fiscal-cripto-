@@ -13,7 +13,7 @@ from typing import Optional
 
 import resend
 
-from models import db, User, CommunicationCampaign, CommunicationDelivery
+from models import db, User, CommunicationCampaign, CommunicationDelivery, ProcessingError
 from .email_sender import render_campaign_html, render_campaign_text
 
 logger = logging.getLogger(__name__)
@@ -114,6 +114,46 @@ def count_eligible_recipients_all_segments() -> dict:
         "verified":   count_eligible_recipients("verified"),
         "unverified": count_eligible_recipients("unverified"),
     }
+
+
+
+def resolve_individual_recipient(campaign):
+    """Resolve (user, email, support) or reject an ineligible individual target.
+
+    An individual campaign without a verified processing-error link is marketing
+    and must follow the same suppression rules as bulk campaigns. A direct
+    response to a real processing error is service-related: a matching, recorded
+    contact address is required; marketing opt-out does not block that response.
+    Inactive accounts and privileged/administrative recipients remain excluded.
+    """
+    address = (campaign.individual_email or "").strip().lower()
+    if not address:
+        return None
+
+    user = User.query.filter(db.func.lower(User.email) == address).first()
+    if user is not None:
+        if (not user.is_active or user.role in _EXCLUDED_ROLES
+                or user.email.strip().lower() in _ADMIN_EMAILS):
+            return None
+
+    if campaign.processing_error_id is not None:
+        incident = db.session.get(ProcessingError, campaign.processing_error_id)
+        if (incident is None or not incident.email
+                or incident.email.strip().lower() != address):
+            return None
+        if incident.user_id is not None and (
+                user is None or user.id != incident.user_id):
+            return None
+        return (user, address, True)
+
+    # Campaign-style individual messages are commercial by default. Do not
+    # silently send to a non-user or someone who explicitly unsubscribed.
+    eligible = get_eligible_recipients_query("all").filter(
+        db.func.lower(User.email) == address
+    ).first()
+    if eligible is None:
+        return None
+    return (eligible, address, False)
 
 
 # ── CAMPAIGN CRUD ─────────────────────────────────────────────────────────────
@@ -264,8 +304,8 @@ def _is_rate_limit_error(exc: Exception) -> bool:
 
 
 def _send_individual_no_user(campaign, email: str, campaign_id: int) -> None:
-    """Sends to an email address not registered as a User (no unsubscribe token)."""
-    from models import ProcessingError
+    """Sends a verified incident follow-up to a non-registered contact."""
+    # Called only after resolve_individual_recipient validates the incident.
     delivery = CommunicationDelivery(
         campaign_id=campaign_id,
         user_id=None,
@@ -275,7 +315,7 @@ def _send_individual_no_user(campaign, email: str, campaign_id: int) -> None:
     db.session.add(delivery)
     db.session.flush()
     try:
-        html = render_campaign_html(campaign, unsubscribe_url="")
+        html = render_campaign_html(campaign, unsubscribe_url="", support=True)
         text = render_campaign_text(campaign, unsubscribe_url="")
         result = resend.Emails.send({
             "from":    _RESEND_FROM_DISPLAY,
@@ -334,20 +374,23 @@ def _execute_campaign(campaign_id: int) -> None:
 
         seg = campaign.recipient_segment or "all"
 
+        is_support = False
         if seg == "individual":
-            # Single-recipient campaign: resolve user by email
-            ind_email = (campaign.individual_email or "").strip()
-            if not ind_email:
-                campaign.status        = "failed"
-                campaign.error_message = "individual_email vacío"
+            # Re-check at execution: opt-out, account status or incident link
+            # can change between queueing the campaign and running the thread.
+            resolved = resolve_individual_recipient(campaign)
+            if resolved is None:
+                campaign.status = "cancelled"
+                campaign.recipients_count = 0
+                campaign.error_message = "Destinatario individual no elegible."
                 db.session.commit()
                 return
-            user_obj = User.query.filter_by(email=ind_email).first()
-            recipients = [user_obj] if user_obj else []
-            if not recipients:
-                # Send to the email even without a user account
+            user_obj, ind_email, is_support = resolved
+            if user_obj is None:
+                # Only a verified incident response may target a non-user.
                 _send_individual_no_user(campaign, ind_email, campaign_id)
                 return
+            recipients = [user_obj]
         else:
             recipients = get_eligible_recipients_query(seg).all()
 
@@ -361,10 +404,14 @@ def _execute_campaign(campaign_id: int) -> None:
         )
 
         for user in recipients:
-            token     = _ensure_unsub_token(user)
-            unsub_url = f"{_APP_BASE_URL}/unsubscribe?token={token}"
-            html      = render_campaign_html(campaign, unsubscribe_url=unsub_url)
-            text      = render_campaign_text(campaign, unsubscribe_url=unsub_url)
+            # Service incident replies are not marketing: they do not add or
+            # rotate unsubscribe tokens, even if the user opted out.
+            unsub_url = ""
+            if not is_support:
+                token = _ensure_unsub_token(user)
+                unsub_url = f"{_APP_BASE_URL}/unsubscribe?token={token}"
+            html = render_campaign_html(campaign, unsubscribe_url=unsub_url, support=is_support)
+            text = render_campaign_text(campaign, unsubscribe_url=unsub_url)
 
             delivery = CommunicationDelivery(
                 campaign_id=campaign_id,
@@ -382,11 +429,11 @@ def _execute_campaign(campaign_id: int) -> None:
                     "subject": campaign.subject,
                     "html":    html,
                     "text":    text,
-                    "headers": {
-                        # RFC 8058 one-click unsubscribe
+                    **({"headers": {
+                        # RFC 8058 one-click unsubscribe for marketing only
                         "List-Unsubscribe":      f"<{unsub_url}>",
                         "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-                    },
+                    }} if not is_support else {}),
                 })
                 delivery.status      = "sent"
                 delivery.provider_id = (result.get("id", "") if isinstance(result, dict) else "")

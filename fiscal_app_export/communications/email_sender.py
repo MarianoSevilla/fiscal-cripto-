@@ -32,8 +32,8 @@ def _body_to_paragraphs(raw: str) -> str:
     return "".join(parts)
 
 
-def render_campaign_html(campaign, unsubscribe_url: str) -> str:
-    """Renders the full HTML email — minimal light design for maximum deliverability."""
+def render_campaign_html(campaign, unsubscribe_url: str, *, support: bool = False) -> str:
+    """Render marketing mail with unsubscribe, or a specific incident reply without it."""
     subject_esc  = _html.escape(campaign.subject)
     preview_text = _html.escape(campaign.preview_text or "")
     preview_snippet = (
@@ -42,6 +42,16 @@ def render_campaign_html(campaign, unsubscribe_url: str) -> str:
         if preview_text else ""
     )
     body_html = _body_to_paragraphs(campaign.body)
+    if support:
+        footer_notice = "Recibes este mensaje en relación con una incidencia concreta de tu solicitud."
+        unsubscribe_link = ""
+    else:
+        footer_notice = "Recibes este email porque tienes una cuenta activa."
+        unsubscribe_link = (
+            f'<a href="{_html.escape(unsubscribe_url, quote=True)}" '
+            f'style="color:#9ca3af;text-decoration:underline;">Desuscribirse</a>'
+            '&nbsp;&middot;&nbsp;'
+        )
 
     return f"""<!DOCTYPE html>
 <html lang="es">
@@ -107,10 +117,8 @@ def render_campaign_html(campaign, unsubscribe_url: str) -> str:
               </p>
               <p style="margin:0;font-size:11px;color:#9ca3af;line-height:1.7;
                          font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;">
-                Recibes este email porque tienes una cuenta activa. &middot;
-                <a href="{unsubscribe_url}"
-                   style="color:#9ca3af;text-decoration:underline;">Desuscribirse</a>
-                &nbsp;&middot;&nbsp;
+                {footer_notice} &middot;
+                {unsubscribe_link}
                 <a href="https://www.marianosevilla.com/privacidad"
                    style="color:#9ca3af;text-decoration:none;">Privacidad</a>
                 &nbsp;&middot;&nbsp;
