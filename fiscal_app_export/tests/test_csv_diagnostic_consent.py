@@ -132,6 +132,9 @@ def test_valid_explicit_consent_transfers_one_file_no_original_name(authenticate
     payload = provider.call_args.kwargs["json"]
     assert url == "https://api.resend.com/emails"
     assert payload["to"] == ["colab.marianosevilla@gmail.com"]
+    assert payload["subject"].startswith("[CSV-DIAG]")
+    assert "30 días" in payload["text"]
+    assert "Papelera" in payload["text"]
     assert payload["attachments"][0]["filename"] == "diagnostico_binance.csv"
     assert "cliente-identificable" not in str(payload)
     assert base64.b64decode(payload["attachments"][0]["content"]) == b"Date,Coin,Amount\\n2025-01-01,BTC,1\\n"
@@ -209,3 +212,20 @@ def test_no_on_server_storage_of_file(authenticated_client):
     assert response.status_code == 200
     with flask_app.app_context():
         assert db.session.query(ProcessingError).count() == before
+
+
+def test_privacy_and_consent_copy_disclose_gmail_retention():
+    """All user-facing entry points disclose the 30-day mailbox policy."""
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    for template in ("templates/tool.html", "templates/binance_v2.html"):
+        source = (root / template).read_text(encoding="utf-8")
+        assert "colab.marianosevilla@gmail.com" in source
+        assert "30 días" in source
+        assert "Resend" in source
+        assert 'id="diagConsentCheck"' in source
+    privacy = (root / "static/privacidad.html").read_text(encoding="utf-8")
+    assert "30 días desde su recepción" in privacy
+    assert "eliminación anticipada" in privacy
+    assert "borrado definitivo" in privacy
+    assert "Resend" in privacy
