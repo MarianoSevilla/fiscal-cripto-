@@ -2470,12 +2470,8 @@ def diagnostico_archivo_voluntario():
     }
 
     try:
-        response = _requests.post(
-            "https://api.resend.com/emails",
-            headers={"Authorization": "Bearer " + api_key, "Content-Type": "application/json"},
-            json=payload,
-            timeout=12,
-        )
+        from csv_diagnostic_transport import send_diagnostic_email
+        response = send_diagnostic_email(payload, api_key)
         if response.status_code not in (200, 201):
             app.logger.warning(
                 "[CSV_DIAGNOSTIC_SUPPORT] delivery rejected status=%d", response.status_code
