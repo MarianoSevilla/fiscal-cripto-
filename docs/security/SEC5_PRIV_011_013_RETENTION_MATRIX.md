@@ -1,6 +1,7 @@
 # SEC5-PRIV-011/012/013 — Inventario y decisiones de conservación
 
 **Estado:** propuesta técnica para revisión, **no política de retención aprobada**.  
+**Continuación:** [borrador de criterios para aprobación, sin purgas ni cambios de producción](SEC5_PRIV_011_013_DECISION_PROPOSAL.md). La propuesta distingue plazos internos sugeridos de obligaciones legales acreditadas; no sustituye esta matriz de inventario.  
 **Fecha de corte:** 28/10/2026.  
 **Repositorio base:** `MarianoSevilla/fiscal-cripto-`, `main@2b360475f2ec2bb9c7a2e032a6db8efc57161d66`.  
 **Fuentes del código:** `fiscal_app_export/models.py`, `app.py::_anonymize_user`, `static/privacidad.html#conservacion`, `communications/`, `fifo_pdf_lifecycle.py`.  
