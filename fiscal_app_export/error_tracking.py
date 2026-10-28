@@ -475,6 +475,7 @@ def _do_record(
     from models import db, ProcessingError
 
     error_type      = type(exc).__name__
+    raw_message = str(exc)  # Used transiently for classification, never persisted.
     # Exception arguments frequently embed CSV rows, identifiers or user filenames.
     # Store a bounded technical category rather than their raw text.
     message_short   = f"{error_type} at {stage or 'processing'}"[:_MAX_MESSAGE_LEN]
@@ -558,7 +559,7 @@ def _do_record(
     if not email:
         return
 
-    if not is_actionable_processing_error(error_type, stage, message_short, error_category):
+    if not is_actionable_processing_error(error_type, stage, raw_message, error_category):
         logger.info(
             "[ERROR_TRACKING] auto-email skipped (non-actionable) error_type=%s stage=%s category=%s",
             error_type, stage, error_category or "—",
@@ -572,7 +573,7 @@ def _do_record(
         )
         return
 
-    user_friendly_msg = make_user_friendly_message(error_type, stage, message_short)
+    user_friendly_msg = make_user_friendly_message(error_type, stage, raw_message)
 
     try:
         sent = send_processing_error_email(email, exchange, record.id, user_friendly_msg)
@@ -593,7 +594,7 @@ def _do_record(
                 record.id,
             )
     except Exception as email_exc:
-        err_str = str(email_exc)[:500]
+        err_str = type(email_exc).__name__  # Provider messages may include addresses or tokens.
         logger.error(
             "[ERROR_TRACKING] auto-email failed error_id=%s: %s", record.id, err_str
         )
