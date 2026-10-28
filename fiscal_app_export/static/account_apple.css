@@ -5,7 +5,8 @@
   background: #f7f9f8;
   color: var(--text);
 }
-.apple-account #contenido { min-height: calc(100vh - 64px); padding-top: 64px; }
+/* The shared header is in normal flow; no duplicate 64px spacer above the hero. */
+.apple-account #contenido { min-height: calc(100vh - 64px); padding-top: 0; }
 .apple-account .account-intro {
   background: var(--intro-bg);
   color: var(--intro-text);
