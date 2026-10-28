@@ -168,8 +168,20 @@ def test_sin_sesion_devuelve_401(client, _app):
 
 
 def test_pw_user_contrasena_correcta(client, _app):
-    """Caso 2: contraseña correcta → 200, cuenta anonimizada."""
+    """Caso 2: elimina credenciales/tokens, no solo la identidad visible."""
     uid = _make_pw_user(_app, "h3_pw_ok@test.com", "Correct-Pass-123!")
+    # Populate the DB before login so the synthetic cached current_user
+    # does not retain a stale NIF across the two test-client requests.
+    with _app.app_context():
+        db.session.remove()
+        u = db.session.get(User, uid)
+        u.nif = "12345678Z"
+        u.comms_unsubscribe_token = "sec5-h3-token-account-deletion"
+        u.password_reset_token_hash = "a" * 64
+        u.password_reset_expires_at = datetime.utcnow()
+        u.last_login = datetime.utcnow()
+        db.session.commit()
+        db.session.remove()
     _login(client, "h3_pw_ok@test.com", "Correct-Pass-123!")
 
     r = client.post("/api/delete-account",
@@ -178,6 +190,18 @@ def test_pw_user_contrasena_correcta(client, _app):
     assert r.status_code == 200, r.get_json()
     assert r.get_json().get("message") == "Cuenta eliminada correctamente."
     assert not _user_is_active(_app, uid)
+    with _app.app_context():
+        db.session.remove()
+        u = db.session.get(User, uid)
+        assert u.email == f"deleted_{uid}@deleted"
+        assert u.password_hash is None and u.google_id is None
+        assert u.full_name is None and u.nif is None
+        assert u.email_verified_at is None and u.is_active is False
+        assert u.comms_unsubscribe_token is None
+        assert u.password_reset_token_hash is None
+        assert u.password_reset_expires_at is None
+        assert u.last_login is None
+        db.session.remove()
     _cleanup(_app, uid)
 
 
@@ -309,4 +333,45 @@ def test_pw_user_no_puede_usar_request_endpoint(client, _app):
 
     r = client.post("/api/delete-account/request", content_type="application/json")
     assert r.status_code == 400
+    _cleanup(_app, uid)
+
+
+def test_deletion_does_not_purge_related_fiscal_or_diagnostic_records(client, _app):
+    """SEC5-PRIV: no implicit cascade or unsafe claims of global deletion.
+
+    Synthetic rows only; future retention decisions require an explicit policy.
+    """
+    from models import FifoReport, ProcessingError
+
+    address = "sec5-privacy-preserved@example.invalid"
+    uid = _make_pw_user(_app, address, "Privacy-Only-123!")
+    with _app.app_context():
+        db.session.remove()
+        report = FifoReport(user_id=uid, exchange="bitvavo", fiscal_year=2025)
+        incident = ProcessingError(
+            user_id=uid, email=address, exchange="bitvavo",
+            error_type="synthetic", error_category="unsupported_format",
+            csv_filename="synthetic-no-real-data.csv",
+        )
+        db.session.add_all([report, incident])
+        db.session.commit()
+        report_id, incident_id = report.id, incident.id
+        db.session.remove()
+
+    _login(client, address, "Privacy-Only-123!")
+    response = client.post("/api/delete-account", json={"password": "Privacy-Only-123!"})
+    assert response.status_code == 200, response.get_json()
+    with _app.app_context():
+        db.session.remove()
+        assert db.session.get(User, uid).is_active is False
+        report = db.session.get(FifoReport, report_id)
+        incident = db.session.get(ProcessingError, incident_id)
+        assert report is not None and report.user_id == uid
+        assert incident is not None and incident.user_id == uid
+        # Independent copies of PII are NOT erased by _anonymize_user.
+        assert incident.email == address
+        db.session.delete(incident)
+        db.session.delete(report)
+        db.session.commit()
+        db.session.remove()
     _cleanup(_app, uid)
