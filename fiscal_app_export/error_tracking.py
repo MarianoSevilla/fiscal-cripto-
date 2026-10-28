@@ -496,7 +496,7 @@ def _minimize_csv_context(csv_context):
                 safe["file_type"] = item["file_type"]
             if item.get("encoding") in ("utf-8", "latin-1"):
                 safe["encoding"] = item["encoding"]
-            if item.get("separator") in (",", ";", "\\t", "|"):
+            if item.get("separator") in (",", ";", "\t", "|"):
                 safe["separator"] = item["separator"]
             n = item.get("n_columns")
             if type(n) is int and 0 < n <= 10000:
