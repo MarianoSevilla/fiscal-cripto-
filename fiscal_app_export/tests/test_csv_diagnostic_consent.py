@@ -43,7 +43,6 @@ def authenticated_client(monkeypatch):
         "password": "csv-diagnostic-fixture-password",
     })
     assert res.status_code == 200
-    monkeypatch.setenv("CSV_DIAGNOSTIC_SUPPORT_EMAIL", "support@example.invalid")
     monkeypatch.setenv("RESEND_API_KEY", "synthetic-resend-key")
     try:
         yield client
@@ -132,7 +131,7 @@ def test_valid_explicit_consent_transfers_one_file_no_original_name(authenticate
     url = provider.call_args.args[0]
     payload = provider.call_args.kwargs["json"]
     assert url == "https://api.resend.com/emails"
-    assert payload["to"] == ["support@example.invalid"]
+    assert payload["to"] == ["colab.marianosevilla@gmail.com"]
     assert payload["attachments"][0]["filename"] == "diagnostico_binance.csv"
     assert "cliente-identificable" not in str(payload)
     assert base64.b64decode(payload["attachments"][0]["content"]) == b"Date,Coin,Amount\\n2025-01-01,BTC,1\\n"
@@ -153,3 +152,60 @@ def test_no_filename_in_logs_on_unexpected_network_failure(authenticated_client,
     assert response.status_code == 502
     assert "PRIVATE-CSV-CONTENT" not in caplog.text
     assert "private-portfolio" not in caplog.text
+
+
+def test_multipart_streams_closed_after_provider_success(authenticated_client):
+    """Explicitly close spooled request files; never retain a server-side copy."""
+    from flask.wrappers import Request
+    original_close = Request.close
+    closed_requests = []
+
+    def tracked_close(request):
+        closed_requests.append(request)
+        return original_close(request)
+
+    with patch.object(Request, "close", autospec=True, side_effect=tracked_close):
+        with patch("requests.post", return_value=MagicMock(status_code=200)):
+            response = send(authenticated_client, filename="sensitive-personal.csv")
+    assert response.status_code == 200
+    assert closed_requests
+    for request_obj in closed_requests:
+        for file in request_obj.files.getlist("archivo"):
+            assert file.stream.closed
+
+
+@pytest.mark.parametrize("expected_status,consent,provider_status", [
+    (400, False, 200),    # User never authorized sending
+    (502, True, 422),     # Provider rejects the email
+])
+def test_multipart_streams_closed_after_rejection(authenticated_client, expected_status, consent, provider_status):
+    from flask.wrappers import Request
+    original_close = Request.close
+    closed_requests = []
+
+    def tracked_close(request):
+        closed_requests.append(request)
+        return original_close(request)
+
+    with patch.object(Request, "close", autospec=True, side_effect=tracked_close):
+        with patch("requests.post", return_value=MagicMock(status_code=provider_status)) as provider:
+            response = send(authenticated_client, consent=consent)
+    assert response.status_code == expected_status
+    if not consent:
+        provider.assert_not_called()
+    assert closed_requests
+    for request_obj in closed_requests:
+        for file in request_obj.files.getlist("archivo"):
+            assert file.stream.closed
+
+
+def test_no_on_server_storage_of_file(authenticated_client):
+    """Uploads are transported directly, never persisted in ProcessingError."""
+    from models import ProcessingError
+    with flask_app.app_context():
+        before = db.session.query(ProcessingError).count()
+    with patch("requests.post", return_value=MagicMock(status_code=200)):
+        response = send(authenticated_client)
+    assert response.status_code == 200
+    with flask_app.app_context():
+        assert db.session.query(ProcessingError).count() == before
