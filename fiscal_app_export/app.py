@@ -2485,7 +2485,7 @@ def diagnostico_archivo_voluntario():
         return jsonify({"error": "No se puede confirmar la entrega. Contacta con soporte antes de repetir."}), 502
 
     app.logger.info("[CSV_DIAGNOSTIC_SUPPORT] sent account_id=%s exchange=%s", current_user.id, exchange)
-    return jsonify({"ok": True, "message": "Archivo enviado voluntariamente a soporte."}), 200
+    return jsonify({"ok": True, "message": "El proveedor de correo ha aceptado el envío."}), 200
 
 
 @app.route("/api/analizar", methods=["POST"])
