@@ -131,8 +131,13 @@ def clear_flask_login_g(_app):
     mantiene un app context activo durante toda la sesión, el estado de login de
     un test autenticado persiste para el siguiente test anónimo si no se limpia.
     """
-    yield
     from flask import g
+    # Module-scoped app context shares SQLAlchemy's scoped session. Reset it
+    # between HTTP tests to avoid stale weak identity-map references.
+    db.session.remove()
+    g.pop("_login_user", None)
+    yield
+    db.session.remove()
     g.pop("_login_user", None)
 
 
