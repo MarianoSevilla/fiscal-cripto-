@@ -573,3 +573,62 @@ def test_sec5_priv_telemetry_excludes_user_content():
         })
         assert "sha256" not in row.csv_context
         assert "headers" not in row.csv_context
+
+
+
+# ── SEC5 PRIVACY: LOSSLESS TECHNICAL CATEGORIES, NO CUSTOMER CONTENT ──────────
+
+def test_privacy_error_categories_keep_distinct_root_causes():
+    from error_tracking import _safe_error_kind
+    date = _safe_error_kind("ValueError", "time data 'personal' does not match format")
+    number = _safe_error_kind("ValueError", "could not convert string to float: 'personal'")
+    assert date == "date_format"
+    assert number == "value_conversion"
+    assert build_processing_error_fingerprint("binance", "classify", "ValueError", date) != (
+        build_processing_error_fingerprint("binance", "classify", "ValueError", number)
+    )
+
+
+def test_privacy_multifile_context_retains_shape_without_private_values():
+    import json
+    from error_tracking import _minimize_csv_context
+    private = "hidden-customer-iban"
+    source = [
+        {"file_type": "csv", "encoding": "utf-8",
+         "separator": "\\t", "n_columns": 3,
+         "headers": [private], "sha256": "f" * 64},
+        {"file_type": "csv", "encoding": "latin-1",
+         "separator": ";", "n_columns": 4, "untrusted": private},
+    ]
+    safe = _minimize_csv_context(json.dumps(source))
+    decoded = json.loads(safe)
+    assert isinstance(decoded, list) and len(decoded) == 2
+    assert decoded[0]["n_columns"] == 3
+    assert decoded[1]["n_columns"] == 4
+    assert decoded[0]["separator"] == "\\t"
+    assert private not in safe
+    assert "sha256" not in safe and "headers" not in safe
+    assert len(json.loads(_minimize_csv_context(json.dumps(source * 15)))) == 10
+
+
+def test_privacy_unsafe_exceptions_never_persist_argument_or_traceback():
+    from models import db, ProcessingError
+    app = TestRecordSafe()._make_app()
+    private = "PRIVATE-LEDGER-CONTENT-789"
+    try:
+        raise ValueError("time data '" + private + "' does not match format")
+    except ValueError as exc:
+        with app.app_context():
+            record_processing_error_safe(
+                user_id=17, email="demo@example.invalid", exchange="binance",
+                stage="classify", exc=exc, csv_filename=private + ".csv",
+                csv_context='{"file_type":"csv","headers":["' + private + '"]}',
+            )
+            row = db.session.query(ProcessingError).first()
+            assert row is not None
+            assert row.message_short == "ValueError: date_format"
+            assert private not in row.message_short
+            assert private not in (row.traceback_short or "")
+            assert private not in (row.csv_context or "")
+            assert row.csv_filename is None
+            assert row.fingerprint
