@@ -91,14 +91,27 @@ def test_same_site_other_subdomain_is_rejected(client, method, path):
     assert response.get_json()["error"] == "Origen de solicitud no válido."
 
 
-def test_missing_origin_and_fetch_metadata_is_not_claimed_as_csrf_protection(client):
-    """Record residual risk: headers absent do not trigger the boundary.
+def test_missing_origin_and_fetch_metadata_rejected(client):
+    response = client.patch("/api/admin/contactos/1", json={"accion": "archivar"})
+    assert response.status_code == 403
+    assert response.get_json()["error"] == "Origen de solicitud no válido."
 
-    No authenticated write is attempted; authentication must still deny
-    this anonymous request. This is NOT a proof of authenticated CSRF safety.
-    """
+
+def test_fetch_metadata_same_origin_allows_request_to_reach_authorization(client):
     response = client.patch(
-        "/api/admin/contactos/1", json={"accion": "archivar"},
+        "/api/admin/contactos/1",
+        headers={"Sec-Fetch-Site": "same-origin"},
+        json={"accion": "archivar"},
     )
     assert response.get_json(silent=True) != {"error": "Origen de solicitud no válido."}
     assert response.status_code in (401, 302, 403)
+
+
+def test_same_site_metadata_rejected_without_origin(client):
+    response = client.patch(
+        "/api/admin/contactos/1",
+        headers={"Sec-Fetch-Site": "same-site"},
+        json={"accion": "archivar"},
+    )
+    assert response.status_code == 403
+    assert response.get_json()["error"] == "Origen de solicitud no válido."
