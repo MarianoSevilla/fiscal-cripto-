@@ -811,8 +811,8 @@ def sensitive_admin_origin_boundary():
     """Deny explicit cross-site writes to administrative resource/contact APIs.
 
     Read-only and provider webhook endpoints are intentionally unaffected.
-    Browsers send Origin and/or Sec-Fetch-Site; legacy clients with neither
-    header retain their existing authentication/authorization requirements.
+    A missing Origin must be accompanied by Sec-Fetch-Site=same-origin.
+    This intentionally fails closed for headerless administrative writes.
     """
     if request.method not in {'POST', 'PATCH', 'PUT', 'DELETE'}:
         return
@@ -825,7 +825,8 @@ def sensitive_admin_origin_boundary():
     origin = request.headers.get('Origin')
     site = request.headers.get('Sec-Fetch-Site')
     if ((origin is not None and origin.rstrip('/') != request.host_url.rstrip('/'))
-            or site == 'cross-site'):
+            or site in {'cross-site', 'same-site'}
+            or (origin is None and site != 'same-origin')):
         return jsonify({'error': 'Origen de solicitud no válido.'}), 403
 
 
