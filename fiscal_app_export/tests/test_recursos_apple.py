@@ -58,9 +58,9 @@ def test_detail_keeps_fields_options_and_optional_marketing_consent():
     assert 'Solo es necesaria la aceptación de privacidad para tramitar la solicitud.' in text
     assert 'Ambas opciones son obligatorias' not in text
     assert 'Quiero recibir por email novedades del canal, recursos y contenido educativo (opcional).' in text
-    marketing_input=re.search(r'<input\\b[^>]*\\bid="marketing_consent"[^>]*>',text)
+    marketing_input=re.search(r'<input\b[^>]*\bid="marketing_consent"[^>]*>',text)
     assert marketing_input
-    assert not re.search(r'\\b(?:checked|required)(?:\\s|=|>)',marketing_input.group(0))
+    assert not re.search(r'\b(?:checked|required)(?:\s|=|>)',marketing_input.group(0))
     assert 'Para enviar la solicitud necesitas activar JavaScript.' in text
     assert 'aria-describedby="uid-helper"' in text
 
