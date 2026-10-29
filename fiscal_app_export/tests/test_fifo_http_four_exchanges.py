@@ -276,6 +276,7 @@ def test_token_cannot_be_used_by_another_authenticated_account(client, isolated_
     "missing_settlement_currency",
     "foreign_fee",
     "unverifiable_fee",
+    "stable_foreign_fee",
     "unknown_event",
 ])
 def test_bitvavo_material_unknown_or_non_eur_blocks_pdf_and_token(client, case):
@@ -291,6 +292,8 @@ def test_bitvavo_material_unknown_or_non_eur_blocks_pdf_and_token(client, case):
     }
     if case == "unknown_event":
         content = original + "UTC,2025-02-03,10:00:00,unknown_fiscal_event,BTC,1,EUR,1,EUR,1,EUR,0,Completed,unknown-id,\n"
+    elif case == "stable_foreign_fee":
+        content = original + "UTC,2025-02-03,10:00:00,buy,USDT,100,EUR,1,EUR,-100,USDT,-1,Completed,stable-id,\n"
     else:
         before, after = cases[case]
         content = original.replace(before, after, 1)
