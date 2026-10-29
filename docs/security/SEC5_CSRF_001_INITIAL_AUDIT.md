@@ -33,3 +33,24 @@
 Primero reproducir impacto. Si una ruta sensible realmente permite un cambio no autorizado bajo el modelo de amenaza, añadir protección compartida limitada a rutas relevantes, con verificación robusta de origen y/o token CSRF para sesiones; nunca bloquear webhooks verificados ni flujos válidos de pago. No concluir explotación por mera ausencia de decorador.
 
 **Pendiente:** ejecutar tests adversariales, revisar implementaciones `AUTH_POST_PATHS` y `advisory_financial_prefreeze`, y presentar hallazgos confirmados y parche solo si procede.
+
+
+## Revisión final del alcance implementado — 29/10/2026
+
+**Resultado del HEAD `5beb7afb0e7770e64797a276ad3f3ac4153b5864`:** [Required CI #539](https://github.com/MarianoSevilla/fiscal-cripto-/actions/runs/40859356687) SUCCESS: backend 2.210 PASS / 63 SKIP / 16 subtests PASS; PostgreSQL y browser-navigation PASS. La suite general no equivale a una auditoría de todos los endpoints mutables.
+
+**Cambios realmente implementados:**
+- `sensitive_admin_origin_boundary` intercepta exclusivamente `POST/PATCH/PUT/DELETE` bajo `/api/admin/recursos/solicitudes/` y `/api/admin/contactos/`.
+- Rechaza `Origin` externo, `Sec-Fetch-Site` igual a `cross-site` o `same-site`, y solicitudes sin `Origin` que tampoco declaren `Sec-Fetch-Site: same-origin`. **No hay excepción para solicitudes sin ambas cabeceras.**
+- Las peticiones con `Origin` idéntico a `request.host_url` o con `Sec-Fetch-Site: same-origin` pueden llegar a los controles de autenticación/autorización. La comprobación se aplica *antes* de los handlers y no altera webhooks/pagos.
+- Pruebas sintéticas incluyen administrador autenticado, subdominio `same-site`, origen externo, cabeceras ausentes, ruta legítima; las pruebas existentes de administración de recursos/contactos envían metadatos de navegador del mismo origen.
+
+**Compatibilidad contrastada con código de frontend:** `static/admin-contactos.html` realiza `fetch('/api/admin/contactos/<id>', {method:'PATCH', ...})` y `static/admin-recursos.html` utiliza rutas relativas `/api/admin/recursos/solicitudes/... ` para POST/DELETE. La estructura es de mismo origen, sin dependencia observada de llamadas cruzadas. La ejecución Chromium global pasó, pero **no se afirma una sesión administrativa E2E real en Chromium**.
+
+**Límites y riesgo residual:**
+- No es un token CSRF universal ni una prueba de seguridad de todas las operaciones mutables del proyecto. Las rutas de autenticación, asesoramiento, cuenta y pagos siguen bajo sus controles propios y requieren valoraciones separadas.
+- Las cabeceras de origen no son prueba de autorización: un cliente no navegador puede falsificarlas; las sesiones, roles y permisos siguen siendo obligatorios.
+- La compatibilidad con navegadores/clientes que omitan ambas cabeceras no está garantizada para estas operaciones; se ha elegido el rechazo por defecto como condición de seguridad.
+- No hubo pruebas sobre datos reales ni despliegue. No declarar producción protegida por este cambio hasta fusionar de forma autorizada y verificar Railway.
+
+**Conclusión de revisión de PR #160:** modificación acotada y CI satisfactoria; apta para solicitar autorización de integración, **sin afirmar que la auditoría CSRF global está cerrada**.
