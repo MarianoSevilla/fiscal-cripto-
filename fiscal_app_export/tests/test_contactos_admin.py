@@ -89,7 +89,11 @@ def normal_user(_app):
 
 @pytest.fixture
 def client(_app):
-    return _app.test_client()
+    # Simulate a same-origin browser for legitimate administrative PATCH calls.
+    # Keep the production boundary fail-closed for requests without origin metadata.
+    test_client = _app.test_client()
+    test_client.environ_base['HTTP_SEC_FETCH_SITE'] = 'same-origin'
+    return test_client
 
 
 def _login_admin(client):
