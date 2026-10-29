@@ -190,11 +190,88 @@ def test_solicitud_sin_legal_accepted(client, resource):
     assert "privacidad" in r.get_json().get("error", "").lower()
 
 
-def test_solicitud_sin_marketing_consent(client, resource):
-    """marketing_consent es ahora obligatorio → 400."""
-    r = _post_solicitud(client, resource, {"marketing_consent": False})
+@pytest.mark.parametrize("marketing_value", [False, None, "true", "false", 1])
+def test_solicitud_sin_consentimiento_comercial_se_tramita_sin_alta(client, resource, _app, marketing_value):
+    """Solo el booleano JSON true es consentimiento expreso."""
+    email = f"marketing_no_{str(marketing_value).lower()}@example.com"
+    payload = {**_VALID_PAYLOAD_TEMPLATE, "resource_id": resource, "email": email}
+    if marketing_value is None:
+        payload.pop("marketing_consent")
+    else:
+        payload["marketing_consent"] = marketing_value
+
+    with patch("app._send_resource_confirmation_email") as confirmation, \
+         patch("app._send_resource_internal_notification") as internal:
+        r = client.post("/api/recursos/solicitar", json=payload)
+    assert r.status_code == 201, r.get_json()
+    confirmation.assert_called_once()
+    internal.assert_called_once()
+    with _app.app_context():
+        db.session.remove()
+        rr = ResourceRequest.query.filter_by(id=r.get_json()["id"]).one()
+        assert rr.marketing_consent is False
+        assert rr.legal_accepted is True
+        db.session.delete(rr)
+        db.session.commit()
+        db.session.remove()
+
+
+def test_solicitud_con_optin_explicito_guarda_true(client, resource, _app):
+    """Consentimiento comercial afirmativo y explícito queda registrado."""
+    r = _post_solicitud(client, resource, {
+        "marketing_consent": True,
+        "email": "consent_optin_true@example.com",
+    })
+    assert r.status_code == 201
+    with _app.app_context():
+        db.session.remove()
+        rr = ResourceRequest.query.filter_by(id=r.get_json()["id"]).one()
+        assert rr.marketing_consent is True
+        db.session.delete(rr)
+        db.session.commit()
+        db.session.remove()
+
+
+def test_sin_privacidad_rechaza_aunque_marketing_sea_true(client, resource):
+    """La aceptación de privacidad sigue siendo condición del formulario."""
+    r = _post_solicitud(client, resource, {
+        "legal_accepted": False, "marketing_consent": True,
+    })
     assert r.status_code == 400
-    assert "comunicaciones" in r.get_json().get("error", "").lower()
+    assert "privacidad" in r.get_json().get("error", "").lower()
+
+
+def test_formulario_no_exige_marketing_y_js_envia_el_valor_real(client, resource):
+    """Regresión mínima de contrato frontend sin depender de datos reales."""
+    from pathlib import Path
+    from html.parser import HTMLParser
+
+    class CheckboxParser(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.inputs = {}
+        def handle_starttag(self, tag, attrs):
+            if tag == "input":
+                d = dict(attrs)
+                if "id" in d:
+                    self.inputs[d["id"]] = d
+
+    res = client.get("/recursos/test-resource")
+    assert res.status_code == 200
+    html = res.get_data(as_text=True)
+    parser = CheckboxParser()
+    parser.feed(html)
+    assert "marketing_consent" in parser.inputs
+    assert "checked" not in parser.inputs["marketing_consent"]
+    assert "required" not in parser.inputs["marketing_consent"]
+    assert "opcional" in html
+    assert "Ambas opciones son obligatorias" not in html
+
+    js = (Path(__file__).resolve().parent.parent / "static" / "recursos_apple.js").read_text(encoding="utf-8")
+    assert "marketing_consent:marketing.checked" in js
+    assert "legal_accepted:legal.checked" in js
+    assert "btn.disabled=pending||!legal.checked" in js
+    assert "legal.checked&&marketing.checked" not in js
 
 
 def test_solicitud_email_invalido(client, resource):
