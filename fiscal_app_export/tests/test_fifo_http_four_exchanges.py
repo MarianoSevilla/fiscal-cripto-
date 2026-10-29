@@ -385,3 +385,38 @@ def test_binance_legacy_ambiguous_or_incomplete_pairs_block_fiscal_pdf(client, i
     assert "Datos fiscales no seguros" in payload.get("error", "")
     assert "token" not in payload and "resumen" not in payload
     assert "operaciones" not in payload
+
+
+@pytest.mark.parametrize("orphan_type,currency,amount", [
+    ("Transaction Buy", "ETH", "1"),
+    ("Transaction Spend", "BTC", "-0.001"),
+    ("Transaction Fee", "BNB", "-0.0001"),
+])
+def test_binance_tx_orphan_leg_rejects_report_before_pdf_token(
+    client, orphan_type, currency, amount,
+):
+    """A Binance TX export must never omit unpaired trade/fee rows in a fiscal PDF."""
+    # Original valid Binance TX fixture has an EUR purchase (2024) and
+    # an EUR sale (2025); add one unmatched material row at a distinct time.
+    valid_csv = _csv_bytes("binance", with_purchase=True).decode("utf-8")
+    writer_buffer = io.StringIO(newline="")
+    writer = csv.writer(writer_buffer)
+    writer.writerow([
+        "123", "2025-03-03 10:00:00", "Spot", orphan_type,
+        currency, amount, "Synthetic/ORPHAN",
+    ])
+    original_plus_orphan = valid_csv + writer_buffer.getvalue()
+    response = client.post("/api/analizar", data={
+        "csv": (io.BytesIO(original_plus_orphan.encode("utf-8")),
+                "binance-tx-synthetic-orphan.csv"),
+        "exchange": "binance",
+        "nombre": "Synthetic - no personal data",
+        "ejercicio": "2025",
+    }, content_type="multipart/form-data")
+    assert response.status_code == 422, (
+        orphan_type, response.status_code, response.get_data(as_text=True)[:550]
+    )
+    payload = response.get_json() or {}
+    assert "Datos fiscales no seguros" in payload.get("error", "")
+    assert "token" not in payload and "resumen" not in payload
+    assert "operaciones" not in payload
