@@ -233,13 +233,16 @@ class ClasificadorBinance:
             spend = grupo[grupo["Operación"] == "Transaction Spend"]
             fee   = grupo[grupo["Operación"] == "Transaction Fee"]
 
-            if buy.empty or spend.empty:
-                for _, fila in grupo.iterrows():
-                    self.desconocidas.append(OperacionDesconocida(
-                        fecha=str(timestamp), subtipo=fila["Operación"],
-                        activo=fila["Moneda"], cantidad=fila["Cambio"], cuenta=fila["Cuenta"]
-                    ))
-                continue
+            # El histórico clásico no aporta un ID de orden con el que
+            # emparejar varias patas ejecutadas en el mismo instante.
+            # La implementación anterior usaba iloc[0] y marcaba todas
+            # las demás filas como procesadas, generando un FIFO parcial.
+            if len(buy) != 1 or len(spend) != 1 or len(fee) > 1:
+                raise ValueError(
+                    "Datos fiscales no seguros: Binance clásico contiene "
+                    "compras, gastos o comisiones sin correspondencia única "
+                    "en la misma fecha y hora. No se puede emitir un informe parcial."
+                )
 
             activo_comprado   = buy.iloc[0]["Moneda"]
             cantidad_comprada = float(buy.iloc[0]["Cambio"])
