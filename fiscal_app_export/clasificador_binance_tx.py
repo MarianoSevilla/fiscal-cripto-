@@ -450,15 +450,16 @@ class ClasificadorBinanceTx:
             buy_rows   = grupo[grupo["Operación"] == "Transaction Buy"]
             spend_rows = grupo[grupo["Operación"] == "Transaction Spend"]
 
-            # Sin par buy+spend → registrar como movimiento
+            # No equiparar una pata huérfana a un simple movimiento:
+            # puede ser adquisición/transmisión o comisión con efecto fiscal.
+            # Hasta contar con una correspondencia verificable, bloquear
+            # íntegramente el informe en lugar de omitir estas filas.
             if buy_rows.empty or spend_rows.empty:
-                for _, fila in grupo.iterrows():
-                    self.movimientos.append(OperacionMovimiento(
-                        fecha=fecha, subtipo=_safe_text(fila["Operación"]),
-                        activo=fila["Moneda"], cantidad=float(fila["Cambio"]),
-                        observacion=str(fila.get("Observación", "")),
-                    ))
-                continue
+                raise ValueError(
+                    "Datos fiscales no seguros: Binance Transaction Buy/Spend/Fee "
+                    "contiene una operación sin el par necesario para calcular "
+                    "el FIFO. Descarga el historial completo."
+                )
 
             # ── Sumar totales por moneda (maneja múltiples rows del mismo activo)
             # buy_rows tienen Cambio positivo; spend_rows tienen Cambio negativo
