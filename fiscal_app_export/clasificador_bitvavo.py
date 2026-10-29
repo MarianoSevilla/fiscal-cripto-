@@ -288,6 +288,10 @@ class ClasificadorBitvavo:
                 )
             return fee_val
 
+        # Validar también las fees de compraventas de stablecoins, aunque
+        # luego queden clasificadas como movimientos informativos.
+        fee_eur = _fee_eur(abs(fee_cant), abs(rec_cant)) if tipo in ("buy", "sell") else 0.0
+
         if tipo == "buy":
             # Compra: Received/Paid = EUR pagados (negativo)
             activo        = moneda
@@ -303,7 +307,6 @@ class ClasificadorBitvavo:
                     observacion=f"Compra de {activo} con {contraparte}"
                 ))
             else:
-                fee_eur = _fee_eur(abs(fee_cant), importe)
                 self.compraventas.append(OperacionCompraventa(
                     fecha=fecha, tipo="COMPRA",
                     activo=activo, cantidad=cant_comprada,
@@ -327,7 +330,6 @@ class ClasificadorBitvavo:
                     observacion=f"Venta de {activo} por {contraparte}"
                 ))
             else:
-                fee_eur = _fee_eur(abs(fee_cant), importe)
                 self.compraventas.append(OperacionCompraventa(
                     fecha=fecha, tipo="VENTA",
                     activo=activo, cantidad=cant_vendida,
