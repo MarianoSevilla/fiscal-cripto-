@@ -110,7 +110,10 @@ def admin_user(_app):
 
 @pytest.fixture
 def client(_app):
-    return _app.test_client()
+    # Reproduce trusted browser metadata for legitimate admin mutations.
+    test_client = _app.test_client()
+    test_client.environ_base['HTTP_SEC_FETCH_SITE'] = 'same-origin'
+    return test_client
 
 
 @pytest.fixture(autouse=True)
