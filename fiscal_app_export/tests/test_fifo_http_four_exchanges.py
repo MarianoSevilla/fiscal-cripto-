@@ -310,3 +310,78 @@ def test_bitvavo_material_unknown_or_non_eur_blocks_pdf_and_token(client, case):
     assert "token" not in payload and "resumen" not in payload
     assert "operaciones" not in payload
     assert payload.get("ok") is not True
+
+
+def _binance_legacy_bytes(*, invalid_group=None):
+    """Synthetic six-column classic Binance CSV (not Binance TX)."""
+    output = io.StringIO(newline="")
+    writer = csv.writer(output)
+    writer.writerow(["Tiempo", "Operación", "Moneda", "Cambio", "Cuenta", "Observación"])
+    buy_time = "2024-01-02 10:00:00"
+    sell_time = "2025-02-02 10:00:00"
+    rows = [
+        [buy_time, "Transaction Buy", "BTC", "0.02", "Spot", ""],
+        [buy_time, "Transaction Spend", "EUR", "-600", "Spot", ""],
+        [sell_time, "Transaction Buy", "EUR", "400", "Spot", ""],
+        [sell_time, "Transaction Spend", "BTC", "-0.01", "Spot", ""],
+    ]
+    extras = {
+        "duplicate_buy": [buy_time, "Transaction Buy", "ETH", "1", "Spot", ""],
+        "duplicate_spend": [buy_time, "Transaction Spend", "USDT", "-100", "Spot", ""],
+        "duplicate_fee": [buy_time, "Transaction Fee", "EUR", "-1", "Spot", ""],
+        "orphan_buy": [buy_time, "Transaction Buy", "ETH", "1", "Spot", ""],
+        "orphan_spend": [buy_time, "Transaction Spend", "EUR", "-1", "Spot", ""],
+        "orphan_fee": [buy_time, "Transaction Fee", "EUR", "-1", "Spot", ""],
+    }
+    if invalid_group == "duplicate_fee":
+        rows.extend([extras[invalid_group], extras[invalid_group]])
+    elif invalid_group == "orphan_buy":
+        rows = [r for r in rows if r[0] != buy_time]
+        rows.append(extras[invalid_group])
+    elif invalid_group == "orphan_spend":
+        rows = [r for r in rows if r[0] != buy_time]
+        rows.append(extras[invalid_group])
+    elif invalid_group == "orphan_fee":
+        rows = [r for r in rows if r[0] != buy_time]
+        rows.append(extras[invalid_group])
+    elif invalid_group:
+        rows.append(extras[invalid_group])
+    writer.writerows(rows)
+    return output.getvalue().encode("utf-8")
+
+
+def test_binance_legacy_unique_eur_pairs_still_generate_fiscal_pdf(client):
+    """A valid classic Binance CSV must not regress to a rejected import."""
+    response = client.post("/api/analizar", data={
+        "csv": (io.BytesIO(_binance_legacy_bytes()), "binance-classic-synthetic.csv"),
+        "exchange": "binance", "nombre": "Synthetic", "ejercicio": "2025",
+    }, content_type="multipart/form-data")
+    assert response.status_code == 200, response.get_data(as_text=True)[:550]
+    payload = response.get_json()
+    assert len(payload["operaciones"]) == 1
+    assert payload["resumen"]["resultado_neto"] == pytest.approx(100, abs=0.01)
+    token = payload["token"]
+    download = client.get("/api/descargar/" + token + "?exchange=binance")
+    assert download.status_code == 200
+    assert download.data.startswith(b"%PDF-")
+    assert client.get("/api/descargar/" + token).status_code == 403
+
+
+@pytest.mark.parametrize("invalid_group", [
+    "duplicate_buy", "duplicate_spend", "duplicate_fee",
+    "orphan_buy", "orphan_spend", "orphan_fee",
+])
+def test_binance_legacy_ambiguous_or_incomplete_pairs_block_fiscal_pdf(client, invalid_group):
+    """Every unpaired or extra CSV leg must block the entire report and token."""
+    response = client.post("/api/analizar", data={
+        "csv": (io.BytesIO(_binance_legacy_bytes(invalid_group=invalid_group)),
+                "binance-classic-synthetic.csv"),
+        "exchange": "binance", "nombre": "Synthetic", "ejercicio": "2025",
+    }, content_type="multipart/form-data")
+    assert response.status_code == 422, (
+        invalid_group, response.status_code, response.get_data(as_text=True)[:550]
+    )
+    payload = response.get_json() or {}
+    assert "Datos fiscales no seguros" in payload.get("error", "")
+    assert "token" not in payload and "resumen" not in payload
+    assert "operaciones" not in payload
