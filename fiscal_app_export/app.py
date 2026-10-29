@@ -1602,6 +1602,22 @@ def _validar_aceptacion_fifo(motor, clasificador=None) -> None:
     """
     _validar_aceptacion_fuentes_fifo(clasificador)
 
+    # El clasificador Binance TX agrupa Transaction Fee con las patas de
+    # compra/venta, pero no traslada su coste ni el activo empleado al motor
+    # FIFO. Evitar un informe IRPF con comisión omitida (incluso si está
+    # denominada en EUR) hasta disponer de valoración y tratamiento fiables.
+    # Este guard solo afecta a la aceptación IRPF; no altera Modelo 721.
+    if isinstance(clasificador, ClasificadorBinanceTx):
+        fees_tx = clasificador.df.loc[
+            clasificador.df["Operación"] == "Transaction Fee", "Cambio"
+        ]
+        if not fees_tx.empty and (fees_tx != 0).any():
+            raise ValueError(
+                "Datos fiscales no seguros: Binance contiene comisiones "
+                "Transaction Fee sin tratamiento fiscal completo. No se "
+                "puede emitir el informe hasta reconstruir su coste."
+            )
+
     # Bitvavo puede clasificar tipos no reconocidos sin convertirlos en
     # compraventas. No emitir un PDF parcial ignorando hechos potencialmente
     # relevantes para el inventario o las transmisiones.
