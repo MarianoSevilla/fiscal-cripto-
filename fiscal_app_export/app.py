@@ -6300,7 +6300,7 @@ def resource_solicitar():
     uid_unknown       = bool(data.get("uid_unknown"))
     telegram_user     = (data.get("telegram_user") or "").strip()[:100] or None
     legal_accepted    = bool(data.get("legal_accepted"))
-    marketing_consent = bool(data.get("marketing_consent"))
+    marketing_consent = data.get("marketing_consent") is True  # solo opt-in explícito
 
     # Validación
     if not name:
@@ -6309,8 +6309,6 @@ def resource_solicitar():
         return jsonify({"error": "El email no es válido."}), 400
     if not legal_accepted:
         return jsonify({"error": "Debes aceptar la política de privacidad."}), 400
-    if not marketing_consent:
-        return jsonify({"error": "Debes aceptar recibir comunicaciones del canal."}), 400
 
     resource = Resource.query.filter_by(id=resource_id, is_active=True).first() if resource_id else None
     if not resource:
@@ -6339,7 +6337,7 @@ def resource_solicitar():
         telegram_user     = telegram_user,
         source            = None,
         legal_accepted    = True,
-        marketing_consent = True,
+        marketing_consent = marketing_consent,
         status            = "recibido",
         ip                = request.headers.get("X-Forwarded-For", request.remote_addr or "")[:45],
     )

@@ -50,12 +50,17 @@ def test_only_current_partner_destinations_and_disclosure():
     assert all(name not in render() for name in ['BingX','Bitget','Bitunix'])
     text=render();assert text.index('Estos son enlaces de afiliación.')<text.index('class="apple-catalog-grid resources-affiliates"')
 
-def test_detail_keeps_fields_options_and_consent_requirements():
+def test_detail_keeps_fields_options_and_optional_marketing_consent():
     text=render('detail');p=DOM();p.feed(text)
     for name in ['name','email','exchange','bitvavo_status','uid','uid_unknown','telegram_user','legal_accepted','marketing_consent','resource_id']:
         assert name in p.ids
     assert re.findall(r'<option value="(.*?)">',text)==['','bitvavo','binance','','registered_via_link','had_account','no_account','not_sure']
-    assert '* Ambas opciones son obligatorias para enviar la solicitud.' in text
+    assert 'Solo es necesaria la aceptación de privacidad para tramitar la solicitud.' in text
+    assert 'Ambas opciones son obligatorias' not in text
+    assert 'Quiero recibir por email novedades del canal, recursos y contenido educativo (opcional).' in text
+    marketing_input=re.search(r'<input\b[^>]*\bid="marketing_consent"[^>]*>',text)
+    assert marketing_input
+    assert not re.search(r'\b(?:checked|required)(?:\s|=|>)',marketing_input.group(0))
     assert 'Para enviar la solicitud necesitas activar JavaScript.' in text
     assert 'aria-describedby="uid-helper"' in text
 
@@ -66,7 +71,11 @@ def test_success_is_outside_form_and_live_feedback_exists():
     assert 'role="alert" hidden' in text
     js=(ROOT/'static/recursos_apple.js').read_text()
     assert "fetch('/api/recursos/solicitar'" in js
-    assert 'marketing_consent:true' in js and 'legal_accepted:true' in js
+    assert 'marketing_consent:marketing.checked' in js
+    assert 'legal_accepted:legal.checked' in js
+    assert 'btn.disabled=pending||!legal.checked' in js
+    assert 'marketing_consent:true' not in js
+    assert 'legal.checked&&marketing.checked' not in js
 
 def test_header_footer_and_legal_destinations_match_home():
     home=(ROOT/'static/landing.html').read_text();text=render()
