@@ -268,3 +268,45 @@ def test_token_cannot_be_used_by_another_authenticated_account(client, isolated_
     owner = client.get("/api/descargar/" + token)
     assert owner.status_code == 200, owner.get_data(as_text=True)[:200] if owner.mimetype != "application/pdf" else ""
     assert owner.data.startswith(b"%PDF-")
+
+
+@pytest.mark.parametrize("case", [
+    "foreign_quote",
+    "foreign_settlement",
+    "missing_settlement_currency",
+    "foreign_fee",
+    "unverifiable_fee",
+    "stable_foreign_fee",
+    "unknown_event",
+])
+def test_bitvavo_material_unknown_or_non_eur_blocks_pdf_and_token(client, case):
+    """No fiscal report from a Bitvavo CSV that cannot establish its EUR basis."""
+    original = _csv_bytes("bitvavo", with_purchase=True).decode("utf-8")
+    assert "EUR,30000,EUR,-300,EUR,0" in original
+    cases = {
+        "foreign_quote": ("EUR,30000,EUR,-300,EUR,0", "USDT,30000,EUR,-300,EUR,0"),
+        "foreign_settlement": ("EUR,30000,EUR,-300,EUR,0", "EUR,30000,USDT,-300,EUR,0"),
+        "missing_settlement_currency": ("EUR,30000,EUR,-300,EUR,0", "EUR,30000,,-300,EUR,0"),
+        "foreign_fee": ("EUR,30000,EUR,-300,EUR,0", "EUR,30000,EUR,-300,BTC,-0.001"),
+        "unverifiable_fee": ("EUR,30000,EUR,-300,EUR,0", "EUR,30000,EUR,-300,EUR,1000"),
+    }
+    if case == "unknown_event":
+        content = original + "UTC,2025-02-03,10:00:00,unknown_fiscal_event,BTC,1,EUR,1,EUR,1,EUR,0,Completed,unknown-id,\n"
+    elif case == "stable_foreign_fee":
+        content = original + "UTC,2025-02-03,10:00:00,buy,USDT,100,EUR,1,EUR,-100,USDT,-1,Completed,stable-id,\n"
+    else:
+        before, after = cases[case]
+        content = original.replace(before, after, 1)
+        assert content != original
+
+    response = client.post("/api/analizar", data={
+        "csv": (io.BytesIO(content.encode("utf-8")), "bitvavo-synthetic-negative.csv"),
+        "exchange": "bitvavo",
+        "nombre": "Synthetic - no personal data",
+        "ejercicio": "2025",
+    }, content_type="multipart/form-data")
+    assert response.status_code == 422, (case, response.get_data(as_text=True)[:600])
+    payload = response.get_json() or {}
+    assert "token" not in payload and "resumen" not in payload
+    assert "operaciones" not in payload
+    assert payload.get("ok") is not True
