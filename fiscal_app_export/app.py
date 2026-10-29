@@ -1602,6 +1602,15 @@ def _validar_aceptacion_fifo(motor, clasificador=None) -> None:
     """
     _validar_aceptacion_fuentes_fifo(clasificador)
 
+    # Bitvavo puede clasificar tipos no reconocidos sin convertirlos en
+    # compraventas. No emitir un PDF parcial ignorando hechos potencialmente
+    # relevantes para el inventario o las transmisiones.
+    if isinstance(clasificador, ClasificadorBitvavo) and getattr(clasificador, "desconocidas", ()):
+        raise ValueError(
+            "Datos fiscales no seguros: Bitvavo contiene operaciones no "
+            "interpretadas. Revisa el historial antes de generar el informe."
+        )
+
     # R01: los swaps entre activos distintos se están valorando con coste
     # histórico FIFO o paridad 1:1, no con ambos precios de mercado en EUR.
     # Incluso un único precio FMV del CSV no demuestra el máximo exigible.
