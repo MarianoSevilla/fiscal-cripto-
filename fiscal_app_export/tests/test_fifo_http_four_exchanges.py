@@ -420,3 +420,76 @@ def test_binance_tx_orphan_leg_rejects_report_before_pdf_token(
     assert "Datos fiscales no seguros" in payload.get("error", "")
     assert "token" not in payload and "resumen" not in payload
     assert "operaciones" not in payload
+
+
+
+def _binance_tx_fifo_with_fee(fee_currency=None, fee_amount=None, fee_on_sale=False):
+    """Synthetic Binance TX: EUR purchase, later EUR sale, optional fee row."""
+    output = io.StringIO(newline="")
+    writer = csv.writer(output)
+    writer.writerow([
+        "ID de usuario", "Tiempo", "Cuenta", "Operación", "Moneda",
+        "Cambio", "Observación",
+    ])
+    purchase = "2024-01-02 10:00:00"
+    sale = "2025-02-02 10:00:00"
+    writer.writerows([
+        ["123", purchase, "Spot", "Transaction Spend", "EUR", "-600", ""],
+        ["123", purchase, "Spot", "Transaction Buy", "BTC", "0.02", ""],
+        ["123", sale, "Spot", "Transaction Spend", "BTC", "-0.01", ""],
+        ["123", sale, "Spot", "Transaction Buy", "EUR", "400", ""],
+    ])
+    if fee_currency is not None:
+        writer.writerow([
+            "123", sale if fee_on_sale else purchase, "Spot",
+            "Transaction Fee", fee_currency, str(fee_amount), "",
+        ])
+    return output.getvalue().encode("utf-8")
+
+
+@pytest.mark.parametrize("fee_currency,fee_amount,fee_on_sale", [
+    ("BNB", "-0.0001", False),
+    ("EUR", "-1.25", False),
+    ("EUR", "-1.25", True),
+    ("USDT", "-0.5", True),
+])
+def test_binance_tx_nonzero_fee_cannot_generate_incomplete_fiscal_pdf(
+    client, fee_currency, fee_amount, fee_on_sale,
+):
+    """Before EUR valuation and disposal accounting, never ignore a nonzero fee."""
+    response = client.post("/api/analizar", data={
+        "csv": (io.BytesIO(_binance_tx_fifo_with_fee(
+            fee_currency, fee_amount, fee_on_sale
+        )), "binance-tx-fee-synthetic.csv"),
+        "exchange": "binance", "nombre": "Synthetic", "ejercicio": "2025",
+    }, content_type="multipart/form-data")
+    assert response.status_code == 422, (
+        fee_currency, fee_on_sale, response.get_data(as_text=True)[:550]
+    )
+    payload = response.get_json() or {}
+    assert "Datos fiscales no seguros" in payload.get("error", "")
+    assert "Transaction Fee" in payload.get("error", "")
+    assert "token" not in payload and "resumen" not in payload
+    assert "operaciones" not in payload
+
+
+@pytest.mark.parametrize("with_zero_fee", [False, True])
+def test_binance_tx_without_material_fee_keeps_eur_fifo_and_pdf(client, with_zero_fee):
+    """Valid paired EUR trades still yield the same fiscal result and one-use PDF."""
+    file_bytes = _binance_tx_fifo_with_fee(
+        "BNB" if with_zero_fee else None,
+        "0" if with_zero_fee else None,
+    )
+    response = client.post("/api/analizar", data={
+        "csv": (io.BytesIO(file_bytes), "binance-tx-zero-fee-synthetic.csv"),
+        "exchange": "binance", "nombre": "Synthetic", "ejercicio": "2025",
+    }, content_type="multipart/form-data")
+    assert response.status_code == 200, response.get_data(as_text=True)[:600]
+    payload = response.get_json() or {}
+    assert payload["resumen"]["resultado_neto"] == pytest.approx(100, abs=0.01)
+    assert len(payload["operaciones"]) == 1
+    token = payload["token"]
+    pdf = client.get("/api/descargar/" + token + "?exchange=binance")
+    assert pdf.status_code == 200
+    assert pdf.data.startswith(b"%PDF-")
+    assert client.get("/api/descargar/" + token).status_code == 403
