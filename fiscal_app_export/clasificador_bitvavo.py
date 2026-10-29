@@ -255,19 +255,37 @@ class ClasificadorBitvavo:
         # Para rendimientos/staking usamos Amount directamente (ya tiene escala legible).
         raw_amount = self._float(fila.get("Amount", 0))
 
-        def _cantidad_desde_precio(importe_eur: float, price: float) -> float:
-            """Calcula unidades desde EUR pagados/recibidos y precio unitario."""
-            if price and price > 0:
-                return round(importe_eur / price, 10)
-            return abs(raw_amount)  # fallback si no hay precio
+        # Solo se puede trasladar un importe a MotorFIFO como EUR cuando el
+        # fichero acredita ambas divisas y el precio unitario. El fallback
+        # previo a EUR/Amount generaba importes fiscalmente no contrastados.
+        if tipo in ("buy", "sell"):
+            quote_currency = str(fila.get("Quote Currency", "")).strip().upper()
+            if (quote_currency != "EUR" or rec_mon.upper() != "EUR"
+                    or quote_price <= 0 or rec_cant == 0):
+                raise ValueError(
+                    "Datos fiscales no seguros: compraventa Bitvavo sin "
+                    "precio y contraparte acreditados en EUR."
+                )
 
-        # El fee en EUR es fiable solo si la cifra es razonable
+        def _cantidad_desde_precio(importe_eur: float, price: float) -> float:
+            """Calcula unidades desde importe EUR y precio unitario EUR."""
+            return round(importe_eur / price, 10)
+
         def _fee_eur(fee_val: float, importe_ref: float) -> float:
-            if fee_mon and fee_mon not in ("nan", "EUR", ""):
-                return 0.0   # fee en cripto → ignoramos (coste ya incluido en rec_cant)
-            # Si el fee parseado supera el importe de referencia está en unidades base
-            if fee_val > importe_ref * 2:
+            # Ignorar una fee no EUR o incoherente rebaja artificialmente los
+            # costes/gastos. No inferir valor histórico ni mutar a EUR=0.
+            if fee_val == 0:
                 return 0.0
+            if fee_mon.upper() != "EUR":
+                raise ValueError(
+                    "Datos fiscales no seguros: comisión Bitvavo sin "
+                    "valoración histórica verificable en EUR."
+                )
+            if fee_val > importe_ref * 2:
+                raise ValueError(
+                    "Datos fiscales no seguros: comisión Bitvavo "
+                    "incompatible con el importe de la compraventa."
+                )
             return fee_val
 
         if tipo == "buy":
