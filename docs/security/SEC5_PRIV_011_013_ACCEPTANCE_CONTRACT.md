@@ -44,6 +44,14 @@ Separar tres operaciones que no son equivalentes:
 - Fuentes externas: Gmail, Resend, Stripe, Rafael Ramos, Railway, logs, backups y ficheros físicos requieren evidencia de custodia, acceso, retención y procedimiento de supresión o excepción. No atribuirles garantías no verificadas.
 - El texto público no cambia hasta que el tratamiento real esté probado y autorizado.
 
+### Tratamiento de consentimientos históricos — actualización 29/10/2026
+
+La [PR #161](https://github.com/MarianoSevilla/fiscal-cripto-/pull/161) eliminó la obligación de aceptar publicidad para solicitar recursos, con pruebas y despliegue en producción. Desde ese cambio la API registra `marketing_consent=True` únicamente ante el valor booleano JSON `true`, y admite la solicitud con consentimiento ausente o `false`.
+
+**No inferir que las solicitudes históricas con `marketing_consent=True` acreditan un consentimiento comercial libre:** antes de esta modificación el formulario obligaba a marcarlo para obtener el recurso. Se requiere evaluar por separado la evidencia, información proporcionada y legitimación de cada segmento antiguo; no incluir esos registros en futuras campañas únicamente por ese booleano. No se recalculan ni modifican datos reales por este documento.
+
+La conservación de la prueba de oposición o de un consentimiento válido requiere finalidad y control de acceso específicos; no confundirla con el plazo de retención del formulario completo, el UID del exchange, Telegram o la IP. La retirada del consentimiento no impide necesariamente enviar mensajes estrictamente necesarios para gestionar una solicitud de recurso.
+
 ## 4. Pruebas de aceptación antes de autorizar ejecución
 
 1. **Cobertura:** inventario ORM y esquema PostgreSQL desechable concuerdan; las 17 tablas se clasifican y cualquier tabla nueva falla la regresión documental.
