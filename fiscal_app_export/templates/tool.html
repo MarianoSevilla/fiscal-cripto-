@@ -737,13 +737,20 @@
 
   // Detecta años en el CSV exclusivamente desde patrones de fecha (YYYY-MM-DD o YY-MM-DD HH:mm:ss).
   // No escanea todo el texto: los importes como $2039.59 o -2028.29 NO se confunden con años.
+  function ultimoEjercicioIrpfEnCurso(fecha = new Date()) {
+    // Mismo huso que la validación del backend; no incluye años futuros.
+    return Number(new Intl.DateTimeFormat('en-GB', {
+      year: 'numeric', timeZone: 'Europe/Madrid'
+    }).format(fecha));
+  }
+
   async function extractYearsFromCSV(file) {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const text = e.target.result || '';
         const years = new Set();
-        const currentYear = new Date().getFullYear();
+        const currentYear = ultimoEjercicioIrpfEnCurso();
         // Formato ISO YYYY-MM-DD: captura el año sólo cuando va seguido de -MM-DD.
         // Descarta cualquier match cuyo año esté fuera del rango [2009, año actual].
         (text.match(/\b(20(?:0[9]|[12][0-9]|3[0-9]))-\d{2}-\d{2}\b/g) || []).forEach(m => {
@@ -789,6 +796,13 @@
   });
 
   function renderYearChips(years) {
+    // Los endpoints de detección XLSX/multiarchivo también pueden devolver
+    // años futuros. Nunca incluirlos en el selector IRPF.
+    const currentYear = ultimoEjercicioIrpfEnCurso();
+    years = [...new Set((years || []).map(Number).filter(
+      yr => Number.isInteger(yr) && yr >= 2009 && yr <= currentYear
+    ))].sort((a, b) => a - b);
+    detectedYears = years;
     const container = document.getElementById('year-chips');
     container.innerHTML = '';
     if (!years || years.length === 0) {
