@@ -71,6 +71,9 @@ def client(uid=None):
         with cli.session_transaction() as sess:
             sess['_user_id'] = identity
             sess['_fresh'] = True
+            now = int(__import__('time').time())
+            sess['auth_started_at'] = now
+            sess['auth_last_activity_at'] = now
     return cli
 
 
