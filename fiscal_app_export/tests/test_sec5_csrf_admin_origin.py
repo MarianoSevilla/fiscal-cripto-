@@ -182,3 +182,102 @@ def test_authenticated_admin_trusted_origin_reaches_handler(authenticated_admin)
     # Synthetic ID is absent: 404 demonstrates the CSRF barrier allowed
     # the authorized call without modifying a real contact.
     assert response.status_code == 404
+
+
+# SEC5-CSRF-001 — Communications is an authenticated browser API, not a
+# provider webhook. In particular, send-test is a bodyless POST: an attacker
+# on a sibling same-site origin could invoke it with a normal HTML form.
+_COMMS_WRITES = [
+    ("POST", "/api/admin/comunicaciones/drafts"),
+    ("PATCH", "/api/admin/comunicaciones/drafts/999999"),
+    ("POST", "/api/admin/comunicaciones/drafts/999999/send-test"),
+    ("POST", "/api/admin/comunicaciones/drafts/999999/send"),
+    ("DELETE", "/api/admin/comunicaciones/campaigns/999999"),
+]
+
+
+@pytest.mark.parametrize("method,path", _COMMS_WRITES)
+@pytest.mark.parametrize("headers", [
+    {},
+    {"Origin": "https://external.example", "Sec-Fetch-Site": "cross-site"},
+    {"Origin": "https://fiscal.marianosevilla.com", "Sec-Fetch-Site": "same-site"},
+    {"Sec-Fetch-Site": "same-site"},
+    {"Origin": "http://localhost", "Sec-Fetch-Site": "cross-site"},
+])
+def test_authenticated_admin_comms_writes_fail_closed_on_untrusted_origin(
+        authenticated_admin, method, path, headers):
+    response = authenticated_admin.open(
+        path, method=method, headers=headers,
+        # A plain form is a browser-simple request: must not send even a test.
+        data="" if path.endswith("/send-test") else None,
+        content_type="text/plain" if path.endswith("/send-test") else None,
+    )
+    assert response.status_code == 403, (method, path, response.status_code)
+    assert response.get_json() == {"error": "Origen de solicitud no válido."}
+
+
+@pytest.mark.parametrize("headers", [
+    {"Origin": "http://localhost", "Sec-Fetch-Site": "same-origin"},
+    {"Sec-Fetch-Site": "same-origin"},
+])
+def test_authenticated_admin_comms_trusted_origin_reaches_handler(
+        authenticated_admin, headers):
+    response = authenticated_admin.post(
+        "/api/admin/comunicaciones/drafts/999999/send-test",
+        headers=headers, data="", content_type="text/plain",
+    )
+    # The synthetic ID does not exist: 404 proves no false-positive rejection.
+    assert response.status_code == 404
+
+
+def test_admin_comms_send_test_never_calls_mail_service_from_same_site_sibling(
+        authenticated_admin, monkeypatch):
+    from app import db
+    from models import CommunicationCampaign
+    from communications import routes as comms_routes
+
+    with flask_app.app_context():
+        draft = CommunicationCampaign(
+            subject="Synthetic CSRF test", body="Nothing is sent externally",
+            recipient_segment="all", status="draft",
+        )
+        db.session.add(draft)
+        db.session.commit()
+        draft_id = draft.id
+        db.session.remove()
+
+    calls = []
+
+    def fake_send_test(campaign, address):
+        calls.append((campaign.id, address))
+        return {"ok": True}
+
+    monkeypatch.setattr(comms_routes, "send_test_email", fake_send_test)
+    try:
+        forged = authenticated_admin.post(
+            f"/api/admin/comunicaciones/drafts/{draft_id}/send-test",
+            headers={
+                "Origin": "https://fiscal.marianosevilla.com",
+                "Sec-Fetch-Site": "same-site",
+            },
+            data="", content_type="text/plain",
+        )
+        assert forged.status_code == 403
+        assert calls == []
+
+        legitimate = authenticated_admin.post(
+            f"/api/admin/comunicaciones/drafts/{draft_id}/send-test",
+            headers={
+                "Origin": "http://localhost",
+                "Sec-Fetch-Site": "same-origin",
+            },
+            data="", content_type="text/plain",
+        )
+        assert legitimate.status_code == 200, legitimate.get_data(as_text=True)
+        assert calls == [(draft_id, "csrf_admin_synthetic@example.invalid")]
+    finally:
+        with flask_app.app_context():
+            db.session.remove()
+            db.session.query(CommunicationCampaign).filter_by(id=draft_id).delete()
+            db.session.commit()
+            db.session.remove()
