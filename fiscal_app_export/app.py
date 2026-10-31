@@ -7,7 +7,7 @@ Seguridad aplicada:
 - CORS restringido a dominios propios
 - Security headers (CSP, HSTS, X-Frame-Options, etc.)
 - Validación estricta de CSV (extensión + tamaño + contenido + exchange)
-- Validación de ejercicio fiscal (2009 – año actual + 1)
+- Validación de ejercicio fiscal IRPF (2009 – año actual en España)
 - Sanitización de inputs de texto
 - PDF borrado automáticamente tras descarga
 - Protección path traversal en tokens
@@ -973,7 +973,17 @@ MAX_CSV_ROWS        = 100_000            # filas máximas permitidas por CSV (�
 MAX_KUCOIN_FILES    = 8                  # KuCoin es multiarchivo: tope de ficheros por análisis
 MAX_BITGET_FILES    = 8                  # Bitget es multiarchivo: tope de ficheros por análisis
 AÑO_MIN = 2009
-AÑO_MAX = datetime.now().year + 1
+
+
+def _ultimo_ejercicio_irpf(ahora=None) -> int:
+    """Máximo año admitido en informes FIFO, incluido el año en curso en España.
+
+    Se calcula por petición para no mantener un límite obsoleto al cambiar
+    de año sin reiniciar Gunicorn. No cambia la regla del Modelo 721, que
+    exige siempre el último ejercicio cerrado.
+    """
+    momento = ahora if ahora is not None else datetime.now(ZoneInfo("Europe/Madrid"))
+    return momento.astimezone(ZoneInfo("Europe/Madrid")).year
 
 # ── MODELO 721: exchanges ──────────────────────────────────────────────────────
 # Orden HFP/886/2023 (DF 2.ª): primer ejercicio declarable, 2023.
@@ -1048,6 +1058,7 @@ def _validar_ejercicio(ejercicio: str) -> tuple[bool, str]:
     """Valida ejercicio: vacío, 'all', un año o varios años separados por coma."""
     if not ejercicio or ejercicio.strip().lower() == "all":
         return True, ""
+    ultimo_ejercicio = _ultimo_ejercicio_irpf()
     for part in ejercicio.split(","):
         part = part.strip()
         if not re.match(r"^\d{4}$", part):
@@ -1055,8 +1066,8 @@ def _validar_ejercicio(ejercicio: str) -> tuple[bool, str]:
         año = int(part)
         if año < AÑO_MIN:
             return False, f"El ejercicio fiscal no puede ser anterior a {AÑO_MIN}."
-        if año > AÑO_MAX:
-            return False, f"El ejercicio fiscal no puede ser posterior a {AÑO_MAX}."
+        if año > ultimo_ejercicio:
+            return False, f"El ejercicio fiscal no puede ser posterior a {ultimo_ejercicio}."
     return True, ""
 
 

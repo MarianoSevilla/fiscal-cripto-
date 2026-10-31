@@ -1104,13 +1104,20 @@ td.type-badge { font-family: var(--font-body); font-size: 10px; text-transform: 
   const yearNoneWarn       = document.getElementById('year-none-warn');
   const yearNodetect       = document.getElementById('year-nodetect');
 
+  function ultimoEjercicioIrpfEnCurso(fecha = new Date()) {
+    // Mismo huso que la validación del backend; no incluye años futuros.
+    return Number(new Intl.DateTimeFormat('en-GB', {
+      year: 'numeric', timeZone: 'Europe/Madrid'
+    }).format(fecha));
+  }
+
   async function extractYearsFromCSV(file) {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const text = e.target.result || '';
         const years = new Set();
-        const currentYear = new Date().getFullYear();
+        const currentYear = ultimoEjercicioIrpfEnCurso();
         (text.match(/\b(20(?:0[9]|[12][0-9]|3[0-9]))-\d{2}-\d{2}\b/g) || []).forEach(m => {
           const yr = Number(m.substring(0, 4));
           if (yr >= 2009 && yr <= currentYear) years.add(yr);
@@ -1149,6 +1156,13 @@ td.type-badge { font-family: var(--font-body); font-size: 10px; text-transform: 
   });
 
   function renderYearChips(years) {
+    // Los endpoints de detección XLSX/multiarchivo también pueden devolver
+    // años futuros. Nunca incluirlos en el selector IRPF.
+    const currentYear = ultimoEjercicioIrpfEnCurso();
+    years = [...new Set((years || []).map(Number).filter(
+      yr => Number.isInteger(yr) && yr >= 2009 && yr <= currentYear
+    ))].sort((a, b) => a - b);
+    detectedYears = years;
     const container = document.getElementById('year-chips');
     container.innerHTML = '';
     if (!years || years.length === 0) {

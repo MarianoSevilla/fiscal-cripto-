@@ -221,6 +221,18 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                             return count
 
                         count = attach_valid()
+                        # Regression: years returned by CSV/XLSX detectors, even
+                        # if they contain next year, never become selectable.
+                        next_year = page.evaluate("ultimoEjercicioIrpfEnCurso() + 1")
+                        page.evaluate(
+                            "renderYearChips([2024, 2025, ultimoEjercicioIrpfEnCurso() + 1])"
+                        )
+                        assert page.locator(
+                            f'.year-chip[data-year="{next_year}"]'
+                        ).count() == 0, (name, width, next_year)
+                        assert page.locator(
+                            '.year-chip[data-year="2025"]'
+                        ).count() == 1, (name, width)
                         if width == 375:
                             assert page.locator("#fileSelected").is_visible()
                         page.locator("#btnAnalizar").click()
