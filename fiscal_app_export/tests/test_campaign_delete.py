@@ -143,13 +143,20 @@ def _login_normal(client):
     return client
 
 
+def _delete_campaign(client, path):
+    """Simula DELETE de navegador desde la misma página administrativa."""
+    return client.delete(
+        path, headers={"Origin": "http://localhost", "Sec-Fetch-Site": "same-origin"}
+    )
+
+
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
 def test_admin_puede_borrar_draft(client, admin_user, _app):
     """Admin borra borrador → 200 {ok: true}; desaparece de BD."""
     cid = _make_campaign(_app, admin_user, status="draft")
     _login_admin(client)
-    r = client.delete(f"/api/admin/comunicaciones/campaigns/{cid}")
+    r = _delete_campaign(client, f"/api/admin/comunicaciones/campaigns/{cid}")
     data = r.get_json()
     assert r.status_code == 200, data
     assert data.get("ok") is True
@@ -161,7 +168,7 @@ def test_admin_puede_borrar_failed(client, admin_user, _app):
     """Admin borra campaña fallida → 200."""
     cid = _make_campaign(_app, admin_user, status="failed")
     _login_admin(client)
-    r = client.delete(f"/api/admin/comunicaciones/campaigns/{cid}")
+    r = _delete_campaign(client, f"/api/admin/comunicaciones/campaigns/{cid}")
     assert r.status_code == 200, r.get_json()
     assert r.get_json().get("ok") is True
     with _app.app_context():
@@ -177,7 +184,7 @@ def test_admin_puede_borrar_sent_sin_entregas_reales(client, admin_user, _app):
     # delivery fallida — no cuenta como "real"
     _make_delivery(_app, cid, status="failed")
     _login_admin(client)
-    r = client.delete(f"/api/admin/comunicaciones/campaigns/{cid}")
+    r = _delete_campaign(client, f"/api/admin/comunicaciones/campaigns/{cid}")
     assert r.status_code == 200, r.get_json()
     assert r.get_json().get("ok") is True
     with _app.app_context():
@@ -194,7 +201,7 @@ def test_no_borrar_sent_con_entregas_reales(client, admin_user, _app):
     cid = _make_campaign(_app, admin_user, status="sent", recipients_count=1)
     _make_delivery(_app, cid, status="sent")
     _login_admin(client)
-    r = client.delete(f"/api/admin/comunicaciones/campaigns/{cid}")
+    r = _delete_campaign(client, f"/api/admin/comunicaciones/campaigns/{cid}")
     data = r.get_json()
     assert r.status_code == 409, data
     assert data.get("ok") is False
@@ -212,7 +219,7 @@ def test_no_borrar_sending(client, admin_user, _app):
     """Campaña en estado 'sending' no se puede eliminar → 409."""
     cid = _make_campaign(_app, admin_user, status="sending")
     _login_admin(client)
-    r = client.delete(f"/api/admin/comunicaciones/campaigns/{cid}")
+    r = _delete_campaign(client, f"/api/admin/comunicaciones/campaigns/{cid}")
     data = r.get_json()
     assert r.status_code == 409, data
     assert data.get("ok") is False
@@ -229,7 +236,7 @@ def test_borrar_elimina_deliveries(client, admin_user, _app):
     did1 = _make_delivery(_app, cid, status="failed")
     did2 = _make_delivery(_app, cid, status="pending")
     _login_admin(client)
-    r = client.delete(f"/api/admin/comunicaciones/campaigns/{cid}")
+    r = _delete_campaign(client, f"/api/admin/comunicaciones/campaigns/{cid}")
     assert r.status_code == 200, r.get_json()
     with _app.app_context():
         assert CommunicationCampaign.query.get(cid)   is None
@@ -241,7 +248,7 @@ def test_usuario_normal_no_puede_borrar(client, normal_user, admin_user, _app):
     """Usuario sin privilegios recibe 404 (no admin)."""
     cid = _make_campaign(_app, admin_user, status="draft")
     _login_normal(client)
-    r = client.delete(f"/api/admin/comunicaciones/campaigns/{cid}")
+    r = _delete_campaign(client, f"/api/admin/comunicaciones/campaigns/{cid}")
     assert r.status_code == 404
     # Limpieza
     with _app.app_context():
@@ -252,7 +259,7 @@ def test_usuario_normal_no_puede_borrar(client, normal_user, admin_user, _app):
 def test_campaña_inexistente_devuelve_404(client, admin_user, _app):
     """ID que no existe → 404."""
     _login_admin(client)
-    r = client.delete("/api/admin/comunicaciones/campaigns/99999")
+    r = _delete_campaign(client, "/api/admin/comunicaciones/campaigns/99999")
     assert r.status_code == 404
 
 
@@ -265,7 +272,7 @@ def test_lista_no_incluye_campaña_borrada(client, admin_user, _app):
     ids_antes = [c["id"] for c in r_antes.get_json()]
     assert cid in ids_antes
 
-    client.delete(f"/api/admin/comunicaciones/campaigns/{cid}")
+    _delete_campaign(client, f"/api/admin/comunicaciones/campaigns/{cid}")
 
     r_despues = client.get("/api/admin/comunicaciones/campaigns")
     ids_despues = [c["id"] for c in r_despues.get_json()]

@@ -113,6 +113,7 @@ def _start(client, campaign_id):
     return client.post(
         f"/api/admin/comunicaciones/drafts/{campaign_id}/send",
         json={"confirm": True},
+        headers={"Origin": "http://localhost", "Sec-Fetch-Site": "same-origin"},
     )
 
 

@@ -886,8 +886,9 @@ limiter = Limiter(
 def sensitive_admin_origin_boundary():
     """Deny explicit cross-site writes to administrative resource/contact APIs.
 
-    Read-only and provider webhook endpoints are intentionally unaffected.
-    A missing Origin must be accompanied by Sec-Fetch-Site=same-origin.
+    Covers resource/contact mutations and communication campaign operations,
+    including bodyless send-test requests. Read-only routes and payment
+    webhooks are unaffected. A missing Origin requires same-origin metadata.
     This intentionally fails closed for headerless administrative writes.
     """
     if request.method not in {'POST', 'PATCH', 'PUT', 'DELETE'}:
@@ -895,6 +896,7 @@ def sensitive_admin_origin_boundary():
     protected = (
         request.path.startswith('/api/admin/recursos/solicitudes/')
         or request.path.startswith('/api/admin/contactos/')
+        or request.path.startswith('/api/admin/comunicaciones/')
     )
     if not protected:
         return
