@@ -4359,7 +4359,7 @@ def delete_account():
 
     _anonymize_user(current_user)
     logout_user()
-    return jsonify({"message": "Cuenta eliminada correctamente."})
+    return jsonify({"message": "Cuenta desactivada y datos principales de identificación retirados. Otros registros del servicio pueden conservarse."})
 
 
 # ── ADMIN STATS ──────────────────────────────────────────────────────────────
