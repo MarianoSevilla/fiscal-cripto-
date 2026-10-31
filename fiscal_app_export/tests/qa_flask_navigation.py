@@ -114,6 +114,9 @@ def flask_cookie(app, user_id):
         with client.session_transaction() as session:
             session["_user_id"] = identity
             session["_fresh"] = True
+            from time import time
+            session["auth_started_at"] = int(time())
+            session["auth_last_activity_at"] = int(time())
         cookie = client.get_cookie(app.config.get("SESSION_COOKIE_NAME", "session"))
         assert cookie, "Cookie de sesión no creada en test_client"
         return cookie.value
@@ -130,6 +133,9 @@ def check_back_end(app, identities):
                 with client.session_transaction() as session:
                     session["_user_id"] = identity
                     session["_fresh"] = True
+                    from time import time
+                    session["auth_started_at"] = int(time())
+                    session["auth_last_activity_at"] = int(time())
             resp = client.get("/api/me")
             assert resp.status_code == 200
             user = resp.json.get("user")
