@@ -214,6 +214,7 @@ class TestIndividualDraft:
         _login(client, "admin_pec@example.com", "adminpass")
         r = client.post(
             "/api/admin/comunicaciones/drafts",
+            headers={"Origin": "http://localhost", "Sec-Fetch-Site": "same-origin"},
             json={
                 "subject":          "Hemos corregido el problema",
                 "body":             "Hola, ya está solucionado.",
@@ -230,6 +231,7 @@ class TestIndividualDraft:
         _login(client, "admin_pec@example.com", "adminpass")
         r = client.post(
             "/api/admin/comunicaciones/drafts",
+            headers={"Origin": "http://localhost", "Sec-Fetch-Site": "same-origin"},
             json={
                 "subject":          "Test",
                 "body":             "Cuerpo.",
@@ -242,6 +244,7 @@ class TestIndividualDraft:
         _login(client, "user_pec@example.com", "userpass")
         r = client.post(
             "/api/admin/comunicaciones/drafts",
+            headers={"Origin": "http://localhost", "Sec-Fetch-Site": "same-origin"},
             json={"subject": "X", "body": "Y", "recipient_segment": "all"},
         )
         assert r.status_code == 404
@@ -255,6 +258,7 @@ class TestIndividualDraft:
         _login(client, "admin_pec@example.com", "adminpass")
         r = client.post(
             "/api/admin/comunicaciones/drafts",
+            headers={"Origin": "http://localhost", "Sec-Fetch-Site": "same-origin"},
             json={
                 "subject":              "Corrección error",
                 "body":                 "Ya está arreglado.",
@@ -271,6 +275,7 @@ class TestIndividualDraft:
         _login(client, "admin_pec@example.com", "adminpass")
         r = client.post(
             "/api/admin/comunicaciones/drafts",
+            headers={"Origin": "http://localhost", "Sec-Fetch-Site": "same-origin"},
             json={
                 "subject":              "Test",
                 "body":                 "Cuerpo.",
