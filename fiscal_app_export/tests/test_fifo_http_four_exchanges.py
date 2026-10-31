@@ -11,7 +11,8 @@ import io
 import os
 import tempfile
 import time
-from datetime import datetime
+from datetime import datetime, timezone
+from unittest.mock import patch
 
 import pdfplumber
 import pytest
@@ -493,3 +494,61 @@ def test_binance_tx_without_material_fee_keeps_eur_fifo_and_pdf(client, with_zer
     assert pdf.status_code == 200
     assert pdf.data.startswith(b"%PDF-")
     assert client.get("/api/descargar/" + token).status_code == 403
+
+
+def test_irpf_max_year_uses_madrid_at_new_year_boundary():
+    """Madrid rolls over before UTC; no process restart needed for the new year."""
+    from app import _ultimo_ejercicio_irpf
+
+    before = datetime(2026, 12, 31, 22, 59, tzinfo=timezone.utc)
+    after = datetime(2026, 12, 31, 23, 0, tzinfo=timezone.utc)
+    assert _ultimo_ejercicio_irpf(before) == 2026
+    assert _ultimo_ejercicio_irpf(after) == 2027
+
+
+@pytest.mark.parametrize("ejercicio,accepted", [
+    ("2009", True),
+    ("2025", True),
+    ("2026", True),              # Preparatorio: ejercicio todavía en curso.
+    ("2025,2026", True),
+    ("2025,2027", False),       # Todo el filtro se rechaza si contiene un futuro.
+    ("2027", False),
+    ("2039", False),
+    ("2008", False),
+    ("all", True),
+    ("", True),
+])
+def test_irpf_year_validation_rejects_explicit_future_year(ejercicio, accepted):
+    from app import _validar_ejercicio
+
+    with patch("app._ultimo_ejercicio_irpf", return_value=2026):
+        valid, message = _validar_ejercicio(ejercicio)
+    assert valid is accepted, (ejercicio, message)
+    if ejercicio in ("2025,2027", "2027", "2039"):
+        assert "2026" in message
+
+
+@pytest.mark.parametrize("route", (
+    "/api/analizar",
+    "/api/kucoin/analizar",
+    "/api/bitget/analizar",
+))
+@pytest.mark.parametrize("ejercicio", ("2027", "2025,2027"))
+def test_irpf_future_year_rejected_http_before_report_or_token(
+    client, route, ejercicio,
+):
+    """All individual FIFO HTTP paths share the same future-year rule."""
+    with patch("app._ultimo_ejercicio_irpf", return_value=2026):
+        response = client.post(route, data={
+            "csv": (io.BytesIO(_csv_bytes("binance", with_purchase=True)),
+                    "synthetic-year-bound.csv"),
+            "exchange": "binance", "nombre": "Synthetic",
+            "ejercicio": ejercicio,
+        }, content_type="multipart/form-data")
+    assert response.status_code == 400, (
+        route, ejercicio, response.get_data(as_text=True)[:400]
+    )
+    payload = response.get_json() or {}
+    assert "2026" in payload.get("error", "")
+    assert "token" not in payload and "resumen" not in payload
+    assert "operaciones" not in payload
