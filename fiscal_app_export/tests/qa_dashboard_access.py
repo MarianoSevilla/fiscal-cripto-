@@ -23,6 +23,9 @@ def client_for(role='user',plan='free',email=None):
     client=app.test_client()
     with client.session_transaction() as session:
         session['_user_id']=identity;session['_fresh']=True
+        now=int(__import__('time').time())
+        session['auth_started_at']=now
+        session['auth_last_activity_at']=now
     return client
 
 @pytest.mark.parametrize('role,plan',[(r,p) for r in ['user','fiscal_advisor','admin'] for p in ['free','pro']])
