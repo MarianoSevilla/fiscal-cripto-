@@ -313,5 +313,7 @@ def test_login_page_explains_expiry_and_old_login_still_works():
             'static'/'auth_apple.js').read_text(encoding='utf-8')
     assert "query.get('expired')==='1'" in source
     person();c=app.test_client()
-    assert c.get('/login/?expired=1').status_code==200
+    res=c.get('/login/?expired=1',follow_redirects=True)
+    assert res.status_code==200
+    assert 'data-auth-view="login"' in res.text
     assert login(c).status_code==200
