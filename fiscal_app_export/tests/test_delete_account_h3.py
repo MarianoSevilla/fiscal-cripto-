@@ -125,6 +125,10 @@ def _inject_oauth_session(client, uid):
     with client.session_transaction() as sess:
         sess["_user_id"] = identity
         sess["_fresh"]   = True
+        # La sesión de prueba OAuth debe cumplir la política de expiración real.
+        now = int(__import__("time").time())
+        sess["auth_started_at"] = now
+        sess["auth_last_activity_at"] = now
 
 
 def _make_delete_token(_app, user_id: int, expired: bool = False) -> str:
