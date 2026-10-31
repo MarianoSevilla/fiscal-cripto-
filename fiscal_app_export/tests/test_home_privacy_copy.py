@@ -27,3 +27,26 @@ def test_home_follows_green_hero_with_how_it_works():
     assert "Método FIFO</li>" not in home
     assert "100% online, sin instalación</li>" not in home
     assert "Consultar exchanges compatibles →" in home  # Available elsewhere.
+
+
+def test_session_cookie_policy_matches_server_side_expiry():
+    """Privacy copy must not promise persistent login after AUTH-SESSION-TTL-001."""
+    policy = (STATIC / "privacidad.html").read_text(encoding="utf-8")
+    cookies = (STATIC / "cookies.html").read_text(encoding="utf-8")
+    server = (STATIC.parent / "app.py").read_text(encoding="utf-8")
+
+    assert "_USER_IDLE_TTL_S = 30 * 60" in server
+    assert "_STAFF_IDLE_TTL_S = 15 * 60" in server
+    assert "_STAFF_ABSOLUTE_TTL_S = 8 * 60 * 60" in server
+    assert "session.permanent = False" in server
+
+    for text in (policy, cookies):
+        assert "30 minutos de inactividad" in text
+        assert "15 minutos" in text
+        assert "8 horas" in text
+        assert "«Recordarme»" in text
+
+    assert "cookie persistente configurada para treinta días" not in policy
+    assert "se elimina al cerrar el navegador" not in cookies
+    assert "esto no amplía la validez de la sesión" in policy
+    assert "no prolonga la sesión caducada" in cookies
