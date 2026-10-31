@@ -29,7 +29,7 @@ import traceback
 import threading
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
-from flask import Flask, request, jsonify, send_file, send_from_directory, redirect, url_for, render_template, session, abort
+from flask import Flask, request, jsonify, send_file, send_from_directory, redirect, url_for, render_template, session, abort, g
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_cors import CORS
@@ -221,10 +221,10 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = _engine_opts
 # Flask devuelve 413 automáticamente si se supera este límite.
 app.config["MAX_CONTENT_LENGTH"] = 15 * 1024 * 1024  # 15 MB
 
-# Sesión NO persistente: session.permanent no se activa en ningún login.
-# La cookie de sesión es ephemeral (sin Max-Age) → el navegador la destruye al cerrar.
-# La cookie de remember-me (checkbox "Recordarme") sí persiste, con este límite:
-app.config["REMEMBER_COOKIE_DURATION"] = timedelta(days=30)
+# Las cookies de sesión no son persistentes; algunos navegadores las restauran.
+# La caducidad efectiva se aplica en el servidor (véase enforce_session_expiry).
+# No se ofrece "Recordarme": no permitir que una cookie heredada reactive el acceso.
+app.config["REMEMBER_COOKIE_DURATION"] = timedelta(minutes=30)
 
 
 # ── EXTENSIONES ───────────────────────────────
@@ -332,12 +332,88 @@ def load_user(user_id: str):
         return None
     return user
 
+# Límite por inactividad, aplicado en servidor; no confiar en cerrar pestañas.
+_USER_IDLE_TTL_S = 30 * 60
+_STAFF_IDLE_TTL_S = 15 * 60
+_STAFF_ABSOLUTE_TTL_S = 8 * 60 * 60
+_AUTH_CREATED_KEY = "auth_started_at"
+_AUTH_ACTIVITY_KEY = "auth_last_activity_at"
+
+
+def _stamp_login_session() -> None:
+    """Inicializa una sesión sin remember-cookie, tanto para password como Google."""
+    now = int(time.time())
+    session.permanent = False
+    session[_AUTH_CREATED_KEY] = now
+    session[_AUTH_ACTIVITY_KEY] = now
+    # Borra también una posible cookie remember emitida por la versión anterior.
+    session["_remember"] = "clear"
+
+
+def _expire_login_session() -> None:
+    """Revoca la sesión actual (y remember heredado) antes de autorizar la ruta."""
+    logout_user()
+    session.clear()
+    session["_remember"] = "clear"
+    g.session_expired = True
+
+
+@app.before_request
+def enforce_session_expiry():
+    """Caducidad comprobada en cada petición, sin almacenar timestamps en BD.
+
+    Una sesión antigua sin sellos de caducidad exige un nuevo acceso. Nunca
+    se reconstituye la identidad desde una cookie remember persistente.
+    No contar /api/me ni assets como actividad humana.
+    """
+    if "_user_id" not in session:
+        if request.cookies.get(app.config.get("REMEMBER_COOKIE_NAME", "remember_token")):
+            logout_user()
+            session["_remember"] = "clear"
+        return
+
+    now = int(time.time())
+    started = session.get(_AUTH_CREATED_KEY)
+    last = session.get(_AUTH_ACTIVITY_KEY)
+    if (type(started) is not int or type(last) is not int
+            or started > now or last > now or last < started):
+        _expire_login_session()
+        return
+
+    if not current_user.is_authenticated:
+        _expire_login_session()
+        return
+
+    staff = _role_is_fiscal_advisor()
+    idle_limit = _STAFF_IDLE_TTL_S if staff else _USER_IDLE_TTL_S
+    if now - last >= idle_limit or (staff and now - started >= _STAFF_ABSOLUTE_TTL_S):
+        _expire_login_session()
+        return
+
+    # Solo peticiones funcionales prolongan la sesión, no los assets ni el
+    # sondeo /api/me. Las escrituras no son excluidas del límite de caducidad.
+    if request.path != "/api/me" and not request.path.startswith("/static/"):
+        session[_AUTH_ACTIVITY_KEY] = now
+    # Elimina remember heredado incluso si la sesión firmada sigue vigente.
+    if request.cookies.get(app.config.get("REMEMBER_COOKIE_NAME", "remember_token")):
+        session["_remember"] = "clear"
+
+
 @login_manager.unauthorized_handler
 def unauthorized():
-    """JSON 401 para rutas API; redirect a /login/ para rutas de navegador."""
+    """401 de API o redirección a login, con explicación si ha expirado."""
+    expired = getattr(g, "session_expired", False)
     if request.path.startswith("/api/"):
+        if expired:
+            return jsonify({
+                "error": "Tu sesión ha caducado. Vuelve a iniciar sesión.",
+                "code": "session_expired",
+            }), 401
         return jsonify({"error": "Autenticación requerida"}), 401
-    return redirect(f"/login/?next={request.path}")
+    target = f"/login/?next={request.path}"
+    if expired:
+        target += "&expired=1"
+    return redirect(target)
 
 
 # ── GOOGLE OAUTH ──────────────────────────────
@@ -2134,6 +2210,7 @@ def auth_google_callback():
     destination = safe_auth_next(session.pop('auth_next', None))
     session.clear()
     login_user(user, remember=False)
+    _stamp_login_session()
     return redirect(destination)
 
 @app.route("/binance")
@@ -3968,7 +4045,7 @@ def login():
     data     = request.get_json(silent=True) or {}
     email    = (data.get("email") or "").strip().lower()
     password = data.get("password") or ""
-    remember = bool(data.get("remember", False))
+    # La opción remember es obsoleta y nunca crea acceso persistente.
 
     with LoginTiming() as timing:
         # Mensaje genérico: no revelar si el email existe o no.
@@ -3992,7 +4069,8 @@ def login():
             db.session.commit()
         with timing.phase('session_create'):
             session.clear()
-            login_user(user, remember=remember)
+            login_user(user, remember=False)
+            _stamp_login_session()
         return jsonify({"message": "Sesión iniciada.", "email": user.email, "plan": user.plan,
                         "redirect_to": safe_auth_next(data.get('next'))})
 

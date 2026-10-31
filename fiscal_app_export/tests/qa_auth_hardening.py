@@ -1,5 +1,6 @@
 """Real Flask/bcrypt, synthetic identities, no providers or production I/O."""
 from datetime import datetime,timedelta
+import time
 import hashlib
 from unittest.mock import patch
 import pytest
@@ -35,8 +36,8 @@ def isolate():
             yield
         db.session.remove();db.drop_all()
 
-def person(verified=True):
-    u=User(email='person@example.invalid',full_name='Persona ficticia',
+def person(verified=True,role='user'):
+    u=User(email='person@example.invalid',full_name='Persona ficticia',role=role,
         email_verified_at=datetime.utcnow() if verified else None)
     u.set_password(PASSWORD);db.session.add(u);db.session.commit();return u
 
@@ -188,3 +189,131 @@ def test_complete_registration_verification_login_and_recovery():
         assert login(c,new_password,next=destination).json['redirect_to']==destination
         assert c.post('/api/logout').status_code==200
         assert c.get('/api/me').json=={'user':None}
+
+
+
+# AUTH-SESSION-TTL-001: real Flask session, synthetic accounts, no providers.
+def _move_session_clock(client, *, started_delta, activity_delta=None):
+    now=int(time.time())
+    with client.session_transaction() as sess:
+        sess['auth_started_at']=now-started_delta
+        sess['auth_last_activity_at']=now-(
+            started_delta if activity_delta is None else activity_delta
+        )
+    return now
+
+
+@pytest.mark.parametrize('role,idle',[
+    ('user',1800),('fiscal_advisor',900),('admin',900),
+])
+def test_server_expires_restored_session_at_role_idle_limit(role,idle):
+    person(role=role);c=app.test_client()
+    assert login(c).status_code==200
+    now=_move_session_clock(c,started_delta=idle,activity_delta=idle)
+    with patch.object(module.time,'time',return_value=now):
+        res=c.get('/dashboard')
+    assert res.status_code==302 and '/login/' in res.location, res.location
+    assert 'expired=1' in res.location
+    assert c.get('/api/me').json=={'user':None}
+    with c.session_transaction() as sess:
+        assert '_user_id' not in sess
+
+
+@pytest.mark.parametrize('role,idle',[
+    ('user',1800),('fiscal_advisor',900),('admin',900),
+])
+def test_activity_renews_idle_but_me_poll_does_not(role,idle):
+    person(role=role);c=app.test_client()
+    assert login(c).status_code==200
+    now=_move_session_clock(c,started_delta=idle-3,activity_delta=idle-3)
+    # Navigation is real user activity, while /api/me polling is passive.
+    with patch.object(module.time,'time',return_value=now):
+        assert c.get('/api/me').json['user']['email']=='person@example.invalid'
+    with c.session_transaction() as sess:
+        assert sess['auth_last_activity_at']==now-idle+3
+    with patch.object(module.time,'time',return_value=now):
+        assert c.get('/dashboard').status_code==200
+    with c.session_transaction() as sess:
+        assert sess['auth_last_activity_at']==now
+
+
+@pytest.mark.parametrize('role', ['fiscal_advisor','admin'])
+def test_staff_eight_hour_absolute_expiry_even_with_recent_activity(role):
+    person(role=role);c=app.test_client()
+    assert login(c).status_code==200
+    now=_move_session_clock(c,started_delta=8*3600,activity_delta=5)
+    with patch.object(module.time,'time',return_value=now):
+        resp=c.get('/admin/asesoramiento')
+    assert resp.status_code==302 and 'expired=1' in resp.location,resp.location
+    assert c.get('/api/me').json=={'user':None}
+
+
+def test_session_expiry_blocks_mutating_api_with_explicit_code():
+    person();c=app.test_client();assert login(c).status_code==200
+    now=_move_session_clock(c,started_delta=1801)
+    with patch.object(module.time,'time',return_value=now):
+        res=c.post('/api/change-password',json={
+            'current_password':PASSWORD,'new_password':'Some other long password 2026!'
+        })
+    assert res.status_code==401, res.get_json()
+    assert res.json.get('code')=='session_expired'
+    assert c.get('/api/me').json=={'user':None}
+
+
+def test_legacy_signed_session_without_timeout_stamps_is_not_trusted():
+    u=person();c=app.test_client()
+    with c.session_transaction() as sess:
+        sess['_user_id']=u.get_id()
+        sess['_fresh']=True
+    res=c.get('/dashboard')
+    assert res.status_code==302 and 'expired=1' in res.location
+    assert c.get('/api/me').json=={'user':None}
+
+
+def test_remember_parameter_cannot_create_persistent_login():
+    person();c=app.test_client();assert login(c,remember=True).status_code==200
+    assert c.get_cookie('remember_token') is None
+    assert c.get('/api/me').json['user']['email']=='person@example.invalid'
+
+
+def test_valid_legacy_remember_cookie_does_not_resurrect_account():
+    from flask_login.utils import encode_cookie
+    u=person();c=app.test_client()
+    c.set_cookie('remember_token',encode_cookie(u.get_id(),key=app.secret_key))
+    assert c.get('/api/me').json=={'user':None}
+    assert c.get_cookie('remember_token') is None
+
+
+def test_restored_browser_cookie_cannot_bypass_server_idle_limit():
+    person();c=app.test_client();assert login(c).status_code==200
+    cookie=c.get_cookie('session')
+    assert cookie
+    restarted=app.test_client()
+    restarted.set_cookie('session',cookie.value)
+    now=int(time.time())
+    with patch.object(module.time,'time',return_value=now+1801):
+        res=restarted.get('/dashboard')
+    assert res.status_code==302 and 'expired=1' in res.location
+    assert restarted.get('/api/me').json=={'user':None}
+
+
+def test_corrupt_or_future_timestamp_fails_closed():
+    person();c=app.test_client();assert login(c).status_code==200
+    with c.session_transaction() as sess:
+        sess['auth_started_at']='invalid'
+    assert c.get('/api/me').json=={'user':None}
+    assert login(c).status_code==200
+    with c.session_transaction() as sess:
+        sess['auth_last_activity_at']=int(time.time())+3600
+    assert c.get('/api/me').json=={'user':None}
+
+
+def test_login_page_explains_expiry_and_old_login_still_works():
+    source=(__import__('pathlib').Path(__file__).resolve().parents[1] /
+            'static'/'auth_apple.js').read_text(encoding='utf-8')
+    assert "query.get('expired')==='1'" in source
+    person();c=app.test_client()
+    res=c.get('/login/?expired=1',follow_redirects=True)
+    assert res.status_code==200
+    assert 'data-auth-view="login"' in res.text
+    assert login(c).status_code==200

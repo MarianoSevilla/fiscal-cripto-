@@ -14,11 +14,16 @@
   }
   return '/dashboard';
  }
- const next=safeNext(new URLSearchParams(location.search).get('next'));
+ const query=new URLSearchParams(location.search);
+ const next=safeNext(query.get('next'));
  document.querySelectorAll('[data-auth-next]').forEach(a=>{
   if(!preview){const u=new URL(a.getAttribute('href'),location.origin);u.searchParams.set('next',next);a.href=u.pathname+u.search}
  });
  const error=$('authError'),status=$('authStatus'),form=$('authForm'),submit=$('authSubmit');
+ if(view==='login' && !preview && query.get('expired')==='1'){
+  status.textContent='Tu sesión ha caducado por seguridad. Vuelve a iniciar sesión para continuar.';
+  status.hidden=false;
+ }
  function message(el,text){el.textContent=text;el.hidden=false;el.focus()}
  function clear(){error.hidden=true;status.hidden=true;document.querySelectorAll('[aria-invalid=true]').forEach(e=>e.removeAttribute('aria-invalid'));document.querySelectorAll('.auth-field-error').forEach(e=>{e.textContent='';e.hidden=true})}
  function invalid(input,text){input.setAttribute('aria-invalid','true');const out=$(input.id+'Error');out.textContent=text;out.hidden=false;input.focus();return false}

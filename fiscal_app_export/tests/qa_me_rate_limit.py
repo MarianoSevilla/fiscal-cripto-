@@ -43,6 +43,9 @@ def client_for(role='user', plan='free', suffix='one'):
     with client.session_transaction() as session:
         session['_user_id'] = identity
         session['_fresh'] = True
+        now = int(time.time())
+        session['auth_started_at'] = now
+        session['auth_last_activity_at'] = now
     return client, user_id
 
 

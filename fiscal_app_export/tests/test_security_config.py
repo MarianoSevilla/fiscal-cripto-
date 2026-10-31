@@ -225,14 +225,15 @@ assert response.status_code == 200
 cookies = SimpleCookie()
 for header in response.headers.getlist('Set-Cookie'):
     cookies.load(header)
-assert {'session', 'remember_token'} <= set(cookies)
-for name in ('session', 'remember_token'):
-    assert bool(cookies[name]['secure']) == EXPECT_SECURE
-    assert cookies[name]['httponly']
-    assert cookies[name]['samesite'] == 'Lax'
+assert 'session' in cookies
+assert bool(cookies['session']['secure']) == EXPECT_SECURE
+assert cookies['session']['httponly']
+assert cookies['session']['samesite'] == 'Lax'
+assert not cookies['session']['max-age']  # No cookie persistente
+assert client.get_cookie('remember_token', domain='fixture.example.invalid') is None
 assert client.get('/dashboard', base_url='https://fixture.example.invalid').status_code == 200
 client.delete_cookie('session', domain='fixture.example.invalid')
-assert client.get('/dashboard', base_url='https://fixture.example.invalid').status_code == 200
+assert client.get('/dashboard', base_url='https://fixture.example.invalid').status_code == 302
 # Reconstruct prior production signature policy with the SAME fixture key.
 old = Flask('u02-previous-policy')
 old.config['SECRET_KEY'] = app.config['SECRET_KEY']
@@ -241,12 +242,13 @@ with app.app_context():
 old_session = old.session_interface.get_signing_serializer(old).dumps({'_user_id': identity, '_fresh': True})
 client = app.test_client()
 client.set_cookie('session', old_session, domain='fixture.example.invalid')
-assert client.get('/dashboard', base_url='https://fixture.example.invalid').status_code == 200
+assert client.get('/dashboard', base_url='https://fixture.example.invalid').status_code == 302
 with old.app_context():
     old_remember = encode_cookie(identity)
 client.delete_cookie('session', domain='fixture.example.invalid')
 client.set_cookie('remember_token', old_remember, domain='fixture.example.invalid')
-assert client.get('/dashboard', base_url='https://fixture.example.invalid').status_code == 200
+assert client.get('/dashboard', base_url='https://fixture.example.invalid').status_code == 302
+assert client.get_cookie('remember_token', domain='fixture.example.invalid') is None
 s = URLSafeTimedSerializer(old.config['SECRET_KEY'])
 token = s.dumps('u02@example.invalid', salt=_VERIFY_TOKEN_SALT)
 assert _confirm_verification_token(token) == ('u02@example.invalid', None)
