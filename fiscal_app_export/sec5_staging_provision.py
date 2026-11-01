@@ -39,6 +39,10 @@ def validate_provision_envelope(env: dict[str, str]) -> None:
 def _run_isolated(command: str, database_url: str, original: dict[str, str]) -> None:
     env = dict(original)
     env["DATABASE_URL"] = database_url
+    # Explicit mode is consumed only by the original STG-LOCK-001 guard.
+    env["SEC5_STAGING_DB_MODE"] = (
+        "RUNTIME" if make_url(database_url).username == ROLE else "BOOTSTRAP"
+    )
     # External provider credentials are already checked as empty by the gate.
     # A child failure can contain DB credentials in its normal traceback.
     # The only emitted diagnostics are an exception CLASS, optional SQLSTATE,
