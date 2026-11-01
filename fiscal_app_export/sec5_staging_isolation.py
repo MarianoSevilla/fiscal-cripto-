@@ -16,6 +16,8 @@ STAGING_ENV_ID = "b2937140-78f7-4347-a9bc-c96333e03b9b"
 STAGING_SERVICE_ID = "3eecda71-9f53-4b33-a308-887d835b7fce"
 PROJECT_ID = "e04f04a8-3aae-4aed-9073-638601f8ca30"
 DATABASE_HOST = "postgres-zzky.railway.internal"
+RUNTIME_DATABASE = "sec5_priv_stage_20261101"
+RUNTIME_LOGIN = "sec5_runtime_stage"
 STAGING_VARIABLES = (
     "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET",
     "RESEND_API_KEY", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET",
@@ -44,14 +46,52 @@ def validate_envelope(environ: dict[str, str]) -> None:
         parsed = make_url(uri)
     except Exception as exc:
         raise StagingIsolationError("invalid DATABASE_URL") from None
-    if parsed.get_backend_name() != "postgresql" or parsed.host != DATABASE_HOST:
-        raise StagingIsolationError("database host not the isolated staging Postgres")
+    if (
+        parsed.get_backend_name() != "postgresql"
+        or parsed.drivername != "postgresql+psycopg2"
+        or parsed.host != DATABASE_HOST
+        or parsed.port != 5432
+        or parsed.database != RUNTIME_DATABASE
+        or parsed.username != RUNTIME_LOGIN
+        or not parsed.password
+        or parsed.query
+        or environ.get("SEC5_STAGING_DB_MODE") != "RUNTIME"
+        or environ.get("SEC5_STAGING_PROVISION")
+        or environ.get("SEC5_STAGING_PROVISION_PASSWORD")
+    ):
+        raise StagingIsolationError("database is not the limited staging runtime")
     if any(environ.get(key, "") for key in STAGING_VARIABLES):
         raise StagingIsolationError("external provider credentials still enabled")
     if environ.get("PROCESSING_ERROR_EMAILS_ENABLED") != "0":
         raise StagingIsolationError("processing error emails not explicitly disabled")
     if environ.get("SEC5_STAGING_ISOLATION") != "READONLY":
         raise StagingIsolationError("explicit isolation opt-in absent")
+
+
+def validate_runtime_acl(role_row: tuple, grants: list[tuple], model_tables: set[str]) -> None:
+    """Validate only PostgreSQL catalog observations: never read/write customer data."""
+    expected_role = (
+        RUNTIME_DATABASE, RUNTIME_LOGIN, RUNTIME_LOGIN,
+        True, False, False, False, False, False, False, False,
+        False, False, False,
+    )
+    # database, current_user, session_user; login; superuser/bypassrls/
+    # createrole/createdb/replication/inherit; schema/database CREATE;
+    # any role membership
+    if tuple(role_row) != expected_role:
+        raise StagingIsolationError("runtime role not least-privileged")
+    if len(model_tables) != 17:
+        raise StagingIsolationError("ORM table inventory changed")
+    records = {t: (s, i, u, d) for t, s, i, u, d in grants}
+    if len(records) != len(grants):
+        raise StagingIsolationError("duplicate database table metadata")
+    if set(records) != model_tables | {"alembic_version"}:
+        raise StagingIsolationError("unexpected table DML rights")
+    for name in model_tables:
+        if records[name] != (True, True, True, True):
+            raise StagingIsolationError("required ORM table grants missing")
+    if records["alembic_version"] != (True, False, False, False):
+        raise StagingIsolationError("Alembic must remain SELECT-only")
 
 
 def verify_readonly() -> None:
@@ -70,17 +110,39 @@ def verify_readonly() -> None:
                 version = int(connection.exec_driver_sql(
                     "SHOW server_version_num"
                 ).scalar_one())
-                row = connection.exec_driver_sql(
-                    "SELECT current_user = session_user, "
-                    "current_setting('is_superuser')"
-                ).one()
                 if read_only != "on" or not 180000 <= version < 190000:
                     raise StagingIsolationError("not PostgreSQL 18 read-only")
-                # Do not claim role separation while old admin DATABASE_URL is used.
+                role_row = connection.exec_driver_sql("""
+                    SELECT current_database(), current_user, session_user,
+                           r.rolcanlogin, r.rolsuper, r.rolbypassrls,
+                           r.rolcreaterole, r.rolcreatedb, r.rolreplication,
+                           r.rolinherit,
+                           has_schema_privilege(current_user, 'public', 'CREATE'),
+                           has_database_privilege(
+                               current_user, current_database(), 'CREATE'),
+                           EXISTS (
+                               SELECT 1 FROM pg_auth_members m
+                               WHERE m.member = r.oid
+                           )
+                    FROM pg_roles r WHERE r.rolname = current_user
+                """).one()
+                grant_rows = connection.exec_driver_sql("""
+                    SELECT c.relname,
+                           has_table_privilege(current_user,c.oid,'SELECT'),
+                           has_table_privilege(current_user,c.oid,'INSERT'),
+                           has_table_privilege(current_user,c.oid,'UPDATE'),
+                           has_table_privilege(current_user,c.oid,'DELETE')
+                    FROM pg_class c
+                    JOIN pg_namespace n ON n.oid = c.relnamespace
+                    WHERE n.nspname='public' AND c.relkind IN ('r','p')
+                """).all()
+                validate_runtime_acl(
+                    role_row, grant_rows, set(db.metadata.tables)
+                )
                 print(
                     "SEC5 STAGING ISOLATION: PASS "
                     "(PostgreSQL18, read-only, staging-only hostname, "
-                    "providers disabled, superuser=" + row[1] + ")",
+                    "providers disabled, limited_role=verified, 17 ORM ACL)",
                     flush=True,
                 )
             finally:
