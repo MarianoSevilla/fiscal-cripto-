@@ -14,7 +14,7 @@ def test_provider_document_does_not_invent_production_backups_or_signed_dpa():
         "5.000 MB",
         "sin volumen persistente",
         "sin buckets",
-        "no demuestra ausencia de cualquier copia",
+        "no demuestra ausencia de copias",
         "no ofrece inventario de backups",
         "dos copias de seguridad manuales",
         "no se utilizan backups automáticos",
