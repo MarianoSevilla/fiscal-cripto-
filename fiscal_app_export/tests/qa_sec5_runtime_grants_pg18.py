@@ -160,6 +160,15 @@ def main():
 
         with _connect(DBNAME, "postgres", PASS_ADMIN) as con:
             with con.cursor() as cur:
+                # A superuser must be rejected BEFORE any role GRANT.
+                try:
+                    grant_existing_runtime_acl(
+                        cur, login="postgres", model_tables=tables
+                    )
+                except ValueError as exc:
+                    assert "safe LOGIN" in str(exc)
+                else:
+                    raise AssertionError("Privileged target passed ACL preflight")
                 cur.execute(sql.SQL("CREATE SCHEMA {}").format(sql.Identifier(VAULT)))
                 cur.execute(sql.SQL(
                     "CREATE TABLE {}.blocked_evidence (id integer, secret text)"

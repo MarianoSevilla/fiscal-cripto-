@@ -21,6 +21,31 @@ def grant_existing_runtime_acl(cursor, *, login: str, model_tables: set[str]) ->
     if any(not name or "." in name or "\x00" in name for name in model_tables):
         raise ValueError("SEC5 runtime ACL: invalid table identifier")
 
+    # Refuse a privileged/multi-role identity before the first GRANT.
+    cursor.execute("""
+        SELECT rolcanlogin, rolsuper, rolbypassrls, rolcreatedb,
+               rolcreaterole, rolreplication, rolinherit
+        FROM pg_roles WHERE rolname = %s
+    """, (login,))
+    if cursor.fetchone() != (True, False, False, False, False, False, False):
+        raise ValueError("SEC5 runtime ACL: target role is not a safe LOGIN")
+    cursor.execute("""
+        SELECT EXISTS(
+            SELECT 1 FROM pg_auth_members m
+            JOIN pg_roles r ON r.oid = m.member
+            WHERE r.rolname = %s
+        )
+    """, (login,))
+    if cursor.fetchone()[0]:
+        raise ValueError("SEC5 runtime ACL: target role has memberships")
+    cursor.execute(
+        "SELECT has_schema_privilege(%s, 'public', 'CREATE'), "
+        "has_database_privilege(%s, current_database(), 'CREATE')",
+        (login, login),
+    )
+    if cursor.fetchone() != (False, False):
+        raise ValueError("SEC5 runtime ACL: target role has DDL privileges")
+
     cursor.execute(
         "SELECT current_setting('server_version_num')::integer / 10000"
     )
