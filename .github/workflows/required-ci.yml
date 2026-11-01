@@ -136,6 +136,11 @@ jobs:
       - name: R01-R04 fiscal 422/200 and persistence on isolated PostgreSQL 18
         run: python fiscal_app_export/tests/qa_fiscal_containment_pg18.py
 
+      - name: SEC5-PRIV count-only ORM scope on disposable PostgreSQL 18
+        env:
+          SEC5_PRIV_SCOPE_PG18_ONLY: "1"
+        run: python fiscal_app_export/tests/qa_sec5_priv_scope_pg18.py
+
   browser-navigation:
     name: browser-navigation
     runs-on: ubuntu-24.04

@@ -85,3 +85,12 @@ Se añade únicamente como **prueba de viabilidad del inventario previo** y como
 **P2 antes de pagos:** contrato con Rafa, información de responsables, facturación/Stripe Connect, derechos de acceso FIFO comprado. No reactivar cobros por trabajo de privacidad.
 
 **Límites:** Esta entrega **no confirma backups habilitados ni DPA firmados**, no ejecuta supresiones, no realiza consulta de datos de usuarios, no cambia permisos, no modifica la política pública, no fusiona, no despliega y **no declara cerrada la fase SEC5-PRIV-011/012/013**. Aplicar cualquier medida deberá tener un plan de pruebas y autorización separada.
+
+
+### Ensayo adicional PostgreSQL 18 — alcance ORM y lectura sin modificaciones
+
+La PR documental incorpora `fiscal_app_export/tests/qa_sec5_priv_scope_pg18.py`, **exclusivamente en GitHub Actions** y bajo el guardia `GITHUB_ACTIONS=true`, `FLASK_ENV=testing`, `SEC5_PRIV_SCOPE_PG18_ONLY=1`. Crea la base independiente `sec5_priv_scope_ci` en el contenedor efímero PostgreSQL 18, materializa los **17 modelos ORM** y utiliza únicamente dos cuentas y referencias S01 sintéticas. La identidad se comprueba mediante `user_id` y correo original, no por coincidencia de correo en otras tablas. Ningún registro de cliente ni base de Railway se conecta a este ensayo.
+
+Se exige que dos casos con un email histórico coincidente mantengan separadas las relaciones S01, las referencias al sujeto y las referencias al administrador, y que el inventario contenga solo recuentos. La lectura se realiza en transacción `READ ONLY` real de PostgreSQL y se comprueba que un `UPDATE` hipotético es rechazado por el servidor (SQLSTATE `25006`). El comprobador no contiene ruta Flask, migración, motor de purga ni orden de eliminación de filas. Tras el ensayo elimina **solo** la base sintética que acaba de crear. No concede acceso a datos bloqueados ni implementa el mecanismo legal del art. 32.
+
+**Aceptar únicamente con CI del HEAD exacto completa**: backend, PostgreSQL 18 y Chromium. Este ensayo no aprueba plazos, no prueba relaciones externas, no autoriza actuaciones reales ni sustituye el piloto de privilegios de la PR #173.
