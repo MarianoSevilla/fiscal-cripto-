@@ -72,7 +72,7 @@ def validate_runtime_acl(role_row: tuple, grants: list[tuple], model_tables: set
     """Validate only PostgreSQL catalog observations: never read/write customer data."""
     expected_role = (
         RUNTIME_DATABASE, RUNTIME_LOGIN, RUNTIME_LOGIN,
-        True, False, False, False, False, False, False, False,
+        True, False, False, False, False, False, False,
         False, False, False,
     )
     # database, current_user, session_user; login; superuser/bypassrls/

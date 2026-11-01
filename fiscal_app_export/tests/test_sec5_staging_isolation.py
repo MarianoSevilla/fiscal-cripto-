@@ -105,7 +105,7 @@ def test_unsafe_runtime_identity_fails(safe_env, mutate):
 def role_row():
     return (
         RUNTIME_DATABASE, RUNTIME_LOGIN, RUNTIME_LOGIN,
-        True, False, False, False, False, False, False, False,
+        True, False, False, False, False, False, False,
         False, False, False,
     )
 
@@ -121,7 +121,7 @@ def test_valid_runtime_pg18_catalog_contract():
                          {f"orm_{i}" for i in range(17)})
 
 
-@pytest.mark.parametrize("index", list(range(3, 14)))
+@pytest.mark.parametrize("index", list(range(3, 13)))
 def test_any_privilege_elevation_fails(index):
     r = list(role_row())
     r[index] = not r[index]
