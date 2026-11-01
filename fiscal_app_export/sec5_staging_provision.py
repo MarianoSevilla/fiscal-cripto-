@@ -44,20 +44,20 @@ def _run_isolated(command: str, database_url: str, original: dict[str, str]) -> 
     # The only emitted diagnostics are an exception CLASS, optional SQLSTATE,
     # and source module/line: never error messages, DSNs or stdout.
     wrapper = (
-        "import sys, traceback\\n"
-        "try:\\n"
-        "    exec(" + repr(command) + ")\\n"
-        "except BaseException as exc:\\n"
-        "    frames = traceback.extract_tb(exc.__traceback__)\\n"
-        "    last = frames[-1] if frames else None\\n"
-        "    origin = getattr(exc, 'orig', None)\\n"
-        "    code = getattr(origin, 'pgcode', None) or 'none'\\n"
-        "    where = (last.filename.rsplit('/', 1)[-1] if last else 'none')\\n"
-        "    line = last.lineno if last else 0\\n"
+        "import sys, traceback\n"
+        "try:\n"
+        "    exec(" + repr(command) + ")\n"
+        "except BaseException as exc:\n"
+        "    frames = traceback.extract_tb(exc.__traceback__)\n"
+        "    last = frames[-1] if frames else None\n"
+        "    origin = getattr(exc, 'orig', None)\n"
+        "    code = getattr(origin, 'pgcode', None) or 'none'\n"
+        "    where = (last.filename.rsplit('/', 1)[-1] if last else 'none')\n"
+        "    line = last.lineno if last else 0\n"
         "    print('SEC5 CHILD SAFE FAILURE: class=' + type(exc).__name__ + "
         "' cause=' + (type(exc.__cause__).__name__ if exc.__cause__ else 'none') "
-        "+ ' sqlstate=' + str(code) + ' at=' + where + ':' + str(line), flush=True)\\n"
-        "    sys.exit(1)\\n"
+        "+ ' sqlstate=' + str(code) + ' at=' + where + ':' + str(line), flush=True)\n"
+        "    sys.exit(1)\n"
     )
     result = subprocess.run(
         [sys.executable, "-c", wrapper],
