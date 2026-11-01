@@ -77,6 +77,7 @@ def _limited_check(url: str) -> None:
 def provision() -> None:
     env = dict(os.environ)
     validate_provision_envelope(env)
+    print("SEC5 STAGING PROVISION PHASE: ENVELOPE_OK", flush=True)
     password = env[PW_VAR]
     old_url = make_url(env["DATABASE_URL"])
     # SQLAlchemy str(URL) REDACTS passwords as ***. Explicit rendering is
@@ -94,6 +95,7 @@ def provision() -> None:
             dbname=old_url.database, user=old_url.username,
             password=old_url.password, connect_timeout=8,
         )
+        print("SEC5 STAGING PROVISION PHASE: ADMIN_CONNECTED", flush=True)
         created_db = False
         created_role = False
         try:
@@ -114,20 +116,24 @@ def provision() -> None:
                 )
                 if cur.fetchone() is not None:
                     raise RuntimeError("Staging runtime role already exists; fail closed")
+                print("SEC5 STAGING PROVISION PHASE: TARGETS_ABSENT", flush=True)
                 cur.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(DBNAME)))
                 created_db = True
+                print("SEC5 STAGING PROVISION PHASE: DATABASE_CREATED", flush=True)
                 cur.execute(sql.SQL(
                     "CREATE ROLE {} LOGIN NOSUPERUSER NOBYPASSRLS "
                     "NOCREATEDB NOCREATEROLE NOREPLICATION "
                     "NOINHERIT PASSWORD {}"
                 ).format(sql.Identifier(ROLE), sql.Literal(password)))
                 created_role = True
+                print("SEC5 STAGING PROVISION PHASE: ROLE_CREATED", flush=True)
 
             # Fresh, standalone database: only the explicit bootstrap may
             # build/migrate the schema. Never modify the old staging database.
             _run_isolated(
                 "from bootstrap_db import main; main()", admin_new_url, env
             )
+            print("SEC5 STAGING PROVISION PHASE: BOOTSTRAP_PASS", flush=True)
             engine = create_engine(admin_new_url)
             try:
                 dbapi = engine.raw_connection()
@@ -144,7 +150,9 @@ def provision() -> None:
             finally:
                 engine.dispose()
 
+            print("SEC5 STAGING PROVISION PHASE: GRANTS_PASS", flush=True)
             _limited_check(runtime_url)
+            print("SEC5 STAGING PROVISION PHASE: LIMITED_LOGIN_PASS", flush=True)
             _run_isolated(
                 "from startup_schema_gate import main; main()", runtime_url, env
             )
@@ -166,6 +174,7 @@ def provision() -> None:
                     cur.execute(sql.SQL(
                         "DROP ROLE IF EXISTS {}"
                     ).format(sql.Identifier(ROLE)))
+            print("SEC5 STAGING PROVISION PHASE: CLEANUP_DONE", flush=True)
             raise
         finally:
             admin.close()
