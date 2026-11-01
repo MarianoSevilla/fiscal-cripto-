@@ -79,14 +79,21 @@ def provision() -> None:
     validate_provision_envelope(env)
     password = env[PW_VAR]
     old_url = make_url(env["DATABASE_URL"])
-    admin_new_url = str(old_url.set(database=DBNAME))
-    runtime_url = str(old_url.set(
+    # SQLAlchemy str(URL) REDACTS passwords as ***. Explicit rendering is
+    # mandatory for internal subprocess DSNs; never print either string.
+    admin_new_url = old_url.set(database=DBNAME).render_as_string(hide_password=False)
+    runtime_url = old_url.set(
         database=DBNAME, username=ROLE, password=password
-    ))
+    ).render_as_string(hide_password=False)
     # DBAPI connection to the *already isolated* staging Postgres only.
+    import psycopg2
     from app import app, db
     with app.app_context():
-        admin = db.engine.raw_connection()
+        admin = psycopg2.connect(
+            host=old_url.host, port=old_url.port or 5432,
+            dbname=old_url.database, user=old_url.username,
+            password=old_url.password, connect_timeout=8,
+        )
         created_db = False
         created_role = False
         try:
