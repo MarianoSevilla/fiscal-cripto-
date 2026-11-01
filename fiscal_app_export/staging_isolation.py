@@ -14,6 +14,8 @@ STAGING_BASE_URL = "https://fiscal-cripto-staging-staging.up.railway.app"
 STAGING_HOST = "fiscal-cripto-staging-staging.up.railway.app"
 RAILWAY_HEALTHCHECK_HOST = "healthcheck.railway.app"
 STAGING_DB_HOST = "postgres-zzky.railway.internal"
+SEC5_ISOLATED_DB_PATH = "/sec5_priv_stage_20261101"
+SEC5_RUNTIME_LOGIN = "sec5_runtime_stage"
 STAGING_PROJECT_ID = "e04f04a8-3aae-4aed-9073-638601f8ca30"
 STAGING_ENVIRONMENT_ID = "b2937140-78f7-4347-a9bc-c96333e03b9b"
 STAGING_SERVICE_ID = "3eecda71-9f53-4b33-a308-887d835b7fce"
@@ -61,11 +63,26 @@ def validate_staging_isolation(env: Mapping[str, str]) -> bool:
 
     try:
         url = urlsplit(env.get("DATABASE_URL", ""))
+        # Retain the original staging-only /railway contract unchanged.
+        # The new database is allowed ONLY with an exact staging-only mode
+        # and role; the administrative bootstrap is one-shot opt-in.
+        legacy_db = url.path == "/railway"
+        limited_db = (
+            url.path == SEC5_ISOLATED_DB_PATH
+            and url.username == SEC5_RUNTIME_LOGIN
+            and env.get("SEC5_STAGING_DB_MODE") == "RUNTIME"
+        )
+        bootstrap_db = (
+            url.path == SEC5_ISOLATED_DB_PATH
+            and url.username != SEC5_RUNTIME_LOGIN
+            and env.get("SEC5_STAGING_DB_MODE") == "BOOTSTRAP"
+            and env.get("SEC5_STAGING_PROVISION") == "EXPLICIT_ONCE"
+        )
         db_ok = (
             url.scheme == "postgresql+psycopg2"
             and url.hostname == STAGING_DB_HOST
             and url.port == 5432
-            and url.path == "/railway"
+            and (legacy_db or limited_db or bootstrap_db)
             and url.username is not None
             and bool(url.password)
             and not url.query
