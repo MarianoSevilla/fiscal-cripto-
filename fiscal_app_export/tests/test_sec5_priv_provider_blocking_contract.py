@@ -23,7 +23,7 @@ def test_provider_document_distinguishes_historical_restores_from_current_backup
         "S01 REHEARSAL: PASS",
         "No se accedió en esta revisión a los archivos actuales",
         "No hay backups periódicos automáticos comunicados",
-        "La última copia identificada es de 14/10/2026",
+        "última copia identificada es de 14/10/2026",
         "DPA efectivo del cliente",
         "cuenta Gmail de consumo",
         "Free, Pro y Scale",
