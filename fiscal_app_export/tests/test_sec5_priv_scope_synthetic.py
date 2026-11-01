@@ -154,3 +154,49 @@ def test_fail_closed_for_inactive_account_or_unverified_email(synthetic_database
     s.commit()
     with pytest.raises(ValueError):
         inventory_verified_user_synthetic(s, user_id=a.id, original_email=a.email)
+
+
+def test_deactivated_scope_cannot_recover_lost_email_or_authorize_erasure(synthetic_database):
+    """Same ID reaches FKs, but historic email-only records remain ambiguous."""
+    s = synthetic_database
+    a = _account(s, "inactive@example.invalid")
+    b = _account(s, "other@example.invalid")
+    s.add_all([
+        FifoReport(user_id=a.id, exchange="bitvavo", fiscal_year=2025),
+        ProcessingError(user_id=None, email=a.email, exchange="binance"),
+        Contacto(nombre="Synthetic", email=a.email,
+                 tipo_consulta="otros", mensaje="test"),
+    ])
+    ca = _case(s, a, a.email)
+    _case(s, b, a.email)  # historical email collision: not A's case
+    s.commit()
+    a_id, b_id = a.id, b.id
+    a.email = f"deleted_{a_id}@deleted"
+    a.is_active = False
+    s.commit()
+
+    from privacy_scope_probe import inventory_deactivated_user_synthetic
+    with pytest.raises(ValueError):
+        inventory_verified_user_synthetic(
+            s, user_id=a_id, original_email="inactive@example.invalid"
+        )
+    with pytest.raises(PermissionError):
+        inventory_deactivated_user_synthetic(
+            s, user_id=a_id, manual_evidence="APPROVED"
+        )
+    scope = inventory_deactivated_user_synthetic(
+        s, user_id=a_id,
+        manual_evidence="SYNTHETIC_MANUAL_IDENTITY_REVIEW_ONLY"
+    )
+    assert scope["direct_id_references"]["fifo_reports.user_id"] == 1
+    assert scope["direct_id_references"]["fiscal_advisory_requests.user_id"] == 1
+    assert scope["copied_email_candidates"] is None
+    assert scope["requires_external_identity_proof"]
+    assert not scope["scope_complete"] and not scope["delete_permitted"]
+    assert "inactive@example.invalid" not in repr(scope)
+    assert s.get(User, b_id).is_active
+    with pytest.raises(ValueError):
+        inventory_deactivated_user_synthetic(
+            s, user_id=b_id,
+            manual_evidence="SYNTHETIC_MANUAL_IDENTITY_REVIEW_ONLY"
+        )

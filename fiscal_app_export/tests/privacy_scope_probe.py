@@ -133,3 +133,72 @@ def inventory_verified_user_synthetic(session, *, user_id, original_email):
                 _count(session, model, condition)
             )
         return result
+
+def inventory_deactivated_user_synthetic(session, *, user_id, manual_evidence):
+    """Count reachable direct references after account deactivation.
+
+    A previously stored email is no longer available in users, so this can
+    NEVER enumerate email-only matches or establish historical ownership.
+    The marker is a synthetic test fixture, NOT evidence of a real identity
+    check or permission to operate on real users.
+    """
+    if isinstance(user_id, bool) or not isinstance(user_id, int) or user_id <= 0:
+        raise ValueError("A valid positive synthetic user ID is required")
+    if manual_evidence != "SYNTHETIC_MANUAL_IDENTITY_REVIEW_ONLY":
+        raise PermissionError("Out-of-band identity review is not verified")
+    with session.no_autoflush:
+        state = session.execute(
+            select(User.email, User.is_active).where(User.id == user_id)
+        ).one_or_none()
+        if (state is None or state.is_active
+                or state.email != f"deleted_{user_id}@deleted"):
+            raise ValueError("Only a synthetically deactivated account is allowed")
+
+        result = {
+            "tables_modeled": len(MODELS),
+            "direct_id_references": {},
+            "staff_actor_references": {},
+            "case_fk_references": {},
+            "case_log_unverified_candidates": 0,
+            "copied_email_candidates": None,
+            "original_email_unavailable": True,
+            "requires_external_identity_proof": True,
+            "scope_complete": False,
+            "delete_permitted": False,
+            "blocking_proven": False,
+            "external_systems_checked": False,
+        }
+        for model, columns in SUBJECT_FIELDS.items():
+            for column in columns:
+                result["direct_id_references"][f"{model.__tablename__}.{column}"] = (
+                    _count(session, model, getattr(model, column) == user_id)
+                )
+        for model, columns in ACTOR_FIELDS.items():
+            for column in columns:
+                result["staff_actor_references"][f"{model.__tablename__}.{column}"] = (
+                    _count(session, model, getattr(model, column) == user_id)
+                )
+        case_ids = select(FiscalAdvisoryRequest.id).where(
+            FiscalAdvisoryRequest.user_id == user_id
+        )
+        attempt_ids = select(S01StripeCheckoutAttempt.id).where(
+            S01StripeCheckoutAttempt.advisory_id.in_(case_ids)
+        )
+        for model, condition in (
+            (S01StripeCheckoutAttempt, S01StripeCheckoutAttempt.advisory_id.in_(case_ids)),
+            (S01StripeEventReceipt, S01StripeEventReceipt.attempt_id.in_(attempt_ids)),
+            (S01StripeNotificationOutbox, S01StripeNotificationOutbox.attempt_id.in_(attempt_ids)),
+            (FiscalAdvisoryFile, FiscalAdvisoryFile.request_id.in_(case_ids)),
+            (FiscalAdvisoryStatusHistory, FiscalAdvisoryStatusHistory.request_id.in_(case_ids)),
+            (AdvisoryInternalNote, AdvisoryInternalNote.request_id.in_(case_ids)),
+        ):
+            result["case_fk_references"][model.__tablename__] = _count(
+                session, model, condition
+            )
+        # advisory_audit_log.request_id has NO FOREIGN KEY: this is just
+        # a candidate count and cannot establish ownership.
+        result["case_log_unverified_candidates"] = _count(
+            session, AdvisoryAuditLog, AdvisoryAuditLog.request_id.in_(case_ids)
+        )
+        return result
+

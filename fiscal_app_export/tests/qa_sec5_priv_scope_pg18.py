@@ -23,7 +23,7 @@ from models import (
 )
 from privacy_scope_probe import (
     MODELS, SUBJECT_FIELDS, ACTOR_FIELDS, EMAIL_CANDIDATES,
-    inventory_verified_user_synthetic,
+    inventory_verified_user_synthetic, inventory_deactivated_user_synthetic,
 )
 
 HOST = "127.0.0.1"
@@ -177,6 +177,75 @@ def _test_count_only_read_only(engine, a_id, b_id):
         )).scalar_one().exchange == "bitvavo"
 
 
+def _test_inactive_account_gap(engine, a_id, b_id):
+    """Legacy account deletion loses original email; only ID links remain."""
+    with Session(engine) as session:
+        a = session.get(User, a_id)
+        a.email = f"deleted_{a_id}@deleted"
+        a.password_hash = None
+        a.google_id = None
+        a.full_name = None
+        a.nif = None
+        a.is_active = False
+        session.commit()
+
+    with Session(engine) as session:
+        session.execute(text("SET TRANSACTION READ ONLY"))
+        try:
+            inventory_verified_user_synthetic(
+                session, user_id=a_id, original_email="subject_a@example.invalid"
+            )
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("active-only probe accepted deactivated account")
+
+        for marker in (None, "", "APPROVED", True):
+            try:
+                inventory_deactivated_user_synthetic(
+                    session, user_id=a_id, manual_evidence=marker
+                )
+            except PermissionError:
+                pass
+            else:
+                raise AssertionError("unverified manual review marker accepted")
+
+        scope = inventory_deactivated_user_synthetic(
+            session, user_id=a_id,
+            manual_evidence="SYNTHETIC_MANUAL_IDENTITY_REVIEW_ONLY"
+        )
+        assert scope["direct_id_references"]["fifo_reports.user_id"] == 1
+        assert scope["direct_id_references"]["fiscal_advisory_requests.user_id"] == 1
+        assert scope["staff_actor_references"]["fiscal_advisory_requests.quoted_by_user_id"] == 1
+        assert scope["staff_actor_references"]["advisory_audit_log.admin_id"] == 1
+        assert scope["case_fk_references"]["s01_stripe_checkout_attempts"] == 1
+        assert scope["case_fk_references"]["s01_stripe_event_receipts"] == 1
+        assert scope["case_fk_references"]["s01_stripe_notification_outbox"] == 1
+        assert scope["case_log_unverified_candidates"] == 1
+        assert scope["copied_email_candidates"] is None
+        assert scope["original_email_unavailable"]
+        assert scope["requires_external_identity_proof"]
+        assert not scope["scope_complete"]
+        assert not scope["delete_permitted"]
+        assert not scope["blocking_proven"]
+        assert not scope["external_systems_checked"]
+        assert "subject_a@example.invalid" not in repr(scope)
+        assert session.get(User, b_id).is_active
+        assert session.get(User, b_id).email == "subject_b@example.invalid"
+        assert not session.new and not session.dirty and not session.deleted
+
+    with Session(engine) as session:
+        try:
+            inventory_deactivated_user_synthetic(
+                session, user_id=b_id,
+                manual_evidence="SYNTHETIC_MANUAL_IDENTITY_REVIEW_ONLY"
+            )
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("active B account accepted as deactivated")
+
+
 def main():
     _guard()
     created = False
@@ -197,6 +266,7 @@ def main():
             with Session(engine) as session:
                 a, b, _, _ = _seed(session)
             _test_count_only_read_only(engine, a, b)
+            _test_inactive_account_gap(engine, a, b)
             print("SEC5_PRIV_SCOPE_PG18: PASS")
         finally:
             engine.dispose()
