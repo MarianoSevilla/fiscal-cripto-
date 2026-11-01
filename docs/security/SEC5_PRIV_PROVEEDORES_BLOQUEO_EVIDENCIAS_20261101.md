@@ -62,7 +62,19 @@
 
 **Sin estadística nueva:** conservar agregados auténticamente anónimos tras una baja, evitando identificadores persistentes; esta fase **no implementa** la futura métrica de cuentas eliminadas.
 
-## 3. Prioridad real y puertas de autorización
+## 3. Ensayo técnico aislado de alcance de cuentas (sin supresión)
+
+Las pruebas de esta misma PR incluyen `fiscal_app_export/tests/privacy_scope_probe.py` y `test_sec5_priv_scope_synthetic.py`. **Son código de pruebas únicamente**: Flask no los importa, no existe endpoint, tarea programada ni consola de producción que pueda ejecutarlos. Mediante SQLAlchemy con SQLite desechable se comprueba:
+
+- Cobertura explícita de **17 tablas ORM** y validez de sus columnas vinculantes. La cuenta se verifica por ID y **email original antes de su desactivación**; en caso de identidad ambigua, cuenta desactivada o email diferente, se rechaza el inventario.
+- Diferenciación entre referencias directas al titular (`user_id`), referencias al usuario como **autor/empleado** (`author_id`, `admin_id`, `assigned_to`), referencias de correo copiadas **candidatas que no prueban titularidad**, y expedientes vinculados por FK.
+- Cadena S01 **solicitud → intento Stripe → recibo de evento/notificación** por `advisory_id`, **nunca por coincidencia de email**. Una segunda cuenta con el mismo email histórico en un expediente sintético no queda atribuida a la primera.
+- El resultado contiene **solo recuentos y etiquetas de columnas**, no correos ni filas, y declara `delete_permitted=False`, `blocking_proven=False` y `external_systems_checked=False`. No introduce `UPDATE`, `DELETE`, `COMMIT` ni `FLUSH`.
+- **Límite importante:** el ensayo SQLite no valida aislamiento legal real, bases jurídicas, tiempos de conservación, soporte externo, integridad PG18 funcional ni ejecución de derechos en producción. El archivo de pruebas **no debe usarse en una BD productiva**; tampoco cubre contenido libre (notas, textos) ni correos compartidos con certeza de identidad.
+
+Se añade únicamente como **prueba de viabilidad del inventario previo** y como barrera contra futuros borrados por coincidencia de email. No supone aprobación de plazos, bloqueo, purga ni tratamiento real.
+
+## 4. Prioridad real y puertas de autorización
 
 **P0 de continuidad para cambios futuros:** dos copias `pg_dump` cifradas con `age`, realizadas desde Mac (11/10 y 14/10), **restauración local PostgreSQL 18 comprobada históricamente para ambas**. La última es de 14/10: antes de migrar o suprimir datos en producción, **crear un respaldo actualizado, comprobar su integridad y ensayar una restauración aislada**, con autorización específica. Mantener registro privado de dónde se conservan y cómo recuperar claves, sin imprimir o transferir datos. No se necesitan backups programados de pago para documentar la política; sí un procedimiento manual acorde con el riesgo. No ejecutar esta actuación ahora.
 
