@@ -15,10 +15,14 @@ from sec5_staging_isolation import (
 def valid():
     return {
         "RAILWAY_PROJECT_ID": PROJECT_ID,
+        "FLASK_ENV": "staging",
+        "RAILWAY_ENVIRONMENT_NAME": "staging",
+        "APP_BASE_URL": "https://fiscal-cripto-staging-staging.up.railway.app",
+        "PAYPAL_ENVIRONMENT": "sandbox",
         "RAILWAY_ENVIRONMENT_ID": STAGING_ENV_ID,
         "RAILWAY_SERVICE_ID": STAGING_SERVICE_ID,
         "DATABASE_URL": "postgresql+psycopg2://ci-user:ci-password@"
-                        + DATABASE_HOST + "/railway",
+                        + DATABASE_HOST + ":5432/railway",
         "PROCESSING_ERROR_EMAILS_ENABLED": "0",
         "SEC5_STAGING_ISOLATION": "READONLY",
         "SEC5_STAGING_PROVISION": "EXPLICIT_ONCE",
@@ -66,3 +70,9 @@ def test_staging_provision_never_imported_by_web_startup():
     root = Path(__file__).resolve().parents[1]
     for file in ("app.py", "Procfile", "bootstrap_db.py", "startup_schema_gate.py"):
         assert "sec5_staging_provision" not in (root / file).read_text(encoding="utf-8")
+
+
+def test_provision_refuses_runtime_mode(valid):
+    valid["SEC5_STAGING_DB_MODE"] = "RUNTIME"
+    with pytest.raises(ValueError):
+        validate_provision_envelope(valid)

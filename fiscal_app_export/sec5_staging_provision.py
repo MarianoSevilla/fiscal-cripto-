@@ -17,7 +17,8 @@ from psycopg2 import sql
 from sqlalchemy import create_engine
 from sqlalchemy.engine import make_url
 
-from sec5_staging_isolation import validate_envelope
+from staging_isolation import validate_staging_isolation
+from sec5_staging_isolation import STAGING_VARIABLES
 from sec5_priv_runtime_acl import grant_existing_runtime_acl
 
 DBNAME = "sec5_priv_stage_20261101"
@@ -28,7 +29,14 @@ OPT_VALUE = "EXPLICIT_ONCE"
 
 
 def validate_provision_envelope(env: dict[str, str]) -> None:
-    validate_envelope(env)
+    if validate_staging_isolation(env) is not True:
+        raise ValueError('Staging administrative connection not permitted')
+    if env.get('SEC5_STAGING_DB_MODE') not in (None, '', 'BOOTSTRAP'):
+        raise ValueError('Provisioner is not the runtime role')
+    if env.get('SEC5_STAGING_ISOLATION') != 'READONLY' or env.get('PROCESSING_ERROR_EMAILS_ENABLED') != '0':
+        raise ValueError('Staging isolation required')
+    if any(env.get(k) for k in STAGING_VARIABLES):
+        raise ValueError('External provider configuration not disabled')
     if env.get(OPT_VAR) != OPT_VALUE:
         raise ValueError("One-shot provisioning not explicitly enabled")
     password = env.get(PW_VAR, "")
