@@ -92,7 +92,42 @@ La capacidad de **estadísticas potentes, agregadas, sin seguimiento individual 
 
 **Autoridad y estados:** la respuesta «procedamos» del titular autoriza **preparar y comprobar esta propuesta**, no aprobar plazos finales, generar borrados o afectar a producción. Aprobación de criterios, implementación, cambios de permisos, fusión, despliegue y cualquier operación sobre datos reales requieren decisiones separadas. Hasta entonces se mantienen las protecciones existentes, los derechos de interesados y la obligación de evaluar cualquier solicitud real sin dilación.
 
-## 6. Criterio de aceptación de esta entrega documental
+## 6. Confirmaciones del titular (01/11/2026) y modelo recomendado
+
+**Origen de la información:** declaraciones del titular durante la revisión, **no inspección de operaciones reales ni acreditación contractual o jurídica**. Las decisiones expresas de producto están confirmadas; las recomendaciones técnicas siguientes siguen pendientes de aceptación/implementación.
+
+### 6.1. Asesoramiento, documentación y responsabilidades
+
+- **Flujo previsto:** solicitud en la plataforma → Rafael tasa la propuesta → aceptación y pago del usuario → Rafael llama al usuario y recibe directamente en su **correo profesional** los documentos que este decide entregar. El análisis y la conservación del expediente profesional ocurren **en el despacho de Rafael**; el portal no debe recibir ni guardar estos documentos.
+- Rafael es **autónomo, economista colegiado en Valencia, con seguro profesional**, y aplica sus procedimientos profesionales. Esto es coherente con que determine por sí mismo el tratamiento de los expedientes que recibe; **no demuestra automáticamente la clasificación contractual exacta de cada tratamiento ni que el portal no contenga datos personales en formularios, descripciones, estados o notas**. La web conserva su propia información de intermediación.
+- **Prohibición funcional de producto:** no activar ni permitir subida de documentos profesionales por el portal; solo se admiten CSV/Excel para el **cálculo FIFO temporal**, con su limpieza correspondiente. `ENABLE_ADVISORY_UPLOADS=false` es el valor predeterminado del código, pero **no prueba** el estado de la variable de entorno ni descarta **filas/archivos históricos** en `fiscal_advisory_files`; revisar existencia solo mediante inventario de metadatos autorizado, sin acceder a documentos.
+- La información sobre quién es responsable y qué datos recibe cada uno deberá explicarse con transparencia y reflejar el acuerdo real con el profesional.
+
+### 6.2. Modelo económico, sin operaciones de pago reales comunicadas
+
+- **Intención:** reparto 70 % Rafael / 30 % Mariano, con Stripe, por el asesoramiento; el titular confirma que **la web no ha cobrado todavía ningún servicio real**. No convertir importes de presupuesto o estados administrativos de la BD en ingresos reales comprobados.
+- **Objetivo prioritario de monetización:** cobrar por generar informes FIFO a partir de 2027. **No está implementado el pago FIFO**. No inferir que una integración Stripe técnica constituya un producto comercial activo.
+- El titular declara que **Rafael puede haber emitido o no factura**: no tratar la emisión como opcional según conveniencia. Antes de cobrar, aclarar **quién presta y factura cada concepto, quién figura como vendedor/cobrador, quién documenta la comisión**, y aplicar el Reglamento de obligaciones de facturación (RD 1619/2012, art. 2) según operación y excepciones legales. No hay cobros actuales que conciliar a partir de este hecho declarado. https://www.boe.es/buscar/act.php?id=BOE-A-2012-14696
+
+### 6.3. Informe FIFO: sin archivo documental ni envío automático de adjuntos
+
+**Recomendación técnica sometida a aceptación:** mantener la **descarga HTTPS directa al dispositivo** con enlace temporal vinculado al usuario y de un solo uso. **No enviar por defecto el PDF fiscal adjunto al correo electrónico**: evitaría el repositorio permanente en la web, pero crearía nuevas copias en el correo del destinatario y potencialmente en proveedor, carpetas de enviados o respaldos, con más destinatarios y superficie de exposición.
+
+- **Verificado en código:** `fifo_pdf_lifecycle.py` establece TTL de 300 segundos, modo privado 0600, limpieza `best-effort`, y descarga mediante `BytesIO`; `app.py:/api/descargar/<token>` comprueba sesión/usuario, emite `Cache-Control: no-store` y marca `downloaded_at`. **No puede acreditar que el navegador haya guardado físicamente el fichero, ni garantiza eliminación ante todas las caídas.**
+- **Responsabilidad de conservación del documento:** el usuario guarda su PDF y archivo CSV original en su dispositivo; la web no dispone de una biblioteca de informes. Si desea regenerarlo, volverá a importar el archivo.
+- **Cuando exista pago:** mantener **la constancia mínima del derecho adquirido**, separada de CSV/PDF. No imponer un segundo pago por una entrega fallida; las condiciones y duración de reintentos/reimportaciones deberán especificarse antes de activar el cobro. Aún **no se decide el período concreto** de ese derecho.
+- No cambiar ahora procesadores, almacenamiento, emails ni interfaz. La propuesta de envío automático por email **no está aprobada ni implementada**.
+
+### 6.4. Baja de cuenta y estadísticas: conservación agregada, no historial identificable
+
+- **Decisión expresa:** al tramitar la supresión, retirar los datos personales que ya no tengan finalidad válida, sin destruir la información necesaria para **estadísticas agregadas realmente anónimas**. Conservar pagos, operaciones y evidencias sujetos a obligaciones o reclamaciones solo cuando proceda y con accesos restringidos/bloqueo legal.
+- **Matiz esencial:** conservar todas las filas de actividad con `user_id` sustituido, importes fiscales individuales o identificadores persistentes **no equivale a anonimización**. Primero deben extraerse/validarse agregaciones útiles (generaciones, descargas, exchanges, ejercicios, fallos, tiempos, etc.) y su riesgo de reidentificación; después decidir la supresión/bloqueo individual por finalidad. El RGPD sigue aplicándose a cualquier seudónimo reversible o correlacionable.
+- **Nuevo requisito registrado para futura auditoría de estadísticas (aplazada):** **«Usuarios que eliminan su cuenta»**, al menos **total acumulado y evolución mensual**, sobre bajas confirmadas y contabilizadas una sola vez, **sin guardar email, ID de usuario o historial personal en la estadística**. Evitar doble cómputo por reintentos y grupos de tamaño que permitan reidentificación. Los datos operativos de baja o derechos tienen controles propios.
+- **No se añade una tabla ni se modifica `/stats` ahora.** Requisito documentado para la futura fase de analítica; la mejora estadística solicitada queda aplazada como antes.
+
+**Consecuencia de estas confirmaciones:** se reducen dudas sobre el *flujo funcional deseado*, pero siguen abiertos el acuerdo y reparto jurídico de responsabilidades, las filas históricas, los proveedores, la política legal definitiva y las pruebas de bloqueo/supresión. No declarar SEC5-PRIV cerrado ni utilizar estos datos para borrar producción sin autorización.
+
+## 7. Criterio de aceptación de esta entrega documental
 
 - Inventario completo de **17/17** tablas ORM, sin atribuir anonimato por mera seudonimización.
 - Una finalidad, propuesta de base jurídica, disparador de revisión, destino y excepción en cada tabla.
