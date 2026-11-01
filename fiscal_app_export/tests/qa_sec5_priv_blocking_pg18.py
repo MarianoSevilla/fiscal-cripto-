@@ -41,9 +41,13 @@ def _assert_synthetic_environment():
         version = cursor.fetchone()[0]
         if version // 10000 != 18:
             raise RuntimeError("SEC5_PRIV PILOT: only disposable PostgreSQL 18")
-        cursor.execute("SELECT inet_server_addr()::text")
-        if cursor.fetchone()[0] not in ("127.0.0.1", "::1"):
-            raise RuntimeError("SEC5_PRIV PILOT: unexpected database host")
+        # GitHub Actions maps runner 127.0.0.1:5432 to the container's
+        # non-loopback bridge address. inet_server_addr() therefore reflects
+        # Docker networking, not an unsafe remote connection. Keep libpq's
+        # *destination* fixed to 127.0.0.1 above; never use DATABASE_URL.
+        cursor.execute("SELECT current_database(), current_user")
+        if cursor.fetchone() != (DATABASE, DB_USER):
+            raise RuntimeError("SEC5_PRIV PILOT: unexpected CI database identity")
 
 
 def setup_synthetic_store():
