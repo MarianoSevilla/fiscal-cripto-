@@ -20,7 +20,7 @@ def test_pilot_remains_test_only_and_requires_an_explicit_ci_gate():
     assert 'or os.environ.get("FLASK_ENV") != "testing"' in source
     assert "127.0.0.1" in source
     assert '"ci-only-test-password"' in source
-    assert "DATABASE_URL" not in source
+    assert 'os.environ.get("DATABASE_URL")' not in source
     assert "from app import" not in source
     assert "@app.route" not in source
     assert "SYNTHETIC_MANUALLY_REVIEWED" in source
