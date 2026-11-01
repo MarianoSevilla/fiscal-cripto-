@@ -51,20 +51,21 @@ _BOOLEAN_FIELDS = (
     "public_object_owner_membership", "public_schema_create",
     "database_schema_create", "privileged_set_role",
 )
+# The third column is the UNSAFE value, not the permitted baseline.
 _RISK_FLAGS = (
-    ("same_session_role", "set_role_already_active", True),
-    ("rolcanlogin", "not_a_login_role", True),
-    ("rolsuper", "superuser", False),
-    ("rolbypassrls", "bypass_rls", False),
-    ("rolcreaterole", "create_role", False),
-    ("rolcreatedb", "create_database", False),
-    ("rolreplication", "replication", False),
-    ("database_owner_membership", "database_owner_membership", False),
-    ("public_schema_owner_membership", "public_schema_owner_membership", False),
-    ("public_object_owner_membership", "public_object_owner_membership", False),
-    ("public_schema_create", "public_schema_create", False),
-    ("database_schema_create", "database_schema_create", False),
-    ("privileged_set_role", "privileged_set_role", False),
+    ("same_session_role", "set_role_already_active", False),
+    ("rolcanlogin", "not_a_login_role", False),
+    ("rolsuper", "superuser", True),
+    ("rolbypassrls", "bypass_rls", True),
+    ("rolcreaterole", "create_role", True),
+    ("rolcreatedb", "create_database", True),
+    ("rolreplication", "replication", True),
+    ("database_owner_membership", "database_owner_membership", True),
+    ("public_schema_owner_membership", "public_schema_owner_membership", True),
+    ("public_object_owner_membership", "public_object_owner_membership", True),
+    ("public_schema_create", "public_schema_create", True),
+    ("database_schema_create", "database_schema_create", True),
+    ("privileged_set_role", "privileged_set_role", True),
 )
 
 
