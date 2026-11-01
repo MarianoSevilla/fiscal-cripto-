@@ -26,6 +26,9 @@ def test_pilot_remains_test_only_and_requires_an_explicit_ci_gate():
     assert "SYNTHETIC_MANUALLY_REVIEWED" in source
     assert "FOR UPDATE" in source
     assert "SET LOCAL ROLE" in source
+    assert "assert_authenticated_boundary((a, b, c))" in source
+    assert "CREATE ROLE {} LOGIN PASSWORD {}" in source
+    assert "expect_login_denied(" in source
     assert "errors.InsufficientPrivilege" in source
     assert "inject_failure=True" in source
     assert "teardown_synthetic_store()" in source

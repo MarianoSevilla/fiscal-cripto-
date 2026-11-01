@@ -21,6 +21,11 @@ APP_SCHEMA = "sec5_priv_pilot_app"
 VAULT_SCHEMA = "sec5_priv_pilot_vault"
 APP_ROLE = "sec5_priv_pilot_runtime"
 LEGAL_ROLE = "sec5_priv_pilot_exception"
+# Short-lived, independently authenticated PostgreSQL logins in CI only.
+APP_LOGIN = "sec5_priv_pilot_app_login"
+LEGAL_LOGIN = "sec5_priv_pilot_exception_login"
+APP_LOGIN_PASSWORD = "synthetic-ci-runtime-login-only"
+LEGAL_LOGIN_PASSWORD = "synthetic-ci-exception-login-only"
 
 
 def connect():
@@ -29,6 +34,32 @@ def connect():
         user=DB_USER, password=CI_PASSWORD, connect_timeout=5,
         options="-c statement_timeout=5000",
     )
+
+def connect_as_login(role_name, password):
+    """Open a real PostgreSQL session as a restricted synthetic LOGIN role."""
+    return psycopg2.connect(
+        host=HOST, port=5432, dbname=DATABASE,
+        user=role_name, password=password, connect_timeout=5,
+        options="-c statement_timeout=5000",
+    )
+
+
+def read_as_login(role_name, password, statement, parameters=()):
+    conn = connect_as_login(role_name, password)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(statement, parameters)
+            return cur.fetchall() if cur.description is not None else []
+    finally:
+        conn.close()
+
+
+def expect_login_denied(role_name, password, statement, parameters=()):
+    try:
+        read_as_login(role_name, password, statement, parameters)
+    except errors.InsufficientPrivilege:
+        return
+    raise AssertionError("authenticated role obtained forbidden SQL privilege")
 
 
 def _assert_synthetic_environment():
@@ -54,6 +85,18 @@ def setup_synthetic_store():
     with connect() as conn, conn.cursor() as cur:
         cur.execute(sql.SQL("CREATE ROLE {} NOLOGIN").format(sql.Identifier(APP_ROLE)))
         cur.execute(sql.SQL("CREATE ROLE {} NOLOGIN").format(sql.Identifier(LEGAL_ROLE)))
+        # These credentials are fixed, fictitious and used solely against
+        # the ephemeral PostgreSQL 18 service on the CI runner.
+        for role_name, password in (
+            (APP_LOGIN, APP_LOGIN_PASSWORD),
+            (LEGAL_LOGIN, LEGAL_LOGIN_PASSWORD),
+        ):
+            cur.execute(sql.SQL("CREATE ROLE {} LOGIN PASSWORD {}").format(
+                sql.Identifier(role_name), sql.Literal(password)))
+        cur.execute(sql.SQL("GRANT {} TO {}").format(
+            sql.Identifier(APP_ROLE), sql.Identifier(APP_LOGIN)))
+        cur.execute(sql.SQL("GRANT {} TO {}").format(
+            sql.Identifier(LEGAL_ROLE), sql.Identifier(LEGAL_LOGIN)))
         cur.execute(sql.SQL("CREATE SCHEMA {}").format(sql.Identifier(APP_SCHEMA)))
         cur.execute(sql.SQL("CREATE SCHEMA {}").format(sql.Identifier(VAULT_SCHEMA)))
         cur.execute(sql.SQL("REVOKE ALL ON SCHEMA {} FROM PUBLIC").format(sql.Identifier(VAULT_SCHEMA)))
@@ -189,10 +232,61 @@ def assert_private_boundary(ids):
         raise AssertionError("exception reader can mutate retained evidence")
 
 
+def assert_authenticated_boundary(ids):
+    """Test real non-superuser authentication, not only SET LOCAL ROLE."""
+    a = ids[0]
+    app_identity = read_as_login(APP_LOGIN, APP_LOGIN_PASSWORD, """
+        SELECT current_user, session_user, rolsuper, rolcreaterole,
+               rolcreatedb, rolbypassrls
+        FROM pg_roles WHERE rolname = current_user
+    """)
+    assert app_identity == [(APP_LOGIN, APP_LOGIN, False, False, False, False)]
+    legal_identity = read_as_login(LEGAL_LOGIN, LEGAL_LOGIN_PASSWORD, """
+        SELECT current_user, session_user, rolsuper, rolcreaterole,
+               rolcreatedb, rolbypassrls
+        FROM pg_roles WHERE rolname = current_user
+    """)
+    assert legal_identity == [(LEGAL_LOGIN, LEGAL_LOGIN, False, False, False, False)]
+
+    ordinary = read_as_login(APP_LOGIN, APP_LOGIN_PASSWORD, sql.SQL("""
+        SELECT email, message, status FROM {}.contacts WHERE id = %s
+    """).format(sql.Identifier(APP_SCHEMA)), (a,))
+    assert ordinary == [(None, None, "blocked")]
+
+    exceptional = read_as_login(LEGAL_LOGIN, LEGAL_LOGIN_PASSWORD, sql.SQL("""
+        SELECT email, message FROM {}.blocked_contact_evidence WHERE id = %s
+    """).format(sql.Identifier(VAULT_SCHEMA)), (a,))
+    assert exceptional == [("subject_a@example.invalid", "Synthetic test message A")]
+
+    expect_login_denied(APP_LOGIN, APP_LOGIN_PASSWORD, sql.SQL("""
+        SELECT email FROM {}.blocked_contact_evidence
+    """).format(sql.Identifier(VAULT_SCHEMA)))
+    expect_login_denied(LEGAL_LOGIN, LEGAL_LOGIN_PASSWORD, sql.SQL("""
+        UPDATE {}.blocked_contact_evidence SET message = %s
+        WHERE id = %s RETURNING id
+    """).format(sql.Identifier(VAULT_SCHEMA)), ("forbidden", a))
+    expect_login_denied(LEGAL_LOGIN, LEGAL_LOGIN_PASSWORD, sql.SQL("""
+        SELECT email FROM {}.contacts
+    """).format(sql.Identifier(APP_SCHEMA)))
+    # Neither authenticated session may promote itself to owner/superuser
+    # or assume the other restricted role.
+    for login, password, forbidden_role in (
+        (APP_LOGIN, APP_LOGIN_PASSWORD, LEGAL_ROLE),
+        (LEGAL_LOGIN, LEGAL_LOGIN_PASSWORD, APP_ROLE),
+        (APP_LOGIN, APP_LOGIN_PASSWORD, DB_USER),
+        (LEGAL_LOGIN, LEGAL_LOGIN_PASSWORD, DB_USER),
+    ):
+        expect_login_denied(
+            login, password, sql.SQL("SET ROLE {}").format(sql.Identifier(forbidden_role))
+        )
+
+
 def teardown_synthetic_store():
     with connect() as conn, conn.cursor() as cur:
         cur.execute(sql.SQL("DROP SCHEMA IF EXISTS {} CASCADE").format(sql.Identifier(APP_SCHEMA)))
         cur.execute(sql.SQL("DROP SCHEMA IF EXISTS {} CASCADE").format(sql.Identifier(VAULT_SCHEMA)))
+        cur.execute(sql.SQL("DROP ROLE IF EXISTS {}").format(sql.Identifier(APP_LOGIN)))
+        cur.execute(sql.SQL("DROP ROLE IF EXISTS {}").format(sql.Identifier(LEGAL_LOGIN)))
         cur.execute(sql.SQL("DROP ROLE IF EXISTS {}").format(sql.Identifier(APP_ROLE)))
         cur.execute(sql.SQL("DROP ROLE IF EXISTS {}").format(sql.Identifier(LEGAL_ROLE)))
 
@@ -234,6 +328,7 @@ def main():
             a, manual_decision="SYNTHETIC_MANUALLY_REVIEWED"
         ) is False  # Idempotent retry
         assert_private_boundary((a, b, c))
+        assert_authenticated_boundary((a, b, c))
         try:
             block_synthetic_contact(9999, manual_decision="SYNTHETIC_MANUALLY_REVIEWED")
         except LookupError:
