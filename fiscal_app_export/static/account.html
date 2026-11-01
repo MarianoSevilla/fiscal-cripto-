@@ -115,6 +115,7 @@
   <div class="danger-zone">
     <h2 class="section-title">Zona de peligro</h2>
     <p class="danger-desc">Al eliminar tu cuenta, esta se desactivará y se retirarán tus principales datos de identificación. Algunos registros del servicio pueden conservarse según nuestra <a href="/privacidad#conservacion">Política de privacidad</a>. Esta acción no se puede deshacer.</p>
+    <p class="danger-desc">Si deseas solicitar también la supresión de otros datos personales, puedes escribir a <a href="mailto:colab.marianosevilla@gmail.com">colab.marianosevilla@gmail.com</a>. La solicitud se revisa por separado, teniendo en cuenta las obligaciones de conservación aplicables.</p>
     <button class="btn btn-danger" id="btnDeleteAccount">Eliminar mi cuenta</button>
   </div>
     </div>
@@ -125,7 +126,9 @@
 <div class="del-backdrop" id="deleteModal" role="dialog" aria-modal="true" aria-labelledby="delTitle" aria-describedby="delHelp">
   <div class="del-dialog">
     <h2 class="del-title" id="delTitle">Eliminar cuenta</h2>
-    <p class="apple-sr-only" id="delHelp">Esta acción requiere confirmar tu identidad y no se puede deshacer.</p>
+    <p class="apple-sr-only" id="delHelp">Esta acción requiere confirmar tu identidad, desactiva tu cuenta y no supone la supresión de todos los registros relacionados.</p>
+
+    <p class="del-desc">Se desactivará el acceso y se retirarán los principales datos de identificación. Pueden conservarse otros registros del servicio que deban revisarse por separado.</p>
 
     <!-- Usuarios con contraseña -->
     <div id="delPanelPassword">

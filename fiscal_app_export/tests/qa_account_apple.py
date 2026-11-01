@@ -93,7 +93,7 @@ def run_account_apple(origin, cookie_name, cookie_value):
                         assert page.locator("#infoVerified").is_visible()
                         assert page.locator("#infoPlan").inner_text() == "Free"
                         # 01-B final: deletion is anonymization, not erasure of all records.
-                        retention_notice = page.locator(".danger-zone .danger-desc")
+                        retention_notice = page.locator(".danger-zone .danger-desc").first
                         assert retention_notice.inner_text() == (
                             "Al eliminar tu cuenta, esta se desactivará y se retirarán tus principales "
                             "datos de identificación. Algunos registros del servicio pueden conservarse "
@@ -104,6 +104,7 @@ def run_account_apple(origin, cookie_name, cookie_value):
                         )
                         assert retention_link.get_attribute("href") == "/privacidad#conservacion"
                         assert "borrarán permanentemente todos tus datos" not in retention_notice.inner_text()
+                        assert "solicitar también la supresión de otros datos personales" in page.locator(".danger-zone .danger-desc").nth(1).inner_text()
                         assert page.locator("#nameInput").input_value() == "Persona ficticia"
                         assert page.locator("#nifInput").input_value() == "12345678Z"
                         assert page.locator("#sectionPassword").is_visible() == (not google)

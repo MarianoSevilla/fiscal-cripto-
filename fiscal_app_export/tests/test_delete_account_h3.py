@@ -192,7 +192,8 @@ def test_pw_user_contrasena_correcta(client, _app):
                     json={"password": "Correct-Pass-123!"},
                     content_type="application/json")
     assert r.status_code == 200, r.get_json()
-    assert r.get_json().get("message") == "Cuenta eliminada correctamente."
+    assert r.get_json().get("message") == ("Cuenta desactivada y datos principales de identificación retirados. "
+                                           "Otros registros del servicio pueden conservarse.")
     assert not _user_is_active(_app, uid)
     with _app.app_context():
         db.session.remove()
@@ -270,7 +271,8 @@ def test_oauth_token_valido_elimina_cuenta(client, _app):
                     json={"token": token},
                     content_type="application/json")
     assert r.status_code == 200, r.get_json()
-    assert r.get_json().get("message") == "Cuenta eliminada correctamente."
+    assert r.get_json().get("message") == ("Cuenta desactivada y datos principales de identificación retirados. "
+                                           "Otros registros del servicio pueden conservarse.")
     assert not _user_is_active(_app, uid)
     _cleanup(_app, uid)
 
@@ -365,6 +367,8 @@ def test_deletion_does_not_purge_related_fiscal_or_diagnostic_records(client, _a
     _login(client, address, "Privacy-Only-123!")
     response = client.post("/api/delete-account", json={"password": "Privacy-Only-123!"})
     assert response.status_code == 200, response.get_json()
+    assert "Otros registros del servicio pueden conservarse" in response.get_json()["message"]
+    assert "eliminada correctamente" not in response.get_json()["message"]
     with _app.app_context():
         db.session.remove()
         assert db.session.get(User, uid).is_active is False
@@ -379,3 +383,16 @@ def test_deletion_does_not_purge_related_fiscal_or_diagnostic_records(client, _a
         db.session.commit()
         db.session.remove()
     _cleanup(_app, uid)
+
+
+def test_account_html_explains_independent_erasure_request():
+    """The account UI must not present deactivation as complete erasure."""
+    from pathlib import Path
+    page = (Path(__file__).resolve().parents[1] / "static" / "account.html").read_text(
+        encoding="utf-8"
+    )
+    assert 'href="/privacidad#conservacion"' in page
+    assert 'href="mailto:colab.marianosevilla@gmail.com"' in page
+    assert "solicitar también la supresión de otros datos personales" in page
+    assert "no supone la supresión de todos los registros relacionados" in page
+    assert "Se desactivará el acceso" in page
