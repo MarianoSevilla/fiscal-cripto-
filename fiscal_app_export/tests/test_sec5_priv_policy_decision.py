@@ -69,3 +69,22 @@ def test_owner_confirmations_keep_documents_outside_platform_and_analytics_defer
         "No se añade una tabla ni se modifica",
     ):
         assert required in policy
+
+
+def test_advisory_contract_and_connect_are_not_claimed_to_be_live():
+    """Owner-provided contract/payment facts must not imply active money movement."""
+    policy = _policy()
+    for required in (
+        "un acuerdo verbal",
+        "Nunca se ha utilizado la web para almacenar documentación",
+        "responsables independientes",
+        "no de un reparto ya implantado",
+        "70 % a la cuenta de Rafael y 30 % a la de Mariano",
+        "direct charges",
+        "application_fee_amount",
+        "destination charges",
+        "no ofrece depósitos ni cuentas de ahorro",
+        "No configurar ni activar pagos/transferencias",
+        "la web no ha cobrado todavía ningún servicio real",
+    ):
+        assert required in policy
