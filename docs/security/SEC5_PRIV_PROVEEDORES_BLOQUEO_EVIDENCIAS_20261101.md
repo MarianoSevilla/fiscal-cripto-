@@ -1,0 +1,75 @@
+# SEC5-PRIV-011/012/013 — Proveedores, transferencias y bloqueo/supresión: evidencia y diseño mínimo
+
+**Estado: investigación documental y contrato técnico de diseño; NO aprobado para operar sobre datos.**  
+**Fecha de contraste:** 01/11/2026. **Base del repositorio:** `main@916d97c74df1657fe2f28cf7f2eb85ff0d52535f`.  
+**Alcance:** Railway production, Gmail de soporte, Resend, Stripe y datos de la plataforma. No se consultaron expedientes, filas personales, buzones ni credenciales; no se modificó producción, base de datos, pagos, estadísticas ni permisos. No supone conformidad RGPD certificada.
+
+## 1. Resultado por proveedor: hecho comprobado vs obligación pendiente
+
+| Sistema | Hecho comprobado en fuente primaria / conector | Pendiente concreto y tratamiento conservador |
+|---|---|---|
+| **Railway — aplicación y PostgreSQL** | Inventario de Railway production 01/11: **ambos servicios en `us-east4-eqdc4a` (Virginia, EE. UU.)**. PostgreSQL: volumen persistente `postgres-volume` **5.000 MB**, ruta `/var/lib/postgresql/data`. Web: **sin volumen persistente**; **sin buckets**; sin cambios staged. Documentación Railway identifica Virginia para ese ID de región. El [DPA de Railway](https://railway.com/legal/dpa) describe rol de encargado y SCC/transferencias desde EEE a EE. UU.; contempla un proceso de firma DocuSign. | Comprobar si el **DPA efectivo del cliente** está firmado/aceptado y contiene garantías adecuadas. No dar por acreditada su ejecución solo por existir la página. La región US no implica por sí sola incumplimiento ni obliga automáticamente a migrar a Europa. Decidir migración solo tras evaluar garantías, coste, continuidad y riesgo. |
+| **Railway — copias y restauración** | La [guía oficial de backups](https://docs.railway.com/volumes/backups) permite programación diaria (conservación 6 días), semanal (27) y mensual (89), más manuales; restaurar puede dejar **un volumen anterior desmontado**, no necesariamente destruido. La [guía PITR](https://docs.railway.com/volumes/point-in-time-recovery) describe un sistema **opcional** de recuperación con bucket. **La ausencia de bucket en el entorno no demuestra ausencia de cualquier copia interna o externa.** | El conector disponible **no ofrece inventario de backups existentes o su configuración por volumen**. Verificar en la pestaña *Backups* del volumen y otros respaldos externos; documentar programaciones reales, acceso, caducidad, pruebas de recuperación y tratamiento de datos que reaparezcan tras restaurar. **No afirmar que hay backups ni que no los hay**. No crear, borrar ni restaurar volúmenes en esta fase. |
+| **Resend — correo de la plataforma** | [DPA](https://resend.com/legal/dpa) actualizado 31/12/2025: correo, destinatarios, contenido y adjuntos son datos procesados. [Resumen oficial RGPD](https://resend.com/security/gdpr): en **Free, Pro y Scale** correos/logs **30 días**, backups **7 días**, supresión restante dentro de **90 días desde cierre de cuenta**; Enterprise personalizable. [Seguridad](https://resend.com/security): **almacenamiento en EE. UU.**, región de envío europea **no significa residencia UE**, SCC/DPF publicados. | Confirmar **plan contratado** y textos/condiciones efectivas de cuenta, si el DPA se considera formalizado y cómo solicitar borrado anticipado de un adjunto cuando proceda. **30 días del proveedor no equivalen al plazo de un fichero en Gmail**; tampoco garantiza borrado simultáneo de todas las copias. No enviar por defecto PDFs/CSV a usuarios: minimización. |
+| **Gmail — buzón de soporte** | El buzón operativo declarado es `colab.marianosevilla@gmail.com`, dirección con dominio de Gmail, **no se ha acreditado que sea Google Workspace**. [Ayuda Gmail](https://support.google.com/mail/answer/7401?hl=es): mensajes eliminados van a Papelera y, sin intervención, se borran de ella pasados **30 días**. [Google retención](https://policies.google.com/technologies/retention): eliminación total de sistemas suele tardar alrededor de **2 meses** y copias cifradas podrían retenerse hasta **6 meses** (descripción general, no SLA específico de cada email). | La etiqueta «Papelera» **no equivale a borrado universal inmediato**. Comprobar condiciones aplicables al uso profesional de una **cuenta Gmail de consumo**: no atribuirle automáticamente el [Cloud DPA específico de Workspace](https://knowledge.workspace.google.com/admin/compliance/privacy-compliance-and-records-for-google-workspace-and-cloud-identity). Para diagnósticos voluntarios mantener el proceso operativo ya acordado (revisiones ≤30 días y antes si se resuelve), separado de los tiempos internos de Google. No acceder ni borrar correo real sin encargo/autorización específica. |
+| **Stripe — pagos aún sin operar en la web** | [DPA Stripe, 28/09/2026](https://stripe.com/legal/dpa): Stripe puede actuar **como responsable independiente** de determinadas finalidades y **como encargado** de otras. [Centro de privacidad](https://stripe.com/gb/legal/privacy-center): excepciones de retención por verificación, AML, fraude, contabilidad y obligaciones. El titular afirma **cero cobros reales** de la plataforma. **Stripe Connect 70/30 es solo diseño futuro, no prestación activa verificada**. | Antes de cobrar, determinar vendedor/cobrador, factura de Rafa y comisión de Mariano, cuenta conectada, asignación de comisiones, reembolsos y disputas. **No imponer a Stripe borrado íntegro** por baja de una cuenta local, ni conservar en PostgreSQL datos innecesarios solo porque Stripe los conserva. No tocar Stripe ni presuponer plazos universales para cada tipo de dato. |
+| **Rafael Ramos — asesor profesional independiente** | Declaración del titular: acuerdo **verbal**; profesional autónomo/colegiado, con seguro; tras aceptar y pagar, **recibe directamente en su correo profesional** documentación y la gestiona en su despacho. El titular indica que **nunca se almacenaron documentos profesionales** en la web. En Railway production `ENABLE_ADVISORY_UPLOADS` **no figura entre las variables**, y el código tiene `false` por defecto. | Formalizar roles de **responsables independientes por finalidad** si ambos deciden fines y medios; no afirmar relación de encargado art. 28 RGPD sin evidencia. El portal **sí guarda** formularios, relatos del caso, estados y notas en `fiscal_advisory_requests`; los modelos `fiscal_advisory_files` siguen definidos. No certificar ausencia histórica a partir de la declaración ni inspeccionar ficheros de clientes sin autorización. |
+
+### Resoluciones que NO se desprenden de la evidencia
+
+- **No** afirmar que Railway hace automáticamente copias diarias de esta base de datos: el proveedor permite configurarlas, pero no se ha observado su activación.
+- **No** afirmar residencia de datos en la UE por tener usuarios españoles o elegir región europea de salida de emails: Railway web y PG están en EE. UU.; Resend indica almacenamiento en EE. UU.
+- **No** confundir las condiciones publicadas de un proveedor con la **contratación efectiva** o el plan de la cuenta. En particular, verificar documentalmente el DPA de Railway y el ámbito contractual de Gmail/Google.
+- **No** tratar la información de pago como si procediera de cobros reales ni usar un registro `fiscal_advisory_files` como prueba de documento almacenado.
+- No abrir auditoría ni cambios de panel de estadísticas en esta fase; la nueva métrica «usuarios que eliminan su cuenta» sigue anotada para esa futura fase.
+
+## 2. Modelo mínimo de supresión y bloqueo — sin ejecución
+
+### Regla principal
+
+**Tres vías, no una purga global:**
+
+**A. Supresión/minimización ordinaria** cuando ha finalizado la finalidad y no hay excepción: eliminar columnas o filas personales y referencias suprimibles, preservando integridad de FKs y solo agregados de verdad anónimos. El registro de actividad con `user_id` persistente, emails, detalles económicos o huellas enlazables **no** se convierte en anónimo por cambiar `users.email`.
+
+**B. Conservación operativa justificada** mientras existe prestación, ticket activo, derecho de descarga comprado, tratamiento de consentimiento/oposición, cargo pendiente, contracargo, reembolso o petición de derechos. Restringir acceso por rol y finalidad, pero **no declarar legalmente bloqueado** un expediente operativo.
+
+**C. Bloqueo legal efectivo** cuando proceda conforme al [artículo 32 LOPDGDD](https://www.boe.es/buscar/act.php?id=BOE-A-2018-16673): identificar y reservar datos, impedir su consulta, tratamiento y visualización ordinarios, y permitir únicamente puesta a disposición de las autoridades indicadas por posibles responsabilidades durante prescripción; destruir después. La norma prevé **copia segura con evidencia de autenticidad, fecha y no manipulación** cuando el bloqueo directo no sea posible o desproporcionado. `archived`, `resolved`, `is_active=False` y un booleano `blocked` sin aislamiento no bastan.
+
+### Contrato de implementación posterior, por orden
+
+1. **Solicitud identificada** con fecha UTC, verificación proporcionada de identidad y referencias previas a la anonimización. No recolectar nueva documentación fiscal ni introducir un sistema documental. Una solicitud por nombre ambiguo no permite borrar registros ajenos.
+2. **Inventario en modo lectura/dry-run** sobre las **17 tablas ORM**, otros emails copiados sin FK y referencias a Stripe/Gmail/Resend. Diferenciar estado por finalidad y presencia de evidencias. El resultado debe minimizar identidades en el propio informe de revisión y no exponerse al usuario ni al panel corriente.
+3. **Decisión manual motivada** para el bajo volumen actual, antes de automatizar nada: `suprimir`, `mantener_operativo`, `bloquear_art32`, `revisión_especial`. La opción seleccionada debe citar causa, responsable, plazo/revisión y estado financiero. No usar solo «han pasado N días».
+4. **Aislamiento verificable** de lo bloqueado de la aplicación ordinaria. Estrategia técnica a evaluar: separar los justificantes mínimos en almacén de acceso restringido (p. ej. esquema/tabla de bloqueo con rol de DB separado y sin exposición HTTP), o usar **copia segura** en los casos permitidos por art. 32. No basta un filtro que pueda saltarse una ruta admin, CSV, API, plantilla, tarea programada o una exportación. Evitar crear una segunda base/servicio si el aislamiento puede acreditarse con menos complejidad. **No migración ni nuevo rol todavía.**
+5. **Actuación idempotente** sobre datos efectivamente suprimibles: probar integridad `user_id`, cascadas, claves `RESTRICT` de S01/Stripe, ficheros reales (si los hubiera), estados `pending`, historial de consentimiento/oposición. Errores de mitad de proceso deben conservar un estado recuperable sin inventar que la eliminación terminó.
+6. **Backups y restauración:** las copias se sujetan a acceso restringido, caducidad efectiva y procedimiento de restauración que impida reintroducir datos cuya supresión ya fue ejecutada (registro mínimo de supresiones/excepciones y reconciliación antes de reabrir acceso). No es necesario destruir todo el backup para cada petición, pero sí documentar cómo se cumple el derecho según las obligaciones que apliquen.
+7. **Pruebas con datos sintéticos y PostgreSQL 18**, luego revisión adversarial. No leer ni modificar filas productivas para validar un algoritmo no probado.
+
+### Aceptación negativa imprescindible
+
+| Caso sintético | Resultado obligatorio |
+|---|---|
+| A solicita supresión, B mantiene igual email histórico/identificador parcial ambiguo | **Nunca** eliminar ni bloquear datos de B |
+| Cuenta de A desactivada y `processing_errors.email` sigue identificando a A | El procedimiento **detecta el duplicado**; no afirma supresión integral |
+| `fifo_reports.user_id` conserva ganancias/pérdidas por ejercicio | No declararlas anónimas; destino sujeto a finalidad, evidencia e integridad |
+| Solicitud asesoramiento con cobro incierto o reembolso abierto | No borrar pruebas de pago ni romper claves de idempotencia/cadenas S01 |
+| Recurso con consentimiento forzado histórico | No convertir `marketing_consent=True` antiguo en permiso de publicidad |
+| Expediente bloqueado consultado por web/admin/API/exportaciones/campañas | No visible/usable por operaciones ordinarias; acceso excepcional limitado y auditado |
+| Borrado externo Gmail/Resend/Stripe devuelve error o resultado parcial | No registrar supresión universal ni ocultar el fallo; conservar obligación de reintento/revisión |
+| PostgreSQL restaura backup anterior a la petición de supresión | No servir datos restaurados hasta la reconciliación de supresiones/bloqueos |
+| Usuario vuelve a importar CSV para regenerar FIFO legítimamente | No rehidratar datos antiguos suprimidos ni crear cobro duplicado en producto de pago (cuando exista) |
+| Reintento técnico de la misma supresión | Idempotente; no duplicar operaciones ni perder evidencia de la decisión |
+
+**Sin estadística nueva:** conservar agregados auténticamente anónimos tras una baja, evitando identificadores persistentes; esta fase **no implementa** la futura métrica de cuentas eliminadas.
+
+## 3. Prioridad real y puertas de autorización
+
+**P0 de configuración/evidencia (solo lectura):** comprobar si el volumen PostgreSQL tiene alguna programación de backups o PITR y documentar garantía de restauración. Sin prueba, tampoco afirmar protección operativa frente a pérdida de DB. No hacer cambios para «arreglarlo» sin autorización explícita.
+
+**P1 contractual:** constatar si Railway DPA/SCC están realmente incorporados/firmados en la cuenta; aclarar si el buzón `@gmail.com` es de consumo y qué régimen le corresponde; verificar plan Resend y condiciones aplicables. **No imponer migración internacional ni compra de servicio sin análisis de proporcionalidad.**
+
+**P1 funcional:** aprobar las condiciones por finalidad del documento [SEC5_PRIV_POLITICA_PARA_APROBACION_20261101.md](SEC5_PRIV_POLITICA_PARA_APROBACION_20261101.md), diseñar bloqueo real y supresión sobre ejemplos sintéticos, incluidas las tablas con emails duplicados.
+
+**P2 antes de pagos:** contrato con Rafa, información de responsables, facturación/Stripe Connect, derechos de acceso FIFO comprado. No reactivar cobros por trabajo de privacidad.
+
+**Límites:** Esta entrega **no confirma backups habilitados ni DPA firmados**, no ejecuta supresiones, no realiza consulta de datos de usuarios, no cambia permisos, no modifica la política pública, no fusiona, no despliega y **no declara cerrada la fase SEC5-PRIV-011/012/013**. Aplicar cualquier medida deberá tener un plan de pruebas y autorización separada.
