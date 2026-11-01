@@ -16,3 +16,9 @@ A passing preflight is **not a substitute** for a separately validated staging l
 **Scope of this code:** zero SQL DDL, zero role changes, zero external API calls, zero changes to the app runtime configuration. The separate staged Railway changes (provider vars blank, source SHA pinned, preDeploy command) must be reviewed as one patch before accepting a staging deployment. If the database DSN does not match the expected host, the deployment must fail closed.
 
 **Follow-up:** after successful, evidence-backed staging isolation, provision a separate staging SQL LOGIN using approved isolated administrative access; validate permission denials and application flows before changing Flask's staging DSN. No change to production or PR merge under this task.
+
+## Actualización operativa: aislamiento PASS, arranque NO-GO (TABLES)
+
+El primer despliegue de staging `2fa108b6-2707-4eac-a931-e40943669ed2` ejecutó la comprobación `SEC5 STAGING ISOLATION: PASS (PostgreSQL18, read-only, staging-only hostname, providers disabled, superuser=on)`. Acto seguido, el arranque Flask falló de forma controlada con `S01 G04 STARTUP: NO-GO (TABLES; details protected)`. **No se ha creado ningún rol, ejecutado DDL ni migración**. La conexión de staging aún es superusuario y el despliegue anterior permanece registrado como SUCCESS.
+
+Para investigar la ausencia de tablas sin tocar datos, `sec5_staging_schema_inventory.py` exige exactamente la misma puerta de aislamiento y consulta exclusivamente `information_schema`/catálogo y `alembic_version` dentro de `SET TRANSACTION READ ONLY`, siempre con `rollback`. Solo imprime nombres de tablas ORM que faltan, número de tablas y revisión Alembic. **No ejecutar `bootstrap_db.py` o `db.create_all` sin decidir una estrategia de datos staging tras examinar este inventario.**
