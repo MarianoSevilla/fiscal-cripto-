@@ -62,7 +62,7 @@ def test_owner_confirmations_keep_documents_outside_platform_and_analytics_defer
         "fiscal_advisory_files",
         "la web no ha cobrado todavía ningún servicio real",
         "No enviar por defecto el PDF fiscal adjunto",
-        "no está implementado el pago FIFO",
+        "No está implementado el pago FIFO",
         "Usuarios que eliminan su cuenta",
         "total acumulado y evolución mensual",
         "sin guardar email, ID de usuario o historial personal",
