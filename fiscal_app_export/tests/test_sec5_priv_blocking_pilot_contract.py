@@ -52,7 +52,7 @@ def test_pilot_document_explicitly_excludes_real_deletion_and_production():
         "no activa purgas",
         "17 tablas",
         "no hay motor de borrado",
-        "no se han leído datos personales",
+        "ni se han leído datos personales",
         "solo demostrará aislamiento",
         "No acredita cumplimiento jurídico integral",
         "Prohibido sin autorización independiente",
