@@ -16,7 +16,9 @@ def test_provider_document_does_not_invent_production_backups_or_signed_dpa():
         "sin buckets",
         "no demuestra ausencia de cualquier copia",
         "no ofrece inventario de backups",
-        "No afirmar que hay backups ni que no los hay",
+        "dos copias de seguridad manuales",
+        "no se utilizan backups automáticos",
+        "no prueba recuperabilidad",
         "DPA efectivo del cliente",
         "cuenta Gmail de consumo",
         "Free, Pro y Scale",
@@ -41,7 +43,7 @@ def test_blocking_document_preserves_exceptions_and_avoids_misleading_flags():
         "idempotente",
         "No es necesario destruir todo el backup",
         "No migración ni nuevo rol todavía",
-        "No se ha observado su activación",
+        "no usa copias automáticas",
         "no declara cerrada la fase",
     ):
         assert required.lower() in note.lower(), required
