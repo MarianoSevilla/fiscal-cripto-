@@ -40,13 +40,35 @@ def _run_isolated(command: str, database_url: str, original: dict[str, str]) -> 
     env = dict(original)
     env["DATABASE_URL"] = database_url
     # External provider credentials are already checked as empty by the gate.
+    # A child failure can contain DB credentials in its normal traceback.
+    # The only emitted diagnostics are an exception CLASS, optional SQLSTATE,
+    # and source module/line: never error messages, DSNs or stdout.
+    wrapper = (
+        "import sys, traceback\\n"
+        "try:\\n"
+        "    exec(" + repr(command) + ")\\n"
+        "except BaseException as exc:\\n"
+        "    frames = traceback.extract_tb(exc.__traceback__)\\n"
+        "    last = frames[-1] if frames else None\\n"
+        "    origin = getattr(exc, 'orig', None)\\n"
+        "    code = getattr(origin, 'pgcode', None) or 'none'\\n"
+        "    where = (last.filename.rsplit('/', 1)[-1] if last else 'none')\\n"
+        "    line = last.lineno if last else 0\\n"
+        "    print('SEC5 CHILD SAFE FAILURE: class=' + type(exc).__name__ + "
+        "' cause=' + (type(exc.__cause__).__name__ if exc.__cause__ else 'none') "
+        "+ ' sqlstate=' + str(code) + ' at=' + where + ':' + str(line), flush=True)\\n"
+        "    sys.exit(1)\\n"
+    )
     result = subprocess.run(
-        [sys.executable, "-c", command],
+        [sys.executable, "-c", wrapper],
         cwd=Path(__file__).resolve().parent,
-        env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        timeout=140, check=False,
+        env=env, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+        timeout=140, check=False, text=True,
     )
     if result.returncode:
+        for line in result.stdout.splitlines():
+            if line.startswith("SEC5 CHILD SAFE FAILURE:"):
+                print(line, flush=True)
         raise RuntimeError("SEC5 staging bootstrap or schema gate rejected")
 
 
