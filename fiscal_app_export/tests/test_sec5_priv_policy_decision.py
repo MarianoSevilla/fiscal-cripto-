@@ -1,0 +1,90 @@
+"""Control documental SEC5-PRIV: contrato de decisión, sin acceso a usuarios ni DB."""
+import re
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+POLICY = ROOT.parent / "docs" / "security" / "SEC5_PRIV_POLITICA_PARA_APROBACION_20261101.md"
+
+
+def _policy():
+    return POLICY.read_text(encoding="utf-8")
+
+
+def test_policy_covers_exactly_every_orm_table():
+    orm = (ROOT / "models.py").read_text(encoding="utf-8")
+    actual = set(re.findall(r'^\s+__tablename__\s*=\s*"([a-z0-9_]+)"', orm, flags=re.M))
+    rows = re.findall(r'^\| `([a-z0-9_]+)` \|', _policy(), flags=re.M)
+    assert len(rows) == len(set(rows)) == len(actual) == 17
+    assert set(rows) == actual
+
+
+def test_policy_is_not_authorization_for_retention_or_erasure():
+    policy = _policy()
+    for exact in (
+        "PROPUESTA PARA APROBACIÓN, NO APROBADA NI IMPLEMENTADA",
+        "no es un plazo legal ni autoriza retención automática",
+        "No hay purga automática por una cifra",
+        "Baja de cuenta ≠ supresión integral",
+        "Bloqueo efectivo:",
+        "Aún no validable sin hechos externos o producto",
+        "no aprobar plazos finales",
+        "afectar a producción",
+    ):
+        assert exact in policy
+    assert "la auditoría del panel queda aplazada" in policy.lower()
+
+
+def test_policy_keeps_key_service_and_legal_exceptions():
+    policy = _policy()
+    for exact in (
+        "Rafael Ramos",
+        "fiscal_advisory_files",
+        "marketing_consent=True",
+        "Código de Comercio art. 30",
+        "Ley 10/2010 art. 2.1(m) y 25",
+        "LOPDGDD art. 32",
+        "Stripe",
+        "Railway",
+        "Gmail",
+        "Resend",
+        "compras/derechos de descarga",
+    ):
+        assert exact in policy
+
+
+def test_owner_confirmations_keep_documents_outside_platform_and_analytics_deferred():
+    """Service facts do not silently authorize payment, upload or analytical tracking."""
+    policy = _policy()
+    for required in (
+        "Rafael tasa la propuesta",
+        "correo profesional",
+        "el portal no debe recibir ni guardar estos documentos",
+        "fiscal_advisory_files",
+        "la web no ha cobrado todavía ningún servicio real",
+        "No enviar por defecto el PDF fiscal adjunto",
+        "No está implementado el pago FIFO",
+        "Usuarios que eliminan su cuenta",
+        "total acumulado y evolución mensual",
+        "sin guardar email, ID de usuario o historial personal",
+        "No se añade una tabla ni se modifica",
+    ):
+        assert required in policy
+
+
+def test_advisory_contract_and_connect_are_not_claimed_to_be_live():
+    """Owner-provided contract/payment facts must not imply active money movement."""
+    policy = _policy()
+    for required in (
+        "un acuerdo verbal",
+        "Nunca se ha utilizado la web para almacenar documentación",
+        "responsables independientes",
+        "no de un reparto ya implantado",
+        "70 % a la cuenta de Rafael y 30 % a la de Mariano",
+        "direct charges",
+        "application_fee_amount",
+        "destination charges",
+        "no ofrece depósitos ni cuentas de ahorro",
+        "No configurar ni activar pagos/transferencias",
+        "la web no ha cobrado todavía ningún servicio real",
+    ):
+        assert required in policy
