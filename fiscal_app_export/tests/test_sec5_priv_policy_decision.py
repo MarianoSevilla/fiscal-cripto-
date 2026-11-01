@@ -50,3 +50,22 @@ def test_policy_keeps_key_service_and_legal_exceptions():
         "compras/derechos de descarga",
     ):
         assert exact in policy
+
+
+def test_owner_confirmations_keep_documents_outside_platform_and_analytics_deferred():
+    """Service facts do not silently authorize payment, upload or analytical tracking."""
+    policy = _policy()
+    for required in (
+        "Rafael tasa la propuesta",
+        "correo profesional",
+        "el portal no debe recibir ni guardar estos documentos",
+        "fiscal_advisory_files",
+        "la web no ha cobrado todavía ningún servicio real",
+        "No enviar por defecto el PDF fiscal adjunto",
+        "no está implementado el pago FIFO",
+        "Usuarios que eliminan su cuenta",
+        "total acumulado y evolución mensual",
+        "sin guardar email, ID de usuario o historial personal",
+        "No se añade una tabla ni se modifica",
+    ):
+        assert required in policy
