@@ -25,7 +25,7 @@ def test_provider_document_distinguishes_historical_restores_from_current_backup
         "No hay backups periódicos automáticos comunicados",
         "copia manual más reciente de noviembre de 2026",
         "RESTAURACION LOCAL: PASS",
-        "no auditoría exhaustiva de todas las filas",
+        "**no** auditoría exhaustiva de todas las filas",
         "DPA efectivo del cliente",
         "cuenta Gmail de consumo",
         "Free, Pro y Scale",
