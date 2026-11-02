@@ -30,7 +30,7 @@ def test_policy_is_not_authorization_for_retention_or_erasure():
         "Bloqueo efectivo:",
         "Aún no validable sin hechos externos o producto",
         "No se aprueban plazos legales universales",
-        "ni acceder a datos de producción",
+        "sin purgar, bloquear, migrar o acceder a datos de producción",
     ):
         assert exact in policy
     assert "la auditoría del panel queda aplazada" in policy.lower()
