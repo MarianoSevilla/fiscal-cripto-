@@ -24,6 +24,7 @@ def test_restore_replay_remains_ci_only_with_explicit_safety_gate():
         '"postgres:18"',
         '"pg_dump"',
         '"pg_restore"',
+        '"docker", "run", "--rm", "-i", "--network", "host"',
         'hmac.compare_digest',
         'backup_sha256',
         'to_jsonb(p)',
