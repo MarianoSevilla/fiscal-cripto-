@@ -56,7 +56,7 @@ def test_doc_requires_closed_traffic_and_rejects_completeness_claims():
     contents = DOC.read_text(encoding="utf-8").lower()
     for item in (
         "pg_dump", "pg_restore", "datos ficticios", "fuera de la copia",
-        "sin tráfico", "hmac", "idempotencia", "faltante",
+        "sin tráfico", "hmac", "idempotencia", "faltar cualquier",
         "no está conectado al arranque", "17 tablas", "no equivale",
         "producción", "stripe", "gmail", "resend",
     ):
