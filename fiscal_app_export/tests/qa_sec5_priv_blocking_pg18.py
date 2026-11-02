@@ -91,12 +91,11 @@ def setup_synthetic_store():
             (APP_LOGIN, APP_LOGIN_PASSWORD),
             (LEGAL_LOGIN, LEGAL_LOGIN_PASSWORD),
         ):
-            cur.execute(sql.SQL("CREATE ROLE {} LOGIN PASSWORD {}").format(
+            cur.execute(sql.SQL("CREATE ROLE {} LOGIN NOINHERIT PASSWORD {}").format(
                 sql.Identifier(role_name), sql.Literal(password)))
-        cur.execute(sql.SQL("GRANT {} TO {}").format(
-            sql.Identifier(APP_ROLE), sql.Identifier(APP_LOGIN)))
-        cur.execute(sql.SQL("GRANT {} TO {}").format(
-            sql.Identifier(LEGAL_ROLE), sql.Identifier(LEGAL_LOGIN)))
+        # The real Flask SQL login has NOINHERIT and no role memberships.
+        # Grant the minimum SELECT privileges directly, so the authenticated
+        # CI logins cannot SET ROLE even into their own NOLOGIN test roles.
         cur.execute(sql.SQL("CREATE SCHEMA {}").format(sql.Identifier(APP_SCHEMA)))
         cur.execute(sql.SQL("CREATE SCHEMA {}").format(sql.Identifier(VAULT_SCHEMA)))
         cur.execute(sql.SQL("REVOKE ALL ON SCHEMA {} FROM PUBLIC").format(sql.Identifier(VAULT_SCHEMA)))
@@ -118,14 +117,16 @@ def setup_synthetic_store():
                 blocked_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
             )
         """).format(sql.Identifier(VAULT_SCHEMA)))
-        cur.execute(sql.SQL("GRANT USAGE ON SCHEMA {} TO {}").format(
-            sql.Identifier(APP_SCHEMA), sql.Identifier(APP_ROLE)))
-        cur.execute(sql.SQL("GRANT SELECT ON {}.contacts TO {}").format(
-            sql.Identifier(APP_SCHEMA), sql.Identifier(APP_ROLE)))
-        cur.execute(sql.SQL("GRANT USAGE ON SCHEMA {} TO {}").format(
-            sql.Identifier(VAULT_SCHEMA), sql.Identifier(LEGAL_ROLE)))
-        cur.execute(sql.SQL("GRANT SELECT ON {}.blocked_contact_evidence TO {}").format(
-            sql.Identifier(VAULT_SCHEMA), sql.Identifier(LEGAL_ROLE)))
+        for recipient in (APP_ROLE, APP_LOGIN):
+            cur.execute(sql.SQL("GRANT USAGE ON SCHEMA {} TO {}").format(
+                sql.Identifier(APP_SCHEMA), sql.Identifier(recipient)))
+            cur.execute(sql.SQL("GRANT SELECT ON {}.contacts TO {}").format(
+                sql.Identifier(APP_SCHEMA), sql.Identifier(recipient)))
+        for recipient in (LEGAL_ROLE, LEGAL_LOGIN):
+            cur.execute(sql.SQL("GRANT USAGE ON SCHEMA {} TO {}").format(
+                sql.Identifier(VAULT_SCHEMA), sql.Identifier(recipient)))
+            cur.execute(sql.SQL("GRANT SELECT ON {}.blocked_contact_evidence TO {}").format(
+                sql.Identifier(VAULT_SCHEMA), sql.Identifier(recipient)))
 
 
 def seed_synthetic_contacts():
@@ -237,16 +238,22 @@ def assert_authenticated_boundary(ids):
     a = ids[0]
     app_identity = read_as_login(APP_LOGIN, APP_LOGIN_PASSWORD, """
         SELECT current_user, session_user, rolsuper, rolcreaterole,
-               rolcreatedb, rolbypassrls
+               rolcreatedb, rolbypassrls, rolinherit, rolreplication,
+               EXISTS (SELECT 1 FROM pg_auth_members
+                       WHERE member = (SELECT oid FROM pg_roles WHERE rolname = current_user))
         FROM pg_roles WHERE rolname = current_user
     """)
-    assert app_identity == [(APP_LOGIN, APP_LOGIN, False, False, False, False)]
+    assert app_identity == [(APP_LOGIN, APP_LOGIN, False, False, False, False,
+                             False, False, False)]
     legal_identity = read_as_login(LEGAL_LOGIN, LEGAL_LOGIN_PASSWORD, """
         SELECT current_user, session_user, rolsuper, rolcreaterole,
-               rolcreatedb, rolbypassrls
+               rolcreatedb, rolbypassrls, rolinherit, rolreplication,
+               EXISTS (SELECT 1 FROM pg_auth_members
+                       WHERE member = (SELECT oid FROM pg_roles WHERE rolname = current_user))
         FROM pg_roles WHERE rolname = current_user
     """)
-    assert legal_identity == [(LEGAL_LOGIN, LEGAL_LOGIN, False, False, False, False)]
+    assert legal_identity == [(LEGAL_LOGIN, LEGAL_LOGIN, False, False, False,
+                               False, False, False, False)]
 
     ordinary = read_as_login(APP_LOGIN, APP_LOGIN_PASSWORD, sql.SQL("""
         SELECT email, message, status FROM {}.contacts WHERE id = %s
@@ -271,6 +278,8 @@ def assert_authenticated_boundary(ids):
     # Neither authenticated session may promote itself to owner/superuser
     # or assume the other restricted role.
     for login, password, forbidden_role in (
+        (APP_LOGIN, APP_LOGIN_PASSWORD, APP_ROLE),
+        (LEGAL_LOGIN, LEGAL_LOGIN_PASSWORD, LEGAL_ROLE),
         (APP_LOGIN, APP_LOGIN_PASSWORD, LEGAL_ROLE),
         (LEGAL_LOGIN, LEGAL_LOGIN_PASSWORD, APP_ROLE),
         (APP_LOGIN, APP_LOGIN_PASSWORD, DB_USER),
