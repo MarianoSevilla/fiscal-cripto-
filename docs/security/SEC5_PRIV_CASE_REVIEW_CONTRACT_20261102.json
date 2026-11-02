@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "status": "DESIGN_ONLY",
+  "execution_enabled": false,
+  "automated_account_closure": false,
+  "automatic_erasure": false,
+  "review_outcomes": [
+    "SUPRIMIR",
+    "MANTENER_OPERATIVO",
+    "BLOQUEAR_ART32",
+    "REVISION_ESPECIAL"
+  ],
+  "required_gates": [
+    "IDENTITY_AND_SCOPE",
+    "PURPOSE_AND_LEGAL_BASIS",
+    "FINANCIAL_AND_EXTERNAL_DEPENDENCIES",
+    "SQL_AND_HTTP_ISOLATION",
+    "ATOMICITY_AND_BACKUP_RECONCILIATION",
+    "EXPLICIT_PRODUCTION_AUTHORIZATION"
+  ],
+  "scenarios": [
+    {
+      "id": "SHARED_HISTORICAL_EMAIL",
+      "given": "Dos cuentas ficticias con email histórico coincidente en un expediente",
+      "expected": "NO_CROSS_ACCOUNT_ATTRIBUTION",
+      "must_prove": [
+        "match_by_verified_id_not_email",
+        "no_write_to_other_account"
+      ]
+    },
+    {
+      "id": "DEACTIVATED_ACCOUNT",
+      "given": "La cuenta A fue desidentificada, pero subsisten referencias por ID y correos sin FK",
+      "expected": "EXTERNAL_IDENTITY_PROOF_REQUIRED",
+      "must_prove": [
+        "id_based_inventory_only",
+        "email_candidates_not_ownership",
+        "scope_complete_false"
+      ]
+    },
+    {
+      "id": "S01_FINANCIAL_HOLD",
+      "given": "Solicitud con intento Stripe, recibo de evento y reembolso o disputa pendiente",
+      "expected": "PRESERVE_FINANCIAL_CHAIN",
+      "must_prove": [
+        "retain_idempotency_and_restrict",
+        "no_orphaned_records",
+        "manual_purpose_review"
+      ]
+    },
+    {
+      "id": "SQL_ROLE_BOUNDARY",
+      "given": "Login ordinario intenta leer evidencia bloqueada, y login excepcional intenta escribirla",
+      "expected": "DATABASE_PERMISSION_DENIED",
+      "must_prove": [
+        "runtime_cannot_read_reserved_data",
+        "exceptional_reader_cannot_modify",
+        "http_admin_exports_excluded"
+      ]
+    },
+    {
+      "id": "MID_TRANSACTION_FAILURE",
+      "given": "Fallo entre reserva de evidencia y redacción; reintento posterior",
+      "expected": "ROLLBACK_AND_IDEMPOTENCE",
+      "must_prove": [
+        "rollback_all_on_failure",
+        "retries_do_not_duplicate",
+        "unrelated_subject_unchanged"
+      ]
+    },
+    {
+      "id": "BACKUP_BEFORE_REQUEST",
+      "given": "Restauración de copia anterior a una supresión o bloqueo ya ejecutado",
+      "expected": "RECONCILE_BEFORE_TRAFFIC",
+      "must_prove": [
+        "restored_system_stays_closed",
+        "replay_post_backup_decisions",
+        "no_reexposure"
+      ]
+    },
+    {
+      "id": "EXTERNAL_PROVIDER_FAILURE",
+      "given": "Gmail, Resend o Stripe no confirman una solicitud de tratamiento",
+      "expected": "EXTERNAL_STATUS_PARTIAL",
+      "must_prove": [
+        "no_global_erasure_claim",
+        "failure_recorded",
+        "responsibility_and_retry_review"
+      ]
+    },
+    {
+      "id": "INACTIVITY_24_MONTHS",
+      "given": "Cuenta sin inicio de sesión en 24 meses",
+      "expected": "REVIEW_ONLY_NO_CLOSURE",
+      "must_prove": [
+        "no_automatic_deactivation",
+        "no_erasure_by_age_alone"
+      ]
+    }
+  ]
+}
