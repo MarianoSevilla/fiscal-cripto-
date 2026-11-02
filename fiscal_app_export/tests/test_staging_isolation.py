@@ -222,3 +222,53 @@ def test_resend_api_is_blocked_in_background_code_too():
     install_staging_email_barrier(mock_resend)
     with pytest.raises(RuntimeError, match="outbound email disabled"):
         mock_resend.Emails.send(to=["example@example.test"])
+
+
+def test_sec5_isolated_runtime_login_allowed_only_explicitly():
+    env = staging_env()
+    env["DATABASE_URL"] = (
+        f"postgresql+psycopg2://sec5_runtime_stage:synthetic@{STAGING_DB_HOST}"
+        ":5432/sec5_priv_stage_20261101"
+    )
+    with pytest.raises(RuntimeError, match="DATABASE_URL"):
+        validate_staging_isolation(env)
+    env["SEC5_STAGING_DB_MODE"] = "RUNTIME"
+    assert validate_staging_isolation(env) is True
+    # No other role or DB can claim a limited connection.
+    env["DATABASE_URL"] = env["DATABASE_URL"].replace(
+        "sec5_runtime_stage:", "postgres:"
+    )
+    with pytest.raises(RuntimeError, match="DATABASE_URL"):
+        validate_staging_isolation(env)
+    env["DATABASE_URL"] = env["DATABASE_URL"].replace(
+        "postgres:", "sec5_runtime_stage:"
+    ).replace("sec5_priv_stage_20261101", "production")
+    with pytest.raises(RuntimeError, match="DATABASE_URL"):
+        validate_staging_isolation(env)
+
+
+def test_sec5_isolated_bootstrap_only_with_explicit_one_shot():
+    env = staging_env()
+    env["DATABASE_URL"] = (
+        f"postgresql+psycopg2://postgres:synthetic@{STAGING_DB_HOST}"
+        ":5432/sec5_priv_stage_20261101"
+    )
+    env["SEC5_STAGING_DB_MODE"] = "BOOTSTRAP"
+    with pytest.raises(RuntimeError, match="DATABASE_URL"):
+        validate_staging_isolation(env)
+    env["SEC5_STAGING_PROVISION"] = "EXPLICIT_ONCE"
+    assert validate_staging_isolation(env) is True
+    env["RAILWAY_ENVIRONMENT_ID"] = "912b2cae-38a8-4900-a2d0-13f85e749971"
+    with pytest.raises(RuntimeError, match="RAILWAY_ENVIRONMENT_ID"):
+        validate_staging_isolation(env)
+
+
+def test_sec5_new_database_wrong_hostname_never_allowed():
+    env = staging_env()
+    env["DATABASE_URL"] = (
+        "postgresql+psycopg2://sec5_runtime_stage:synthetic@"
+        "postgres.railway.internal:5432/sec5_priv_stage_20261101"
+    )
+    env["SEC5_STAGING_DB_MODE"] = "RUNTIME"
+    with pytest.raises(RuntimeError, match="DATABASE_URL"):
+        validate_staging_isolation(env)
