@@ -1,6 +1,10 @@
 # SEC5-PRIV — usuario SQL limitado para Flask: validación aislada
 
-**Estado 01/11/2026:** propuesta de implementación + prueba real sobre un PostgreSQL 18 desechable de GitHub Actions. **No ejecutada en Railway staging o production. No hay credenciales ni datos reales en estos artefactos.**
+**Estado histórico 01/11/2026:** propuesta de implementación y prueba sobre PostgreSQL 18 desechable de GitHub Actions. La actualización de 02/11/2026, indicada a continuación, prevalece sobre las afirmaciones históricas de ausencia de ejecución en Railway.
+
+> **Actualización de estado — 02/11/2026.** Las secciones de diagnóstico y plan que siguen documentan el **estado histórico del 01/11, no el estado actual**. El titular comunicó que en producción se ejecutaron y superaron las comprobaciones `SEC5 PROD: FLASK ROLE VERIFIED PASS`, `17 ORM ACL VERIFIED PASS` y `ALEMBIC READ ONLY PASS` tras separar el usuario SQL ordinario. La consulta anterior que detectó un superusuario fue válida **antes** de esa intervención, pero ya no debe citarse como situación vigente. La PR #177 integró el contrato de permisos y pruebas CI; esta integración no fue por sí misma la operación de cambio de credenciales. Railway confirmó posteriormente el servicio web **online** y el despliegue `main@87fe4da39add` como **SUCCESS**. Estos hechos no demuestran que exista un almacén de datos bloqueados, una auditoría completa de accesos reales ni conformidad jurídica.
+
+> **Estado del staging:** según la evidencia recogida en la PR #176, la prueba autorizada se efectuó con PostgreSQL propio y login restringido, proveedores externos neutralizados y comprobación read-only de predeploy satisfactoria. Los párrafos históricos que describen staging sin aislar se mantienen solo como antecedentes, no como instrucciones vigentes. Antes de cualquier nuevo ensayo, volver a comprobar su configuración real.
 
 ## Diagnóstico acreditado
 
@@ -10,7 +14,7 @@ El propietario ejecutó desde el Mac una consulta read-only por SSH **dentro del
 - `rolsuper=True`, `rolbypassrls=True`, `rolcreaterole=True`, `rolcreatedb=True`
 - `database_owner_member=True` y `public_schema_owner_member=True`
 
-Por tanto, la conexión Flask **es superusuario actualmente**. Esto incrementa el impacto de una eventual ejecución de SQL en la aplicación y no permite utilizar las ACL de un almacén bloqueado como barrera real frente al proceso web. **No evidencia explotación ni acceso no autorizado.**
+Por tanto, **en el momento de aquella consulta (01/11)** la conexión Flask era superusuario. Esto incrementa el impacto de una eventual ejecución de SQL en la aplicación y no permite utilizar las ACL de un almacén bloqueado como barrera real frente al proceso web. **No evidencia explotación ni acceso no autorizado.**
 
 ## Objetivo técnico mínimo
 
@@ -37,7 +41,7 @@ El job `postgres-bootstrap` ejecuta `qa_sec5_runtime_grants_pg18.py` contra Post
 
 Este ensayo **no prueba flujos externos Stripe/Resend, todas las rutas HTTP, permisos de tablas no ORM de futuras versiones, concurrencia real ni retenciones RGPD**. Una CI satisfactoria es condición necesaria, no evidencia de un cambio seguro en producción.
 
-## Estado de staging y criterio NO-GO
+## Estado histórico de staging y criterio NO-GO (01/11)
 
 Inspección Railway 01/11/2026:
 
@@ -46,7 +50,7 @@ Inspección Railway 01/11/2026:
 - En staging figuran variables de **Stripe, PayPal, Resend, Google y Turnstile**. Conocer los nombres no demuestra si las claves son ficticias o reales; **no ejecutar pruebas integradas que llamen proveedores** hasta inventario de aislamiento, neutralización y firewall de pruebas.
 - No se ha consultado ningún valor secreto, ni filas o expedientes, ni modificado volumen/variables.
 
-## Condiciones para migración posterior (pendiente de autorización)
+## Plan histórico para migración (ejecutado parcialmente después, no repetir sin reevaluación)
 
 1. Confirmar identidad de staging, origen de `DATABASE_URL`, que apunte **solo a PostgreSQL staging**, y modo de aislamiento de proveedores. No copiar base real ni credenciales productivas.
 2. Ejecutar ensayo real de aplicación actual contra BD sintética y usuario limitado, incluyendo login, administración, informes FIFO y estados S01, sin solicitudes externas.
@@ -54,4 +58,4 @@ Inspección Railway 01/11/2026:
 4. En una ventana autorizada, crear login nuevo con contraseña fuerte gestionada por Railway, conceder privilegios exactos, validar por conexión independiente y preparar reversión del DSN; migraciones mantienen usuario admin separado. No degradar el superusuario existente ni publicar contraseñas en GitHub/CI/chat.
 5. Cambiar `DATABASE_URL` del **servicio web exclusivamente**, no del servicio PostgreSQL, con despliegue controlado y monitoreo; comprobar puerta de arranque, rutas y rollback. El futuro vault de bloqueo legal requiere rol y permisos especiales propios; no está implementado aquí.
 
-**NO MERGE / NO DEPLOY sin revisión independiente y autorización posterior.** Referencias: PostgreSQL 18 `GRANT`, `ALTER DEFAULT PRIVILEGES` y `Schemas`, documentación oficial.
+**Nota:** esta advertencia era aplicable a la propuesta inicial de 01/11; no revoca las autorizaciones y actuaciones posteriores registradas. Cualquier intervención futura sobre producción requiere autorización específica. **El bloqueo legal real continúa no implementado.** Referencias: PostgreSQL 18 `GRANT`, `ALTER DEFAULT PRIVILEGES` y `Schemas`, documentación oficial.
