@@ -21,7 +21,9 @@ def test_policy_covers_exactly_every_orm_table():
 def test_policy_is_not_authorization_for_retention_or_erasure():
     policy = _policy()
     for exact in (
-        "PROPUESTA PARA APROBACIÓN, NO APROBADA NI IMPLEMENTADA",
+        "CRITERIOS INTERNOS DE REVISIÓN APROBADOS POR EL TITULAR EL 02/11/2026; NO IMPLEMENTADOS", 
+        "no autoriza fusionar esta PR", 
+        "no convalida automáticamente la base jurídica", 
         "no es un plazo legal ni autoriza retención automática",
         "No hay purga automática por una cifra",
         "Baja de cuenta ≠ supresión integral",
@@ -32,6 +34,21 @@ def test_policy_is_not_authorization_for_retention_or_erasure():
     ):
         assert exact in policy
     assert "la auditoría del panel queda aplazada" in policy.lower()
+
+
+def test_24_months_of_inactivity_never_close_or_disable_an_account():
+    policy = _policy()
+    users_row = next(line for line in policy.splitlines() if line.startswith("| `users` |"))
+    for required in (
+        "Cuenta inactiva 24 meses",
+        "no cierra, desactiva ni elimina la cuenta",
+        "actividad fiscal estacional",
+        "nunca por cumplir 24 meses de inactividad",
+    ):
+        assert required in users_row
+    assert "no iniciar cierre, desactivación, eliminación" in policy
+    assert "revisar proporcionalmente datos asociados" in policy
+    assert "La aprobación de criterios no autoriza" in policy
 
 
 def test_policy_keeps_key_service_and_legal_exceptions():
