@@ -15,8 +15,8 @@
 
 1. Rechaza autorización inexistente, etiqueta de autorización no sintética y decisiones no previstas.
 2. Rechaza registro de otro usuario con el mismo email copiado, registro sin FK de usuario, cuenta desactivada y titular con expediente de asesoramiento y evidencia sintética de Stripe.
-3. Inyecta una excepción después de reservar pero antes de borrar; el rollback debe conservar la fila ordinaria y descartar íntegramente la reserva.
-4. Prueba operación válida y repetición idempotente de las dos decisiones; rechaza volver a aplicar una decisión incompatible.
+3. Inyecta excepciones tanto antes como **después del DELETE**, todavía dentro de la transacción: ambos casos deben revertir íntegramente reserva y borrado.
+4. Prueba dos solicitudes **concurrentes** de supresión para un mismo registro, con bloqueo de fila y resultado exactamente una operación nueva y otra idempotente; también rechaza la repetición incompatible de una decisión.
 5. Verifica mediante consultas ORM que los dos registros salieron de `processing_errors`, mientras los registros ajenos y el recibo sintético S01 permanecen intactos.
 6. Comprueba que un login normal no puede leer el esquema reservado; que el login excepcional no puede consultar `processing_errors` ni actualizar la reserva, y que ninguno puede asumir `postgres`.
 7. Exige que el fichero de prueba siga fuera del árbol de importación de Flask y que su ejecución desde CI esté protegida por un indicador explícito.
