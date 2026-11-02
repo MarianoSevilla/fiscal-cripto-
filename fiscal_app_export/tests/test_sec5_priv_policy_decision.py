@@ -29,8 +29,8 @@ def test_policy_is_not_authorization_for_retention_or_erasure():
         "Baja de cuenta ≠ supresión integral",
         "Bloqueo efectivo:",
         "Aún no validable sin hechos externos o producto",
-        "no aprobar plazos finales",
-        "afectar a producción",
+        "No se aprueban plazos legales universales",
+        "ni acceder a datos de producción",
     ):
         assert exact in policy
     assert "la auditoría del panel queda aplazada" in policy.lower()
