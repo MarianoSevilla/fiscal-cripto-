@@ -100,15 +100,15 @@ def _mac(value):
 
 def _row(cur, record_id):
     cur.execute(
-        "SELECT id,user_id,email,exchange,message_short "
-        "FROM public.processing_errors WHERE id=%s FOR UPDATE",
+        "SELECT p.id,p.user_id,p.email,p.exchange,p.message_short,to_jsonb(p) "
+        "FROM public.processing_errors p WHERE p.id=%s FOR UPDATE OF p",
         (record_id,),
     )
     return cur.fetchone()
 
 
 def _tag(row):
-    return _mac(b"record:" + _canonical(list(row)))
+    return _mac(b"record:" + _canonical(row[5]))
 
 
 def _sign(payload):
@@ -215,10 +215,7 @@ def _reconcile(envelope, dump, *, crash_after_first=False):
             )
         """).format(sql.Identifier(VAULT)))
         for index, (event, row) in enumerate(zip(payload["events"], originals)):
-            held = {
-                "id": row[0], "user_id": row[1], "email": row[2],
-                "exchange": row[3], "message_short": row[4],
-            } if event["decision"] == "BLOQUEAR_ART32" else None
+            held = row[5] if event["decision"] == "BLOQUEAR_ART32" else None
             cur.execute(sql.SQL(
                 "INSERT INTO {}.ledger(source_id,subject_id,decision,row_tag,payload) "
                 "VALUES (%s,%s,%s,%s,%s::jsonb)"
@@ -401,12 +398,16 @@ def main():
                 "SELECT source_id,decision,payload FROM {}.ledger ORDER BY source_id"
             ).format(sql.Identifier(VAULT)))
             rows = {row[0]: row for row in cur.fetchall()}
-            assert rows[blocked][1:] == (
-                "BLOQUEAR_ART32",
-                {"id": blocked, "user_id": subject,
-                 "email": "restore-a@example.invalid",
-                 "exchange": "binance", "message_short": "Synthetic blocked"},
-            )
+            assert rows[blocked][1] == "BLOQUEAR_ART32"
+            blocked_payload = rows[blocked][2]
+            assert set(blocked_payload) == {
+                col.name for col in ProcessingError.__table__.columns
+            }
+            assert blocked_payload["id"] == blocked
+            assert blocked_payload["user_id"] == subject
+            assert blocked_payload["email"] == "restore-a@example.invalid"
+            assert blocked_payload["exchange"] == "binance"
+            assert blocked_payload["message_short"] == "Synthetic blocked"
             assert rows[erased][1:] == ("SUPRIMIR", None)
 
         with admin.cursor() as cur:
