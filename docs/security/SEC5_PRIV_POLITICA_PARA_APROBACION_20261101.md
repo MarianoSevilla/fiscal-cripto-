@@ -1,6 +1,6 @@
-# SEC5-PRIV-011/012/013 · Política de conservación por finalidad — decisión del titular
+# SEC5-PRIV-011/012/013 · Criterios de revisión por finalidad — decisión del titular
 
-**Estado: PROPUESTA PARA APROBACIÓN, NO APROBADA NI IMPLEMENTADA.**  
+**Estado: CRITERIOS INTERNOS DE REVISIÓN APROBADOS POR EL TITULAR EL 02/11/2026; NO IMPLEMENTADOS.** **No se aprueban plazos legales universales, retención automática ni supresión/bloqueo de datos reales.**  
 **Corte:** 01/11/2026. **Repositorio base:** `main@916d97c74df1657fe2f28cf7f2eb85ff0d52535f`.  
 **Objetivo limitado:** convertir la matriz existente en decisiones concretas y proporcionadas, sin cambiar la analítica, sin diseñar nuevas funcionalidades y **sin purgar, bloquear, migrar o acceder a datos de producción**.
 
@@ -18,13 +18,13 @@ La capacidad de **estadísticas potentes, agregadas, sin seguimiento individual 
 - **A — Agregado realmente anónimo:** conservar estadísticas únicamente después de evaluar irreversibilidad, tamaño de grupos y posible enlace indirecto. La seudonimización no excluye RGPD.
 - **H — En espera de verificación:** no implantar supresión irreversible sin aclarar obligaciones, custodio, proveedor o estado de pago. No justifica uso ordinario indefinido.
 
-## 2. Matriz de decisión propuesta: 17 tablas ORM
+## 2. Matriz de revisión aprobada como criterio de diseño: 17 tablas ORM
 
-**Cómo leer la tabla:** en «revisión» se propone el **punto de decisión**, no un calendario de eliminación; «destino» establece qué decisión tomar si la finalidad cesa, condicionada al análisis de excepciones. Todas estas filas requieren ratificación del responsable antes de traducirse a código.
+**Cómo leer la tabla:** se aprueba **el momento de revisión interna**, no un calendario de eliminación; «destino» describe alternativas condicionadas al análisis de finalidad, base jurídica, excepciones y datos concretos. La aprobación **no convalida automáticamente la base jurídica de cada tratamiento ni autoriza traducir la tabla a código**. La ejecución exige evaluación, pruebas y autorización separadas.
 
 | Tabla ORM | Finalidad y base RGPD a confirmar | Disparador / revisión propuesta | Destino y condición esencial |
 |---|---|---|---|
-| `users` | **O:** acceso y cuentas; art. 6.1(b) cuando proceda; seguridad/prevención de abusos: valorar 6.1(f) | Mientras cuenta activa. Al solicitar baja, actuación inmediata de desactivación; cuentas inactivas: **revisión a los 24 meses** desde último acceso válido, **no baja automática** | Revocar sesiones/credenciales; suprimir identificadores sin finalidad; mantener ID solo mientras referencias justificadas lo requieran. La baja actual no limpia datos asociados; no prometer anonimización completa |
+| `users` | **O:** acceso y cuentas; art. 6.1(b) cuando proceda; seguridad/prevención de abusos: valorar 6.1(f) | **Cuenta inactiva 24 meses:** revisar únicamente la necesidad de los datos personales asociados. La inactividad **no cierra, desactiva ni elimina la cuenta**. La actividad fiscal estacional justifica que pueda regresar años después sin registrarse de nuevo. Solicitud de baja: tramitar por procedimiento propio | Preservar la cuenta cuando siga justificada la relación de servicio; minimizar datos accesorios que hayan perdido su finalidad. **Revocar sesiones o credenciales solo por baja verificada u otra causa de seguridad justificada, nunca por cumplir 24 meses de inactividad**. La baja actual no limpia todas las referencias asociadas; no prometer anonimización completa |
 | `fifo_reports` | **O/A:** gestión del informe, descargas, soporte y métricas agregadas; valorar 6.1(b)/(f) por finalidad | Registros individuales: **revisión a 90 días** de generación o última descarga legítima (la fecha más reciente). Nuevas compras/derechos de descarga **H** hasta definir producto 2027 | Priorizar retirar `resultado_neto`, `ganancias_brutas`, `perdidas_brutas` y `user_id` cuando ya no sean necesarios individualmente; mantener solo agregación realmente anónima tras evaluación. No eliminar compras, derechos de uso, quejas o evidencia |
 | `processing_errors` | **O:** diagnosticar, atender errores y prevenir regresiones; valorar 6.1(b)/(f) | **Revisión a 30 días desde `resolved_at`** y a **90 días desde `created_at`** si sigue abierta (escalado, no purga) | Primero minimizar `email`, `csv_context`, `traceback_short`, `csv_filename` históricos; no romper tickets abiertos ni soporte consentido. La huella técnica exige comprobación antes de llamarla anónima |
 | `incidents` | **O/A:** causa raíz de incidencias y calidad | Al cierre `resolved_at`, **revisión a 90 días**; nuevas regresiones justificadas generan nueva evaluación | Conservar patrones técnicos no vinculables; reducir `notes` y títulos libres con identidad; incidencia activa o regresión pendiente conserva finalidad |
@@ -74,10 +74,10 @@ La capacidad de **estadísticas potentes, agregadas, sin seguimiento individual 
 5. **Validar sin usuarios reales:** pruebas negativas multicuenta, relojes UTC, pagos pendientes, copias de email, ficheros, reintentos, aislación del bloqueo y defensa de reclamaciones en SQLite y PostgreSQL desechables. Una prueba de CI no acredita una eliminación en Gmail/Railway/Stripe.
 6. **No ampliar estadísticas:** solo se define qué datos personales no deberían retenerse sin finalidad. La auditoría del panel queda aplazada y requerirá encargo propio.
 
-## 5. Decisiones concretas reservadas para aprobación
+## 5. Criterios de revisión aprobados y decisiones pendientes
 
-**Propuesta recomendada — ratificar en bloque como criterios de diseño:**
-- Cuenta activa = servicio; baja validada = desactivación inmediata; 24 meses de inactividad = revisión, nunca baja automática.
+**Aprobación expresa del titular (02/11/2026) — solo como criterios internos de revisión, no como retenciones legales ni instrucciones de purga:**
+- Cuenta activa = acceso de servicio mientras exista finalidad. **24 meses de inactividad = revisar proporcionalmente datos asociados; no iniciar cierre, desactivación, eliminación, revocación de acceso ni requerimiento de nuevo registro por ese solo motivo**. Una baja solicitada y verificada se tramita por su procedimiento específico.
 - FIFO individual = revisar a 90 días desde generación/última descarga, sin perjudicar compras o soporte; priorizar desidentificación de **importes fiscales personales** frente a métricas agregadas.
 - Diagnóstico = revisar 30 días tras resolver y, si no resuelto, escalar a 90 días desde evento; incidentes cerrados 90 días.
 - Consultas y solicitudes de asesoramiento **sin prestación/pago** = revisar a 180 días de cierre.
@@ -90,7 +90,7 @@ La capacidad de **estadísticas potentes, agregadas, sin seguimiento individual 
 3. **Duración de derechos de acceso/descarga comprados** y obligaciones del futuro producto FIFO de pago.
 4. Tratamiento de objetos/filas de `fiscal_advisory_files` que puedan permanecer de etapas anteriores.
 
-**Autoridad y estados:** la respuesta «procedamos» del titular autoriza **preparar y comprobar esta propuesta**, no aprobar plazos finales, generar borrados o afectar a producción. Aprobación de criterios, implementación, cambios de permisos, fusión, despliegue y cualquier operación sobre datos reales requieren decisiones separadas. Hasta entonces se mantienen las protecciones existentes, los derechos de interesados y la obligación de evaluar cualquier solicitud real sin dilación.
+**Autoridad y estados:** el 02/11/2026 el titular **aprueba expresamente los criterios de revisión enumerados arriba**, aclarando que las cuentas inactivas no se eliminan ni se desactivan por edad. Quedan **sin aprobar** periodos legales concretos de retención y supresión, automatismos, bases jurídicas no verificadas, tratamiento de excepciones, bloqueos legales reales y la futura duración del acceso FIFO comprado. **La aprobación de criterios no autoriza fusionar esta PR, desplegar, modificar configuración, ejecutar borrados/bloqueos ni acceder a datos reales.** Esas intervenciones exigen autorización separada. El ejercicio efectivo de derechos de interesados debe atenderse sin dilación.
 
 ## 6. Confirmaciones del titular (01/11/2026) y modelo recomendado
 
@@ -132,13 +132,14 @@ La capacidad de **estadísticas potentes, agregadas, sin seguimiento individual 
 
 **Consecuencia de estas confirmaciones:** se reducen dudas sobre el *flujo funcional deseado*, pero siguen abiertos el acuerdo y reparto jurídico de responsabilidades, las filas históricas, los proveedores, la política legal definitiva y las pruebas de bloqueo/supresión. No declarar SEC5-PRIV cerrado ni utilizar estos datos para borrar producción sin autorización.
 
-## 7. Criterio de aceptación de esta entrega documental
+## 7. Criterio de aceptación de la aprobación documental (sin ejecución)
 
 - Inventario completo de **17/17** tablas ORM, sin atribuir anonimato por mera seudonimización.
 - Una finalidad, propuesta de base jurídica, disparador de revisión, destino y excepción en cada tabla.
 - Distinción explícita entre **revisión**, **retención legal**, **bloqueo** y **destrucción**.
 - Expresión veraz sobre CSV/PDF temporales, registros persistentes y custodia de Rafael.
 - Ningún cambio de cálculo fiscal, estadísticas, pagos, cuentas, comunicaciones, tablas, migraciones, ejecución de plazos, datos reales ni producción.
+- La aprobación es exclusivamente del **diseño interno de revisión**, no de políticas legales específicas ni de procedimientos automáticos. No implica cierre automático de cuentas inactivas.
 - El documento no modifica ni sustituye automáticamente la política publicada `/privacidad`; eso exige una intervención y autorización posterior.
 
 **Fuentes técnicas:** `fiscal_app_export/models.py`, `app.py`, `fifo_pdf_lifecycle.py`, `error_tracking.py`, `static/privacidad.html`; `docs/security/SEC5_PRIV_011_013_RETENTION_MATRIX.md`, `SEC5_PRIV_011_013_DECISION_PROPOSAL.md`, `SEC5_PRIV_011_013_ACCEPTANCE_CONTRACT.md` y `SEC5_PRIV_DERECHOS_SUPRESION_PROCEDIMIENTO.md`.
