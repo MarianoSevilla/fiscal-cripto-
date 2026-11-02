@@ -5,7 +5,9 @@ This script may only use its named local CI database; never a DATABASE_URL.
 """
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing, contextmanager
+from threading import Barrier
 import os
 from pathlib import Path
 import sys
@@ -137,7 +139,7 @@ def _seed(engine):
 
 
 def _rehearsal(record_id, user_id, email, *, decision, authorization,
-               inject_failure=False):
+               inject_failure=False, inject_failure_after_delete=False):
     """Operator-only simulated operation for a single verified processing error.
 
     No public entrypoint; refuses financial-advisory records. A vault tombstone
@@ -205,6 +207,8 @@ def _rehearsal(record_id, user_id, email, *, decision, authorization,
         )
         if cur.rowcount != 1:
             raise RuntimeError("Unexpected concurrent delete")
+        if inject_failure_after_delete:
+            raise RuntimeError("Injected synthetic failure after delete")
         return True
 
 
@@ -253,10 +257,38 @@ def _assert_lifecycle(engine, ids):
                     (block_id,))
         assert cur.fetchone()[0] == 1
 
+    # A failure after the DELETE must also roll back the entire transaction.
+    try:
+        _rehearsal(erase_id, a, "synthetic-a@example.invalid",
+                   decision="SUPRIMIR", authorization=AUTHORIZED,
+                   inject_failure_after_delete=True)
+    except RuntimeError as exc:
+        assert str(exc) == "Injected synthetic failure after delete"
+    else:
+        raise AssertionError("Post-delete crash did not roll back")
+    with _tx() as cur:
+        cur.execute(sql.SQL("SELECT COUNT(*) FROM {}.ledger").format(
+            sql.Identifier(VAULT)))
+        assert cur.fetchone()[0] == 0
+        cur.execute("SELECT COUNT(*) FROM public.processing_errors WHERE id=%s",
+                    (erase_id,))
+        assert cur.fetchone()[0] == 1
+
     assert _rehearsal(block_id, a, "synthetic-a@example.invalid",
                       decision="BLOQUEAR_ART32", authorization=AUTHORIZED)
-    assert _rehearsal(erase_id, a, "synthetic-a@example.invalid",
-                      decision="SUPRIMIR", authorization=AUTHORIZED)
+
+    # Two concurrent identical requests must serialize at the user/row lock,
+    # produce exactly one ledger item, and return one new + one idempotent result.
+    simultaneous = Barrier(2)
+    def _concurrent_erasure():
+        simultaneous.wait(timeout=10)
+        return _rehearsal(erase_id, a, "synthetic-a@example.invalid",
+                          decision="SUPRIMIR", authorization=AUTHORIZED)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(_concurrent_erasure)
+        second = pool.submit(_concurrent_erasure)
+        assert sorted((first.result(timeout=20), second.result(timeout=20))) == [False, True]
     assert _rehearsal(block_id, a, "synthetic-a@example.invalid",
                       decision="BLOQUEAR_ART32", authorization=AUTHORIZED) is False
     assert _rehearsal(erase_id, a, "synthetic-a@example.invalid",
