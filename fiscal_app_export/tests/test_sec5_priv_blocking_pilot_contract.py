@@ -27,7 +27,14 @@ def test_pilot_remains_test_only_and_requires_an_explicit_ci_gate():
     assert "FOR UPDATE" in source
     assert "SET LOCAL ROLE" in source
     assert "assert_authenticated_boundary((a, b, c))" in source
-    assert "CREATE ROLE {} LOGIN PASSWORD {}" in source
+    assert "CREATE ROLE {} LOGIN NOINHERIT PASSWORD {}" in source
+    assert "GRANT {} TO {}" not in source
+    assert "for recipient in (APP_ROLE, APP_LOGIN):" in source
+    assert "for recipient in (LEGAL_ROLE, LEGAL_LOGIN):" in source
+    assert "rolinherit, rolreplication" in source
+    assert "FROM pg_auth_members" in source
+    assert "(APP_LOGIN, APP_LOGIN_PASSWORD, APP_ROLE)" in source
+    assert "(LEGAL_LOGIN, LEGAL_LOGIN_PASSWORD, LEGAL_ROLE)" in source
     assert "expect_login_denied(" in source
     assert "errors.InsufficientPrivilege" in source
     assert "inject_failure=True" in source
