@@ -73,7 +73,7 @@ def _client(command, dump=None):
     """Run version-matched PostgreSQL 18 client in the ephemeral CI container."""
     _guard()
     args = [
-        "docker", "run", "--rm", "--network", "host",
+        "docker", "run", "--rm", "-i", "--network", "host",
         "-e", "PGPASSWORD=" + PG_PASSWORD, "postgres:18", command,
         "-h", "127.0.0.1", "-U", "postgres", "-d", DB,
     ]
