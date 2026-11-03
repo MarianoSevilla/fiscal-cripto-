@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+from tempfile import TemporaryDirectory
 
 import psycopg2
 from psycopg2 import errors, sql
@@ -23,6 +24,9 @@ from sqlalchemy.orm import Session
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from models import db, User, ProcessingError  # noqa: E402
 from sec5_priv_runtime_acl import grant_existing_runtime_acl  # noqa: E402
+from sec5_priv_recovery_evidence import (  # noqa: E402
+    RecoveryEvidenceError, persist_immutable, read_pinned,
+)
 
 DB = "sec5_priv_restore_ci"
 VAULT = "sec5_priv_restored_vault_ci"
@@ -264,6 +268,7 @@ def main():
     created = False
     created_roles = []
     engine = None
+    external_folder = None
     try:
         with admin.cursor() as cur:
             cur.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(DB)))
@@ -310,6 +315,28 @@ def main():
             ],
         })
         assert "restore-a@example.invalid" not in repr(manifest)
+
+        # This directory lives on the runner filesystem, NOT in PostgreSQL.
+        # In production the location AND trusted head must be durable, separate
+        # from each other and from all DB backups. This is synthetic CI only.
+        external_folder = TemporaryDirectory(prefix="sec5-priv-outside-db-")
+        journal = Path(external_folder.name) / "immutable-reviewed-events.json"
+        pinned_head = persist_immutable(journal, manifest)
+        assert read_pinned(journal, trusted_head=pinned_head) == manifest
+        for wrong_head in (None, "", "0" * 64):
+            try:
+                read_pinned(journal, trusted_head=wrong_head)
+            except RecoveryEvidenceError:
+                pass
+            else:
+                raise AssertionError("Missing or stale trusted recovery head accepted")
+        try:
+            persist_immutable(journal, manifest)
+        except RecoveryEvidenceError:
+            pass
+        else:
+            raise AssertionError("Existing decision evidence overwritten")
+
         with _tx() as cur:
             cur.execute("DELETE FROM public.processing_errors WHERE id IN (%s,%s)",
                         (blocked, erased))
@@ -322,6 +349,26 @@ def main():
             cur.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(DB)))
         _client("pg_restore", dump)
 
+        # The restored DB has lost its prior decisions. Only the independent
+        # and pinned on-disk journal can authorize synthetic reconciliation.
+        manifest = read_pinned(journal, trusted_head=pinned_head)
+        for absent in (Path(external_folder.name) / "missing.json",):
+            try:
+                read_pinned(absent, trusted_head=pinned_head)
+            except RecoveryEvidenceError:
+                pass
+            else:
+                raise AssertionError("Reopening accepted a missing external journal")
+        tampered_file = Path(external_folder.name) / "tampered.json"
+        tampered_file.write_bytes(journal.read_bytes() + b" ")
+        tampered_file.chmod(0o600)
+        try:
+            read_pinned(tampered_file, trusted_head=pinned_head)
+        except RecoveryEvidenceError:
+            pass
+        else:
+            raise AssertionError("Reopening accepted modified on-disk evidence")
+        # The synthetic gate must still refuse the restored rows before replay.
         try:
             _gate(manifest, dump)
         except RuntimeError as exc:
@@ -441,9 +488,11 @@ def main():
             cur.execute("SELECT id FROM public.processing_errors ORDER BY id")
             assert cur.fetchall() == [(unrelated,)]
         print("SEC5_PRIV_RESTORE_PG18: PASS (real synthetic pg_dump/restore, "
-              "external signed journal, pre-traffic deny, replay atomicity, "
+              "fsynced journal with independent trusted head, pre-traffic deny, replay atomicity, "
               "subject integrity, idempotence, SQL role isolation)")
     finally:
+        if external_folder is not None:
+            external_folder.cleanup()
         if engine is not None:
             engine.dispose()
         try:
