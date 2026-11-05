@@ -20,10 +20,11 @@ from sqlalchemy.orm import Session
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from models import (  # noqa: E402
-    db, User, ProcessingError, FiscalAdvisoryRequest,
+    db, User, ProcessingError, FiscalAdvisoryRequest, FiscalAdvisoryFile,
     S01StripeCheckoutAttempt, S01StripeEventReceipt,
 )
 from sec5_priv_runtime_acl import grant_existing_runtime_acl  # noqa: E402
+from sec5_priv_advisory_file_probe import inspect_advisory_file_metadata  # noqa: E402
 
 DB = "sec5_priv_lifecycle_ci"
 APP_LOGIN = "sec5_lifecycle_runtime_ci"
@@ -131,6 +132,20 @@ def _seed(engine):
             stripe_event_id="evt_sec5_lifecycle_b",
             attempt_id=attempt.id, event_type="checkout.session.completed",
         ))
+        session.flush()
+        # Two synthetic historical metadata rows, one deliberately linked to
+        # a different account than the request. No physical files are created.
+        session.add_all([
+            FiscalAdvisoryFile(
+                request_id=request.id, user_id=b_id, file_name="synthetic-b.pdf",
+                file_path="/ci-only/nonexistent-b.pdf", file_type="application/pdf",
+            ),
+            FiscalAdvisoryFile(
+                request_id=request.id, user_id=c_id, file_name="synthetic-mismatch.pdf",
+                file_path="/ci-only/nonexistent-mismatch.pdf",
+                file_type="application/pdf",
+            ),
+        ])
         session.flush()
         result = (a_id, b_id, c_id, blocked.id, erased.id, other.id, orphan.id,
                   inactive.id, attempt.id)
@@ -324,6 +339,25 @@ def _assert_lifecycle(engine, ids):
         assert entries[block_id][3]["email"] == "synthetic-a@example.invalid"
         assert entries[erase_id][1:3] == (a, "SUPRIMIR")
         assert entries[erase_id][3] is None
+
+    # Exercise the count-only preflight with a real, limited PostgreSQL login.
+    # It may report mismatched ownership but must never expose names or paths.
+    probe_engine = create_engine(
+        f"postgresql+psycopg2://{APP_LOGIN}:{APP_PASSWORD}@127.0.0.1:5432/{DB}"
+    )
+    try:
+        report = inspect_advisory_file_metadata(probe_engine)
+        assert report["status"] == "REVIEW_REQUIRED"
+        assert report["metadata_rows"] == 2
+        assert report["linked_requests"] == 1
+        assert report["linked_users"] == 2
+        assert report["ownership_mismatches"] == 1
+        assert report["missing_requests"] == 0
+        assert not report["physical_files_verified"]
+        assert not report["complete_inventory_proven"]
+        assert not any("file_name" in key or "file_path" in key for key in report)
+    finally:
+        probe_engine.dispose()
 
     with _tx(user=APP_LOGIN, password=APP_PASSWORD) as cur:
         cur.execute(
