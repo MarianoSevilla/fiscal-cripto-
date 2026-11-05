@@ -51,7 +51,7 @@ El usuario **no tiene que compartir documentos de terceros con datos personales*
 - Railway production permanece estable en el commit observado; no se ha accedido a datos reales.
 - Identificados **tres controles de cuenta** de bajo coste y el control Stripe condicionado al futuro producto.
 
-**No confirmado:** DPA ferroviario (Railway) efectivamente firmado, copia privada Resend, plan Gmail/Resend, entidad receptora DPF por certificación, Stripe Connect, acceso específico a expedientes, borrados y retención real de cada proveedor.
+**No confirmado:** DPA de Railway efectivamente firmado, copia privada Resend, plan Gmail/Resend, entidad receptora DPF por certificación, Stripe Connect, acceso específico a expedientes, borrados y retención real de cada proveedor.
 
 **Resultado:** `INVESTIGACION_PUBLICA_PASS / CONTRATO_CUENTA_NO_VERIFICADO`. Este subtrabajo documental puede archivarse tras revisión de la PR; **SEC5-PRIV global permanece ABIERTA**. No autoriza cambios de producción, compra de servicios, firma de DPA, difusión pública de contratos, migración, supresión ni despliegue.
 
