@@ -141,7 +141,7 @@ def _seed(engine):
                 file_path="/ci-only/nonexistent-b.pdf", file_type="application/pdf",
             ),
             FiscalAdvisoryFile(
-                request_id=request.id, user_id=a_id, file_name="synthetic-mismatch.pdf",
+                request_id=request.id, user_id=c_id, file_name="synthetic-mismatch.pdf",
                 file_path="/ci-only/nonexistent-mismatch.pdf",
                 file_type="application/pdf",
             ),
