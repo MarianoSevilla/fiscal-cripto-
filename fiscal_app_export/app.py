@@ -5958,27 +5958,25 @@ def _send_advisory_confirmation_email(advisory: "FiscalAdvisoryRequest"):
 
 
 def _send_advisory_internal_notification(advisory: "FiscalAdvisoryRequest"):
-    """Email interno a Mariano y Rafa."""
+    """Aviso mínimo de nueva solicitud; los datos del caso se consultan en el panel protegido.
+
+    Evitar duplicar en correos personales/Resend relatos fiscales, contacto,
+    importes e información de facturación. La función no cambia destinatarios.
+    """
     if not resend.api_key or not _ADVISORY_NOTIFY_EMAILS:
         return
-    amount_str = f"{advisory.amount_paid / 100:.2f} EUR" if advisory.amount_paid else "—"
-    panel_url  = f"{_APP_BASE_URL}/admin/asesoramiento"
+    panel_url = f"{_APP_BASE_URL}/admin/asesoramiento"
     text = (
-        f"Nueva solicitud de asesoramiento fiscal\n\n"
-        f"ID: #{advisory.id}\n"
-        f"Nombre: {advisory.full_name}\n"
-        f"Email: {advisory.email}\n"
-        f"Servicio: {advisory.service_label()}\n"
-        f"Año fiscal: {advisory.tax_year}\n"
-        f"Importe: {amount_str}\n\n"
-        f"Descripción:\n{advisory.case_description[:500]}\n\n"
+        f"Hay una nueva solicitud de asesoramiento fiscal.\n\n"
+        f"Referencia: #{advisory.id}\n"
+        f"Consulta los detalles en el panel protegido de asesoramiento.\n"
         f"Panel: {panel_url}"
     )
     try:
         resend.Emails.send({
             "from":    _RESEND_FROM_DISPLAY,
             "to":      _ADVISORY_NOTIFY_EMAILS,
-            "subject": f"[Asesoramiento] Nueva solicitud #{advisory.id} — {advisory.service_label()}",
+            "subject": f"[Asesoramiento] Nueva solicitud #{advisory.id}",
             "text":    text,
         })
     except Exception as exc:
