@@ -75,7 +75,7 @@ def _test_request():
 
 def _invoke(function, request):
     if function == "_send_advisory_message_email":
-        return request and function, ("Mensaje privado",)
+        return function, ("Mensaje privado",)
     if function == "_send_advisory_quote_email":
         return function, (f"https://example.invalid/pago?token={PRIVATE_TOKEN}",)
     return function, ()
@@ -110,8 +110,13 @@ def test_advisory_mail_does_not_log_pii_or_vendor_exception(func_name, provider_
     # La operación mantiene su comportamiento: una llamada real (falsa) al
     # proveedor con el correo necesario; se minimizan únicamente los logs.
     payload = mailer.send.call_args.args[0]
-    if func_name != "_send_advisory_internal_notification":
+    if func_name not in (
+        "_send_advisory_internal_notification",
+        "_send_advisory_payment_internal_notification",
+    ):
         assert payload["to"] == [PRIVATE_EMAIL]
+    else:
+        assert payload["to"] == ["interno@example.invalid"]
 
 
 @pytest.mark.parametrize(
