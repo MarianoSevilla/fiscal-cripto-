@@ -29,7 +29,7 @@ def test_scenario_is_in_existing_ci_pg18_lab_not_in_flask():
     assert "ThreadPoolExecutor(max_workers=2)" in text
     assert "if any(count != 0 for count in scope[key].values()):" in text
     assert "SEC5_PRIV_EMPTY_ACCOUNT_PG18: PASS" in text
-    assert text.count("_assert_empty_account_rehearsal(engine, ids)") == 1
+    assert text.count("        _assert_empty_account_rehearsal(engine, ids)") == 1
     assert "def _rehearse_empty_account_row_only" not in FLASK.read_text()
     assert "from qa_sec5_priv_record_lifecycle_pg18" not in FLASK.read_text()
     assert "@app.route" not in text
