@@ -77,3 +77,11 @@ No abrir una reforma general de infraestructura. Bastan los controles privados d
 - [RGPD, arts. 5, 13, 28 y 44-46](https://eur-lex.europa.eu/eli/reg/2016/679/oj?locale=es)
 
 **Relación con documentos del proyecto:** `SEC5_PRIV_PROVEEDORES_BLOQUEO_EVIDENCIAS_20261101.md`, `SEC5_PRIV_POLITICA_PARA_APROBACION_20261101.md`, `SEC5_PRIV_RAFA_ACUERDO_COLABORACION_BORRADOR_20261105.md` y `SEC5_PRIV_BACKUP_RECOVERY_RUNBOOK_20261103.md`.
+
+## 9. Seguimiento contractual posterior al corte documental (05/11/2026)
+
+**Railway — declaración del titular, sin verificación independiente de los archivos finales.** El titular contactó con Railway Support, recibió el enlace oficial de su formulario DocuSign, aportó una copia de once páginas para revisión y completó la firma electrónica en DocuSign identificándose como persona física. Posteriormente confirmó haber descargado/guardado el documento definitivo y certificado de finalización al responder «ya está» a esa instrucción. En la copia previa constaba la firma visible de Railway, pero permanecía en blanco la firma del titular. **No se ha inspeccionado el PDF final ejecutado ni su certificado de finalización; por tanto, la doble firma, integridad, entidad contractual y estado definitivo no se consideran acreditados documentalmente en este expediente.**
+
+**Estado interno:** `RAILWAY_FIRMA_DECLARADA / DOCUMENTO_FINAL_NO_INSPECCIONADO`. La comprobación de existencia y custodia privada corresponde al titular; el contrato firmado y sus certificados **no se suben a GitHub**. Esta anotación actualiza el estado operativo respecto a los pendientes recogidos en §§2, 5 y 6, que reflejan el corte documental previo a la firma. No autoriza modificaciones de producción, borrados, migraciones ni despliegues.
+
+**Siguiente evidencia separada:** Resend — copia DPA disponible en Settings → Documents y plan efectivo; Google/Gmail — modalidad contractual de la cuenta utilizada para soporte. Ninguna se infiere de la formalización de Railway.
