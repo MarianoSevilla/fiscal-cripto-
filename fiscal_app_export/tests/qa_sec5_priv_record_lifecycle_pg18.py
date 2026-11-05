@@ -445,10 +445,13 @@ def _assert_empty_account_rehearsal(engine, ids):
         copied = User(email="synthetic-copied@example.invalid", role="user")
         actor = User(email="synthetic-actor@example.invalid", role="user")
         concurrent = User(email="synthetic-race@example.invalid", role="user")
-        session.add_all((clean, copied, actor, concurrent))
+        staff = User(email="synthetic-staff@example.invalid", role="admin")
+        paid = User(email="synthetic-paid@example.invalid", role="user", plan="pro")
+        session.add_all((clean, copied, actor, concurrent, staff, paid))
         session.flush()
         clean_id, copied_id = clean.id, copied.id
         actor_id, concurrent_id = actor.id, concurrent.id
+        staff_id, paid_id = staff.id, paid.id
         session.add(Contacto(
             nombre="Synthetic", email=copied.email, mensaje="test-only",
             tipo_consulta="otros",
@@ -473,6 +476,8 @@ def _assert_empty_account_rehearsal(engine, ids):
         (c_id, "synthetic-inactive@example.invalid", AUTHORIZED),
         (copied_id, "synthetic-copied@example.invalid", AUTHORIZED),
         (actor_id, "synthetic-actor@example.invalid", AUTHORIZED),
+        (staff_id, "synthetic-staff@example.invalid", AUTHORIZED),
+        (paid_id, "synthetic-paid@example.invalid", AUTHORIZED),
     ):
         try:
             rehearse(user_id, email, evidence=evidence)
@@ -508,7 +513,7 @@ def _assert_empty_account_rehearsal(engine, ids):
     with Session(engine) as session:
         assert session.get(User, clean_id) is None
         assert session.get(User, concurrent_id) is None
-        for surviving_id in (a_id, b_id, c_id, copied_id, actor_id):
+        for surviving_id in (a_id, b_id, c_id, copied_id, actor_id, staff_id, paid_id):
             assert session.get(User, surviving_id) is not None
         assert session.execute(
             select(Contacto.id).where(
