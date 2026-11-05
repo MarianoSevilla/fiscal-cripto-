@@ -5954,7 +5954,7 @@ def _send_advisory_confirmation_email(advisory: "FiscalAdvisoryRequest"):
             "text":    text,
         })
     except Exception as exc:
-        app.logger.error("Error enviando email confirmación advisory: %s", exc)
+        app.logger.error("Aviso de confirmación advisory fallido | solicitud #%s | tipo=%s", advisory.id, type(exc).__name__)
 
 
 def _send_advisory_internal_notification(advisory: "FiscalAdvisoryRequest"):
@@ -5980,7 +5980,7 @@ def _send_advisory_internal_notification(advisory: "FiscalAdvisoryRequest"):
             "text":    text,
         })
     except Exception as exc:
-        app.logger.error("Error enviando notificación interna advisory: %s", exc)
+        app.logger.error("Aviso interno advisory fallido | solicitud #%s | tipo=%s", advisory.id, type(exc).__name__)
 
 
 def _send_advisory_message_email(advisory: "FiscalAdvisoryRequest", mensaje: str) -> bool:
@@ -5990,18 +5990,18 @@ def _send_advisory_message_email(advisory: "FiscalAdvisoryRequest", mensaje: str
     if not resend.api_key:
         app.logger.error(
             "RESEND_API_KEY no configurada — email de mensaje NO enviado "
-            "(advisory_id=%s, to=%s)", advisory.id, advisory.email
+            "(advisory_id=%s)", advisory.id
         )
         return False
 
     html, text = advisory_message_email(advisory, mensaje)
 
     app.logger.info(
-        "Enviando email de mensaje | advisory_id=%s | to=%s | from=%s",
-        advisory.id, advisory.email, _RESEND_FROM_DISPLAY,
+        "Enviando email de mensaje | advisory_id=%s",
+        advisory.id,
     )
     try:
-        resp = resend.Emails.send({
+        resend.Emails.send({
             "from":    _RESEND_FROM_DISPLAY,
             "to":      [advisory.email],
             "subject": "Mensaje sobre tu solicitud de asesoramiento fiscal",
@@ -6009,14 +6009,14 @@ def _send_advisory_message_email(advisory: "FiscalAdvisoryRequest", mensaje: str
             "text":    text,
         })
         app.logger.info(
-            "Email de mensaje enviado OK | advisory_id=%s | resend_id=%s",
-            advisory.id, getattr(resp, "id", resp),
+            "Email de mensaje aceptado por Resend | advisory_id=%s",
+            advisory.id,
         )
         return True
     except Exception as exc:
         app.logger.error(
-            "ERROR enviando email de mensaje | advisory_id=%s | to=%s | error=%s",
-            advisory.id, advisory.email, exc,
+            "ERROR enviando email de mensaje | advisory_id=%s | tipo=%s",
+            advisory.id, type(exc).__name__,
         )
         return False
 
@@ -6028,7 +6028,7 @@ def _send_advisory_quote_email(advisory: "FiscalAdvisoryRequest", payment_url: s
     if not resend.api_key:
         app.logger.error(
             "RESEND_API_KEY no configurada — email de presupuesto NO enviado "
-            "(advisory_id=%s, to=%s)", advisory.id, advisory.email
+            "(advisory_id=%s)", advisory.id
         )
         return False
 
@@ -6037,11 +6037,11 @@ def _send_advisory_quote_email(advisory: "FiscalAdvisoryRequest", payment_url: s
     subject    = f"Tu presupuesto de asesoramiento fiscal — {amount_str} €"
 
     app.logger.info(
-        "Enviando email de presupuesto | advisory_id=%s | to=%s | from=%s | subject=%r",
-        advisory.id, advisory.email, _RESEND_FROM_DISPLAY, subject,
+        "Enviando email de presupuesto | advisory_id=%s",
+        advisory.id,
     )
     try:
-        resp = resend.Emails.send({
+        resend.Emails.send({
             "from":    _RESEND_FROM_DISPLAY,
             "to":      [advisory.email],
             "subject": subject,
@@ -6049,14 +6049,14 @@ def _send_advisory_quote_email(advisory: "FiscalAdvisoryRequest", payment_url: s
             "text":    text,
         })
         app.logger.info(
-            "Email de presupuesto enviado OK | advisory_id=%s | resend_id=%s",
-            advisory.id, getattr(resp, "id", resp),
+            "Email de presupuesto aceptado por Resend | advisory_id=%s",
+            advisory.id,
         )
         return True
     except Exception as exc:
         app.logger.error(
-            "ERROR enviando email de presupuesto | advisory_id=%s | to=%s | error=%s",
-            advisory.id, advisory.email, exc,
+            "ERROR enviando email de presupuesto | advisory_id=%s | tipo=%s",
+            advisory.id, type(exc).__name__,
         )
         return False
 
@@ -6075,7 +6075,7 @@ def _send_advisory_payment_confirmed_email(advisory: "FiscalAdvisoryRequest"):
             "text":    text,
         })
     except Exception as exc:
-        app.logger.error("Error enviando email pago confirmado advisory: %s", exc)
+        app.logger.error("Confirmación de pago advisory fallida | solicitud #%s | tipo=%s", advisory.id, type(exc).__name__)
 
 
 def _send_advisory_payment_internal_notification(advisory: "FiscalAdvisoryRequest"):
@@ -6093,7 +6093,7 @@ def _send_advisory_payment_internal_notification(advisory: "FiscalAdvisoryReques
             "text":    text,
         })
     except Exception as exc:
-        app.logger.error("Error enviando notificación interna pago advisory: %s", exc)
+        app.logger.error("Aviso interno de pago advisory fallido | solicitud #%s | tipo=%s", advisory.id, type(exc).__name__)
 
 
 def _send_advisory_status_update_email(advisory: "FiscalAdvisoryRequest", note: str = "") -> None:
@@ -6124,8 +6124,8 @@ def _send_advisory_status_update_email(advisory: "FiscalAdvisoryRequest", note: 
     if not _ADVISORY_STATUS_EMAILS_ENABLED:
         app.logger.info(
             "[advisory email] DESHABILITADO (ENABLE_ADVISORY_STATUS_EMAILS=false). "
-            "Se habría enviado '%s' a %s (solicitud #%s).",
-            subject, advisory.email, advisory.id,
+            "Se habría enviado estado=%s (solicitud #%s).",
+            advisory.status, advisory.id,
         )
         return
 
@@ -6141,13 +6141,13 @@ def _send_advisory_status_update_email(advisory: "FiscalAdvisoryRequest", note: 
             "text":    text,
         })
         app.logger.info(
-            "[advisory email] Enviado '%s' a %s (solicitud #%s).",
-            subject, advisory.email, advisory.id,
+            "[advisory email] Enviado estado=%s (solicitud #%s).",
+            advisory.status, advisory.id,
         )
     except Exception as exc:
         app.logger.error(
-            "[advisory email] Error enviando estado=%s solicitud #%s: %s",
-            advisory.status, advisory.id, exc,
+            "[advisory email] Error enviando estado=%s solicitud #%s: tipo=%s",
+            advisory.status, advisory.id, type(exc).__name__,
         )
 
 
