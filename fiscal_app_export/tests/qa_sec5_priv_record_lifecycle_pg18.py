@@ -21,10 +21,12 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from models import (  # noqa: E402
     db, User, ProcessingError, FiscalAdvisoryRequest, FiscalAdvisoryFile,
+    Contacto, CommunicationCampaign,
     S01StripeCheckoutAttempt, S01StripeEventReceipt,
 )
 from sec5_priv_runtime_acl import grant_existing_runtime_acl  # noqa: E402
 from sec5_priv_advisory_file_probe import inspect_advisory_file_metadata  # noqa: E402
+from privacy_scope_probe import inventory_verified_user_synthetic  # noqa: E402
 
 DB = "sec5_priv_lifecycle_ci"
 APP_LOGIN = "sec5_lifecycle_runtime_ci"
@@ -382,6 +384,156 @@ def _assert_lifecycle(engine, ids):
         assert {r[0] for r in cur.fetchall()} == {block_id, erase_id}
 
 
+
+def _rehearse_empty_account_row_only(
+    engine, *, user_id, original_email, manual_evidence, inject_after_flush=False
+):
+    """Delete ONLY a synthetic, unreferenced user row, never a real data subject.
+
+    This is NOT a production API or a complete GDPR erasure. It intentionally
+    refuses any known direct, actor, case or copied-email candidate, including
+    an unpaid advisory case. Unlinked free text, providers and backups remain
+    outside this laboratory.
+    """
+    _guard()
+    if engine.url.database != DB or engine.url.host != "127.0.0.1":
+        raise RuntimeError("Unexpected non-CI database")
+    if manual_evidence != AUTHORIZED:
+        raise PermissionError("Synthetic review marker required")
+    if type(user_id) is not int or user_id <= 0:
+        raise PermissionError("Invalid synthetic account identifier")
+    if not isinstance(original_email, str) or not original_email:
+        raise PermissionError("Verified synthetic email required")
+
+    with Session(engine) as session:
+        with session.begin():
+            account = session.execute(
+                select(User).where(User.id == user_id).with_for_update()
+            ).scalar_one_or_none()
+            if account is None:
+                # No-op on a missing row, not proof of prior real-world erasure.
+                return False
+            if account.role != "user" or account.plan != "free":
+                raise PermissionError("Staff or paid account requires review")
+            # Verify email/active status and classify all known 17-model links.
+            scope = inventory_verified_user_synthetic(
+                session, user_id=user_id, original_email=original_email
+            )
+            if scope["tables_modeled"] != 17:
+                raise RuntimeError("Unexpected ORM inventory")
+            for key in (
+                "verified_subject_refs", "staff_actor_refs",
+                "copied_email_candidates", "indirect_case_refs",
+            ):
+                if any(count != 0 for count in scope[key].values()):
+                    raise PermissionError("Related data requires separate review")
+            if scope["delete_permitted"] or scope["blocking_proven"]:
+                raise AssertionError("The synthetic scope must never authorize erasure")
+            # A throw after SQL has been flushed proves rollback of the row.
+            session.delete(account)
+            session.flush()
+            if inject_after_flush:
+                raise RuntimeError("Injected synthetic post-delete failure")
+    return True
+
+
+def _assert_empty_account_rehearsal(engine, ids):
+    """Adversarial, disposable PG18 test; no calls or state in production."""
+    a_id, b_id, c_id, *_rest = ids
+    with Session(engine) as session:
+        clean = User(email="synthetic-clean@example.invalid", role="user")
+        copied = User(email="synthetic-copied@example.invalid", role="user")
+        actor = User(email="synthetic-actor@example.invalid", role="user")
+        concurrent = User(email="synthetic-race@example.invalid", role="user")
+        staff = User(email="synthetic-staff@example.invalid", role="admin")
+        paid = User(email="synthetic-paid@example.invalid", role="user", plan="pro")
+        session.add_all((clean, copied, actor, concurrent, staff, paid))
+        session.flush()
+        clean_id, copied_id = clean.id, copied.id
+        actor_id, concurrent_id = actor.id, concurrent.id
+        staff_id, paid_id = staff.id, paid.id
+        session.add(Contacto(
+            nombre="Synthetic", email=copied.email, mensaje="test-only",
+            tipo_consulta="otros",
+        ))
+        session.add(CommunicationCampaign(
+            created_by_id=actor_id, subject="test-only", body="synthetic",
+        ))
+        session.commit()
+
+    def rehearse(user_id, email, *, evidence=AUTHORIZED, failure=False):
+        return _rehearse_empty_account_row_only(
+            engine, user_id=user_id, original_email=email,
+            manual_evidence=evidence, inject_after_flush=failure,
+        )
+
+    # Missing/manual or invalid evidence must refuse before touching rows.
+    for user_id, email, evidence in (
+        (clean_id, "synthetic-clean@example.invalid", "APPROVED"),
+        (clean_id, "wrong@example.invalid", AUTHORIZED),
+        (a_id, "synthetic-a@example.invalid", AUTHORIZED),
+        (b_id, "synthetic-b@example.invalid", AUTHORIZED),
+        (c_id, "synthetic-inactive@example.invalid", AUTHORIZED),
+        (copied_id, "synthetic-copied@example.invalid", AUTHORIZED),
+        (actor_id, "synthetic-actor@example.invalid", AUTHORIZED),
+        (staff_id, "synthetic-staff@example.invalid", AUTHORIZED),
+        (paid_id, "synthetic-paid@example.invalid", AUTHORIZED),
+    ):
+        try:
+            rehearse(user_id, email, evidence=evidence)
+        except (ValueError, PermissionError):
+            pass
+        else:
+            raise AssertionError("Unsafe synthetic account deletion accepted")
+
+    # An exception after DELETE/flush must fully restore the account.
+    try:
+        rehearse(clean_id, "synthetic-clean@example.invalid", failure=True)
+    except RuntimeError as exc:
+        assert str(exc) == "Injected synthetic post-delete failure"
+    else:
+        raise AssertionError("Missing rollback after flushed synthetic DELETE")
+    with Session(engine) as session:
+        assert session.get(User, clean_id) is not None
+
+    assert rehearse(clean_id, "synthetic-clean@example.invalid")
+    assert rehearse(clean_id, "synthetic-clean@example.invalid") is False
+
+    # Two simultaneous requests must serialize; never erase a second account.
+    barrier = Barrier(2)
+    def worker():
+        barrier.wait(timeout=10)
+        return rehearse(concurrent_id, "synthetic-race@example.invalid")
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        one, two = pool.submit(worker), pool.submit(worker)
+        assert sorted((one.result(timeout=20), two.result(timeout=20))) == [
+            False, True
+        ]
+
+    with Session(engine) as session:
+        assert session.get(User, clean_id) is None
+        assert session.get(User, concurrent_id) is None
+        for surviving_id in (a_id, b_id, c_id, copied_id, actor_id, staff_id, paid_id):
+            assert session.get(User, surviving_id) is not None
+        assert session.execute(
+            select(Contacto.id).where(
+                Contacto.email == "synthetic-copied@example.invalid"
+            )
+        ).scalar_one() is not None
+        assert session.execute(
+            select(CommunicationCampaign.id).where(
+                CommunicationCampaign.created_by_id == actor_id
+            )
+        ).scalar_one() is not None
+        assert session.execute(
+            select(S01StripeEventReceipt.stripe_event_id).where(
+                S01StripeEventReceipt.stripe_event_id == "evt_sec5_lifecycle_b"
+            )
+        ).scalar_one() == "evt_sec5_lifecycle_b"
+
+    print("SEC5_PRIV_EMPTY_ACCOUNT_PG18: PASS "
+          "(only synthetic unreferenced user rows, no production or legal erasure)")
+
 def main():
     _guard()
     with _tx("postgres") as cur:
@@ -447,6 +599,7 @@ def main():
 
         ids = _seed(engine)
         _assert_lifecycle(engine, ids)
+        _assert_empty_account_rehearsal(engine, ids)
         print("SEC5_PRIV_LIFECYCLE_PG18: PASS (synthetic ORM scope, "
               "atomic reservation/erasure, identity/finance guards, "
               "least-privilege SQL, no providers or Railway)")
