@@ -1,6 +1,6 @@
 # SEC5-PRIV — Preflight manual por expediente, sin actuaciones sobre datos
 
-**Fecha:** 06/11/2026. **Estado:** especificación y prueba sintética de una barrera de decisión; **sin fusión ni despliegue** mientras esta PR esté en revisión. **No autoriza** una supresión, un bloqueo ni un cambio de permisos, aunque todas las casillas indiquen «revisado».
+**Fecha:** 06/11/2026. **Estado:** especificación y prueba sintética de una barrera de decisión; **sin fusión y sin despliegue** mientras esta PR esté en revisión. **No autoriza** una supresión, un bloqueo ni un cambio de permisos, aunque todas las casillas indiquen «revisado».
 
 ## Conclusión y uso permitido
 
