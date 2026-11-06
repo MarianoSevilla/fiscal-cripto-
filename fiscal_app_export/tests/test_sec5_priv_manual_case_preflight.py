@@ -3,9 +3,11 @@ import ast
 import copy
 import json
 from pathlib import Path
+import sys
 
 import pytest
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from privacy_case_preflight import REQUIRED_GATES, review_declared_case
 
 ROOT = Path(__file__).resolve().parents[2]
