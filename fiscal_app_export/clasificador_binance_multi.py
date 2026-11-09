@@ -308,11 +308,17 @@ class ClasificadorBinanceMulti:
             raise BinanceMultiUserError("all_empty", "Los archivos de Binance no contienen operaciones.")
         return self
 
-    def _add_event(self, event: BinanceCanonicalEvent):
+    def _add_event(self, event: BinanceCanonicalEvent) -> bool:
+        """Añade un evento una sola vez y devuelve si es nuevo.
+
+        Los parsers deben añadir a las listas derivadas (FIFO/movimientos)
+        únicamente cuando devuelve True.
+        """
         if event.event_id in self._seen_event_ids:
-            return
+            return False
         self._seen_event_ids.add(event.event_id)
         self.eventos.append(event)
+        return True
 
     def _gap(self, code: str, source: str, fecha: str, detalle: str):
         self.bloqueos_valoracion.append(BinanceValuationGap(code, source, fecha, detalle))
@@ -324,6 +330,7 @@ class ClasificadorBinanceMulti:
 
     def _parse_spot_trade(self, df, filename):
         tz = _timezone_hint(filename)
+        occurrences = {}
         for idx, row in df.iterrows():
             fecha = _date(row["Tiempo"])
             executed_qty, executed_asset = _amount_asset(row["Ejecutado"], field="Ejecutado")
@@ -331,7 +338,10 @@ class ClasificadorBinanceMulti:
             fee_qty, fee_asset = _amount_asset(row["Tarifa"], field="Tarifa")
             side = _text(row["Lado"]).upper()
             order_id = _text(row["Número de pedido"])
-            eid = _event_id("spot_trade", order_id, fecha, idx, executed_qty, executed_asset, quote_qty, quote_asset, fee_qty, fee_asset)
+            fp = (order_id, fecha, executed_qty, executed_asset, quote_qty, quote_asset, fee_qty, fee_asset, side)
+            occurrence = occurrences.get(fp, 0)
+            occurrences[fp] = occurrence + 1
+            eid = _event_id("spot_trade", *fp, occurrence)
             if side == "BUY":
                 delivered_asset, delivered_qty = quote_asset, quote_qty
                 received_asset, received_qty = executed_asset, executed_qty
@@ -347,7 +357,8 @@ class ClasificadorBinanceMulti:
                 delivered_asset, delivered_qty, received_asset, received_qty,
                 fee_asset, fee_qty, value_eur, valuation, order_id, "", tz,
             )
-            self._add_event(event)
+            if not self._add_event(event):
+                continue
             if value_eur is None:
                 self._gap("spot_non_eur", "spot_trade", fecha,
                           f"Fill Spot {delivered_asset}→{received_asset} sin valoración EUR acreditada.")
@@ -389,6 +400,7 @@ class ClasificadorBinanceMulti:
 
     def _parse_convert(self, df, filename):
         tz = _timezone_hint(filename)
+        occurrences = {}
         for idx, row in df.iterrows():
             if not self._ok(row):
                 continue
@@ -397,14 +409,18 @@ class ClasificadorBinanceMulti:
             buy_qty, buy_asset = _amount_asset(row["Comprar"], field="Comprar")
             wallet = _text(row.get("Billetera", ""))
             ref = _text(row.get("Par", ""))
-            eid = _event_id("convert", fecha, wallet, ref, sell_qty, sell_asset, buy_qty, buy_asset, idx)
+            fp = (fecha, wallet, ref, sell_qty, sell_asset, buy_qty, buy_asset)
+            occurrence = occurrences.get(fp, 0)
+            occurrences[fp] = occurrence + 1
+            eid = _event_id("convert", *fp, occurrence)
             value_eur = sell_qty if sell_asset == "EUR" else buy_qty if buy_asset == "EUR" else None
             event = BinanceCanonicalEvent(
                 eid, "convert", fecha, "CONVERT", sell_asset, sell_qty, buy_asset, buy_qty,
                 "", Decimal("0"), value_eur,
                 "EUR_DIRECTO" if value_eur is not None else "PENDIENTE", ref, wallet, tz,
             )
-            self._add_event(event)
+            if not self._add_event(event):
+                continue
             if value_eur is None:
                 self._gap("convert_non_eur", "convert", fecha,
                           f"Convert {sell_asset}→{buy_asset} sin valoración EUR acreditada.")
@@ -442,7 +458,8 @@ class ClasificadorBinanceMulti:
                 "EUR_DIRECTO" if "EUR" in {spend_asset, recv_asset} else "PENDIENTE",
                 ref, "", tz,
             )
-            self._add_event(event)
+            if not self._add_event(event):
+                continue
             if side == "BUY":
                 if spend_asset != "EUR" or recv_asset == "EUR":
                     self._gap("fiat_buy_not_eur", "fiat_buy", fecha, "Compra fiat sin pata EUR verificable.")
@@ -483,13 +500,15 @@ class ClasificadorBinanceMulti:
             fee = _decimal(row.get("Tarifa", 0), field="Tarifa")
             txid = _text(row.get("TXID", ""))
             eid = _event_id(f"crypto_{kind.lower()}", txid or idx, fecha, asset, qty, fee)
-            self._add_event(BinanceCanonicalEvent(
+            is_new = self._add_event(BinanceCanonicalEvent(
                 eid, f"crypto_{kind.lower()}", fecha, f"TRANSFER_{kind}",
                 asset if kind == "WITHDRAW" else "", qty if kind == "WITHDRAW" else Decimal("0"),
                 asset if kind == "DEPOSIT" else "", qty if kind == "DEPOSIT" else Decimal("0"),
                 asset if kind == "WITHDRAW" and fee else "", fee,
                 None, "NO_APLICA", txid, _text(row.get("Red", "")), tz,
             ))
+            if not is_new:
+                continue
             signed = float(qty if kind == "DEPOSIT" else -qty)
             self.movimientos.append(OperacionMovimiento(
                 fecha, kind, asset, signed, txid,
@@ -516,12 +535,14 @@ class ClasificadorBinanceMulti:
             qty, asset = _amount_asset(row[value_col], field=value_col)
             ref = _text(row.get("ID de transacción", idx))
             eid = _event_id(kind.lower(), ref, fecha, qty, asset)
-            self._add_event(BinanceCanonicalEvent(
+            is_new = self._add_event(BinanceCanonicalEvent(
                 eid, kind.lower(), fecha, kind,
                 asset if kind == "FIAT_WITHDRAW" else "", qty if kind == "FIAT_WITHDRAW" else Decimal("0"),
                 asset if kind == "FIAT_DEPOSIT" else "", qty if kind == "FIAT_DEPOSIT" else Decimal("0"),
                 "", Decimal("0"), None, "NO_APLICA", ref, "", tz,
             ))
+            if not is_new:
+                continue
             self.movimientos.append(OperacionMovimiento(
                 fecha, kind, asset, float(qty if kind == "FIAT_DEPOSIT" else -qty), ref,
             ))
