@@ -126,6 +126,33 @@ def _read_csv(path: str) -> Tuple[List[str], List[dict], bool]:
         except StopIteration:
             return [], [], True
         keys = [_norm_header(h) for h in headers]
+        if not keys or any(not key for key in keys):
+            raise BinanceMultiUserError(
+                "invalid_csv_headers",
+                "Binance contiene una cabecera CSV vacía o inválida.",
+                category="parser_error",
+            )
+        duplicate_keys = {key for key in keys if keys.count(key) > 1}
+        # El historial oficial de órdenes Spot trae dos columnas Tiempo.
+        # El cálculo FIFO no utiliza ninguna de sus fechas para crear
+        # ejecuciones. Para otros formatos, el dict sobreescribiría datos
+        # normalizados sin avisar (por ejemplo, Hora y Tiempo).
+        expected_spot_orders = {
+            "número de pedido", "par", "lado", "precio de la orden",
+            "cantidad de la orden", "precio medio", "total de trading", "estado",
+        }
+        spot_orders_double_time = (
+            duplicate_keys == {"tiempo"}
+            and keys.count("tiempo") == 2
+            and expected_spot_orders.issubset(set(keys))
+        )
+        if duplicate_keys and not spot_orders_double_time:
+            raise BinanceMultiUserError(
+                "ambiguous_csv_headers",
+                "Binance contiene columnas duplicadas después de normalizar "
+                "las cabeceras. No se puede interpretar sin perder datos.",
+                category="parser_error",
+            )
         rows: List[dict] = []
         sentinel = False
         for raw in reader:

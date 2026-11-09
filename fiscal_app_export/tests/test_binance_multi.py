@@ -517,3 +517,26 @@ def test_dos_deposit_tx_reconciliados_con_dos_deposit_nativos(tmp_path):
     c = _classify([dep, tx])
     assert len(c.movimientos) == 2
     assert "transferencias_duplicadas_sin_identidad_univoca" not in c.fuentes_materiales_no_soportadas
+
+
+def test_csv_cabeceras_normalizadas_duplicadas_se_rechazan(tmp_path):
+    headers = [
+        "ID de usuario", "Tiempo", "Hora", "Cuenta",
+        "Operación", "Moneda", "Cambio", "Observación",
+    ]
+    p = _csv(tmp_path, "duplicate_headers.csv", headers, [
+        ["1", "2025-01-01 09:00:00", "2025-01-01 10:00:00", "Spot",
+         "Deposit", "XRP", "10", ""],
+    ])
+    with pytest.raises(BinanceMultiUserError) as exc:
+        _classify([p])
+    assert exc.value.code == "ambiguous_csv_headers"
+
+
+def test_csv_cabecera_vacia_se_rechaza(tmp_path):
+    headers = ["Tiempo", "", "Par", "Lado", "Precio",
+               "Ejecutado", "Cantidad", "Tarifa", "AOR", "Tasa"]
+    p = _csv(tmp_path, "empty_header.csv", headers, [])
+    with pytest.raises(BinanceMultiUserError) as exc:
+        _classify([p])
+    assert exc.value.code == "invalid_csv_headers"
