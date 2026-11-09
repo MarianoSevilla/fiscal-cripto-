@@ -87,6 +87,10 @@ _COLS_EN_ES = {
     "Coin":      "Moneda",
     "Change":    "Cambio",
     "Remark":    "Observación",
+    # Alias observados en exportaciones directas de Binance en español (2026).
+    "Hora":      "Tiempo",
+    "Cambiar":   "Cambio",
+    "Comentario": "Observación",
 }
 
 
