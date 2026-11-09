@@ -457,3 +457,36 @@ def test_spot_sin_aor_sigue_funcionando(tmp_path):
     assert len(c.compraventas) == 1
     assert len(c.intercambios_nativos) == 1
     assert c.fuentes_materiales_no_soportadas == []
+
+
+def test_spot_rechaza_fills_sin_orden_correspondiente(tmp_path):
+    fills = _csv(tmp_path, "fills.csv", SPOT_H, [
+        ["42", "2025-01-01 10:00:00", "XRPEUR", "BUY", "2", "10XRP", "20EUR", "0XRP", "", ""],
+        ["43", "2025-01-01 10:01:00", "XRPEUR", "BUY", "2", "5XRP", "10EUR", "0XRP", "", ""],
+    ])
+    orders = _csv(tmp_path, "orders.csv", SPOT_ORDER_H, [
+        ["2025-01-01 10:00:00", "42", "XRPEUR", "Market", "BUY", "0", "10XRP",
+         "2025-01-01 10:00:00", "10XRP", "2", "20EUR", "Filled"],
+    ])
+    c = _classify([fills, orders])
+    assert len(c.compraventas) == 2
+    assert "spot_orders_ejecutadas_sin_fills_completos" in c.fuentes_materiales_no_soportadas
+
+
+def test_spot_con_archivo_ordenes_vacio_y_fills_bloquea(tmp_path):
+    fills = _csv(tmp_path, "fills.csv", SPOT_H, [
+        ["42", "2025-01-01 10:00:00", "XRPEUR", "BUY", "2", "10XRP", "20EUR", "0XRP", "", ""],
+    ])
+    orders = _csv(tmp_path, "orders.csv", SPOT_ORDER_H, [])
+    c = _classify([fills, orders])
+    assert len(c.compraventas) == 1
+    assert "spot_orders_ejecutadas_sin_fills_completos" in c.fuentes_materiales_no_soportadas
+
+
+def test_spot_sin_archivo_ordenes_acepta_fills_y_no_infiere_ordenes(tmp_path):
+    fills = _csv(tmp_path, "fills.csv", SPOT_H, [
+        ["42", "2025-01-01 10:00:00", "XRPEUR", "BUY", "2", "10XRP", "20EUR", "0XRP", "", ""],
+    ])
+    c = _classify([fills])
+    assert len(c.compraventas) == 1
+    assert not c.fuentes_materiales_no_soportadas

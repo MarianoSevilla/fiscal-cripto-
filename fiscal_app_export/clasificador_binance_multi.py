@@ -480,6 +480,14 @@ class ClasificadorBinanceMulti:
         """
         orders = self._source_rows["spot_orders"]
         if not orders:
+            # El fichero de órdenes puede estar vacío porque corresponde a
+            # un intervalo diferente del historial de operaciones. Con ambos
+            # informes aportados no debe darse por completa la conciliación.
+            if (self._sections["spot_orders"].detectado
+                    and self._source_rows["spot_trades"]):
+                self.fuentes_materiales_no_soportadas.append(
+                    "spot_orders_ejecutadas_sin_fills_completos"
+                )
             return
 
         fills: Dict[tuple, List[Decimal]] = {}
@@ -548,6 +556,12 @@ class ClasificadorBinanceMulti:
             native = fills.get(key)
             if native is None or native[0] != base_qty or native[1] != quote_qty:
                 missing_or_mismatched = True
+
+        # También exigir que cada orden con fills aparezca en el fichero
+        # de órdenes; comprobar solo en la otra dirección puede aceptar
+        # una exportación parcial y un FIFO con cobertura no demostrada.
+        if set(fills) - seen_order_keys:
+            missing_or_mismatched = True
 
         if missing_or_mismatched:
             self.fuentes_materiales_no_soportadas.append(
