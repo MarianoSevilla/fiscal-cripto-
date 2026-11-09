@@ -20,7 +20,9 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import os
 import re
+import tempfile
 import unicodedata
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
@@ -282,6 +284,14 @@ class ClasificadorBinanceMulti:
         self._cross_file_rows: Dict[str, str] = {}
         self._tz_offsets: set[str] = set()
 
+        # Identidad económica de fuentes nativas. Se usa exclusivamente para
+        # reconciliar Transaction History; nunca para fabricar operaciones.
+        # key = (source_group, fecha, give_asset, recv_asset)
+        # value = [give_total, recv_total]
+        self._native_exchange_totals: Dict[tuple, List[Decimal]] = {}
+        self._native_transfer_keys: set[tuple] = set()
+        self._native_cash_keys: set[tuple] = set()
+
     @property
     def resumen_archivos(self) -> dict:
         out = {k: v.as_dict() for k, v in self._sections.items()}
@@ -305,8 +315,13 @@ class ClasificadorBinanceMulti:
 
             recognized += 1
             sec = self._sections[source]
-            sec.detectado = True
-            sec.vacio = sec.vacio or empty
+            if not sec.detectado:
+                sec.detectado = True
+                sec.vacio = empty
+            else:
+                # Varias exportaciones de la misma fuente: solo es "vacía" si
+                # TODAS lo son.
+                sec.vacio = sec.vacio and empty
             sec.registros += len(rows)
             tz = _tz_from_filename(filename)
             if tz:
@@ -449,6 +464,21 @@ class ClasificadorBinanceMulti:
         recv_asset = recv_asset.upper()
         fee_asset = fee_asset.upper() if fee_asset else None
 
+        if source.startswith("Spot "):
+            source_group = "spot"
+        elif source == "Convert":
+            source_group = "convert"
+        elif source == "Fiat trade":
+            source_group = "fiat"
+        else:
+            source_group = "other"
+        native_key = (source_group, fecha, give_asset, recv_asset)
+        totals = self._native_exchange_totals.setdefault(
+            native_key, [Decimal("0"), Decimal("0")]
+        )
+        totals[0] += give_amount
+        totals[1] += recv_amount
+
         recv_net = recv_amount
         if fee_asset == recv_asset and fee_amount > 0:
             recv_net = recv_amount - fee_amount
@@ -518,6 +548,9 @@ class ClasificadorBinanceMulti:
                         category="parser_error",
                     )
                 asset = row.get("moneda", "").strip().upper()
+                self._native_transfer_keys.add(
+                    (source, fecha, asset, amount)
+                )
                 self.movimientos.append(OperacionMovimiento(
                     fecha=fecha, subtipo=subtype, activo=asset,
                     cantidad=float(amount) * sign,
@@ -544,8 +577,10 @@ class ClasificadorBinanceMulti:
                     continue
                 field = "importe de depósito" if source == "fiat_deposit" else "importe de retiro"
                 qty, asset = _amount_asset(row.get(field), field=field)
+                fecha = _fecha(row.get("tiempo"))
+                self._native_cash_keys.add((source, fecha, asset, qty))
                 self.movimientos.append(OperacionMovimiento(
-                    fecha=_fecha(row.get("tiempo")), subtipo=subtype,
+                    fecha=fecha, subtipo=subtype,
                     activo=asset, cantidad=float(qty) * (1 if source == "fiat_deposit" else -1),
                     observacion=row.get("método", ""),
                 ))
@@ -555,101 +590,309 @@ class ClasificadorBinanceMulti:
             if self._source_rows[source]:
                 self.fuentes_materiales_no_soportadas.append(source)
 
-    def _process_transaction_history(self) -> None:
-        rows = self._source_rows["transaction_history"]
-        if not rows:
-            return
+    @staticmethod
+    def _tx_group_legs(group: List[dict], negative_ops: set[str], positive_ops: set[str]):
+        """Devuelve una única pata negativa y positiva agregadas, o None.
 
-        richer_trade_sources = any(
-            self._sections[k].detectado and self._sections[k].registros > 0
-            for k in ("spot_trades", "convert_orders", "fiat_trade")
-        )
-        richer_crypto_transfers = any(
-            self._sections[k].detectado and self._sections[k].registros > 0
-            for k in ("crypto_deposit", "crypto_withdrawal")
-        )
-        richer_fiat_cash = any(
-            self._sections[k].detectado and self._sections[k].registros > 0
-            for k in ("fiat_deposit", "fiat_withdrawal")
-        )
-
-        if not richer_trade_sources:
-            tx_files = []
-            for path, filename in zip(self.filepaths, self.filenames):
-                headers, _r, _empty = _read_csv(path)
-                if detect_binance_source(headers) == "transaction_history":
-                    tx_files.append((path, filename))
-            from clasificador_binance_tx import ClasificadorBinanceTx
-            for path, _filename in tx_files:
-                legacy = ClasificadorBinanceTx(path).clasificar()
-                self.compraventas.extend(legacy.compraventas)
-                self.swaps.extend(legacy.swaps)
-                self.rendimientos.extend(legacy.rendimientos)
-                self.movimientos.extend(legacy.movimientos)
-                self.desconocidas.extend(legacy.desconocidas)
-                self.advertencias.extend(legacy.advertencias)
-
-                # El wrapper multi debe conservar los guards fiscales del
-                # clasificador legacy: rendimientos sin EUR y Transaction Fee
-                # no pueden quedar autorizados por cambiar de tipo de clase.
-                for income in legacy.rendimientos:
-                    self.valoraciones_pendientes.append({
-                        "fecha": income.fecha,
-                        "fuente": "Transaction History",
-                        "motivo": "rendimiento_sin_valor_eur",
-                        "activo": income.activo,
-                    })
-                try:
-                    fee_rows = legacy.df.loc[
-                        legacy.df["Operación"] == "Transaction Fee",
-                        ["Tiempo", "Moneda", "Cambio"],
-                    ]
-                    for _, fee_row in fee_rows.iterrows():
-                        amount = abs(Decimal(str(fee_row["Cambio"])))
-                        if amount > 0:
-                            self._pending_fee(
-                                str(fee_row["Tiempo"]),
-                                "Transaction History",
-                                str(fee_row["Moneda"]),
-                                amount,
-                            )
-                except Exception:
-                    # Si cambia la forma interna del legacy, fail-closed:
-                    # la aceptación posterior verá la operación desconocida o
-                    # el propio parser legacy habrá fallado antes.
-                    pass
-            return
-
-        for row, _filename in rows:
+        La deduplicación solo se permite cuando cada lado usa exactamente un
+        activo y los signos son coherentes.
+        """
+        neg: Dict[str, Decimal] = {}
+        pos: Dict[str, Decimal] = {}
+        for row in group:
             op = row.get("operación", "").strip()
-            if op in _TRADELIKE_TX:
+            if op not in negative_ops | positive_ops:
                 continue
-            if richer_crypto_transfers and op in _CRYPTO_TRANSFER_TX:
-                continue
-            if richer_fiat_cash and op in _FIAT_TRANSFER_TX:
-                continue
+            asset = row.get("moneda", "").strip().upper()
+            amount = _decimal(row.get("cambio"), field="Cambio")
+            if op in negative_ops:
+                if amount >= 0:
+                    return None
+                neg[asset] = neg.get(asset, Decimal("0")) + (-amount)
+            elif op in positive_ops:
+                if amount <= 0:
+                    return None
+                pos[asset] = pos.get(asset, Decimal("0")) + amount
+        if len(neg) != 1 or len(pos) != 1:
+            return None
+        give_asset, give_amount = next(iter(neg.items()))
+        recv_asset, recv_amount = next(iter(pos.items()))
+        return give_asset, give_amount, recv_asset, recv_amount
 
+    def _matching_native_exchange(
+        self, *, fecha: str, give_asset: str, give_amount: Decimal,
+        recv_asset: str, recv_amount: Decimal, groups: Optional[set[str]] = None,
+        tolerance_seconds: int = 0,
+    ) -> Optional[tuple]:
+        """Busca una única identidad nativa exacta para reconciliación.
+
+        No hay fuzzy matching de cantidades. Para Convert se admite únicamente
+        la tolerancia temporal ya existente en el parser legacy (≤2s).
+        """
+        target_dt = datetime.strptime(fecha, "%Y-%m-%d %H:%M:%S")
+        candidates = []
+        for key, totals in self._native_exchange_totals.items():
+            group, native_fecha, native_give, native_recv = key
+            if groups is not None and group not in groups:
+                continue
+            if native_give != give_asset or native_recv != recv_asset:
+                continue
+            try:
+                native_dt = datetime.strptime(native_fecha, "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                continue
+            if abs((native_dt - target_dt).total_seconds()) > tolerance_seconds:
+                continue
+            if totals[0] == give_amount and totals[1] == recv_amount:
+                candidates.append(key)
+        if len(candidates) == 1:
+            return candidates[0]
+        if len(candidates) > 1:
+            marker = "solape_ambiguo_fuentes_nativas"
+            if marker not in self.fuentes_materiales_no_soportadas:
+                self.fuentes_materiales_no_soportadas.append(marker)
+        return None
+
+    def _filter_exact_tx_duplicates(self, rows: List[dict]) -> List[dict]:
+        """Elimina solo duplicados demostrados frente a fuentes nativas.
+
+        Lo no demostrado se conserva para ClasificadorBinanceTx. Así Spot no
+        puede borrar por accidente Binance Pay, Convert legacy o ventas que no
+        aparezcan en el fichero nativo.
+        """
+        drop: set[int] = set()
+
+        # Transaction Sold/Revenue y Buy/Spend se agrupan por segundo + cuenta,
+        # igual que el fallback seguro, pero sólo se omiten si las patas exactas
+        # existen en una fuente nativa.
+        exact_groups: Dict[tuple, List[int]] = {}
+        exact_ops = {
+            "Transaction Sold", "Transaction Revenue",
+            "Transaction Buy", "Transaction Spend", "Transaction Fee",
+        }
+        for idx, row in enumerate(rows):
+            if row.get("operación", "").strip() not in exact_ops:
+                continue
+            key = (_fecha(row.get("tiempo")), row.get("cuenta", "").strip())
+            exact_groups.setdefault(key, []).append(idx)
+
+        for (fecha, _cuenta), indices in exact_groups.items():
+            group_rows = [rows[i] for i in indices]
+            ops = {r.get("operación", "").strip() for r in group_rows}
+            # Venta
+            if {"Transaction Sold", "Transaction Revenue"} <= ops and not (
+                {"Transaction Buy", "Transaction Spend"} & ops
+            ):
+                legs = self._tx_group_legs(
+                    group_rows, {"Transaction Sold"}, {"Transaction Revenue"}
+                )
+                if legs and self._matching_native_exchange(
+                    fecha=fecha, give_asset=legs[0], give_amount=legs[1],
+                    recv_asset=legs[2], recv_amount=legs[3],
+                    groups={"spot", "fiat", "convert"},
+                ):
+                    drop.update(indices)
+                    continue
+
+            # Compra / Binance Pay
+            if {"Transaction Buy", "Transaction Spend"} <= ops and not (
+                {"Transaction Sold", "Transaction Revenue"} & ops
+            ):
+                legs = self._tx_group_legs(
+                    group_rows, {"Transaction Spend"}, {"Transaction Buy"}
+                )
+                if legs and self._matching_native_exchange(
+                    fecha=fecha, give_asset=legs[0], give_amount=legs[1],
+                    recv_asset=legs[2], recv_amount=legs[3],
+                    groups={"spot", "fiat", "convert"},
+                ):
+                    drop.update(indices)
+
+        # Binance Convert: reproducir la ventana temporal del legacy y comparar
+        # exclusivamente contra Convert nativo.
+        convert_indices = [
+            i for i, r in enumerate(rows)
+            if r.get("operación", "").strip() == "Binance Convert"
+        ]
+        convert_indices.sort(key=lambda i: _fecha(rows[i].get("tiempo")))
+        clusters: List[List[int]] = []
+        current: List[int] = []
+        previous_dt = None
+        for idx in convert_indices:
+            dt = datetime.strptime(_fecha(rows[idx].get("tiempo")), "%Y-%m-%d %H:%M:%S")
+            if previous_dt is not None and (dt - previous_dt).total_seconds() > 2:
+                clusters.append(current)
+                current = []
+            current.append(idx)
+            previous_dt = dt
+        if current:
+            clusters.append(current)
+
+        for indices in clusters:
+            group_rows = [rows[i] for i in indices]
+            fecha = _fecha(group_rows[0].get("tiempo"))
+            legs = self._tx_group_legs(
+                group_rows, {"Binance Convert"}, {"Binance Convert"}
+            )
+            # _tx_group_legs no puede distinguir signo usando el mismo op;
+            # Convert se agrega explícitamente por signo.
+            neg: Dict[str, Decimal] = {}
+            pos: Dict[str, Decimal] = {}
+            for row in group_rows:
+                asset = row.get("moneda", "").strip().upper()
+                amount = _decimal(row.get("cambio"), field="Cambio")
+                if amount < 0:
+                    neg[asset] = neg.get(asset, Decimal("0")) + (-amount)
+                elif amount > 0:
+                    pos[asset] = pos.get(asset, Decimal("0")) + amount
+            if len(neg) == 1 and len(pos) == 1:
+                give_asset, give_amount = next(iter(neg.items()))
+                recv_asset, recv_amount = next(iter(pos.items()))
+                if self._matching_native_exchange(
+                    fecha=fecha, give_asset=give_asset, give_amount=give_amount,
+                    recv_asset=recv_asset, recv_amount=recv_amount,
+                    groups={"convert"}, tolerance_seconds=2,
+                ):
+                    drop.update(indices)
+
+        # Buy/Sell Crypto With Fiat con Wallet ID: sólo se omite si el grupo
+        # contiene ambas patas y reproduce un trade fiat nativo.
+        wallet_re = re.compile(r"Wallet/(\w+)", re.I)
+        wallet_groups: Dict[tuple, List[int]] = {}
+        for idx, row in enumerate(rows):
+            op = row.get("operación", "").strip()
+            if op not in {"Buy Crypto With Fiat", "Sell Crypto To Fiat"}:
+                continue
+            m = wallet_re.search(row.get("observación", "") or "")
+            if not m:
+                continue
+            wallet_groups.setdefault((op, m.group(1)), []).append(idx)
+
+        for (_op, _wallet), indices in wallet_groups.items():
+            group_rows = [rows[i] for i in indices]
+            neg: Dict[str, Decimal] = {}
+            pos: Dict[str, Decimal] = {}
+            for row in group_rows:
+                asset = row.get("moneda", "").strip().upper()
+                amount = _decimal(row.get("cambio"), field="Cambio")
+                if amount < 0:
+                    neg[asset] = neg.get(asset, Decimal("0")) + (-amount)
+                elif amount > 0:
+                    pos[asset] = pos.get(asset, Decimal("0")) + amount
+            if len(neg) == 1 and len(pos) == 1:
+                give_asset, give_amount = next(iter(neg.items()))
+                recv_asset, recv_amount = next(iter(pos.items()))
+                fecha = _fecha(group_rows[0].get("tiempo"))
+                if self._matching_native_exchange(
+                    fecha=fecha, give_asset=give_asset, give_amount=give_amount,
+                    recv_asset=recv_asset, recv_amount=recv_amount,
+                    groups={"fiat"},
+                ):
+                    drop.update(indices)
+
+        # Transferencias: match exacto por fecha + activo + cantidad.
+        transfer_map = {
+            "Deposit": ("crypto_deposit", 1),
+            "Withdraw": ("crypto_withdrawal", -1),
+            "Fiat Deposit": ("fiat_deposit", 1),
+            "Fiat Withdraw": ("fiat_withdrawal", -1),
+        }
+        for idx, row in enumerate(rows):
+            op = row.get("operación", "").strip()
+            if op not in transfer_map:
+                continue
+            source, sign = transfer_map[op]
             fecha = _fecha(row.get("tiempo"))
             asset = row.get("moneda", "").strip().upper()
             amount = _decimal(row.get("cambio"), field="Cambio")
-            account = row.get("cuenta", "")
-            category = REGLAS_TX.get(op)
-            if category == "RENDIMIENTO":
-                self.rendimientos.append(OperacionRendimiento(
-                    fecha=fecha, subtipo=op, activo=asset,
-                    cantidad=float(amount), cuenta=account,
-                ))
+            expected = amount if sign > 0 else -amount
+            if expected <= 0:
+                continue
+            key = (source, fecha, asset, expected)
+            native_keys = (
+                self._native_transfer_keys
+                if source.startswith("crypto_")
+                else self._native_cash_keys
+            )
+            if key in native_keys:
+                drop.add(idx)
+
+        # Si existe una fuente fiat nativa y una operación fiat legacy sin Wallet
+        # no puede ligarse inequívocamente, no la ocultamos: el parser legacy la
+        # procesará o bloqueará. Nunca se deduplica por mera proximidad temporal.
+        return [row for idx, row in enumerate(rows) if idx not in drop]
+
+    def _merge_legacy_transaction_rows(self, rows: List[dict]) -> None:
+        if not rows:
+            return
+        from clasificador_binance_tx import ClasificadorBinanceTx
+
+        tmp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", newline="", suffix=".csv", delete=False
+            ) as tmp:
+                tmp_path = tmp.name
+                writer = csv.writer(tmp)
+                writer.writerow([
+                    "ID de usuario", "Tiempo", "Cuenta", "Operación",
+                    "Moneda", "Cambio", "Observación",
+                ])
+                for row in rows:
+                    writer.writerow([
+                        "",
+                        row.get("tiempo", ""),
+                        row.get("cuenta", ""),
+                        row.get("operación", ""),
+                        row.get("moneda", ""),
+                        row.get("cambio", ""),
+                        row.get("observación", ""),
+                    ])
+
+            legacy = ClasificadorBinanceTx(tmp_path).clasificar()
+            self.compraventas.extend(legacy.compraventas)
+            self.swaps.extend(legacy.swaps)
+            self.rendimientos.extend(legacy.rendimientos)
+            self.movimientos.extend(legacy.movimientos)
+            self.desconocidas.extend(legacy.desconocidas)
+            self.advertencias.extend(legacy.advertencias)
+
+            for income in legacy.rendimientos:
                 self.valoraciones_pendientes.append({
-                    "fecha": fecha, "fuente": "Transaction History",
-                    "motivo": "rendimiento_sin_valor_eur", "activo": asset,
+                    "fecha": income.fecha,
+                    "fuente": "Transaction History",
+                    "motivo": "rendimiento_sin_valor_eur",
+                    "activo": income.activo,
                 })
-            elif category == "MOVIMIENTO":
-                self.movimientos.append(OperacionMovimiento(
-                    fecha=fecha, subtipo=op, activo=asset, cantidad=float(amount),
-                    observacion=row.get("observación", ""),
-                ))
-            else:
-                self.desconocidas.append(OperacionDesconocida(
-                    fecha=fecha, subtipo=op or "Operación Binance no reconocida",
-                    activo=asset or "?", cantidad=float(amount), cuenta=account,
-                ))
+            fee_rows = legacy.df.loc[
+                legacy.df["Operación"] == "Transaction Fee",
+                ["Tiempo", "Moneda", "Cambio"],
+            ]
+            for _, fee_row in fee_rows.iterrows():
+                amount = abs(Decimal(str(fee_row["Cambio"])))
+                if amount > 0:
+                    self._pending_fee(
+                        str(fee_row["Tiempo"]),
+                        "Transaction History",
+                        str(fee_row["Moneda"]),
+                        amount,
+                    )
+        finally:
+            if tmp_path:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+
+    def _process_transaction_history(self) -> None:
+        rows = [row for row, _filename in self._source_rows["transaction_history"]]
+        if not rows:
+            return
+        filtered = self._filter_exact_tx_duplicates(rows)
+        omitted = len(rows) - len(filtered)
+        if omitted:
+            self.advertencias.append(
+                f"Binance: {omitted} fila(s) de Transaction History se omitieron "
+                "porque estaban reproducidas exactamente por una fuente nativa."
+            )
+        self._merge_legacy_transaction_rows(filtered)
