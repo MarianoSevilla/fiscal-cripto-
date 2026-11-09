@@ -197,3 +197,40 @@ def test_export_binance_offset_a_utc_y_cruce_anual():
 def test_export_binance_sin_zona_horaria_no_permite_valoracion():
     with pytest.raises(BinancePriceEvidenceError, match="zona horaria"):
         binance_export_time_to_utc("2025-01-01 12:00:00", "spot.csv")
+
+
+
+def test_trade_publico_de_otro_dia_no_valida_archivo_por_nombre():
+    archive, checksum = zipped_trades([
+        "42,2.5,10,25,1735819200000000,True,True",
+    ], name="XRPEUR-trades-2025-01-01.zip")
+    with pytest.raises(BinancePriceEvidenceError, match="fuera del periodo"):
+        parse_verified_binance_trade_zip(
+            archive, checksum, archive_name="XRPEUR-trades-2025-01-01.zip",
+            symbol="XRPEUR", base="XRP", quote="EUR",
+        )
+
+
+def test_trade_publico_qty_o_quoteqty_no_positivos_rechazados():
+    for record in (
+        "42,2.5,0,25,1735732800000000,True,True",
+        "42,2.5,10,0,1735732800000000,True,True",
+        "42,2.5,10,NaN,1735732800000000,True,True",
+    ):
+        archive, checksum = zipped_trades([record])
+        with pytest.raises(BinancePriceEvidenceError, match="positivo y finito"):
+            parse_verified_binance_trade_zip(
+                archive, checksum, archive_name="XRPEUR-trades-2025-01-01.zip",
+                symbol="XRPEUR", base="XRP", quote="EUR",
+            )
+
+
+def test_trades_mensuales_no_admiten_fecha_del_mes_siguiente():
+    archive, checksum = zipped_trades([
+        "42,2.5,10,25,1738368000000000,True,True",
+    ], name="XRPEUR-trades-2025-01.zip")
+    with pytest.raises(BinancePriceEvidenceError, match="fuera del periodo"):
+        parse_verified_binance_trade_zip(
+            archive, checksum, archive_name="XRPEUR-trades-2025-01.zip",
+            symbol="XRPEUR", base="XRP", quote="EUR",
+        )

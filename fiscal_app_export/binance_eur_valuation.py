@@ -18,7 +18,7 @@ import io
 import re
 import zipfile
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import PurePosixPath
 from typing import Iterable
@@ -129,6 +129,24 @@ def parse_verified_binance_trade_zip(
         raise BinancePriceEvidenceError("Nombre de archivo de operaciones no reconocido")
     if not archive_name.startswith(f"{symbol}-trades-"):
         raise BinancePriceEvidenceError("ZIP histórico de símbolo distinto")
+    period_match = re.fullmatch(
+        rf"{re.escape(symbol)}-trades-(\d{{4}})-(\d{{2}})(?:-(\d{{2}}))?\.zip",
+        archive_name,
+    )
+    if period_match is None:
+        raise BinancePriceEvidenceError("Periodo de ZIP histórico inválido")
+    try:
+        year, month = int(period_match.group(1)), int(period_match.group(2))
+        day = int(period_match.group(3)) if period_match.group(3) else None
+        period_start = date(year, month, day or 1)
+        if day is not None:
+            period_end = period_start + timedelta(days=1)
+        elif month == 12:
+            period_end = date(year + 1, 1, 1)
+        else:
+            period_end = date(year, month + 1, 1)
+    except (ValueError, OverflowError) as exc:
+        raise BinancePriceEvidenceError("Fecha del ZIP histórico inválida") from exc
     match = re.fullmatch(
         r"\s*([a-fA-F0-9]{64})(?:[ \t]+[*]?([^\r\n]+))?\s*",
         str(checksum), re.ASCII,
@@ -174,12 +192,19 @@ def parse_verified_binance_trade_zip(
                             trade_id = int(row[0])
                         except ValueError as exc:
                             raise BinancePriceEvidenceError("Trade ID histórico inválido") from exc
+                        price = _positive_decimal(row[1], name="precio histórico")
+                        _positive_decimal(row[2], name="cantidad histórica")
+                        _positive_decimal(row[3], name="contravalor histórico")
+                        observed_at = _timestamp_utc(row[4].strip())
+                        if not period_start <= observed_at.date() < period_end:
+                            raise BinancePriceEvidenceError(
+                                "Trade histórico fuera del periodo declarado por su ZIP"
+                            )
                         if len(result) >= max_trades:
                             raise BinancePriceEvidenceError("Límite de operaciones históricas superado")
                         result.append(TradePriceEvidence(
                             base=base, quote=quote,
-                            price=_positive_decimal(row[1], name="precio histórico"),
-                            observed_at=_timestamp_utc(row[4].strip()),
+                            price=price, observed_at=observed_at,
                             public_trade_id=trade_id, archive_sha256=digest,
                         ))
             if not result:
