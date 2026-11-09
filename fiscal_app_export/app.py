@@ -1720,6 +1720,21 @@ def _validar_aceptacion_fifo(motor, clasificador=None) -> None:
                 "Datos fiscales no seguros: Binance contiene una fuente con "
                 "operaciones que todavía no se pueden reconstruir con seguridad."
             )
+        # Los depósitos cripto aportan cantidad, pero sus lotes externos
+        # (fecha/coste de adquisición) no se incorporan al motor FIFO.
+        # Aunque existan compras locales suficientes, una venta posterior
+        # podría consumir los lotes equivocados por orden histórico.
+        # Tampoco sería fiable la posición final si se omite el depósito.
+        if any(
+            getattr(m, "subtipo", "") == "Depósito cripto"
+            and getattr(m, "cantidad", 0) > 0
+            for m in getattr(clasificador, "movimientos", ())
+        ):
+            raise ValueError(
+                "Datos fiscales no seguros: Binance contiene depósitos cripto "
+                "cuyos lotes de adquisición, fechas y costes no están "
+                "reconstruidos en el FIFO. Requiere conciliar su origen."
+            )
         if getattr(clasificador, "valoraciones_pendientes", ()):
             raise ValueError(
                 "Datos fiscales no seguros: Binance contiene permutas o rendimientos "

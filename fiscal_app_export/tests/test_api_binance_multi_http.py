@@ -297,3 +297,62 @@ def test_http_spot_aor_no_reconstruido_422_sin_token(client, usuario):
     body = r.get_json()
     assert "Datos fiscales no seguros" in body["error"]
     assert "token" not in body
+
+
+
+def test_http_deposito_externo_no_se_oculta_aunque_haya_compras_locales(client, usuario):
+    """Una venta puede parecer cubierta por compra Spot pero requerir un lote
+    anterior depositado desde fuera: no asignar el coste local a ciegas.
+    """
+    _login(client)
+    spot_csv = (
+        SPOT_HEADER
+        + "invented-buy,2025-04-05 10:00:00,XRPEUR,BUY,2,10XRP,20EUR,0XRP,,\n"
+        + "invented-sell,2025-04-10 10:00:00,XRPEUR,SELL,3,5XRP,15EUR,0EUR,,\n"
+    ).encode("utf-8-sig")
+    deposit_csv = (
+        "Tiempo,Moneda,Red,Cantidad,Dirección,TXID,Estado\n"
+        "2025-04-04 10:00:00,XRP,XRP,10,synthetic-address,"
+        "synthetic-deposit,Completed\n"
+    ).encode("utf-8-sig")
+    r = client.post(
+        "/api/binance/analizar",
+        data={
+            "csv": [
+                (io.BytesIO(spot_csv), "Binance-Spot-(UTC+1).csv"),
+                (io.BytesIO(deposit_csv), "Binance-Deposits-(UTC+1).csv"),
+            ],
+            "ejercicio": "2025",
+            "nombre": "Ensayo de coste externo",
+        },
+        content_type="multipart/form-data",
+    )
+    body = r.get_json()
+    assert r.status_code == 422
+    assert "depósitos cripto" in body["error"].lower()
+    assert "lotes" in body["error"].lower()
+    assert "token" not in body
+    assert "resumen" not in body
+
+
+def test_http_solo_deposito_externo_no_emite_posicion_fifo_vacia(client, usuario):
+    """Un depósito sin coste no se traduce en una cartera FIFO vacía."""
+    _login(client)
+    deposit_csv = (
+        "Tiempo,Moneda,Red,Cantidad,Dirección,TXID,Estado\n"
+        "2025-04-04 10:00:00,XRP,XRP,10,synthetic-address,"
+        "synthetic-deposit,Completed\n"
+    ).encode("utf-8-sig")
+    r = client.post(
+        "/api/binance/analizar",
+        data={
+            "csv": (io.BytesIO(deposit_csv), "Binance-Deposits-(UTC+1).csv"),
+            "ejercicio": "2025",
+            "nombre": "Ensayo depósito sin compras",
+        },
+        content_type="multipart/form-data",
+    )
+    body = r.get_json()
+    assert r.status_code == 422
+    assert "depósitos cripto" in body["error"].lower()
+    assert "token" not in body
