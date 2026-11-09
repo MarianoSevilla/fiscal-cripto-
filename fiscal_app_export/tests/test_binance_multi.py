@@ -155,6 +155,7 @@ def test_transaction_history_es_complementario_si_hay_spot(tmp_path):
         ["42", "2025-01-01 10:00:00", "XRPEUR", "BUY", "2", "10XRP", "20EUR", "0XRP", "", ""],
     ])
     tx = _csv(tmp_path, "tx.csv", TX_H, [
+        ["1", "2025-01-01 10:00:00", "Spot", "Transaction Spend", "EUR", "-20", ""],
         ["1", "2025-01-01 10:00:00", "Spot", "Transaction Buy", "XRP", "10", ""],
         ["1", "2025-01-02 10:00:00", "Earn", "Simple Earn Flexible Interest", "XRP", "0.1", ""],
     ])
