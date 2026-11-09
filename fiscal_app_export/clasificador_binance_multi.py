@@ -521,9 +521,10 @@ class ClasificadorBinanceMulti:
                 fecha, kind, asset, signed, txid,
             ))
             if kind == "WITHDRAW" and fee:
-                self.advertencias.append(
-                    f"{fecha} | Retiro {asset}: la comisión de red se conserva en la trazabilidad "
-                    "y requiere conciliación con el destino antes de atribuir efecto fiscal."
+                self._gap(
+                    "withdrawal_fee_unhandled", "crypto_withdraw", fecha,
+                    f"Retiro {asset} con comisión de red: el inventario no puede ajustarse "
+                    "sin fijar antes su tratamiento fiscal.",
                 )
 
     def _parse_fiat_deposit(self, df, filename):
@@ -573,33 +574,62 @@ class ClasificadorBinanceMulti:
         # Specialized data is canonical. TX remains complementary for legacy rewards/Earn etc.
         # Header aliases from PR #192 are applied locally by ClasificadorBinanceTx.
         legacy = ClasificadorBinanceTx(self.filepaths[self.filenames.index(filename)]).clasificar()
-        specialized_present = bool(self._specialized_families)
+        def _same_cv(a, b) -> bool:
+            try:
+                return (
+                    str(a.fecha)[:19] == str(b.fecha)[:19]
+                    and str(a.tipo).upper() == str(b.tipo).upper()
+                    and str(a.activo).upper() == str(b.activo).upper()
+                    and str(a.contraparte).upper() == str(b.contraparte).upper()
+                    and abs(float(a.cantidad) - float(b.cantidad)) <= max(1e-12, 1e-12 * abs(float(a.cantidad)))
+                    and abs(float(a.importe) - float(b.importe)) <= max(1e-9, 1e-12 * abs(float(a.importe)))
+                )
+            except (TypeError, ValueError):
+                return False
 
-        # Direct economic trades from TX are fallback only when specialized files are absent.
-        # Even then, only direct-EUR operations with no unresolved fee may reach MotorFIFO.
-        if not specialized_present:
-            for op in legacy.compraventas:
-                if str(op.contraparte).upper() != "EUR":
-                    self._gap("legacy_trade_non_eur", "transaction_history", op.fecha,
-                              f"Operación legacy {op.activo}/{op.contraparte} sin valoración EUR acreditada.")
-                    continue
-                if float(getattr(op, "fee_cantidad", 0) or 0) != 0:
-                    self._gap("legacy_trade_fee", "transaction_history", op.fecha,
-                              "Comisión legacy Binance sin tratamiento fiscal completo.")
-                    continue
-                self.compraventas.append(op)
-            for op in legacy.swaps:
-                self._gap("legacy_swap_unvalued", "transaction_history", op.fecha,
-                          f"Permuta legacy {op.activo_entregado}→{op.activo_recibido} sin valoración EUR acreditada.")
-        # Rewards and movements remain complementary because specialized Spot/Convert/Fiat
-        # do not cover Earn or generic account events. Legacy rewards do not carry a
-        # transaction-time EUR valuation, therefore they are retained for provenance but block IRPF.
+        # TX is complementary, not globally disabled by the presence of specialized
+        # sources. This preserves Binance Pay/legacy EUR events while suppressing
+        # operations already represented by Spot/Convert/Fiat.
+        for op in legacy.compraventas:
+            if any(_same_cv(op, existing) for existing in self.compraventas):
+                continue
+            if str(op.contraparte).upper() != "EUR":
+                self._gap("legacy_trade_non_eur", "transaction_history", op.fecha,
+                          f"Operación legacy {op.activo}/{op.contraparte} sin valoración EUR acreditada.")
+                continue
+            if float(getattr(op, "fee_cantidad", 0) or 0) != 0:
+                self._gap("legacy_trade_fee", "transaction_history", op.fecha,
+                          "Comisión legacy Binance sin tratamiento fiscal completo.")
+                continue
+            self.compraventas.append(op)
+
+        for op in legacy.swaps:
+            self._gap("legacy_swap_unvalued", "transaction_history", op.fecha,
+                      f"Permuta legacy {op.activo_entregado}→{op.activo_recibido} sin valoración EUR acreditada.")
+
+        # Rewards remain complementary because Spot/Convert/Fiat do not cover Earn.
+        # They are retained for provenance but block IRPF until transaction-time EUR valuation exists.
         self.rendimientos.extend(legacy.rendimientos)
         if legacy.rendimientos:
             first_date = getattr(legacy.rendimientos[0], "fecha", "")
             self._gap("legacy_income_unvalued", "transaction_history", str(first_date),
                       "Rendimientos Binance sin valoración EUR verificable a la fecha de percepción.")
-        self.movimientos.extend(legacy.movimientos)
+
+        # Specialized transfer exports have precedence over equivalent TX movement rows,
+        # while internal account movements and Earn subscriptions remain complementary.
+        covered_movement_types = set()
+        if "crypto_deposit" in self.resumen_archivos:
+            covered_movement_types.add("deposit")
+        if "crypto_withdraw" in self.resumen_archivos:
+            covered_movement_types.add("withdraw")
+        if "fiat_deposit" in self.resumen_archivos:
+            covered_movement_types.add("fiat deposit")
+        if "fiat_withdraw" in self.resumen_archivos:
+            covered_movement_types.add("fiat withdraw")
+        for movement in legacy.movimientos:
+            if str(getattr(movement, "subtipo", "")).strip().lower() in covered_movement_types:
+                continue
+            self.movimientos.append(movement)
 
         for unknown in legacy.desconocidas:
             self.desconocidas.append(unknown)
