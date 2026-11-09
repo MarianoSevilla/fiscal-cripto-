@@ -207,3 +207,74 @@ def test_http_mas_de_32000_fills_spot_sin_truncamiento_fifo_pdf(client, usuario)
     assert body["resumen"]["operaciones_con_resultado"] == 1
     assert body["resumen"]["resultado_neto"] == pytest.approx(1.0)
     assert "token" in body and body["token"]
+
+
+
+def test_http_spot_par_inconsistente_422_sin_pdf(client, usuario):
+    _login(client)
+    incorrect = (
+        SPOT_HEADER
+        + "100,2025-01-01 10:00:00,BTCEUR,BUY,2,1XRP,2EUR,0XRP,,\n"
+    ).encode("utf-8-sig")
+    r = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(incorrect), "Binance-Spot-(UTC+1).csv"),
+              "ejercicio": "2025", "nombre": "Sintético"},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 422
+    body = r.get_json()
+    assert "token" not in body
+    assert "Datos fiscales no seguros" in body["error"]
+
+
+def test_http_convert_estado_desconocido_422_sin_pdf(client, usuario):
+    _login(client)
+    future_state = (
+        CONVERT_HEADER
+        + "2025-01-01 10:00:00,SPOT,XRPEUR,Instant,2 EUR,1 XRP,,,,NewFutureState\n"
+    ).encode("utf-8-sig")
+    r = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(future_state), "Binance-Convert-(UTC+1).csv"),
+              "ejercicio": "2025", "nombre": "Sintético"},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 422
+    body = r.get_json()
+    assert "token" not in body
+
+
+def test_http_csv_columnas_desalineadas_400_sin_pdf(client, usuario):
+    _login(client)
+    malformed = (
+        SPOT_HEADER
+        + "100,2025-01-01 10:00:00,XRPEUR,BUY,2,1XRP\n"
+    ).encode("utf-8-sig")
+    r = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(malformed), "Binance-Spot-(UTC+1).csv"),
+              "ejercicio": "2025", "nombre": "Sintético"},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 400
+    assert "token" not in r.get_json()
+    assert "número de columnas" in r.get_json()["error"]
+
+
+def test_http_filas_iguales_entre_csv_distintos_422(client, usuario):
+    _login(client)
+    duplicated = "100,2025-01-01 10:00:00,XRPEUR,BUY,2,1XRP,2EUR,0XRP,,\n"
+    extra = "101,2025-01-01 10:01:00,XRPEUR,BUY,2,1XRP,2EUR,0XRP,,\n"
+    r = client.post(
+        "/api/binance/analizar",
+        data={"csv": [
+            (io.BytesIO((SPOT_HEADER + duplicated + extra).encode("utf-8")),
+             "spot-part1.csv"),
+            (io.BytesIO((SPOT_HEADER + duplicated).encode("utf-8")),
+             "spot-part2.csv"),
+        ], "ejercicio": "2025", "nombre": "Sintético"},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 422
+    assert "token" not in r.get_json()
