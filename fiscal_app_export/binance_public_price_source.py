@@ -113,8 +113,13 @@ def fetch_official_spot_trades(
         checksum = checksum_bytes.decode("ascii")
     except UnicodeDecodeError as exc:
         raise BinanceMarketDownloadError("CHECKSUM público no es ASCII") from exc
-    return parse_verified_binance_trade_zip(
-        archive, checksum, archive_name=filename,
-        symbol=symbol, base=base, quote=quote,
-        max_archive_bytes=ZIP_LIMIT,
-    )
+    try:
+        return parse_verified_binance_trade_zip(
+            archive, checksum, archive_name=filename,
+            symbol=symbol, base=base, quote=quote,
+            max_archive_bytes=ZIP_LIMIT,
+        )
+    except BinancePriceEvidenceError as exc:
+        raise BinanceMarketDownloadError(
+            "El ZIP público o su CHECKSUM no ha superado la validación histórica"
+        ) from exc
