@@ -245,6 +245,11 @@ class ClasificadorBinanceMulti:
         self.filenames = list(filenames or [Path(p).name for p in filepaths])
         if len(self.filepaths) != len(self.filenames):
             raise BinanceMultiUserError("file_name_mismatch", "No se puede identificar de forma segura el conjunto de archivos Binance.")
+        if len(set(self.filenames)) != len(self.filenames):
+            raise BinanceMultiUserError(
+                "duplicate_filename",
+                "Hay dos archivos Binance con el mismo nombre. Conserva los nombres originales de Binance y elimina duplicados.",
+            )
         digests = []
         for path in self.filepaths:
             with open(path, "rb") as fh:
@@ -304,7 +309,8 @@ class ClasificadorBinanceMulti:
                 )
             handler(df, filename)
 
-        if not any(self.resumen_archivos.values()):
+        if not (self.eventos or self.compraventas or self.rendimientos
+                or self.movimientos or self.desconocidas or self.bloqueos_valoracion):
             raise BinanceMultiUserError("all_empty", "Los archivos de Binance no contienen operaciones.")
         return self
 
