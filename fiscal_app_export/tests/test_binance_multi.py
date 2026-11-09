@@ -227,6 +227,29 @@ def test_export_tx_vacio_no_invalida_fuentes_especializadas(tmp_path):
     assert c.resumen_archivos["transaction_history"]["vacio"] is True
 
 
+def test_todos_los_exports_vacios_no_generan_informe(tmp_path):
+    tx, name = _csv(
+        tmp_path, "Binance-Historial-de-transacciones-20260101(UTC+1)_empty.csv",
+        TX_HEADER_ALT,
+        "No hay datos que se ajusten a los criterios.,,,,,,\n",
+    )
+    with pytest.raises(BinanceMultiUserError, match="no contienen operaciones"):
+        ClasificadorBinanceMulti([tx], [name]).clasificar()
+
+
+def test_retiro_con_fee_conserva_movimiento_pero_bloquea_informe(tmp_path):
+    wd, name = _csv(
+        tmp_path, "Binance-Historial-de-retiros-20260101(UTC+1)_fee.csv",
+        CRYPTO_WITHDRAW_HEADER,
+        "2025-04-02 10:00:00,XRP,XRP,50,0.1,rAddress2,TX-FEE,Completed\n",
+    )
+    c = ClasificadorBinanceMulti([wd], [name]).clasificar()
+    assert len(c.movimientos) == 1
+    assert "withdrawal_fee_unhandled" in {g.code for g in c.bloqueos_valoracion}
+    with pytest.raises(ValueError, match="No se puede emitir un informe parcial"):
+        c.validar_aceptacion()
+
+
 def test_fiat_ambiguo_renombrado_se_bloquea(tmp_path):
     path, _ = _csv(
         tmp_path, "renombrado.csv", FIAT_HEADER,
@@ -257,5 +280,5 @@ def test_archivo_duplicado_se_rechaza_antes_de_clasificar(tmp_path):
         SPOT_HEADER,
         "OID-11,2025-01-02 10:00:00,BTCEUR,BUY,50000,0.001 BTC,50 EUR,0 BTC,,\n",
     )
-    with pytest.raises(BinanceMultiUserError, match="mismo archivo"):
+    with pytest.raises(BinanceMultiUserError, match="duplic|mismo nombre"):
         ClasificadorBinanceMulti([path, path], [name, name])
