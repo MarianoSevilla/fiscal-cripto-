@@ -165,3 +165,44 @@ def test_hipotesis_fiat_externa_invalida_se_rechaza(tmp_path):
             classify(purchase), inicio="2025-01-01",
             metodos_pago_externo=("",),
         )
+
+
+
+def test_eventos_mismo_segundo_se_agregan_sin_deficit_artificial(tmp_path):
+    """Dentro del mismo segundo no se presume un orden del CSV entre fuentes."""
+    fiat = csvfile(tmp_path, "deposit.csv", FIAT_DEP_H, [
+        ["2025-02-01 10:00:00", "SEPA", "20 EUR", "20 EUR",
+         "0 EUR", "Successful", "invented-deposit"],
+    ])
+    trade = csvfile(tmp_path, "spot.csv", SPOT_H, [
+        ["invented-order", "2025-02-01 10:00:00", "XRPEUR", "BUY",
+         "2", "10XRP", "20EUR", "0XRP", "", ""],
+    ])
+    report = diagnosticar_saldo_inicial_cero(
+        classify(trade, fiat), inicio="2025-01-01",
+    )
+    assert report.activos_con_deficit == ()
+    assert report.pagos_externos_supuestos == 0
+
+
+def test_deficit_transitorio_y_posterior_mas_grave_se_preservan(tmp_path):
+    """Un ingreso posterior no prueba que una disposición anterior fuese válida."""
+    spot = csvfile(tmp_path, "spot.csv", SPOT_H, [
+        ["invented-1", "2025-01-02 10:00:00", "XRPUSDC", "BUY",
+         "10", "1XRP", "10USDC", "0XRP", "", ""],
+        ["invented-2", "2025-01-04 10:00:00", "XRPUSDC", "BUY",
+         "40", "1XRP", "40USDC", "0XRP", "", ""],
+    ])
+    deposit = csvfile(tmp_path, "deposit.csv", CRYPTO_DEP_H, [
+        ["2025-01-03 10:00:00", "USDC", "ETH", "30",
+         "invented-address", "invented-hash", "Completed"],
+    ])
+    report = diagnosticar_saldo_inicial_cero(
+        classify(spot, deposit), inicio="2025-01-01",
+    )
+    assert [d.activo for d in report.activos_con_deficit] == ["USDC"]
+    deficit = report.activos_con_deficit[0]
+    assert deficit.primera_fecha == "2025-01-02"
+    assert str(deficit.saldo_minimo) == "-20"
+    assert report.activos_depositados_sin_coste_acreditado == ("USDC",)
+    assert not report.coste_fiscal_acreditado
