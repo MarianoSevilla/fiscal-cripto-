@@ -540,3 +540,52 @@ def test_csv_cabecera_vacia_se_rechaza(tmp_path):
     with pytest.raises(BinanceMultiUserError) as exc:
         _classify([p])
     assert exc.value.code == "invalid_csv_headers"
+
+
+
+def test_fiat_cash_usa_neto_recibido_en_depositos_y_bruto_sustraido_en_retiros(tmp_path):
+    deposit = _csv(tmp_path, "fiat_deposit.csv", [
+        "Tiempo", "Método", "Importe de depósito", "Recibir cantidad",
+        "Tarifa", "Estado", "ID de transacción",
+    ], [
+        ["2025-01-05 09:00:00", "SEPA", "100 EUR", "99 EUR", "1 EUR", "Successful", "fake-1"],
+        ["2025-01-05 10:00:00", "SEPA", "100 EUR", "99 EUR", "1 EUR", "Failed", "fake-2"],
+    ])
+    withdrawal = _csv(tmp_path, "fiat_withdrawal.csv", [
+        "Tiempo", "Método", "Importe de retiro", "Recibir cantidad",
+        "Tarifa", "Estado", "ID de transacción",
+    ], [
+        ["2025-01-06 09:00:00", "SEPA", "50 EUR", "49.5 EUR", "0.5 EUR", "Successful", "fake-3"],
+    ])
+    c = _classify([deposit, withdrawal])
+    assert len(c.movimientos) == 2
+    assert [m.cantidad for m in c.movimientos] == [99, -50]
+    assert "Comisión fiat: 1 EUR" in c.movimientos[0].observacion
+    assert "Comisión fiat: 0.5 EUR" in c.movimientos[1].observacion
+    assert c.compraventas == []
+    assert c.swaps == []
+    assert c.comisiones_pendientes == []
+
+
+def test_fiat_cash_importes_no_conciliados_se_rechazan(tmp_path):
+    deposit = _csv(tmp_path, "fiat_inconsistent.csv", [
+        "Tiempo", "Método", "Importe de depósito", "Recibir cantidad",
+        "Tarifa", "Estado", "ID de transacción",
+    ], [
+        ["2025-01-05 09:00:00", "SEPA", "100 EUR", "98 EUR", "1 EUR", "Successful", "fake-1"],
+    ])
+    with pytest.raises(BinanceMultiUserError) as exc:
+        _classify([deposit])
+    assert exc.value.code == "fiat_cash_fee_mismatch"
+
+
+def test_fiat_cash_nunca_convierte_a_otra_moneda_sin_fuente_valorada(tmp_path):
+    deposit = _csv(tmp_path, "fiat_cross_currency.csv", [
+        "Tiempo", "Método", "Importe de depósito", "Recibir cantidad",
+        "Tarifa", "Estado", "ID de transacción",
+    ], [
+        ["2025-01-05 09:00:00", "SEPA", "100 EUR", "109 USD", "1 EUR", "Successful", "fake-1"],
+    ])
+    with pytest.raises(BinanceMultiUserError) as exc:
+        _classify([deposit])
+    assert exc.value.code == "fiat_cash_fee_mismatch"

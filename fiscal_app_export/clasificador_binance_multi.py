@@ -781,20 +781,38 @@ class ClasificadorBinanceMulti:
                 if not self._native_status_ok(row.get("estado"), source):
                     continue
                 field = "importe de depósito" if source == "fiat_deposit" else "importe de retiro"
-                qty, asset = _amount_asset(row.get(field), field=field)
-                if qty <= 0:
+                gross, asset = _amount_asset(row.get(field), field=field)
+                received, received_asset = _amount_asset(
+                    row.get("recibir cantidad"), field="Recibir cantidad"
+                )
+                fee, fee_asset = _amount_asset(row.get("tarifa"), field="Tarifa")
+                # Datos reales Binance: el importe solicitado es bruto; el
+                # recibido es neto después de la comisión de procesamiento.
+                # Un depósito acredita el neto en Binance. Una retirada
+                # consume el bruto de Binance y acredita el neto al banco.
+                # No inferir movimientos netos omitiendo la tarifa.
+                if (
+                    gross <= 0 or received <= 0 or fee < 0
+                    or asset != received_asset or asset != fee_asset
+                    or gross - received != fee
+                ):
                     raise BinanceMultiUserError(
-                        "invalid_fiat_cash_amount",
-                        "Binance contiene un movimiento fiat ejecutado con cantidad no positiva.",
+                        "fiat_cash_fee_mismatch",
+                        "Binance contiene un depósito o retiro fiat con importes "
+                        "bruto, neto y comisión que no concilian. No se puede "
+                        "reconstruir el movimiento sin inventar cantidades.",
                         category="parser_error",
                     )
+                account_delta = received if source == "fiat_deposit" else -gross
                 fecha = _fecha(row.get("tiempo"))
-                key = (source, fecha, asset, qty)
+                key = (source, fecha, asset, abs(account_delta))
                 self._native_cash_keys[key] = self._native_cash_keys.get(key, 0) + 1
+                method = row.get("método", "")
+                fee_note = f" | Comisión fiat: {fee} {asset}" if fee > 0 else ""
                 self.movimientos.append(OperacionMovimiento(
                     fecha=fecha, subtipo=subtype,
-                    activo=asset, cantidad=float(qty) * (1 if source == "fiat_deposit" else -1),
-                    observacion=row.get("método", ""),
+                    activo=asset, cantidad=float(account_delta),
+                    observacion=f"{method}{fee_note}",
                 ))
 
     def _process_optional_sources(self) -> None:
