@@ -102,3 +102,32 @@ def test_swap_no_crea_lote_si_falta_inventario_entregado():
     with pytest.raises(BinancePriceEvidenceError, match="inventario previo"):
         apply(m, evidence())
     assert m.inventario.get("USDC", []) == []
+
+
+def test_swap_con_inventario_insuficiente_no_modifica_lotes_ni_resultados():
+    m = MotorFIFO()
+    m.registrar_compra(
+        fecha="2024-12-01 12:00:00", activo="XRP",
+        cantidad=3.0, importe=3.0, contraparte="EUR",
+        fee_activo="EUR", fee_cantidad=0.0,
+    )
+    before = m.inventario["XRP"][0].cantidad_restante
+    with pytest.raises(BinancePriceEvidenceError, match="Inventario de permuta insuficiente"):
+        apply(m, evidence())
+    assert m.inventario["XRP"][0].cantidad_restante == before
+    assert m.inventario.get("USDC", []) == []
+    assert m.resultados == []
+
+
+def test_swap_con_lote_futuro_no_modifica_inventario():
+    m = seeded_motor()
+    m.registrar_compra(
+        fecha="2025-02-01 12:00:00", activo="XRP",
+        cantidad=3.0, importe=6.0, contraparte="EUR",
+        fee_activo="EUR", fee_cantidad=0.0,
+    )
+    previous = [l.cantidad_restante for l in m.inventario["XRP"]]
+    with pytest.raises(BinancePriceEvidenceError, match="posterior"):
+        apply(m, evidence())
+    assert [l.cantidad_restante for l in m.inventario["XRP"]] == previous
+    assert m.resultados == []

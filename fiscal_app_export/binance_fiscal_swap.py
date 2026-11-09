@@ -74,10 +74,30 @@ def aplicar_permuta_binance_valorada(
     numeric_received = float(received_amount)
     numeric_value = float(valuation.fiscal_value_eur)
     motor._finite(numeric_given, numeric_received, numeric_value)
-    if not motor.inventario.get(given_asset.upper()):
+    dt = motor._parsear_fecha(fecha_local)
+    lots = motor.inventario.get(given_asset.upper(), ())
+    if not lots:
         raise BinancePriceEvidenceError("Permuta sin inventario previo acreditado")
 
-    dt = motor._parsear_fecha(fecha_local)
+    # _consumir_fifo modifica los lotes a medida que avanza. Comprobar antes
+    # que el inventario es suficiente y que no contiene lotes futuros evita
+    # un rechazo con inventario parcialmente consumido.
+    if any(lot.cantidad_restante > 0 and lot.fecha > dt for lot in lots):
+        raise BinancePriceEvidenceError(
+            "Permuta con inventario posterior a la operación; requiere orden cronológico"
+        )
+    available = sum(
+        (Decimal(str(lot.cantidad_restante))
+         for lot in lots if lot.cantidad_restante > 0),
+        Decimal("0"),
+    )
+    if available < given_amount:
+        raise BinancePriceEvidenceError(
+            "Inventario de permuta insuficiente: no se modifica ningún lote"
+        )
+
+    unit_cost = numeric_value / numeric_received
+    motor._finite(unit_cost)
     result = motor._consumir_fifo(
         dt=dt, activo=given_asset.upper(), cantidad=numeric_given,
         precio_transmision=numeric_value, tipo="swap", nota=nota,
@@ -86,8 +106,6 @@ def aplicar_permuta_binance_valorada(
         raise BinancePriceEvidenceError("Inventario de permuta insuficiente")
     result.activo_recibido = received_asset.upper()
     motor.resultados.append(result)
-    unit_cost = numeric_value / numeric_received
-    motor._finite(unit_cost)
     motor.inventario[received_asset.upper()].append(Lote(
         fecha=dt, cantidad_original=numeric_received,
         cantidad_restante=numeric_received, precio_coste_unitario=unit_cost,
