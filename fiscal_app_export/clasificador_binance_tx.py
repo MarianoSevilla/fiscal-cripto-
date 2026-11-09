@@ -188,6 +188,7 @@ class ClasificadorBinanceTx:
     def clasificar(self):
         self._procesar_buy_sell_fiat()
         self._procesar_convert()
+        self._procesar_transaction_sold_revenue()
         self._procesar_transaction_buy_spend()
         self._procesar_resto()
         if self.desconocidas:
@@ -410,6 +411,86 @@ class ClasificadorBinanceTx:
                     activo_recibido=activo_rec,  cantidad_recibida=cant_rec,
                 ))
 
+    # ── TRANSACTION SOLD / REVENUE (fallback legacy) ───────────────────────
+
+    def _procesar_transaction_sold_revenue(self):
+        """Reconstruye ventas legacy únicamente cuando el contravalor es EUR.
+
+        Este fallback conserva la utilidad de PR #193 para usuarios que sólo
+        disponen de Transaction History. El importador multifuente prefiere
+        siempre Spot/Convert/Fiat nativos cuando están presentes.
+        """
+        ops = {
+            "Transaction Sold", "Transaction Revenue", "Transaction Fee",
+            "Transaction Buy", "Transaction Spend",
+        }
+        filas = self.df[self.df["Operación"].isin(ops)]
+        if filas.empty:
+            return
+
+        for (momento, cuenta), grupo in filas.groupby(["Tiempo", "Cuenta"], sort=False):
+            presentes = set(grupo["Operación"])
+            if not ({"Transaction Sold", "Transaction Revenue"} & presentes):
+                continue
+            if "Transaction Buy" in presentes or "Transaction Spend" in presentes:
+                raise ValueError(
+                    "Datos fiscales no seguros: Binance mezcla compras y ventas "
+                    "en el mismo segundo sin identificador de ejecución."
+                )
+
+            vendidos = grupo[grupo["Operación"] == "Transaction Sold"]
+            recibidos = grupo[grupo["Operación"] == "Transaction Revenue"]
+            fees = grupo[grupo["Operación"] == "Transaction Fee"]
+            if vendidos.empty or recibidos.empty:
+                raise ValueError(
+                    "Datos fiscales no seguros: Binance Transaction Sold/Revenue "
+                    "contiene una venta sin contrapartida verificable."
+                )
+            if vendidos["Moneda"].nunique() != 1 or recibidos["Moneda"].nunique() != 1:
+                raise ValueError(
+                    "Datos fiscales no seguros: Binance incluye varias monedas "
+                    "en ventas simultáneas sin correspondencia verificable."
+                )
+            if not vendidos["Cambio"].lt(0).all() or not recibidos["Cambio"].gt(0).all():
+                raise ValueError(
+                    "Datos fiscales no seguros: Binance contiene cantidades "
+                    "inválidas en Transaction Sold/Revenue."
+                )
+
+            activo = str(vendidos["Moneda"].iloc[0])
+            contraparte = str(recibidos["Moneda"].iloc[0])
+            cantidad = -float(vendidos["Cambio"].sum())
+            importe = float(recibidos["Cambio"].sum())
+            if not math.isfinite(cantidad) or not math.isfinite(importe) or cantidad <= 0 or importe <= 0:
+                raise ValueError("Datos fiscales no seguros: importe o cantidad de venta inválidos.")
+
+            if contraparte != "EUR":
+                raise ValueError(
+                    "Datos fiscales no seguros: Binance registra ventas contra "
+                    "una divisa distinta de EUR sin valoración histórica EUR "
+                    "acreditada. No se puede generar un informe fiscal."
+                )
+
+            if not fees.empty:
+                if (not fees["Cambio"].le(0).all()
+                        or not fees["Moneda"].eq("EUR").all()):
+                    raise ValueError(
+                        "Datos fiscales no seguros: Binance registra comisiones "
+                        "de venta en otra moneda o con signo no verificable."
+                    )
+                fee_eur = -float(fees["Cambio"].sum())
+            else:
+                fee_eur = 0.0
+            if not math.isfinite(fee_eur) or fee_eur > importe:
+                raise ValueError("Datos fiscales no seguros: comisión de venta inválida.")
+
+            self.compraventas.append(OperacionCompraventa(
+                fecha=str(momento), tipo="VENTA", activo=activo,
+                cantidad=cantidad, contraparte="EUR", importe=importe,
+                fee_activo="EUR", fee_cantidad=fee_eur,
+            ))
+            self._procesadas.update(grupo.index.tolist())
+
     # ── TRANSACTION BUY / SPEND (Binance Pay) ────────────────────────────────
 
     def _procesar_transaction_buy_spend(self):
@@ -429,25 +510,15 @@ class ClasificadorBinanceTx:
         En cualquier otro caso        → SWAP crypto→crypto.
         """
         ops_tx = {"Transaction Buy", "Transaction Spend", "Transaction Fee"}
-        mask   = self.df["Operación"].isin(ops_tx)
-        filas  = self.df[mask].copy().sort_values("Tiempo").reset_index()
+        mask = (self.df["Operación"].isin(ops_tx)
+                & ~self.df.index.isin(self._procesadas))
+        filas = self.df[mask].copy().sort_values(["Tiempo", "Cuenta"]).reset_index()
         if filas.empty:
             return
 
-        # Agrupar por segundo exacto
-        grupos: list = []
-        grupo_actual = [filas.iloc[0]]
-        for i in range(1, len(filas)):
-            diff = (filas.iloc[i]["Tiempo"] - filas.iloc[i - 1]["Tiempo"]).total_seconds()
-            if diff == 0:
-                grupo_actual.append(filas.iloc[i])
-            else:
-                grupos.append(grupo_actual)
-                grupo_actual = [filas.iloc[i]]
-        grupos.append(grupo_actual)
-
-        for grupo_list in grupos:
-            grupo = pd.DataFrame(grupo_list)
+        # Mismo segundo no basta: nunca cruzar patas entre cuentas distintas.
+        # Las fees de ventas ya consumidas tampoco pueden reaparecer aquí.
+        for _, grupo in filas.groupby(["Tiempo", "Cuenta"], sort=False):
             self._procesadas.update(grupo["index"].tolist())
 
             fecha      = str(grupo.iloc[0]["Tiempo"])
