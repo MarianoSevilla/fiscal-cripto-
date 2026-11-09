@@ -373,3 +373,26 @@ def test_convert_failed_no_es_operacion_ejecutada(tmp_path):
     c = _classify([p])
     assert not c.compraventas
     assert c.fuentes_materiales_no_soportadas == []
+
+
+
+def test_transferencia_cripto_sin_activo_se_rechaza(tmp_path):
+    p = _csv(tmp_path, "deposit.csv", DEPOSIT_H, [
+        ["2025-01-01 10:00:00", "", "XRP", "10", "addr", "synthetic", "Completed"],
+    ])
+    with pytest.raises(BinanceMultiUserError) as exc:
+        _classify([p])
+    assert exc.value.code == "invalid_transfer_asset"
+
+
+def test_movimiento_fiat_no_positivo_se_rechaza(tmp_path):
+    headers = [
+        "Tiempo", "Método", "Importe de depósito",
+        "Recibir cantidad", "Tarifa", "Estado", "ID de transacción",
+    ]
+    p = _csv(tmp_path, "fiat.csv", headers, [
+        ["2025-01-01 10:00:00", "SEPA", "-10 EUR", "-10 EUR", "0 EUR", "Completed", "synthetic"],
+    ])
+    with pytest.raises(BinanceMultiUserError) as exc:
+        _classify([p])
+    assert exc.value.code == "invalid_fiat_cash_amount"

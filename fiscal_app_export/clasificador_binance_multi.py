@@ -664,6 +664,12 @@ class ClasificadorBinanceMulti:
                         category="parser_error",
                     )
                 asset = row.get("moneda", "").strip().upper()
+                if not re.fullmatch(r"[A-Z0-9]{2,20}", asset):
+                    raise BinanceMultiUserError(
+                        "invalid_transfer_asset",
+                        "Binance contiene una transferencia sin identificador de activo válido.",
+                        category="parser_error",
+                    )
                 self._native_transfer_keys.add(
                     (source, fecha, asset, amount)
                 )
@@ -693,6 +699,12 @@ class ClasificadorBinanceMulti:
                     continue
                 field = "importe de depósito" if source == "fiat_deposit" else "importe de retiro"
                 qty, asset = _amount_asset(row.get(field), field=field)
+                if qty <= 0:
+                    raise BinanceMultiUserError(
+                        "invalid_fiat_cash_amount",
+                        "Binance contiene un movimiento fiat ejecutado con cantidad no positiva.",
+                        category="parser_error",
+                    )
                 fecha = _fecha(row.get("tiempo"))
                 self._native_cash_keys.add((source, fecha, asset, qty))
                 self.movimientos.append(OperacionMovimiento(
