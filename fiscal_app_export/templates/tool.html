@@ -221,12 +221,12 @@
     <!-- Columna izquierda: drop zone + nombre/año -->
     <div class="bar-left">
       <div class="bar-dropzone" id="dropZone">
-        <input type="file" id="csvInput" aria-label="Seleccionar historial de operaciones" aria-describedby="dropHint" accept="{% if exchange_id == 'mexc' %}.xlsx,.xls{% elif exchange_id == 'bit2me' and bit2me_excel_enabled %}.csv,.xlsx,.xls{% else %}.csv{% endif %}"{% if exchange_id in ['binance', 'kucoin', 'bitget'] %} multiple{% endif %}>
+        <input type="file" id="csvInput" aria-label="Seleccionar historial de operaciones" aria-describedby="dropHint" accept="{% if exchange_id == 'mexc' %}.xlsx,.xls{% elif exchange_id == 'bit2me' and bit2me_excel_enabled %}.csv,.xlsx,.xls{% elif exchange_id == 'binance' %}.csv,.zip{% else %}.csv{% endif %}"{% if exchange_id in ['binance', 'kucoin', 'bitget'] %} multiple{% endif %}>
         <span style="font-size:22px;flex-shrink:0;">📂</span>
         {% if exchange_id == 'mexc' %}
         <span class="bar-drop-text" id="dropHint">Arrastra aquí el XLS/XLSX de {{ exchange_name }} o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Solo ficheros .xls / .xlsx</span></span>
         {% elif exchange_id == 'binance' %}
-        <span class="bar-drop-text" id="dropHint">Arrastra aquí <strong>los CSV de Binance</strong> o haz clic para seleccionarlos<br><span style="font-size:11px;opacity:0.65;">Operaciones Spot · Convert · compras/ventas fiat · depósitos/retiros · Historial de transacciones complementario</span></span>
+        <span class="bar-drop-text" id="dropHint">Arrastra aquí <strong>los ZIP originales o CSV de Binance</strong> o haz clic para seleccionarlos<br><span style="font-size:11px;opacity:0.65;">Operaciones Spot · Convert · compras/ventas fiat · depósitos/retiros · Historial de transacciones complementario</span></span>
         {% elif exchange_id == 'kucoin' %}
         <span class="bar-drop-text" id="dropHint">Arrastra aquí <strong>todos los CSV de KuCoin</strong> que tengas o haz clic para seleccionarlos<br><span style="font-size:11px;opacity:0.65;">Cuenta de trading, financiación, órdenes fiat, depósitos cripto · puedes subir varios a la vez · si alguno está vacío, no pasa nada</span></span>
         {% elif exchange_id == 'bitget' %}
@@ -550,7 +550,7 @@
 
   const instrucciones = {
     binance: {
-      hint: 'Arrastra aquí <strong>los CSV de Binance</strong> o haz clic para seleccionarlos<br><span style="font-size:11px;opacity:0.65;">Spot · Convert · compras/ventas fiat · depósitos/retiros · TX complementario · puedes subir varios</span>',
+      hint: 'Arrastra aquí <strong>los ZIP originales o CSV de Binance</strong> o haz clic para seleccionarlos<br><span style="font-size:11px;opacity:0.65;">Spot · Convert · compras/ventas fiat · depósitos/retiros · TX complementario · puedes subir varios</span>',
     },
     kraken: {
       hint: 'Arrastra aquí el CSV de Kraken o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Exportación de Ledgers · solo ficheros .csv</span>',
@@ -911,8 +911,12 @@
     const files = Array.from(fileList || []);
     if (!files.length) return;
     for (const f of files) {
-      if (!f.name.toLowerCase().endsWith('.csv')) {
-        mostrarErrorArchivo('Todos los ficheros deben ser .csv');
+      const lower = f.name.toLowerCase();
+      const binanceZipOk = EXCHANGE_PAGE === 'binance' && lower.endsWith('.zip');
+      if (!lower.endsWith('.csv') && !binanceZipOk) {
+        mostrarErrorArchivo(EXCHANGE_PAGE === 'binance'
+          ? 'Binance admite los ZIP originales o ficheros .csv.'
+          : 'Todos los ficheros deben ser .csv');
         selectedFiles = []; actualizarBoton(); return;
       }
       if (f.size > 10 * 1024 * 1024) {
