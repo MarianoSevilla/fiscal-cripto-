@@ -474,13 +474,14 @@ class ClasificadorBinanceMulti:
                 if recv_asset != "EUR" or spend_asset == "EUR":
                     self._gap("fiat_sell_not_eur", "fiat_sell", fecha, "Venta fiat sin pata EUR verificable.")
                     continue
-                if fee_qty and fee_asset != "EUR":
-                    self._gap("fiat_sell_fee_non_eur", "fiat_sell", fecha,
-                              f"Comisión de venta fiat en {fee_asset} sin valoración EUR acreditada.")
+                if fee_qty:
+                    self._gap("fiat_sell_fee_semantics_unverified", "fiat_sell", fecha,
+                              "Venta fiat con comisión no nula: Binance no acredita en este formato "
+                              "si «Recibir cantidad» es bruto o neto de la tarifa.")
                     continue
                 self.compraventas.append(OperacionCompraventa(
                     fecha, "VENTA", spend_asset, float(spend_qty), "EUR",
-                    float(recv_qty), fee_asset or "EUR", float(fee_qty),
+                    float(recv_qty), "", 0.0,
                 ))
 
     def _parse_crypto_deposit(self, df, filename):
