@@ -121,19 +121,19 @@ def test_compra_en_activo_recibido_consume_comision_y_no_duplica_lotes(tmp_path)
 
 def test_compra_fiat_por_transferencia_externa_no_gasta_saldo_binance_si_se_supone(tmp_path):
     purchase = csvfile(tmp_path, "fiat_bank_purchase.csv", FIAT_TRADE_H, [
-        ["2025-01-20 10:00:00", "Transferencia bancaria (SEPA Instant)",
+        ["2025-06-15 10:00:00", "Banco de prueba (ficticio)",
          "10 EUR", "5 XRP", "1 EUR", "2", "Successful", "synthetic-1"],
     ])
     classified = classify(purchase)
     assert classified.intercambios_nativos[0].payment_method == (
-        "Transferencia bancaria (SEPA Instant)"
+        "Banco de prueba (ficticio)"
     )
     baseline = diagnosticar_saldo_inicial_cero(classified, inicio="2025-01-01")
     assert [d.activo for d in baseline.activos_con_deficit] == ["EUR"]
 
     external = diagnosticar_saldo_inicial_cero(
         classified, inicio="2025-01-01",
-        metodos_pago_externo=("Transferencia bancaria (SEPA Instant)",),
+        metodos_pago_externo=("Banco de prueba (ficticio)",),
     )
     assert external.activos_con_deficit == ()
     assert external.pagos_externos_supuestos == 1
@@ -144,12 +144,12 @@ def test_compra_fiat_por_transferencia_externa_no_gasta_saldo_binance_si_se_supo
 
 def test_metodo_saldo_no_se_excluye_por_inferencia_de_banco(tmp_path):
     purchase = csvfile(tmp_path, "fiat_balance_purchase.csv", FIAT_TRADE_H, [
-        ["2025-01-20 10:00:00", "Saldo",
+        ["2025-06-15 10:00:00", "Saldo",
          "10 EUR", "5 XRP", "1 EUR", "2", "Successful", "synthetic-2"],
     ])
     report = diagnosticar_saldo_inicial_cero(
         classify(purchase), inicio="2025-01-01",
-        metodos_pago_externo=("Transferencia bancaria (SEPA Instant)",),
+        metodos_pago_externo=("Banco de prueba (ficticio)",),
     )
     assert [d.activo for d in report.activos_con_deficit] == ["EUR"]
     assert report.pagos_externos_supuestos == 0
@@ -157,7 +157,7 @@ def test_metodo_saldo_no_se_excluye_por_inferencia_de_banco(tmp_path):
 
 def test_hipotesis_fiat_externa_invalida_se_rechaza(tmp_path):
     purchase = csvfile(tmp_path, "fiat.csv", FIAT_TRADE_H, [
-        ["2025-01-20 10:00:00", "Saldo",
+        ["2025-06-15 10:00:00", "Saldo",
          "10 EUR", "5 XRP", "0 EUR", "2", "Successful", "synthetic-3"],
     ])
     with pytest.raises(BinanceCoverageError, match="Métodos externos"):
