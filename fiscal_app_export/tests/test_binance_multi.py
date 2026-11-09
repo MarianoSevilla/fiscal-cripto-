@@ -318,3 +318,22 @@ def test_tx_fee_identica_a_spot_se_deduplica_preservando_neto(tmp_path):
     assert len(c.compraventas) == 1
     assert c.compraventas[0].cantidad == 9.9
     assert c.comisiones_pendientes == []
+
+
+def test_filas_spot_identicas_en_exportaciones_diferentes_bloquean_sin_omitir(tmp_path):
+    row = ["42", "2025-01-01 10:00:00", "XRPEUR", "BUY", "2", "1XRP", "2EUR", "0XRP", "", ""]
+    a = _csv(tmp_path, "spot_a.csv", SPOT_H, [row])
+    b = _csv(tmp_path, "spot_b.csv", SPOT_H, [row])
+    c = _classify([a, b])
+    assert len(c.compraventas) == 2
+    assert c.compraventas[0].cantidad == 1.0
+    assert c.compraventas[1].cantidad == 1.0
+    assert "filas_identicas_entre_exportaciones_sin_id_unico" in c.fuentes_materiales_no_soportadas
+
+
+def test_dos_fills_spot_identicos_dentro_del_mismo_csv_no_se_deduplican(tmp_path):
+    row = ["42", "2025-01-01 10:00:00", "XRPEUR", "BUY", "2", "1XRP", "2EUR", "0XRP", "", ""]
+    p = _csv(tmp_path, "spot.csv", SPOT_H, [row, row])
+    c = _classify([p])
+    assert len(c.compraventas) == 2
+    assert not c.fuentes_materiales_no_soportadas

@@ -332,11 +332,19 @@ class ClasificadorBinanceMulti:
                 digest = _row_digest(source, row)
                 previous_file = self._cross_file_rows.get(digest)
                 if previous_file is not None and previous_file != path:
+                    # Dos registros iguales pueden ser operaciones legítimas
+                    # distintas: Spot exporta order ID, no trade ID único.
+                    # Sin identidad inequívoca, omitir uno podría falsear FIFO.
+                    # Mantener ambos y bloquear el PDF hasta conciliarlos.
+                    if "filas_identicas_entre_exportaciones_sin_id_unico" not in self.fuentes_materiales_no_soportadas:
+                        self.fuentes_materiales_no_soportadas.append(
+                            "filas_identicas_entre_exportaciones_sin_id_unico"
+                        )
                     self.advertencias.append(
-                        f"Binance: se omitió una fila duplicada de {source} "
-                        "presente en más de una exportación."
+                        f"Binance: filas indistinguibles de {source} en "
+                        "exportaciones diferentes; posible duplicidad "
+                        "o dos operaciones reales. Requiere conciliación."
                     )
-                    continue
                 self._cross_file_rows[digest] = path
                 self._source_rows[source].append((row, filename))
 
