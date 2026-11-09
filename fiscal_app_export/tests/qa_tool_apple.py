@@ -12,7 +12,7 @@ from playwright.sync_api import expect, sync_playwright
 TOOLS = ("fiscal", "binance", "bitvavo", "bit2me", "kraken", "coinbase", "nexo",
          "cryptocom", "uphold", "mexc", "bitget", "kucoin")
 WIDTHS = (375, 768, 1440)
-MULTI = {"bitget", "kucoin"}
+MULTI = {"binance", "bitget", "kucoin"}
 RESULT = {
     "ok": True,
     "token": "synthetic-ui-token",
