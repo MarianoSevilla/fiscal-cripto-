@@ -51,7 +51,7 @@ def test_spot_trades_preserva_fills_y_no_usa_ordenes_como_operaciones(tmp_path):
     assert len([e for e in c.eventos if e.fuente == "spot_trade"]) == 2
     assert len(c.compraventas) == 2
     assert c.bloqueos_valoracion == []
-    assert c.resumen_archivos[n2]["tipo"] == "spot_order"
+    assert c.resumen_archivos["spot_order"]["detectado"] is True
 
 
 def test_spot_buy_fee_en_activo_comprado_reduce_cantidad_neta(tmp_path):
@@ -219,7 +219,7 @@ def test_export_tx_vacio_no_invalida_fuentes_especializadas(tmp_path):
     )
     c = ClasificadorBinanceMulti([tx, spot], [ntx, nspot]).clasificar()
     assert len(c.compraventas) == 1
-    assert c.resumen_archivos[ntx]["vacio"] is True
+    assert c.resumen_archivos["transaction_history"]["vacio"] is True
 
 
 def test_fiat_ambiguo_renombrado_se_bloquea(tmp_path):
