@@ -203,6 +203,6 @@ def test_deficit_transitorio_y_posterior_mas_grave_se_preservan(tmp_path):
     assert [d.activo for d in report.activos_con_deficit] == ["USDC"]
     deficit = report.activos_con_deficit[0]
     assert deficit.primera_fecha == "2025-01-02"
-    assert str(deficit.saldo_minimo) == "-20"
+    assert deficit.saldo_minimo == __import__("decimal").Decimal("-20")
     assert report.activos_depositados_sin_coste_acreditado == ("USDC",)
     assert not report.coste_fiscal_acreditado
