@@ -289,6 +289,7 @@ class ClasificadorBinanceMulti:
         # key = (source_group, fecha, give_asset, recv_asset)
         # value = [give_total, recv_total]
         self._native_exchange_totals: Dict[tuple, List[Decimal]] = {}
+        self._native_exchange_fee_totals: Dict[tuple, Dict[str, Decimal]] = {}
         self._native_transfer_keys: set[tuple] = set()
         self._native_cash_keys: set[tuple] = set()
 
@@ -562,6 +563,9 @@ class ClasificadorBinanceMulti:
         )
         totals[0] += give_amount
         totals[1] += recv_amount
+        if fee_asset and fee_amount > 0:
+            fees = self._native_exchange_fee_totals.setdefault(native_key, {})
+            fees[fee_asset] = fees.get(fee_asset, Decimal("0")) + fee_amount
 
         recv_net = recv_amount
         if fee_asset == recv_asset and fee_amount > 0:
@@ -737,6 +741,35 @@ class ClasificadorBinanceMulti:
                 self.fuentes_materiales_no_soportadas.append(marker)
         return None
 
+    def _require_matched_native_tx_fees(self, key: tuple, group_rows: List[dict]) -> None:
+        """No descartar fees del ledger sin comprobarlas contra la fuente nativa.
+
+        El matching de patas por sí solo no acredita que una comisión de otro
+        activo esté ya representada en Spot/fiat/Convert.
+        """
+        tx_fees: Dict[str, Decimal] = {}
+        for row in group_rows:
+            if row.get("operación", "").strip() != "Transaction Fee":
+                continue
+            asset = row.get("moneda", "").strip().upper()
+            amount = _decimal(row.get("cambio"), field="Cambio")
+            if not asset or amount > 0:
+                raise BinanceMultiUserError(
+                    "native_tx_fee_mismatch",
+                    "Binance contiene una comisión de Transaction History sin signo "
+                    "o activo conciliable con la fuente nativa.",
+                    category="parser_error",
+                )
+            if amount < 0:
+                tx_fees[asset] = tx_fees.get(asset, Decimal("0")) - amount
+        if tx_fees and tx_fees != self._native_exchange_fee_totals.get(key, {}):
+            raise BinanceMultiUserError(
+                "native_tx_fee_mismatch",
+                "Las comisiones de Transaction History no coinciden con las de "
+                "la operación nativa. No se puede descartar ese movimiento.",
+                category="parser_error",
+            )
+
     def _filter_exact_tx_duplicates(self, rows: List[dict]) -> List[dict]:
         """Elimina solo duplicados demostrados frente a fuentes nativas.
 
@@ -770,11 +803,13 @@ class ClasificadorBinanceMulti:
                 legs = self._tx_group_legs(
                     group_rows, {"Transaction Sold"}, {"Transaction Revenue"}
                 )
-                if legs and self._matching_native_exchange(
+                native_key = (self._matching_native_exchange(
                     fecha=fecha, give_asset=legs[0], give_amount=legs[1],
                     recv_asset=legs[2], recv_amount=legs[3],
                     groups={"spot", "fiat", "convert"},
-                ):
+                ) if legs else None)
+                if native_key:
+                    self._require_matched_native_tx_fees(native_key, group_rows)
                     drop.update(indices)
                     continue
 
@@ -785,11 +820,13 @@ class ClasificadorBinanceMulti:
                 legs = self._tx_group_legs(
                     group_rows, {"Transaction Spend"}, {"Transaction Buy"}
                 )
-                if legs and self._matching_native_exchange(
+                native_key = (self._matching_native_exchange(
                     fecha=fecha, give_asset=legs[0], give_amount=legs[1],
                     recv_asset=legs[2], recv_amount=legs[3],
                     groups={"spot", "fiat", "convert"},
-                ):
+                ) if legs else None)
+                if native_key:
+                    self._require_matched_native_tx_fees(native_key, group_rows)
                     drop.update(indices)
 
         # Binance Convert: reproducir la ventana temporal del legacy y comparar

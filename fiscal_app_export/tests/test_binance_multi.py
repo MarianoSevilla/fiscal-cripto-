@@ -289,3 +289,32 @@ def test_spot_orden_cancelada_no_ejecutada_no_exige_fills(tmp_path):
     ])
     c = _classify([orders])
     assert c.fuentes_materiales_no_soportadas == []
+
+
+def test_tx_fee_no_conciliada_con_spot_no_se_descarta(tmp_path):
+    spot = _csv(tmp_path, "spot.csv", SPOT_H, [
+        ["42", "2025-01-01 10:00:00", "XRPEUR", "BUY", "2", "10XRP", "20EUR", "0XRP", "", ""],
+    ])
+    tx = _csv(tmp_path, "tx.csv", TX_H, [
+        ["1", "2025-01-01 10:00:00", "Spot", "Transaction Spend", "EUR", "-20", ""],
+        ["1", "2025-01-01 10:00:00", "Spot", "Transaction Buy", "XRP", "10", ""],
+        ["1", "2025-01-01 10:00:00", "Spot", "Transaction Fee", "BNB", "-0.01", ""],
+    ])
+    with pytest.raises(BinanceMultiUserError) as exc:
+        _classify([spot, tx])
+    assert exc.value.code == "native_tx_fee_mismatch"
+
+
+def test_tx_fee_identica_a_spot_se_deduplica_preservando_neto(tmp_path):
+    spot = _csv(tmp_path, "spot.csv", SPOT_H, [
+        ["42", "2025-01-01 10:00:00", "XRPEUR", "BUY", "2", "10XRP", "20EUR", "0.1XRP", "", ""],
+    ])
+    tx = _csv(tmp_path, "tx.csv", TX_H, [
+        ["1", "2025-01-01 10:00:00", "Spot", "Transaction Spend", "EUR", "-20", ""],
+        ["1", "2025-01-01 10:00:00", "Spot", "Transaction Buy", "XRP", "10", ""],
+        ["1", "2025-01-01 10:00:00", "Spot", "Transaction Fee", "XRP", "-0.1", ""],
+    ])
+    c = _classify([spot, tx])
+    assert len(c.compraventas) == 1
+    assert c.compraventas[0].cantidad == 9.9
+    assert c.comisiones_pendientes == []

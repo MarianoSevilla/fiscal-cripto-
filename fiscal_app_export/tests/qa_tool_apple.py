@@ -196,9 +196,11 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                             bad_filename = "incorrect.csv" if name == "mexc" else "incorrect.txt"
                             picker.set_input_files({"name": bad_filename, "mimeType": "text/plain",
                                                     "buffer": b"invalid format"})
-                            assert "fichero" in page.locator("#dropHint").inner_text().lower() or (
-                                "aceptan" in page.locator("#dropHint").inner_text().lower()
-                            )
+                            invalid_hint = page.locator("#dropHint").inner_text().lower()
+                            assert (
+                                "fichero" in invalid_hint or "aceptan" in invalid_hint
+                                or (name == "binance" and "binance admite archivos .csv y .zip" in invalid_hint)
+                            ), (name, width, invalid_hint)
                             assert page.locator("#btnAnalizar").is_disabled()
 
                         def attach_valid():
@@ -322,7 +324,7 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                             assert page.locator('meta[name="robots"]').get_attribute(
                                 "content"
                             ) == "noindex, nofollow"
-                            assert page.locator("#csvInput").get_attribute("accept") == ".csv"
+                            assert page.locator("#csvInput").get_attribute("accept") == ".csv,.zip"
                             assert page.locator("#btnAnalizar").is_disabled()
                             assert page.locator("#emptyState").is_visible()
                             assert page.locator(".tool-video").count() == 1
