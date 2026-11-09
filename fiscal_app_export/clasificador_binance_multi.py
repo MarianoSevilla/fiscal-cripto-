@@ -346,13 +346,31 @@ class ClasificadorBinanceMulti:
                           f"Comisión Spot pagada en {fee_asset} sin valoración EUR acreditada.")
                 continue
             if side == "BUY":
-                # If Binance reports fee in bought asset, Executed is treated as the source quantity;
-                # MotorFIFO legacy semantics do not add the fee again.
+                net_received = received_qty
+                acquisition_cost = delivered_qty
+                if fee_qty:
+                    if fee_asset == received_asset:
+                        net_received = received_qty - fee_qty
+                        if net_received <= 0:
+                            raise BinanceMultiUserError(
+                                "spot_fee_invalid",
+                                "Datos fiscales no seguros: la comisión Spot consume toda la cantidad comprada.",
+                                category="parser_error",
+                            )
+                    elif fee_asset == "EUR":
+                        acquisition_cost = delivered_qty + fee_qty
+                    elif fee_asset:
+                        # Already registered as a valuation gap above.
+                        continue
                 self.compraventas.append(OperacionCompraventa(
-                    fecha, "COMPRA", received_asset, float(received_qty), "EUR",
-                    float(delivered_qty), fee_asset, float(fee_qty),
+                    fecha, "COMPRA", received_asset, float(net_received), "EUR",
+                    float(acquisition_cost), "", 0.0,
                 ))
             else:
+                if fee_qty and fee_asset == delivered_asset:
+                    self._gap("spot_sell_fee_base_asset", "spot_trade", fecha,
+                              f"Comisión de venta Spot pagada en {fee_asset}; requiere tratamiento fiscal separado.")
+                    continue
                 self.compraventas.append(OperacionCompraventa(
                     fecha, "VENTA", delivered_asset, float(delivered_qty), "EUR",
                     float(received_qty), fee_asset, float(fee_qty),
