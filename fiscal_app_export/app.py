@@ -1698,6 +1698,14 @@ def _validar_aceptacion_fifo(motor, clasificador=None) -> None:
     """
     _validar_aceptacion_fuentes_fifo(clasificador)
 
+    # Legacy Transaction History: tampoco emitir un informe parcial si Binance
+    # introduce un tipo de evento nuevo que el parser todavía no interpreta.
+    if isinstance(clasificador, ClasificadorBinanceTx) and getattr(clasificador, "desconocidas", ()):
+        raise ValueError(
+            "Datos fiscales no seguros: Binance contiene operaciones no interpretadas. "
+            "Sube las fuentes nativas Spot/Convert/Fiat o revisa el historial."
+        )
+
     # Binance multifuente: la reconstrucción económica puede ser completa aunque
     # falte la valoración fiscal EUR. Nunca emitir un PDF parcial ni asumir
     # paridad de stablecoins / coste cero / comisión irrelevante.
