@@ -23,6 +23,9 @@ import secrets
 import hashlib
 import math
 import tempfile
+import zipfile
+import shutil
+from pathlib import PurePosixPath
 from io import BytesIO
 import fifo_pdf_lifecycle as _pdf_lifecycle
 import traceback
@@ -1051,7 +1054,9 @@ MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
 MAX_CSV_ROWS        = 100_000            # filas máximas permitidas por CSV (≈ 10 MB de datos reales)
 MAX_KUCOIN_FILES    = 8                  # KuCoin es multiarchivo: tope de ficheros por análisis
 MAX_BITGET_FILES    = 8                  # Bitget es multiarchivo: tope de ficheros por análisis
-MAX_BINANCE_FILES   = 16                 # Binance multifuente: Spot, Convert, Fiat, transferencias y TX complementario
+MAX_BINANCE_FILES   = 16                 # uploads ZIP/CSV por análisis
+MAX_BINANCE_EXTRACTED_FILES = 32          # miembros CSV tras extraer ZIPs
+MAX_BINANCE_UNCOMPRESSED_BYTES = 25 * 1024 * 1024  # defensa contra zip bombs
 AÑO_MIN = 2009
 
 
@@ -2444,7 +2449,91 @@ def _guardar_csvs_multi(archivos, max_files: int, label: str) -> tuple:
 
 
 def _guardar_csvs_binance(archivos) -> tuple:
-    return _guardar_csvs_multi(archivos, MAX_BINANCE_FILES, "Binance")
+    """Guarda CSV directos o extrae ZIP originales de Binance de forma acotada.
+
+    Solo se aceptan miembros CSV planos. Se rechazan rutas internas, cifrado,
+    formatos anidados y tamaños descomprimidos excesivos. Los nombres internos
+    se conservan porque Binance incluye en ellos la zona horaria del export.
+    """
+    if not archivos:
+        raise ValueError("No se recibió ningún fichero.")
+    if len(archivos) > MAX_BINANCE_FILES:
+        raise ValueError(f"Demasiados ficheros. Máximo {MAX_BINANCE_FILES} ZIP/CSV de Binance por análisis.")
+
+    tmp_paths: list = []
+    filenames: list = []
+    extracted_bytes = 0
+
+    def _cleanup():
+        for p in tmp_paths:
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
+
+    def _write_csv_bytes(data_stream, display_name: str, declared_size: int | None = None):
+        nonlocal extracted_bytes
+        if len(tmp_paths) >= MAX_BINANCE_EXTRACTED_FILES:
+            raise ValueError(f"El conjunto Binance contiene más de {MAX_BINANCE_EXTRACTED_FILES} CSV.")
+        if declared_size is not None and declared_size > MAX_FILE_SIZE_BYTES:
+            raise ValueError("Un CSV descomprimido de Binance supera el máximo de 10 MB.")
+        with tempfile.NamedTemporaryFile(prefix=_pdf_lifecycle.PDF_PREFIX, suffix=".csv", delete=False) as tmp:
+            written = 0
+            while True:
+                chunk = data_stream.read(1024 * 1024)
+                if not chunk:
+                    break
+                written += len(chunk)
+                extracted_bytes += len(chunk)
+                if written > MAX_FILE_SIZE_BYTES or extracted_bytes > MAX_BINANCE_UNCOMPRESSED_BYTES:
+                    try:
+                        os.unlink(tmp.name)
+                    except OSError:
+                        pass
+                    raise ValueError("Los ZIP de Binance superan el límite seguro de datos descomprimidos.")
+                tmp.write(chunk)
+            tmp_paths.append(tmp.name)
+            filenames.append(display_name)
+
+    try:
+        for archivo in archivos:
+            fn = archivo.filename or ""
+            lower = fn.lower()
+            if lower.endswith(".csv"):
+                _write_csv_bytes(archivo.stream, fn)
+                continue
+            if not lower.endswith(".zip"):
+                raise ValueError("Binance admite únicamente los ZIP originales o CSV exportados por Binance.")
+
+            try:
+                archivo.stream.seek(0)
+                with zipfile.ZipFile(archivo.stream) as zf:
+                    infos = [i for i in zf.infolist() if not i.is_dir()]
+                    if not infos:
+                        raise ValueError("El ZIP de Binance está vacío.")
+                    for info in infos:
+                        path = PurePosixPath(info.filename)
+                        if len(path.parts) != 1 or path.name != info.filename or path.name in {"", ".", ".."}:
+                            raise ValueError("ZIP de Binance no válido: contiene rutas internas no permitidas.")
+                        if info.flag_bits & 0x1:
+                            raise ValueError("ZIP de Binance no válido: contiene un CSV cifrado.")
+                        if not path.name.lower().endswith(".csv"):
+                            raise ValueError("ZIP de Binance no válido: solo se permiten miembros CSV.")
+                        if info.file_size > MAX_FILE_SIZE_BYTES:
+                            raise ValueError("Un CSV descomprimido de Binance supera el máximo de 10 MB.")
+                        if info.file_size and info.compress_size == 0:
+                            raise ValueError("ZIP de Binance no válido: relación de compresión insegura.")
+                        if info.compress_size and info.file_size / info.compress_size > 200:
+                            raise ValueError("ZIP de Binance rechazado por relación de compresión anómala.")
+                        with zf.open(info, "r") as member:
+                            _write_csv_bytes(member, path.name, info.file_size)
+            except zipfile.BadZipFile as exc:
+                raise ValueError("El archivo ZIP de Binance está dañado o no es un ZIP válido.") from exc
+
+        return tmp_paths, filenames
+    except Exception:
+        _cleanup()
+        raise
 
 
 def _guardar_csvs_kucoin(archivos) -> tuple:
