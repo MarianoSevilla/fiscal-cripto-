@@ -587,6 +587,36 @@ class ClasificadorBinanceMulti:
                 self.movimientos.extend(legacy.movimientos)
                 self.desconocidas.extend(legacy.desconocidas)
                 self.advertencias.extend(legacy.advertencias)
+
+                # El wrapper multi debe conservar los guards fiscales del
+                # clasificador legacy: rendimientos sin EUR y Transaction Fee
+                # no pueden quedar autorizados por cambiar de tipo de clase.
+                for income in legacy.rendimientos:
+                    self.valoraciones_pendientes.append({
+                        "fecha": income.fecha,
+                        "fuente": "Transaction History",
+                        "motivo": "rendimiento_sin_valor_eur",
+                        "activo": income.activo,
+                    })
+                try:
+                    fee_rows = legacy.df.loc[
+                        legacy.df["Operación"] == "Transaction Fee",
+                        ["Tiempo", "Moneda", "Cambio"],
+                    ]
+                    for _, fee_row in fee_rows.iterrows():
+                        amount = abs(Decimal(str(fee_row["Cambio"])))
+                        if amount > 0:
+                            self._pending_fee(
+                                str(fee_row["Tiempo"]),
+                                "Transaction History",
+                                str(fee_row["Moneda"]),
+                                amount,
+                            )
+                except Exception:
+                    # Si cambia la forma interna del legacy, fail-closed:
+                    # la aceptación posterior verá la operación desconocida o
+                    # el propio parser legacy habrá fallado antes.
+                    pass
             return
 
         for row, _filename in rows:
