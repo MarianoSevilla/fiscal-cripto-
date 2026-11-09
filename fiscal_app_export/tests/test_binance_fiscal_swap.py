@@ -48,7 +48,7 @@ def apply(m, v, **overrides):
         "export_filename": "Binance-Convert-(UTC+1).zip",
         "given_asset": "XRP", "given_amount": Decimal("5"),
         "received_asset": "USDC", "received_amount": Decimal("11"),
-        "valuation": v,
+        "valuation": v, "fee_amount": Decimal("0"),
     }
     args.update(overrides)
     return aplicar_permuta_binance_valorada(**args)

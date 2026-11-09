@@ -20,7 +20,7 @@ def aplicar_permuta_binance_valorada(
     given_asset: str, given_amount: Decimal,
     received_asset: str, received_amount: Decimal,
     valuation: SwapEURValuation,
-    fee_amount: Decimal = Decimal("0"),
+    fee_amount: Decimal,
     nota: str = "Binance permuta con precios históricos acreditados",
 ) -> None:
     """Registra una permuta EUR justificada como consumo FIFO + nuevo lote.
@@ -52,6 +52,14 @@ def aplicar_permuta_binance_valorada(
     if not fee_amount.is_finite() or fee_amount != 0:
         raise BinancePriceEvidenceError(
             "Comisión de permuta no contabilizada; no se permite aplicar valoración"
+        )
+    if (
+        not valuation.given.path or not valuation.received.path
+        or valuation.given_value_eur != given_amount * valuation.given.unit_price_eur
+        or valuation.received_value_eur != received_amount * valuation.received.unit_price_eur
+    ):
+        raise BinancePriceEvidenceError(
+            "Valoración de mercado sin evidencia o importes EUR inconsistentes"
         )
     if valuation.fiscal_value_eur != max(
         valuation.given_value_eur, valuation.received_value_eur
