@@ -221,10 +221,12 @@
     <!-- Columna izquierda: drop zone + nombre/año -->
     <div class="bar-left">
       <div class="bar-dropzone" id="dropZone">
-        <input type="file" id="csvInput" aria-label="Seleccionar historial de operaciones" aria-describedby="dropHint" accept="{% if exchange_id == 'mexc' %}.xlsx,.xls{% elif exchange_id == 'bit2me' and bit2me_excel_enabled %}.csv,.xlsx,.xls{% else %}.csv{% endif %}"{% if exchange_id in ['kucoin', 'bitget'] %} multiple{% endif %}>
+        <input type="file" id="csvInput" aria-label="Seleccionar historial de operaciones" aria-describedby="dropHint" accept="{% if exchange_id == 'mexc' %}.xlsx,.xls{% elif exchange_id == 'bit2me' and bit2me_excel_enabled %}.csv,.xlsx,.xls{% elif exchange_id == 'binance' %}.csv,.zip{% else %}.csv{% endif %}"{% if exchange_id in ['binance', 'kucoin', 'bitget'] %} multiple{% endif %}>
         <span style="font-size:22px;flex-shrink:0;">📂</span>
         {% if exchange_id == 'mexc' %}
         <span class="bar-drop-text" id="dropHint">Arrastra aquí el XLS/XLSX de {{ exchange_name }} o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Solo ficheros .xls / .xlsx</span></span>
+        {% elif exchange_id == 'binance' %}
+        <span class="bar-drop-text" id="dropHint">Arrastra aquí <strong>los ZIP originales o CSV de Binance</strong> o haz clic para seleccionarlos<br><span style="font-size:11px;opacity:0.65;">Operaciones Spot · Convert · compras/ventas fiat · depósitos/retiros · Historial de transacciones complementario</span></span>
         {% elif exchange_id == 'kucoin' %}
         <span class="bar-drop-text" id="dropHint">Arrastra aquí <strong>todos los CSV de KuCoin</strong> que tengas o haz clic para seleccionarlos<br><span style="font-size:11px;opacity:0.65;">Cuenta de trading, financiación, órdenes fiat, depósitos cripto · puedes subir varios a la vez · si alguno está vacío, no pasa nada</span></span>
         {% elif exchange_id == 'bitget' %}
@@ -237,7 +239,7 @@
         <span class="bar-drop-text" id="dropHint">Arrastra aquí tu CSV o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Solo ficheros .csv</span></span>
         {% endif %}
       </div>
-      {% if exchange_id in ['kucoin', 'bitget'] %}
+      {% if exchange_id in ['binance', 'kucoin', 'bitget'] %}
       <div id="kucoinSummary" class="kucoin-summary" style="display:none;"></div>
       {% endif %}
       <div class="bar-inputs-row">
@@ -247,7 +249,7 @@
         </div>
         <div class="bar-field bar-field-year" id="ejercicio-section">
           <span class="tool-year-label" id="yearLabel">Ejercicio fiscal</span>
-          <div id="year-placeholder-bar" class="year-placeholder-bar">Sube {% if exchange_id == 'mexc' %}el archivo Excel{% elif exchange_id in ['kucoin', 'bitget'] %}los CSV{% else %}el CSV{% endif %} para detectar</div>
+          <div id="year-placeholder-bar" class="year-placeholder-bar">Sube {% if exchange_id == 'mexc' %}el archivo Excel{% elif exchange_id in ['binance', 'kucoin', 'bitget'] %}los CSV{% else %}el CSV{% endif %} para detectar</div>
           <div id="year-chips-wrap" style="display:none">
             <div id="year-chips" class="year-chips" role="group" aria-labelledby="yearLabel"></div>
             <p id="year-none-warn" class="year-none-warn-bar" style="display:none">Selecciona al menos un ejercicio</p>
@@ -276,7 +278,7 @@
   <!-- Meta: warning + estado fichero + botones post-análisis -->
   <div class="bar-meta">
     <div class="bar-warning">
-      <strong>⚠ Importante:</strong> {% if exchange_id == 'mexc' %}El archivo Excel debe incluir todo el historial desde tu primera operación, no solo el año que quieres declarar.{% elif exchange_id in ['kucoin', 'bitget'] %}Los CSV deben incluir todo el historial desde tu primera operación, no solo el año que quieres declarar.{% else %}El CSV debe incluir todo el historial desde tu primera operación, no solo el año que quieres declarar.{% endif %}
+      <strong>⚠ Importante:</strong> {% if exchange_id == 'mexc' %}El archivo Excel debe incluir todo el historial desde tu primera operación, no solo el año que quieres declarar.{% elif exchange_id in ['binance', 'kucoin', 'bitget'] %}Los CSV deben incluir todo el historial desde tu primera operación, no solo el año que quieres declarar.{% else %}El CSV debe incluir todo el historial desde tu primera operación, no solo el año que quieres declarar.{% endif %}
     </div>
     <div class="bar-file-selected" id="fileSelected">
       <span>📄</span><span id="fileName">—</span>
@@ -548,7 +550,7 @@
 
   const instrucciones = {
     binance: {
-      hint: 'Arrastra aquí el CSV de Binance o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Historial de Operaciones Spot · solo ficheros .csv</span>',
+      hint: 'Arrastra aquí <strong>los ZIP originales o CSV de Binance</strong> o haz clic para seleccionarlos<br><span style="font-size:11px;opacity:0.65;">Spot · Convert · compras/ventas fiat · depósitos/retiros · TX complementario · puedes subir varios</span>',
     },
     kraken: {
       hint: 'Arrastra aquí el CSV de Kraken o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Exportación de Ledgers · solo ficheros .csv</span>',
@@ -603,8 +605,8 @@
   const btnDownload  = document.getElementById('btnDownload');
   const btnNuevo     = document.getElementById('btnNuevo');
 
-  // Flujo MULTIARCHIVO (KuCoin y Bitget comparten el mismo patrón)
-  const MULTI_PAGES   = ['kucoin', 'bitget'];
+  // Flujo MULTIARCHIVO compartido: cada exchange mantiene endpoint/clasificador dedicado.
+  const MULTI_PAGES   = ['binance', 'kucoin', 'bitget'];
   const isMultiPage   = MULTI_PAGES.includes(EXCHANGE_PAGE);
   const isKucoinPage  = isMultiPage;   // alias retrocompatible dentro de este script
   const kucoinSummary = document.getElementById('kucoinSummary');
@@ -855,6 +857,15 @@
 
   // ── MULTIARCHIVO: selección + resumen ──────────────────────────────────
   const MULTI_SUMMARY_SECTIONS = {
+    binance: [
+      ['spot_trade',          'Operaciones Spot (fills)'],
+      ['convert',             'Órdenes Convert'],
+      ['fiat_buy',            'Compras fiat'],
+      ['fiat_sell',           'Ventas fiat'],
+      ['crypto_deposit',      'Depósitos cripto'],
+      ['crypto_withdraw',     'Retiros cripto'],
+      ['transaction_history', 'Historial de transacciones (complementario)'],
+    ],
     kucoin: [
       ['trading',         'Cuenta de trading'],
       ['financiacion',    'Cuenta de financiación'],
@@ -869,6 +880,7 @@
     ],
   };
   const MULTI_SUMMARY_TITLE = {
+    binance: 'Fuentes Binance detectadas',
     kucoin: 'Archivos KuCoin detectados',
     bitget: 'Archivos Bitget detectados',
   };
@@ -899,8 +911,12 @@
     const files = Array.from(fileList || []);
     if (!files.length) return;
     for (const f of files) {
-      if (!f.name.toLowerCase().endsWith('.csv')) {
-        mostrarErrorArchivo('Todos los ficheros deben ser .csv');
+      const lower = f.name.toLowerCase();
+      const binanceZipOk = EXCHANGE_PAGE === 'binance' && lower.endsWith('.zip');
+      if (!lower.endsWith('.csv') && !binanceZipOk) {
+        mostrarErrorArchivo(EXCHANGE_PAGE === 'binance'
+          ? 'Binance admite los ZIP originales o ficheros .csv.'
+          : 'Todos los ficheros deben ser .csv');
         selectedFiles = []; actualizarBoton(); return;
       }
       if (f.size > 10 * 1024 * 1024) {
