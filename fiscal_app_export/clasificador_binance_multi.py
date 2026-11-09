@@ -548,12 +548,29 @@ class ClasificadorBinanceMulti:
         specialized_present = bool(self._specialized_families)
 
         # Direct economic trades from TX are fallback only when specialized files are absent.
+        # Even then, only direct-EUR operations with no unresolved fee may reach MotorFIFO.
         if not specialized_present:
-            self.compraventas.extend(legacy.compraventas)
-            self.swaps.extend(legacy.swaps)
+            for op in legacy.compraventas:
+                if str(op.contraparte).upper() != "EUR":
+                    self._gap("legacy_trade_non_eur", "transaction_history", op.fecha,
+                              f"Operación legacy {op.activo}/{op.contraparte} sin valoración EUR acreditada.")
+                    continue
+                if float(getattr(op, "fee_cantidad", 0) or 0) != 0:
+                    self._gap("legacy_trade_fee", "transaction_history", op.fecha,
+                              "Comisión legacy Binance sin tratamiento fiscal completo.")
+                    continue
+                self.compraventas.append(op)
+            for op in legacy.swaps:
+                self._gap("legacy_swap_unvalued", "transaction_history", op.fecha,
+                          f"Permuta legacy {op.activo_entregado}→{op.activo_recibido} sin valoración EUR acreditada.")
         # Rewards and movements remain complementary because specialized Spot/Convert/Fiat
-        # do not cover Earn or generic account events.
+        # do not cover Earn or generic account events. Legacy rewards do not carry a
+        # transaction-time EUR valuation, therefore they are retained for provenance but block IRPF.
         self.rendimientos.extend(legacy.rendimientos)
+        if legacy.rendimientos:
+            first_date = getattr(legacy.rendimientos[0], "fecha", "")
+            self._gap("legacy_income_unvalued", "transaction_history", str(first_date),
+                      "Rendimientos Binance sin valoración EUR verificable a la fecha de percepción.")
         self.movimientos.extend(legacy.movimientos)
 
         for unknown in legacy.desconocidas:
