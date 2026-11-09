@@ -315,13 +315,13 @@ class ClasificadorBinanceMulti:
             for row in rows:
                 digest = _row_digest(source, row)
                 previous_file = self._cross_file_rows.get(digest)
-                if previous_file is not None and previous_file != filename:
+                if previous_file is not None and previous_file != path:
                     self.advertencias.append(
                         f"Binance: se omitió una fila duplicada de {source} "
                         "presente en más de una exportación."
                     )
                     continue
-                self._cross_file_rows[digest] = filename
+                self._cross_file_rows[digest] = path
                 self._source_rows[source].append((row, filename))
 
         if not recognized:
