@@ -187,9 +187,9 @@ def test_http_mas_de_32000_fills_spot_sin_truncamiento_fifo_pdf(client, usuario)
     lines = [SPOT_HEADER]
     for n in range(32_005):
         lines.append(
-            f"{1000+n},2025-01-01 10:00:00,XRPEUR,BUY,2,1XRP,2EUR,0XRP,,\\n"
+            f"{1000+n},2025-01-01 10:00:00,XRPEUR,BUY,2,1XRP,2EUR,0XRP,,\n"
         )
-    lines.append("999999,2025-01-02 10:00:00,XRPEUR,SELL,3,1XRP,3EUR,0EUR,,\\n")
+    lines.append("999999,2025-01-02 10:00:00,XRPEUR,SELL,3,1XRP,3EUR,0EUR,,\n")
     payload = "".join(lines).encode("utf-8-sig")
     r = client.post(
         "/api/binance/analizar",
