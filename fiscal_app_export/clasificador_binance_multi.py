@@ -245,6 +245,15 @@ class ClasificadorBinanceMulti:
         self.filenames = list(filenames or [Path(p).name for p in filepaths])
         if len(self.filepaths) != len(self.filenames):
             raise BinanceMultiUserError("file_name_mismatch", "No se puede identificar de forma segura el conjunto de archivos Binance.")
+        digests = []
+        for path in self.filepaths:
+            with open(path, "rb") as fh:
+                digests.append(hashlib.sha256(fh.read()).hexdigest())
+        if len(set(digests)) != len(digests):
+            raise BinanceMultiUserError(
+                "duplicate_file",
+                "Has subido el mismo archivo de Binance más de una vez. Elimina el duplicado y vuelve a intentarlo.",
+            )
 
         self.compraventas: list[OperacionCompraventa] = []
         self.swaps = []  # No se crean swaps sin valoración EUR acreditada.
