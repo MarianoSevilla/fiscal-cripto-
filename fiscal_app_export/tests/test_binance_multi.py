@@ -134,19 +134,24 @@ def test_fiat_buy_no_suma_dos_veces_tarifa_exportada(tmp_path):
     assert op.fee_cantidad == 0
 
 
-def test_fiat_sell_fee_eur_se_conserva(tmp_path):
-    path, name = _csv(
-        tmp_path, "Binance-Historial-de-ventas-de-fiat-20260101(UTC+1)_a.csv",
+def test_fiat_sell_sin_fee_es_valorable_y_fee_no_nula_bloquea(tmp_path):
+    ok, n1 = _csv(
+        tmp_path, "Binance-Historial-de-ventas-de-fiat-20260101(UTC+1)_ok.csv",
         FIAT_HEADER,
-        "2025-03-02 10:00:00,Tarjeta,1 BNB,599 EUR,1 EUR,600,Successful,F-2\n",
+        "2025-03-02 10:00:00,Saldo,1 BNB,599 EUR,0 EUR,599,Successful,F-2\n",
     )
-    c = ClasificadorBinanceMulti([path], [name]).clasificar()
-    op = c.compraventas[0]
-    assert (op.tipo, op.activo, op.contraparte) == ("VENTA", "BNB", "EUR")
-    assert op.importe == pytest.approx(599)
-    assert op.fee_activo == "EUR"
-    assert op.fee_cantidad == pytest.approx(1)
+    c_ok = ClasificadorBinanceMulti([ok], [n1]).clasificar()
+    assert len(c_ok.compraventas) == 1
+    assert c_ok.compraventas[0].importe == pytest.approx(599)
 
+    blocked, n2 = _csv(
+        tmp_path, "Binance-Historial-de-ventas-de-fiat-20260101(UTC+1)_fee.csv",
+        FIAT_HEADER,
+        "2025-03-03 10:00:00,Saldo,1 BNB,599 EUR,1 EUR,600,Successful,F-3\n",
+    )
+    c_blocked = ClasificadorBinanceMulti([blocked], [n2]).clasificar()
+    assert not c_blocked.compraventas
+    assert "fiat_sell_fee_semantics_unverified" in {g.code for g in c_blocked.bloqueos_valoracion}
 
 def test_transferencias_crypto_no_se_convierten_en_compraventas(tmp_path):
     dep, n1 = _csv(
@@ -229,6 +234,21 @@ def test_fiat_ambiguo_renombrado_se_bloquea(tmp_path):
     )
     with pytest.raises(BinanceMultiUserError, match="sin renombrarlo"):
         ClasificadorBinanceMulti([path], ["renombrado.csv"]).clasificar()
+
+
+def test_exports_spot_solapados_deduplican_sin_perder_fills_identicos(tmp_path):
+    header = SPOT_HEADER
+    row = "OID-12,2025-01-02 10:00:00,BTCEUR,BUY,50000,0.001BTC,50EUR,0BTC,,\n"
+    p1, n1 = _csv(tmp_path, "Binance-Historial-de-operaciones-de-spot-20260101(UTC+1)_a.csv", header, row, row)
+    # Segundo export solapado: conserva las dos ocurrencias legítimas y añade una nueva.
+    p2, n2 = _csv(
+        tmp_path, "Binance-Historial-de-operaciones-de-spot-20260201(UTC+1)_b.csv", header,
+        row, row,
+        "OID-13,2025-01-03 10:00:00,BTCEUR,BUY,50000,0.001BTC,50EUR,0BTC,,\n",
+    )
+    c = ClasificadorBinanceMulti([p1, p2], [n1, n2]).clasificar()
+    assert len(c.eventos) == 3
+    assert len(c.compraventas) == 3
 
 
 def test_archivo_duplicado_se_rechaza_antes_de_clasificar(tmp_path):
