@@ -273,11 +273,13 @@ class ClasificadorBinanceMulti:
             df = _normal_df(path)
             source = _detect_source(df, filename)
             empty = _is_empty_export(df)
-            self.resumen_archivos[filename] = {
-                "tipo": source,
-                "filas": 0 if empty else int(len(df)),
-                "vacio": bool(empty),
-            }
+            summary = self.resumen_archivos.setdefault(source, {
+                "detectado": False, "vacio": True, "registros": 0, "archivos": 0,
+            })
+            summary["detectado"] = True
+            summary["archivos"] += 1
+            summary["registros"] += 0 if empty else int(len(df))
+            summary["vacio"] = summary["registros"] == 0
             parsed.append((source, path, filename, df))
             if not empty and source in {"spot_trade", "convert", "fiat_buy", "fiat_sell"}:
                 self._specialized_families.add(source)
