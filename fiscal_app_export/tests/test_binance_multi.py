@@ -243,3 +243,49 @@ def test_csv_duplicado_se_rechaza(tmp_path):
     b.write_text("a,b\n1,2\n", encoding="utf-8")
     with pytest.raises(BinanceUploadError, match="dos veces"):
         save_binance_uploads([_Upload(a), _Upload(b)])
+
+
+def test_spot_orden_dos_fills_conciliados_sin_perder_operaciones(tmp_path):
+    fills = _csv(tmp_path, "fills.csv", SPOT_H, [
+        ["42", "2025-01-01 10:00:00", "XRPEUR", "BUY", "2", "6XRP", "12EUR", "0XRP", "", ""],
+        ["42", "2025-01-01 10:00:01", "XRPEUR", "BUY", "2", "4XRP", "8EUR", "0XRP", "", ""],
+    ])
+    orders = _csv(tmp_path, "orders.csv", SPOT_ORDER_H, [
+        ["2025-01-01 09:59:59", "42", "XRPEUR", "Market", "BUY", "0", "10XRP",
+         "2025-01-01 10:00:01", "10XRP", "2", "20EUR", "Filled"],
+    ])
+    c = _classify([fills, orders])
+    assert len(c.compraventas) == 2
+    assert c.fuentes_materiales_no_soportadas == []
+
+
+def test_spot_orden_ejecutada_sin_fills_bloquea_aceptacion(tmp_path):
+    orders = _csv(tmp_path, "orders.csv", SPOT_ORDER_H, [
+        ["2025-01-01 09:59:59", "42", "XRPEUR", "Market", "BUY", "0", "10XRP",
+         "2025-01-01 10:00:01", "10XRP", "2", "20EUR", "Filled"],
+    ])
+    c = _classify([orders])
+    assert c.compraventas == []
+    assert "spot_orders_ejecutadas_sin_fills_completos" in c.fuentes_materiales_no_soportadas
+
+
+def test_spot_orden_sin_uno_de_sus_fills_bloquea_aceptacion(tmp_path):
+    fills = _csv(tmp_path, "fills.csv", SPOT_H, [
+        ["42", "2025-01-01 10:00:00", "XRPEUR", "BUY", "2", "6XRP", "12EUR", "0XRP", "", ""],
+    ])
+    orders = _csv(tmp_path, "orders.csv", SPOT_ORDER_H, [
+        ["2025-01-01 09:59:59", "42", "XRPEUR", "Market", "BUY", "0", "10XRP",
+         "2025-01-01 10:00:01", "10XRP", "2", "20EUR", "Filled"],
+    ])
+    c = _classify([fills, orders])
+    assert len(c.compraventas) == 1
+    assert "spot_orders_ejecutadas_sin_fills_completos" in c.fuentes_materiales_no_soportadas
+
+
+def test_spot_orden_cancelada_no_ejecutada_no_exige_fills(tmp_path):
+    orders = _csv(tmp_path, "orders.csv", SPOT_ORDER_H, [
+        ["2025-01-01 09:59:59", "43", "XRPEUR", "Limit", "BUY", "2", "10XRP",
+         "2025-01-01 10:00:01", "0XRP", "0", "0EUR", "Canceled"],
+    ])
+    c = _classify([orders])
+    assert c.fuentes_materiales_no_soportadas == []

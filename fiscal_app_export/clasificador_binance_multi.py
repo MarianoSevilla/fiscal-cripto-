@@ -353,6 +353,7 @@ class ClasificadorBinanceMulti:
             )
 
         self._process_spot()
+        self._reconcile_spot_orders()
         self._process_convert()
         self._process_fiat_trades()
         self._process_crypto_transfers()
@@ -409,6 +410,89 @@ class ClasificadorBinanceMulti:
                     fee_asset=fee_asset, fee_amount=fee_qty,
                     source="Spot SELL",
                 )
+
+    def _reconcile_spot_orders(self) -> None:
+        """Contrasta órdenes con ejecución contra todos sus fills Spot.
+
+        Una orden Filled/Partially Filled sin trades, o con volúmenes distintos,
+        puede indicar una exportación incompleta. No se infieren trades ni se
+        descartan órdenes ejecutadas: la aceptación fiscal debe bloquear el PDF.
+        """
+        orders = self._source_rows["spot_orders"]
+        if not orders:
+            return
+
+        fills: Dict[tuple, List[Decimal]] = {}
+        for row, _filename in self._source_rows["spot_trades"]:
+            order_id = row.get("número de pedido", "").strip()
+            pair = row.get("par", "").strip().upper()
+            side = row.get("lado", "").strip().upper()
+            base_qty, base = _amount_asset(row.get("ejecutado"), field="Ejecutado")
+            quote_qty, quote = _amount_asset(row.get("cantidad"), field="Cantidad")
+            if not order_id or not pair or side not in {"BUY", "SELL"} or pair != base + quote:
+                self.fuentes_materiales_no_soportadas.append(
+                    "spot_fill_sin_identidad_reconciliable"
+                )
+                return
+            totals = fills.setdefault((order_id, pair, side), [Decimal("0"), Decimal("0")])
+            totals[0] += base_qty
+            totals[1] += quote_qty
+
+        executed_states = {"filled", "partially filled", "partially_filled", "partiallyfilled"}
+        unfilled_states = {"new", "canceled", "cancelled", "expired", "rejected"}
+        seen_order_keys: set[tuple] = set()
+        missing_or_mismatched = False
+
+        for row, _filename in orders:
+            status = row.get("estado", "").strip().lower()
+            raw_executed = row.get("ejecutado", "").strip()
+            if not raw_executed or raw_executed in {"0", "0.0", "0.00"}:
+                if status not in unfilled_states:
+                    missing_or_mismatched = True
+                continue
+
+            try:
+                base_qty, base_asset = _amount_asset(raw_executed, field="Ejecutado")
+            except BinanceMultiUserError:
+                missing_or_mismatched = True
+                continue
+            if base_qty < 0 or (base_qty == 0 and status in executed_states):
+                missing_or_mismatched = True
+                continue
+            if base_qty == 0:
+                continue
+
+            try:
+                quote_qty, quote_asset = _amount_asset(
+                    row.get("total de trading"), field="Total de trading"
+                )
+            except BinanceMultiUserError:
+                missing_or_mismatched = True
+                continue
+            if quote_qty <= 0:
+                missing_or_mismatched = True
+                continue
+
+            order_id = row.get("número de pedido", "").strip()
+            pair = row.get("par", "").strip().upper()
+            side = row.get("lado", "").strip().upper()
+            key = (order_id, pair, side)
+            if (
+                not order_id or side not in {"BUY", "SELL"}
+                or pair != base_asset + quote_asset
+                or key in seen_order_keys
+            ):
+                missing_or_mismatched = True
+                continue
+            seen_order_keys.add(key)
+            native = fills.get(key)
+            if native is None or native[0] != base_qty or native[1] != quote_qty:
+                missing_or_mismatched = True
+
+        if missing_or_mismatched:
+            self.fuentes_materiales_no_soportadas.append(
+                "spot_orders_ejecutadas_sin_fills_completos"
+            )
 
     def _process_convert(self) -> None:
         for row, _filename in self._source_rows["convert_orders"]:
