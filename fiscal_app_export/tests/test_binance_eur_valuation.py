@@ -97,7 +97,7 @@ def test_ruta_directa_eur_y_precision_decimal():
 def test_buscador_no_utiliza_trade_futuro_ni_obsoleto():
     book = BinanceHistoricalEURPrices([
         price("XRP", "EUR", "1", when=T - timedelta(seconds=61)),
-        price("XRP", "EUR", "3", when=T + timedelta(seconds=1)),
+        price("XRP", "EUR", "3", when=T + timedelta(seconds=1), id=2),
     ])
     with pytest.raises(BinancePriceEvidenceError, match="No existe evidencia"):
         book.price_eur("XRP", T)
