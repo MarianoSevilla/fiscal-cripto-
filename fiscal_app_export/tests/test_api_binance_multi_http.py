@@ -179,3 +179,31 @@ def test_dos_csv_identicos_se_rechazan_antes_de_calcular(client, usuario):
     assert r.status_code == 400
     assert body["ok"] is False
     assert "dos veces" in body["error"]
+
+
+def test_http_mas_de_32000_fills_spot_sin_truncamiento_fifo_pdf(client, usuario):
+    """Regresión sintética >32k: origen histórico completo, venta, FIFO e informe."""
+    _login(client)
+    lines = [SPOT_HEADER]
+    for n in range(32_005):
+        lines.append(
+            f"{1000+n},2025-01-01 10:00:00,XRPEUR,BUY,2,1XRP,2EUR,0XRP,,\\n"
+        )
+    lines.append("999999,2025-01-02 10:00:00,XRPEUR,SELL,3,1XRP,3EUR,0EUR,,\\n")
+    payload = "".join(lines).encode("utf-8-sig")
+    r = client.post(
+        "/api/binance/analizar",
+        data={
+            "csv": (io.BytesIO(payload), "Binance-Spot-32k-(UTC+1).csv"),
+            "ejercicio": "2025",
+            "nombre": "Caso sintético más de 32000",
+        },
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 200, r.get_data(as_text=True)[:400]
+    body = r.get_json()
+    assert body["ok"] is True
+    assert body["resumen_archivos"]["spot_trades"]["registros"] == 32_006
+    assert body["resumen"]["operaciones_con_resultado"] == 1
+    assert body["resumen"]["resultado_neto"] == pytest.approx(1.0)
+    assert "token" in body and body["token"]
