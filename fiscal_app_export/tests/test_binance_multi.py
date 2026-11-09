@@ -231,15 +231,11 @@ def test_fiat_ambiguo_renombrado_se_bloquea(tmp_path):
         ClasificadorBinanceMulti([path], ["renombrado.csv"]).clasificar()
 
 
-def test_archivo_duplicado_no_duplica_eventos(tmp_path):
+def test_archivo_duplicado_se_rechaza_antes_de_clasificar(tmp_path):
     path, name = _csv(
         tmp_path, "Binance-Historial-de-operaciones-de-spot-20260101(UTC+1)_a.csv",
         SPOT_HEADER,
         "OID-11,2025-01-02 10:00:00,BTCEUR,BUY,50000,0.001 BTC,50 EUR,0 BTC,,\n",
     )
-    c = ClasificadorBinanceMulti([path, path], [name, name]).clasificar()
-    assert len(c.eventos) == 1
-    assert len(c.compraventas) == 2  # classification lists reveal duplicate input -> must fail closed
-    # Duplicate uploads must be detected before they can reach MotorFIFO.
-    ids = [e.event_id for e in c.eventos]
-    assert len(ids) == len(set(ids))
+    with pytest.raises(BinanceMultiUserError, match="mismo archivo"):
+        ClasificadorBinanceMulti([path, path], [name, name])
