@@ -295,5 +295,5 @@ def test_http_spot_aor_no_reconstruido_422_sin_token(client, usuario):
     )
     assert r.status_code == 422
     body = r.get_json()
-    assert body["ok"] is False
+    assert "Datos fiscales no seguros" in body["error"]
     assert "token" not in body
