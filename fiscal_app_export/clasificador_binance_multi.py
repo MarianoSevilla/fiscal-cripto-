@@ -36,7 +36,7 @@ from clasificador_binance_tx import ClasificadorBinanceTx
 from csv_schema import leer_csv_texto, normalizar_cabeceras
 
 
-_AMOUNT_RE = re.compile(r"^\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s+([A-Za-z0-9._-]+)\s*$")
+_AMOUNT_RE = re.compile(r"^\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*([A-Za-z][A-Za-z0-9._-]*)\s*$")
 _TZ_RE = re.compile(r"\(UTC([+-]\d{1,2})(?::?(\d{2}))?\)", re.IGNORECASE)
 
 
