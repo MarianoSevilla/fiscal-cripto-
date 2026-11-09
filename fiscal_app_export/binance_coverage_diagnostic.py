@@ -32,10 +32,15 @@ class BinanceCoverageResult:
     activos_con_deficit: tuple[BinanceCoverageDeficit, ...]
     activos_depositados_sin_coste_acreditado: tuple[str, ...]
     movimientos_no_contabilizados: tuple[str, ...]
+    pagos_externos_supuestos: int = 0
 
     @property
     def conciliacion_saldos_ok(self) -> bool:
-        return not self.activos_con_deficit and not self.movimientos_no_contabilizados
+        return (
+            not self.activos_con_deficit
+            and not self.movimientos_no_contabilizados
+            and self.pagos_externos_supuestos == 0
+        )
 
     @property
     def coste_fiscal_acreditado(self) -> bool:
@@ -62,7 +67,9 @@ def _date(value: str) -> datetime:
         raise BinanceCoverageError("Fecha Binance no interpretable") from exc
 
 
-def diagnosticar_saldo_inicial_cero(clasificador, *, inicio: str) -> BinanceCoverageResult:
+def diagnosticar_saldo_inicial_cero(
+    clasificador, *, inicio: str, metodos_pago_externo: tuple[str, ...] = (),
+) -> BinanceCoverageResult:
     """Diagnóstico por evento, agrupado por segundo y activo.
 
     NO intenta reconstruir inventario global ni FIFO. En particular:
@@ -71,6 +78,10 @@ def diagnosticar_saldo_inicial_cero(clasificador, *, inicio: str) -> BinanceCove
     - Los movimientos no nativos se señalan como no conciliados.
     - El déficit es indicio de fuentes omitidas/incompletas, no prueba de
       adquisiciones anteriores a la fecha asumida.
+    - Una compra fiat pagada desde el banco no implica necesariamente
+      un cargo sobre el saldo fiat de Binance. Solo se descuenta fuera del
+      libro si se pasa EXPLÍCITAMENTE el método exacto como hipótesis.
+      Este supuesto nunca acredita saldo ni habilita FIFO/PDF.
     """
     if not isinstance(inicio, str) or len(inicio) != 10:
         raise BinanceCoverageError("Fecha de inicio inválida")
@@ -81,6 +92,12 @@ def diagnosticar_saldo_inicial_cero(clasificador, *, inicio: str) -> BinanceCove
     if fecha_inicio.strftime("%Y-%m-%d") != inicio:
         raise BinanceCoverageError("Fecha de inicio inválida")
 
+    if not isinstance(metodos_pago_externo, tuple) or any(
+        not isinstance(x, str) or not x.strip() for x in metodos_pago_externo
+    ):
+        raise BinanceCoverageError("Métodos externos deben ser una tupla de textos no vacíos")
+    external_methods = {x.strip().casefold() for x in metodos_pago_externo}
+    pagos_externos_supuestos = 0
     events: list[tuple[datetime, str, Decimal]] = []
     transferred_in: set[str] = set()
     uncovered: set[str] = set()
@@ -105,12 +122,25 @@ def diagnosticar_saldo_inicial_cero(clasificador, *, inicio: str) -> BinanceCove
     for op in getattr(clasificador, "intercambios_nativos", ()):
         amount_give = _decimal_positivo(op.given_amount)
         amount_recv = _decimal_positivo(op.received_amount)
-        movement(op.local_time, op.given_asset, -amount_give)
-        movement(op.local_time, op.received_asset, amount_recv)
         fee = _decimal_positivo(op.fee_amount, allow_zero=True)
-        if fee:
-            if not op.fee_asset:
-                raise BinanceCoverageError("Comisión sin moneda")
+        if fee and not op.fee_asset:
+            raise BinanceCoverageError("Comisión sin moneda")
+
+        # No confundir una compra de cripto pagada desde el banco con
+        # una salida del monedero EUR de Binance. Solo bajo hipótesis
+        # indicada explícitamente; el método nativo sigue conservado.
+        external_bank_purchase = (
+            op.source == "Fiat trade"
+            and op.given_asset == "EUR"
+            and str(getattr(op, "payment_method", "")).strip().casefold()
+                in external_methods
+        )
+        if external_bank_purchase:
+            pagos_externos_supuestos += 1
+        else:
+            movement(op.local_time, op.given_asset, -amount_give)
+        movement(op.local_time, op.received_asset, amount_recv)
+        if fee and not (external_bank_purchase and op.fee_asset == "EUR"):
             movement(op.local_time, op.fee_asset, -fee)
 
     accepted_movements = {
@@ -154,4 +184,5 @@ def diagnosticar_saldo_inicial_cero(clasificador, *, inicio: str) -> BinanceCove
         ),
         activos_depositados_sin_coste_acreditado=tuple(sorted(transferred_in)),
         movimientos_no_contabilizados=tuple(sorted(uncovered)),
+        pagos_externos_supuestos=pagos_externos_supuestos,
     )

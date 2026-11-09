@@ -91,6 +91,7 @@ class BinanceNativeExchange:
     received_amount: Decimal
     fee_asset: Optional[str]
     fee_amount: Decimal
+    payment_method: str = ""
 
 
 _HEADER_ALIASES = {
@@ -640,13 +641,14 @@ class ClasificadorBinanceMulti:
                 recv_asset=recv_asset, recv_amount=recv_qty,
                 fee_asset=fee_asset, fee_amount=fee_qty,
                 source="Fiat trade", filename=_filename,
+                payment_method=row.get("método", "").strip(),
             )
 
     def _register_exchange(
         self, *, fecha: str, give_asset: str, give_amount: Decimal,
         recv_asset: str, recv_amount: Decimal,
         fee_asset: Optional[str], fee_amount: Decimal, source: str,
-        filename: str,
+        filename: str, payment_method: str = "",
     ) -> None:
         give_asset = give_asset.upper()
         recv_asset = recv_asset.upper()
@@ -685,6 +687,7 @@ class ClasificadorBinanceMulti:
             given_asset=give_asset, given_amount=give_amount,
             received_asset=recv_asset, received_amount=recv_amount,
             fee_asset=fee_asset, fee_amount=fee_amount,
+            payment_method=payment_method,
         ))
 
         if give_asset == "EUR" and recv_asset != "EUR":
