@@ -87,6 +87,10 @@ _COLS_EN_ES = {
     "Coin":      "Moneda",
     "Change":    "Cambio",
     "Remark":    "Observación",
+    # Variante española observada en exports Binance 2026 (PR #192).
+    "Hora":       "Tiempo",
+    "Cambiar":    "Cambio",
+    "Comentario": "Observación",
 }
 
 
