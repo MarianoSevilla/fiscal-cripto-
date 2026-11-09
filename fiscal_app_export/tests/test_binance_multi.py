@@ -434,3 +434,26 @@ def test_intercambios_nativos_convert_conservan_origen_y_precision(tmp_path):
     assert str(event.received_amount) == "10.87654321"
     assert event.filename.endswith("::convert.csv")
     assert c.valoraciones_pendientes
+
+
+
+def test_spot_con_conversion_aor_no_se_interpreta_como_operacion_simple(tmp_path):
+    p = _csv(tmp_path, "spot-aor.csv", SPOT_H, [
+        ["42", "2025-02-01 12:00:00", "XRPEUR", "BUY", "2",
+         "10XRP", "20EUR", "0XRP", "XRPEUR", "1"],
+    ])
+    c = _classify([p])
+    assert c.compraventas == []
+    assert "spot_aor_conversion_no_reconstruida" in c.fuentes_materiales_no_soportadas
+    assert c.intercambios_nativos == []
+
+
+def test_spot_sin_aor_sigue_funcionando(tmp_path):
+    p = _csv(tmp_path, "spot-plain.csv", SPOT_H, [
+        ["42", "2025-02-01 12:00:00", "XRPEUR", "BUY", "2",
+         "10XRP", "20EUR", "0XRP", "", ""],
+    ])
+    c = _classify([p])
+    assert len(c.compraventas) == 1
+    assert len(c.intercambios_nativos) == 1
+    assert c.fuentes_materiales_no_soportadas == []

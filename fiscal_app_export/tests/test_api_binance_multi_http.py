@@ -278,3 +278,22 @@ def test_http_filas_iguales_entre_csv_distintos_422(client, usuario):
     )
     assert r.status_code == 422
     assert "token" not in r.get_json()
+
+
+
+def test_http_spot_aor_no_reconstruido_422_sin_token(client, usuario):
+    _login(client)
+    aor = (
+        SPOT_HEADER
+        + "42,2025-02-01 12:00:00,XRPEUR,BUY,2,10XRP,20EUR,0XRP,XRPEUR,1\n"
+    ).encode("utf-8-sig")
+    r = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(aor), "Binance-Spot-(UTC+1).csv"),
+              "ejercicio": "2025", "nombre": "Prueba sintética AOR"},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 422
+    body = r.get_json()
+    assert body["ok"] is False
+    assert "token" not in body

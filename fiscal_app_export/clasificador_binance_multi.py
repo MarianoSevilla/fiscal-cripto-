@@ -421,6 +421,18 @@ class ClasificadorBinanceMulti:
                 "el FIFO usa Historial de operaciones Spot (fills)."
             )
         for row, _filename in rows:
+            # Las columnas AOR incorporadas a los exports 2026 identifican
+            # posibles rutas de conversión. Sin documentar qué activo y
+            # cantidades terminan en cada tramo no deben tratarse como un
+            # simple BUY/SELL del par original.
+            aor_pair = row.get("par de conversión de aor", "").strip()
+            aor_rate = row.get("tasa de conversión de aor", "").strip()
+            if aor_pair or aor_rate:
+                if "spot_aor_conversion_no_reconstruida" not in self.fuentes_materiales_no_soportadas:
+                    self.fuentes_materiales_no_soportadas.append(
+                        "spot_aor_conversion_no_reconstruida"
+                    )
+                continue
             side = row.get("lado", "").strip().upper()
             if side not in {"BUY", "SELL"}:
                 self.fuentes_materiales_no_soportadas.append("lado Spot desconocido")
