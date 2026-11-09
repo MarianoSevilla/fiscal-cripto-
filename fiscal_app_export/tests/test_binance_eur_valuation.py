@@ -16,6 +16,7 @@ from binance_eur_valuation import (
     BinancePriceEvidenceError,
     TradePriceEvidence,
     parse_verified_binance_trade_zip,
+    binance_export_time_to_utc,
 )
 
 
@@ -181,3 +182,18 @@ def test_cotizacion_duplicada_exacta_no_altera_libro():
     found = book.price_eur("XRP", T)
     assert found.unit_price_eur == Decimal("2.0")
     assert len(found.path) == 1
+
+
+
+def test_export_binance_offset_a_utc_y_cruce_anual():
+    assert binance_export_time_to_utc(
+        "2025-01-01 00:30:00", "Binance-Spot-(UTC+1).zip::spot.csv"
+    ) == datetime(2024, 12, 31, 23, 30, tzinfo=timezone.utc)
+    assert binance_export_time_to_utc(
+        "2025-01-01 23:30:00", "Binance-Spot-(UTC-5).zip"
+    ) == datetime(2025, 1, 2, 4, 30, tzinfo=timezone.utc)
+
+
+def test_export_binance_sin_zona_horaria_no_permite_valoracion():
+    with pytest.raises(BinancePriceEvidenceError, match="zona horaria"):
+        binance_export_time_to_utc("2025-01-01 12:00:00", "spot.csv")

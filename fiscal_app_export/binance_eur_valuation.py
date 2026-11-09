@@ -44,6 +44,29 @@ def _utc(value: datetime, *, field: str) -> datetime:
     return value.astimezone(timezone.utc)
 
 
+def binance_export_time_to_utc(local_time: str, export_filename: str) -> datetime:
+    """Transforma hora local Binance mediante el offset explícito del fichero.
+
+    No se interpreta una fecha naive como UTC: un offset ausente/ambiguo impide
+    vincular la transacción con cotizaciones históricas verificables.
+    """
+    match = re.search(r"\(UTC([+-])(\d{1,2})(?::(\d{2}))?\)", str(export_filename), re.I)
+    if not match:
+        raise BinancePriceEvidenceError("Exportación Binance sin zona horaria UTC explícita")
+    hours = int(match.group(2))
+    minutes = int(match.group(3) or "0")
+    if minutes >= 60 or hours > 14 or (hours == 14 and minutes > 0):
+        raise BinancePriceEvidenceError("Offset UTC de exportación fuera de rango")
+    offset = timedelta(hours=hours, minutes=minutes)
+    if match.group(1) == "-":
+        offset = -offset
+    try:
+        local = datetime.strptime(str(local_time), "%Y-%m-%d %H:%M:%S")
+    except ValueError as exc:
+        raise BinancePriceEvidenceError("Hora Binance no interpretable") from exc
+    return local.replace(tzinfo=timezone(offset)).astimezone(timezone.utc)
+
+
 @dataclass(frozen=True)
 class TradePriceEvidence:
     base: str
@@ -181,6 +204,7 @@ class AssetEURPrice:
 
 @dataclass(frozen=True)
 class SwapEURValuation:
+    at_utc: datetime
     given: AssetEURPrice
     received: AssetEURPrice
     given_amount: Decimal
@@ -283,7 +307,7 @@ class BinanceHistoricalEURPrices:
         given_value = give_qty * given.unit_price_eur
         received_value = recv_qty * received.unit_price_eur
         return SwapEURValuation(
-            given=given, received=received,
+            at_utc=at, given=given, received=received,
             given_amount=give_qty, received_amount=recv_qty,
             given_value_eur=given_value, received_value_eur=received_value,
             fiscal_value_eur=max(given_value, received_value),
