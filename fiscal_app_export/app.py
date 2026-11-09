@@ -64,6 +64,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from clasificador import ClasificadorBinance
 from clasificador_binance_tx import ClasificadorBinanceTx
+from clasificador_binance_multi import ClasificadorBinanceMulti, BinanceMultiUserError
 from clasificador_bit2me import ClasificadorBit2Me
 from clasificador_bit2me_excel import (
     ClasificadorBit2MeExcel, validar_columnas_bit2me_excel, Bit2MeExcelError,
@@ -1050,6 +1051,7 @@ MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
 MAX_CSV_ROWS        = 100_000            # filas máximas permitidas por CSV (≈ 10 MB de datos reales)
 MAX_KUCOIN_FILES    = 8                  # KuCoin es multiarchivo: tope de ficheros por análisis
 MAX_BITGET_FILES    = 8                  # Bitget es multiarchivo: tope de ficheros por análisis
+MAX_BINANCE_FILES   = 16                 # Binance multifuente: Spot, Convert, Fiat, transferencias y TX complementario
 AÑO_MIN = 2009
 
 
@@ -1366,6 +1368,11 @@ def procesar_binance(filepath: str) -> tuple:
 
 def procesar_binance_tx(filepath: str) -> tuple:
     return procesar_con_fifo(ClasificadorBinanceTx(filepath).clasificar())
+
+
+def procesar_binance_multi(filepaths: list, filenames: list = None) -> tuple:
+    """Binance multifuente: normaliza fuentes canónicas antes de MotorFIFO."""
+    return procesar_con_fifo(ClasificadorBinanceMulti(filepaths, filenames).clasificar())
 
 
 def procesar_bitvavo(filepath: str) -> tuple:
@@ -1690,6 +1697,9 @@ def _validar_aceptacion_fifo(motor, clasificador=None) -> None:
     no modifica el motor, el clasificador ni los recorridos Modelo 721.
     """
     _validar_aceptacion_fuentes_fifo(clasificador)
+
+    if isinstance(clasificador, ClasificadorBinanceMulti):
+        clasificador.validar_aceptacion()
 
     # El clasificador Binance TX agrupa Transaction Fee con las patas de
     # compra/venta, pero no traslada su coste ni el activo empleado al motor
@@ -2433,12 +2443,59 @@ def _guardar_csvs_multi(archivos, max_files: int, label: str) -> tuple:
     return tmp_paths, filenames
 
 
+def _guardar_csvs_binance(archivos) -> tuple:
+    return _guardar_csvs_multi(archivos, MAX_BINANCE_FILES, "Binance")
+
+
 def _guardar_csvs_kucoin(archivos) -> tuple:
     return _guardar_csvs_multi(archivos, MAX_KUCOIN_FILES, "KuCoin")
 
 
 def _guardar_csvs_bitget(archivos) -> tuple:
     return _guardar_csvs_multi(archivos, MAX_BITGET_FILES, "Bitget")
+
+
+@app.route("/api/binance/anos", methods=["POST"])
+@login_required
+@limiter.limit("30 per minute")
+def api_binance_anos():
+    """Detecta años y fuentes Binance sin ejecutar MotorFIFO ni emitir informe."""
+    archivos = request.files.getlist("csv") or request.files.getlist("files")
+    tmp_paths: list = []
+    try:
+        tmp_paths, filenames = _guardar_csvs_binance(archivos)
+        if sum(_contar_csv_rows(p) for p in tmp_paths) > MAX_CSV_ROWS:
+            return jsonify({"ok": False, "error": f"Los ficheros superan el máximo conjunto de {MAX_CSV_ROWS:,} filas."}), 400
+        clasificador = ClasificadorBinanceMulti(tmp_paths, filenames).clasificar()
+        años = set()
+        for event in clasificador.eventos:
+            try:
+                años.add(int(str(event.fecha)[:4]))
+            except (ValueError, TypeError):
+                pass
+        for grupo in (clasificador.compraventas, clasificador.movimientos, clasificador.rendimientos):
+            for op in grupo:
+                try:
+                    años.add(int(str(op.fecha)[:4]))
+                except (ValueError, TypeError):
+                    pass
+        return jsonify({
+            "ok": True,
+            "anos": sorted(años),
+            "resumen": clasificador.resumen_archivos,
+            "advertencias": clasificador.advertencias,
+            "bloqueos": sorted({g.code for g in clasificador.bloqueos_valoracion}),
+        })
+    except (BinanceMultiUserError, ValueError) as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"ok": False, "error": _error_amigable(exc)}), 500
+    finally:
+        for p in tmp_paths:
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
 
 
 @app.route("/api/kucoin/anos", methods=["POST"])
@@ -3087,6 +3144,141 @@ def analizar():
             try:
                 os.unlink(tmp_path)
             except Exception:
+                pass
+
+
+@app.route("/api/binance/analizar", methods=["POST"])
+@login_required
+@limiter.limit("3 per 10 minutes", exempt_when=_is_admin)
+@limiter.limit("6 per hour",       exempt_when=_is_admin)
+@limiter.limit("15 per day",       exempt_when=_is_admin)
+def analizar_binance_multi():
+    """Análisis fiscal Binance multifuente.
+
+    Endpoint aislado del flujo legacy single-file. Las fuentes especializadas
+    se normalizan y cualquier hueco de valoración fiscal bloquea el informe.
+    """
+    uid = current_user.id
+    tmp_paths: list = []
+    filenames: list = []
+
+    with _analisis_lock:
+        if uid in _analisis_en_curso:
+            return jsonify({"error": "Ya tienes un análisis en proceso. Espera a que termine antes de lanzar otro."}), 409
+        _analisis_en_curso.add(uid)
+
+    t_start = time.time()
+    csv_rows = 0
+    try:
+        archivos = request.files.getlist("csv") or request.files.getlist("files")
+        nombre = _sanitizar_texto(request.form.get("nombre", ""))
+        ejercicio = _sanitizar_texto(request.form.get("ejercicio", ""), max_len=40)
+
+        valido_ej, error_ej = _validar_ejercicio(ejercicio)
+        if not valido_ej:
+            return jsonify({"error": error_ej}), 400
+
+        try:
+            tmp_paths, filenames = _guardar_csvs_binance(archivos)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+
+        csv_rows = sum(_contar_csv_rows(p) for p in tmp_paths)
+        if csv_rows > MAX_CSV_ROWS:
+            return jsonify({
+                "error": f"Los ficheros suman demasiadas filas ({csv_rows:,}). El máximo permitido es {MAX_CSV_ROWS:,} filas."
+            }), 400
+
+        _ev_list = [_capturar_evidencia(p, exchange="binance") for p in tmp_paths]
+        _evidencia_json = json.dumps(_ev_list) if _ev_list else None
+
+        try:
+            motor, rendimientos, clasificador = procesar_binance_multi(tmp_paths, filenames)
+            _filtrar_motor_por_ejercicio(motor, ejercicio)
+            rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
+
+            # _motor_a_json ejecuta la aceptación fail-closed antes de serializar/PDF.
+            resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
+            advertencias = list(motor.advertencias) + list(clasificador.advertencias)
+            rendimientos_json = _rendimientos_a_json(rendimientos)
+            pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Binance", rendimientos)
+
+            processing_ms = int((time.time() - t_start) * 1000)
+            distinct_assets = len({op["activo"] for op in operaciones}) if operaciones else 0
+            pdf_tmp = _guardar_pdf_temporal(tmp_paths[0], pdf_bytes)
+            report_id = _registrar_informe(
+                exchange="binance",
+                fiscal_year=_ejercicio_a_fiscal_year(ejercicio),
+                csv_rows=csv_rows,
+                distinct_assets=distinct_assets,
+                processing_ms=processing_ms,
+                fifo_operations=resumen.get("operaciones_con_resultado", len(operaciones)),
+                fifo_swaps=0,
+                fifo_rendimientos=len(rendimientos_json),
+                fifo_movimientos=len(clasificador.movimientos),
+                fifo_advertencias=len(advertencias),
+                fifo_desconocidas=len(clasificador.desconocidas),
+                resultado_neto=resumen.get("resultado_neto"),
+                ganancias_brutas=resumen.get("ganancias_brutas"),
+                perdidas_brutas=resumen.get("perdidas_brutas"),
+                fiscal_years_str=(ejercicio or "")[:50],
+            )
+            token = os.path.basename(pdf_tmp)
+            _guardar_token_pdf(token, report_id)
+            return jsonify({
+                "ok": True,
+                "resumen": resumen,
+                "operaciones": operaciones,
+                "posicion": posicion,
+                "rendimientos": rendimientos_json,
+                "advertencias": advertencias,
+                "resumen_archivos": clasificador.resumen_archivos,
+                "token": token,
+                "estimacion": False,
+            })
+        except Exception as exc:
+            category = getattr(exc, "category", "parser_error")
+            code = getattr(exc, "code", None)
+            _registrar_informe(
+                exchange="binance",
+                fiscal_year=_ejercicio_a_fiscal_year(ejercicio),
+                csv_rows=csv_rows,
+                distinct_assets=0,
+                processing_ms=int((time.time() - t_start) * 1000),
+                status="failed",
+                error_type=type(exc).__name__,
+                error_category=category,
+            )
+            try:
+                record_processing_error_safe(
+                    user_id=current_user.id if current_user.is_authenticated else None,
+                    email=current_user.email if current_user.is_authenticated else None,
+                    exchange="binance",
+                    stage="classify",
+                    exc=exc,
+                    csv_filename=", ".join(filenames),
+                    csv_size=None,
+                    parser="ClasificadorBinanceMulti",
+                    error_category=category,
+                    error_code=code,
+                    csv_context=_evidencia_json,
+                )
+            except Exception as tracking_exc:
+                app.logger.error("[ERROR_TRACKING] Binance multi diagnostic failed exception=%s", type(tracking_exc).__name__)
+
+            if isinstance(exc, ValueError) and (
+                str(exc).startswith("Datos fiscales no seguros:")
+                or isinstance(exc, BinanceMultiUserError)
+            ):
+                return jsonify({"error": str(exc)}), 422
+            return jsonify({"error": _error_amigable(exc)}), 500
+    finally:
+        with _analisis_lock:
+            _analisis_en_curso.discard(uid)
+        for p in tmp_paths:
+            try:
+                os.unlink(p)
+            except OSError:
                 pass
 
 
