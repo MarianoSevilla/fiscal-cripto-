@@ -4,6 +4,7 @@ Los ejercicios se construyen con operaciones inventadas. No se publican
 ZIP, órdenes, TXID, direcciones o cantidades de usuarios reales.
 """
 from pathlib import Path
+from decimal import Decimal
 import csv
 import sys
 
@@ -56,7 +57,7 @@ def test_inicio_2025_no_inventa_saldo_ni_coste_y_detecta_fee_bnb(tmp_path):
     )
     assert [d.activo for d in report.activos_con_deficit] == ["BNB"]
     assert report.activos_con_deficit[0].primera_fecha == "2025-01-02"
-    assert report.activos_con_deficit[0].saldo_minimo == -__import__("decimal").Decimal("0.01")
+    assert report.activos_con_deficit[0].saldo_minimo == -Decimal("0.01")
     assert report.coste_fiscal_acreditado is False
 
 
@@ -203,6 +204,6 @@ def test_deficit_transitorio_y_posterior_mas_grave_se_preservan(tmp_path):
     assert [d.activo for d in report.activos_con_deficit] == ["USDC"]
     deficit = report.activos_con_deficit[0]
     assert deficit.primera_fecha == "2025-01-02"
-    assert deficit.saldo_minimo == __import__("decimal").Decimal("-20")
+    assert deficit.saldo_minimo == Decimal("-20")
     assert report.activos_depositados_sin_coste_acreditado == ("USDC",)
     assert not report.coste_fiscal_acreditado
