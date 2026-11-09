@@ -791,9 +791,15 @@ class ClasificadorBinanceMulti:
                 # Un depósito acredita el neto en Binance. Una retirada
                 # consume el bruto de Binance y acredita el neto al banco.
                 # No inferir movimientos netos omitiendo la tarifa.
+                if gross <= 0 or received <= 0:
+                    raise BinanceMultiUserError(
+                        "invalid_fiat_cash_amount",
+                        "Binance contiene un movimiento fiat ejecutado con "
+                        "cantidad no positiva.",
+                        category="parser_error",
+                    )
                 if (
-                    gross <= 0 or received <= 0 or fee < 0
-                    or asset != received_asset or asset != fee_asset
+                    fee < 0 or asset != received_asset or asset != fee_asset
                     or gross - received != fee
                 ):
                     raise BinanceMultiUserError(
