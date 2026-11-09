@@ -81,12 +81,12 @@ def test_comision_de_tercera_moneda_no_se_descarta(tmp_path):
 def test_varias_ejecuciones_mismo_segundo_se_conservan(tmp_path):
     c = _clasificador(
         tmp_path,
-        "999,2025-05-01 10:00:00,Spot,Transaction Sold,BTC,-0.01,\\n",
-        "999,2025-05-01 10:00:00,Spot,Transaction Revenue,EUR,300,\\n",
-        "999,2025-05-01 10:00:00,Spot,Transaction Fee,EUR,-0.75,\\n",
-        "999,2025-05-01 10:00:00,Spot,Transaction Sold,BTC,-0.02,\\n",
-        "999,2025-05-01 10:00:00,Spot,Transaction Revenue,EUR,600,\\n",
-        "999,2025-05-01 10:00:00,Spot,Transaction Fee,EUR,-1.5,\\n",
+        "999,2025-05-01 10:00:00,Spot,Transaction Sold,BTC,-0.01,\n",
+        "999,2025-05-01 10:00:00,Spot,Transaction Revenue,EUR,300,\n",
+        "999,2025-05-01 10:00:00,Spot,Transaction Fee,EUR,-0.75,\n",
+        "999,2025-05-01 10:00:00,Spot,Transaction Sold,BTC,-0.02,\n",
+        "999,2025-05-01 10:00:00,Spot,Transaction Revenue,EUR,600,\n",
+        "999,2025-05-01 10:00:00,Spot,Transaction Fee,EUR,-1.5,\n",
     )
     assert len(c.compraventas) == 1
     venta = c.compraventas[0]
@@ -100,7 +100,7 @@ def test_revenue_huerfano_se_bloquea(tmp_path):
     with pytest.raises(ValueError, match="sin contrapartida"):
         _clasificador(
             tmp_path,
-            "999,2025-05-01 10:00:00,Spot,Transaction Revenue,EUR,600,\\n",
+            "999,2025-05-01 10:00:00,Spot,Transaction Revenue,EUR,600,\n",
         )
 
 
