@@ -58,7 +58,7 @@ def test_spot_buy_fee_en_activo_comprado_reduce_cantidad_neta(tmp_path):
     trades, name = _csv(
         tmp_path, "Binance-Historial-de-operaciones-de-spot-20260101(UTC+1)_a.csv",
         SPOT_HEADER,
-        "OID-2,2025-01-02 10:00:00,XRPEUR,BUY,2,100 XRP,200 EUR,0.5 XRP,,\n",
+        "OID-2,2025-01-02 10:00:00,XRPEUR,BUY,2,100XRP,200EUR,0.5XRP,,\n",
     )
     c = ClasificadorBinanceMulti([trades], [name]).clasificar()
     assert len(c.compraventas) == 1
@@ -96,7 +96,7 @@ def test_spot_no_eur_queda_canonico_pero_bloqueado(tmp_path):
     trades, name = _csv(
         tmp_path, "Binance-Historial-de-operaciones-de-spot-20260101(UTC+1)_a.csv",
         SPOT_HEADER,
-        "OID-5,2025-01-02 10:00:00,XRPUSDT,SELL,2,100 XRP,200 USDT,0.2 USDT,,\n",
+        "OID-5,2025-01-02 10:00:00,XRPUSDT,SELL,2,100XRP,200USDT,0.2USDT,,\n",
     )
     c = ClasificadorBinanceMulti([trades], [name]).clasificar()
     assert len(c.eventos) == 1
