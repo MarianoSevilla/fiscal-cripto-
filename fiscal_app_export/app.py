@@ -1707,6 +1707,18 @@ def _validar_aceptacion_fifo(motor, clasificador=None) -> None:
                 "puede emitir el informe hasta reconstruir su coste."
             )
 
+    # Igual que en otros exchanges, los eventos Binance TX desconocidos
+    # pueden ser transmisiones/adquisiciones o rendimientos fiscalmente
+    # materiales. Una advertencia en el PDF no sustituye su reconstrucción.
+    if isinstance(clasificador, ClasificadorBinanceTx) and getattr(
+        clasificador, "desconocidas", ()
+    ):
+        raise ValueError(
+            "Datos fiscales no seguros: Binance contiene operaciones no "
+            "interpretadas que pueden alterar el cálculo FIFO o la renta. "
+            "No se puede emitir un informe parcial."
+        )
+
     # Bitvavo puede clasificar tipos no reconocidos sin convertirlos en
     # compraventas. No emitir un PDF parcial ignorando hechos potencialmente
     # relevantes para el inventario o las transmisiones.
