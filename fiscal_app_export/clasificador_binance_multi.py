@@ -89,11 +89,12 @@ _HEADER_ALIASES = {
 
 
 def _norm_header(value: str) -> str:
-    value = unicodedata.normalize("NFKC", str(value or ""))
+    # Quitar notas tipográficas ANTES de NFKC: NFKC transforma ¹/²/³ en
+    # dígitos ASCII y haría irreconocibles cabeceras como "Total de trading³".
+    value = re.sub(r"[¹²³⁴⁵⁶⁷⁸⁹⁰]+$", "", str(value or "").strip())
+    value = unicodedata.normalize("NFKC", value)
     value = value.lstrip("\ufeff").strip().lower()
     value = " ".join(value.split())
-    # Binance añade notas tipográficas a algunas cabeceras (Tipo¹, Ejecutado²…).
-    value = value.rstrip("¹²³⁴⁵⁶⁷⁸⁹⁰")
     return _HEADER_ALIASES.get(value, value)
 
 
