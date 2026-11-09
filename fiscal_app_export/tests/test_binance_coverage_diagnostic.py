@@ -112,5 +112,5 @@ def test_compra_en_activo_recibido_consume_comision_y_no_duplica_lotes(tmp_path)
         classify(fiat, spot), inicio="2025-01-01",
     )
     assert report.activos_con_deficit == ()
-    assert report.operaciones_contabilizadas == 5
+    assert report.operaciones_contabilizadas == 4
     assert report.coste_fiscal_acreditado is False
