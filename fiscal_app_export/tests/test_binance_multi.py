@@ -396,3 +396,41 @@ def test_movimiento_fiat_no_positivo_se_rechaza(tmp_path):
     with pytest.raises(BinanceMultiUserError) as exc:
         _classify([p])
     assert exc.value.code == "invalid_fiat_cash_amount"
+
+
+
+def test_intercambios_nativos_preservan_cada_fill_y_archivo_para_valoracion(tmp_path):
+    source = _csv(tmp_path, "spot.csv", SPOT_H, [
+        ["42", "2025-01-01 10:00:00", "XRPEUR", "BUY", "2",
+         "10XRP", "20EUR", "0.1BNB", "", ""],
+        ["42", "2025-01-01 10:00:00", "XRPEUR", "BUY", "2",
+         "5XRP", "10EUR", "0BNB", "", ""],
+    ])
+    c = _classify([source], ["Binance-Spot-(UTC+1).zip::trades.csv"])
+    assert len(c.intercambios_nativos) == 2
+    first, second = c.intercambios_nativos
+    assert first.filename == "Binance-Spot-(UTC+1).zip::trades.csv"
+    assert first.local_time == "2025-01-01 10:00:00"
+    assert first.given_asset == "EUR"
+    assert first.received_asset == "XRP"
+    assert str(first.given_amount) == "20"
+    assert str(first.received_amount) == "10"
+    assert first.fee_asset == "BNB"
+    assert str(first.fee_amount) == "0.1"
+    assert str(second.received_amount) == "5"
+    assert len(c.compraventas) == 2
+
+
+def test_intercambios_nativos_convert_conservan_origen_y_precision(tmp_path):
+    source = _csv(tmp_path, "convert.csv", CONVERT_H, [
+        ["2025-01-01 10:00:00", "SPOT", "XRPUSDC", "Instant",
+         "20.12345678 USDC", "10.87654321 XRP", "", "", "", "Successful"],
+    ])
+    c = _classify([source], ["Binance-Convert-(UTC+1).zip::convert.csv"])
+    assert len(c.intercambios_nativos) == 1
+    event = c.intercambios_nativos[0]
+    assert event.source == "Convert"
+    assert str(event.given_amount) == "20.12345678"
+    assert str(event.received_amount) == "10.87654321"
+    assert event.filename.endswith("::convert.csv")
+    assert c.valoraciones_pendientes

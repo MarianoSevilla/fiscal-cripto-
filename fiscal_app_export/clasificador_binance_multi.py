@@ -75,6 +75,24 @@ class _Section:
         }
 
 
+@dataclass(frozen=True)
+class BinanceNativeExchange:
+    """Hecho económico original, sin valorar ni fusionar por segundo.
+
+    Se conserva exclusivamente durante la petición; no contiene cuentas,
+    identificadores de usuario ni movimientos privados en logs persistentes.
+    """
+    source: str
+    filename: str
+    local_time: str
+    given_asset: str
+    given_amount: Decimal
+    received_asset: str
+    received_amount: Decimal
+    fee_asset: Optional[str]
+    fee_amount: Decimal
+
+
 _HEADER_ALIASES = {
     # Transaction History clásico / variante 2026 (PR #192)
     "hora": "tiempo",
@@ -283,6 +301,7 @@ class ClasificadorBinanceMulti:
 
         self.valoraciones_pendientes: List[dict] = []
         self.comisiones_pendientes: List[dict] = []
+        self.intercambios_nativos: List[BinanceNativeExchange] = []
         self.fuentes_materiales_no_soportadas: List[str] = []
         self._sections: Dict[str, _Section] = {k: _Section() for k in self.SOURCE_KEYS}
         self._unknown_files = 0
@@ -430,14 +449,14 @@ class ClasificadorBinanceMulti:
                     fecha=fecha, give_asset=quote, give_amount=quote_qty,
                     recv_asset=base, recv_amount=base_qty,
                     fee_asset=fee_asset, fee_amount=fee_qty,
-                    source="Spot BUY",
+                    source="Spot BUY", filename=_filename,
                 )
             else:
                 self._register_exchange(
                     fecha=fecha, give_asset=base, give_amount=base_qty,
                     recv_asset=quote, recv_amount=quote_qty,
                     fee_asset=fee_asset, fee_amount=fee_qty,
-                    source="Spot SELL",
+                    source="Spot SELL", filename=_filename,
                 )
 
     def _reconcile_spot_orders(self) -> None:
@@ -540,7 +559,7 @@ class ClasificadorBinanceMulti:
                 fecha=fecha, give_asset=give_asset, give_amount=give_qty,
                 recv_asset=recv_asset, recv_amount=recv_qty,
                 fee_asset=None, fee_amount=Decimal("0"),
-                source="Convert",
+                source="Convert", filename=_filename,
             )
 
     def _process_fiat_trades(self) -> None:
@@ -565,13 +584,14 @@ class ClasificadorBinanceMulti:
                 fecha=fecha, give_asset=give_asset, give_amount=give_qty,
                 recv_asset=recv_asset, recv_amount=recv_qty,
                 fee_asset=fee_asset, fee_amount=fee_qty,
-                source="Fiat trade",
+                source="Fiat trade", filename=_filename,
             )
 
     def _register_exchange(
         self, *, fecha: str, give_asset: str, give_amount: Decimal,
         recv_asset: str, recv_amount: Decimal,
         fee_asset: Optional[str], fee_amount: Decimal, source: str,
+        filename: str,
     ) -> None:
         give_asset = give_asset.upper()
         recv_asset = recv_asset.upper()
@@ -604,6 +624,13 @@ class ClasificadorBinanceMulti:
                     "Binance contiene una comisión superior al activo recibido.",
                     category="parser_error",
                 )
+
+        self.intercambios_nativos.append(BinanceNativeExchange(
+            source=source, filename=filename, local_time=fecha,
+            given_asset=give_asset, given_amount=give_amount,
+            received_asset=recv_asset, received_amount=recv_amount,
+            fee_asset=fee_asset, fee_amount=fee_amount,
+        ))
 
         if give_asset == "EUR" and recv_asset != "EUR":
             eur_cost = give_amount + (fee_amount if fee_asset == "EUR" else Decimal("0"))
