@@ -315,8 +315,10 @@ class ClasificadorBinanceMulti:
         # value = [give_total, recv_total]
         self._native_exchange_totals: Dict[tuple, List[Decimal]] = {}
         self._native_exchange_fee_totals: Dict[tuple, Dict[str, Decimal]] = {}
-        self._native_transfer_keys: set[tuple] = set()
-        self._native_cash_keys: set[tuple] = set()
+        # El mismo activo/importe/segundo puede representar más de un evento:
+        # una clave de conjunto no acredita una deduplicación uno-a-uno.
+        self._native_transfer_keys: Dict[tuple, int] = {}
+        self._native_cash_keys: Dict[tuple, int] = {}
 
     @property
     def resumen_archivos(self) -> dict:
@@ -723,8 +725,9 @@ class ClasificadorBinanceMulti:
                         "Binance contiene una transferencia sin identificador de activo válido.",
                         category="parser_error",
                     )
-                self._native_transfer_keys.add(
-                    (source, fecha, asset, amount)
+                key = (source, fecha, asset, amount)
+                self._native_transfer_keys[key] = (
+                    self._native_transfer_keys.get(key, 0) + 1
                 )
                 self.movimientos.append(OperacionMovimiento(
                     fecha=fecha, subtipo=subtype, activo=asset,
@@ -759,7 +762,8 @@ class ClasificadorBinanceMulti:
                         category="parser_error",
                     )
                 fecha = _fecha(row.get("tiempo"))
-                self._native_cash_keys.add((source, fecha, asset, qty))
+                key = (source, fecha, asset, qty)
+                self._native_cash_keys[key] = self._native_cash_keys.get(key, 0) + 1
                 self.movimientos.append(OperacionMovimiento(
                     fecha=fecha, subtipo=subtype,
                     activo=asset, cantidad=float(qty) * (1 if source == "fiat_deposit" else -1),
@@ -1004,7 +1008,11 @@ class ClasificadorBinanceMulti:
                 ):
                     drop.update(indices)
 
-        # Transferencias: match exacto por fecha + activo + cantidad.
+        # Transferencias: conciliación uno-a-uno por fecha + activo + cantidad.
+        # Usar un set descartaría dos filas TX frente a una sola transferencia
+        # nativa. Preservar la fila sobrante y bloquear la aceptación.
+        remaining_crypto = dict(self._native_transfer_keys)
+        remaining_fiat = dict(self._native_cash_keys)
         transfer_map = {
             "Deposit": ("crypto_deposit", 1),
             "Withdraw": ("crypto_withdrawal", -1),
@@ -1023,13 +1031,14 @@ class ClasificadorBinanceMulti:
             if expected <= 0:
                 continue
             key = (source, fecha, asset, expected)
-            native_keys = (
-                self._native_transfer_keys
-                if source.startswith("crypto_")
-                else self._native_cash_keys
-            )
-            if key in native_keys:
+            remaining = remaining_crypto if source.startswith("crypto_") else remaining_fiat
+            if remaining.get(key, 0) > 0:
+                remaining[key] -= 1
                 drop.add(idx)
+            elif key in remaining:
+                marker = "transferencias_duplicadas_sin_identidad_univoca"
+                if marker not in self.fuentes_materiales_no_soportadas:
+                    self.fuentes_materiales_no_soportadas.append(marker)
 
         # Si existe una fuente fiat nativa y una operación fiat legacy sin Wallet
         # no puede ligarse inequívocamente, no la ocultamos: el parser legacy la

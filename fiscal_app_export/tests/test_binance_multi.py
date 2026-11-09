@@ -490,3 +490,30 @@ def test_spot_sin_archivo_ordenes_acepta_fills_y_no_infiere_ordenes(tmp_path):
     c = _classify([fills])
     assert len(c.compraventas) == 1
     assert not c.fuentes_materiales_no_soportadas
+
+
+def test_dos_deposit_tx_con_una_transferencia_nativa_no_se_borran_ambos(tmp_path):
+    dep = _csv(tmp_path, "deposit.csv", DEPOSIT_H, [
+        ["2025-01-01 10:00:00", "XRP", "XRP", "10", "synthetic", "tx-id-1", "Completed"],
+    ])
+    tx = _csv(tmp_path, "tx.csv", TX_H, [
+        ["1", "2025-01-01 10:00:00", "Spot", "Deposit", "XRP", "10", ""],
+        ["1", "2025-01-01 10:00:00", "Spot", "Deposit", "XRP", "10", ""],
+    ])
+    c = _classify([dep, tx])
+    assert len(c.movimientos) >= 1
+    assert "transferencias_duplicadas_sin_identidad_univoca" in c.fuentes_materiales_no_soportadas
+
+
+def test_dos_deposit_tx_reconciliados_con_dos_deposit_nativos(tmp_path):
+    dep = _csv(tmp_path, "deposit.csv", DEPOSIT_H, [
+        ["2025-01-01 10:00:00", "XRP", "XRP", "10", "synthetic-a", "tx-id-1", "Completed"],
+        ["2025-01-01 10:00:00", "XRP", "XRP", "10", "synthetic-b", "tx-id-2", "Completed"],
+    ])
+    tx = _csv(tmp_path, "tx.csv", TX_H, [
+        ["1", "2025-01-01 10:00:00", "Spot", "Deposit", "XRP", "10", ""],
+        ["1", "2025-01-01 10:00:00", "Spot", "Deposit", "XRP", "10", ""],
+    ])
+    c = _classify([dep, tx])
+    assert len(c.movimientos) == 2
+    assert "transferencias_duplicadas_sin_identidad_univoca" not in c.fuentes_materiales_no_soportadas
