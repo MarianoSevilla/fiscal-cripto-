@@ -153,3 +153,31 @@ def test_permuta_no_acepta_fecha_sin_zona_horaria():
 def test_rechaza_precio_ausente_o_no_finito(value):
     with pytest.raises(BinancePriceEvidenceError):
         price("XRP", "EUR", value)
+
+
+
+def test_marca_temporal_microsegundos_preservados_exactamente():
+    archive, checksum = zipped_trades([
+        "43,2.5,10,25,1735732800123456,True,True",
+    ])
+    records = parse_verified_binance_trade_zip(
+        archive, checksum, archive_name="XRPEUR-trades-2025-01-01.zip",
+        symbol="XRPEUR", base="XRP", quote="EUR",
+    )
+    assert records[0].observed_at == T + timedelta(microseconds=123456)
+
+
+def test_mismo_trade_id_publico_con_precios_distintos_bloquea():
+    with pytest.raises(BinancePriceEvidenceError, match="Conflicto"):
+        BinanceHistoricalEURPrices([
+            price("XRP", "EUR", "2.0", id=51),
+            price("XRP", "EUR", "2.1", id=51),
+        ])
+
+
+def test_cotizacion_duplicada_exacta_no_altera_libro():
+    entry = price("XRP", "EUR", "2.0", id=51)
+    book = BinanceHistoricalEURPrices([entry, entry])
+    found = book.price_eur("XRP", T)
+    assert found.unit_price_eur == Decimal("2.0")
+    assert len(found.path) == 1

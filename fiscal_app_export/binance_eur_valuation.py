@@ -72,8 +72,11 @@ def _timestamp_utc(raw: str) -> datetime:
     """Binance Spot publica milisegundos antes de 2025 y microsegundos desde 2025."""
     try:
         number = int(raw)
-        seconds = Decimal(number) / (Decimal(1_000_000) if number >= 10**15 else Decimal(1_000))
-        dt = datetime.fromtimestamp(float(seconds), tz=timezone.utc)
+        unit = 1_000_000 if number >= 10**15 else 1_000
+        seconds, remainder = divmod(number, unit)
+        dt = datetime.fromtimestamp(seconds, tz=timezone.utc) + timedelta(
+            microseconds=remainder if unit == 1_000_000 else remainder * 1_000
+        )
     except (ValueError, OverflowError, OSError) as exc:
         raise BinancePriceEvidenceError("Timestamp Spot público inválido") from exc
     if dt.year < 2017 or dt.year > 2100:
@@ -125,6 +128,7 @@ def parse_verified_binance_trade_zip(
             name = PurePosixPath(member.filename.replace("\\", "/"))
             if (
                 name.is_absolute() or len(name.parts) != 1
+                or name.name != archive_name[:-4] + ".csv"
                 or name.suffix.lower() != ".csv" or ".." in name.parts
                 or member.file_size > max_uncompressed_bytes
                 or member.file_size <= 0
@@ -196,9 +200,19 @@ class BinanceHistoricalEURPrices:
             raise ValueError("max_age_seconds fuera del intervalo 1..300")
         self.max_age_seconds = max_age_seconds
         grouped: dict[tuple[str, str], list[TradePriceEvidence]] = {}
+        by_public_trade_id: dict[tuple[str, str, int], TradePriceEvidence] = {}
         for entry in evidence:
             if not isinstance(entry, TradePriceEvidence):
                 raise BinancePriceEvidenceError("Evidencia de precio no válida")
+            key = (entry.base, entry.quote, entry.public_trade_id)
+            if key in by_public_trade_id:
+                prev = by_public_trade_id[key]
+                if prev.price != entry.price or prev.observed_at != entry.observed_at:
+                    raise BinancePriceEvidenceError(
+                        "Conflicto entre cotizaciones para el mismo trade ID público"
+                    )
+                continue
+            by_public_trade_id[key] = entry
             grouped.setdefault((entry.base, entry.quote), []).append(entry)
         self._prices = {
             pair: sorted(rows, key=lambda e: (e.observed_at, e.public_trade_id))
