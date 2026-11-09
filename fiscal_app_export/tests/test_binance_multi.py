@@ -337,3 +337,39 @@ def test_dos_fills_spot_identicos_dentro_del_mismo_csv_no_se_deduplican(tmp_path
     c = _classify([p])
     assert len(c.compraventas) == 2
     assert not c.fuentes_materiales_no_soportadas
+
+
+def test_spot_par_no_coincide_con_activos_no_pasa_al_fifo(tmp_path):
+    p = _csv(tmp_path, "spot.csv", SPOT_H, [
+        ["42", "2025-01-01 10:00:00", "BTCEUR", "BUY", "2", "1XRP", "2EUR", "0XRP", "", ""],
+    ])
+    c = _classify([p])
+    assert not c.compraventas
+    assert "par_spot_inconsistente" in c.fuentes_materiales_no_soportadas
+
+
+def test_csv_binance_fila_con_columnas_incompletas_se_rechaza(tmp_path):
+    p = _csv(tmp_path, "spot.csv", SPOT_H, [
+        ["42", "2025-01-01 10:00:00", "XRPEUR", "BUY", "2", "1XRP", "2EUR"],
+    ])
+    with pytest.raises(BinanceMultiUserError) as exc:
+        _classify([p])
+    assert exc.value.code == "inconsistent_csv_columns"
+
+
+def test_convert_estado_desconocido_no_omite_operacion(tmp_path):
+    p = _csv(tmp_path, "convert.csv", CONVERT_H, [
+        ["2025-01-01 10:00:00", "SPOT", "XRPEUR", "Instant", "20 EUR", "10 XRP", "", "", "", "UnknownNewStatus"],
+    ])
+    c = _classify([p])
+    assert not c.compraventas
+    assert "estado_no_reconocido_convert_orders" in c.fuentes_materiales_no_soportadas
+
+
+def test_convert_failed_no_es_operacion_ejecutada(tmp_path):
+    p = _csv(tmp_path, "convert.csv", CONVERT_H, [
+        ["2025-01-01 10:00:00", "SPOT", "XRPEUR", "Instant", "20 EUR", "10 XRP", "", "", "", "Failed"],
+    ])
+    c = _classify([p])
+    assert not c.compraventas
+    assert c.fuentes_materiales_no_soportadas == []

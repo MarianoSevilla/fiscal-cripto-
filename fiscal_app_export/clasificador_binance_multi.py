@@ -117,8 +117,14 @@ def _read_csv(path: str) -> Tuple[List[str], List[dict], bool]:
             if _NO_DATA in first:
                 sentinel = True
                 continue
-            row = {k: (raw[i].strip() if i < len(raw) else "")
-                   for i, k in enumerate(keys)}
+            if len(raw) != len(keys):
+                raise BinanceMultiUserError(
+                    "inconsistent_csv_columns",
+                    "Binance contiene filas con un número de columnas distinto "
+                    "al de la cabecera. No es seguro interpretar ese CSV.",
+                    category="parser_error",
+                )
+            row = {k: raw[i].strip() for i, k in enumerate(keys)}
             rows.append(row)
     return headers, rows, (sentinel or not rows)
 
@@ -376,6 +382,18 @@ class ClasificadorBinanceMulti:
             )
         return self
 
+    def _native_status_ok(self, raw: str, source: str) -> bool:
+        """No omitir eventos financieros con estados nuevos o pendientes."""
+        state = str(raw or "").strip().lower()
+        if state in _SUCCESS:
+            return True
+        if state in {"failed", "failure", "rejected", "cancelled", "canceled", "expired"}:
+            return False
+        marker = f"estado_no_reconocido_{source}"
+        if marker not in self.fuentes_materiales_no_soportadas:
+            self.fuentes_materiales_no_soportadas.append(marker)
+        return False
+
     def _process_spot(self) -> None:
         rows = self._source_rows["spot_trades"]
         if self._sections["spot_orders"].detectado:
@@ -399,11 +417,13 @@ class ClasificadorBinanceMulti:
                     category="parser_error",
                 )
             pair = row.get("par", "").strip().upper()
-            if pair and pair != f"{base}{quote}":
+            if pair != f"{base}{quote}":
+                self.fuentes_materiales_no_soportadas.append("par_spot_inconsistente")
                 self.advertencias.append(
-                    f"Binance Spot: el par {pair} no coincide con los activos de la ejecución; "
-                    "se usan los activos explícitos de Ejecutado/Cantidad."
+                    "Binance Spot: el par no coincide con los activos explícitos "
+                    "de Ejecutado/Cantidad. Se bloquea el informe."
                 )
+                continue
 
             if side == "BUY":
                 self._register_exchange(
@@ -505,7 +525,7 @@ class ClasificadorBinanceMulti:
 
     def _process_convert(self) -> None:
         for row, _filename in self._source_rows["convert_orders"]:
-            if not _status_ok(row.get("estado")):
+            if not self._native_status_ok(row.get("estado"), "convert_orders"):
                 continue
             fecha = _fecha(row.get("tiempo"))
             give_qty, give_asset = _amount_asset(row.get("vender"), field="Vender")
@@ -525,7 +545,7 @@ class ClasificadorBinanceMulti:
 
     def _process_fiat_trades(self) -> None:
         for row, _filename in self._source_rows["fiat_trade"]:
-            if not _status_ok(row.get("estado")):
+            if not self._native_status_ok(row.get("estado"), "fiat_trade"):
                 continue
             fecha = _fecha(row.get("tiempo"))
             give_qty, give_asset = _amount_asset(
@@ -633,7 +653,7 @@ class ClasificadorBinanceMulti:
             ("crypto_withdrawal", "Retiro cripto", -1),
         ):
             for row, _filename in self._source_rows[source]:
-                if not _status_ok(row.get("estado")):
+                if not self._native_status_ok(row.get("estado"), source):
                     continue
                 fecha = _fecha(row.get("tiempo"))
                 amount = _decimal(row.get("cantidad"), field="Cantidad")
@@ -669,7 +689,7 @@ class ClasificadorBinanceMulti:
             ("fiat_withdrawal", "Retiro fiat"),
         ):
             for row, _filename in self._source_rows[source]:
-                if not _status_ok(row.get("estado")):
+                if not self._native_status_ok(row.get("estado"), source):
                     continue
                 field = "importe de depósito" if source == "fiat_deposit" else "importe de retiro"
                 qty, asset = _amount_asset(row.get(field), field=field)
