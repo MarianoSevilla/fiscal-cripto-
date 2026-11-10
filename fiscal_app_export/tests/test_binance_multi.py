@@ -591,7 +591,7 @@ def test_fiat_cash_nunca_convierte_a_otra_moneda_sin_fuente_valorada(tmp_path):
     assert exc.value.code == "fiat_cash_fee_mismatch"
 
 
-def def test_ledger_rebates_iguales_mismo_csv_conservan_multiplicidad(tmp_path):
+def test_ledger_rebates_iguales_mismo_csv_conservan_multiplicidad(tmp_path):
     """Binance puede registrar dos bonos iguales en la misma marca temporal.
 
     Sin ID único no se puede colapsar dos filas idénticas en una.
