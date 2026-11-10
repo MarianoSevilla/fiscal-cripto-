@@ -245,6 +245,41 @@ class BinanceFungibleInventory:
         self._wallets[(dest, a)] += q
         self._latest = dt
 
+    def transfer_split(self, *, asset, quantity, timestamp,
+                       origin_allocations, destination, reference):
+        """Traslada una suscripción multibilletera SOLO con reparto documentado.
+
+        'SPOT + FUNDING' no acredita las cantidades por origen. Esta función
+        requiere ambas cantidades explícitas; no las deduce ni iguala el total
+        a SPOT. Verifica todas las patas antes de mutar, conserva lotes y no
+        autoriza un resultado fiscal.
+        """
+        a = _asset(asset)
+        q = _quantity(quantity)
+        dst = self._wallet(destination)
+        dt = self._check_time(timestamp)
+        if not isinstance(reference, str) or not reference.strip() or reference in self._refs:
+            raise BinanceEarnInventoryError("Referencia de transferencia ausente o repetida")
+        if not isinstance(origin_allocations, dict) or len(origin_allocations) < 2:
+            raise BinanceEarnInventoryError("Reparto de origen multibilletera no acreditado")
+        sources = {}
+        for wallet, amount in origin_allocations.items():
+            src = self._wallet(wallet)
+            if src == dst or src in sources:
+                raise BinanceEarnInventoryError("Orígenes de transferencia incompatibles")
+            sources[src] = _quantity(amount)
+        if sum(sources.values(), Decimal(0)) != q:
+            raise BinanceEarnInventoryError("El reparto no coincide con el total transferido")
+        if any(self._wallets.get((src, a), Decimal(0)) < amount
+               for src, amount in sources.items()):
+            raise BinanceEarnInventoryError("Saldo de origen insuficiente")
+
+        for src, amount in sources.items():
+            self._wallets[(src, a)] -= amount
+        self._wallets[(dst, a)] += q
+        self._refs.add(reference)
+        self._latest = dt
+
     def dispose(self, *, asset, quantity, timestamp, wallet, reference):
         """Descuenta unidades de una venta/fee mediante FIFO *global*.
 

@@ -273,3 +273,65 @@ def test_disposicion_lotes_mismo_segundo_completos_y_referencia_unica():
         book.dispose(asset="BTC", quantity="1",
                      timestamp="2023-01-01 00:00:00", wallet="SPOT",
                      reference="synthetic-sale")
+
+
+def test_reparto_spot_funding_documentado_no_modifica_lotes():
+    book = BinanceFungibleInventory()
+    book.acquire(asset="BTC", quantity="4", acquired_at="2020-01-01 00:00:00",
+                 wallet="SPOT", reference="synthetic-spot", cost_eur="400")
+    book.acquire(asset="BTC", quantity="6", acquired_at="2021-01-01 00:00:00",
+                 wallet="FUNDING", reference="synthetic-funding", cost_eur="900")
+    original = book.lots("BTC")
+    book.transfer_split(
+        asset="BTC", quantity="5", timestamp="2022-01-01 00:00:00",
+        origin_allocations={"SPOT": "2", "FUNDING": "3"},
+        destination="EARN_FLEXIBLE", reference="synthetic-mixed-sub",
+    )
+    assert book.wallet_balance("SPOT", "BTC") == Decimal("2")
+    assert book.wallet_balance("FUNDING", "BTC") == Decimal("3")
+    assert book.wallet_balance("EARN_FLEXIBLE", "BTC") == Decimal("5")
+    assert book.lots("BTC") == original
+    assert book.conserved("BTC") and not book.fiscal_ready
+
+
+@pytest.mark.parametrize("allocations,quantity,error", [
+    ({"SPOT": "2", "FUNDING": "2"}, "5", "no coincide"),
+    ({"SPOT": "2", "FUNDING": "5"}, "7", "insuficiente"),
+    ({"SPOT": "1"}, "1", "multibilletera"),
+    ({"SPOT": "2", "spot": "2"}, "4", "incompatibles"),
+    ({"SPOT": "2", "FUNDING": 0.1}, "2.1", "Decimal"),
+    ({"SPOT": "2", "FUNDING": "NaN"}, "5", "finita"),
+])
+def test_repartos_ambiguos_o_incompletos_no_mutan_estado(allocations, quantity, error):
+    book = BinanceFungibleInventory()
+    book.acquire(asset="BTC", quantity="3", acquired_at="2020-01-01 00:00:00",
+                 wallet="SPOT", reference="synthetic-spot")
+    book.acquire(asset="BTC", quantity="3", acquired_at="2021-01-01 00:00:00",
+                 wallet="FUNDING", reference="synthetic-funding")
+    original = book.lots("BTC")
+    with pytest.raises(BinanceEarnInventoryError, match=error):
+        book.transfer_split(
+            asset="BTC", quantity=quantity, timestamp="2022-01-01 00:00:00",
+            origin_allocations=allocations, destination="EARN_FLEXIBLE",
+            reference="synthetic-mixed-sub",
+        )
+    assert book.lots("BTC") == original
+    assert book.wallet_balance("SPOT", "BTC") == Decimal("3")
+    assert book.wallet_balance("FUNDING", "BTC") == Decimal("3")
+    assert book.wallet_balance("EARN_FLEXIBLE", "BTC") == Decimal("0")
+    assert book.conserved("BTC")
+
+
+def test_referencia_mixta_repetida_se_rechaza_sin_mutacion():
+    book = BinanceFungibleInventory()
+    for wallet in ("SPOT", "FUNDING"):
+        book.acquire(asset="XRP", quantity="3", acquired_at="2020-01-01 00:00:00",
+                     wallet=wallet, reference="synthetic-" + wallet)
+    params = dict(asset="XRP", quantity="2", timestamp="2021-01-01 00:00:00",
+                  origin_allocations={"SPOT": "1", "FUNDING": "1"},
+                  destination="EARN_FLEXIBLE", reference="synthetic-mixed")
+    book.transfer_split(**params)
+    with pytest.raises(BinanceEarnInventoryError, match="repetida"):
+        book.transfer_split(**params)
+    assert book.wallet_balance("EARN_FLEXIBLE", "XRP") == Decimal("2")
+    assert book.conserved("XRP")
