@@ -380,3 +380,27 @@ def test_http_earn_recompensa_no_se_emite_como_fifo_vacio(client, usuario):
     assert "Simple Earn" in data["error"]
     assert "token" not in data
     assert "resumen" not in data
+
+
+def test_http_conversion_small_assets_bnb_no_se_omite_como_movimiento(client, usuario):
+    """El intercambio de polvo a BNB exige dos patas y valor EUR demostrable."""
+    _login(client)
+    tx = (
+        "ID de usuario,Tiempo,Cuenta,Operación,Moneda,Cambio,Observación\n"
+        "synthetic,2025-06-10 12:00:00,Spot,Small Assets Exchange BNB,ABC,-1.25,\n"
+        "synthetic,2025-06-10 12:00:00,Spot,Small Assets Exchange BNB,BNB,0.003,\n"
+    ).encode("utf-8-sig")
+    r = client.post(
+        "/api/binance/analizar",
+        data={
+            "csv": (io.BytesIO(tx), "Binance-TX-(UTC+1).csv"),
+            "ejercicio": "2025",
+            "nombre": "Conversión sintética no valorada",
+        },
+        content_type="multipart/form-data",
+    )
+    body = r.get_json()
+    assert r.status_code == 422, r.get_data(as_text=True)[:400]
+    assert "fuente" in body["error"].lower()
+    assert "token" not in body
+    assert "resumen" not in body

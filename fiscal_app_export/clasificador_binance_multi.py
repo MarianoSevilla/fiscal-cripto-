@@ -1321,6 +1321,16 @@ class ClasificadorBinanceMulti:
         rows = [row for row, _filename in self._source_rows["transaction_history"]]
         if not rows:
             return
+        # Small Assets Exchange BNB es una conversión de activos. El parser
+        # heredado la clasifica como MOVIMIENTO, sin reconstruir adquisición
+        # BNB ni disposición del activo entregado. No emitir IRPF parcial.
+        if any(
+            row.get("operación", "").strip() == "Small Assets Exchange BNB"
+            for row in rows
+        ):
+            self.fuentes_materiales_no_soportadas.append(
+                "small_assets_exchange_bnb_sin_permuta_valorada"
+            )
         filtered = self._filter_exact_tx_duplicates(rows)
         omitted = len(rows) - len(filtered)
         if omitted:
