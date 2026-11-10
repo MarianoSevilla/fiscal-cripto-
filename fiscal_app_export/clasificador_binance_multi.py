@@ -1359,6 +1359,19 @@ class ClasificadorBinanceMulti:
         rows = [row for row, _filename in self._source_rows["transaction_history"]]
         if not rows:
             return
+        # Los registros Earn del ledger general pueden aparecer SIN los
+        # ZIP especializados. El parser heredado los marca MOVIMIENTO y una
+        # suscripción/redención aislada no reconstruye ni lote ni saldo Earn.
+        # Sin este guard un informe parcial podría pasar inadvertido.
+        if any(
+            str(row.get("operación", "")).strip().startswith((
+                "Simple Earn Flexible ", "Simple Earn Locked ",
+            ))
+            for row in rows
+        ):
+            self.fuentes_materiales_no_soportadas.append(
+                "earn_ledger_sin_lotes_ni_valoracion_acreditados"
+            )
         # Small Assets Exchange BNB es una conversión de activos. El parser
         # heredado la clasifica como MOVIMIENTO, sin reconstruir adquisición
         # BNB ni disposición del activo entregado. No emitir IRPF parcial.

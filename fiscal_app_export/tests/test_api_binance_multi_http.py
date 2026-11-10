@@ -458,3 +458,24 @@ def test_anos_binance_rechaza_utf8_corrupto_sin_500(client, usuario):
     assert r.status_code == 400
     assert r.get_json()["ok"] is False
     assert "UTF-8" in r.get_json()["error"]
+
+
+def test_http_solo_ledger_con_earn_bloquea_pdf_incompleto(client, usuario):
+    """Sin ZIP Earn, una suscripción TX no demuestra un lote ni valor EUR."""
+    _login(client)
+    tx = (
+        "ID de usuario,Tiempo,Cuenta,Operación,Moneda,Cambio,Observación\n"
+        "synthetic,2025-06-10 12:00:00,Spot,"
+        "Simple Earn Flexible Subscription,BTC,-0.1,Binance Earn\n"
+    ).encode("utf-8-sig")
+    r = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(tx), "Binance-TX-(UTC+1).csv"),
+              "ejercicio": "2025", "nombre": "Sintético"},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 422, r.get_data(as_text=True)[:400]
+    body = r.get_json()
+    assert "fuente" in body["error"].lower()
+    assert "token" not in body
+    assert "resumen" not in body
