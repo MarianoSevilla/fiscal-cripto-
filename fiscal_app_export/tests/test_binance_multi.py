@@ -589,3 +589,24 @@ def test_fiat_cash_nunca_convierte_a_otra_moneda_sin_fuente_valorada(tmp_path):
     with pytest.raises(BinanceMultiUserError) as exc:
         _classify([deposit])
     assert exc.value.code == "fiat_cash_fee_mismatch"
+
+
+def def test_ledger_rebates_iguales_mismo_csv_conservan_multiplicidad(tmp_path):
+    """Binance puede registrar dos bonos iguales en la misma marca temporal.
+
+    Sin ID único no se puede colapsar dos filas idénticas en una.
+    Solo se emplean cantidades, fechas y activos completamente sintéticos.
+    """
+    same_row = [
+        "fake-user", "2022-06-01 10:00:00", "Spot",
+        "Commission Rebate", "ABC", "0.00000004", "",
+    ]
+    ledger = _csv(tmp_path, "synthetic_2022_ledger.csv", TX_H, [
+        same_row, same_row,
+    ])
+    c = _classify([ledger])
+    assert c.resumen_archivos["transaction_history"]["registros"] == 2
+    assert len(c.rendimientos) == 2
+    assert all(r.subtipo == "Commission Rebate" for r in c.rendimientos)
+    assert sum(r.cantidad for r in c.rendimientos) == pytest.approx(0.00000008)
+    assert c.fuentes_materiales_no_soportadas == []
