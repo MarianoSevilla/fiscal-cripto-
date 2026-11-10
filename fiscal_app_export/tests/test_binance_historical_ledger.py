@@ -71,8 +71,11 @@ def test_ledger_streaming_mas_de_100000_filas_y_preserva_multiplicidad(tmp_path)
     # Un único archivo superior al tope de la interfaz web, procesado localmente
     # sin construir una lista de filas ni cargar el CSV entero en memoria.
     count = 120_001
-    z = _zip(tmp_path, "big", HEADER + (
-        "fake,2021-05-01 00:00:00,Spot,Commission Rebate,ABC,0.00001,\n" * count
+    # Repeticiones legítimas por parejas; el identificador sintético solo
+    # evita una compresión artificial extrema que sería un ZIP bomb.
+    z = _zip(tmp_path, "big", HEADER + "".join(
+        f"fake,2021-05-01 00:00:00,Spot,Commission Rebate,ABC,0.00001,event-{i // 2:06d}\n"
+        for i in range(count)
     ))
     r = inspeccionar_historial_binance([z], max_csv_bytes=12_000_000)
     assert r.registros == count
