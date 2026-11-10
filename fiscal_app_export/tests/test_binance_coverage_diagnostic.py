@@ -13,6 +13,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from binance_coverage_diagnostic import (
     BinanceCoverageError, diagnosticar_saldo_inicial_cero,
+    diagnosticar_saldo_con_apertura,
 )
 from clasificador_binance_multi import ClasificadorBinanceMulti
 
@@ -207,3 +208,66 @@ def test_deficit_transitorio_y_posterior_mas_grave_se_preservan(tmp_path):
     assert deficit.saldo_minimo == Decimal("-20")
     assert report.activos_depositados_sin_coste_acreditado == ("USDC",)
     assert not report.coste_fiscal_acreditado
+
+
+def test_apertura_documentada_elimina_deficit_falso_sin_crear_coste_fiscal(tmp_path):
+    """Una comisión BNB consume cantidad antigua; no implica adquisición nueva."""
+    trade = csvfile(tmp_path, "trade.csv", SPOT_H, [
+        ["fake", "2025-02-03 09:00:00", "XRPEUR", "BUY", "2",
+         "10XRP", "20EUR", "0.01BNB", "", ""],
+    ])
+    classified = classify(trade)
+    baseline = diagnosticar_saldo_inicial_cero(classified, inicio="2025-01-01")
+    assert {d.activo for d in baseline.activos_con_deficit} == {"BNB", "EUR"}
+    documented = diagnosticar_saldo_con_apertura(
+        classified, inicio="2025-01-01",
+        saldos_iniciales={"BNB": Decimal("0.01"), "EUR": "20.00"},
+    )
+    assert documented.activos_con_deficit == ()
+    assert dict(documented.saldos_finales)["BNB"] == Decimal("0")
+    assert dict(documented.saldos_finales)["XRP"] == Decimal("10")
+    assert documented.coste_fiscal_acreditado is False
+    assert baseline.coste_fiscal_acreditado is False
+
+
+def test_apertura_parcial_reconoce_deficit_posterior(tmp_path):
+    trade = csvfile(tmp_path, "trade.csv", SPOT_H, [
+        ["fake", "2025-02-03 09:00:00", "XRPEUR", "BUY", "2",
+         "10XRP", "20EUR", "0.01BNB", "", ""],
+    ])
+    result = diagnosticar_saldo_con_apertura(
+        classify(trade), inicio="2025-01-01",
+        saldos_iniciales={"BNB": "0.005", "EUR": "20"},
+    )
+    assert len(result.activos_con_deficit) == 1
+    assert result.activos_con_deficit[0].activo == "BNB"
+    assert result.activos_con_deficit[0].saldo_minimo == Decimal("-0.005")
+    assert result.activos_con_deficit[0].primera_fecha == "2025-02-03"
+
+
+@pytest.mark.parametrize("opening", [
+    {"BNB": -1}, {"BNB": "NaN"}, {"BNB": "Infinity"},
+    {"BNB": 0.01}, {"BNB": True}, {"BNB": "not-an-amount"},
+    {"BNB": "1", "bnb": "1"}, {"": "1"}, {10: "1"},
+])
+def test_apertura_invalida_no_se_acepta(tmp_path, opening):
+    trade = csvfile(tmp_path, "trade.csv", SPOT_H, [
+        ["fake", "2025-02-03 09:00:00", "XRPEUR", "BUY", "2",
+         "10XRP", "20EUR", "0.01BNB", "", ""],
+    ])
+    with pytest.raises(BinanceCoverageError):
+        diagnosticar_saldo_con_apertura(
+            classify(trade), inicio="2025-01-01", saldos_iniciales=opening,
+        )
+
+
+def test_apertura_rechaza_eventos_anteriores_a_fecha_documentada(tmp_path):
+    spot = csvfile(tmp_path, "spot.csv", SPOT_H, [
+        ["fake", "2024-12-31 21:00:00", "XRPEUR", "BUY", "2",
+         "10XRP", "20EUR", "0XRP", "", ""],
+    ])
+    with pytest.raises(BinanceCoverageError, match="anterior"):
+        diagnosticar_saldo_con_apertura(
+            classify(spot), inicio="2025-01-01",
+            saldos_iniciales={"EUR": "100"},
+        )

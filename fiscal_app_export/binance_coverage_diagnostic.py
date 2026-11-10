@@ -8,6 +8,7 @@ ni derecho a generar PDF. No modifica MotorFIFO ni clases de importación.
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
@@ -33,6 +34,7 @@ class BinanceCoverageResult:
     activos_depositados_sin_coste_acreditado: tuple[str, ...]
     movimientos_no_contabilizados: tuple[str, ...]
     pagos_externos_supuestos: int = 0
+    saldos_finales: tuple[tuple[str, Decimal], ...] = ()
 
     @property
     def conciliacion_saldos_ok(self) -> bool:
@@ -69,6 +71,54 @@ def _date(value: str) -> datetime:
 
 def diagnosticar_saldo_inicial_cero(
     clasificador, *, inicio: str, metodos_pago_externo: tuple[str, ...] = (),
+) -> BinanceCoverageResult:
+    """Compatibilidad: apertura de cantidades cero, solo para hipótesis sintéticas."""
+    return _diagnosticar_saldos(
+        clasificador, inicio=inicio,
+        metodos_pago_externo=metodos_pago_externo, saldos_iniciales={},
+    )
+
+
+def diagnosticar_saldo_con_apertura(
+    clasificador, *, inicio: str, saldos_iniciales: Mapping[str, Decimal | str],
+    metodos_pago_externo: tuple[str, ...] = (),
+) -> BinanceCoverageResult:
+    """Diagnóstico de cantidades desde una apertura externa, NO de coste fiscal.
+
+    La apertura debe haber sido acreditada fuera de este módulo. No acepta
+    floats ni inferencias de coste de adquisición en EUR.
+    """
+    if not isinstance(saldos_iniciales, Mapping):
+        raise BinanceCoverageError("Los saldos de apertura deben ser un mapa de cantidades")
+    apertura: dict[str, Decimal] = {}
+    for asset, amount in saldos_iniciales.items():
+        if not isinstance(asset, str):
+            raise BinanceCoverageError("Activo de apertura inválido")
+        normalized = asset.strip().upper()
+        if (not normalized or len(normalized) > 30
+                or any(not (c.isascii() and (c.isalnum() or c in "._-"))
+                       for c in normalized)):
+            raise BinanceCoverageError("Activo de apertura inválido")
+        if normalized in apertura:
+            raise BinanceCoverageError("Activo de apertura duplicado")
+        if isinstance(amount, (bool, float)) or not isinstance(amount, (str, Decimal)):
+            raise BinanceCoverageError("Saldo de apertura: utiliza Decimal o texto, nunca float")
+        try:
+            qty = Decimal(amount)
+        except (InvalidOperation, ValueError) as exc:
+            raise BinanceCoverageError("Saldo de apertura inválido") from exc
+        if not qty.is_finite() or qty < 0:
+            raise BinanceCoverageError("Saldo de apertura negativo o no finito")
+        apertura[normalized] = qty
+    return _diagnosticar_saldos(
+        clasificador, inicio=inicio,
+        metodos_pago_externo=metodos_pago_externo, saldos_iniciales=apertura,
+    )
+
+
+def _diagnosticar_saldos(
+    clasificador, *, inicio: str, metodos_pago_externo: tuple[str, ...],
+    saldos_iniciales: dict[str, Decimal],
 ) -> BinanceCoverageResult:
     """Diagnóstico por evento, agrupado por segundo y activo.
 
@@ -108,7 +158,7 @@ def diagnosticar_saldo_inicial_cero(
         dt = _date(fecha)
         if dt < fecha_inicio:
             raise BinanceCoverageError(
-                "Existe una operación anterior al saldo inicial cero supuesto"
+                "Existe una operación anterior a la fecha de apertura indicada"
             )
         asset = str(activo or "").strip().upper()
         if not asset or any(ch.isspace() for ch in asset):
@@ -167,7 +217,7 @@ def diagnosticar_saldo_inicial_cero(
         uncovered.add("fuentes materiales no soportadas")
 
     events.sort(key=lambda e: (e[0], e[1]))
-    balances: dict[str, Decimal] = defaultdict(Decimal)
+    balances: dict[str, Decimal] = defaultdict(Decimal, saldos_iniciales)
     first_negative: dict[str, str] = {}
     minima: dict[str, Decimal] = {}
     for (dt, asset), segment in groupby(events, lambda e: (e[0], e[1])):
@@ -185,4 +235,5 @@ def diagnosticar_saldo_inicial_cero(
         activos_depositados_sin_coste_acreditado=tuple(sorted(transferred_in)),
         movimientos_no_contabilizados=tuple(sorted(uncovered)),
         pagos_externos_supuestos=pagos_externos_supuestos,
+        saldos_finales=tuple(sorted(balances.items())),
     )
