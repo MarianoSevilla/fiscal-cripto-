@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime
+from itertools import groupby
 from decimal import Decimal, InvalidOperation
 import re
 
@@ -181,6 +182,15 @@ class BinanceGlobalLot:
     reference: str
 
 
+@dataclass(frozen=True)
+class BinanceConsumedLot:
+    """Parte efectivamente consumida de un lote global, SIN ganancia fiscal."""
+    acquisition_reference: str
+    acquired_at: str
+    quantity: Decimal
+    allocated_cost_eur: Decimal | None
+
+
 class BinanceFungibleInventory:
     """Inventario global con saldos por billetera; transferencia NO modifica lotes.
 
@@ -234,6 +244,72 @@ class BinanceFungibleInventory:
         self._wallets[(source, a)] -= q
         self._wallets[(dest, a)] += q
         self._latest = dt
+
+    def dispose(self, *, asset, quantity, timestamp, wallet, reference):
+        """Descuenta unidades de una venta/fee mediante FIFO *global*.
+
+        Solo inventario: no calcula transmisión, valor de mercado, rendimientos,
+        ni autoriza PDF. Usa el saldo de la billetera para verificar custodia,
+        pero elige lotes por fecha global, aun si fueron trasladados a Earn.
+        Rechaza orden intrasegundo ambiguo y duplicidades por referencia.
+        Valida todo antes de mutar el estado.
+        """
+        a = _asset(asset)
+        q = _quantity(quantity)
+        w = self._wallet(wallet)
+        dt = self._check_time(timestamp)
+        if not isinstance(reference, str) or not reference.strip() or reference in self._refs:
+            raise BinanceEarnInventoryError("Referencia de disposición ausente o repetida")
+        if self._wallets.get((w, a), Decimal(0)) < q:
+            raise BinanceEarnInventoryError("Saldo de origen insuficiente")
+
+        remaining = q
+        after = []
+        consumed = []
+        for acquired_at, iterator in groupby(self._lots.get(a, ()), key=lambda l: l.acquired_at):
+            group = list(iterator)
+            if remaining > 0:
+                if _second(acquired_at) >= dt:
+                    raise BinanceEarnInventoryError(
+                        "No se acredita orden temporal entre adquisición y disposición"
+                    )
+                group_total = sum((lot.quantity for lot in group), Decimal(0))
+                if len(group) > 1 and remaining < group_total:
+                    raise BinanceEarnInventoryError(
+                        "Lotes adquiridos al mismo segundo sin orden FIFO acreditado"
+                    )
+            for lot in group:
+                taken = min(remaining, lot.quantity)
+                if not taken:
+                    after.append(lot)
+                    continue
+                cost_used = (
+                    None if lot.cost_eur is None
+                    else lot.cost_eur * taken / lot.quantity
+                )
+                consumed.append(BinanceConsumedLot(
+                    acquisition_reference=lot.reference,
+                    acquired_at=lot.acquired_at,
+                    quantity=taken,
+                    allocated_cost_eur=cost_used,
+                ))
+                rest = lot.quantity - taken
+                if rest:
+                    after.append(BinanceGlobalLot(
+                        asset=a, quantity=rest, acquired_at=lot.acquired_at,
+                        cost_eur=(None if lot.cost_eur is None
+                                  else lot.cost_eur - cost_used),
+                        reference=lot.reference,
+                    ))
+                remaining -= taken
+        if remaining:
+            raise BinanceEarnInventoryError("Inventario global insuficiente")
+
+        self._lots[a] = after
+        self._wallets[(w, a)] -= q
+        self._refs.add(reference)
+        self._latest = dt
+        return tuple(consumed)
 
     def wallet_balance(self, wallet, asset):
         return self._wallets[(self._wallet(wallet), _asset(asset))]

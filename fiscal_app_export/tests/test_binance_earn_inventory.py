@@ -170,3 +170,106 @@ def test_earn_signos_invalidos_se_rechazan():
     with pytest.raises(BinanceEarnInventoryError, match="Dirección"):
         conciliar_earn_con_ledger([], [tx("subscription",
                           "2024-01-01 00:00:00", "BTC", "-1")])
+
+
+def test_disposicion_fifo_global_no_confunde_custodia_con_antiguedad():
+    book = BinanceFungibleInventory()
+    book.acquire(asset="BTC", quantity="1", acquired_at="2020-01-01 00:00:00",
+                 wallet="EARN_FLEXIBLE", reference="synthetic-old", cost_eur="100")
+    book.acquire(asset="BTC", quantity="1", acquired_at="2021-01-01 00:00:00",
+                 wallet="SPOT", reference="synthetic-new", cost_eur="300")
+    consumed = book.dispose(asset="BTC", quantity="0.5",
+                            timestamp="2022-01-01 00:00:00", wallet="SPOT",
+                            reference="synthetic-sale")
+    assert len(consumed) == 1
+    assert consumed[0].acquisition_reference == "synthetic-old"
+    assert consumed[0].allocated_cost_eur == Decimal("50")
+    assert book.lots("BTC")[0].quantity == Decimal("0.5")
+    assert book.lots("BTC")[0].cost_eur == Decimal("50")
+    assert book.wallet_balance("EARN_FLEXIBLE", "BTC") == Decimal("1")
+    assert book.wallet_balance("SPOT", "BTC") == Decimal("0.5")
+    assert book.conserved("BTC") and not book.fiscal_ready
+
+
+def test_disposicion_parcial_multilote_con_coste_decimal_exacto():
+    book = BinanceFungibleInventory()
+    book.acquire(asset="XRP", quantity="2", acquired_at="2020-01-01 00:00:00",
+                 wallet="SPOT", reference="synthetic-a", cost_eur="60")
+    book.acquire(asset="XRP", quantity="3", acquired_at="2021-01-01 00:00:00",
+                 wallet="SPOT", reference="synthetic-b", cost_eur="90")
+    taken = book.dispose(asset="XRP", quantity="3.5",
+                         timestamp="2022-01-01 00:00:00", wallet="SPOT",
+                         reference="synthetic-sale")
+    assert [piece.quantity for piece in taken] == [Decimal("2"), Decimal("1.5")]
+    assert [piece.allocated_cost_eur for piece in taken] == [
+        Decimal("60"), Decimal("45")
+    ]
+    assert book.lots("XRP")[0].reference == "synthetic-b"
+    assert book.lots("XRP")[0].quantity == Decimal("1.5")
+    assert book.lots("XRP")[0].cost_eur == Decimal("45")
+    assert book.conserved("XRP")
+
+
+def test_disposicion_con_coste_no_acreditado_no_lo_sustituye_por_cero():
+    book = BinanceFungibleInventory()
+    book.acquire(asset="BTC", quantity="2", acquired_at="2020-01-01 00:00:00",
+                 wallet="SPOT", reference="synthetic-external", cost_eur=None)
+    taken = book.dispose(asset="BTC", quantity="1",
+                         timestamp="2021-01-01 00:00:00", wallet="SPOT",
+                         reference="synthetic-sale")
+    assert taken[0].allocated_cost_eur is None
+    assert book.lots("BTC")[0].cost_eur is None
+    assert not book.fiscal_ready
+
+
+def test_disposicion_saldo_insuficiente_no_muta_lotes():
+    book = BinanceFungibleInventory()
+    book.acquire(asset="BTC", quantity="1", acquired_at="2020-01-01 00:00:00",
+                 wallet="EARN_FLEXIBLE", reference="synthetic-earn")
+    original = book.lots("BTC")
+    with pytest.raises(BinanceEarnInventoryError, match="insuficiente"):
+        book.dispose(asset="BTC", quantity="0.5",
+                     timestamp="2021-01-01 00:00:00", wallet="SPOT",
+                     reference="synthetic-sale")
+    assert book.lots("BTC") == original
+    assert book.wallet_balance("EARN_FLEXIBLE", "BTC") == Decimal("1")
+    assert book.conserved("BTC")
+
+
+def test_disposicion_orden_mismo_segundo_ambigua_no_muta_estado():
+    book = BinanceFungibleInventory()
+    book.acquire(asset="BTC", quantity="1", acquired_at="2021-01-01 00:00:00",
+                 wallet="SPOT", reference="synthetic-a", cost_eur="100")
+    book.acquire(asset="BTC", quantity="1", acquired_at="2021-01-01 00:00:00",
+                 wallet="SPOT", reference="synthetic-b", cost_eur="200")
+    original = book.lots("BTC")
+    with pytest.raises(BinanceEarnInventoryError, match="mismo segundo"):
+        book.dispose(asset="BTC", quantity="1",
+                     timestamp="2021-02-01 00:00:00", wallet="SPOT",
+                     reference="synthetic-sale")
+    assert book.lots("BTC") == original
+    assert book.wallet_balance("SPOT", "BTC") == Decimal("2")
+    with pytest.raises(BinanceEarnInventoryError, match="orden temporal"):
+        book.dispose(asset="BTC", quantity="2",
+                     timestamp="2021-01-01 00:00:00", wallet="SPOT",
+                     reference="synthetic-sale")
+    assert book.lots("BTC") == original
+    assert book.conserved("BTC")
+
+
+def test_disposicion_lotes_mismo_segundo_completos_y_referencia_unica():
+    book = BinanceFungibleInventory()
+    book.acquire(asset="BTC", quantity="1", acquired_at="2021-01-01 00:00:00",
+                 wallet="SPOT", reference="synthetic-a", cost_eur="100")
+    book.acquire(asset="BTC", quantity="1", acquired_at="2021-01-01 00:00:00",
+                 wallet="SPOT", reference="synthetic-b", cost_eur="200")
+    taken = book.dispose(asset="BTC", quantity="2",
+                         timestamp="2022-01-01 00:00:00", wallet="SPOT",
+                         reference="synthetic-sale")
+    assert sum((x.allocated_cost_eur for x in taken), Decimal(0)) == Decimal(300)
+    assert book.lots("BTC") == ()
+    assert book.conserved("BTC")
+    with pytest.raises(BinanceEarnInventoryError, match="repetida"):
+        book.dispose(asset="BTC", quantity="1",
+                     timestamp="2023-01-01 00:00:00", wallet="SPOT",
+                     reference="synthetic-sale")
