@@ -161,3 +161,63 @@ def test_earn_producto_ajeno_a_moneda_bloquea(tmp_path):
     with pytest.raises(BinanceMultiUserError) as exc:
         ClasificadorBinanceMulti([str(path)]).clasificar()
     assert exc.value.code == "earn_product_asset_mismatch"
+
+
+def test_earn_fuente_nativa_y_ledger_conciliacion_multianual(tmp_path):
+    """El importador correlaciona las dos fuentes sin deduplicar ni crear lotes."""
+    ledger = _fake_csv(tmp_path, "tx.csv", [
+        "ID de usuario", "Tiempo", "Cuenta", "Operación", "Moneda",
+        "Cambio", "Observación",
+    ], [
+        ["fake", "2024-12-19 20:09:03", "Spot",
+         "Simple Earn Flexible Subscription", "XRP", "-10", "Binance Earn"],
+        ["fake", "2024-12-20 10:10:00", "Spot",
+         "Simple Earn Flexible Subscription", "BTC", "-0.1", "Binance Earn"],
+        ["fake", "2025-01-05 12:00:01", "Spot",
+         "Simple Earn Flexible Redemption", "XRP", "4", "Binance Earn"],
+    ])
+    sub = _fake_csv(tmp_path, "sub.csv", SUB, [
+        ["2024-12-19 20:09:00", "XRP", "XRP", "10", "Auto", "SPOT", "Success"],
+        ["2024-12-20 10:10:00", "BTC", "BTC", "0.1",
+         "Normal", "SPOT + FUNDING", "Success"],
+    ])
+    red = _fake_csv(tmp_path, "red.csv", RED, [
+        ["2025-01-05 12:00:01", "XRP", "XRP", "4",
+         "Fast redemption", "SPOT", "Success"],
+    ])
+    c = ClasificadorBinanceMulti([str(sub), str(red), str(ledger)]).clasificar()
+    report = c.earn_reconciliation
+    assert report is not None
+    assert report.ledger_events == report.native_events == 3
+    assert report.matched_to_second == 2
+    assert report.matched_same_day == 1
+    assert report.ledger_unmatched == report.native_unmatched == 0
+    assert report.mixed_or_unknown_origin == 1
+    assert report.quantities_reconciled
+    assert not report.instant_reconciled
+    assert not report.fiscal_ready
+    assert "earn_orden_intradia_o_origen_pendiente" in (
+        c.fuentes_materiales_no_soportadas
+    )
+    assert not c.compraventas and not c.swaps
+    assert len(c.movimientos) == 3
+
+
+def test_earn_fuentes_desiguales_se_marcan_sin_compensar_cantidades(tmp_path):
+    ledger = _fake_csv(tmp_path, "tx.csv", [
+        "ID de usuario", "Tiempo", "Cuenta", "Operación", "Moneda",
+        "Cambio", "Observación",
+    ], [
+        ["fake", "2024-12-19 20:09:03", "Spot",
+         "Simple Earn Flexible Subscription", "XRP", "-10", "Binance Earn"],
+    ])
+    sub = _fake_csv(tmp_path, "sub.csv", SUB, [
+        ["2024-12-19 20:09:03", "XRP", "XRP", "9.99999999",
+         "Auto", "SPOT", "Success"],
+    ])
+    c = ClasificadorBinanceMulti([str(sub), str(ledger)]).clasificar()
+    report = c.earn_reconciliation
+    assert report.native_unmatched == report.ledger_unmatched == 1
+    assert not report.quantities_reconciled
+    assert "earn_fuentes_no_conciliadas" in c.fuentes_materiales_no_soportadas
+    assert not c.compraventas and not c.swaps
