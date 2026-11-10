@@ -38,6 +38,9 @@ from clasificador import (
     OperacionDesconocida,
 )
 from clasificador_binance_tx import REGLAS_TX
+from binance_earn_inventory import (
+    BinanceEarnInventoryError, conciliar_earn_con_ledger,
+)
 
 
 _NO_DATA = "no hay datos que se ajusten a los criterios"
@@ -412,6 +415,7 @@ class ClasificadorBinanceMulti:
         self.comisiones_pendientes: List[dict] = []
         self.intercambios_nativos: List[BinanceNativeExchange] = []
         self.earn_events: List[BinanceEarnEvent] = []
+        self.earn_reconciliation = None  # diagnóstico no fiscal, en memoria
         self.fuentes_materiales_no_soportadas: List[str] = []
         self._sections: Dict[str, _Section] = {k: _Section() for k in self.SOURCE_KEYS}
         self._unknown_files = 0
@@ -515,6 +519,30 @@ class ClasificadorBinanceMulti:
         self._process_earn_flexible()
         self._process_optional_sources()
         self._process_transaction_history()
+        # Conciliación únicamente informativa. No elimina registros, no crea
+        # lotes ni rebaja el bloqueo fiscal de Simple Earn en app.py.
+        if any(e.source in ("earn_flexible_subscription",
+                            "earn_flexible_redemption") for e in self.earn_events):
+            try:
+                self.earn_reconciliation = conciliar_earn_con_ledger(
+                    self.earn_events,
+                    (row for row, _ in self._source_rows["transaction_history"]),
+                )
+            except BinanceEarnInventoryError as exc:
+                raise BinanceMultiUserError(
+                    "earn_ledger_invalido",
+                    "Binance: el historial de movimientos Earn contiene fechas, "
+                    "monedas o cantidades no conciliables.",
+                    category="parser_error",
+                ) from exc
+            if not self.earn_reconciliation.quantities_reconciled:
+                self.fuentes_materiales_no_soportadas.append(
+                    "earn_fuentes_no_conciliadas"
+                )
+            if not self.earn_reconciliation.instant_reconciled:
+                self.fuentes_materiales_no_soportadas.append(
+                    "earn_orden_intradia_o_origen_pendiente"
+                )
 
         if self._unknown_files:
             self.advertencias.append(
