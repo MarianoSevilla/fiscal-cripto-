@@ -76,6 +76,24 @@ class _Section:
 
 
 @dataclass(frozen=True)
+class BinanceEarnEvent:
+    """Evento Earn original y de solo lectura, sin coste fiscal inventado.
+
+    Las fechas de recompensas Real-Time pueden ser solo diarias: nunca
+    convertir artificialmente esa fecha en la hora 00:00 para FIFO.
+    """
+    source: str
+    filename: str
+    original_time: str
+    precision: str
+    asset: str
+    amount: Decimal
+    kind: str
+    origin: str
+    destination: str
+
+
+@dataclass(frozen=True)
 class BinanceNativeExchange:
     """Hecho económico original, sin valorar ni fusionar por segundo.
 
@@ -195,11 +213,29 @@ _SIG = {
     "fiat_exchange": {"método", "cantidad", "precio", "cantidad final",
                       "hora de creación", "estado", "id de transacción"},
     "crypto_transfer": {"tiempo", "moneda", "red", "cantidad", "dirección", "txid", "estado"},
+    "earn_flexible_subscription": {
+        "fecha de suscripción", "nombre del producto", "moneda", "cantidad",
+        "tipo", "de", "estado",
+    },
+    "earn_flexible_redemption": {
+        "fecha de canje", "nombre del producto", "moneda", "principal reembolsado",
+        "método", "canjear por", "estado",
+    },
+    "earn_flexible_rewards": {"tiempo", "moneda", "cantidad", "tipo"},
+    "earn_flexible_exchange": {"tiempo", "moneda", "cantidad", "a", "estado"},
 }
 
 
 def detect_binance_source(headers: Iterable[str]) -> str:
     norm = {_norm_header(h) for h in headers}
+    # Las dos firmas cortas tienen que coincidir EXACTAMENTE para no
+    # apropiarse de otro formato Binance con columnas adicionales.
+    for name in ("earn_flexible_rewards", "earn_flexible_exchange"):
+        if norm == _SIG[name]:
+            return name
+    for name in ("earn_flexible_subscription", "earn_flexible_redemption"):
+        if _SIG[name].issubset(norm):
+            return name
     if _SIG["spot_orders"].issubset(norm):
         return "spot_orders"
     if _SIG["spot_trades"].issubset(norm):
@@ -272,6 +308,47 @@ def _decimal(raw: str, *, field: str) -> Decimal:
     return value
 
 
+_EARN_NUMBER = re.compile(r"^(?:[0-9]+|[0-9]{1,3}(?:,[0-9]{3})+)(?:\.[0-9]+)?$")
+
+
+def _earn_amount(raw: str) -> Decimal:
+    """Decimal exacto; separadores de miles solo con agrupación de 3."""
+    val = str(raw or "").strip()
+    if not _EARN_NUMBER.fullmatch(val):
+        raise BinanceMultiUserError(
+            "invalid_earn_amount",
+            "Binance Earn contiene una cantidad no interpretable.",
+            category="parser_error",
+        )
+    value = Decimal(val.replace(",", ""))
+    if not value.is_finite() or value <= 0:
+        raise BinanceMultiUserError(
+            "invalid_earn_amount",
+            "Binance Earn contiene una cantidad no positiva o no finita.",
+            category="parser_error",
+        )
+    return value
+
+
+def _earn_time(raw: str) -> tuple[str, str]:
+    """Conserva precisión diaria o de segundos del origen, sin rellenar hora."""
+    value = str(raw or "").strip()
+    try:
+        if re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", value):
+            datetime.strptime(value, "%Y-%m-%d")
+            return value, "day"
+        if re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}", value):
+            datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+            return value, "second"
+    except ValueError:
+        pass
+    raise BinanceMultiUserError(
+        "invalid_earn_date",
+        "Binance Earn contiene una fecha inválida.",
+        category="parser_error",
+    )
+
+
 def _fecha(raw: str) -> str:
     raw = str(raw or "").strip()
     for fmt in ("%Y-%m-%d %H:%M:%S", "%y-%m-%d %H:%M:%S", "%Y-%m-%d", "%y-%m-%d"):
@@ -312,6 +389,8 @@ class ClasificadorBinanceMulti:
         "spot_trades", "spot_orders", "convert_orders", "recurring_convert",
         "fiat_trade", "fiat_deposit", "fiat_withdrawal", "fiat_exchange",
         "crypto_deposit", "crypto_withdrawal", "transaction_history",
+        "earn_flexible_subscription", "earn_flexible_redemption",
+        "earn_flexible_rewards", "earn_flexible_exchange",
     )
 
     def __init__(self, filepaths: List[str], filenames: Optional[List[str]] = None):
@@ -330,6 +409,7 @@ class ClasificadorBinanceMulti:
         self.valoraciones_pendientes: List[dict] = []
         self.comisiones_pendientes: List[dict] = []
         self.intercambios_nativos: List[BinanceNativeExchange] = []
+        self.earn_events: List[BinanceEarnEvent] = []
         self.fuentes_materiales_no_soportadas: List[str] = []
         self._sections: Dict[str, _Section] = {k: _Section() for k in self.SOURCE_KEYS}
         self._unknown_files = 0
@@ -422,6 +502,7 @@ class ClasificadorBinanceMulti:
         self._process_fiat_trades()
         self._process_crypto_transfers()
         self._process_fiat_cash()
+        self._process_earn_flexible()
         self._process_optional_sources()
         self._process_transaction_history()
 
@@ -823,6 +904,81 @@ class ClasificadorBinanceMulti:
                     activo=asset, cantidad=float(account_delta),
                     observacion=f"{method}{fee_note}",
                 ))
+
+    def _process_earn_flexible(self) -> None:
+        """Reconoce Earn sin convertir transferencias en compras fiscales.
+
+        Suscripción/redención: movimiento interno de la misma moneda.
+        Recompensas: cantidad nueva, pero sin valoración EUR de adquisición.
+        Intercambiar: la cabecera no describe suficientemente la permuta.
+        Por ello esta fase conserva evidencia y BLOQUEA el PDF.
+        """
+        for source in (
+            "earn_flexible_subscription", "earn_flexible_redemption",
+            "earn_flexible_rewards", "earn_flexible_exchange",
+        ):
+            rows = self._source_rows[source]
+            if not rows:
+                continue
+            if source == "earn_flexible_exchange":
+                self.fuentes_materiales_no_soportadas.append(
+                    "earn_flexible_intercambio_sin_patas_de_valoracion"
+                )
+                continue
+
+            for row, filename in rows:
+                if source != "earn_flexible_rewards":
+                    if not self._native_status_ok(row.get("estado"), source):
+                        continue
+                if source == "earn_flexible_subscription":
+                    time_raw = row.get("fecha de suscripción")
+                    amount_raw = row.get("cantidad")
+                    kind = row.get("tipo", "")
+                    origin = row.get("de", "")
+                    destination = "Earn Flexible"
+                elif source == "earn_flexible_redemption":
+                    time_raw = row.get("fecha de canje")
+                    amount_raw = row.get("principal reembolsado")
+                    kind = row.get("método", "")
+                    origin = "Earn Flexible"
+                    destination = row.get("canjear por", "")
+                else:
+                    time_raw = row.get("tiempo")
+                    amount_raw = row.get("cantidad")
+                    kind = row.get("tipo", "")
+                    origin = "Earn Flexible"
+                    destination = (
+                        "SPOT" if kind == "Bonus Tiered APR Rewards"
+                        else "Earn Flexible" if kind == "Real-time APR Rewards"
+                        else "destino no acreditado"
+                    )
+
+                asset = row.get("moneda", "").strip().upper()
+                if not re.fullmatch(r"[A-Z0-9]{2,20}", asset):
+                    raise BinanceMultiUserError(
+                        "invalid_earn_asset",
+                        "Binance Earn contiene un activo no reconocible.",
+                        category="parser_error",
+                    )
+                product = row.get("nombre del producto")
+                if product is not None and product.strip().upper() != asset:
+                    raise BinanceMultiUserError(
+                        "earn_product_asset_mismatch",
+                        "El producto y la moneda de Binance Earn no coinciden.",
+                        category="parser_error",
+                    )
+                date, precision = _earn_time(time_raw)
+                self.earn_events.append(BinanceEarnEvent(
+                    source=source, filename=filename,
+                    original_time=date, precision=precision,
+                    asset=asset, amount=_earn_amount(amount_raw),
+                    kind=kind, origin=origin, destination=destination,
+                ))
+
+        if self.earn_events:
+            self.fuentes_materiales_no_soportadas.append(
+                "earn_flexible_requiere_inventario_y_valoracion_fiscal"
+            )
 
     def _process_optional_sources(self) -> None:
         for source in ("recurring_convert", "fiat_exchange"):

@@ -117,6 +117,7 @@ def test_bundle_12_zip_se_reconoce_completo_sin_duplicar_ordenes(tmp_path):
         assert all(
             c.resumen_archivos[group]["detectado"]
             for group in ClasificadorBinanceMulti.SOURCE_KEYS
+            if not group.startswith("earn_flexible_")
         )
         for group in ("recurring_convert", "fiat_exchange", "transaction_history"):
             assert c.resumen_archivos[group]["vacio"]

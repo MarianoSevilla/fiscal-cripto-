@@ -356,3 +356,27 @@ def test_http_solo_deposito_externo_no_emite_posicion_fifo_vacia(client, usuario
     assert r.status_code == 422
     assert "depósitos cripto" in body["error"].lower()
     assert "token" not in body
+
+
+
+def test_http_earn_recompensa_no_se_emite_como_fifo_vacio(client, usuario):
+    """Fuente Earn reconocida; sin base EUR de recompensa nunca hay PDF."""
+    _login(client)
+    reward_csv = (
+        "Tiempo,Moneda,Cantidad,Tipo\n"
+        "2025-05-03,ABC,0.00000001,Real-time APR Rewards\n"
+    ).encode("utf-8-sig")
+    r = client.post(
+        "/api/binance/analizar",
+        data={
+            "csv": (io.BytesIO(reward_csv), "Binance-Earn-(UTC+1).csv"),
+            "ejercicio": "2025",
+            "nombre": "Prueba Earn inventada",
+        },
+        content_type="multipart/form-data",
+    )
+    data = r.get_json()
+    assert r.status_code == 422
+    assert "Simple Earn" in data["error"]
+    assert "token" not in data
+    assert "resumen" not in data

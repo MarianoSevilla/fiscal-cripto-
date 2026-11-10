@@ -1710,6 +1710,12 @@ def _validar_aceptacion_fifo(motor, clasificador=None) -> None:
     # falte la valoración fiscal EUR. Nunca emitir un PDF parcial ni asumir
     # paridad de stablecoins / coste cero / comisión irrelevante.
     if isinstance(clasificador, ClasificadorBinanceMulti):
+        if getattr(clasificador, "earn_events", ()):
+            raise ValueError(
+                "Datos fiscales no seguros: Binance Simple Earn contiene "
+                "suscripciones, redenciones o recompensas pendientes de "
+                "conciliar con el inventario FIFO y de valorar en EUR."
+            )
         if getattr(clasificador, "desconocidas", ()):
             raise ValueError(
                 "Datos fiscales no seguros: Binance contiene operaciones no "
