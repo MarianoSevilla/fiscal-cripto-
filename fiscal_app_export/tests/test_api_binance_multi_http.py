@@ -404,3 +404,57 @@ def test_http_conversion_small_assets_bnb_no_se_omite_como_movimiento(client, us
     assert "fuente" in body["error"].lower()
     assert "token" not in body
     assert "resumen" not in body
+
+
+def test_anos_binance_earn_detecta_fechas_reales_y_no_el_anio_del_zip(client, usuario):
+    """Un CSV Earn de 2025 puede traer recompensas de finales de 2024."""
+    _login(client)
+    data = (
+        "Tiempo,Moneda,Cantidad,Tipo\n"
+        "2024-12-31,ABC,0.00000001,Real-time APR Rewards\n"
+        "2025-01-01,ABC,0.00000002,Real-time APR Rewards\n"
+    ).encode("utf-8-sig")
+    r = client.post(
+        "/api/binance/anos",
+        data={"csv": (io.BytesIO(data), "Binance-Earn-2025-(UTC+1).csv")},
+        content_type="multipart/form-data",
+    )
+    body = r.get_json()
+    assert r.status_code == 200, r.get_data(as_text=True)[:400]
+    assert body["anos"] == [2024, 2025]
+    assert body["resumen"]["earn_flexible_rewards"]["registros"] == 2
+
+
+def test_anos_binance_rechaza_mas_de_100000_filas_antes_de_clasificar(client, usuario):
+    """Selector de ejercicios aplica el mismo límite seguro del análisis."""
+    _login(client)
+    row = "fake,2021-01-01 00:00:00,Spot,Commission Rebate,ABC,0.00001,\n"
+    txt = ("ID de usuario,Tiempo,Cuenta,Operación,Moneda,Cambio,Observación\n"
+           + row * 100001)
+    r = client.post(
+        "/api/binance/anos",
+        data={"csv": (io.BytesIO(txt.encode("utf-8")), "Binance-TX-(UTC+1).csv")},
+        content_type="multipart/form-data",
+    )
+    body = r.get_json()
+    assert r.status_code == 400
+    assert body["ok"] is False
+    assert "100,000" in body["error"]
+
+
+def test_anos_binance_rechaza_utf8_corrupto_sin_500(client, usuario):
+    """No aceptar reemplazo silencioso de bytes en una fila monetaria."""
+    _login(client)
+    raw = (
+        b"Tiempo,Moneda,Cantidad,Tipo\n"
+        + b"2025-01-01,AB" + bytes((255,))
+        + b",0.1,Real-time APR Rewards\n"
+    )
+    r = client.post(
+        "/api/binance/anos",
+        data={"csv": (io.BytesIO(raw), "Earn-corrupt-(UTC+1).csv")},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 400
+    assert r.get_json()["ok"] is False
+    assert "UTF-8" in r.get_json()["error"]

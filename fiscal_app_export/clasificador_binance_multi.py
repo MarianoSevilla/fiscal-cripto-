@@ -138,7 +138,9 @@ def _norm_header(value: str) -> str:
 
 
 def _read_csv(path: str) -> Tuple[List[str], List[dict], bool]:
-    with open(path, "r", encoding="utf-8-sig", errors="replace", newline="") as fh:
+    # No sustituir silenciosamente octetos inválidos con U+FFFD: una
+    # corrupción de moneda, fecha o cantidad falsearía el resultado fiscal.
+    with open(path, "r", encoding="utf-8-sig", errors="strict", newline="") as fh:
         reader = csv.reader(fh)
         try:
             headers = next(reader)
@@ -441,7 +443,15 @@ class ClasificadorBinanceMulti:
 
         recognized = 0
         for path, filename in zip(self.filepaths, self.filenames):
-            headers, rows, empty = _read_csv(path)
+            try:
+                headers, rows, empty = _read_csv(path)
+            except UnicodeDecodeError as exc:
+                raise BinanceMultiUserError(
+                    "invalid_csv_encoding",
+                    "El CSV de Binance contiene bytes que no son UTF-8 válido. "
+                    "Descarga el archivo original desde Binance y no lo edites.",
+                    category="parser_error",
+                ) from exc
             source = detect_binance_source(headers)
             if source == "unknown":
                 self._unknown_files += 1

@@ -610,3 +610,17 @@ def test_ledger_rebates_iguales_mismo_csv_conservan_multiplicidad(tmp_path):
     assert all(r.subtipo == "Commission Rebate" for r in c.rendimientos)
     assert sum(r.cantidad for r in c.rendimientos) == pytest.approx(0.00000008)
     assert c.fuentes_materiales_no_soportadas == []
+
+
+def test_binance_multi_csv_utf8_invalido_falla_cerrado(tmp_path):
+    """El clasificador no reemplaza bytes ilegales antes de calcular FIFO."""
+    p = tmp_path / "earn_corrupt.csv"
+    p.write_bytes(
+        b"Tiempo,Moneda,Cantidad,Tipo\n"
+        + b"2025-01-01,AB" + bytes((255,))
+        + b",0.01,Real-time APR Rewards\n"
+    )
+    with pytest.raises(BinanceMultiUserError) as exc:
+        _classify([p])
+    assert exc.value.code == "invalid_csv_encoding"
+    assert exc.value.category == "parser_error"

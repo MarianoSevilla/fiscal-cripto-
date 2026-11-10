@@ -2523,6 +2523,13 @@ def api_binance_anos():
     tmp_paths: list = []
     try:
         tmp_paths, filenames = _guardar_csvs_binance(archivos)
+        csv_rows = sum(_contar_csv_rows(p) for p in tmp_paths)
+        if csv_rows > MAX_CSV_ROWS:
+            return jsonify({
+                "ok": False,
+                "error": f"Los CSV de Binance suman demasiadas filas ({csv_rows:,}). "
+                         f"El máximo permitido es {MAX_CSV_ROWS:,} filas.",
+            }), 400
         clasificador = ClasificadorBinanceMulti(tmp_paths, filenames).clasificar()
 
         años: set = set()
@@ -2535,6 +2542,11 @@ def api_binance_anos():
                     años.add(int(str(op.fecha)[:4]))
                 except (ValueError, TypeError):
                     pass
+
+        # Simple Earn guarda fecha en original_time (a veces solo día).
+        # Incluso un ZIP de 2025 puede incluir recompensas fechadas en 2024.
+        for evento in getattr(clasificador, "earn_events", ()):
+            años.add(int(evento.original_time[:4]))
 
         return jsonify({
             "ok": True,
