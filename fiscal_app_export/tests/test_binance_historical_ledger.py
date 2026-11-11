@@ -198,3 +198,11 @@ def test_ledger_cutoff_same_second_buy_and_fee_not_false_shortfall(tmp_path):
     assert r.sin_saldos_negativos_globales
     assert dict(r.saldos_netos)["BTC"] == Decimal("0.99")
     assert r.fifo_fiscal_acreditado is False
+
+
+
+def test_ledger_no_data_sentinel_does_not_bypass_row_limit(tmp_path):
+    z = _zip(tmp_path, "repeated-empty", HEADER +
+        "No hay datos que se ajusten a los criterios.\n" * 3)
+    with pytest.raises(BinanceHistoricalLedgerError, match="límite de filas"):
+        inspeccionar_historial_binance([z], max_registros=2)

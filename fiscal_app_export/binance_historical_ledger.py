@@ -163,6 +163,11 @@ def inspeccionar_historial_binance(
                                 "Las columnas no corresponden al historial general Binance"
                             )
                         for record in reader:
+                            scanned_rows += 1
+                            if scanned_rows > max_registros:
+                                raise BinanceHistoricalLedgerError(
+                                    "El historial supera el límite de filas"
+                                )
                             # Exportación vacía nativa: frase en primera columna
                             # y resto de celdas vacías; no inventar una operación.
                             sentinel = str(record.get("ID de usuario") or "").strip().lower()
@@ -208,11 +213,6 @@ def inspeccionar_historial_binance(
                                         "Los períodos históricos se solapan o están desordenados"
                                     )
                             previous_in_file = dt
-                            scanned_rows += 1
-                            if scanned_rows > max_registros:
-                                raise BinanceHistoricalLedgerError(
-                                    "El historial supera el límite de filas"
-                                )
                             if cutoff is not None and dt > cutoff:
                                 continue
                             if pending_time is not None and dt > pending_time:
