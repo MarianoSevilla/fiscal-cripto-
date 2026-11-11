@@ -571,3 +571,23 @@ def test_anos_binance_acepta_31_zip_sin_perder_filas(client, usuario):
     assert payload["anos"] == [2021]
     assert payload["resumen"]["transaction_history"]["registros"] == 31
     assert not any("conciliación" in a.lower() for a in payload["advertencias"])
+
+
+def test_http_binance_dust_multi_asset_remains_blocked(client, usuario):
+    _login(client)
+    raw = (
+        "ID de usuario,Tiempo,Cuenta,Operación,Moneda,Cambio,Observación\n"
+        "synthetic,2025-02-02 12:00:00,Spot,Small Assets Exchange BNB,AAA,-2,\n"
+        "synthetic,2025-02-02 12:00:00,Spot,Small Assets Exchange BNB,BBB,-3,\n"
+        "synthetic,2025-02-02 12:00:00,Spot,Small Assets Exchange BNB,BNB,0.005,\n"
+    ).encode("utf-8-sig")
+    response = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(raw), "Binance-TX-(UTC+1).csv"),
+              "ejercicio": "2025", "nombre": "Synthetic"},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 422, response.get_data(as_text=True)[:250]
+    payload = response.get_json()
+    assert "token" not in payload
+    assert "resumen" not in payload

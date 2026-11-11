@@ -48,6 +48,7 @@ from binance_commission_evidence import (
     BinanceCommissionEvidenceError, audit_binance_commissions,
     is_binance_commission, iter_binance_commissions,
 )
+from binance_dust_evidence import BinanceDustEvidenceError, audit_binance_dust
 
 
 _NO_DATA = "no hay datos que se ajusten a los criterios"
@@ -440,6 +441,8 @@ class ClasificadorBinanceMulti:
         self.earn_reward_reconciliation = None
         self.earn_reward_candidates = ()  # nunca se inyecta en MotorFIFO/PDF
         self.commission_evidence_summary = None
+        self.dust_evidence_summary = None
+        self.dust_evidence = ()
         self._commission_files: List[str] = []  # CSV temporales de la petición
         self.fuentes_materiales_no_soportadas: List[str] = []
         self._sections: Dict[str, _Section] = {k: _Section() for k in self.SOURCE_KEYS}
@@ -1480,13 +1483,19 @@ class ClasificadorBinanceMulti:
             self.fuentes_materiales_no_soportadas.append(
                 "earn_ledger_sin_lotes_ni_valoracion_acreditados"
             )
-        # Small Assets Exchange BNB es una conversión de activos. El parser
-        # heredado la clasifica como MOVIMIENTO, sin reconstruir adquisición
-        # BNB ni disposición del activo entregado. No emitir IRPF parcial.
-        if any(
-            row.get("operación", "").strip() == "Small Assets Exchange BNB"
-            for row in rows
-        ):
+        # Un canje de pequeños saldos puede incluir muchos activos entregados
+        # y varios abonos BNB en el mismo segundo. Agrupación probatoria, no
+        # emparejamiento uno-a-uno ni valoración EUR; no crear permutas FIFO.
+        try:
+            self.dust_evidence_summary, self.dust_evidence = audit_binance_dust(rows)
+        except BinanceDustEvidenceError as exc:
+            raise BinanceMultiUserError(
+                "invalid_binance_dust",
+                "Binance contiene un canje de saldos pequeños con fecha, activo "
+                "o cantidad no verificables. No se puede emitir el informe.",
+                category="parser_error",
+            ) from exc
+        if self.dust_evidence_summary.rows:
             self.fuentes_materiales_no_soportadas.append(
                 "small_assets_exchange_bnb_sin_permuta_valorada"
             )
