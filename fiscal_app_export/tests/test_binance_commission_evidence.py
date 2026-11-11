@@ -128,3 +128,19 @@ def test_legacy_does_not_tax_referrals_as_investment_income(tmp_path):
     assert not parsed.rendimientos
     assert len(parsed.desconocidas) == 3
     assert {op.subtipo for op in parsed.desconocidas} == COMMISSION_OPERATIONS
+
+
+def test_eur_commission_amount_has_known_eur_value_but_not_fiscal_category():
+    evidence = list(iter_binance_commissions([
+        row("Commission Rebate", "0.50", asset="EUR")
+    ]))
+    assert len(evidence) == 1
+    assert evidence[0].quantity == Decimal("0.50")
+    assert evidence[0].value_eur == Decimal("0.50")
+    assert evidence[0].fiscal_category is None
+    report = audit_binance_commissions([
+        row("Commission Rebate", "0.50", asset="EUR")
+    ])
+    assert report.pending_eur_valuations == 0
+    assert report.pending_fiscal_classifications == 1
+    assert not report.fiscal_ready

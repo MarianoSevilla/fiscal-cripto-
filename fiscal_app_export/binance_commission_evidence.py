@@ -36,7 +36,7 @@ class BinanceCommissionEvidence:
     asset: str
     quantity: Decimal
     wallet: str
-    value_eur: None = None
+    value_eur: Decimal | None = None
     fiscal_category: None = None
 
     @property
@@ -98,6 +98,7 @@ def iter_binance_commissions(rows):
         yield BinanceCommissionEvidence(
             ordinal=ordinal, source_operation=operation, earned_at=stamp,
             asset=symbol, quantity=quantity, wallet=wallet,
+            value_eur=(quantity if symbol == "EUR" else None),
         )
 
 
@@ -109,8 +110,11 @@ def audit_binance_commissions(rows):
     by_operation, by_asset = Counter(), Counter()
     quantities = defaultdict(Decimal)
     count = 0
+    pending_value = 0
     for evidence in iter_binance_commissions(rows):
         count += 1
+        if evidence.value_eur is None:
+            pending_value += 1
         by_operation[evidence.source_operation] += 1
         by_asset[evidence.asset] += 1
         quantities[evidence.asset] += evidence.quantity
@@ -119,6 +123,6 @@ def audit_binance_commissions(rows):
         operation_counts=tuple(sorted(by_operation.items())),
         asset_counts=tuple(sorted(by_asset.items())),
         quantities_by_asset=tuple(sorted(quantities.items())),
-        pending_eur_valuations=count,
+        pending_eur_valuations=pending_value,
         pending_fiscal_classifications=count,
     )
