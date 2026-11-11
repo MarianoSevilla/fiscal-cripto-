@@ -1,3 +1,4 @@
+from decimal import Decimal
 """Pruebas sintéticas del importador Binance multifuente.
 
 Ningún fixture contiene datos de usuarios reales.
@@ -606,10 +607,19 @@ def test_ledger_rebates_iguales_mismo_csv_conservan_multiplicidad(tmp_path):
     ])
     c = _classify([ledger])
     assert c.resumen_archivos["transaction_history"]["registros"] == 2
-    assert len(c.rendimientos) == 2
-    assert all(r.subtipo == "Commission Rebate" for r in c.rendimientos)
-    assert sum(r.cantidad for r in c.rendimientos) == pytest.approx(0.00000008)
-    assert c.fuentes_materiales_no_soportadas == []
+    # Dos eventos económicos separados, sin asignar renta fiscal o valor EUR
+    # hasta reconstruir su origen exacto; no son compras ni se descartan.
+    assert c.rendimientos == []
+    assert c.commission_evidence_summary.records == 2
+    entries = list(c.iter_commission_evidence())
+    assert [r.source_operation for r in entries] == [
+        "Commission Rebate", "Commission Rebate",
+    ]
+    assert [r.ordinal for r in entries] == [0, 1]
+    assert sum((r.quantity for r in entries), Decimal(0)) == Decimal("0.00000008")
+    assert "binance_comisiones_sin_valoracion_ni_categoria_fiscal" in (
+        c.fuentes_materiales_no_soportadas
+    )
 
 
 def test_binance_multi_csv_utf8_invalido_falla_cerrado(tmp_path):
