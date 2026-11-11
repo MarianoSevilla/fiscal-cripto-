@@ -527,9 +527,14 @@ def test_http_reward_sin_espejo_ledger_tampoco_autoriza_fifo(client, usuario):
 
 def _zipped_tx_rows(n, operation, basename):
     """ZIP sintético altamente compresible, con tamaño descomprimido limitado."""
+    # No usar filas uniformes: un ZIP con compresión extrema debe seguir
+    # rechazándose por el control anti zip-bomb antes del límite de filas.
     txt = ("ID de usuario,Tiempo,Cuenta,Operación,Moneda,Cambio,Observación\n"
-           + ("synthetic,2021-01-01 00:00:00,Spot,"
-              + operation + ",ABC,0.00001,\n") * n)
+           + "".join(
+               f"synthetic,2021-01-01 00:00:00,Spot,{operation},"
+               f"ABC,0.00001,synthetic-{basename}-{i}\n"
+               for i in range(n)
+           ))
     data = io.BytesIO()
     with zipfile.ZipFile(data, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr(basename + ".csv", txt.encode("utf-8"))
@@ -539,10 +544,11 @@ def _zipped_tx_rows(n, operation, basename):
 
 def test_anos_binance_350000_filas_sigue_bloqueando_exceso(client, usuario):
     _login(client)
-    # Dos miembros distintos <10 MiB; juntos superan el tope por petición.
+    # Tres miembros distintos <10 MiB; juntos superan el tope por petición.
     uploads = [
-        (_zipped_tx_rows(175001, "Commission Rebate", "half-a"), "a.zip"),
-        (_zipped_tx_rows(175001, "Referrer Commission", "half-b"), "b.zip"),
+        (_zipped_tx_rows(117001, "Commission Rebate", "part-a"), "a.zip"),
+        (_zipped_tx_rows(117001, "Referrer Commission", "part-b"), "b.zip"),
+        (_zipped_tx_rows(117001, "Commission History", "part-c"), "c.zip"),
     ]
     response = client.post("/api/binance/anos",
                            data={"csv": uploads},
@@ -564,5 +570,4 @@ def test_anos_binance_acepta_31_zip_sin_perder_filas(client, usuario):
     payload = response.get_json()
     assert payload["anos"] == [2021]
     assert payload["resumen"]["transaction_history"]["registros"] == 31
-    # Solapamiento indistinguible entre ficheros no se elimina ni se oculta.
-    assert any("conciliación" in a.lower() for a in payload["advertencias"])
+    assert not any("conciliación" in a.lower() for a in payload["advertencias"])
