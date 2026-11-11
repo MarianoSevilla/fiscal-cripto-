@@ -144,3 +144,49 @@ def test_eur_commission_amount_has_known_eur_value_but_not_fiscal_category():
     assert report.pending_eur_valuations == 0
     assert report.pending_fiscal_classifications == 1
     assert not report.fiscal_ready
+
+
+def test_big_ledger_uses_bounded_commission_memory_and_keeps_all_receipts(tmp_path):
+    path = _write_csv(tmp_path, "many.csv", (
+        row("Commission Rebate", "0.00000001") for _ in range(101001)
+    ))
+    c = ClasificadorBinanceMulti([path]).clasificar()
+    assert c.resumen_archivos["transaction_history"]["registros"] == 101001
+    assert c.commission_evidence_summary.records == 101001
+    assert c.commission_evidence_summary.years == (2021,)
+    # Las filas masivas se leen del temporal, no se materializan en memoria.
+    assert c._source_rows["transaction_history"] == []
+    assert sum(1 for _ in c.iter_commission_evidence()) == 101001
+    assert c.commission_evidence_summary.pending_eur_valuations == 101001
+    assert "binance_comisiones_sin_valoracion_ni_categoria_fiscal" in (
+        c.fuentes_materiales_no_soportadas
+    )
+
+
+def test_duplicate_commission_across_files_blocks_without_dropping(tmp_path):
+    common = [row("Referrer Commission", "0.125")]
+    a = _write_csv(tmp_path, "first.csv", common)
+    b = _write_csv(tmp_path, "second.csv", common)
+    c = ClasificadorBinanceMulti([a,b]).clasificar()
+    assert c.commission_evidence_summary.records == 2
+    assert sum(1 for _ in c.iter_commission_evidence()) == 2
+    assert "filas_identicas_entre_exportaciones_sin_id_unico" in (
+        c.fuentes_materiales_no_soportadas
+    )
+
+
+def test_ledger_commission_and_economic_event_keeps_the_other_event(tmp_path):
+    p = _write_csv(tmp_path, "mixed.csv", [
+        row("Commission Rebate", "0.01"),
+        row("Commission History", "0.02"),
+        row("Referrer Commission", "0.03"),
+        row("Other Unrecognized Operation", "1"),
+    ])
+    c = ClasificadorBinanceMulti([p]).clasificar()
+    assert c.commission_evidence_summary.records == 3
+    assert len(c._source_rows["transaction_history"]) == 1
+    assert c.resumen_archivos["transaction_history"]["registros"] == 4
+    assert len(c.desconocidas) == 1
+    assert "binance_comisiones_sin_valoracion_ni_categoria_fiscal" in (
+        c.fuentes_materiales_no_soportadas
+    )

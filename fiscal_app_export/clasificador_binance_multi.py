@@ -147,7 +147,7 @@ def _norm_header(value: str) -> str:
     return _HEADER_ALIASES.get(value, value)
 
 
-def _read_csv(path: str) -> Tuple[List[str], List[dict], bool]:
+def _read_csv(path: str, *, on_commission=None) -> Tuple[List[str], List[dict], bool]:
     # No sustituir silenciosamente octetos inválidos con U+FFFD: una
     # corrupción de moneda, fecha o cantidad falsearía el resultado fiscal.
     with open(path, "r", encoding="utf-8-sig", errors="strict", newline="") as fh:
@@ -186,6 +186,10 @@ def _read_csv(path: str) -> Tuple[List[str], List[dict], bool]:
             )
         rows: List[dict] = []
         sentinel = False
+        valid_count = 0
+        # Solo el historial con cabecera Binance completa puede aplicar el
+        # camino de streaming. Cualquier otra fuente mantiene el parser previo.
+        tx_header = _SIG["transaction_history"].issubset(set(keys))
         for raw in reader:
             if not any((c or "").strip() for c in raw):
                 continue
@@ -201,8 +205,16 @@ def _read_csv(path: str) -> Tuple[List[str], List[dict], bool]:
                     category="parser_error",
                 )
             row = {k: raw[i].strip() for i, k in enumerate(keys)}
-            rows.append(row)
-    return headers, rows, (sentinel or not rows)
+            valid_count += 1
+            if (on_commission is not None and tx_header
+                    and is_binance_commission(row)):
+                # La fila se valida/audita más tarde por streaming desde el
+                # CSV temporal. No ocupar memoria con cientos de miles de
+                # diccionarios que el motor fiscal todavía no debe usar.
+                on_commission(row)
+            else:
+                rows.append(row)
+    return headers, rows, (sentinel or valid_count == 0)
 
 
 _SIG = {
@@ -380,10 +392,12 @@ def _status_ok(raw: str) -> bool:
     return str(raw or "").strip().lower() in _SUCCESS
 
 
-def _row_digest(source: str, row: dict) -> str:
+def _row_digest(source: str, row: dict) -> bytes:
     payload = json.dumps([source, sorted(row.items())], ensure_ascii=False,
                          separators=(",", ":")).encode("utf-8")
-    return hashlib.sha256(payload).hexdigest()
+    # Bytes en lugar de hexadecimal: menor presión de memoria para cientos
+    # de miles de referencias de duplicidad, con la misma robustez SHA-256.
+    return hashlib.sha256(payload).digest()
 
 
 def _tz_from_filename(name: str) -> Optional[str]:
@@ -426,6 +440,7 @@ class ClasificadorBinanceMulti:
         self.earn_reward_reconciliation = None
         self.earn_reward_candidates = ()  # nunca se inyecta en MotorFIFO/PDF
         self.commission_evidence_summary = None
+        self._commission_files: List[str] = []  # CSV temporales de la petición
         self.fuentes_materiales_no_soportadas: List[str] = []
         self._sections: Dict[str, _Section] = {k: _Section() for k in self.SOURCE_KEYS}
         self._unknown_files = 0
@@ -451,14 +466,68 @@ class ClasificadorBinanceMulti:
         out["timezone_offsets"] = sorted(self._tz_offsets)
         return out
 
+    def _track_original_row(self, source: str, row: dict, path: str) -> None:
+        """Detección exacta entre archivos; nunca elimina coincidencias.
+
+        El aviso se añade una sola vez, incluso ante un solapamiento masivo,
+        para no agotar memoria con miles de mensajes repetidos.
+        """
+        digest = _row_digest(source, row)
+        previous_file = self._cross_file_rows.get(digest)
+        if previous_file is not None and previous_file != path:
+            marker = "filas_identicas_entre_exportaciones_sin_id_unico"
+            if marker not in self.fuentes_materiales_no_soportadas:
+                self.fuentes_materiales_no_soportadas.append(marker)
+                self.advertencias.append(
+                    "Binance: existen filas indistinguibles de la misma fuente "
+                    "en distintas exportaciones; requiere conciliación."
+                )
+        self._cross_file_rows[digest] = path
+
+    @staticmethod
+    def _stream_commission_csv(path: str):
+        """Itera únicamente las filas de comisión sin retener el historial.
+
+        _read_csv ya validó cabeceras, contenido y codificación completa
+        durante la carga de esta misma petición.
+        """
+        with open(path, "r", encoding="utf-8-sig", errors="strict",
+                  newline="") as fh:
+            reader = csv.reader(fh)
+            headers = next(reader)
+            keys = [_norm_header(key) for key in headers]
+            for raw in reader:
+                if not any((v or "").strip() for v in raw):
+                    continue
+                if _NO_DATA in (raw[0] or "").strip().lower():
+                    continue
+                if len(raw) != len(keys):
+                    raise BinanceCommissionEvidenceError(
+                        "CSV de comisiones con columnas inconsistentes"
+                    )
+                row = {key: raw[i].strip() for i, key in enumerate(keys)}
+                if is_binance_commission(row):
+                    yield row
+
+    def _iter_commission_source_rows(self):
+        for path in self._commission_files:
+            yield from self._stream_commission_csv(path)
+
     def clasificar(self) -> "ClasificadorBinanceMulti":
         if not self.filepaths:
             raise BinanceMultiUserError("no_files", "No se recibió ningún archivo de Binance.")
 
         recognized = 0
         for path, filename in zip(self.filepaths, self.filenames):
+            commission_count = 0
+
+            def on_commission(row):
+                nonlocal commission_count
+                commission_count += 1
+                self._track_original_row("transaction_history", row, path)
+
             try:
-                headers, rows, empty = _read_csv(path)
+                headers, rows, empty = _read_csv(path, on_commission=on_commission)
             except UnicodeDecodeError as exc:
                 raise BinanceMultiUserError(
                     "invalid_csv_encoding",
@@ -482,29 +551,17 @@ class ClasificadorBinanceMulti:
                 # Varias exportaciones de la misma fuente: solo es "vacía" si
                 # TODAS lo son.
                 sec.vacio = sec.vacio and empty
-            sec.registros += len(rows)
+            sec.registros += len(rows) + commission_count
+            if commission_count:
+                self._commission_files.append(path)
             tz = _tz_from_filename(filename)
             if tz:
                 self._tz_offsets.add(tz)
 
             for row in rows:
-                digest = _row_digest(source, row)
-                previous_file = self._cross_file_rows.get(digest)
-                if previous_file is not None and previous_file != path:
-                    # Dos registros iguales pueden ser operaciones legítimas
-                    # distintas: Spot exporta order ID, no trade ID único.
-                    # Sin identidad inequívoca, omitir uno podría falsear FIFO.
-                    # Mantener ambos y bloquear el PDF hasta conciliarlos.
-                    if "filas_identicas_entre_exportaciones_sin_id_unico" not in self.fuentes_materiales_no_soportadas:
-                        self.fuentes_materiales_no_soportadas.append(
-                            "filas_identicas_entre_exportaciones_sin_id_unico"
-                        )
-                    self.advertencias.append(
-                        f"Binance: filas indistinguibles de {source} en "
-                        "exportaciones diferentes; posible duplicidad "
-                        "o dos operaciones reales. Requiere conciliación."
-                    )
-                self._cross_file_rows[digest] = path
+                # Las comisiones ya se registraron para detectar solapamientos
+                # pero solo permanecen como CSV temporal de lectura diferida.
+                self._track_original_row(source, row, path)
                 self._source_rows[source].append((row, filename))
 
         if not recognized:
@@ -1404,13 +1461,11 @@ class ClasificadorBinanceMulti:
         Iterador de memoria constante sobre filas originales ya importadas;
         no usar para autorizar PDF, ni sumar como compras.
         """
-        return iter_binance_commissions(
-            row for row, _filename in self._source_rows["transaction_history"]
-        )
+        return iter_binance_commissions(self._iter_commission_source_rows())
 
     def _process_transaction_history(self) -> None:
         rows = [row for row, _filename in self._source_rows["transaction_history"]]
-        if not rows:
+        if not rows and not self._commission_files:
             return
         # Los registros Earn del ledger general pueden aparecer SIN los
         # ZIP especializados. El parser heredado los marca MOVIMIENTO y una
@@ -1441,7 +1496,9 @@ class ClasificadorBinanceMulti:
         # en _source_rows; el parser legacy no debe transformarlas en renta
         # fiscal ni en lotes incompletos. Evita materializar 250k objetos nuevos.
         try:
-            self.commission_evidence_summary = audit_binance_commissions(rows)
+            self.commission_evidence_summary = audit_binance_commissions(
+                self._iter_commission_source_rows()
+            )
         except BinanceCommissionEvidenceError as exc:
             raise BinanceMultiUserError(
                 "invalid_binance_commission",
@@ -1453,9 +1510,11 @@ class ClasificadorBinanceMulti:
             self.fuentes_materiales_no_soportadas.append(
                 "binance_comisiones_sin_valoracion_ni_categoria_fiscal"
             )
-        transactional = [row for row in rows if not is_binance_commission(row)]
-        filtered = self._filter_exact_tx_duplicates(transactional)
-        omitted = len(transactional) - len(filtered)
+        # Las comisiones se han separado durante la lectura inicial. Así el
+        # parser legacy solo materializa hechos distintos del programa de
+        # referidos/rebates; nunca 250k filas innecesarias.
+        filtered = self._filter_exact_tx_duplicates(rows)
+        omitted = len(rows) - len(filtered)
         if omitted:
             self.advertencias.append(
                 f"Binance: {omitted} fila(s) de Transaction History se omitieron "

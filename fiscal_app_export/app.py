@@ -1049,7 +1049,8 @@ def _validar_password(password: str) -> tuple[bool, str]:
 # ── VALIDACIÓN Y SANITIZACIÓN ─────────────────
 
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
-MAX_CSV_ROWS        = 100_000            # filas máximas permitidas por CSV (≈ 10 MB de datos reales)
+MAX_CSV_ROWS        = 100_000            # límite conservador compartido por los demás exchanges
+MAX_BINANCE_CSV_ROWS = 350_000            # límite independiente: históricos Binance multi-año
 MAX_KUCOIN_FILES    = 8                  # KuCoin es multiarchivo: tope de ficheros por análisis
 MAX_BITGET_FILES    = 8                  # Bitget es multiarchivo: tope de ficheros por análisis
 AÑO_MIN = 2009
@@ -2499,8 +2500,8 @@ def _guardar_csvs_binance(archivos) -> tuple:
     return save_binance_uploads(
         archivos,
         prefix=_pdf_lifecycle.PDF_PREFIX,
-        max_uploads=20,
-        max_csv_files=40,
+        max_uploads=40,
+        max_csv_files=60,
         max_member_bytes=MAX_FILE_SIZE_BYTES,
         max_total_bytes=50 * 1024 * 1024,
     )
@@ -2524,11 +2525,11 @@ def api_binance_anos():
     try:
         tmp_paths, filenames = _guardar_csvs_binance(archivos)
         csv_rows = sum(_contar_csv_rows(p) for p in tmp_paths)
-        if csv_rows > MAX_CSV_ROWS:
+        if csv_rows > MAX_BINANCE_CSV_ROWS:
             return jsonify({
                 "ok": False,
                 "error": f"Los CSV de Binance suman demasiadas filas ({csv_rows:,}). "
-                         f"El máximo permitido es {MAX_CSV_ROWS:,} filas.",
+                         f"El máximo permitido es {MAX_BINANCE_CSV_ROWS:,} filas.",
             }), 400
         clasificador = ClasificadorBinanceMulti(tmp_paths, filenames).clasificar()
 
@@ -2547,6 +2548,11 @@ def api_binance_anos():
         # Incluso un ZIP de 2025 puede incluir recompensas fechadas en 2024.
         for evento in getattr(clasificador, "earn_events", ()):
             años.add(int(evento.original_time[:4]))
+        # El historial solo con ingresos por afiliación no debe mostrar
+        # "sin ejercicios"; sus filas se procesan por streaming.
+        commission_audit = getattr(clasificador, "commission_evidence_summary", None)
+        if commission_audit is not None:
+            años.update(commission_audit.years)
 
         return jsonify({
             "ok": True,
@@ -2602,10 +2608,10 @@ def analizar_binance_multi():
             return jsonify({"error": str(exc)}), 400
 
         csv_rows = sum(_contar_csv_rows(p) for p in tmp_paths)
-        if csv_rows > MAX_CSV_ROWS:
+        if csv_rows > MAX_BINANCE_CSV_ROWS:
             return jsonify({
                 "error": f"Los CSV de Binance suman demasiadas filas ({csv_rows:,}). "
-                         f"El máximo permitido es {MAX_CSV_ROWS:,} filas."
+                         f"El máximo permitido es {MAX_BINANCE_CSV_ROWS:,} filas."
             }), 400
 
         _ev_list = [_capturar_evidencia(p, exchange="binance") for p in tmp_paths]

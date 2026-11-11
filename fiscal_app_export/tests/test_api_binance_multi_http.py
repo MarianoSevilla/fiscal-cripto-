@@ -425,10 +425,10 @@ def test_anos_binance_earn_detecta_fechas_reales_y_no_el_anio_del_zip(client, us
     assert body["resumen"]["earn_flexible_rewards"]["registros"] == 2
 
 
-def test_anos_binance_rechaza_mas_de_100000_filas_antes_de_clasificar(client, usuario):
-    """Selector de ejercicios aplica el mismo límite seguro del análisis."""
+def test_anos_binance_acepta_mas_de_100000_filas_por_streaming(client, usuario):
+    """Historial real de 2021 supera el límite anterior de 100k."""
     _login(client)
-    row = "fake,2021-01-01 00:00:00,Spot,Commission Rebate,ABC,0.00001,\n"
+    row = "synthetic,2021-01-01 00:00:00,Spot,Commission Rebate,ABC,0.00001,\n"
     txt = ("ID de usuario,Tiempo,Cuenta,Operación,Moneda,Cambio,Observación\n"
            + row * 100001)
     r = client.post(
@@ -437,9 +437,10 @@ def test_anos_binance_rechaza_mas_de_100000_filas_antes_de_clasificar(client, us
         content_type="multipart/form-data",
     )
     body = r.get_json()
-    assert r.status_code == 400
-    assert body["ok"] is False
-    assert "100,000" in body["error"]
+    assert r.status_code == 200, str(body)[:400]
+    assert body["ok"] is True
+    assert body["anos"] == [2021]
+    assert body["resumen"]["transaction_history"]["registros"] == 100001
 
 
 def test_anos_binance_rechaza_utf8_corrupto_sin_500(client, usuario):
@@ -522,3 +523,46 @@ def test_http_reward_sin_espejo_ledger_tampoco_autoriza_fifo(client, usuario):
     assert response.status_code == 422, response.get_data(as_text=True)[:400]
     payload = response.get_json()
     assert "token" not in payload and "resumen" not in payload
+
+
+def _zipped_tx_rows(n, operation, basename):
+    """ZIP sintético altamente compresible, con tamaño descomprimido limitado."""
+    txt = ("ID de usuario,Tiempo,Cuenta,Operación,Moneda,Cambio,Observación\n"
+           + ("synthetic,2021-01-01 00:00:00,Spot,"
+              + operation + ",ABC,0.00001,\n") * n)
+    data = io.BytesIO()
+    with zipfile.ZipFile(data, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr(basename + ".csv", txt.encode("utf-8"))
+    data.seek(0)
+    return data
+
+
+def test_anos_binance_350000_filas_sigue_bloqueando_exceso(client, usuario):
+    _login(client)
+    # Dos miembros distintos <10 MiB; juntos superan el tope por petición.
+    uploads = [
+        (_zipped_tx_rows(175001, "Commission Rebate", "half-a"), "a.zip"),
+        (_zipped_tx_rows(175001, "Referrer Commission", "half-b"), "b.zip"),
+    ]
+    response = client.post("/api/binance/anos",
+                           data={"csv": uploads},
+                           content_type="multipart/form-data")
+    assert response.status_code == 400
+    assert "350,000" in response.get_json()["error"]
+
+
+def test_anos_binance_acepta_31_zip_sin_perder_filas(client, usuario):
+    _login(client)
+    zips = [
+        (_zipped_tx_rows(1, "Commission Rebate", str(i)), f"part-{i}.zip")
+        for i in range(31)
+    ]
+    response = client.post("/api/binance/anos",
+                           data={"csv": zips},
+                           content_type="multipart/form-data")
+    assert response.status_code == 200, response.get_data(as_text=True)[:400]
+    payload = response.get_json()
+    assert payload["anos"] == [2021]
+    assert payload["resumen"]["transaction_history"]["registros"] == 31
+    # Solapamiento indistinguible entre ficheros no se elimina ni se oculta.
+    assert any("conciliación" in a.lower() for a in payload["advertencias"])

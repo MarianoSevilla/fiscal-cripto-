@@ -52,6 +52,7 @@ class BinanceCommissionAudit:
     quantities_by_asset: tuple[tuple[str, Decimal], ...]
     pending_eur_valuations: int
     pending_fiscal_classifications: int
+    years: tuple[int, ...] = ()
 
     @property
     def fiscal_ready(self):
@@ -111,8 +112,10 @@ def audit_binance_commissions(rows):
     quantities = defaultdict(Decimal)
     count = 0
     pending_value = 0
+    years = set()
     for evidence in iter_binance_commissions(rows):
         count += 1
+        years.add(int(evidence.earned_at[:4]))
         if evidence.value_eur is None:
             pending_value += 1
         by_operation[evidence.source_operation] += 1
@@ -125,4 +128,5 @@ def audit_binance_commissions(rows):
         quantities_by_asset=tuple(sorted(quantities.items())),
         pending_eur_valuations=pending_value,
         pending_fiscal_classifications=count,
+        years=tuple(sorted(years)),
     )
