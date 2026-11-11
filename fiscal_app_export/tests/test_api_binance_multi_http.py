@@ -479,3 +479,46 @@ def test_http_solo_ledger_con_earn_bloquea_pdf_incompleto(client, usuario):
     assert "fuente" in body["error"].lower()
     assert "token" not in body
     assert "resumen" not in body
+
+
+def test_http_recompensa_nativa_y_ledger_no_emiten_pdf_por_cuadre_diario(client, usuario):
+    """Una coincidencia diaria no es hora de adquisición ni valoración EUR."""
+    _login(client)
+    reward = (
+        "Tiempo,Moneda,Cantidad,Tipo\n"
+        "2025-06-10,ABC,0.125,Real-time APR Rewards\n"
+    ).encode("utf-8-sig")
+    ledger = (
+        "ID de usuario,Tiempo,Cuenta,Operación,Moneda,Cambio,Observación\n"
+        "synthetic,2025-06-10 12:00:00,Spot,"
+        "Simple Earn Flexible Interest,ABC,0.125,Prueba\n"
+    ).encode("utf-8-sig")
+    response = client.post(
+        "/api/binance/analizar",
+        data={"csv": [
+            (io.BytesIO(reward), "Earn-reward-(UTC+1).csv"),
+            (io.BytesIO(ledger), "Binance-TX-(UTC+1).csv"),
+        ], "ejercicio": "2025", "nombre": "Prueba sintética"},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 422, response.get_data(as_text=True)[:400]
+    payload = response.get_json()
+    assert "token" not in payload and "resumen" not in payload
+
+
+def test_http_reward_sin_espejo_ledger_tampoco_autoriza_fifo(client, usuario):
+    """Real-time APR Earn no requiere espejo Spot, pero sí valoración fiscal."""
+    _login(client)
+    reward = (
+        "Tiempo,Moneda,Cantidad,Tipo\n"
+        "2025-06-10,ABC,0.00000001,Real-time APR Rewards\n"
+    ).encode("utf-8-sig")
+    response = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(reward), "Earn-reward-(UTC+1).csv"),
+              "ejercicio": "2025", "nombre": "Prueba sintética"},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 422, response.get_data(as_text=True)[:400]
+    payload = response.get_json()
+    assert "token" not in payload and "resumen" not in payload
