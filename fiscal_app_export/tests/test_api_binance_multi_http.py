@@ -879,27 +879,21 @@ def _earn_principal_only_uploads(*, reward_line="", subscription_qty="10",
     ]
 
 
-def test_binance_pure_earn_principal_transfer_preserves_fifo_and_pdf(client, usuario):
-    """Acquisitions remain in FIFO; Earn principal transfer is not taxable."""
+def test_binance_pure_earn_principal_without_period_coverage_fails_closed(client, usuario):
+    """El CSV de recompensas vacío no acredita su rango de exportación.
+
+    Binance permite seleccionar fechas: aunque Spot↔Earn cuadre exactamente,
+    no cabe concluir que faltan cero ingresos en todo el período sin prueba.
+    """
     _login(client)
     r = client.post(
         "/api/binance/analizar",
         data={"csv": _earn_principal_only_uploads(), "ejercicio": "2025",
-              "nombre": "Solo principal sintético"},
+              "nombre": "Principal sin cobertura de recompensas"},
         content_type="multipart/form-data",
     )
-    assert r.status_code == 200, r.get_data(as_text=True)[:450]
-    body = r.get_json()
-    assert body["resumen"]["operaciones_con_resultado"] == 1
-    assert body["resumen"]["resultado_neto"] == pytest.approx(4)
-    assert len(body["operaciones"]) == 1
-    assert body["operaciones"][0]["coste_fifo"] == pytest.approx(8)
-    position = {item["activo"]: item for item in body["posicion"]}
-    assert position["XRP"]["cantidad"] == pytest.approx(6)
-    assert position["XRP"]["coste_total"] == pytest.approx(12)
-    downloaded = client.get(f"/api/descargar/{body['token']}?exchange=binance")
-    assert downloaded.status_code == 200
-    assert downloaded.data.startswith(b"%PDF-")
+    assert r.status_code == 422, r.get_data(as_text=True)[:500]
+    assert "token" not in r.get_json()
 
 
 @pytest.mark.parametrize("mode", ["reward", "without_reward_evidence", "mismatched",
