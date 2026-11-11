@@ -1827,6 +1827,17 @@ def _validar_aceptacion_fifo(motor, clasificador=None) -> None:
                 )
         if (getattr(clasificador, "earn_events", ())
                 and getattr(clasificador, "earn_principal_only_audit", None) is None):
+            rewards_section = getattr(
+                clasificador, "_sections", {}
+            ).get("earn_flexible_rewards")
+            if (rewards_section is not None and rewards_section.detectado
+                    and rewards_section.vacio):
+                raise ValueError(
+                    "No se puede generar un informe fiscal fiable: el CSV "
+                    "de recompensas de Binance Simple Earn está vacío, pero "
+                    "no acredita el período de fechas que cubre. No se puede "
+                    "descartar que existan rendimientos Earn omitidos."
+                )
             raise ValueError(
                 "Datos fiscales no seguros: Binance Simple Earn contiene "
                 "suscripciones, redenciones o recompensas pendientes de "
