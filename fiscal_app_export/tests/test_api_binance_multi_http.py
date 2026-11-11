@@ -532,7 +532,7 @@ def _zipped_tx_rows(n, operation, basename):
     txt = ("ID de usuario,Tiempo,Cuenta,Operación,Moneda,Cambio,Observación\n"
            + "".join(
                f"synthetic,2021-01-01 00:00:00,Spot,{operation},"
-               f"ABC,0.00001,synthetic-{basename}-{i}\n"
+               f"ABC,0.00001,x-{basename}-{i}\n"
                for i in range(n)
            ))
     data = io.BytesIO()
