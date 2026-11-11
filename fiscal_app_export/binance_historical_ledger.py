@@ -166,12 +166,16 @@ def inspeccionar_historial_binance(
                             # Exportación vacía nativa: frase en primera columna
                             # y resto de celdas vacías; no inventar una operación.
                             sentinel = str(record.get("ID de usuario") or "").strip().lower()
-                            if sentinel.startswith(_NO_DATA_SENTINEL) and all(
-                                value is None or str(value).strip() == ""
-                                for field, value in record.items()
-                                if field != "ID de usuario"
-                            ):
-                                continue
+                            if sentinel.startswith(_NO_DATA_SENTINEL):
+                                if all(
+                                    value is None or str(value).strip() == ""
+                                    for field, value in record.items()
+                                    if field != "ID de usuario"
+                                ):
+                                    continue
+                                raise BinanceHistoricalLedgerError(
+                                    "Marcador de exportación vacía con otros datos"
+                                )
                             if None in record or any(v is None for v in record.values()):
                                 raise BinanceHistoricalLedgerError(
                                     "Fila histórica con columnas desalineadas"
