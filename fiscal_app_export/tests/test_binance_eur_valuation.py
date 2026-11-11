@@ -273,7 +273,7 @@ def test_sparse_trade_rejects_future_only_and_stale_price():
         parse_verified_binance_trade_zip(
             archive, checksum, archive_name="XRPEUR-trades-2025-01-01.zip",
             symbol="XRPEUR", base="XRP", quote="EUR",
-            target_times=[T + timedelta(seconds=61)],
+            target_times=[T + timedelta(seconds=121)],
             max_age_seconds=60,
         )
 

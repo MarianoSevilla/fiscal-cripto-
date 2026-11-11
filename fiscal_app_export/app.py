@@ -139,6 +139,19 @@ _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # permiten una excepción. No altera la clave suministrada ni las firmas existentes.
 app.config.update(build_security_config(os.environ))
 
+# El catálogo de mercado se genera offline desde Binance Vision con ZIP +
+# CHECKSUM; nunca se construye a partir de CSV privados ni se descarga aquí.
+# Ambas variables son operativas: si se instala solo una, fallar al arrancar.
+_binance_catalog_path = (os.environ.get("BINANCE_MARKET_CATALOG_PATH") or "").strip()
+_binance_catalog_hash = (os.environ.get("BINANCE_MARKET_CATALOG_SHA256") or "").strip()
+if bool(_binance_catalog_path) != bool(_binance_catalog_hash):
+    raise RuntimeError("Configuración incompleta de catálogo Binance verificado")
+if _binance_catalog_path:
+    from binance_verified_price_catalog import load_pinned_verified_catalog
+    app.config["BINANCE_VERIFIED_MARKET_PRICES"] = load_pinned_verified_catalog(
+        _binance_catalog_path, expected_sha256=_binance_catalog_hash
+    )
+
 # STG-LOCK-001: preserve preflight firewall from the dedicated staging branch.
 # Validate the Railway identity, isolated PostgreSQL hostname, and absence
 # of provider credentials BEFORE db.init_app() or any migration/financial route.
