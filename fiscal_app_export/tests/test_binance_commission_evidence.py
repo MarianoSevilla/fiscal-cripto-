@@ -60,7 +60,7 @@ def test_identical_rows_are_separate_receipts_not_deduplicated():
 def test_non_commission_operations_are_never_inferred_as_referrals():
     allrows = [row("Transaction Fee", "-0.001"),
                row("Simple Earn Flexible Interest", "0.2")]
-    assert list(iter_binance_commissions(allrows)) == ()
+    assert list(iter_binance_commissions(allrows)) == []
     assert audit_binance_commissions(allrows).records == 0
 
 
