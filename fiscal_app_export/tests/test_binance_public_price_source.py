@@ -137,5 +137,5 @@ def test_provider_forwards_sparse_targets_to_verified_parser(monkeypatch):
         period="2025-01-01", target_times=[target],
     )
     assert len(data) == 1
-    assert data[0].price == 2.1
+    assert str(data[0].price) == "2.1"
     assert data[0].observed_at == target - timedelta(seconds=1)
