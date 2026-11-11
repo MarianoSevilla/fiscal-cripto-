@@ -663,9 +663,24 @@ class ClasificadorBinanceMulti:
         Se preservan todas las filas para conciliación, pero el PDF se bloquea.
         """
         by_second_asset: Dict[tuple, set[str]] = {}
+        purchase_unit_costs: Dict[tuple, set[Decimal]] = {}
         for trade in self.intercambios_nativos:
             if trade.given_asset == "EUR" and trade.received_asset != "EUR":
                 asset, direction = trade.received_asset, "acquire"
+                # Dos fills comprados al mismo segundo con costes diferentes
+                # no tienen orden de lotes acreditado por la exportación a
+                # segundos. Aunque el CSV se ordene, eso no lo convierte en
+                # la secuencia de ejecuciones de Binance.
+                net_qty = trade.received_amount
+                if trade.fee_asset == trade.received_asset:
+                    net_qty -= trade.fee_amount
+                eur_cost = trade.given_amount
+                if trade.fee_asset == "EUR":
+                    eur_cost += trade.fee_amount
+                if net_qty > 0:
+                    purchase_unit_costs.setdefault(
+                        (trade.local_time, asset), set()
+                    ).add(eur_cost / net_qty)
             elif trade.received_asset == "EUR" and trade.given_asset != "EUR":
                 asset, direction = trade.given_asset, "dispose"
             else:
@@ -676,6 +691,10 @@ class ClasificadorBinanceMulti:
         if any(len(sides) > 1 for sides in by_second_asset.values()):
             self.fuentes_materiales_no_soportadas.append(
                 "binance_orden_intrasegundo_incierto"
+            )
+        if any(len(prices) > 1 for prices in purchase_unit_costs.values()):
+            self.fuentes_materiales_no_soportadas.append(
+                "binance_fifo_lotes_mismo_segundo_precio_distinto"
             )
 
     def _native_status_ok(self, raw: str, source: str) -> bool:

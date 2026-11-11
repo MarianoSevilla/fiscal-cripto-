@@ -668,3 +668,22 @@ def test_binance_same_second_eur_buy_sell_blocks_fifo_even_if_csv_ordered(client
     body = response.get_json()
     assert "token" not in body
     assert "Datos fiscales no seguros" in body["error"]
+
+
+def test_binance_same_second_different_lot_cost_blocks_partial_sale(client, usuario):
+    """No escoger lotes por orden accidental del ZIP cuando precios difieren."""
+    _login(client)
+    raw = (
+        SPOT_HEADER
+        + "buy-a,2025-01-05 10:00:00,XRPEUR,BUY,2,2XRP,4EUR,0XRP,,\n"
+        + "buy-b,2025-01-05 10:00:00,XRPEUR,BUY,3,2XRP,6EUR,0XRP,,\n"
+        + "sell-a,2025-01-06 10:00:00,XRPEUR,SELL,3,1XRP,3EUR,0EUR,,\n"
+    ).encode("utf-8-sig")
+    response = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(raw), "Binance-Spot-(UTC+1).csv"),
+              "ejercicio": "2025", "nombre": "Ensayo lotes sintéticos"},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 422
+    assert "token" not in response.get_json()
