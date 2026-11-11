@@ -52,7 +52,6 @@ from binance_dust_evidence import BinanceDustEvidenceError, audit_binance_dust
 from binance_convert_ledger_evidence import (
     BinanceConvertLedgerError, audit_convert_ledger,
 )
-from binance_earn_transfer_only import verify_principal_only_earn
 
 
 _NO_DATA = "no hay datos que se ajusten a los criterios"
@@ -673,19 +672,15 @@ class ClasificadorBinanceMulti:
                 "earn_recompensas_sin_orden_intradia_acreditado"
             )
 
-        # Soporte muy acotado: solo principal Spot ↔ Earn ↔ Spot
-        # con la fuente de recompensas expresamente vacía, correspondencia
-        # ledger exacta a segundos e inventario de custodia Decimal sin déficit.
-        # No convierte intereses en adquisiciones ni relaja otros bloqueos.
-        self.earn_principal_only_audit = verify_principal_only_earn(self)
-        if self.earn_principal_only_audit is not None:
-            self.fuentes_materiales_no_soportadas = [
-                marker for marker in self.fuentes_materiales_no_soportadas
-                if marker not in {
-                    "earn_flexible_requiere_inventario_y_valoracion_fiscal",
-                    "earn_ledger_sin_lotes_ni_valoracion_acreditados",
-                }
-            ]
+        # NO-GO temporal: un CSV de recompensas nativas vacío no acredita
+        # qué rango temporal se exportó. Binance permite filtrar por fechas:
+        # podría faltar la renta Real-time APR acumulada en Earn durante
+        # suscripciones/redenciones conciliadas. Hasta disponer de evidencia
+        # comprobable de cobertura para todo el período, conservar el bloqueo
+        # fiscal aunque cuadren principal, ledger y saldo Decimal.
+        # El verificador de neutralidad de transferencias permanece separado
+        # para reutilizarlo cuando la cobertura se pueda acreditar.
+        self.earn_principal_only_audit = None
 
         if self._unknown_files:
             self.advertencias.append(
