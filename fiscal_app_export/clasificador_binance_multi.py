@@ -49,6 +49,9 @@ from binance_commission_evidence import (
     is_binance_commission, iter_binance_commissions,
 )
 from binance_dust_evidence import BinanceDustEvidenceError, audit_binance_dust
+from binance_convert_ledger_evidence import (
+    BinanceConvertLedgerError, audit_convert_ledger,
+)
 
 
 _NO_DATA = "no hay datos que se ajusten a los criterios"
@@ -443,6 +446,7 @@ class ClasificadorBinanceMulti:
         self.commission_evidence_summary = None
         self.dust_evidence_summary = None
         self.dust_evidence = ()
+        self.convert_ledger_reconciliation = None
         self._commission_files: List[str] = []  # CSV temporales de la petición
         self.fuentes_materiales_no_soportadas: List[str] = []
         self._sections: Dict[str, _Section] = {k: _Section() for k in self.SOURCE_KEYS}
@@ -589,6 +593,25 @@ class ClasificadorBinanceMulti:
         self._process_earn_flexible()
         self._process_optional_sources()
         self._guard_eur_intrasecond_order()
+        # Las 2 patas contables de Convert son espejo, no 2 permutas nuevas.
+        # Se exige correspondencia unívoca cuando ambas fuentes cubren el
+        # mismo día. No se infiere un instante de ejecución fiscal desde ellas.
+        try:
+            self.convert_ledger_reconciliation = audit_convert_ledger(
+                self.intercambios_nativos,
+                (row for row, _ in self._source_rows["transaction_history"]),
+            )
+        except BinanceConvertLedgerError as exc:
+            raise BinanceMultiUserError(
+                "binance_convert_ledger_invalid",
+                "El historial Binance Convert contiene patas contables "
+                "con fechas, monedas o cantidades inválidas.",
+                category="parser_error",
+            ) from exc
+        if not self.convert_ledger_reconciliation.reconciled_where_ledger_exists:
+            self.fuentes_materiales_no_soportadas.append(
+                "binance_convert_fuentes_no_conciliadas"
+            )
         self._process_transaction_history()
         # Conciliación únicamente informativa. No elimina registros, no crea
         # lotes ni rebaja el bloqueo fiscal de Simple Earn en app.py.
