@@ -116,3 +116,26 @@ def test_http_content_length_excede_limite(monkeypatch):
             "https://data.binance.vision/data/spot/daily/trades/XRPEUR/test.zip",
             limit=32,
         )
+
+
+def test_provider_forwards_sparse_targets_to_verified_parser(monkeypatch):
+    from datetime import timedelta
+    target = datetime(2025, 1, 1, 12, tzinfo=timezone.utc)
+    name = "XRPEUR-trades-2025-01-01.zip"
+    raw = io.BytesIO()
+    with zipfile.ZipFile(raw, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr(name[:-4] + ".csv", "\n".join([
+            "1,2.1,1,2.1,1735732799000000,True,True",
+            "2,999,1,999,1735732801000000,True,True",
+        ]) + "\n")
+    digest = sha256(raw.getvalue()).hexdigest()
+    monkeypatch.setattr(provider, "_read_official_https",
+        lambda url, *, limit: (digest+" "+name).encode("ascii")
+        if url.endswith(".CHECKSUM") else raw.getvalue())
+    data = fetch_official_spot_trades(
+        symbol="XRPEUR", base="XRP", quote="EUR",
+        period="2025-01-01", target_times=[target],
+    )
+    assert len(data) == 1
+    assert data[0].price == 2.1
+    assert data[0].observed_at == target - timedelta(seconds=1)

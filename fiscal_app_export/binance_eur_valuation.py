@@ -112,6 +112,8 @@ def parse_verified_binance_trade_zip(
     base: str, quote: str, max_archive_bytes: int = 50 * 1024 * 1024,
     max_uncompressed_bytes: int = 150 * 1024 * 1024,
     max_trades: int = 1_000_000,
+    target_times: Iterable[datetime] | None = None,
+    max_age_seconds: int = 60,
 ) -> list[TradePriceEvidence]:
     """Carga un ZIP public-trades cuyo SHA256 concuerda con su .CHECKSUM.
 
@@ -135,6 +137,16 @@ def parse_verified_binance_trade_zip(
     )
     if period_match is None:
         raise BinancePriceEvidenceError("Periodo de ZIP histórico inválido")
+    if not isinstance(max_trades, int) or not 1 <= max_trades <= 2_000_000:
+        raise BinancePriceEvidenceError("Límite de trades históricos inválido")
+    if not isinstance(max_age_seconds, int) or not 1 <= max_age_seconds <= 300:
+        raise BinancePriceEvidenceError("Antigüedad histórica fuera de rango")
+    targets = None
+    if target_times is not None:
+        target_list = [_utc(t, field="instante de mercado") for t in target_times]
+        if not target_list or len(target_list) > 256:
+            raise BinancePriceEvidenceError("Número de instantes de mercado inválido")
+        targets = tuple(sorted(set(target_list)))
     try:
         year, month = int(period_match.group(1)), int(period_match.group(2))
         day = int(period_match.group(3)) if period_match.group(3) else None
@@ -147,6 +159,10 @@ def parse_verified_binance_trade_zip(
             period_end = date(year, month + 1, 1)
     except (ValueError, OverflowError) as exc:
         raise BinancePriceEvidenceError("Fecha del ZIP histórico inválida") from exc
+    if targets is not None and any(
+        not period_start <= t.date() < period_end for t in targets
+    ):
+        raise BinancePriceEvidenceError("Instante solicitado fuera del periodo histórico")
     match = re.fullmatch(
         r"\s*([a-fA-F0-9]{64})(?:[ \t]+[*]?([^\r\n]+))?\s*",
         str(checksum), re.ASCII,
@@ -180,6 +196,10 @@ def parse_verified_binance_trade_zip(
             ):
                 raise BinancePriceEvidenceError("Compresión histórica anómala")
             result: list[TradePriceEvidence] = []
+            matches: list[TradePriceEvidence | None] = (
+                [None] * len(targets) if targets is not None else []
+            )
+            scanned = 0
             with zf.open(member) as raw:
                 with io.TextIOWrapper(raw, encoding="utf-8-sig", newline="") as text_stream:
                     reader = csv.reader(text_stream)
@@ -200,15 +220,49 @@ def parse_verified_binance_trade_zip(
                             raise BinancePriceEvidenceError(
                                 "Trade histórico fuera del periodo declarado por su ZIP"
                             )
-                        if len(result) >= max_trades:
+                        scanned += 1
+                        if scanned > max_trades:
                             raise BinancePriceEvidenceError("Límite de operaciones históricas superado")
-                        result.append(TradePriceEvidence(
-                            base=base, quote=quote,
-                            price=price, observed_at=observed_at,
-                            public_trade_id=trade_id, archive_sha256=digest,
-                        ))
-            if not result:
+                        if targets is None:
+                            result.append(TradePriceEvidence(
+                                base=base, quote=quote,
+                                price=price, observed_at=observed_at,
+                                public_trade_id=trade_id, archive_sha256=digest,
+                            ))
+                        else:
+                            # Mantener únicamente el último trade público ANTES
+                            # del hecho económico y en la ventana autorizada.
+                            # O(n_trades + coincidencias) y memoria O(instantes).
+                            start = bisect.bisect_left(targets, observed_at)
+                            end = bisect.bisect_right(
+                                targets, observed_at + timedelta(seconds=max_age_seconds)
+                            )
+                            for index in range(start, end):
+                                last = matches[index]
+                                if (last is None or
+                                        (observed_at, trade_id) >
+                                        (last.observed_at, last.public_trade_id)):
+                                    matches[index] = TradePriceEvidence(
+                                        base=base, quote=quote,
+                                        price=price, observed_at=observed_at,
+                                        public_trade_id=trade_id, archive_sha256=digest,
+                                    )
+            if scanned == 0:
                 raise BinancePriceEvidenceError("Archivo sin trades válidos")
+            if targets is not None:
+                # Algunos instantes pueden no tener mercado reciente; se
+                # verifican por separado en el libro al valorar el swap.
+                seen = set()
+                for entry in matches:
+                    if entry is None:
+                        continue
+                    if (entry.public_trade_id, entry.observed_at) not in seen:
+                        result.append(entry)
+                        seen.add((entry.public_trade_id, entry.observed_at))
+                if not result:
+                    raise BinancePriceEvidenceError(
+                        "No existen operaciones Spot recientes para esos instantes"
+                    )
             return result
     except (zipfile.BadZipFile, UnicodeError, OSError) as exc:
         raise BinancePriceEvidenceError("ZIP histórico ilegible") from exc

@@ -15,8 +15,8 @@ import re
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import date
-from typing import Literal
+from datetime import date, datetime
+from typing import Literal, Iterable
 
 from binance_eur_valuation import (
     BinancePriceEvidenceError, TradePriceEvidence, parse_verified_binance_trade_zip,
@@ -79,6 +79,8 @@ def _read_official_https(url: str, *, limit: int) -> bytes:
 def fetch_official_spot_trades(
     *, symbol: str, base: str, quote: str, period: str,
     granularity: Literal["daily", "monthly"] = "daily",
+    target_times: Iterable[datetime] | None = None,
+    max_age_seconds: int = 60,
 ) -> list[TradePriceEvidence]:
     """Descarga ZIP y CHECKSUM con URL construida internamente y verifica trades.
 
@@ -118,6 +120,8 @@ def fetch_official_spot_trades(
             archive, checksum, archive_name=filename,
             symbol=symbol, base=base, quote=quote,
             max_archive_bytes=ZIP_LIMIT,
+            target_times=target_times,
+            max_age_seconds=max_age_seconds,
         )
     except BinancePriceEvidenceError as exc:
         raise BinanceMarketDownloadError(

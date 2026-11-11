@@ -234,3 +234,74 @@ def test_trades_mensuales_no_admiten_fecha_del_mes_siguiente():
             archive, checksum, archive_name="XRPEUR-trades-2025-01.zip",
             symbol="XRPEUR", base="XRP", quote="EUR",
         )
+
+
+def test_sparse_trade_selects_last_preceding_each_requested_instant():
+    # Microsegundos exactos, trade posterior ignorado aunque sea más cercano.
+    name = "XRPEUR-trades-2025-01-01.zip"
+    at0 = datetime(2025, 1, 1, 12, 0, 30, tzinfo=timezone.utc)
+    at1 = datetime(2025, 1, 1, 12, 1, 30, tzinfo=timezone.utc)
+    archive, checksum = zipped_trades([
+        "1,2,1,2,1735732800000000,True,True",
+        "2,2.1,1,2.1,1735732830000000,True,True",
+        "3,2.2,1,2.2,1735732860000000,True,True",
+        "4,2.3,1,2.3,1735732890000001,True,True",
+    ], name)
+    rows = parse_verified_binance_trade_zip(
+        archive, checksum, archive_name=name,
+        symbol="XRPEUR", base="XRP", quote="EUR",
+        target_times=[at0, at1],
+    )
+    assert {r.public_trade_id for r in rows} == {2, 3}
+    book = BinanceHistoricalEURPrices(rows)
+    assert book.price_eur("XRP", at0).unit_price_eur == Decimal("2.1")
+    assert book.price_eur("XRP", at1).unit_price_eur == Decimal("2.2")
+
+
+def test_sparse_trade_rejects_future_only_and_stale_price():
+    archive, checksum = zipped_trades([
+        "1,2,1,2,1735732800000000,True,True",
+        "2,3,1,3,1735732860000000,True,True",
+    ])
+    with pytest.raises(BinancePriceEvidenceError, match="recientes"):
+        parse_verified_binance_trade_zip(
+            archive, checksum, archive_name="XRPEUR-trades-2025-01-01.zip",
+            symbol="XRPEUR", base="XRP", quote="EUR",
+            target_times=[T - timedelta(seconds=1)],
+        )
+    with pytest.raises(BinancePriceEvidenceError, match="recientes"):
+        parse_verified_binance_trade_zip(
+            archive, checksum, archive_name="XRPEUR-trades-2025-01-01.zip",
+            symbol="XRPEUR", base="XRP", quote="EUR",
+            target_times=[T + timedelta(seconds=61)],
+            max_age_seconds=60,
+        )
+
+
+def test_sparse_trade_validates_all_rows_not_only_selected_ones():
+    archive, checksum = zipped_trades([
+        "1,2,1,2,1735732800000000,True,True",
+        "2,NaN,1,1,1735732830000000,True,True",
+    ])
+    with pytest.raises(BinancePriceEvidenceError):
+        parse_verified_binance_trade_zip(
+            archive, checksum, archive_name="XRPEUR-trades-2025-01-01.zip",
+            symbol="XRPEUR", base="XRP", quote="EUR",
+            target_times=[T],
+        )
+
+
+def test_sparse_trade_rejects_out_of_archive_day_or_naive_dates():
+    archive, checksum = zipped_trades(["1,2,1,2,1735732800000000,True,True"])
+    with pytest.raises(BinancePriceEvidenceError, match="fuera"):
+        parse_verified_binance_trade_zip(
+            archive, checksum, archive_name="XRPEUR-trades-2025-01-01.zip",
+            symbol="XRPEUR", base="XRP", quote="EUR",
+            target_times=[datetime(2025, 1, 2, 12, tzinfo=timezone.utc)],
+        )
+    with pytest.raises(BinancePriceEvidenceError, match="zona"):
+        parse_verified_binance_trade_zip(
+            archive, checksum, archive_name="XRPEUR-trades-2025-01-01.zip",
+            symbol="XRPEUR", base="XRP", quote="EUR",
+            target_times=[datetime(2025, 1, 1, 12)],
+        )
