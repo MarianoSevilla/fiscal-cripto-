@@ -74,6 +74,15 @@ def aplicar_permuta_binance_valorada(
     numeric_received = float(received_amount)
     numeric_value = float(valuation.fiscal_value_eur)
     motor._finite(numeric_given, numeric_received, numeric_value)
+    # MotorFIFO heredado utiliza float; rechazar valores decimales que se
+    # truncarían al convertirlos, antes de consumir lotes o crear ingresos.
+    # No equivale aún a una validación Decimal global de toda la web.
+    if (Decimal(str(numeric_given)) != given_amount
+            or Decimal(str(numeric_received)) != received_amount
+            or Decimal(str(numeric_value)) != valuation.fiscal_value_eur):
+        raise BinancePriceEvidenceError(
+            "Cantidad o EUR de permuta pierde precisión en el motor FIFO actual"
+        )
     dt = motor._parsear_fecha(fecha_local)
     lots = motor.inventario.get(given_asset.upper(), ())
     if not lots:

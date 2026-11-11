@@ -1294,6 +1294,20 @@ def _pipeline_motor(clasificador, *, binance_market_prices=None) -> MotorFIFO:
                 raise BinancePriceEvidenceError(
                     "Orden de disposiciones Binance dentro del mismo segundo no acreditado"
                 )
+            # La misma marca de segundo no prueba si se compró el activo
+            # antes o después de venderlo/convertirlo. Evaluar TODAS las
+            # fuentes nativas, no solo la cotización EUR o la lista de swaps.
+            directions = {}
+            for event in clasificador.intercambios_nativos:
+                at = event.local_time
+                if event.given_asset != "EUR":
+                    directions.setdefault((at, event.given_asset), set()).add("out")
+                if event.received_asset != "EUR":
+                    directions.setdefault((at, event.received_asset), set()).add("in")
+            if any(len(kinds) > 1 for kinds in directions.values()):
+                raise BinancePriceEvidenceError(
+                    "Adquisición y disposición del mismo activo sin orden intrasegundo"
+                )
     motor = MotorFIFO()
     ops = []
     for op in clasificador.compraventas:

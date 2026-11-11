@@ -131,3 +131,21 @@ def test_swap_con_lote_futuro_no_modifica_inventario():
         apply(m, evidence())
     assert [l.cantidad_restante for l in m.inventario["XRP"]] == previous
     assert m.resultados == []
+
+
+def test_permuta_rechaza_truncamiento_decimal_antes_de_consumir_lotes():
+    from binance_eur_valuation import SwapEURValuation, AssetEURPrice
+    m = seeded_motor()
+    before = m.inventario["XRP"][0].cantidad_restante
+    frac = Decimal("0.123456789123456789")
+    catalog = book()
+    valuation = catalog.value_swap(
+        timestamp=WHEN,
+        given_asset="XRP", given_amount=frac,
+        received_asset="USDC", received_amount=Decimal("11"),
+    )
+    with pytest.raises(BinancePriceEvidenceError, match="precisión"):
+        apply(m, valuation, given_amount=frac)
+    assert m.inventario["XRP"][0].cantidad_restante == before
+    assert m.inventario.get("USDC", []) == []
+    assert m.resultados == []

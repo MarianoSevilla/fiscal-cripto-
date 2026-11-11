@@ -806,3 +806,32 @@ def test_binance_convert_catalogo_incompleto_no_emite_pdf(client, usuario, monke
     )
     assert response.status_code == 422
     assert "token" not in response.get_json()
+
+
+def test_binance_precio_eur_verificado_no_acepta_compra_y_swap_mismo_segundo(
+        client, usuario, monkeypatch):
+    from datetime import timezone
+    from decimal import Decimal
+    from binance_eur_valuation import BinanceHistoricalEURPrices, TradePriceEvidence
+    at = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
+    monkeypatch.setitem(flask_app.config, "BINANCE_VERIFIED_MARKET_PRICES",
+        BinanceHistoricalEURPrices([
+            TradePriceEvidence("XRP", "EUR", Decimal("2"), at, 1, "a"*64),
+            TradePriceEvidence("USDC", "EUR", Decimal("0.9"), at, 2, "b"*64),
+        ]))
+    _login(client)
+    buy = (SPOT_HEADER
+           + "buy,2025-01-01 13:00:00,XRPEUR,BUY,1,10XRP,10EUR,0XRP,,\n"
+           ).encode("utf-8-sig")
+    convert = (CONVERT_HEADER
+               + "2025-01-01 13:00:00,SPOT,XRPUSDC,Instant,5 XRP,11 USDC,,,,Successful\n"
+               ).encode("utf-8-sig")
+    response = client.post(
+        "/api/binance/analizar",
+        data={"csv": [(io.BytesIO(buy), "Binance-Spot-(UTC+1).csv"),
+                      (io.BytesIO(convert), "Binance-Convert-(UTC+1).csv")],
+              "ejercicio": "2025", "nombre": "Sin orden intrasegundo"},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 422
+    assert "token" not in response.get_json()
