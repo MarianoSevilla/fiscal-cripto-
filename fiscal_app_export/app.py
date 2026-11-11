@@ -1399,6 +1399,10 @@ def _pipeline_motor(clasificador, *, binance_market_prices=None) -> MotorFIFO:
                 importe=op.valor_eur, contraparte="EUR",
                 fee_activo="EUR", fee_cantidad=0.0,
             )
+    if (isinstance(clasificador, ClasificadorBinanceMulti)
+            and getattr(clasificador, "earn_principal_only_audit", None) is not None):
+        from binance_earn_transfer_only import validate_principal_only_motor
+        validate_principal_only_motor(clasificador.earn_principal_only_audit, motor)
     if priced_swaps:
         # Fijar esta prueba interna solo después de aplicar TODOS los swaps.
         # Los validadores posteriores vuelven a comprobar identidad y cantidad.

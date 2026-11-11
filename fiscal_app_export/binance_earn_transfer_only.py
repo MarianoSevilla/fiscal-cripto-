@@ -10,7 +10,7 @@ No confirma que un contribuyente no tenga tenencias en otros exchanges.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from binance_earn_inventory import BinanceEarnInventoryError, BinanceFungibleInventory
 
@@ -31,6 +31,8 @@ class BinancePrincipalOnlyAudit:
     transfer_events: int
     spot_trades: int
     assets: tuple[str, ...]
+    sold: tuple[tuple[str, str, Decimal, Decimal], ...] = ()
+    remaining: tuple[tuple[str, Decimal, Decimal], ...] = ()
     fifo_effect: str = "none"
 
     @property
@@ -120,6 +122,7 @@ def verify_principal_only_earn(classifier) -> BinancePrincipalOnlyAudit | None:
         return None
 
     book = BinanceFungibleInventory()
+    sales = []
     try:
         for stamp, asset, kind, index, event in sorted(order):
             if kind == "buy":
@@ -135,11 +138,17 @@ def verify_principal_only_earn(classifier) -> BinancePrincipalOnlyAudit | None:
                     cost_eur=cost,
                 )
             elif kind == "sell":
-                book.dispose(
+                pieces = book.dispose(
                     asset=asset, quantity=event.given_amount,
                     timestamp=stamp, wallet="SPOT",
                     reference=f"native-sell-{index}",
                 )
+                if any(p.allocated_cost_eur is None for p in pieces):
+                    return None
+                sales.append((
+                    stamp, asset, event.given_amount,
+                    sum((p.allocated_cost_eur for p in pieces), Decimal("0")),
+                ))
             elif kind == "subscribe":
                 book.transfer(
                     asset=asset, quantity=event.amount,
@@ -162,8 +171,65 @@ def verify_principal_only_earn(classifier) -> BinancePrincipalOnlyAudit | None:
     if any(book.wallet_balance("EARN_FLEXIBLE", asset) != Decimal("0")
            for asset in assets):
         return None
+    remaining = []
+    for asset in assets:
+        lots = book.lots(asset)
+        if any(lot.cost_eur is None for lot in lots):
+            return None
+        remaining.append((
+            asset,
+            sum((lot.quantity for lot in lots), Decimal("0")),
+            sum((lot.cost_eur for lot in lots), Decimal("0")),
+        ))
     return BinancePrincipalOnlyAudit(
         transfer_events=len(events),
         spot_trades=len(spot),
         assets=assets,
+        sold=tuple(sales),
+        remaining=tuple(remaining),
     )
+
+
+def validate_principal_only_motor(audit, motor) -> None:
+    """Compara el motor fiscal con un inventario Decimal independiente.
+
+    Ningún permiso parcial: importe FIFO, cantidad y posición completa han
+    de concordar antes de JSON, PDF y generación del token.
+    """
+    if not isinstance(audit, BinancePrincipalOnlyAudit):
+        raise ValueError("Datos fiscales no seguros: auditoría Earn inexistente.")
+    results = tuple(motor.resultados)
+    if len(results) != len(audit.sold):
+        raise ValueError("Datos fiscales no seguros: ventas Earn no conciliadas con FIFO.")
+    cent = Decimal("0.01")
+
+    def same_eur(actual, exact):
+        try:
+            got = Decimal(str(actual))
+            return (got.is_finite()
+                    and abs(got - exact) <= Decimal("0.000000001")
+                    and got.quantize(cent, rounding=ROUND_HALF_UP)
+                    == exact.quantize(cent, rounding=ROUND_HALF_UP))
+        except (ValueError, ArithmeticError):
+            return False
+
+    for result, (stamp, asset, qty, exact_cost) in zip(results, audit.sold):
+        if (result.tipo_operacion != "venta"
+                or result.fecha.strftime("%Y-%m-%d %H:%M:%S") != stamp
+                or result.activo != asset
+                or Decimal(str(result.cantidad_vendida)) != qty
+                or not same_eur(result.precio_coste, exact_cost)):
+            raise ValueError(
+                "Datos fiscales no seguros: el coste FIFO de Earn no coincide "
+                "con el inventario global Decimal."
+            )
+    current = {p.activo: p for p in motor.posicion_actual()}
+    expected = {asset: (qty, cost) for asset, qty, cost in audit.remaining
+                if qty > 0}
+    if set(current) != set(expected):
+        raise ValueError("Datos fiscales no seguros: posiciones Earn no conciliadas.")
+    for asset, (qty, cost) in expected.items():
+        position = current[asset]
+        if (Decimal(str(position.cantidad_total)) != qty
+                or not same_eur(position.coste_total, cost)):
+            raise ValueError("Datos fiscales no seguros: saldo o coste Earn divergente.")
