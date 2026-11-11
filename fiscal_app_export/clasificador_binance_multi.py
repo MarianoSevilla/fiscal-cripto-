@@ -41,6 +41,9 @@ from clasificador_binance_tx import REGLAS_TX
 from binance_earn_inventory import (
     BinanceEarnInventoryError, conciliar_earn_con_ledger,
 )
+from binance_earn_rewards import (
+    BinanceEarnRewardsError, reconcile_earn_rewards,
+)
 
 
 _NO_DATA = "no hay datos que se ajusten a los criterios"
@@ -416,6 +419,8 @@ class ClasificadorBinanceMulti:
         self.intercambios_nativos: List[BinanceNativeExchange] = []
         self.earn_events: List[BinanceEarnEvent] = []
         self.earn_reconciliation = None  # diagnóstico no fiscal, en memoria
+        self.earn_reward_reconciliation = None
+        self.earn_reward_candidates = ()  # nunca se inyecta en MotorFIFO/PDF
         self.fuentes_materiales_no_soportadas: List[str] = []
         self._sections: Dict[str, _Section] = {k: _Section() for k in self.SOURCE_KEYS}
         self._unknown_files = 0
@@ -543,6 +548,35 @@ class ClasificadorBinanceMulti:
                 self.fuentes_materiales_no_soportadas.append(
                     "earn_orden_intradia_o_origen_pendiente"
                 )
+
+        # Rendimientos Real-time APR se acumulan dentro de Earn; Bonus APR
+        # llega a Spot. Auto-subscription solo traslada principal Spot->Earn.
+        # No construir adquisiciones desde el espejo Transaction History.
+        ledger_rows = (row for row, _ in self._source_rows["transaction_history"])
+        try:
+            rewards, candidates = reconcile_earn_rewards(self.earn_events, ledger_rows)
+        except BinanceEarnRewardsError as exc:
+            raise BinanceMultiUserError(
+                "earn_rewards_invalidas",
+                "Binance: hay recompensas Earn con fechas, activos o cantidades "
+                "no verificables. No se puede elaborar el informe.",
+                category="parser_error",
+            ) from exc
+        self.earn_reward_reconciliation = rewards
+        self.earn_reward_candidates = candidates
+        if rewards.ledger_not_in_native:
+            self.fuentes_materiales_no_soportadas.append(
+                "earn_intereses_ledger_sin_fuente_nativa_suficiente"
+            )
+        if rewards.unknown_native_kinds:
+            self.fuentes_materiales_no_soportadas.append(
+                "earn_tipo_recompensa_desconocido"
+            )
+        if (rewards.native_day_only or rewards.matched_by_day
+                or rewards.daily_aggregate_only_groups):
+            self.fuentes_materiales_no_soportadas.append(
+                "earn_recompensas_sin_orden_intradia_acreditado"
+            )
 
         if self._unknown_files:
             self.advertencias.append(

@@ -66,6 +66,8 @@ class BinanceEarnSourceBridge:
     native_unmatched: int
     ambiguous_same_day: int
     mixed_or_unknown_origin: int
+    day_only_with_other_economic_activity: int = 0
+    day_only_without_other_economic_activity: int = 0
 
     @property
     def quantities_reconciled(self):
@@ -95,11 +97,24 @@ def conciliar_earn_con_ledger(earn_events, ledger_rows):
     """
     native = Counter()
     ledger = Counter()
+    economic_days = set()
     mixed = 0
 
     for e in earn_events:
         direction = _SOURCE_DIRECTION.get(e.source)
         if direction is None:
+            # Recompensas Earn del mismo día pueden crear nuevos lotes.
+            if str(e.source) == "earn_flexible_rewards":
+                dt = str(e.original_time)
+                date = dt[:10]
+                if len(dt) == 10:
+                    try:
+                        datetime.strptime(date, "%Y-%m-%d")
+                    except ValueError as exc:
+                        raise BinanceEarnInventoryError("Fecha Earn inválida") from exc
+                else:
+                    _second(dt)
+                economic_days.add((date, _asset(e.asset)))
             continue
         dt = str(e.original_time)
         if len(dt) == 10:
@@ -123,6 +138,14 @@ def conciliar_earn_con_ledger(earn_events, ledger_rows):
     for row in ledger_rows:
         direction = _OP_DIRECTION.get(str(row.get("operación", "")).strip())
         if direction is None:
+            # Exposición potencial al orden intradía cuando en ese activo
+            # hubo hechos distintos del movimiento interno (ventas, fees,
+            # intereses, depósitos, etc.). No deduce la hora correcta.
+            stamp = str(row.get("tiempo", "")).strip()
+            symbol = str(row.get("moneda", "")).strip().upper()
+            if len(stamp) == 19 and _ASSET.fullmatch(symbol):
+                _second(stamp)
+                economic_days.add((stamp[:10], symbol))
             continue
         raw = str(row.get("tiempo", ""))
         _second(raw)
@@ -160,6 +183,9 @@ def conciliar_earn_con_ledger(earn_events, ledger_rows):
     daily = sum(matches.values())
     ambiguous = sum(count for key, count in matches.items()
                     if nday[key] > 1 or lday[key] > 1)
+    with_activity = sum(count for (_dir, day, asset, _qty), count in matches.items()
+                        if (day, asset) in economic_days)
+    without_activity = daily - with_activity
     return BinanceEarnSourceBridge(
         ledger_events=sum(ledger.values()) + count_strict,
         native_events=sum(native.values()) + count_strict,
@@ -169,6 +195,8 @@ def conciliar_earn_con_ledger(earn_events, ledger_rows):
         native_unmatched=sum((nday-matches).values()),
         ambiguous_same_day=ambiguous,
         mixed_or_unknown_origin=mixed,
+        day_only_with_other_economic_activity=with_activity,
+        day_only_without_other_economic_activity=without_activity,
     )
 
 

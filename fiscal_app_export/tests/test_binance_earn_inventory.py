@@ -335,3 +335,39 @@ def test_referencia_mixta_repetida_se_rechaza_sin_mutacion():
         book.transfer_split(**params)
     assert book.wallet_balance("EARN_FLEXIBLE", "XRP") == Decimal("2")
     assert book.conserved("XRP")
+
+
+def test_diferencia_intradia_con_venta_misma_moneda_se_considera_potencialmente_material():
+    events = [native("subscription", "2024-08-01 11:00:01", "ABC", "10")]
+    rows = [
+        tx("subscription", "2024-08-01 11:00:02", "ABC", "10"),
+        {"operación": "Transaction Sold", "tiempo": "2024-08-01 11:00:03",
+         "moneda": "ABC", "cambio": "-2", "cuenta": "Spot"},
+    ]
+    report = conciliar_earn_con_ledger(events, rows)
+    assert report.matched_same_day == 1
+    assert report.day_only_with_other_economic_activity == 1
+    assert report.day_only_without_other_economic_activity == 0
+    assert not report.fiscal_ready
+
+
+def test_diferencia_intradia_sin_otros_hechos_sigue_sin_autorizar_fifo():
+    events = [native("redemption", "2024-08-01 11:00:01", "ABC", "10")]
+    rows = [tx("redemption", "2024-08-01 11:00:02", "ABC", "10")]
+    report = conciliar_earn_con_ledger(events, rows)
+    assert report.day_only_with_other_economic_activity == 0
+    assert report.day_only_without_other_economic_activity == 1
+    assert not report.instant_reconciled and not report.fiscal_ready
+
+
+def test_recompensa_del_mismo_dia_puede_afectar_orden_intradia():
+    events = [
+        native("subscription", "2024-08-01 11:00:01", "ABC", "10"),
+        SimpleNamespace(source="earn_flexible_rewards",
+                        original_time="2024-08-01", asset="ABC",
+                        amount=Decimal("0.01")),
+    ]
+    rows = [tx("subscription", "2024-08-01 11:00:02", "ABC", "10")]
+    report = conciliar_earn_con_ledger(events, rows)
+    assert report.day_only_with_other_economic_activity == 1
+    assert not report.fiscal_ready
