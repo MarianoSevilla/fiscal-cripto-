@@ -894,6 +894,7 @@ def test_binance_pure_earn_principal_without_period_coverage_fails_closed(client
     )
     assert r.status_code == 422, r.get_data(as_text=True)[:500]
     assert "token" not in r.get_json()
+    assert "no acredita el período de fechas" in str(r.get_json())
 
 
 @pytest.mark.parametrize("mode", ["reward", "without_reward_evidence", "mismatched",
