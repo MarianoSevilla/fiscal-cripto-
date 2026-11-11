@@ -692,7 +692,20 @@ class ClasificadorBinanceMulti:
             self.fuentes_materiales_no_soportadas.append(
                 "binance_orden_intrasegundo_incierto"
             )
-        if any(len(prices) > 1 for prices in purchase_unit_costs.values()):
+        # Distintos costes al mismo segundo no alteran el resultado si esas
+        # adquisiciones no se consumen en una transmisión posterior. Evitar
+        # bloquear compras sin ventas, pero nunca elegir arbitrariamente qué
+        # lote se consumió cuando sí hay una venta posterior del activo.
+        latest_eur_disposal: Dict[str, str] = {}
+        for trade in self.intercambios_nativos:
+            if trade.received_asset == "EUR" and trade.given_asset != "EUR":
+                previous = latest_eur_disposal.get(trade.given_asset, "")
+                if trade.local_time > previous:
+                    latest_eur_disposal[trade.given_asset] = trade.local_time
+        if any(
+            len(prices) > 1 and latest_eur_disposal.get(asset, "") > timestamp
+            for (timestamp, asset), prices in purchase_unit_costs.items()
+        ):
             self.fuentes_materiales_no_soportadas.append(
                 "binance_fifo_lotes_mismo_segundo_precio_distinto"
             )
