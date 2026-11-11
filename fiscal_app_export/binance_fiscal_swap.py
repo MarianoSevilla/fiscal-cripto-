@@ -74,14 +74,31 @@ def aplicar_permuta_binance_valorada(
     numeric_received = float(received_amount)
     numeric_value = float(valuation.fiscal_value_eur)
     motor._finite(numeric_given, numeric_received, numeric_value)
-    # MotorFIFO heredado utiliza float; rechazar valores decimales que se
-    # truncarían al convertirlos, antes de consumir lotes o crear ingresos.
-    # No equivale aún a una validación Decimal global de toda la web.
+    # Las cantidades de inventario han de sobrevivir EXACTAMENTE el
+    # round-trip de float; una pérdida allí alteraría el número de unidades.
+    # El precio EUR procedente de un par inverso (p.ej. EURUSDC) puede tener
+    # expansión decimal periódica y no es representable exactamente en float.
+    # Permitir SOLO diferencias de valor fiscal submicroscópicas que no
+    # alteren un céntimo, ni individualmente ni acumuladas en la petición.
+    # Conservar la evidencia Decimal completa en _binance_verified_swaps.
     if (Decimal(str(numeric_given)) != given_amount
-            or Decimal(str(numeric_received)) != received_amount
-            or Decimal(str(numeric_value)) != valuation.fiscal_value_eur):
+            or Decimal(str(numeric_received)) != received_amount):
         raise BinancePriceEvidenceError(
-            "Cantidad o EUR de permuta pierde precisión en el motor FIFO actual"
+            "Cantidad de permuta pierde precisión en el motor FIFO actual"
+        )
+    from decimal import ROUND_HALF_UP
+    exact_eur = valuation.fiscal_value_eur
+    bridged_eur = Decimal(str(numeric_value))
+    bridge_delta = abs(bridged_eur - exact_eur)
+    total_bridge_delta = getattr(
+        motor, "_binance_bridge_cumulative_delta_eur", Decimal("0")
+    )
+    if (bridge_delta > Decimal("0.0000000001")
+            or total_bridge_delta + bridge_delta > Decimal("0.00000001")
+            or exact_eur.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            != bridged_eur.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)):
+        raise BinancePriceEvidenceError(
+            "Valor EUR de permuta pierde precisión fiscal en el motor FIFO actual"
         )
     dt = motor._parsear_fecha(fecha_local)
     lots = motor.inventario.get(given_asset.upper(), ())
@@ -120,3 +137,6 @@ def aplicar_permuta_binance_valorada(
         cantidad_restante=numeric_received, precio_coste_unitario=unit_cost,
         contraparte=given_asset.upper(), origen="binance_swap_valued",
     ))
+    motor._binance_bridge_cumulative_delta_eur = (
+        total_bridge_delta + bridge_delta
+    )

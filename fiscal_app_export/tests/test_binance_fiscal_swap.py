@@ -149,3 +149,86 @@ def test_permuta_rechaza_truncamiento_decimal_antes_de_consumir_lotes():
     assert m.inventario["XRP"][0].cantidad_restante == before
     assert m.inventario.get("USDC", []) == []
     assert m.resultados == []
+
+
+
+def test_permuta_eur_por_par_inverso_permite_error_inferior_al_centimo():
+    """Un precio EURUSDT de mercado genera una división Decimal periódica.
+
+    La diferencia numérica al convertir un importe EUR al MotorFIFO float
+    es menor de 1e-10 EUR, NO cambia céntimos y no altera unidades.
+    """
+    q = BinanceHistoricalEURPrices([
+        TradePriceEvidence("EUR", "USDT", Decimal("1.0527"), WHEN, 5, "c"*64),
+        TradePriceEvidence("EUR", "USDC", Decimal("1.0529"), WHEN, 6, "d"*64),
+    ])
+    v = q.value_swap(
+        timestamp=WHEN, given_asset="USDT", given_amount=Decimal("10"),
+        received_asset="USDC", received_amount=Decimal("10"),
+    )
+    assert Decimal(str(float(v.fiscal_value_eur))) != v.fiscal_value_eur
+    m = MotorFIFO()
+    m.registrar_compra(
+        fecha="2024-12-01 12:00:00", activo="USDT",
+        cantidad=10.0, importe=8.0, contraparte="EUR",
+        fee_activo="EUR", fee_cantidad=0,
+    )
+    apply(
+        m, v, given_asset="USDT", given_amount=Decimal("10"),
+        received_asset="USDC", received_amount=Decimal("10"),
+    )
+    assert len(m.resultados) == 1
+    assert m.resultados[0].precio_transmision == pytest.approx(
+        float(v.fiscal_value_eur)
+    )
+    assert (m._binance_bridge_cumulative_delta_eur
+            <= Decimal("0.0000000001"))
+
+
+def test_permuta_que_cambia_redondeo_en_centimos_sigue_bloqueada():
+    """Nunca permitir doble -> Decimal si cambia 0.00 EUR a 0.01 EUR."""
+    q = BinanceHistoricalEURPrices([
+        TradePriceEvidence("XRP", "EUR", Decimal("0.00099999999999999998"), WHEN, 5, "c"*64),
+        TradePriceEvidence("USDC", "EUR", Decimal("0.00001"), WHEN, 6, "d"*64),
+    ])
+    v = q.value_swap(
+        timestamp=WHEN, given_asset="XRP", given_amount=Decimal("5"),
+        received_asset="USDC", received_amount=Decimal("11"),
+    )
+    assert v.fiscal_value_eur < Decimal("0.005")
+    assert Decimal(str(float(v.fiscal_value_eur))) == Decimal("0.005")
+    m = seeded_motor()
+    before = m.inventario["XRP"][0].cantidad_restante
+    with pytest.raises(BinancePriceEvidenceError, match="precisión fiscal"):
+        apply(m, v)
+    assert m.inventario["XRP"][0].cantidad_restante == before
+    assert m.resultados == []
+    assert m.inventario.get("USDC", []) == []
+
+
+def test_permuta_importe_eur_grande_con_perdida_absoluta_bloqueada():
+    """Aunque coincidiesen los céntimos, la pérdida absoluta está limitada."""
+    q = BinanceHistoricalEURPrices([
+        TradePriceEvidence("XRP", "EUR", Decimal("100000000.123456789123"), WHEN, 5, "c"*64),
+        TradePriceEvidence("USDC", "EUR", Decimal("0.00001"), WHEN, 6, "d"*64),
+    ])
+    v = q.value_swap(
+        timestamp=WHEN, given_asset="XRP", given_amount=Decimal("5"),
+        received_asset="USDC", received_amount=Decimal("11"),
+    )
+    m = seeded_motor()
+    with pytest.raises(BinancePriceEvidenceError, match="precisión fiscal"):
+        apply(m, v)
+    assert not m.resultados
+
+
+def test_permuta_precision_inventario_sigue_bloqueada_aunque_eur_sea_valido():
+    m = seeded_motor()
+    frac = Decimal("0.123456789123456789")
+    v = book().value_swap(
+        timestamp=WHEN, given_asset="XRP", given_amount=frac,
+        received_asset="USDC", received_amount=Decimal("11"),
+    )
+    with pytest.raises(BinancePriceEvidenceError, match="Cantidad"):
+        apply(m, v, given_amount=frac)
+    assert m.resultados == []
