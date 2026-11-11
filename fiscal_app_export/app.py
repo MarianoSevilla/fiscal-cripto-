@@ -2809,6 +2809,16 @@ def analizar_binance_multi():
                 )
             if isinstance(exc, (BinanceMultiUserError, BinanceUploadError)):
                 return jsonify({"error": str(exc)}), 400
+            # La falta de trades públicos EUR, un CHECKSUM inválido o un
+            # instante ambiguo es insuficiencia fiscal, NO error del servidor.
+            # Mensaje estable: nunca exponer al cliente datos de mercado
+            # privados o trazas internas de validación.
+            from binance_eur_valuation import BinancePriceEvidenceError
+            if isinstance(exc, BinancePriceEvidenceError):
+                return jsonify({
+                    "error": "Datos fiscales no seguros: no se ha podido acreditar "
+                             "la valoración EUR de una o varias permutas Binance."
+                }), 422
             if isinstance(exc, ValueError) and str(exc).startswith("Datos fiscales no seguros:"):
                 return jsonify({"error": str(exc)}), 422
             return jsonify({"error": _error_amigable(exc)}), 500
