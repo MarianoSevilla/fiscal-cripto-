@@ -718,3 +718,91 @@ def test_binance_2025_position_pdf_ignores_2026_with_full_history(client, usuari
     downloaded = client.get(f"/api/descargar/{payload['token']}")
     assert downloaded.status_code == 200
     assert downloaded.data.startswith(b"%PDF-")
+
+
+def test_binance_convert_aeat_precio_verificado_eur_y_pdf(client, usuario, monkeypatch):
+    """Fase opt-in: compras EUR -> permuta valorada -> venta EUR -> PDF.
+
+    XRP comprado 10 por 10 EUR; entrega 5 XRP y recibe 11 USDC.
+    Mercado en el momento: XRP/EUR=2, USDC/EUR=0.9.
+    Art. 37.1.h: mayor(10,9.9) = 10 EUR; FIFO=5 -> ganancia=5.
+    Venta 11 USDC por 9 EUR: coste=10 -> pérdida=-1, neto 4 EUR.
+    """
+    from datetime import timezone
+    from decimal import Decimal
+    from binance_eur_valuation import BinanceHistoricalEURPrices, TradePriceEvidence
+
+    at = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
+    book = BinanceHistoricalEURPrices([
+        TradePriceEvidence("XRP", "EUR", Decimal("2"), at, 1, "a"*64),
+        TradePriceEvidence("USDC", "EUR", Decimal("0.9"), at, 2, "b"*64),
+    ])
+    monkeypatch.setitem(flask_app.config, "BINANCE_VERIFIED_MARKET_PRICES", book)
+    _login(client)
+    buy = (SPOT_HEADER
+           + "buy,2024-12-01 10:00:00,XRPEUR,BUY,1,10XRP,10EUR,0XRP,,\n"
+           + "sell,2025-01-02 13:00:00,USDCEUR,SELL,0.818181818,11USDC,9EUR,0EUR,,\n"
+           ).encode("utf-8-sig")
+    convert = (CONVERT_HEADER
+               + "2025-01-01 13:00:00,SPOT,XRPUSDC,Instant,5 XRP,11 USDC,,,,Successful\n"
+               ).encode("utf-8-sig")
+    response = client.post(
+        "/api/binance/analizar",
+        data={"csv": [(io.BytesIO(buy), "Binance-Spot-(UTC+1).csv"),
+                      (io.BytesIO(convert), "Binance-Convert-(UTC+1).csv")],
+              "ejercicio": "2025", "nombre": "Caso sintético fiscal"},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 200, response.get_data(as_text=True)[:460]
+    data = response.get_json()
+    assert data["resumen"]["operaciones_con_resultado"] == 2
+    assert data["resumen"]["resultado_neto"] == pytest.approx(4.0)
+    by_type = {o["tipo"]: o for o in data["operaciones"]}
+    assert by_type["swap"]["transmision"] == pytest.approx(10.0)
+    assert by_type["swap"]["coste_fifo"] == pytest.approx(5.0)
+    assert by_type["swap"]["ganancia_perdida"] == pytest.approx(5.0)
+    assert by_type["venta"]["coste_fifo"] == pytest.approx(10.0)
+    assert by_type["venta"]["ganancia_perdida"] == pytest.approx(-1.0)
+    pdf = client.get(f"/api/descargar/{data['token']}?exchange=binance")
+    assert pdf.status_code == 200
+    assert pdf.data.startswith(b"%PDF-")
+
+
+def test_binance_convert_sin_catalogo_eur_no_emite_pdf(client, usuario, monkeypatch):
+    """El opt-in no autoriza un PDF cuando el servidor carece de precios."""
+    monkeypatch.delitem(flask_app.config, "BINANCE_VERIFIED_MARKET_PRICES", raising=False)
+    _login(client)
+    raw = (CONVERT_HEADER
+           + "2025-01-01 13:00:00,SPOT,XRPUSDC,Instant,5 XRP,11 USDC,,,,Successful\n"
+           ).encode("utf-8-sig")
+    response = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(raw), "Binance-Convert-(UTC+1).csv"),
+              "ejercicio": "2025", "nombre": "Caso sintético sin precios"},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 422
+    assert "token" not in response.get_json()
+
+
+def test_binance_convert_catalogo_incompleto_no_emite_pdf(client, usuario, monkeypatch):
+    from datetime import timezone
+    from decimal import Decimal
+    from binance_eur_valuation import BinanceHistoricalEURPrices, TradePriceEvidence
+    t = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
+    book = BinanceHistoricalEURPrices([
+        TradePriceEvidence("XRP", "EUR", Decimal("2"), t, 1, "a"*64),
+    ])
+    monkeypatch.setitem(flask_app.config, "BINANCE_VERIFIED_MARKET_PRICES", book)
+    _login(client)
+    raw = (CONVERT_HEADER
+           + "2025-01-01 13:00:00,SPOT,XRPUSDC,Instant,5 XRP,11 USDC,,,,Successful\n"
+           ).encode("utf-8-sig")
+    response = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(raw), "Binance-Convert-(UTC+1).csv"),
+              "ejercicio": "2025", "nombre": "Caso sintético sin mercado completo"},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 422
+    assert "token" not in response.get_json()

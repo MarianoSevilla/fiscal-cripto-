@@ -1262,14 +1262,48 @@ def _validar_csv(filepath: str, exchange: str) -> tuple[bool, str]:
 
 # ── PIPELINES ─────────────────────────────────
 
-def _pipeline_motor(clasificador) -> MotorFIFO:
-    """Pipeline común: clasificador → motor FIFO."""
+def _pipeline_motor(clasificador, *, binance_market_prices=None) -> MotorFIFO:
+    """Pipeline común; Binance solo acepta swaps con mercado EUR verificado.
+
+    El proveedor histórico se carga fuera de la petición. Nunca se buscan
+    cotizaciones en la red desde este pipeline ni se asume paridad.
+    """
+    priced_swaps = ()
+    if binance_market_prices is not None and isinstance(clasificador, ClasificadorBinanceMulti):
+        if clasificador.swaps:
+            from binance_valuation_audit import valorar_permutas_nativas
+            from binance_eur_valuation import BinanceHistoricalEURPrices, BinancePriceEvidenceError
+            if not isinstance(binance_market_prices, BinanceHistoricalEURPrices):
+                raise BinancePriceEvidenceError("Proveedor histórico Binance sin validar")
+            priced_swaps = valorar_permutas_nativas(clasificador, binance_market_prices)
+            if len(priced_swaps) != len(clasificador.swaps):
+                raise BinancePriceEvidenceError("No están valoradas todas las permutas Binance")
+            # El CSV de órdenes carece de milisegundos. Si existen varias
+            # disposiciones del mismo activo dentro del mismo segundo, no
+            # se conoce qué hecho consumió cada lote en primer lugar.
+            counts = {}
+            for priced in priced_swaps:
+                event = priced.source
+                if event.source not in {"Spot BUY", "Spot SELL", "Convert"}:
+                    raise BinancePriceEvidenceError(
+                        "Permuta fiat/externa sin tratamiento acreditado"
+                    )
+                key = (event.local_time, event.given_asset)
+                counts[key] = counts.get(key, 0) + 1
+            if any(n > 1 for n in counts.values()):
+                raise BinancePriceEvidenceError(
+                    "Orden de disposiciones Binance dentro del mismo segundo no acreditado"
+                )
     motor = MotorFIFO()
     ops = []
     for op in clasificador.compraventas:
         ops.append(("cv", op.fecha, op))
-    for op in clasificador.swaps:
-        ops.append(("swap", op.fecha, op))
+    if priced_swaps:
+        for priced in priced_swaps:
+            ops.append(("verified_swap", priced.source.local_time, priced))
+    else:
+        for op in clasificador.swaps:
+            ops.append(("swap", op.fecha, op))
     # Coinbase and Bitvavo record the received reward only in rendimientos.
     # A fiscal income entry also creates one acquisition lot at its verified
     # EUR value. Crypto.com ALREADY adds this lot in its parser: never add
@@ -1309,21 +1343,41 @@ def _pipeline_motor(clasificador) -> MotorFIFO:
                 cantidad_recibida=op.cantidad_recibida,
                 nota=op.nota
             )
+        elif tipo == "verified_swap":
+            from binance_fiscal_swap import aplicar_permuta_binance_valorada
+            source = op.source
+            aplicar_permuta_binance_valorada(
+                motor,
+                fecha_local=source.local_time,
+                export_filename=source.filename,
+                given_asset=source.given_asset,
+                given_amount=source.given_amount,
+                received_asset=source.received_asset,
+                received_amount=source.received_amount,
+                fee_amount=source.fee_amount,
+                valuation=op.valuation,
+            )
         elif tipo == "reward":
             motor.registrar_compra(
                 fecha=op.fecha, activo=op.activo, cantidad=op.cantidad,
                 importe=op.valor_eur, contraparte="EUR",
                 fee_activo="EUR", fee_cantidad=0.0,
             )
+    if priced_swaps:
+        # Fijar esta prueba interna solo después de aplicar TODOS los swaps.
+        # Los validadores posteriores vuelven a comprobar identidad y cantidad.
+        clasificador._binance_verified_swaps = tuple(priced_swaps)
     return motor
 
 
-def procesar_con_fifo(clasificador) -> tuple:
+def procesar_con_fifo(clasificador, *, binance_market_prices=None) -> tuple:
     """Pipeline genérico: clasificador ya instanciado → motor FIFO + rendimientos + clasificador.
     Devuelve 3-tupla (motor, rendimientos, clasificador) para permitir extracción de telemetría
     (swaps totales, movimientos, desconocidas) que solo viven en el clasificador.
     """
-    motor = _pipeline_motor(clasificador)
+    motor = _pipeline_motor(
+        clasificador, binance_market_prices=binance_market_prices
+    )
     rendimientos = clasificador.rendimientos if hasattr(clasificador, 'rendimientos') else []
     return motor, rendimientos, clasificador
 
@@ -1371,9 +1425,16 @@ def procesar_binance_tx(filepath: str) -> tuple:
     return procesar_con_fifo(ClasificadorBinanceTx(filepath).clasificar())
 
 
-def procesar_binance_multi(filepaths: list, filenames: list = None) -> tuple:
-    """Binance multifuente: Spot/Convert/fiat/transferencias/Transaction History."""
-    return procesar_con_fifo(ClasificadorBinanceMulti(filepaths, filenames).clasificar())
+def procesar_binance_multi(filepaths: list, filenames: list = None, *, market_prices=None) -> tuple:
+    """Binance multifuente, con valoración opcional desde mercado verificado.
+
+    Sin catálogo previo, los swaps siguen bloqueados y nunca se descarga
+    mercado público dentro de esta solicitud.
+    """
+    return procesar_con_fifo(
+        ClasificadorBinanceMulti(filepaths, filenames).clasificar(),
+        binance_market_prices=market_prices,
+    )
 
 
 def procesar_bitvavo(filepath: str) -> tuple:
@@ -1711,6 +1772,19 @@ def _validar_aceptacion_fifo(motor, clasificador=None) -> None:
     # falte la valoración fiscal EUR. Nunca emitir un PDF parcial ni asumir
     # paridad de stablecoins / coste cero / comisión irrelevante.
     if isinstance(clasificador, ClasificadorBinanceMulti):
+        priced_swaps = getattr(clasificador, "_binance_verified_swaps", ())
+        if priced_swaps:
+            from binance_valuation_audit import BinanceSwapAuditRecord
+            if (len(priced_swaps) != len(clasificador.swaps)
+                    or len(priced_swaps) != len(clasificador.valoraciones_pendientes)
+                    or not all(isinstance(record, BinanceSwapAuditRecord)
+                               for record in priced_swaps)
+                    or len([r for r in motor.resultados if r.tipo_operacion == "swap"])
+                    != len(priced_swaps)):
+                raise ValueError(
+                    "Datos fiscales no seguros: permutas Binance no conciliadas "
+                    "con el cálculo FIFO valorado."
+                )
         if getattr(clasificador, "earn_events", ()):
             raise ValueError(
                 "Datos fiscales no seguros: Binance Simple Earn contiene "
@@ -1742,7 +1816,8 @@ def _validar_aceptacion_fifo(motor, clasificador=None) -> None:
                 "cuyos lotes de adquisición, fechas y costes no están "
                 "reconstruidos en el FIFO. Requiere conciliar su origen."
             )
-        if getattr(clasificador, "valoraciones_pendientes", ()):
+        if (getattr(clasificador, "valoraciones_pendientes", ())
+                and not priced_swaps):
             raise ValueError(
                 "Datos fiscales no seguros: Binance contiene permutas o rendimientos "
                 "sin valoración histórica acreditada en EUR."
@@ -1782,10 +1857,16 @@ def _validar_aceptacion_fifo(motor, clasificador=None) -> None:
     # histórico FIFO o paridad 1:1, no con ambos precios de mercado en EUR.
     # Incluso un único precio FMV del CSV no demuestra el máximo exigible.
     swaps = getattr(clasificador, "swaps", ()) if clasificador is not None else ()
-    if any(
-        getattr(op, "activo_entregado", None) != getattr(op, "activo_recibido", None)
-        for op in swaps
-    ) or any(r.tipo_operacion == "swap" for r in motor.resultados):
+    verified_binance_swaps = (
+        isinstance(clasificador, ClasificadorBinanceMulti)
+        and bool(getattr(clasificador, "_binance_verified_swaps", ()))
+    )
+    if not verified_binance_swaps and (
+        any(
+            getattr(op, "activo_entregado", None) != getattr(op, "activo_recibido", None)
+            for op in swaps
+        ) or any(r.tipo_operacion == "swap" for r in motor.resultados)
+    ):
         raise ValueError(
             "Datos fiscales no seguros: existen permutas entre criptomonedas "
             "sin valoración suficiente de mercado en EUR para ambos activos. "
@@ -2619,7 +2700,10 @@ def analizar_binance_multi():
         _evidencia_json = json.dumps(_ev_list) if _ev_list else None
 
         try:
-            motor, rendimientos, clasificador = procesar_binance_multi(tmp_paths, filenames)
+            market_prices = app.config.get("BINANCE_VERIFIED_MARKET_PRICES")
+            motor, rendimientos, clasificador = procesar_binance_multi(
+                tmp_paths, filenames, market_prices=market_prices
+            )
             # El historial completo sigue usándose para calcular lotes FIFO,
             # pero la posición mostrada para IRPF/721 debe ser el cierre del
             # ejercicio seleccionado, no el saldo de años posteriores.

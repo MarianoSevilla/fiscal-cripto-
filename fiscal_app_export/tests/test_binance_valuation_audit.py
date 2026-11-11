@@ -116,3 +116,20 @@ def test_permuta_sin_precio_eur_de_un_activo_se_rechaza(tmp_path):
     ])
     with pytest.raises(BinancePriceEvidenceError, match="No existe evidencia"):
         valorar_permutas_nativas(classified, prices)
+
+
+def test_no_se_valora_fiat_trade_no_eur_como_permuta_criptos(tmp_path):
+    """Las conversiones fiat no EUR no pueden pasar por cripto↔cripto."""
+    from binance_eur_valuation import BinanceHistoricalEURPrices
+    # El control estricto se aplica en el pipeline, no en el catálogo.
+    from app import _pipeline_motor
+    csv_path = source(tmp_path,
+        ["Tiempo","Método","Cantidad a gastar","Recibir cantidad",
+         "Tarifa","Precio","Estado","ID de transacción"],
+        [["2025-01-01 13:00:00","SEPA","5 USD","10 XRP","0 XRP",
+          "2","Successful","synthetic-fi-1"]], "fiat.csv")
+    classified = ClasificadorBinanceMulti(
+        [csv_path], ["Binance-Fiat-(UTC+1).csv"]
+    ).clasificar()
+    with pytest.raises(BinancePriceEvidenceError, match="fiat"):
+        _pipeline_motor(classified, binance_market_prices=book())
