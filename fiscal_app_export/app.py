@@ -1275,6 +1275,15 @@ def _pipeline_motor(clasificador, *, binance_market_prices=None) -> MotorFIFO:
             from binance_eur_valuation import BinanceHistoricalEURPrices, BinancePriceEvidenceError
             if not isinstance(binance_market_prices, BinanceHistoricalEURPrices):
                 raise BinancePriceEvidenceError("Proveedor histórico Binance sin validar")
+            # Fiat trade contra USD/GBP/etc. no constituye automáticamente
+            # una permuta cripto-cripto bajo el art. 37.1.h. Rechazarla ANTES
+            # de consultar precios y no aplicar esa regla fiscal indebidamente.
+            for event in clasificador.intercambios_nativos:
+                if (event.given_asset != "EUR" and event.received_asset != "EUR"
+                        and event.source not in {"Spot BUY", "Spot SELL", "Convert"}):
+                    raise BinancePriceEvidenceError(
+                        "Permuta fiat/externa sin tratamiento acreditado"
+                    )
             priced_swaps = valorar_permutas_nativas(clasificador, binance_market_prices)
             if len(priced_swaps) != len(clasificador.swaps):
                 raise BinancePriceEvidenceError("No están valoradas todas las permutas Binance")
