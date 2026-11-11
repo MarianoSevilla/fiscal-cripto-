@@ -44,6 +44,10 @@ from binance_earn_inventory import (
 from binance_earn_rewards import (
     BinanceEarnRewardsError, reconcile_earn_rewards,
 )
+from binance_commission_evidence import (
+    BinanceCommissionEvidenceError, audit_binance_commissions,
+    is_binance_commission, iter_binance_commissions,
+)
 
 
 _NO_DATA = "no hay datos que se ajusten a los criterios"
@@ -421,6 +425,7 @@ class ClasificadorBinanceMulti:
         self.earn_reconciliation = None  # diagnóstico no fiscal, en memoria
         self.earn_reward_reconciliation = None
         self.earn_reward_candidates = ()  # nunca se inyecta en MotorFIFO/PDF
+        self.commission_evidence_summary = None
         self.fuentes_materiales_no_soportadas: List[str] = []
         self._sections: Dict[str, _Section] = {k: _Section() for k in self.SOURCE_KEYS}
         self._unknown_files = 0
@@ -1393,6 +1398,16 @@ class ClasificadorBinanceMulti:
                 except OSError:
                     pass
 
+    def iter_commission_evidence(self):
+        """Evidencias con Decimal y sin crear rendimientos fiscales.
+
+        Iterador de memoria constante sobre filas originales ya importadas;
+        no usar para autorizar PDF, ni sumar como compras.
+        """
+        return iter_binance_commissions(
+            row for row, _filename in self._source_rows["transaction_history"]
+        )
+
     def _process_transaction_history(self) -> None:
         rows = [row for row, _filename in self._source_rows["transaction_history"]]
         if not rows:
@@ -1420,8 +1435,27 @@ class ClasificadorBinanceMulti:
             self.fuentes_materiales_no_soportadas.append(
                 "small_assets_exchange_bnb_sin_permuta_valorada"
             )
-        filtered = self._filter_exact_tx_duplicates(rows)
-        omitted = len(rows) - len(filtered)
+        # Los ingresos por afiliación y descuentos de comisiones no se pueden
+        # clasificar automáticamente como capital mobiliario, compras o coste
+        # cero. Preservar filas originales, cantidades Decimal y multiplicidad
+        # en _source_rows; el parser legacy no debe transformarlas en renta
+        # fiscal ni en lotes incompletos. Evita materializar 250k objetos nuevos.
+        try:
+            self.commission_evidence_summary = audit_binance_commissions(rows)
+        except BinanceCommissionEvidenceError as exc:
+            raise BinanceMultiUserError(
+                "invalid_binance_commission",
+                "Binance contiene una comisión de referencia con fecha, cuenta, "
+                "activo o cantidad no válidos. No se puede emitir el informe.",
+                category="parser_error",
+            ) from exc
+        if self.commission_evidence_summary.records:
+            self.fuentes_materiales_no_soportadas.append(
+                "binance_comisiones_sin_valoracion_ni_categoria_fiscal"
+            )
+        transactional = [row for row in rows if not is_binance_commission(row)]
+        filtered = self._filter_exact_tx_duplicates(transactional)
+        omitted = len(transactional) - len(filtered)
         if omitted:
             self.advertencias.append(
                 f"Binance: {omitted} fila(s) de Transaction History se omitieron "

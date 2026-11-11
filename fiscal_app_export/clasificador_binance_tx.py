@@ -124,10 +124,12 @@ REGLAS_TX = {
     "Withdraw":                          "MOVIMIENTO",
     "Fiat Withdraw":                     "MOVIMIENTO",
     "Fiat Deposit":                      "MOVIMIENTO",
-    # ── Comisiones y referidos (rendimientos del capital) ────────────────────
-    # Art. 25.2 LIRPF: comisiones cobradas son rendimiento del capital mobiliario
-    "Commission Rebate":                             "RENDIMIENTO",
-    "Referrer Commission":                           "RENDIMIENTO",
+    # ── Comisiones y referidos (calificación y valor EUR pendientes) ─────────
+    # No suponer capital mobiliario. La afiliación de una web puede formar
+    # parte de una actividad económica y un rebate puede ser un reembolso.
+    "Commission History":                            "COMISION_PENDIENTE",
+    "Commission Rebate":                             "COMISION_PENDIENTE",
+    "Referrer Commission":                           "COMISION_PENDIENTE",
     # ── Distribuciones de pools y staking (rendimientos del capital) ─────────
     "Pool Distribution":                             "RENDIMIENTO",
     "Launchpool Airdrop - System Distribution":      "RENDIMIENTO",
@@ -613,6 +615,13 @@ class ClasificadorBinanceTx:
                 self.movimientos.append(OperacionMovimiento(
                     fecha=fecha, subtipo=op, activo=moneda,
                     cantidad=cambio, observacion=obs,
+                ))
+            elif cat == "COMISION_PENDIENTE":
+                # Un cliente del importador legacy también debe fallar
+                # cerrado: no imputar como capital ni omitir nuevas monedas.
+                self.desconocidas.append(OperacionDesconocida(
+                    fecha=fecha, subtipo=op, activo=moneda,
+                    cantidad=cambio, cuenta=cuenta,
                 ))
             else:
                 self.desconocidas.append(OperacionDesconocida(
