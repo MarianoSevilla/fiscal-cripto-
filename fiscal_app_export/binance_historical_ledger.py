@@ -31,6 +31,7 @@ _EXPECTED = {
 _SYMBOL = re.compile(r"^[A-Z0-9][A-Z0-9._-]{0,29}$")
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
 _TZ = re.compile(r"\(UTC[+-]\d{1,2}\)")
+_NO_DATA_SENTINEL = "no hay datos que se ajusten a los criterios"
 
 
 @dataclass(frozen=True)
@@ -58,6 +59,7 @@ class BinanceHistoricalLedgerResult:
 
 def inspeccionar_historial_binance(
     archivos: Iterable[str | Path], *,
+    hasta_local: str | None = None,
     max_archivos: int = 12,
     max_registros: int = 500_000,
     max_csv_bytes: int = 16 * 1024 * 1024,
@@ -69,6 +71,16 @@ def inspeccionar_historial_binance(
     fiscales ni para desactivar los bloqueos del endpoint FIFO.
     Los ZIP no se extraen al disco. El lector comprueba CRC al llegar al EOF.
     """
+    # Corte en horario LOCAL del nombre original (UTC±H); no convertir una
+    # fecha naive a UTC. Las filas posteriores siguen verificándose completas.
+    cutoff = None
+    if hasta_local is not None:
+        if not isinstance(hasta_local, str) or not _DATE.fullmatch(hasta_local):
+            raise BinanceHistoricalLedgerError("Instante de corte local inválido")
+        try:
+            cutoff = datetime.strptime(hasta_local, "%Y-%m-%d %H:%M:%S")
+        except ValueError as exc:
+            raise BinanceHistoricalLedgerError("Fecha de corte inexistente") from exc
     paths = list(archivos)
     if not paths or len(paths) > max_archivos or max_archivos < 1:
         raise BinanceHistoricalLedgerError("Cantidad de archivos fuera del límite")
@@ -85,6 +97,7 @@ def inspeccionar_historial_binance(
     last_time: datetime | None = None
     total_bytes = 0
     number_rows = 0
+    scanned_rows = 0  # El límite de seguridad incluye filas posteriores al corte.
 
     # No se puede dar por positivo o negativo un movimiento dentro de
     # un segundo: Binance presenta varias patas de un mismo hecho con
@@ -150,6 +163,15 @@ def inspeccionar_historial_binance(
                                 "Las columnas no corresponden al historial general Binance"
                             )
                         for record in reader:
+                            # Exportación vacía nativa: frase en primera columna
+                            # y resto de celdas vacías; no inventar una operación.
+                            sentinel = str(record.get("ID de usuario") or "").strip().lower()
+                            if sentinel.startswith(_NO_DATA_SENTINEL) and all(
+                                value is None or str(value).strip() == ""
+                                for field, value in record.items()
+                                if field != "ID de usuario"
+                            ):
+                                continue
                             if None in record or any(v is None for v in record.values()):
                                 raise BinanceHistoricalLedgerError(
                                     "Fila histórica con columnas desalineadas"
@@ -181,16 +203,19 @@ def inspeccionar_historial_binance(
                                     raise BinanceHistoricalLedgerError(
                                         "Los períodos históricos se solapan o están desordenados"
                                     )
+                            previous_in_file = dt
+                            scanned_rows += 1
+                            if scanned_rows > max_registros:
+                                raise BinanceHistoricalLedgerError(
+                                    "El historial supera el límite de filas"
+                                )
+                            if cutoff is not None and dt > cutoff:
+                                continue
                             if pending_time is not None and dt > pending_time:
                                 settle()
                             pending_time = dt
                             pending_changes[symbol] += amount
-                            previous_in_file = dt
                             number_rows += 1
-                            if number_rows > max_registros:
-                                raise BinanceHistoricalLedgerError(
-                                    "El historial supera el límite de filas"
-                                )
                             counts[dt.year] += 1
                             kind = record["Operación"].strip()
                             operations[kind] += 1

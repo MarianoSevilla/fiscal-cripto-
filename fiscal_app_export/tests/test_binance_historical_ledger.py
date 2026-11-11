@@ -121,3 +121,80 @@ def test_ledger_rechaza_rutas_zip_y_bytes_danados(tmp_path):
     bad = _zip(tmp_path, "bad-utf8", HEADER.encode() + bytes((255,)))
     with pytest.raises(BinanceHistoricalLedgerError, match="ZIP histórico"):
         inspeccionar_historial_binance([bad])
+
+
+
+def test_ledger_asof_cutoff_wallets_and_empty_export(tmp_path):
+    old = _zip(tmp_path, "2019", HEADER + (
+        "synthetic,2019-01-01 09:00:00,Spot,Deposit,BTC,0.7,\n"
+        "synthetic,2019-01-02 09:00:00,Funding,Pool Distribution,BTC,0.3,\n"
+        "synthetic,2019-01-03 09:00:00,Spot,Simple Earn Flexible Subscription,BTC,-0.7,\n"
+    ))
+    no_data = _zip(tmp_path, "empty", HEADER +
+        "No hay datos que se ajusten a los criterios.\n")
+    recent = _zip(tmp_path, "2025", HEADER + (
+        "synthetic,2025-09-27 11:00:00,Spot,Simple Earn Flexible Redemption,BTC,0.7,\n"
+        "synthetic,2025-09-27 11:01:00,Funding,Binance Convert,BTC,-0.3,\n"
+        "synthetic,2025-09-27 11:01:00,Spot,Binance Convert,BTC,0.3,\n"
+        "synthetic,2025-09-27 11:02:00,Spot,Binance Convert,BTC,-1,\n"
+    ))
+    sources = [old, no_data, recent]
+    cut = inspeccionar_historial_binance(
+        sources, hasta_local="2025-09-27 11:00:00")
+    wallets = {(a, asset): q for a, asset, q in cut.saldos_por_cuenta}
+    assert wallets[("Spot", "BTC")] == Decimal("0.7")
+    assert wallets[("Funding", "BTC")] == Decimal("0.3")
+    assert dict(cut.saldos_netos)["BTC"] == Decimal("1.0")
+    assert cut.registros == 4
+    assert cut.sin_saldos_negativos_globales and not cut.fifo_fiscal_acreditado
+    middle = inspeccionar_historial_binance(
+        sources, hasta_local="2025-09-27 11:01:00")
+    assert dict(middle.saldos_netos)["BTC"] == Decimal("1")
+    w2 = {(a, asset): q for a, asset, q in middle.saldos_por_cuenta}
+    assert w2[("Spot", "BTC")] == Decimal("1")
+    assert w2[("Funding", "BTC")] == Decimal("0")
+    final = inspeccionar_historial_binance(sources)
+    assert final.registros == 7
+    assert dict(final.saldos_netos)["BTC"] == Decimal("0")
+    assert final.sin_saldos_negativos_globales and not final.fifo_fiscal_acreditado
+
+
+def test_ledger_cutoff_does_not_skip_validation_after_cut(tmp_path):
+    z = _zip(tmp_path, "corrupted", HEADER + (
+        "synthetic,2024-01-01 10:00:00,Spot,Deposit,BTC,1,\n"
+        "synthetic,2026-01-01 10:00:00,Spot,Deposit,BTC,NaN,\n"
+    ))
+    with pytest.raises(BinanceHistoricalLedgerError, match="no finita"):
+        inspeccionar_historial_binance(
+            [z], hasta_local="2024-12-31 23:59:59")
+
+
+@pytest.mark.parametrize("cut", [
+    "2025-02-30 00:00:00", "2025-01-01T00:00:00",
+    "", 2025, "2025-01-01 00:00:00Z",
+])
+def test_ledger_cutoff_rejects_invalid_dates(tmp_path, cut):
+    z = _zip(tmp_path, "valid", HEADER +
+        "synthetic,2025-01-01 10:00:00,Spot,Deposit,BTC,1,\n")
+    with pytest.raises(BinanceHistoricalLedgerError):
+        inspeccionar_historial_binance([z], hasta_local=cut)
+
+
+def test_ledger_no_data_sentinel_cannot_hide_other_fields(tmp_path):
+    z = _zip(tmp_path, "bad-sentinel", HEADER +
+        "No hay datos que se ajusten a los criterios.,2024-01-01 10:00:00,Spot,Deposit,BTC,3,\n")
+    with pytest.raises(BinanceHistoricalLedgerError):
+        inspeccionar_historial_binance([z])
+
+
+def test_ledger_cutoff_same_second_buy_and_fee_not_false_shortfall(tmp_path):
+    z = _zip(tmp_path, "same-second-fee", HEADER + (
+        "synthetic,2021-01-01 00:00:00,Spot,Fee,BTC,-0.01,\n"
+        "synthetic,2021-01-01 00:00:00,Spot,Buy,BTC,1,\n"
+        "synthetic,2022-01-01 00:00:00,Spot,Sell,BTC,-0.99,\n"
+    ))
+    r = inspeccionar_historial_binance(
+        [z], hasta_local="2021-12-31 23:59:59")
+    assert r.sin_saldos_negativos_globales
+    assert dict(r.saldos_netos)["BTC"] == Decimal("0.99")
+    assert r.fifo_fiscal_acreditado is False
