@@ -52,6 +52,7 @@ from binance_dust_evidence import BinanceDustEvidenceError, audit_binance_dust
 from binance_convert_ledger_evidence import (
     BinanceConvertLedgerError, audit_convert_ledger,
 )
+from binance_earn_transfer_only import verify_principal_only_earn
 
 
 _NO_DATA = "no hay datos que se ajusten a los criterios"
@@ -441,6 +442,7 @@ class ClasificadorBinanceMulti:
         self.intercambios_nativos: List[BinanceNativeExchange] = []
         self.earn_events: List[BinanceEarnEvent] = []
         self.earn_reconciliation = None  # diagnóstico no fiscal, en memoria
+        self.earn_principal_only_audit = None
         self.earn_reward_reconciliation = None
         self.earn_reward_candidates = ()  # nunca se inyecta en MotorFIFO/PDF
         self.commission_evidence_summary = None
@@ -670,6 +672,20 @@ class ClasificadorBinanceMulti:
             self.fuentes_materiales_no_soportadas.append(
                 "earn_recompensas_sin_orden_intradia_acreditado"
             )
+
+        # Soporte muy acotado: solo principal Spot ↔ Earn ↔ Spot
+        # con la fuente de recompensas expresamente vacía, correspondencia
+        # ledger exacta a segundos e inventario de custodia Decimal sin déficit.
+        # No convierte intereses en adquisiciones ni relaja otros bloqueos.
+        self.earn_principal_only_audit = verify_principal_only_earn(self)
+        if self.earn_principal_only_audit is not None:
+            self.fuentes_materiales_no_soportadas = [
+                marker for marker in self.fuentes_materiales_no_soportadas
+                if marker not in {
+                    "earn_flexible_requiere_inventario_y_valoracion_fiscal",
+                    "earn_ledger_sin_lotes_ni_valoracion_acreditados",
+                }
+            ]
 
         if self._unknown_files:
             self.advertencias.append(

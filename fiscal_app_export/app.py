@@ -1821,7 +1821,8 @@ def _validar_aceptacion_fifo(motor, clasificador=None) -> None:
                     "Datos fiscales no seguros: permutas Binance no conciliadas "
                     "con el cálculo FIFO valorado."
                 )
-        if getattr(clasificador, "earn_events", ()):
+        if (getattr(clasificador, "earn_events", ())
+                and getattr(clasificador, "earn_principal_only_audit", None) is None):
             raise ValueError(
                 "Datos fiscales no seguros: Binance Simple Earn contiene "
                 "suscripciones, redenciones o recompensas pendientes de "

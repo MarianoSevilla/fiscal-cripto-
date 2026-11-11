@@ -835,3 +835,97 @@ def test_binance_precio_eur_verificado_no_acepta_compra_y_swap_mismo_segundo(
     )
     assert response.status_code == 422
     assert "token" not in response.get_json()
+
+
+EARN_SUB_HEADER = (
+    "Fecha de suscripción,Nombre del producto,Moneda,Cantidad,Tipo,De,Estado\n"
+)
+EARN_RED_HEADER = (
+    "Fecha de canje,Nombre del producto,Moneda,Principal Reembolsado,"
+    "Método,Canjear por,Estado\n"
+)
+EARN_REW_HEADER = "Tiempo,Moneda,Cantidad,Tipo\n"
+TX_EARN_HEADER = (
+    "ID de usuario,Tiempo,Cuenta,Operación,Moneda,Cambio,Observación\n"
+)
+
+
+def _earn_principal_only_uploads(*, reward_line="", subscription_qty="10",
+                                 redemption_qty="10", origin="SPOT",
+                                 redemption_wallet="SPOT", time_shift=False):
+    spot = (
+        SPOT_HEADER
+        + "buy,2024-06-01 10:00:00,XRPEUR,BUY,2,10XRP,20EUR,0XRP,,\n"
+        + "sell,2025-06-01 10:00:00,XRPEUR,SELL,3,4XRP,12EUR,0EUR,,\n"
+    )
+    sub_time = "2024-07-01 12:00:00"
+    ledger_sub = "2024-07-01 12:00:01" if time_shift else sub_time
+    red_time = "2025-05-01 12:00:00"
+    sub = (EARN_SUB_HEADER + f"{sub_time},XRP,XRP,{subscription_qty},Auto,{origin},Successful\n")
+    red = (EARN_RED_HEADER + f"{red_time},XRP,XRP,{redemption_qty},Fast,{redemption_wallet},Successful\n")
+    ledger = (TX_EARN_HEADER
+              + f"synthetic,{ledger_sub},Spot,Simple Earn Flexible Subscription,XRP,-{subscription_qty},\n"
+              + f"synthetic,{red_time},Spot,Simple Earn Flexible Redemption,XRP,{redemption_qty},\n")
+    reward = EARN_REW_HEADER + reward_line
+    return [
+        (io.BytesIO(content.encode("utf-8-sig")), filename)
+        for content, filename in [
+            (spot, "Binance-Spot-(UTC+1).csv"),
+            (sub, "Binance-Earn-Subscription-(UTC+1).csv"),
+            (red, "Binance-Earn-Redemption-(UTC+1).csv"),
+            (reward, "Binance-Earn-Reward-(UTC+1).csv"),
+            (ledger, "Binance-TX-(UTC+1).csv"),
+        ]
+    ]
+
+
+def test_binance_pure_earn_principal_transfer_preserves_fifo_and_pdf(client, usuario):
+    """Acquisitions remain in FIFO; Earn principal transfer is not taxable."""
+    _login(client)
+    r = client.post(
+        "/api/binance/analizar",
+        data={"csv": _earn_principal_only_uploads(), "ejercicio": "2025",
+              "nombre": "Solo principal sintético"},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 200, r.get_data(as_text=True)[:450]
+    body = r.get_json()
+    assert body["resumen"]["operaciones_con_resultado"] == 1
+    assert body["resumen"]["resultado_neto"] == pytest.approx(4)
+    assert len(body["operaciones"]) == 1
+    assert body["operaciones"][0]["coste_fifo"] == pytest.approx(8)
+    position = {item["activo"]: item for item in body["posicion"]}
+    assert position["XRP"]["cantidad"] == pytest.approx(6)
+    assert position["XRP"]["coste_total"] == pytest.approx(12)
+    downloaded = client.get(f"/api/descargar/{body['token']}?exchange=binance")
+    assert downloaded.status_code == 200
+    assert downloaded.data.startswith(b"%PDF-")
+
+
+@pytest.mark.parametrize("mode", ["reward", "without_reward_evidence", "mismatched",
+                                  "origin_mixed", "ledger_only_day", "overdraft"])
+def test_binance_pure_earn_unsafe_variants_still_fail_closed(client, usuario, mode):
+    _login(client)
+    opts = {}
+    if mode == "reward":
+        opts["reward_line"] = "2025-01-03,XRP,0.01,Real-time APR Rewards\n"
+    if mode == "mismatched":
+        opts["redemption_qty"] = "9"
+    if mode == "origin_mixed":
+        opts["origin"] = "SPOT + FUNDING"
+    if mode == "ledger_only_day":
+        opts["time_shift"] = True
+    if mode == "overdraft":
+        opts["subscription_qty"] = "11"
+        opts["redemption_qty"] = "11"
+    uploads = _earn_principal_only_uploads(**opts)
+    if mode == "without_reward_evidence":
+        uploads = [upload for upload in uploads if "Reward" not in upload[1]]
+    r = client.post(
+        "/api/binance/analizar",
+        data={"csv": uploads, "ejercicio": "2025",
+              "nombre": "Earn no acreditado"},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 422, r.get_data(as_text=True)[:500]
+    assert "token" not in r.get_json()
