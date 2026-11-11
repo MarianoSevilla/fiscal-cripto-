@@ -591,3 +591,80 @@ def test_http_binance_dust_multi_asset_remains_blocked(client, usuario):
     payload = response.get_json()
     assert "token" not in payload
     assert "resumen" not in payload
+
+
+def test_aeat_eur_fifo_multiyear_fees_download_pdf_single_use(client, usuario):
+    """Aceptación completa: FIFO 2025 con compras 2023/2024 y fees documentadas.
+
+    Caso independiente calculado manualmente:
+      compra A: 10 XRP - 0.1 XRP fee -> 9.9 XRP; coste 20 EUR
+      compra B: 10 XRP, 1 EUR fee -> 10 XRP; coste 41 EUR
+      venta 1: 12 XRP -> 60 EUR - 2 EUR fee; coste 20+2.1*4.1=28.61
+      venta 2:  2 XRP -> 10 EUR - 0.5 EUR fee; coste 8.2
+      ganancia 2025: 29.39+1.30 = 30.69 EUR
+      posición: 5.9 XRP; coste total 24.19 EUR
+    """
+    _login(client)
+    chunks = [
+        (2023,
+         "buy-a,2023-01-02 10:00:00,XRPEUR,BUY,2,10XRP,20EUR,0.1XRP,,\n"),
+        (2024,
+         "buy-b,2024-02-03 12:00:00,XRPEUR,BUY,4,10XRP,40EUR,1EUR,,\n"),
+        (2025,
+         "sale-a,2025-03-04 15:00:00,XRPEUR,SELL,5,12XRP,60EUR,2EUR,,\n"
+         "sale-b,2025-07-08 16:00:00,XRPEUR,SELL,5,2XRP,10EUR,0.5EUR,,\n"),
+    ]
+    uploads = [
+        (io.BytesIO((SPOT_HEADER + entries).encode("utf-8-sig")),
+         f"Binance-Spot-{year}-(UTC+1).csv")
+        for year, entries in chunks
+    ]
+    response = client.post(
+        "/api/binance/analizar",
+        data={"csv": uploads, "ejercicio": "2025", "nombre": "Ensayo AEAT sintético"},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 200, response.get_data(as_text=True)[:450]
+    payload = response.get_json()
+    assert payload["ok"]
+    assert payload["resumen_archivos"]["spot_trades"]["registros"] == 4
+    assert payload["resumen"]["operaciones_con_resultado"] == 2
+    assert payload["resumen"]["resultado_neto"] == pytest.approx(30.69, abs=0.0001)
+    assert len(payload["operaciones"]) == 2
+    by_date = {op["fecha"]: op for op in payload["operaciones"]}
+    assert by_date["2025-03-04"]["coste_fifo"] == pytest.approx(28.61, abs=0.0001)
+    assert by_date["2025-03-04"]["transmision"] == pytest.approx(58, abs=0.0001)
+    assert by_date["2025-03-04"]["ganancia_perdida"] == pytest.approx(29.39, abs=0.0001)
+    assert by_date["2025-07-08"]["coste_fifo"] == pytest.approx(8.2, abs=0.0001)
+    assert by_date["2025-07-08"]["ganancia_perdida"] == pytest.approx(1.3, abs=0.0001)
+    position = {p["activo"]: p for p in payload["posicion"]}
+    assert position["XRP"]["cantidad"] == pytest.approx(5.9, abs=0.00000001)
+    assert position["XRP"]["coste_total"] == pytest.approx(24.19, abs=0.0001)
+    token = payload["token"]
+    pdf = client.get(f"/api/descargar/{token}?exchange=binance")
+    assert pdf.status_code == 200
+    assert pdf.mimetype == "application/pdf"
+    assert pdf.data.startswith(b"%PDF-")
+    assert len(pdf.data) > 1000
+    again = client.get(f"/api/descargar/{token}?exchange=binance")
+    assert again.status_code == 403
+
+
+def test_binance_same_second_eur_buy_sell_blocks_fifo_even_if_csv_ordered(client, usuario):
+    """Un timestamp a segundos no acredita orden entre compra y venta XRP."""
+    _login(client)
+    raw = (
+        SPOT_HEADER
+        + "buy,2025-03-05 10:00:00,XRPEUR,BUY,2,10XRP,20EUR,0XRP,,\n"
+        + "sell,2025-03-05 10:00:00,XRPEUR,SELL,3,5XRP,15EUR,0EUR,,\n"
+    ).encode("utf-8-sig")
+    response = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(raw), "Binance-Spot-(UTC+1).csv"),
+              "ejercicio": "2025", "nombre": "Ensayo simultáneo sintético"},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 422
+    body = response.get_json()
+    assert "token" not in body
+    assert "Datos fiscales no seguros" in body["error"]

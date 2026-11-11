@@ -588,6 +588,7 @@ class ClasificadorBinanceMulti:
         self._process_fiat_cash()
         self._process_earn_flexible()
         self._process_optional_sources()
+        self._guard_eur_intrasecond_order()
         self._process_transaction_history()
         # Conciliación únicamente informativa. No elimina registros, no crea
         # lotes ni rebaja el bloqueo fiscal de Simple Earn en app.py.
@@ -652,6 +653,30 @@ class ClasificadorBinanceMulti:
                 f"Binance: {self._unknown_files} archivo(s) no se reconocieron."
             )
         return self
+
+    def _guard_eur_intrasecond_order(self) -> None:
+        """Rechaza una compra y venta del mismo activo al mismo segundo.
+
+        Las fuentes Spot/Fiat/Convert pueden perder milisegundos y los IDs de
+        orden no demuestran el orden de ejecución de fills. No escoger el
+        orden del CSV como criterio fiscal cuando se usan lotes de ese segundo.
+        Se preservan todas las filas para conciliación, pero el PDF se bloquea.
+        """
+        by_second_asset: Dict[tuple, set[str]] = {}
+        for trade in self.intercambios_nativos:
+            if trade.given_asset == "EUR" and trade.received_asset != "EUR":
+                asset, direction = trade.received_asset, "acquire"
+            elif trade.received_asset == "EUR" and trade.given_asset != "EUR":
+                asset, direction = trade.given_asset, "dispose"
+            else:
+                continue
+            by_second_asset.setdefault(
+                (trade.local_time, asset), set()
+            ).add(direction)
+        if any(len(sides) > 1 for sides in by_second_asset.values()):
+            self.fuentes_materiales_no_soportadas.append(
+                "binance_orden_intrasegundo_incierto"
+            )
 
     def _native_status_ok(self, raw: str, source: str) -> bool:
         """No omitir eventos financieros con estados nuevos o pendientes."""
