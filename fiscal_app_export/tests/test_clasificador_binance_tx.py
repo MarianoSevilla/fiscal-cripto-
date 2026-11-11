@@ -48,12 +48,12 @@ def test_commission_rebate_eur(tmp_path):
     csv = HEADER + "123,24-06-15 10:00:00,Spot,Commission Rebate,EUR,0.50,\n"
     c = ClasificadorBinanceTx(_csv_to_tmpfile(csv, tmp_path)).clasificar()
 
-    assert len(c.rendimientos) == 1, "Debe clasificarse como RENDIMIENTO"
-    r = c.rendimientos[0]
+    assert len(c.desconocidas) == 1, "Debe conservarse como operación pendiente"
+    r = c.desconocidas[0]
     assert r.activo    == "EUR"
     assert r.cantidad  == pytest.approx(0.50)
     assert r.subtipo   == "Commission Rebate"
-    assert len(c.desconocidas) == 0
+    assert len(c.rendimientos) == 0
 
 
 # ── Test 2: Commission Rebate en BNB ──────────────────────────────────────────
@@ -61,36 +61,36 @@ def test_commission_rebate_eur(tmp_path):
 def test_commission_rebate_bnb(tmp_path):
     """
     Una fila de Commission Rebate en BNB con Cambio positivo.
-    Se clasifica como RENDIMIENTO; `activo` es BNB (sin valoración EUR conocida).
+    Se conserva pendiente de clasificación fiscal; `activo` es BNB (sin valoración EUR conocida).
     NO debe interpretarse la cantidad como euros.
     """
     csv = HEADER + "123,24-06-15 10:01:00,Spot,Commission Rebate,BNB,0.00000052,\n"
     c = ClasificadorBinanceTx(_csv_to_tmpfile(csv, tmp_path)).clasificar()
 
-    assert len(c.rendimientos) == 1
-    r = c.rendimientos[0]
+    assert len(c.desconocidas) == 1
+    r = c.desconocidas[0]
     assert r.activo   == "BNB"
     assert r.cantidad == pytest.approx(0.00000052)
     # El rendimiento no tiene atributo valor_eur: no existe valoración EUR automática
     assert not hasattr(r, "valor_eur"), \
         "OperacionRendimiento no debe tener campo valor_eur para no confundir con importe EUR"
-    assert len(c.desconocidas) == 0
+    assert len(c.rendimientos) == 0
 
 
 # ── Test 3: Referrer Commission en USDT ───────────────────────────────────────
 
 def test_referrer_commission_usdt(tmp_path):
     """
-    Referrer Commission en USDT: rendimiento en estable (≈ USD, requiere conversión EUR).
+    Referrer Commission en USDT: ingreso sin clasificación fiscal ni conversión EUR acreditada.
     """
     csv = HEADER + "123,24-07-01 08:00:00,Spot,Referrer Commission,USDT,1.23456,ref123\n"
     c = ClasificadorBinanceTx(_csv_to_tmpfile(csv, tmp_path)).clasificar()
 
-    assert len(c.rendimientos) == 1
-    r = c.rendimientos[0]
+    assert len(c.desconocidas) == 1
+    r = c.desconocidas[0]
     assert r.activo   == "USDT"
     assert r.cantidad == pytest.approx(1.23456)
-    assert len(c.desconocidas) == 0
+    assert len(c.rendimientos) == 0
 
 
 # ── Test 4: Pool Distribution en LTC ──────────────────────────────────────────
@@ -242,8 +242,8 @@ def test_fecha_formato_antiguo_2digit_year_con_hora(tmp_path):
     """Formato histórico Binance: año 2 dígitos + hora — debe seguir funcionando."""
     csv = HEADER + "123,24-06-15 10:00:00,Spot,Commission Rebate,EUR,0.50,\n"
     c = ClasificadorBinanceTx(_csv_to_tmpfile(csv, tmp_path)).clasificar()
-    assert len(c.rendimientos) == 1
-    r = c.rendimientos[0]
+    assert len(c.desconocidas) == 1
+    r = c.desconocidas[0]
     # Fecha parseada correctamente: 2024-06-15
     assert "2024" in r.fecha, f"Año esperado 2024 en fecha: {r.fecha}"
     assert "06" in r.fecha
@@ -254,8 +254,8 @@ def test_fecha_formato_nuevo_4digit_year_con_hora(tmp_path):
     """Formato nuevo Binance: año 4 dígitos + hora — el bug real de producción."""
     csv = HEADER + "123,2025-12-31 14:30:00,Spot,Commission Rebate,EUR,1.00,\n"
     c = ClasificadorBinanceTx(_csv_to_tmpfile(csv, tmp_path)).clasificar()
-    assert len(c.rendimientos) == 1
-    r = c.rendimientos[0]
+    assert len(c.desconocidas) == 1
+    r = c.desconocidas[0]
     assert "2025" in r.fecha
     assert "12" in r.fecha
     assert "31" in r.fecha
@@ -265,8 +265,8 @@ def test_fecha_formato_nuevo_4digit_year_sin_hora(tmp_path):
     """Formato sin hora: 2025-12-31 — variante del bug de producción."""
     csv = HEADER + "123,2025-12-31,Spot,Commission Rebate,EUR,2.00,\n"
     c = ClasificadorBinanceTx(_csv_to_tmpfile(csv, tmp_path)).clasificar()
-    assert len(c.rendimientos) == 1
-    r = c.rendimientos[0]
+    assert len(c.desconocidas) == 1
+    r = c.desconocidas[0]
     assert "2025" in r.fecha
     assert "12" in r.fecha
     assert "31" in r.fecha
@@ -281,7 +281,7 @@ def test_fecha_formato_mixto_en_misma_columna(tmp_path):
     )
     # No debe lanzar excepción — ambas filas se procesan
     c = ClasificadorBinanceTx(_csv_to_tmpfile(csv, tmp_path)).clasificar()
-    assert len(c.rendimientos) == 2
+    assert len(c.desconocidas) == 2
 
 
 def test_fecha_formato_desconocido_loguea_warning(tmp_path, caplog):
@@ -300,7 +300,7 @@ def test_fecha_formato_desconocido_loguea_warning(tmp_path, caplog):
     )
     assert any("_TIEMPO_FORMATOS" in m for m in caplog.messages)
     # A pesar del formato inusual, la fila se clasifica (no se pierde)
-    assert len(c.rendimientos) == 1
+    assert len(c.desconocidas) == 1
 
 
 def test_fecha_completamente_rota_lanza_error(tmp_path):
@@ -436,16 +436,16 @@ def test_fecha_parse_tiempo_directo_formatos():
 # ══════════════════════════════════════════════════════════════════════════════
 
 def test_en_commission_rebate_eur(tmp_path):
-    """Cabeceras en inglés: Commission Rebate EUR → RENDIMIENTO."""
+    """Cabeceras en inglés: Commission Rebate EUR → operación fiscal pendiente."""
     csv = HEADER_EN + "123,24-06-15 10:00:00,Spot,Commission Rebate,EUR,0.50,\n"
     c = ClasificadorBinanceTx(_csv_to_tmpfile(csv, tmp_path)).clasificar()
 
-    assert len(c.rendimientos) == 1
-    r = c.rendimientos[0]
+    assert len(c.desconocidas) == 1
+    r = c.desconocidas[0]
     assert r.activo   == "EUR"
     assert r.cantidad == pytest.approx(0.50)
     assert r.subtipo  == "Commission Rebate"
-    assert len(c.desconocidas) == 0
+    assert len(c.rendimientos) == 0
 
 
 def test_en_pool_distribution_ltc(tmp_path):
@@ -520,7 +520,7 @@ def test_en_resultado_identico_al_espanol(tmp_path):
     assert len(c_es.desconocidas) == len(c_en.desconocidas)
 
     # Verificar valores concretos en el CSV en inglés
-    r_eur = next(r for r in c_en.rendimientos if r.activo == "EUR")
+    r_eur = next(r for r in c_en.desconocidas if r.activo == "EUR")
     assert r_eur.cantidad == pytest.approx(0.50)
     assert c_en.swaps[0].activo_entregado  == "USDC"
     assert c_en.swaps[0].activo_recibido   == "XRP"
