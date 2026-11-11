@@ -572,6 +572,10 @@ class ClasificadorBinanceMulti:
             self.fuentes_materiales_no_soportadas.append(
                 "earn_tipo_recompensa_desconocido"
             )
+        if rewards.unlocated_native_rewards:
+            self.fuentes_materiales_no_soportadas.append(
+                "earn_airdrop_destino_no_acreditado"
+            )
         if (rewards.native_day_only or rewards.matched_by_day
                 or rewards.daily_aggregate_only_groups):
             self.fuentes_materiales_no_soportadas.append(

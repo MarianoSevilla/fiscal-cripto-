@@ -32,7 +32,8 @@ def tx(stamp, qty, *, asset="ABC", operation="Simple Earn Flexible Interest"):
 
 
 def test_un_espejo_exactamente_igual_no_crea_un_segundo_lote():
-    e = reward("2025-01-04 08:04:05", "0.125")
+    e = reward("2025-01-04 08:04:05", "0.125",
+               kind="Bonus Tiered APR Rewards")
     bridge, candidates = reconcile_earn_rewards(
         [e], [tx("2025-01-04 08:04:05", "0.125")]
     )
@@ -48,7 +49,8 @@ def test_apr_en_tiempo_real_sin_espejo_spot_es_normal_pero_no_fiscal():
     bridge, candidates = reconcile_earn_rewards(
         [reward("2025-01-04", "0.01")], []
     )
-    assert bridge.native_not_in_ledger == 1
+    assert bridge.native_not_in_ledger == 0  # Real-time no tiene espejo Spot.
+    assert bridge.real_time_apr_records == 1
     assert bridge.ledger_not_in_native == 0
     assert bridge.native_day_only == 1
     assert candidates[0].precision == "day"
@@ -77,7 +79,8 @@ def test_subscripcion_auto_no_es_recompensa_ni_lote():
 
 
 def test_dos_recompensas_repetidas_no_son_un_unico_ingreso():
-    e = reward("2025-01-01 08:00:00", "0.125")
+    e = reward("2025-01-01 08:00:00", "0.125",
+               kind="Bonus Tiered APR Rewards")
     bridge, candidates = reconcile_earn_rewards(
         [e, e], [tx("2025-01-01 08:00:00", "0.125")] * 2
     )
@@ -89,7 +92,8 @@ def test_dos_recompensas_repetidas_no_son_un_unico_ingreso():
 
 def test_diferencia_de_segundos_se_reconoce_solo_a_nivel_dia():
     bridge, candidates = reconcile_earn_rewards(
-        [reward("2025-01-04 01:01:01", "0.125")],
+        [reward("2025-01-04 01:01:01", "0.125",
+                kind="Bonus Tiered APR Rewards")],
         [tx("2025-01-04 01:01:02", "0.125")],
     )
     assert bridge.matched_exact == 0
@@ -100,7 +104,8 @@ def test_diferencia_de_segundos_se_reconoce_solo_a_nivel_dia():
 
 def test_suma_diaria_igual_con_filas_distintas_no_da_match_univoco():
     bridge, candidates = reconcile_earn_rewards(
-        [reward("2025-01-04", "0.1"), reward("2025-01-04", "0.2")],
+        [reward("2025-01-04", "0.1", kind="Bonus Tiered APR Rewards"),
+         reward("2025-01-04", "0.2", kind="Bonus Tiered APR Rewards")],
         [tx("2025-01-04 09:00:00", "0.3")],
     )
     assert bridge.matched_exact == bridge.matched_by_day == 0
@@ -113,7 +118,8 @@ def test_suma_diaria_igual_con_filas_distintas_no_da_match_univoco():
 
 def test_sumatorio_solo_parecido_no_se_admite_como_cuadre():
     bridge, _ = reconcile_earn_rewards(
-        [reward("2025-01-04", "0.10000001"), reward("2025-01-04", "0.2")],
+        [reward("2025-01-04", "0.10000001", kind="Bonus Tiered APR Rewards"),
+         reward("2025-01-04", "0.2", kind="Bonus Tiered APR Rewards")],
         [tx("2025-01-04 09:00:00", "0.3")],
     )
     assert bridge.daily_aggregate_only_groups == 0
@@ -135,7 +141,7 @@ def test_otros_rendimientos_no_se_confunden_con_earn_flexible():
         [tx("2025-01-04 12:00:00", "0.125",
             operation="Simple Earn Locked Rewards")],
     )
-    assert bridge.native_not_in_ledger == 1
+    assert bridge.native_not_in_ledger == 0
     assert bridge.ledger_records == 0
     assert len(candidates) == 1
 
@@ -170,7 +176,8 @@ def test_clasificador_recompensa_nativa_y_ledger_mantiene_guard(tmp_path):
         return str(p)
     native = csv_file("rewards.csv",
                       ["Tiempo", "Moneda", "Cantidad", "Tipo"],
-                      [["2025-01-04", "ABC", "0.125", "Real-time APR Rewards"]])
+                      [["2025-01-04 11:00:00", "ABC", "0.125",
+                        "Bonus Tiered APR Rewards"]])
     ledger = csv_file("ledger.csv",
                       ["ID de usuario", "Tiempo", "Cuenta", "Operación",
                        "Moneda", "Cambio", "Observación"],
@@ -184,3 +191,67 @@ def test_clasificador_recompensa_nativa_y_ledger_mantiene_guard(tmp_path):
     assert "earn_flexible_requiere_inventario_y_valoracion_fiscal" in (
         c.fuentes_materiales_no_soportadas
     )
+
+
+def test_airdrop_nativo_y_ledger_es_un_solo_candidato_sin_billetera_supuesta():
+    native = reward("2025-01-04 05:00:01", "0.003",
+                    kind="Airdrop Rewards")
+    ledger = tx("2025-01-04 05:00:03", "0.003",
+                operation="Simple Earn Flexible Airdrop")
+    bridge, candidates = reconcile_earn_rewards([native], [ledger])
+    assert bridge.native_records == bridge.ledger_records == 1
+    assert bridge.matched_by_day == 1
+    assert bridge.native_not_in_ledger == bridge.ledger_not_in_native == 0
+    assert bridge.unknown_native_kinds == 0
+    assert bridge.unlocated_native_rewards == 1
+    assert bridge.candidate_lots == len(candidates) == 1
+    assert candidates[0].expected_wallet is None
+    assert candidates[0].cost_eur is None
+    assert not bridge.fiscal_ready
+
+
+def test_recompensa_realtime_no_puede_suplantar_bonus_mismo_importe():
+    e = reward("2025-01-04 10:00:00", "0.03")
+    l = tx("2025-01-04 10:00:00", "0.03")
+    bridge, candidates = reconcile_earn_rewards([e], [l])
+    assert bridge.matched_exact == bridge.matched_by_day == 0
+    assert bridge.real_time_apr_records == 1
+    assert bridge.ledger_not_in_native == 1
+    assert bridge.native_not_in_ledger == 0
+    assert len(candidates) == 1
+
+
+def test_bono_y_airdrop_con_igual_importe_no_se_mezclan():
+    e = reward("2025-01-04 10:00:00", "0.03",
+               kind="Airdrop Rewards")
+    l = tx("2025-01-04 10:00:00", "0.03")
+    bridge, _ = reconcile_earn_rewards([e], [l])
+    assert bridge.matched_exact == bridge.matched_by_day == 0
+    assert bridge.native_not_in_ledger == 1
+    assert bridge.ledger_not_in_native == 1
+    assert bridge.unlocated_native_rewards == 1
+
+
+def test_cuatro_tipos_de_lotes_no_se_fabrican_con_mismo_importe():
+    earn_events = [
+        reward("2025-01-04", "0.03"),
+        reward("2025-01-04 10:00:00", "0.03",
+               kind="Bonus Tiered APR Rewards"),
+        reward("2025-01-04 10:00:00", "0.03",
+               kind="Airdrop Rewards"),
+        subscription("2025-01-04 10:01:00", "0.03"),
+    ]
+    ledger = [
+        tx("2025-01-04 10:00:00", "0.03"),
+        tx("2025-01-04 10:00:00", "0.03",
+           operation="Simple Earn Flexible Airdrop"),
+    ]
+    report, candidates = reconcile_earn_rewards(earn_events, ledger)
+    assert report.native_records == 3
+    assert report.ledger_records == 2
+    assert report.matched_exact == 2
+    assert report.real_time_apr_records == 1
+    assert report.auto_subscriptions == 1
+    assert report.candidate_lots == len(candidates) == 3
+    assert report.unlocated_native_rewards == 1
+    assert not report.fiscal_ready

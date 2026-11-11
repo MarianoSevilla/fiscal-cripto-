@@ -24,8 +24,14 @@ class BinanceEarnRewardsError(ValueError):
 _KNOWN = {
     "Real-time APR Rewards": "EARN_FLEXIBLE",
     "Bonus Tiered APR Rewards": "SPOT",
+    # Recompensa verificada, pero la fuente nativa no acredita destino.
+    # Solo un asiento del ledger con cuenta SPOT acredita su recepción.
+    "Airdrop Rewards": None,
 }
-_LEDGER_REWARD = "Simple Earn Flexible Interest"
+_LEDGER_REWARD = {
+    "Simple Earn Flexible Interest": "Bonus Tiered APR Rewards",
+    "Simple Earn Flexible Airdrop": "Airdrop Rewards",
+}
 _SYMBOL = re.compile(r"^[A-Z0-9][A-Z0-9._-]{0,29}$")
 _DAY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _SECOND = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
@@ -72,7 +78,7 @@ class BinanceEarnRewardCandidate:
     quantity: Decimal
     earned_on: str
     precision: str
-    expected_wallet: str
+    expected_wallet: str | None
     kind: str
     cost_eur: None = None
 
@@ -103,6 +109,8 @@ class BinanceEarnRewardsBridge:
     native_day_only: int
     auto_subscriptions: int
     candidate_lots: int
+    real_time_apr_records: int = 0
+    unlocated_native_rewards: int = 0
 
     @property
     def fiscal_ready(self):
@@ -120,8 +128,10 @@ def reconcile_earn_rewards(earn_events, ledger_rows):
     identidad uno a uno. La fuente Earn nativa origina candidatos únicos;
     ningún registro espejo del ledger crea un segundo candidato.
 
-    Los contadores "native_not_in_ledger" son diagnósticos, NO errores:
-    la APR Real-time no necesita aparecer como ingreso Spot en el ledger.
+    Solo Bonus Tiered y Airdrop se concilian contra tipos EXACTOS del ledger.
+    Real-time APR no necesita asiento Spot: no se intenta emparejar con
+    "Simple Earn Flexible Interest", ni siquiera si coinciden cantidades.
+    Los contadores de ausencias son diagnósticos, NO cierres fiscales.
     """
     native = Counter()
     ledger = Counter()
@@ -129,6 +139,9 @@ def reconcile_earn_rewards(earn_events, ledger_rows):
     unknown = 0
     auto_subscriptions = 0
     day_only = 0
+    native_records = 0
+    real_time_records = 0
+    unlocated = 0
 
     for ordinal, event in enumerate(earn_events):
         source = str(getattr(event, "source", ""))
@@ -143,13 +156,19 @@ def reconcile_earn_rewards(earn_events, ledger_rows):
         asset = _asset(event.asset)
         amount = _amount(event.amount)
         kind = str(event.kind).strip()
-        native[(stamp, asset, amount)] += 1
+        native_records += 1
         if precision == "day":
             day_only += 1
-        wallet = _KNOWN.get(kind)
-        if wallet is None:
+        if kind not in _KNOWN:
             unknown += 1
             continue
+        wallet = _KNOWN[kind]
+        if kind == "Real-time APR Rewards":
+            real_time_records += 1
+        else:
+            native[(kind, stamp, asset, amount)] += 1
+        if wallet is None:
+            unlocated += 1
         candidates.append(BinanceEarnRewardCandidate(
             source_ordinal=ordinal,
             asset=asset, quantity=amount, earned_on=stamp,
@@ -157,12 +176,13 @@ def reconcile_earn_rewards(earn_events, ledger_rows):
         ))
 
     for row in ledger_rows:
-        if str(row.get("operación", "")).strip() != _LEDGER_REWARD:
+        kind = _LEDGER_REWARD.get(str(row.get("operación", "")).strip())
+        if kind is None:
             continue
         stamp, _precision = _time(row.get("tiempo", ""))
         asset = _asset(row.get("moneda", ""))
         amount = _amount(row.get("cambio", ""))
-        ledger[(stamp, asset, amount)] += 1
+        ledger[(kind, stamp, asset, amount)] += 1
 
     strict = native & ledger
     exact = sum(strict.values())
@@ -173,8 +193,8 @@ def reconcile_earn_rewards(earn_events, ledger_rows):
 
     def by_day(counter):
         out = Counter()
-        for (stamp, asset, amount), count in counter.items():
-            out[(stamp[:10], asset, amount)] += count
+        for (kind, stamp, asset, amount), count in counter.items():
+            out[(kind, stamp[:10], asset, amount)] += count
         return out
 
     nday, lday = by_day(n_remaining), by_day(l_remaining)
@@ -191,8 +211,8 @@ def reconcile_earn_rewards(earn_events, ledger_rows):
     # si cuadra el TOTAL, describirlo como agregado, jamás como match fila.
     def totals(counter):
         out = defaultdict(lambda: [Decimal(0), 0])
-        for (day, asset, amount), count in counter.items():
-            bucket = out[(day, asset)]
+        for (kind, day, asset, amount), count in counter.items():
+            bucket = out[(kind, day, asset)]
             bucket[0] += amount * count
             bucket[1] += count
         return out
@@ -207,7 +227,7 @@ def reconcile_earn_rewards(earn_events, ledger_rows):
             agg_ledger += lsum[key][1]
 
     return BinanceEarnRewardsBridge(
-        native_records=sum(native.values()),
+        native_records=native_records,
         ledger_records=sum(ledger.values()),
         matched_exact=exact,
         matched_by_day=matched_by_day,
@@ -221,4 +241,6 @@ def reconcile_earn_rewards(earn_events, ledger_rows):
         native_day_only=day_only,
         auto_subscriptions=auto_subscriptions,
         candidate_lots=len(candidates),
+        real_time_apr_records=real_time_records,
+        unlocated_native_rewards=unlocated,
     ), tuple(candidates)
