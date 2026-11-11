@@ -28,7 +28,7 @@ def subscription(stamp, qty, *, kind="Auto"):
 
 def tx(stamp, qty, *, asset="ABC", operation="Simple Earn Flexible Interest"):
     return {"operación": operation, "tiempo": stamp, "moneda": asset,
-            "cambio": str(qty), "cuenta": "Spot"}
+            "cambio": qty, "cuenta": "Spot"}
 
 
 def test_un_espejo_exactamente_igual_no_crea_un_segundo_lote():
