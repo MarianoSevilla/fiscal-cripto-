@@ -1847,7 +1847,7 @@ def _validar_aceptacion_bit2me_fiscal(clasificador) -> None:
         )
 
 
-def _motor_a_json(motor, clasificador=None) -> tuple:
+def _motor_a_json(motor, clasificador=None, *, posiciones_snapshot=None) -> tuple:
     """Convierte el resultado del motor FIFO validado a JSON para la UI."""
     _validar_aceptacion_fifo(motor, clasificador)
     motor.validar_integridad()
@@ -1859,7 +1859,8 @@ def _motor_a_json(motor, clasificador=None) -> tuple:
             "precio_medio": round(p.precio_medio, 4),
             "coste_total": round(p.coste_total, 4),
         }
-        for p in motor.posicion_actual()
+        for p in (posiciones_snapshot if posiciones_snapshot is not None
+                  else motor.posicion_actual())
     ]
     operaciones = [
         {
@@ -2619,12 +2620,27 @@ def analizar_binance_multi():
 
         try:
             motor, rendimientos, clasificador = procesar_binance_multi(tmp_paths, filenames)
+            # El historial completo sigue usándose para calcular lotes FIFO,
+            # pero la posición mostrada para IRPF/721 debe ser el cierre del
+            # ejercicio seleccionado, no el saldo de años posteriores.
+            # Capturar ANTES de filtrar resultados; posicion_a_fecha necesita
+            # todas las transmisiones anteriores al cierre para reconstruir.
+            years = _años_seleccionados(ejercicio)
+            posiciones_snapshot = (
+                motor.posicion_a_fecha(datetime(max(years), 12, 31, 23, 59, 59, 999999))
+                if years else None
+            )
             _filtrar_motor_por_ejercicio(motor, ejercicio)
             rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
-            resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
+            resumen, posicion, operaciones = _motor_a_json(
+                motor, clasificador, posiciones_snapshot=posiciones_snapshot
+            )
             advertencias = motor.advertencias + clasificador.advertencias
             rendimientos_json = _rendimientos_a_json(rendimientos)
-            pdf_bytes = generar_pdf(motor, nombre, ejercicio, "Binance", rendimientos)
+            pdf_bytes = generar_pdf(
+                motor, nombre, ejercicio, "Binance", rendimientos,
+                posiciones_snapshot=posiciones_snapshot
+            )
 
             processing_ms = int((time.time() - t_start) * 1000)
             distinct_assets = len({op["activo"] for op in operaciones}) if operaciones else 0

@@ -687,3 +687,34 @@ def test_binance_same_second_different_lot_cost_blocks_partial_sale(client, usua
     )
     assert response.status_code == 422
     assert "token" not in response.get_json()
+
+
+def test_binance_2025_position_pdf_ignores_2026_with_full_history(client, usuario):
+    """IRPF 2025 no puede mostrar en posición el saldo posterior de 2026."""
+    _login(client)
+    raw = (
+        SPOT_HEADER
+        + "buy-a,2024-06-01 10:00:00,XRPEUR,BUY,2,10XRP,20EUR,0XRP,,\n"
+        + "sell-a,2025-06-01 10:00:00,XRPEUR,SELL,3,5XRP,15EUR,0EUR,,\n"
+        + "buy-b,2026-05-01 10:00:00,XRPEUR,BUY,2,100XRP,200EUR,0XRP,,\n"
+        + "sell-b,2026-05-02 10:00:00,XRPEUR,SELL,3,1XRP,3EUR,0EUR,,\n"
+    ).encode("utf-8-sig")
+    response = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(raw), "Binance-Spot-(UTC+1).csv"),
+              "ejercicio": "2025", "nombre": "Corte anual sintético"},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 200, response.get_data(as_text=True)[:450]
+    payload = response.get_json()
+    assert payload["resumen_archivos"]["spot_trades"]["registros"] == 4
+    assert payload["resumen"]["operaciones_con_resultado"] == 1
+    assert payload["resumen"]["resultado_neto"] == pytest.approx(5.0)
+    assert len(payload["operaciones"]) == 1
+    assert payload["operaciones"][0]["fecha"] == "2025-06-01"
+    positions = {p["activo"]: p for p in payload["posicion"]}
+    assert positions["XRP"]["cantidad"] == pytest.approx(5.0)
+    assert positions["XRP"]["coste_total"] == pytest.approx(10.0)
+    downloaded = client.get(f"/api/descargar/{payload['token']}")
+    assert downloaded.status_code == 200
+    assert downloaded.data.startswith(b"%PDF-")
