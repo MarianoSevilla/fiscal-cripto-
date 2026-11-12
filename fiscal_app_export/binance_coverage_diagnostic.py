@@ -237,3 +237,95 @@ def _diagnosticar_saldos(
         pagos_externos_supuestos=pagos_externos_supuestos,
         saldos_finales=tuple(sorted(balances.items())),
     )
+
+
+@dataclass(frozen=True)
+class BinanceStatementBalanceComparison:
+    """Contraste de cantidades: NUNCA prueba lotes, coste EUR ni FIFO fiscal."""
+
+    activos_comparados: tuple[str, ...]
+    diferencias_materiales: tuple[tuple[str, Decimal, Decimal, Decimal], ...]
+    diferencias_en_margen_de_presentacion: tuple[
+        tuple[str, Decimal, Decimal, Decimal], ...
+    ]
+    activos_sin_dato_de_cierre: tuple[str, ...]
+    margen_presentacion: Decimal
+
+    @property
+    def fifo_fiscal_acreditado(self) -> bool:
+        return False
+
+
+def contrastar_con_saldos_declarados(
+    diagnostico: BinanceCoverageResult, *,
+    saldos_cierre: Mapping[str, str | Decimal],
+    unidad_presentacion: str | Decimal,
+) -> BinanceStatementBalanceComparison:
+    """Compara el diagnóstico contra cantidades publicadas en un statement.
+
+    Es obligatorio aportar explícitamente la precisión de cantidad del
+    extracto (p.ej. '0.000001'); nunca interpretar un activo ausente del
+    statement como saldo cero. Como apertura y cierre pueden estar redondeados
+    independientemente, una diferencia de hasta DOS unidades de presentación
+    es solo compatible con su precisión, NO una conciliación acreditada.
+    El análisis de costes y lotes requiere fuentes históricas adicionales.
+    """
+    if not isinstance(diagnostico, BinanceCoverageResult):
+        raise BinanceCoverageError("Diagnóstico de saldos Binance inválido")
+    if not isinstance(saldos_cierre, Mapping) or not saldos_cierre:
+        raise BinanceCoverageError("Se requiere al menos un saldo de cierre declarado")
+
+    if isinstance(unidad_presentacion, (bool, float)) or not isinstance(
+        unidad_presentacion, (str, Decimal)
+    ):
+        raise BinanceCoverageError("Precisión del extracto debe ser texto o Decimal")
+    try:
+        unidad = Decimal(unidad_presentacion)
+    except (InvalidOperation, ValueError) as exc:
+        raise BinanceCoverageError("Precisión del extracto inválida") from exc
+    if not unidad.is_finite() or unidad <= 0:
+        raise BinanceCoverageError("Precisión del extracto inválida")
+
+    cierre: dict[str, Decimal] = {}
+    for raw_asset, raw_amount in saldos_cierre.items():
+        if not isinstance(raw_asset, str):
+            raise BinanceCoverageError("Activo del extracto inválido")
+        asset = raw_asset.strip().upper()
+        if (not asset or len(asset) > 30
+                or any(not (c.isascii() and (c.isalnum() or c in "._-"))
+                       for c in asset)):
+            raise BinanceCoverageError("Activo del extracto inválido")
+        if asset in cierre:
+            raise BinanceCoverageError("Activo del extracto duplicado")
+        if isinstance(raw_amount, (float, bool)) or not isinstance(
+            raw_amount, (str, Decimal)
+        ):
+            raise BinanceCoverageError("Saldo del extracto requiere texto o Decimal")
+        try:
+            amount = Decimal(raw_amount)
+        except (InvalidOperation, ValueError) as exc:
+            raise BinanceCoverageError("Saldo del extracto inválido") from exc
+        if not amount.is_finite() or amount < 0:
+            raise BinanceCoverageError("Saldo del extracto inválido")
+        cierre[asset] = amount
+
+    calculados = dict(diagnostico.saldos_finales)
+    material: list[tuple[str, Decimal, Decimal, Decimal]] = []
+    precision: list[tuple[str, Decimal, Decimal, Decimal]] = []
+    margen = unidad * 2
+    for asset in sorted(cierre):
+        calculated = calculados.get(asset, Decimal("0"))
+        stated = cierre[asset]
+        difference = calculated - stated
+        item = (asset, calculated, stated, difference)
+        if abs(difference) > margen:
+            material.append(item)
+        else:
+            precision.append(item)
+    return BinanceStatementBalanceComparison(
+        activos_comparados=tuple(sorted(cierre)),
+        diferencias_materiales=tuple(material),
+        diferencias_en_margen_de_presentacion=tuple(precision),
+        activos_sin_dato_de_cierre=tuple(sorted(set(calculados) - set(cierre))),
+        margen_presentacion=margen,
+    )
