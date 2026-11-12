@@ -1833,7 +1833,7 @@ def _validar_aceptacion_fifo(motor, clasificador=None) -> None:
             if (rewards_section is not None and rewards_section.detectado
                     and rewards_section.vacio):
                 raise ValueError(
-                    "No se puede generar un informe fiscal fiable: el CSV "
+                    "Datos fiscales no seguros: el CSV "
                     "de recompensas de Binance Simple Earn está vacío, pero "
                     "no acredita el período de fechas que cubre. No se puede "
                     "descartar que existan rendimientos Earn omitidos."
