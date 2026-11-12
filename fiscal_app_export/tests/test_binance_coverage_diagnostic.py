@@ -12,8 +12,9 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from binance_coverage_diagnostic import (
-    BinanceCoverageError, diagnosticar_saldo_inicial_cero,
-    diagnosticar_saldo_con_apertura,
+    BinanceCoverageError, BinanceCoverageResult,
+    diagnosticar_saldo_inicial_cero, diagnosticar_saldo_con_apertura,
+    contrastar_con_saldos_declarados,
 )
 from clasificador_binance_multi import ClasificadorBinanceMulti
 
@@ -270,4 +271,76 @@ def test_apertura_rechaza_eventos_anteriores_a_fecha_documentada(tmp_path):
         diagnosticar_saldo_con_apertura(
             classify(spot), inicio="2025-01-01",
             saldos_iniciales={"EUR": "100"},
+        )
+
+
+def _statement_diagnostic(*balances):
+    # Solo cantidades inventadas; sin identificación de titulares o cuentas.
+    return BinanceCoverageResult(
+        fecha_inicio="2025-01-01",
+        operaciones_contabilizadas=3,
+        activos_con_deficit=(),
+        activos_depositados_sin_coste_acreditado=(),
+        movimientos_no_contabilizados=(),
+        saldos_finales=balances,
+    )
+
+
+def test_statement_comparison_respetar_ultima_cifra_publicada():
+    report = _statement_diagnostic(
+        ("BTC", Decimal("1.000002")),
+        ("XRP", Decimal("5.000000")),
+    )
+    comparison = contrastar_con_saldos_declarados(
+        report, saldos_cierre={"BTC": "1.000001"},
+        unidad_presentacion="0.000001",
+    )
+    assert comparison.diferencias_materiales == ()
+    assert comparison.diferencias_en_margen_de_presentacion == (
+        ("BTC", Decimal("1.000002"), Decimal("1.000001"), Decimal("0.000001")),
+    )
+    assert comparison.activos_sin_dato_de_cierre == ("XRP",)
+    assert not comparison.fifo_fiscal_acreditado
+
+
+def test_statement_comparison_no_oculta_diferencia_superior_a_precision():
+    report = _statement_diagnostic(("BTC", Decimal("1.100000")))
+    comparison = contrastar_con_saldos_declarados(
+        report, saldos_cierre={"BTC": Decimal("1.000000"), "ETH": "2.500000"},
+        unidad_presentacion=Decimal("0.000001"),
+    )
+    assert [x[0] for x in comparison.diferencias_materiales] == ["BTC", "ETH"]
+    assert comparison.diferencias_materiales[0][3] == Decimal("0.100000")
+    # Los activos sin eventos conocidos no se consideran cero fiscal acreditado.
+    assert comparison.diferencias_materiales[1][3] == Decimal("-2.500000")
+    assert not comparison.fifo_fiscal_acreditado
+
+
+def test_statement_comparison_no_convierte_conciliacion_en_fiscalidad():
+    report = _statement_diagnostic(("XRP", Decimal("11.0")))
+    comparison = contrastar_con_saldos_declarados(
+        report, saldos_cierre={"XRP": "11.0"}, unidad_presentacion="0.000001",
+    )
+    assert comparison.diferencias_materiales == ()
+    assert not comparison.fifo_fiscal_acreditado
+
+
+@pytest.mark.parametrize("closing,unit", [
+    ({}, "0.000001"),
+    ({"BTC": "NaN"}, "0.000001"),
+    ({"BTC": "Infinity"}, "0.000001"),
+    ({"BTC": "-1"}, "0.000001"),
+    ({"BTC": 1.0}, "0.000001"),
+    ({"BTC": "1"}, "0"),
+    ({"BTC": "1"}, "-0.000001"),
+    ({"BTC": "1"}, "NaN"),
+    ({"BTC": "1"}, 0.000001),
+    ({"B TC": "1"}, "0.000001"),
+    ({"btc": "1", "BTC": "2"}, "0.000001"),
+])
+def test_statement_comparison_rechaza_pruebas_invalidas(closing, unit):
+    report = _statement_diagnostic(("BTC", Decimal("1")))
+    with pytest.raises(BinanceCoverageError):
+        contrastar_con_saldos_declarados(
+            report, saldos_cierre=closing, unidad_presentacion=unit,
         )
