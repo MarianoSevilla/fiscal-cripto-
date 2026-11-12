@@ -634,3 +634,48 @@ def test_binance_multi_csv_utf8_invalido_falla_cerrado(tmp_path):
         _classify([p])
     assert exc.value.code == "invalid_csv_encoding"
     assert exc.value.category == "parser_error"
+
+
+def test_earn_overlap_realistic_stays_fail_closed(tmp_path):
+    """Dos ZIP Earn solapados no deben borrar una recompensa sin identidad."""
+    headers = ["Tiempo", "Moneda", "Cantidad", "Tipo"]
+    shared = ["2025-12-30", "ABC", "0.00000012", "Real-time APR Rewards"]
+    first = _csv(tmp_path, "earn-year.csv", headers, [
+        ["2025-12-29", "ABC", "0.00000011", "Real-time APR Rewards"],
+        shared,
+    ])
+    second = _csv(tmp_path, "earn-boundary.csv", headers, [
+        shared,
+        ["2026-01-01", "ABC", "0.00000013", "Real-time APR Rewards"],
+    ])
+    classified = _classify([first, second])
+    assert classified.resumen_archivos["earn_flexible_rewards"]["registros"] == 4
+    assert len(classified.earn_events) == 4
+    assert "filas_identicas_entre_exportaciones_sin_id_unico" in (
+        classified.fuentes_materiales_no_soportadas
+    )
+    assert "earn_flexible_requiere_inventario_y_valoracion_fiscal" in (
+        classified.fuentes_materiales_no_soportadas
+    )
+
+
+def test_earn_ledger_historico_sin_zip_nativo_no_se_concilia(tmp_path):
+    """Una exportacion Earn parcial no acredita suscripciones anteriores."""
+    headers = ["Fecha de suscripción", "Nombre del producto", "Moneda",
+               "Cantidad", "Tipo", "De", "Estado"]
+    native = _csv(tmp_path, "earn-native.csv", headers, [
+        ["2025-05-01 12:00:00", "ABC", "ABC", "100",
+         "Auto", "SPOT", "Success"],
+    ])
+    ledger = _csv(tmp_path, "ledger.csv", TX_H, [
+        ["synthetic", "2025-05-01 12:00:00", "Spot",
+         "Simple Earn Flexible Subscription", "ABC", "-100", ""],
+        ["synthetic", "2025-05-03 12:00:00", "Spot",
+         "Simple Earn Flexible Subscription", "ABC", "-50", ""],
+    ])
+    classified = _classify([native, ledger])
+    assert classified.earn_reconciliation.ledger_unmatched == 1
+    assert classified.earn_reconciliation.native_unmatched == 0
+    assert "earn_fuentes_no_conciliadas" in (
+        classified.fuentes_materiales_no_soportadas
+    )
