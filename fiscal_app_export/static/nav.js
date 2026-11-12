@@ -27,17 +27,18 @@
 
           <!-- Estado autenticado (oculto hasta que /api/me resuelve) -->
           <div class="snav-avatar-wrap snav-hidden" id="snavAvatarWrap">
-            <button class="snav-avatar" id="snavAvatar" aria-label="Menú de usuario" aria-haspopup="true" aria-expanded="false">U</button>
-            <div class="snav-dropdown" id="snavDropdown" role="menu">
-              <a href="/account"   class="snav-dd-item"             id="snavItemAccount" role="menuitem">Mi cuenta</a>
-              <a href="/dashboard" class="snav-dd-item"             id="snavItemDash"    role="menuitem">Mi espacio fiscal</a>
-              <a href="/stats"     class="snav-dd-item snav-hidden" id="snavItemStats"          role="menuitem">Stats</a>
-              <a href="/admin/asesoramiento"      class="snav-dd-item snav-hidden" id="snavItemAdminAsesoria"    role="menuitem">Panel asesoramiento</a>
-              <a href="/admin/comunicaciones"     class="snav-dd-item snav-hidden" id="snavItemAdminComms"       role="menuitem">Comunicaciones</a>
-              <a href="/admin/recursos"           class="snav-dd-item snav-hidden" id="snavItemAdminRecursos"    role="menuitem">Solicitudes de recursos</a>
-              <a href="/mis-solicitudes-fiscales" class="snav-dd-item snav-hidden" id="snavItemMisSolicitudes"  role="menuitem">Mis solicitudes fiscales</a>
+            <button type="button" class="snav-avatar" id="snavAvatar" aria-label="Menú de usuario" aria-controls="snavDropdown" aria-expanded="false">U</button>
+            <div class="snav-dropdown" id="snavDropdown">
+              <a href="/dashboard" class="snav-dd-item"             id="snavItemDash">Mi espacio fiscal</a>
+              <a href="/account"   class="snav-dd-item"             id="snavItemAccount">Mi cuenta</a>
+              <a href="/stats"     class="snav-dd-item snav-hidden" id="snavItemStats">Stats</a>
+              <a href="/admin/asesoramiento"      class="snav-dd-item snav-hidden" id="snavItemAdminAsesoria">Panel asesoramiento</a>
+              <a href="/admin/comunicaciones"     class="snav-dd-item snav-hidden" id="snavItemAdminComms">Comunicaciones</a>
+              <a href="/admin/recursos"           class="snav-dd-item snav-hidden" id="snavItemAdminRecursos">Solicitudes de recursos</a>
+              <a href="/mis-solicitudes-fiscales" class="snav-dd-item snav-hidden" id="snavItemMisSolicitudes">Mis solicitudes fiscales</a>
+              <a href="/admin/contactos"          class="snav-dd-item snav-hidden" id="snavItemAdminContactos">Contactos</a>
               <div class="snav-dd-divider"></div>
-              <button class="snav-dd-item danger" id="snavBtnLogout" role="menuitem">Cerrar sesión</button>
+              <button type="button" class="snav-dd-item danger" id="snavBtnLogout">Cerrar sesión</button>
             </div>
           </div>`;
   }
@@ -73,6 +74,7 @@
       '/admin/asesoramiento':       'snavItemAdminAsesoria',
       '/admin/comunicaciones':      'snavItemAdminComms',
       '/admin/recursos':            'snavItemAdminRecursos',
+      '/admin/contactos':           'snavItemAdminContactos',
       '/mis-solicitudes-fiscales':  'snavItemMisSolicitudes',
     };
     for (const [prefix, id] of Object.entries(map)) {
@@ -112,11 +114,12 @@
       avatar.setAttribute('aria-expanded', 'false');
     });
 
-    // Cerrar con Escape
+    // Disclosure of native links: Tab navigates; Escape closes and restores focus.
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && dropdown.classList.contains('open')) {
         dropdown.classList.remove('open');
         avatar.setAttribute('aria-expanded', 'false');
+        avatar.focus();
       }
     });
   }
@@ -314,14 +317,18 @@
             const adminComms      = document.getElementById('snavItemAdminComms');
             const adminRecursos   = document.getElementById('snavItemAdminRecursos');
             const misSolicitudes  = document.getElementById('snavItemMisSolicitudes');
+            const adminContactos  = document.getElementById('snavItemAdminContactos');
             if (stats)          stats.classList.remove('snav-hidden');
             if (adminAsesoria)  adminAsesoria.classList.remove('snav-hidden');
             if (adminComms)     adminComms.classList.remove('snav-hidden');
             if (adminRecursos)  adminRecursos.classList.remove('snav-hidden');
             if (misSolicitudes) misSolicitudes.classList.remove('snav-hidden');
+            if (adminContactos) adminContactos.classList.remove('snav-hidden');
           } else if (user.is_fiscal_advisor) {
             const adminAsesoria = document.getElementById('snavItemAdminAsesoria');
+            const adminRecursos = document.getElementById('snavItemAdminRecursos');
             if (adminAsesoria) adminAsesoria.classList.remove('snav-hidden');
+            if (adminRecursos) adminRecursos.classList.remove('snav-hidden');
           }
         }
       }

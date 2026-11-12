@@ -244,6 +244,8 @@ def main():
                         total += 1
                     finally:
                         page.close()
+            from qa_avatar_navigation import run_avatar_navigation
+            run_avatar_navigation(browser, origin, check_header)
         finally:
             browser.close()
     print(f"QA responsive navegación: {total} casos PASS (datos simulados)")
