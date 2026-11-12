@@ -300,6 +300,7 @@ def test_statement_comparison_respetar_ultima_cifra_publicada():
         ("BTC", Decimal("1.000002"), Decimal("1.000001"), Decimal("0.000001")),
     )
     assert comparison.activos_sin_dato_de_cierre == ("XRP",)
+    assert comparison.activos_sin_saldo_calculado == ()
     assert not comparison.fifo_fiscal_acreditado
 
 
@@ -309,10 +310,10 @@ def test_statement_comparison_no_oculta_diferencia_superior_a_precision():
         report, saldos_cierre={"BTC": Decimal("1.000000"), "ETH": "2.500000"},
         unidad_presentacion=Decimal("0.000001"),
     )
-    assert [x[0] for x in comparison.diferencias_materiales] == ["BTC", "ETH"]
+    assert [x[0] for x in comparison.diferencias_materiales] == ["BTC"]
     assert comparison.diferencias_materiales[0][3] == Decimal("0.100000")
-    # Los activos sin eventos conocidos no se consideran cero fiscal acreditado.
-    assert comparison.diferencias_materiales[1][3] == Decimal("-2.500000")
+    # No inventar saldo 0 para ETH, que no figura en el diagnóstico.
+    assert comparison.activos_sin_saldo_calculado == ("ETH",)
     assert not comparison.fifo_fiscal_acreditado
 
 
@@ -322,6 +323,7 @@ def test_statement_comparison_no_convierte_conciliacion_en_fiscalidad():
         report, saldos_cierre={"XRP": "11.0"}, unidad_presentacion="0.000001",
     )
     assert comparison.diferencias_materiales == ()
+    assert comparison.activos_sin_saldo_calculado == ()
     assert not comparison.fifo_fiscal_acreditado
 
 
