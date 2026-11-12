@@ -249,6 +249,7 @@ class BinanceStatementBalanceComparison:
         tuple[str, Decimal, Decimal, Decimal], ...
     ]
     activos_sin_dato_de_cierre: tuple[str, ...]
+    activos_sin_saldo_calculado: tuple[str, ...]
     margen_presentacion: Decimal
 
     @property
@@ -265,7 +266,7 @@ def contrastar_con_saldos_declarados(
 
     Es obligatorio aportar explícitamente la precisión de cantidad del
     extracto (p.ej. '0.000001'); nunca interpretar un activo ausente del
-    statement como saldo cero. Como apertura y cierre pueden estar redondeados
+    statement o del diagnóstico como saldo cero. Como apertura y cierre pueden estar redondeados
     independientemente, una diferencia de hasta DOS unidades de presentación
     es solo compatible con su precisión, NO una conciliación acreditada.
     El análisis de costes y lotes requiere fuentes históricas adicionales.
@@ -312,9 +313,15 @@ def contrastar_con_saldos_declarados(
     calculados = dict(diagnostico.saldos_finales)
     material: list[tuple[str, Decimal, Decimal, Decimal]] = []
     precision: list[tuple[str, Decimal, Decimal, Decimal]] = []
+    sin_calculo: list[str] = []
     margen = unidad * 2
     for asset in sorted(cierre):
-        calculated = calculados.get(asset, Decimal("0"))
+        if asset not in calculados:
+            # No se conoce apertura ni historial de este activo: NO
+            # convertir una fuente omitida en saldo calculado cero.
+            sin_calculo.append(asset)
+            continue
+        calculated = calculados[asset]
         stated = cierre[asset]
         difference = calculated - stated
         item = (asset, calculated, stated, difference)
@@ -327,5 +334,6 @@ def contrastar_con_saldos_declarados(
         diferencias_materiales=tuple(material),
         diferencias_en_margen_de_presentacion=tuple(precision),
         activos_sin_dato_de_cierre=tuple(sorted(set(calculados) - set(cierre))),
+        activos_sin_saldo_calculado=tuple(sin_calculo),
         margen_presentacion=margen,
     )
