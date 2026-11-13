@@ -307,7 +307,7 @@ def reconcile_earn_rewards(earn_events, ledger_rows):
     # Los candidatos de la fuente nativa sin espejo tampoco deben desaparecer.
     # Un match por suma diaria no permite individualizar recompensa y asiento.
     native_missing_year_kind = Counter()
-    for (kind, day, asset, _amount), count in nday.items():
+    for (kind, day, asset, reward_quantity), count in nday.items():
         if (kind, day, asset) not in aggregate_keys:
             native_missing_year_kind[(int(day[:4]), kind)] += count
 
