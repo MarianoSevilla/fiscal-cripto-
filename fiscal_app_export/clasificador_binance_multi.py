@@ -616,8 +616,12 @@ class ClasificadorBinanceMulti:
         self._process_transaction_history()
         # Conciliación únicamente informativa. No elimina registros, no crea
         # lotes ni rebaja el bloqueo fiscal de Simple Earn en app.py.
-        if any(e.source in ("earn_flexible_subscription",
-                            "earn_flexible_redemption") for e in self.earn_events):
+        if (any(e.source in ("earn_flexible_subscription",
+                             "earn_flexible_redemption") for e in self.earn_events)
+                or any(row.get("operación", "").strip() in (
+                    "Simple Earn Flexible Subscription",
+                    "Simple Earn Flexible Redemption",
+                ) for row, _ in self._source_rows["transaction_history"])):
             try:
                 self.earn_reconciliation = conciliar_earn_con_ledger(
                     self.earn_events,
