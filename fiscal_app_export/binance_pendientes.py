@@ -100,7 +100,11 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
             for item in grouped or ():
                 if (isinstance(item, tuple) and len(item) == 3
                         and type(item[0]) is int and 2009 <= item[0] <= 2100
-                        and item[1] in ("Bonus Tiered APR Rewards", "Airdrop Rewards")
+                        and item[1] in (
+                            "Bonus Tiered APR Rewards", "Airdrop Rewards",
+                            "Simple Earn Flexible Interest",
+                            "Simple Earn Flexible Airdrop",
+                        )
                         and type(item[2]) is int and item[2] > 0):
                     counts[item[0]] = counts.get(item[0], 0) + item[2]
                 else:
