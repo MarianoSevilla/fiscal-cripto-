@@ -45,6 +45,13 @@ class BinanceHistoricalLedgerResult:
     netos_earn_flexible: tuple[tuple[str, Decimal], ...]
     saldos_por_cuenta: tuple[tuple[str, str, Decimal], ...]
     primeras_insuficiencias: tuple[tuple[str, str, Decimal], ...]
+    # Cuenta, activo, primer instante negativo, saldo de ese instante.
+    # Evidencia de conciliación, NO prueba de un coste FIFO ausente.
+    primeras_insuficiencias_por_cuenta: tuple[tuple[str, str, str, Decimal], ...] = ()
+
+    @property
+    def sin_saldos_negativos_por_cuenta(self) -> bool:
+        return not self.primeras_insuficiencias_por_cuenta
 
     @property
     def sin_saldos_negativos_globales(self) -> bool:
@@ -104,6 +111,9 @@ def inspeccionar_historial_binance(
     # la misma marca temporal. Acumularlas antes de comprobar los saldos.
     pending_time: datetime | None = None
     pending_changes: dict[str, Decimal] = defaultdict(Decimal)
+    pending_account_changes: dict[tuple[str, str], Decimal] = defaultdict(Decimal)
+    account_balances_temporal: dict[tuple[str, str], Decimal] = defaultdict(Decimal)
+    first_account_negative: dict[tuple[str, str], tuple[str, Decimal]] = {}
 
     def settle() -> None:
         if pending_time is None:
@@ -116,6 +126,15 @@ def inspeccionar_historial_binance(
                     balances[symbol],
                 )
         pending_changes.clear()
+        # Misma regla intrasegundo por cuenta: las dos patas internas
+        # del mismo segundo pueden compensarse sin un déficit real.
+        for key, change in pending_account_changes.items():
+            account_balances_temporal[key] += change
+            if account_balances_temporal[key] < 0 and key not in first_account_negative:
+                first_account_negative[key] = (
+                    pending_time.isoformat(sep=" "), account_balances_temporal[key]
+                )
+        pending_account_changes.clear()
 
     for path in paths:
         path = Path(path)
@@ -223,7 +242,9 @@ def inspeccionar_historial_binance(
                             counts[dt.year] += 1
                             kind = record["Operación"].strip()
                             operations[kind] += 1
-                            per_account[(record["Cuenta"].strip(), symbol)] += amount
+                            wallet_key = (record["Cuenta"].strip(), symbol)
+                            per_account[wallet_key] += amount
+                            pending_account_changes[wallet_key] += amount
                             if kind in (
                                 "Simple Earn Flexible Subscription",
                                 "Simple Earn Flexible Redemption",
@@ -250,5 +271,9 @@ def inspeccionar_historial_binance(
         saldos_por_cuenta=tuple(sorted((acct, sym, q) for (acct, sym), q in per_account.items())),
         primeras_insuficiencias=tuple(sorted(
             (sym, day, amount) for sym, (day, amount) in first_negative.items()
+        )),
+        primeras_insuficiencias_por_cuenta=tuple(sorted(
+            (wallet, asset, day, amount)
+            for (wallet, asset), (day, amount) in first_account_negative.items()
         )),
     )
