@@ -141,3 +141,56 @@ def test_earn_no_deduce_tipos_si_contadores_no_coinciden():
                  if i["codigo"] == "earn_cobertura")
     assert "2021 (3 movimientos)" in issue["descripcion"]
     assert "Desglose:" not in issue["descripcion"]
+
+
+def test_diagnostico_recompensas_historicas_diferencia_dos_brechas():
+    c = _clasificador(
+        fuentes_materiales_no_soportadas=[
+            "earn_intereses_ledger_sin_fuente_nativa_suficiente",
+            "earn_recompensas_nativas_sin_asiento_general",
+        ],
+        earn_reward_reconciliation=SimpleNamespace(
+            ledger_not_in_native=5,
+            native_not_in_ledger=2,
+            ledger_missing_by_year_kind=(
+                (2020, "Bonus Tiered APR Rewards", 1),
+                (2021, "Bonus Tiered APR Rewards", 2),
+                (2021, "Airdrop Rewards", 2),
+            ),
+            native_missing_by_year_kind=(
+                (2024, "Bonus Tiered APR Rewards", 2),
+            ),
+        ),
+    )
+    diag = diagnosticar_pendientes_binance(c)
+    codes = _codes(diag)
+    assert "earn_recompensas_sin_nativo" in codes
+    assert "earn_recompensas_sin_ledger" in codes
+    assert "otras_incidencias" not in codes
+    missing = next(x for x in diag["incidencias"]
+                   if x["codigo"] == "earn_recompensas_sin_nativo")
+    assert "2020: 1" in missing["descripcion"]
+    assert "2021: 4" in missing["descripcion"]
+    assert "5 abonos" in missing["descripcion"]
+    assert "coste EUR inventado" in missing["siguiente_paso"]
+    native = next(x for x in diag["incidencias"]
+                  if x["codigo"] == "earn_recompensas_sin_ledger")
+    assert "2024: 2" in native["descripcion"]
+    assert "2 recompensas nativas" in native["descripcion"]
+    assert diag["validez_fiscal_acreditada"] is False
+
+
+def test_diagnostico_recompensas_sin_ano_comprobado_no_inventa_ano():
+    c = _clasificador(
+        earn_reward_reconciliation=SimpleNamespace(
+            ledger_not_in_native=4,
+            native_not_in_ledger=0,
+            ledger_missing_by_year_kind=(
+                ("fecha-secreta", "Bonus Tiered APR Rewards", 4),
+            ),
+        )
+    )
+    issue = next(x for x in diagnosticar_pendientes_binance(c)["incidencias"]
+                 if x["codigo"] == "earn_recompensas_sin_nativo")
+    assert "fecha-secreta" not in issue["descripcion"]
+    assert "Por ejercicio:" not in issue["descripcion"]
