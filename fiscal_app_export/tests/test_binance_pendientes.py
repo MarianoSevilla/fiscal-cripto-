@@ -96,6 +96,11 @@ def test_earn_informa_anos_y_contadores_sin_detalles_privados():
         earn_reconciliation=SimpleNamespace(
             ledger_unmatched=5,
             ledger_unmatched_by_year=((2020, 2), (2023, 3)),
+            ledger_unmatched_by_year_direction=(
+                (2020, "subscription", 1),
+                (2020, "redemption", 1),
+                (2023, "subscription", 3),
+            ),
         ),
         fuentes_materiales_no_soportadas=["earn_fuentes_no_conciliadas"],
     )
@@ -104,6 +109,8 @@ def test_earn_informa_anos_y_contadores_sin_detalles_privados():
                  if i["codigo"] == "earn_cobertura")
     assert "2020 (2 movimientos)" in issue["descripcion"]
     assert "2023 (3 movimientos)" in issue["descripcion"]
+    assert "4 suscripciones y 1 reembolsos" in issue["descripcion"]
+    assert "no adquisiciones fiscales acreditadas" in issue["descripcion"]
     assert "EUR" in issue["siguiente_paso"]
     assert diag["validez_fiscal_acreditada"] is False
 
@@ -120,3 +127,17 @@ def test_earn_no_infiere_periodos_cuando_no_estan_comprobados():
                  if i["codigo"] == "earn_cobertura")
     assert "Períodos identificados" not in issue["descripcion"]
     assert diag["validez_fiscal_acreditada"] is False
+
+
+def test_earn_no_deduce_tipos_si_contadores_no_coinciden():
+    c = _clasificador(
+        earn_reconciliation=SimpleNamespace(
+            ledger_unmatched=3,
+            ledger_unmatched_by_year=((2021, 3),),
+            ledger_unmatched_by_year_direction=((2021, "subscription", 2),),
+        ),
+    )
+    issue = next(i for i in diagnosticar_pendientes_binance(c)["incidencias"]
+                 if i["codigo"] == "earn_cobertura")
+    assert "2021 (3 movimientos)" in issue["descripcion"]
+    assert "Desglose:" not in issue["descripcion"]
