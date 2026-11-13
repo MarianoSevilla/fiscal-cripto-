@@ -216,6 +216,6 @@ def test_diagnostico_abonos_earn_en_custodia_fuera_de_spot():
     assert "otras_incidencias" not in _codes(report)
     issue = next(i for i in report["incidencias"]
                  if i["codigo"] == "earn_custodia_no_conciliada")
-    assert "1 apuntes" in issue["descripcion"]
+    assert "1 apunte" in issue["descripcion"]
     assert "EUR" in issue["siguiente_paso"]
     assert report["validez_fiscal_acreditada"] is False
