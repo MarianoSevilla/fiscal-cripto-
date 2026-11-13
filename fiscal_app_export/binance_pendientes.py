@@ -148,7 +148,7 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
         add(
             "earn_custodia_no_conciliada", "revision",
             "Rendimientos Earn en otra custodia",
-            f"El historial general contiene {other_wallet} apuntes de "
+            f"El historial general contiene {other_wallet} " + ("apunte" if other_wallet == 1 else "apuntes") + " de "
             "rendimiento Earn contabilizados fuera de Spot. No es correcto "
             "relacionarlos con abonos Spot solo por moneda, fecha e importe.",
             "Conserva el histórico original y acredita la cuenta receptora "
