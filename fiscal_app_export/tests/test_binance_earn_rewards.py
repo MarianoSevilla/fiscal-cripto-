@@ -375,3 +375,23 @@ def test_recompensa_repetida_no_se_descarta_en_resumen_anual():
     )
     assert [x.ledger_ordinal for x in report.ledger_unresolved_evidence] == [1]
     assert report.ledger_unresolved_evidence[0].cost_eur is None
+
+
+def test_clasificador_conserva_bonus_nativo_sin_asiento_general(tmp_path):
+    p = tmp_path / "rewards.csv"
+    with p.open("w", encoding="utf-8-sig", newline="") as output:
+        writer = csv.writer(output)
+        writer.writerow(["Tiempo", "Moneda", "Cantidad", "Tipo"])
+        writer.writerow([
+            "2024-01-15 11:00:00", "ABC", "0.05", "Bonus Tiered APR Rewards"
+        ])
+    c = ClasificadorBinanceMulti([str(p)]).clasificar()
+    assert c.earn_reward_reconciliation.native_not_in_ledger == 1
+    assert c.earn_reward_reconciliation.native_missing_by_year_kind == (
+        (2024, "Bonus Tiered APR Rewards", 1),
+    )
+    assert "earn_recompensas_nativas_sin_asiento_general" in (
+        c.fuentes_materiales_no_soportadas
+    )
+    assert c.earn_reward_candidates[0].cost_eur is None
+    assert not c.earn_reward_reconciliation.fiscal_ready
