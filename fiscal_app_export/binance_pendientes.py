@@ -37,13 +37,29 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
     earn = getattr(clasificador, "earn_reconciliation", None)
     earn_unmatched = getattr(earn, "ledger_unmatched", 0) if earn is not None else 0
     if earn_unmatched:
+        missing_years = getattr(earn, "ledger_unmatched_by_year", ()) or ()
+        # Únicamente años + contadores: no enviar cantidades, activos,
+        # fechas exactas ni registros privados al navegador.
+        years = []
+        for pair in missing_years:
+            if (isinstance(pair, tuple) and len(pair) == 2
+                    and type(pair[0]) is int and type(pair[1]) is int
+                    and 2009 <= pair[0] <= 2100 and pair[1] > 0):
+                years.append(f"{pair[0]} ({pair[1]} movimientos)")
+        years_text = (
+            " Períodos identificados: " + ", ".join(years) + "."
+            if years and sum(y[1] for y in missing_years) == earn_unmatched
+            else ""
+        )
         add(
             "earn_cobertura", "archivo", "Historial Simple Earn incompleto",
             "Hay movimientos Simple Earn del historial general que no aparecen "
-            "en los archivos específicos aportados.",
-            "Descarga las suscripciones, reembolsos y recompensas de Simple Earn "
-            "de los períodos anteriores que Binance permita exportar. "
-            "Si ya no están disponibles, reúne justificantes históricos.",
+            "en los archivos específicos aportados." + years_text,
+            "Recupera las exportaciones específicas de suscripciones y "
+            "reembolsos Simple Earn de esos períodos cuando estén disponibles. "
+            "Si Binance ya no las permite descargar, reúne justificantes "
+            "alternativos. No se pueden reconstruir compras ni costes EUR "
+            "únicamente a partir de este diagnóstico.",
         )
     if getattr(clasificador, "earn_events", ()) or any(
         m.startswith("earn_") for m in markers
