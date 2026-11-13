@@ -2756,8 +2756,15 @@ def analizar_binance_multi():
 
         try:
             market_prices = app.config.get("BINANCE_VERIFIED_MARKET_PRICES")
-            motor, rendimientos, clasificador = procesar_binance_multi(
-                tmp_paths, filenames, market_prices=market_prices
+            # Conservar el clasificador antes de entrar en el motor.
+            # Si el FIFO falla por una insuficiencia material, la respuesta
+            # 422 debe explicar qué fuente puede aportar el usuario.
+            # La clasificación y el cálculo siguen ejecutándose una sola vez.
+            clasificador = ClasificadorBinanceMulti(
+                tmp_paths, filenames
+            ).clasificar()
+            motor, rendimientos, clasificador = procesar_con_fifo(
+                clasificador, binance_market_prices=market_prices
             )
             # El historial completo sigue usándose para calcular lotes FIFO,
             # pero la posición mostrada para IRPF/721 debe ser el cierre del
