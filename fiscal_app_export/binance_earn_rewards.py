@@ -94,6 +94,32 @@ class BinanceEarnRewardCandidate:
 
 
 @dataclass(frozen=True)
+class BinanceLedgerEarnRewardEvidence:
+    """Apunte de rendimiento del ledger sin identidad nativa unívoca.
+
+    El ledger acredita el abono contable, no su coste EUR ni que la misma
+    recompensa deba añadirse por segunda vez al inventario. El ordinal es
+    posición de lectura, NO identificador emitido por Binance.
+    """
+    ledger_ordinal: int
+    kind: str
+    ledger_time: str
+    asset: str
+    quantity: Decimal
+    wallet: str
+    relation: str  # "sin_fuente_nativa" o "solo_total_diario"
+    cost_eur: None = None
+
+    @property
+    def acquired_at_for_fifo(self):
+        return None
+
+    @property
+    def fiscal_ready(self):
+        return False
+
+
+@dataclass(frozen=True)
 class BinanceEarnRewardsBridge:
     native_records: int
     ledger_records: int
@@ -111,6 +137,13 @@ class BinanceEarnRewardsBridge:
     candidate_lots: int
     real_time_apr_records: int = 0
     unlocated_native_rewards: int = 0
+    # Se conservan todos los apuntes sin match individual: incluso un
+    # total diario compatible no prueba identidad, orden ni lote fiscal.
+    ledger_unresolved_evidence: tuple[BinanceLedgerEarnRewardEvidence, ...] = ()
+    # Solo los NO conciliados ni siquiera por totales diarios.
+    ledger_missing_by_year_kind: tuple[tuple[int, str, int], ...] = ()
+    native_missing_by_year_kind: tuple[tuple[int, str, int], ...] = ()
+    native_day_only_by_year: tuple[tuple[int, int], ...] = ()
 
     @property
     def fiscal_ready(self):
@@ -142,6 +175,8 @@ def reconcile_earn_rewards(earn_events, ledger_rows):
     native_records = 0
     real_time_records = 0
     unlocated = 0
+    native_daily_years = Counter()
+    ledger_entries = []
 
     for ordinal, event in enumerate(earn_events):
         source = str(getattr(event, "source", ""))
@@ -159,6 +194,7 @@ def reconcile_earn_rewards(earn_events, ledger_rows):
         native_records += 1
         if precision == "day":
             day_only += 1
+            native_daily_years[int(stamp[:4])] += 1
         if kind not in _KNOWN:
             unknown += 1
             continue
@@ -175,7 +211,7 @@ def reconcile_earn_rewards(earn_events, ledger_rows):
             precision=precision, expected_wallet=wallet, kind=kind,
         ))
 
-    for row in ledger_rows:
+    for ordinal, row in enumerate(ledger_rows):
         kind = _LEDGER_REWARD.get(str(row.get("operación", "")).strip())
         if kind is None:
             continue
@@ -183,6 +219,10 @@ def reconcile_earn_rewards(earn_events, ledger_rows):
         asset = _asset(row.get("moneda", ""))
         amount = _amount(row.get("cambio", ""))
         ledger[(kind, stamp, asset, amount)] += 1
+        ledger_entries.append((
+            ordinal, kind, stamp, asset, amount,
+            str(row.get("cuenta", "")).strip(),
+        ))
 
     strict = native & ledger
     exact = sum(strict.values())
@@ -220,11 +260,60 @@ def reconcile_earn_rewards(earn_events, ledger_rows):
     nsum, lsum = totals(nday), totals(lday)
     aggregate_groups = 0
     agg_native = agg_ledger = 0
+    aggregate_keys = set()
     for key in nsum.keys() & lsum.keys():
         if nsum[key][0] == lsum[key][0]:
             aggregate_groups += 1
+            aggregate_keys.add(key)
             agg_native += nsum[key][1]
             agg_ledger += lsum[key][1]
+
+    # Relacionar las ocurrencias concretas en el mismo orden del ledger,
+    # nunca deduplicarlas por coincidencias de importe/segundo.
+    strict_available = strict.copy()
+    day_available = daymatched.copy()
+    unresolved = []
+    missing_year_kind = Counter()
+    for ordinal, kind, stamp, asset, amount, wallet in ledger_entries:
+        key = (kind, stamp, asset, amount)
+        daily_key = (kind, stamp[:10], asset, amount)
+        if strict_available[key] > 0:
+            strict_available[key] -= 1
+        elif day_available[daily_key] > 0:
+            day_available[daily_key] -= 1
+        else:
+            relation = (
+                "solo_total_diario"
+                if (kind, stamp[:10], asset) in aggregate_keys
+                else "sin_fuente_nativa"
+            )
+            unresolved.append(BinanceLedgerEarnRewardEvidence(
+                ledger_ordinal=ordinal, kind=kind, ledger_time=stamp,
+                asset=asset, quantity=amount, wallet=wallet, relation=relation,
+            ))
+            if relation == "sin_fuente_nativa":
+                missing_year_kind[(int(stamp[:4]), kind)] += 1
+
+    # Los candidatos de la fuente nativa sin espejo tampoco deben desaparecer.
+    # Un match por suma diaria no permite individualizar recompensa y asiento.
+    native_missing_year_kind = Counter()
+    for (kind, day, asset, _amount), count in nday.items():
+        if (kind, day, asset) not in aggregate_keys:
+            native_missing_year_kind[(int(day[:4]), kind)] += count
+
+    def grouped_year_kind(counter):
+        return tuple(
+            (year, kind, count)
+            for (year, kind), count in sorted(counter.items())
+        )
+
+    if (
+        sum(missing_year_kind.values()) != sum(lday.values()) - agg_ledger
+        or sum(native_missing_year_kind.values()) != sum(nday.values()) - agg_native
+    ):
+        raise BinanceEarnRewardsError(
+            "Inconsistencia de multiplicidades en conciliación de recompensas"
+        )
 
     return BinanceEarnRewardsBridge(
         native_records=native_records,
@@ -243,4 +332,8 @@ def reconcile_earn_rewards(earn_events, ledger_rows):
         candidate_lots=len(candidates),
         real_time_apr_records=real_time_records,
         unlocated_native_rewards=unlocated,
+        ledger_unresolved_evidence=tuple(unresolved),
+        ledger_missing_by_year_kind=grouped_year_kind(missing_year_kind),
+        native_missing_by_year_kind=grouped_year_kind(native_missing_year_kind),
+        native_day_only_by_year=tuple(sorted(native_daily_years.items())),
     ), tuple(candidates)
