@@ -359,8 +359,17 @@ def test_http_solo_deposito_externo_no_emite_posicion_fifo_vacia(client, usuario
 
 
 
-def test_http_earn_recompensa_no_se_emite_como_fifo_vacio(client, usuario):
+def test_http_earn_recompensa_no_se_emite_como_fifo_vacio(
+    client, usuario, monkeypatch
+):
     """Fuente Earn reconocida; sin base EUR de recompensa nunca hay PDF."""
+    # Diagnóstico solo para datos sintéticos: devolver el tipo y mensaje
+    # de un posible 500 en vez de esconder la regresión tras texto genérico.
+    import app as app_module
+    monkeypatch.setattr(
+        app_module, "_error_amigable",
+        lambda error: f"REGRESION_SINTETICA_{type(error).__name__}: {error}",
+    )
     _login(client)
     reward_csv = (
         "Tiempo,Moneda,Cantidad,Tipo\n"
