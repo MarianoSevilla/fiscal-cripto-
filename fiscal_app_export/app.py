@@ -2688,11 +2688,13 @@ def api_binance_anos():
         if commission_audit is not None:
             años.update(commission_audit.years)
 
+        from binance_pendientes import diagnosticar_pendientes_binance
         return jsonify({
             "ok": True,
             "anos": sorted(años),
             "resumen": clasificador.resumen_archivos,
             "advertencias": clasificador.advertencias,
+            "diagnostico_binance": diagnosticar_pendientes_binance(clasificador),
         })
     except (BinanceMultiUserError, BinanceUploadError, ValueError) as exc:
         return jsonify({"ok": False, "error": str(exc)}), 400
@@ -2727,6 +2729,7 @@ def analizar_binance_multi():
 
     t_start = time.time()
     csv_rows = 0
+    clasificador = None
     try:
         archivos = request.files.getlist("csv") or request.files.getlist("files")
         nombre = _sanitizar_texto(request.form.get("nombre", ""))
@@ -2858,7 +2861,13 @@ def analizar_binance_multi():
                              "la valoración EUR de una o varias permutas Binance."
                 }), 422
             if isinstance(exc, ValueError) and str(exc).startswith("Datos fiscales no seguros:"):
-                return jsonify({"error": str(exc)}), 422
+                payload = {"error": str(exc)}
+                if clasificador is not None:
+                    from binance_pendientes import diagnosticar_pendientes_binance
+                    payload["diagnostico_binance"] = diagnosticar_pendientes_binance(
+                        clasificador
+                    )
+                return jsonify(payload), 422
             return jsonify({"error": _error_amigable(exc)}), 500
     finally:
         with _analisis_lock:
