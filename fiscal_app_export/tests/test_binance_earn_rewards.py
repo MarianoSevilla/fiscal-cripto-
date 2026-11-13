@@ -410,5 +410,21 @@ def test_intereses_ledger_fuera_de_spot_no_pueden_acreditar_mismo_abono(wallet):
     )
     ledger_row = tx("2025-01-04 12:00:00", "0.1")
     ledger_row["cuenta"] = wallet
-    with pytest.raises(BinanceEarnRewardsError, match="Billetera"):
-        reconcile_earn_rewards([native], [ledger_row])
+    report, candidates = reconcile_earn_rewards([native], [ledger_row])
+    assert report.matched_exact == report.matched_by_day == 0
+    assert report.ledger_not_in_native == 1
+    assert report.native_not_in_ledger == 1
+    assert report.ledger_other_wallet_records == 1
+    assert report.ledger_missing_by_year_kind == (
+        (2025, "Simple Earn Flexible Interest", 1),
+    )
+    assert report.native_missing_by_year_kind == (
+        (2025, "Bonus Tiered APR Rewards", 1),
+    )
+    assert len(report.ledger_unresolved_evidence) == 1
+    entry = report.ledger_unresolved_evidence[0]
+    assert entry.ledger_operation == "Simple Earn Flexible Interest"
+    assert entry.wallet == str(wallet).strip()
+    assert entry.cost_eur is None and not entry.fiscal_ready
+    assert len(candidates) == 1 and candidates[0].cost_eur is None
+    assert not report.fiscal_ready
