@@ -127,3 +127,29 @@ def test_debito_2025_no_fiable_no_puede_marcarse_como_ausencia_de_impacto(value)
             [ledger("2025-01-01 01:00:00", "Binance Convert", "ABC", value)],
             [], exercise=2025,
         )
+
+
+def test_debito_con_separador_de_miles_binance_mantiene_prioridad():
+    result = analizar_impacto_earn_historico(
+        SimpleNamespace(ledger_unresolved_evidence=[
+            evidence("2020-01-01 00:00:00", "ABC"),
+        ]),
+        [ledger("2025-01-01 10:00:00", "Binance Convert", "ABC",
+                "-1,234.567890")],
+        [], exercise=2025,
+    )
+    assert result.with_possible_disposal == 1
+    assert result.fifo_acreditado is False
+
+
+@pytest.mark.parametrize("raw", ["1,23.45", "-1,23", "-1.234,5"])
+def test_separadores_miles_irregulares_no_se_interpretan_como_eur(raw):
+    with pytest.raises(BinanceEarnImpactError, match="Cantidad"):
+        analizar_impacto_earn_historico(
+            SimpleNamespace(ledger_unresolved_evidence=[
+                evidence("2023-01-01 00:00:00", "ABC"),
+            ]),
+            [ledger("2025-01-01 01:00:00", "Binance Convert", "ABC",
+                    raw)],
+            [], exercise=2025,
+        )
