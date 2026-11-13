@@ -145,6 +145,7 @@ class BinanceEarnRewardsBridge:
     ledger_missing_by_year_kind: tuple[tuple[int, str, int], ...] = ()
     native_missing_by_year_kind: tuple[tuple[int, str, int], ...] = ()
     native_day_only_by_year: tuple[tuple[int, int], ...] = ()
+    ledger_other_wallet_records: int = 0
 
     @property
     def fiscal_ready(self):
@@ -178,6 +179,7 @@ def reconcile_earn_rewards(earn_events, ledger_rows):
     unlocated = 0
     native_daily_years = Counter()
     ledger_entries = []
+    ledger_other_wallet = 0
 
     for ordinal, event in enumerate(earn_events):
         source = str(getattr(event, "source", ""))
@@ -216,20 +218,20 @@ def reconcile_earn_rewards(earn_events, ledger_rows):
         kind = _LEDGER_REWARD.get(str(row.get("operación", "")).strip())
         if kind is None:
             continue
-        # Un abono en otra custodia no es el espejo Spot de Bonus/Airdrop.
-        # Rechazo explícito: no falsear la conciliación por coincidir importe
-        # y fecha mientras el destino contable es diferente o desconocido.
+        # Earn/Funding u otra cuenta no son el espejo de una distribución
+        # acreditada en Spot. Conservar, pero NO emparejarla por igualdad
+        # de segundo, activo e importe: sería una identidad ficticia.
         wallet = str(row.get("cuenta", "")).strip()
+        matching_kind = kind
         if wallet.upper() != "SPOT":
-            raise BinanceEarnRewardsError(
-                "Billetera de rendimiento Earn del ledger no conciliable"
-            )
+            ledger_other_wallet += 1
+            matching_kind = kind + " [custodia diferente de SPOT]"
         stamp, _precision = _time(row.get("tiempo", ""))
         asset = _asset(row.get("moneda", ""))
         amount = _amount(row.get("cambio", ""))
-        ledger[(kind, stamp, asset, amount)] += 1
+        ledger[(matching_kind, stamp, asset, amount)] += 1
         ledger_entries.append((
-            ordinal, kind, str(row.get("operación", "")).strip(),
+            ordinal, matching_kind, str(row.get("operación", "")).strip(),
             stamp, asset, amount, wallet,
         ))
 
@@ -346,4 +348,5 @@ def reconcile_earn_rewards(earn_events, ledger_rows):
         ledger_missing_by_year_kind=grouped_year_kind(missing_year_kind),
         native_missing_by_year_kind=grouped_year_kind(native_missing_year_kind),
         native_day_only_by_year=tuple(sorted(native_daily_years.items())),
+        ledger_other_wallet_records=ledger_other_wallet,
     ), tuple(candidates)
