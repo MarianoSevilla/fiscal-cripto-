@@ -240,8 +240,19 @@ class BinanceFungibleInventory:
 
     @staticmethod
     def _wallet(value):
-        name = str(value).strip().upper()
-        if name not in {"SPOT", "EARN_FLEXIBLE", "FUNDING"}:
+        # Las seis cuentas listadas aparecen realmente en los históricos
+        # Binance; EARN_FLEXIBLE es una custodia interna conciliada por
+        # los CSV Earn, no un tipo de cuenta fiscal.
+        #
+        # Reconocer una billetera NO clasifica su actividad económica,
+        # ni convierte derivados/futuros en adquisiciones FIFO.
+        if not isinstance(value, str):
+            raise BinanceEarnInventoryError("Billetera no identificada")
+        name = value.strip().upper()
+        if name not in {
+            "SPOT", "EARN_FLEXIBLE", "FUNDING", "USD-M FUTURES",
+            "COIN-M FUTURES", "POOL", "ALPHA",
+        }:
             raise BinanceEarnInventoryError("Billetera no identificada")
         return name
 
