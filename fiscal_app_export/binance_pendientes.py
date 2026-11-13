@@ -69,8 +69,11 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
             )
             redemptions = earn_unmatched - subscriptions
             directions_text = (
-                f" Desglose: {subscriptions} suscripciones y "
-                f"{redemptions} reembolsos; son movimientos, no "
+                f" Desglose: {subscriptions} "
+                f"{'suscripción' if subscriptions == 1 else 'suscripciones'} y "
+                f"{redemptions} "
+                f"{'reembolso' if redemptions == 1 else 'reembolsos'}; "
+                "son movimientos, no "
                 "adquisiciones fiscales acreditadas."
             )
         else:
