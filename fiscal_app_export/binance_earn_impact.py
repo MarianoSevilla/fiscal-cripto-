@@ -55,7 +55,7 @@ def _quantity(raw):
     # agrupaciones inválidas (1,23.45) ni confundir coma decimal con miles.
     if "," in text:
         if not re.fullmatch(
-            r"[+-]?\\d{1,3}(?:,\\d{3})+(?:\\.\\d+)?", text
+            r"[+-]?\d{1,3}(?:,\d{3})+(?:\.\d+)?", text
         ):
             raise BinanceEarnImpactError("Cantidad histórica no válida")
         text = text.replace(",", "")
