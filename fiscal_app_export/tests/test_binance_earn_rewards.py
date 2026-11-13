@@ -255,3 +255,123 @@ def test_cuatro_tipos_de_lotes_no_se_fabrican_con_mismo_importe():
     assert report.candidate_lots == len(candidates) == 3
     assert report.unlocated_native_rewards == 1
     assert not report.fiscal_ready
+
+
+def test_cobertura_recompensas_2020_2023_preserva_asientos_sin_lotes():
+    rows = [
+        tx("2020-12-01 12:00:00", "0.25"),
+        tx("2021-06-01 12:00:00", "0.50"),
+        tx("2022-06-01 12:00:00", "0.75",
+           operation="Simple Earn Flexible Airdrop"),
+        tx("2022-06-01 12:00:00", "0.75",
+           operation="Simple Earn Flexible Airdrop"),
+        tx("2023-01-01 12:00:00", "0.10"),
+    ]
+    report, candidates = reconcile_earn_rewards([], rows)
+    assert candidates == ()
+    assert report.ledger_records == report.ledger_not_in_native == 5
+    assert report.ledger_missing_by_year_kind == (
+        (2020, "Bonus Tiered APR Rewards", 1),
+        (2021, "Bonus Tiered APR Rewards", 1),
+        (2022, "Airdrop Rewards", 2),
+        (2023, "Bonus Tiered APR Rewards", 1),
+    )
+    assert len(report.ledger_unresolved_evidence) == 5
+    assert [x.ledger_ordinal for x in report.ledger_unresolved_evidence] == [
+        0, 1, 2, 3, 4
+    ]
+    assert all(
+        x.relation == "sin_fuente_nativa" and x.cost_eur is None
+        and x.acquired_at_for_fifo is None and not x.fiscal_ready
+        for x in report.ledger_unresolved_evidence
+    )
+    assert not report.fiscal_ready
+
+
+def test_coincidencias_exactas_y_diarias_no_crean_recompensas_adicionales():
+    events = [
+        reward("2024-02-01 10:00:00", "0.1",
+               kind="Bonus Tiered APR Rewards"),
+        reward("2024-02-02 10:00:00", "0.2",
+               kind="Bonus Tiered APR Rewards"),
+    ]
+    ledger = [
+        tx("2024-02-01 10:00:00", "0.1"),
+        tx("2024-02-02 10:00:03", "0.2"),
+    ]
+    report, candidates = reconcile_earn_rewards(events, ledger)
+    assert report.matched_exact == report.matched_by_day == 1
+    assert report.ledger_not_in_native == report.native_not_in_ledger == 0
+    assert report.ledger_unresolved_evidence == ()
+    assert report.ledger_missing_by_year_kind == ()
+    assert report.native_missing_by_year_kind == ()
+    assert len(candidates) == 2
+    assert not report.fiscal_ready
+
+
+def test_total_diario_compatible_conserva_asiento_sin_identidad_individual():
+    events = [
+        reward("2024-02-01", "0.1", kind="Bonus Tiered APR Rewards"),
+        reward("2024-02-01", "0.2", kind="Bonus Tiered APR Rewards"),
+    ]
+    report, candidates = reconcile_earn_rewards(
+        events, [tx("2024-02-01 09:00:00", "0.3")]
+    )
+    assert report.daily_aggregate_only_groups == 1
+    assert report.ledger_not_in_native == report.native_not_in_ledger == 0
+    assert report.ledger_missing_by_year_kind == ()
+    assert report.native_missing_by_year_kind == ()
+    assert len(report.ledger_unresolved_evidence) == 1
+    assert report.ledger_unresolved_evidence[0].relation == "solo_total_diario"
+    assert report.ledger_unresolved_evidence[0].cost_eur is None
+    assert len(candidates) == 2
+    assert not report.fiscal_ready
+
+
+def test_recompensas_solo_nativas_no_desaparecen_en_conciliacion():
+    events = [
+        reward("2024-01-01 10:00:00", "0.1",
+               kind="Bonus Tiered APR Rewards"),
+        reward("2024-01-02 10:00:00", "0.2",
+               kind="Bonus Tiered APR Rewards"),
+    ]
+    report, candidates = reconcile_earn_rewards(events, [])
+    assert report.native_records == report.native_not_in_ledger == 2
+    assert report.native_missing_by_year_kind == (
+        (2024, "Bonus Tiered APR Rewards", 2),
+    )
+    assert report.ledger_unresolved_evidence == ()
+    assert [x.quantity for x in candidates] == [
+        Decimal("0.1"), Decimal("0.2"),
+    ]
+    assert all(x.cost_eur is None and not x.fiscal_ready for x in candidates)
+
+
+def test_apr_diario_se_separa_por_ejercicio_no_inventa_fecha_fifo():
+    report, candidates = reconcile_earn_rewards(
+        [reward("2025-12-31", "0.01"), reward("2026-01-01", "0.02")],
+        [],
+    )
+    assert report.native_day_only_by_year == ((2025, 1), (2026, 1))
+    assert report.real_time_apr_records == 2
+    assert report.ledger_not_in_native == 0
+    assert all(x.acquired_at_for_fifo is None for x in candidates)
+    assert not report.fiscal_ready
+
+
+def test_recompensa_repetida_no_se_descarta_en_resumen_anual():
+    events = [
+        reward("2024-01-01", "0.02", kind="Bonus Tiered APR Rewards"),
+    ]
+    ledger = [
+        tx("2024-01-01 09:00:00", "0.02"),
+        tx("2024-01-01 09:00:00", "0.02"),
+    ]
+    report, _ = reconcile_earn_rewards(events, ledger)
+    assert report.matched_by_day == 1
+    assert report.ledger_not_in_native == 1
+    assert report.ledger_missing_by_year_kind == (
+        (2024, "Bonus Tiered APR Rewards", 1),
+    )
+    assert [x.ledger_ordinal for x in report.ledger_unresolved_evidence] == [1]
+    assert report.ledger_unresolved_evidence[0].cost_eur is None
