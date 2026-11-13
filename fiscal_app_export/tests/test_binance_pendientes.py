@@ -269,3 +269,34 @@ def test_prioridad_earn_no_se_presenta_como_riesgo_2024():
     )
     report = diagnosticar_pendientes_binance(c)
     assert "earn_prioridad_2025" not in _codes(report)
+
+
+def test_eur_explicito_distingue_candidatos_completos_de_fiat_ambiguo():
+    c = _clasificador(
+        eur_acquisition_evidence=SimpleNamespace(
+            candidates=(object(), object(), object()),
+            complete_cost_candidates=2,
+            incomplete_cost_candidates=1,
+        )
+    )
+    report = diagnosticar_pendientes_binance(c)
+    issue = next(x for x in report["incidencias"]
+                 if x["codigo"] == "adquisiciones_eur_documentadas")
+    assert issue["tipo"] == "informacion"
+    assert "3 adquisiciones" in issue["descripcion"]
+    assert "2 con importe" in issue["descripcion"]
+    assert "1 requieren" in issue["descripcion"]
+    assert "USDT/USDC/EUR" in issue["siguiente_paso"]
+    assert report["validez_fiscal_acreditada"] is False
+
+
+def test_eur_explicito_no_inventa_cuadre_si_contadores_inconsistentes():
+    c = _clasificador(
+        eur_acquisition_evidence=SimpleNamespace(
+            candidates=(object(), object()),
+            complete_cost_candidates=3,
+            incomplete_cost_candidates=1,
+        )
+    )
+    report = diagnosticar_pendientes_binance(c)
+    assert "adquisiciones_eur_documentadas" not in _codes(report)
