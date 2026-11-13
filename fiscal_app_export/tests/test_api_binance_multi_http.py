@@ -385,7 +385,7 @@ def test_http_earn_recompensa_no_se_emite_como_fifo_vacio(
         content_type="multipart/form-data",
     )
     data = r.get_json()
-    assert r.status_code == 422
+    assert r.status_code == 422, data
     assert "Simple Earn" in data["error"]
     assert "token" not in data
     assert "resumen" not in data
