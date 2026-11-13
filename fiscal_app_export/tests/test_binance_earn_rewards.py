@@ -458,3 +458,35 @@ def test_clasificador_preserva_interes_del_ledger_en_earn_sin_falsear_spot(tmp_p
         c.fuentes_materiales_no_soportadas
     )
     assert not bridge.fiscal_ready
+
+
+def test_clasificador_prioriza_abonos_historicos_relacionados_con_2025(tmp_path):
+    p = tmp_path / "historial.csv"
+    with p.open("w", encoding="utf-8-sig", newline="") as out:
+        writer = csv.writer(out)
+        writer.writerow([
+            "ID de usuario", "Tiempo", "Cuenta", "Operación",
+            "Moneda", "Cambio", "Observación",
+        ])
+        writer.writerows([
+            ["synthetic", "2021-01-02 11:00:00", "Spot",
+             "Simple Earn Flexible Interest", "ABC", "0.1", ""],
+            ["synthetic", "2021-01-02 11:00:00", "Spot",
+             "Simple Earn Flexible Interest", "XYZ", "0.3", ""],
+            ["synthetic", "2025-01-02 10:00:00", "Spot",
+             "Transaction Spend", "ABC", "-0.1", ""],
+            ["synthetic", "2025-01-02 10:00:00", "Spot",
+             "Withdraw", "XYZ", "-0.2", ""],
+        ])
+    classified = ClasificadorBinanceMulti([str(p)]).clasificar()
+    risk = classified.earn_reward_impact_2025
+    assert risk is not None
+    assert risk.exercise == 2025
+    assert risk.prior_ledger_only_rewards == 2
+    assert risk.with_possible_disposal == 1
+    assert risk.without_observed_disposal == 1
+    assert risk.with_external_withdrawal == 1
+    assert risk.fifo_acreditado is False
+    assert "earn_intereses_ledger_sin_fuente_nativa_suficiente" in (
+        classified.fuentes_materiales_no_soportadas
+    )
