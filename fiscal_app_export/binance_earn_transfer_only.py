@@ -154,12 +154,14 @@ def verify_principal_only_earn(classifier) -> BinancePrincipalOnlyAudit | None:
                     asset=asset, quantity=event.amount,
                     timestamp=stamp, origin="SPOT",
                     destination="EARN_FLEXIBLE",
+                    reference=f"native-earn-subscribe-{index}",
                 )
             else:
                 book.transfer(
                     asset=asset, quantity=event.amount,
                     timestamp=stamp, origin="EARN_FLEXIBLE",
                     destination="SPOT",
+                    reference=f"native-earn-redeem-{index}",
                 )
     except (BinanceEarnInventoryError, ValueError, ArithmeticError):
         return None
