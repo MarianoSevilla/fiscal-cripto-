@@ -1039,8 +1039,8 @@ def test_binance_solo_ledger_earn_revela_periodos_sin_csv_nativo(client, usuario
     issue = next(
         i for i in report["incidencias"] if i["codigo"] == "earn_cobertura"
     )
-    assert "2021 (1 movimientos)" in issue["descripcion"]
-    assert "2023 (1 movimientos)" in issue["descripcion"]
+    assert "2021 (1 movimiento)" in issue["descripcion"]
+    assert "2023 (1 movimiento)" in issue["descripcion"]
     assert report["validez_fiscal_acreditada"] is False
 
     blocked = client.post(
