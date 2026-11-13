@@ -102,7 +102,8 @@ class BinanceLedgerEarnRewardEvidence:
     posición de lectura, NO identificador emitido por Binance.
     """
     ledger_ordinal: int
-    kind: str
+    kind: str  # familia para emparejamiento; NO calificación histórica
+    ledger_operation: str  # texto original del asiento, sin reinterpretación
     ledger_time: str
     asset: str
     quantity: Decimal
@@ -220,8 +221,8 @@ def reconcile_earn_rewards(earn_events, ledger_rows):
         amount = _amount(row.get("cambio", ""))
         ledger[(kind, stamp, asset, amount)] += 1
         ledger_entries.append((
-            ordinal, kind, stamp, asset, amount,
-            str(row.get("cuenta", "")).strip(),
+            ordinal, kind, str(row.get("operación", "")).strip(),
+            stamp, asset, amount, str(row.get("cuenta", "")).strip(),
         ))
 
     strict = native & ledger
@@ -274,7 +275,7 @@ def reconcile_earn_rewards(earn_events, ledger_rows):
     day_available = daymatched.copy()
     unresolved = []
     missing_year_kind = Counter()
-    for ordinal, kind, stamp, asset, amount, wallet in ledger_entries:
+    for ordinal, kind, operation, stamp, asset, amount, wallet in ledger_entries:
         key = (kind, stamp, asset, amount)
         daily_key = (kind, stamp[:10], asset, amount)
         if strict_available[key] > 0:
@@ -288,11 +289,12 @@ def reconcile_earn_rewards(earn_events, ledger_rows):
                 else "sin_fuente_nativa"
             )
             unresolved.append(BinanceLedgerEarnRewardEvidence(
-                ledger_ordinal=ordinal, kind=kind, ledger_time=stamp,
-                asset=asset, quantity=amount, wallet=wallet, relation=relation,
+                ledger_ordinal=ordinal, kind=kind, ledger_operation=operation,
+                ledger_time=stamp, asset=asset, quantity=amount,
+                wallet=wallet, relation=relation,
             ))
             if relation == "sin_fuente_nativa":
-                missing_year_kind[(int(stamp[:4]), kind)] += 1
+                missing_year_kind[(int(stamp[:4]), operation)] += 1
 
     # Los candidatos de la fuente nativa sin espejo tampoco deben desaparecer.
     # Un match por suma diaria no permite individualizar recompensa y asiento.
