@@ -676,6 +676,14 @@ def test_earn_ledger_historico_sin_zip_nativo_no_se_concilia(tmp_path):
     classified = _classify([native, ledger])
     assert classified.earn_reconciliation.ledger_unmatched == 1
     assert classified.earn_reconciliation.native_unmatched == 0
+    evidence = classified.earn_reconciliation.ledger_only_evidence
+    assert len(evidence) == 1
+    assert evidence[0].ledger_time == "2025-05-03 12:00:00"
+    assert evidence[0].asset == "ABC"
+    assert evidence[0].quantity == Decimal("50")
+    assert evidence[0].direction == "subscription"
+    assert evidence[0].cost_eur is None
+    assert evidence[0].fiscal_ready is False
     assert "earn_fuentes_no_conciliadas" in (
         classified.fuentes_materiales_no_soportadas
     )
