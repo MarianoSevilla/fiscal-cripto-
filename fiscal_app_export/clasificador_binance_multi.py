@@ -47,6 +47,9 @@ from binance_earn_rewards import (
 from binance_earn_impact import (
     BinanceEarnImpactError, analizar_impacto_earn_historico,
 )
+from binance_eur_acquisition_evidence import (
+    BinanceEURAcquisitionError, auditar_adquisiciones_eur_nativas,
+)
 from binance_commission_evidence import (
     BinanceCommissionEvidenceError, audit_binance_commissions,
     is_binance_commission, iter_binance_commissions,
@@ -448,6 +451,9 @@ class ClasificadorBinanceMulti:
         self.earn_reward_reconciliation = None
         # Solo una prioridad documental de IRPF 2025; NO autoriza lotes.
         self.earn_reward_impact_2025 = None
+        # Compras nativas contra EUR: evidencia de origen de coste,
+        # no adquisición global autorizada para MotorFIFO.
+        self.eur_acquisition_evidence = None
         self.earn_reward_candidates = ()  # nunca se inyecta en MotorFIFO/PDF
         self.commission_evidence_summary = None
         self.dust_evidence_summary = None
@@ -594,6 +600,17 @@ class ClasificadorBinanceMulti:
         self._reconcile_spot_orders()
         self._process_convert()
         self._process_fiat_trades()
+        try:
+            self.eur_acquisition_evidence = auditar_adquisiciones_eur_nativas(
+                self.intercambios_nativos
+            )
+        except BinanceEURAcquisitionError as exc:
+            raise BinanceMultiUserError(
+                "binance_eur_adquisiciones_invalidas",
+                "Binance: las adquisiciones pagadas en EUR contienen "
+                "importes, fechas o comisiones no verificables.",
+                category="parser_error",
+            ) from exc
         self._process_crypto_transfers()
         self._process_fiat_cash()
         self._process_earn_flexible()
