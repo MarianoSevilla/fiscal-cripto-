@@ -44,6 +44,9 @@ from binance_earn_inventory import (
 from binance_earn_rewards import (
     BinanceEarnRewardsError, reconcile_earn_rewards,
 )
+from binance_earn_impact import (
+    BinanceEarnImpactError, analizar_impacto_earn_historico,
+)
 from binance_commission_evidence import (
     BinanceCommissionEvidenceError, audit_binance_commissions,
     is_binance_commission, iter_binance_commissions,
@@ -443,6 +446,8 @@ class ClasificadorBinanceMulti:
         self.earn_reconciliation = None  # diagnóstico no fiscal, en memoria
         self.earn_principal_only_audit = None
         self.earn_reward_reconciliation = None
+        # Solo una prioridad documental de IRPF 2025; NO autoriza lotes.
+        self.earn_reward_impact_2025 = None
         self.earn_reward_candidates = ()  # nunca se inyecta en MotorFIFO/PDF
         self.commission_evidence_summary = None
         self.dust_evidence_summary = None
@@ -658,6 +663,20 @@ class ClasificadorBinanceMulti:
             ) from exc
         self.earn_reward_reconciliation = rewards
         self.earn_reward_candidates = candidates
+        # Diagnóstico limitado a 2025 y solo para recompensas del ledger
+        # que carecen de CSV nativo. No presume que se consumió un lote.
+        if rewards.ledger_not_in_native:
+            try:
+                self.earn_reward_impact_2025 = analizar_impacto_earn_historico(
+                    rewards,
+                    (row for row, _ in self._source_rows["transaction_history"]),
+                    self.intercambios_nativos,
+                    exercise=2025,
+                )
+            except BinanceEarnImpactError:
+                self.fuentes_materiales_no_soportadas.append(
+                    "earn_impacto_2025_no_calculable"
+                )
         if rewards.ledger_not_in_native:
             self.fuentes_materiales_no_soportadas.append(
                 "earn_intereses_ledger_sin_fuente_nativa_suficiente"
