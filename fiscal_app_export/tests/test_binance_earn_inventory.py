@@ -435,3 +435,75 @@ def test_traslado_referencia_reutilizada_por_disposicion_no_muta():
     assert book.lots("BTC") == lots
     assert book.wallet_balance("SPOT", "BTC") == Decimal("2")
     assert book.conserved("BTC")
+
+
+@pytest.mark.parametrize("wallet", [
+    "Spot", "Funding", "USD-M Futures", "Coin-M Futures", "Pool", "Alpha",
+])
+def test_cuentas_reales_binance_separadas_sin_inferir_tratamiento_fiscal(wallet):
+    """Las custodias reales del ledger no son tipos de operaciones IRPF."""
+    book = BinanceFungibleInventory()
+    book.acquire(
+        asset="ABC", quantity="1", acquired_at="2024-01-01 00:00:00",
+        wallet=wallet, reference="synthetic-account", cost_eur=None,
+    )
+    assert book.wallet_balance(wallet, "ABC") == Decimal(1)
+    assert book.wallet_balance("SPOT", "ABC") == (Decimal(1) if wallet == "Spot" else Decimal(0))
+    assert book.conserved("ABC")
+    assert book.fiscal_ready is False
+
+
+def test_transferencia_futuros_conserva_lote_global_y_no_duplica():
+    book = BinanceFungibleInventory()
+    book.acquire(
+        asset="BTC", quantity="2", acquired_at="2023-01-01 00:00:00",
+        wallet="Spot", reference="synthetic-spot-acquisition", cost_eur="500",
+    )
+    initial = book.lots("BTC")
+    outbound = dict(
+        asset="BTC", quantity="1.5", timestamp="2024-01-01 00:00:00",
+        origin="Spot", destination="USD-M Futures",
+        reference="synthetic-forward-to-futures",
+    )
+    book.transfer(**outbound)
+    assert book.wallet_balance("Spot", "BTC") == Decimal("0.5")
+    assert book.wallet_balance("USD-M Futures", "BTC") == Decimal("1.5")
+    with pytest.raises(BinanceEarnInventoryError, match="repetida"):
+        book.transfer(**outbound)
+    book.transfer(
+        asset="BTC", quantity="1.5", timestamp="2024-02-01 00:00:00",
+        origin="USD-M Futures", destination="Spot",
+        reference="synthetic-return-from-futures",
+    )
+    assert book.wallet_balance("Spot", "BTC") == Decimal("2")
+    assert book.wallet_balance("USD-M Futures", "BTC") == Decimal(0)
+    assert book.lots("BTC") == initial
+    assert book.conserved("BTC") and not book.fiscal_ready
+
+
+def test_no_mezclar_custodia_futuros_pool_alpha_entre_si():
+    book = BinanceFungibleInventory()
+    book.acquire(asset="ETH", quantity="3", acquired_at="2024-01-01 00:00:00",
+                 wallet="Coin-M Futures", reference="synthetic-cm")
+    initial = book.lots("ETH")
+    with pytest.raises(BinanceEarnInventoryError, match="insuficiente"):
+        book.transfer(
+            asset="ETH", quantity="1", timestamp="2024-01-02 00:00:00",
+            origin="USD-M Futures", destination="Pool",
+            reference="synthetic-no-custody",
+        )
+    assert book.wallet_balance("Coin-M Futures", "ETH") == Decimal("3")
+    assert book.wallet_balance("USD-M Futures", "ETH") == Decimal(0)
+    assert book.wallet_balance("Pool", "ETH") == Decimal(0)
+    assert book.lots("ETH") == initial
+    assert book.conserved("ETH")
+
+
+@pytest.mark.parametrize("wallet", ["USDT-Margin", "Earn", "Spot + Funding", "", None, 2])
+def test_custodias_no_acreditadas_no_se_inventan(wallet):
+    book = BinanceFungibleInventory()
+    with pytest.raises(BinanceEarnInventoryError, match="Billetera"):
+        book.acquire(asset="BTC", quantity="1", acquired_at="2024-01-01 00:00:00",
+                     wallet=wallet, reference="synthetic-unknown")
+    assert book.lots("BTC") == ()
+    assert book.conserved("BTC")
