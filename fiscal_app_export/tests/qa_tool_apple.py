@@ -241,9 +241,19 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                         if first_error:
                             page.locator("#errorState").wait_for(state="visible")
                             assert page.locator("#btnRetry").is_visible()
+                            # Un bloqueo fiscal 422 de Binance conserva los
+                            # ZIP ya elegidos: no debe duplicar el lote al
+                            # pulsar "Volver a intentarlo".
+                            if name == "binance":
+                                assert page.locator("#fileSelected").is_visible()
+                                assert page.locator("#btnDownload").is_hidden()
                             page.locator("#btnRetry").click()
                             assert page.locator("#emptyState").is_visible()
-                            count = attach_valid()
+                            if name == "binance":
+                                assert page.locator("#fileSelected").is_visible()
+                                expect(page.locator("#btnAnalizar")).to_be_enabled()
+                            else:
+                                count = attach_valid()
                             page.locator("#btnAnalizar").click()
                         page.locator("#resultsContent").wait_for(state="visible")
                         assert page.locator("#kpiOps").inner_text() == "2"
