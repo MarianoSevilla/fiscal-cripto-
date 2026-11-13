@@ -143,6 +143,19 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
                 "supongas que son duplicados.",
             )
 
+    other_wallet = getattr(reward_bridge, "ledger_other_wallet_records", 0)
+    if other_wallet:
+        add(
+            "earn_custodia_no_conciliada", "revision",
+            "Rendimientos Earn en otra custodia",
+            f"El historial general contiene {other_wallet} apuntes de "
+            "rendimiento Earn contabilizados fuera de Spot. No es correcto "
+            "relacionarlos con abonos Spot solo por moneda, fecha e importe.",
+            "Conserva el histórico original y acredita la cuenta receptora "
+            "con movimientos de custodia y saldos. Sin esa conciliación "
+            "no se generarán lotes fiscales ni costes EUR inferidos.",
+        )
+
     if getattr(clasificador, "earn_events", ()) or any(
         m.startswith("earn_") for m in markers
     ):
@@ -236,6 +249,7 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
         "earn_ledger_sin_lotes_ni_valoracion_acreditados",
         "earn_intereses_ledger_sin_fuente_nativa_suficiente",
         "earn_recompensas_nativas_sin_asiento_general",
+        "earn_abonos_en_custodia_no_conciliada",
         "earn_tipo_recompensa_desconocido",
         "earn_airdrop_destino_no_acreditado",
         "binance_comisiones_sin_valoracion_ni_categoria_fiscal",
