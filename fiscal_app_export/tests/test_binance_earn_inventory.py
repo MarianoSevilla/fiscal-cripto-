@@ -555,3 +555,62 @@ def test_earn_solo_ledger_sin_nativos_conserva_desglose_anual():
     assert result.ledger_unmatched_by_year == ((2021, 1), (2022, 1))
     assert result.matched_to_second == result.matched_same_day == 0
     assert result.fiscal_ready is False
+
+
+def test_cronologia_ledger_sin_nativo_preserva_cada_apunte_y_no_crea_lotes():
+    """Los dos movimientos del ledger no son compras ni costes EUR."""
+    rows = [
+        tx("subscription", "2020-02-01 10:00:00", "BTC", "2"),
+        tx("subscription", "2020-02-01 10:00:00", "BTC", "2"),
+        tx("redemption", "2022-02-01 11:00:00", "BTC", "1"),
+    ]
+    report = conciliar_earn_con_ledger([], rows)
+    assert report.ledger_unmatched == 3
+    assert len(report.ledger_only_evidence) == 3
+    assert [r.ledger_ordinal for r in report.ledger_only_evidence] == [0, 1, 2]
+    assert [r.direction for r in report.ledger_only_evidence] == [
+        "subscription", "subscription", "redemption"
+    ]
+    assert [r.quantity for r in report.ledger_only_evidence] == [
+        Decimal("2"), Decimal("2"), Decimal("1")
+    ]
+    assert all(r.cost_eur is None and not r.fiscal_ready
+               for r in report.ledger_only_evidence)
+    assert report.ledger_unmatched_by_year_direction == (
+        (2020, "subscription", 2), (2022, "redemption", 1),
+    )
+    assert not report.fiscal_ready
+
+
+def test_cronologia_earn_no_anade_falsos_huerfanos_en_match_diario():
+    native_rows = [
+        native("subscription", "2024-04-10 10:00:00", "ABC", "2"),
+        native("redemption", "2024-04-11 10:00:00", "ABC", "1"),
+    ]
+    ledger = [
+        tx("subscription", "2024-04-10 10:00:02", "ABC", "2"),
+        tx("redemption", "2024-04-11 10:00:00", "ABC", "1"),
+    ]
+    report = conciliar_earn_con_ledger(native_rows, ledger)
+    assert report.ledger_only_evidence == ()
+    assert report.ledger_unmatched_by_year_direction == ()
+    assert report.matched_same_day == 1
+    assert report.matched_to_second == 1
+    assert report.fiscal_ready is False
+
+
+def test_cronologia_earn_ledger_parcialmente_emparejado_con_repeticiones():
+    event = native("subscription", "2024-04-10 10:00:00", "ABC", "2")
+    ledger = [
+        tx("subscription", "2024-04-10 10:00:03", "ABC", "2"),
+        tx("subscription", "2024-04-10 10:00:03", "ABC", "2"),
+    ]
+    report = conciliar_earn_con_ledger([event], ledger)
+    assert report.matched_same_day == 1
+    assert report.ledger_unmatched == 1
+    assert len(report.ledger_only_evidence) == 1
+    # Los dos asientos no tienen identidad diferenciable: su ordinal
+    # es solo un índice de lectura, nunca un ID único de Binance.
+    assert report.ledger_only_evidence[0].ledger_ordinal == 1
+    assert report.ledger_only_evidence[0].cost_eur is None
+    assert not report.fiscal_ready
