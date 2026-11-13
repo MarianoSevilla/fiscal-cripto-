@@ -68,6 +68,10 @@ class BinanceEarnSourceBridge:
     mixed_or_unknown_origin: int
     day_only_with_other_economic_activity: int = 0
     day_only_without_other_economic_activity: int = 0
+    # Desglose de las filas sin homólogo, tras conciliar por segundo/día.
+    # Los años no acreditan por sí solos la existencia de un CSV descargable.
+    ledger_unmatched_by_year: tuple[tuple[int, int], ...] = ()
+    native_unmatched_by_year: tuple[tuple[int, int], ...] = ()
 
     @property
     def quantities_reconciled(self):
@@ -186,17 +190,28 @@ def conciliar_earn_con_ledger(earn_events, ledger_rows):
     with_activity = sum(count for (_dir, day, asset, _qty), count in matches.items()
                         if (day, asset) in economic_days)
     without_activity = daily - with_activity
+    missing_ledger = lday - matches
+    missing_native = nday - matches
+
+    def by_year(unmatched):
+        counts = Counter()
+        for (_direction, day, _asset, _qty), count in unmatched.items():
+            counts[int(day[:4])] += count
+        return tuple(sorted(counts.items()))
+
     return BinanceEarnSourceBridge(
         ledger_events=sum(ledger.values()) + count_strict,
         native_events=sum(native.values()) + count_strict,
         matched_to_second=count_strict,
         matched_same_day=daily,
-        ledger_unmatched=sum((lday-matches).values()),
-        native_unmatched=sum((nday-matches).values()),
+        ledger_unmatched=sum(missing_ledger.values()),
+        native_unmatched=sum(missing_native.values()),
         ambiguous_same_day=ambiguous,
         mixed_or_unknown_origin=mixed,
         day_only_with_other_economic_activity=with_activity,
         day_only_without_other_economic_activity=without_activity,
+        ledger_unmatched_by_year=by_year(missing_ledger),
+        native_unmatched_by_year=by_year(missing_native),
     )
 
 
