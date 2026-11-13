@@ -109,7 +109,7 @@ def test_earn_informa_anos_y_contadores_sin_detalles_privados():
                  if i["codigo"] == "earn_cobertura")
     assert "2020 (2 movimientos)" in issue["descripcion"]
     assert "2023 (3 movimientos)" in issue["descripcion"]
-    assert "4 suscripciones y 1 reembolsos" in issue["descripcion"]
+    assert "4 suscripciones y 1 reembolso" in issue["descripcion"]
     assert "no adquisiciones fiscales acreditadas" in issue["descripcion"]
     assert "EUR" in issue["siguiente_paso"]
     assert diag["validez_fiscal_acreditada"] is False
