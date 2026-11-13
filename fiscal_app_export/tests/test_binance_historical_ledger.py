@@ -206,3 +206,54 @@ def test_ledger_no_data_sentinel_does_not_bypass_row_limit(tmp_path):
         "No hay datos que se ajusten a los criterios.\n" * 3)
     with pytest.raises(BinanceHistoricalLedgerError, match="límite de filas"):
         inspeccionar_historial_binance([z], max_registros=2)
+
+
+def test_ledger_deficit_custodia_oculto_por_saldo_global(tmp_path):
+    """Saldo global correcto no acredita la custodia de otra billetera."""
+    z = _zip(tmp_path, "custody-deficit", HEADER + (
+        "synthetic,2024-01-01 09:00:00,Spot,Deposit,BTC,5,\n"
+        "synthetic,2024-01-02 09:00:00,USD-M Futures,Fee,BTC,-2,\n"
+        "synthetic,2024-01-03 09:00:00,USD-M Futures,Transfer,BTC,2,\n"
+    ))
+    report = inspeccionar_historial_binance([z])
+    assert report.sin_saldos_negativos_globales
+    assert not report.sin_saldos_negativos_por_cuenta
+    assert report.primeras_insuficiencias_por_cuenta == (
+        ("USD-M Futures", "BTC", "2024-01-02 09:00:00", Decimal("-2")),
+    )
+    assert dict(report.saldos_netos)["BTC"] == Decimal("5")
+    assert report.fifo_fiscal_acreditado is False
+
+
+def test_ledger_custodia_mismo_segundo_compensa_sin_falso_deficit(tmp_path):
+    z = _zip(tmp_path, "custody-same-second", HEADER + (
+        "synthetic,2024-01-01 09:00:00,Funding,Fee,ETH,-0.2,\n"
+        "synthetic,2024-01-01 09:00:00,Funding,Deposit,ETH,0.2,\n"
+    ))
+    report = inspeccionar_historial_binance([z])
+    assert report.sin_saldos_negativos_globales
+    assert report.sin_saldos_negativos_por_cuenta
+    assert report.primeras_insuficiencias_por_cuenta == ()
+
+
+def test_ledger_custodia_diversas_billeteras_sin_mezclar_sus_saldos(tmp_path):
+    z = _zip(tmp_path, "custody-separated", HEADER + (
+        "synthetic,2024-01-01 09:00:00,Spot,Deposit,BTC,2,\n"
+        "synthetic,2024-01-02 09:00:00,Spot,Transfer,BTC,-1,\n"
+        "synthetic,2024-01-02 09:00:00,Funding,Transfer,BTC,1,\n"
+        "synthetic,2024-01-03 09:00:00,Coin-M Futures,Deposit,BTC,1,\n"
+        "synthetic,2024-01-04 09:00:00,Pool,Pool Distribution,BTC,1,\n"
+        "synthetic,2024-01-05 09:00:00,Alpha,Deposit,BTC,1,\n"
+    ))
+    report = inspeccionar_historial_binance([z])
+    assert report.sin_saldos_negativos_por_cuenta
+    assert report.sin_saldos_negativos_globales
+    accounts = {(wallet, asset): qty
+                for wallet, asset, qty in report.saldos_por_cuenta}
+    assert accounts[("Spot", "BTC")] == Decimal("1")
+    assert accounts[("Funding", "BTC")] == Decimal("1")
+    assert accounts[("Coin-M Futures", "BTC")] == Decimal("1")
+    assert accounts[("Pool", "BTC")] == Decimal("1")
+    assert accounts[("Alpha", "BTC")] == Decimal("1")
+    assert dict(report.saldos_netos)["BTC"] == Decimal("5")
+    assert not report.fifo_fiscal_acreditado
