@@ -259,11 +259,22 @@ class BinanceFungibleInventory:
         self._refs.add(reference)
         self._latest = dt
 
-    def transfer(self, *, asset, quantity, timestamp, origin, destination):
+    def transfer(self, *, asset, quantity, timestamp, origin, destination,
+                 reference):
+        """Traslada custodia una sola vez: las referencias impiden replays.
+
+        Una coincidencia de moneda/importe/segundo NO acredita identidad.
+        La capa llamadora debe aportar una referencia unívoca verificada; no
+        debe fabricar referencias distintas para duplicados del mismo hecho.
+        """
         a = _asset(asset)
         q = _quantity(quantity)
         source, dest = self._wallet(origin), self._wallet(destination)
         dt = self._check_time(timestamp)
+        if not isinstance(reference, str) or not reference.strip() or reference in self._refs:
+            raise BinanceEarnInventoryError(
+                "Referencia de transferencia ausente o repetida"
+            )
         if source == dest:
             raise BinanceEarnInventoryError("Transferencia sin cambio de billetera")
         if self._wallets[(source, a)] < q:
@@ -271,6 +282,7 @@ class BinanceFungibleInventory:
         # Solo cambia custodia; ni se modifica ni se divide ningún lote global.
         self._wallets[(source, a)] -= q
         self._wallets[(dest, a)] += q
+        self._refs.add(reference)
         self._latest = dt
 
     def transfer_split(self, *, asset, quantity, timestamp,
