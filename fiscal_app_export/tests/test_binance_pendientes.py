@@ -194,3 +194,28 @@ def test_diagnostico_recompensas_sin_ano_comprobado_no_inventa_ano():
                  if x["codigo"] == "earn_recompensas_sin_nativo")
     assert "fecha-secreta" not in issue["descripcion"]
     assert "Por ejercicio:" not in issue["descripcion"]
+
+
+def test_diagnostico_abonos_earn_en_custodia_fuera_de_spot():
+    c = _clasificador(
+        fuentes_materiales_no_soportadas=[
+            "earn_abonos_en_custodia_no_conciliada",
+        ],
+        earn_reward_reconciliation=SimpleNamespace(
+            ledger_not_in_native=1,
+            native_not_in_ledger=0,
+            ledger_other_wallet_records=1,
+            ledger_missing_by_year_kind=(
+                (2021, "Simple Earn Flexible Interest", 1),
+            ),
+        ),
+    )
+    report = diagnosticar_pendientes_binance(c)
+    assert "earn_custodia_no_conciliada" in _codes(report)
+    assert "earn_recompensas_sin_nativo" in _codes(report)
+    assert "otras_incidencias" not in _codes(report)
+    issue = next(i for i in report["incidencias"]
+                 if i["codigo"] == "earn_custodia_no_conciliada")
+    assert "1 apuntes" in issue["descripcion"]
+    assert "EUR" in issue["siguiente_paso"]
+    assert report["validez_fiscal_acreditada"] is False
