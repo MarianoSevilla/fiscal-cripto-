@@ -45,7 +45,7 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
             if (isinstance(pair, tuple) and len(pair) == 2
                     and type(pair[0]) is int and type(pair[1]) is int
                     and 2009 <= pair[0] <= 2100 and pair[1] > 0):
-                years.append(f"{pair[0]} ({pair[1]} movimientos)")
+                years.append(f"{pair[0]} ({pair[1]} " + ("movimiento" if pair[1] == 1 else "movimientos") + ")")
         years_text = (
             " Períodos identificados: " + ", ".join(years) + "."
             if years and sum(y[1] for y in missing_years) == earn_unmatched
