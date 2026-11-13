@@ -143,6 +143,31 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
                 "supongas que son duplicados.",
             )
 
+    exposure = getattr(clasificador, "earn_reward_impact_2025", None)
+    if (exposure is not None
+            and getattr(exposure, "exercise", None) == 2025
+            and getattr(exposure, "prior_ledger_only_rewards", 0) > 0):
+        total = exposure.prior_ledger_only_rewards
+        possible = exposure.with_possible_disposal
+        remaining = exposure.without_observed_disposal
+        # No presentar esto como prueba de coste, consumo de lotes ni
+        # ausencia de otros exchanges o transmisiones no documentadas.
+        if (type(total) is int and type(possible) is int
+                and type(remaining) is int and total == possible + remaining
+                and 0 <= possible <= total):
+            add(
+                "earn_prioridad_2025", "revision",
+                "Prioridad documental de recompensas Earn para 2025",
+                f"De {total} abonos históricos sin CSV específico de Earn, "
+                f"{possible} corresponden a activos con posibles salidas "
+                f"económicas observadas en 2025. Otros {remaining} no "
+                "aparecen en esos tipos de salida en las fuentes revisadas. "
+                "La ausencia de coincidencia no demuestra irrelevancia fiscal.",
+                "Prioriza la documentación de adquisiciones y valoraciones "
+                "EUR de los activos con posibles salidas en 2025, sin "
+                "excluir los demás del inventario global.",
+            )
+
     other_wallet = getattr(reward_bridge, "ledger_other_wallet_records", 0)
     if other_wallet:
         add(
