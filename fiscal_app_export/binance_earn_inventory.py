@@ -57,6 +57,27 @@ def _second(value):
 
 
 @dataclass(frozen=True)
+class BinanceLedgerEarnEvidence:
+    """Asiento del ledger sin homólogo nativo; NO es una compra FIFO.
+
+    El ordinal señala la posición dentro de la lectura de Transaction History,
+    nunca un identificador único emitido por Binance. El coste EUR es desconocido
+    y el asiento Spot no demuestra por sí solo el origen del principal.
+    """
+    ledger_ordinal: int
+    direction: str
+    ledger_time: str
+    asset: str
+    quantity: Decimal
+    wallet: str
+    cost_eur: None = None
+
+    @property
+    def fiscal_ready(self):
+        return False
+
+
+@dataclass(frozen=True)
 class BinanceEarnSourceBridge:
     ledger_events: int
     native_events: int
@@ -72,6 +93,9 @@ class BinanceEarnSourceBridge:
     # Los años no acreditan por sí solos la existencia de un CSV descargable.
     ledger_unmatched_by_year: tuple[tuple[int, int], ...] = ()
     native_unmatched_by_year: tuple[tuple[int, int], ...] = ()
+    ledger_only_evidence: tuple[BinanceLedgerEarnEvidence, ...] = ()
+    # (año, direction, número de asientos). Únicamente agregados para UI.
+    ledger_unmatched_by_year_direction: tuple[tuple[int, str, int], ...] = ()
 
     @property
     def quantities_reconciled(self):
@@ -103,6 +127,7 @@ def conciliar_earn_con_ledger(earn_events, ledger_rows):
     ledger = Counter()
     economic_days = set()
     mixed = 0
+    ledger_entries = []
 
     for e in earn_events:
         direction = _SOURCE_DIRECTION.get(e.source)
@@ -139,7 +164,7 @@ def conciliar_earn_con_ledger(earn_events, ledger_rows):
         elif str(e.destination).strip().upper() != "SPOT":
             mixed += 1
 
-    for row in ledger_rows:
+    for ordinal, row in enumerate(ledger_rows):
         direction = _OP_DIRECTION.get(str(row.get("operación", "")).strip())
         if direction is None:
             # Exposición potencial al orden intradía cuando en ese activo
@@ -167,6 +192,11 @@ def conciliar_earn_con_ledger(earn_events, ledger_rows):
         if str(row.get("cuenta", "")).strip().upper() != "SPOT":
             mixed += 1
         ledger[(direction, raw, asset, abs(signed))] += 1
+        ledger_entries.append(BinanceLedgerEarnEvidence(
+            ledger_ordinal=ordinal, direction=direction, ledger_time=raw,
+            asset=asset, quantity=abs(signed),
+            wallet=str(row.get("cuenta", "")).strip(),
+        ))
 
     strict = native & ledger
     count_strict = sum(strict.values())
@@ -193,6 +223,29 @@ def conciliar_earn_con_ledger(earn_events, ledger_rows):
     missing_ledger = lday - matches
     missing_native = nday - matches
 
+    # Conservar asientos reales y multiplicidades sin fingir identidad entre
+    # filas nativas y contables. El ledger no contiene necesariamente un ID
+    # único; los emparejamientos por día no prueban el orden intradía.
+    strict_to_consume = strict.copy()
+    day_to_consume = matches.copy()
+    ledger_only = []
+    for item in ledger_entries:
+        key = (item.direction, item.ledger_time, item.asset, item.quantity)
+        day_key = (item.direction, item.ledger_time[:10], item.asset, item.quantity)
+        if strict_to_consume[key] > 0:
+            strict_to_consume[key] -= 1
+        elif day_to_consume[day_key] > 0:
+            day_to_consume[day_key] -= 1
+        else:
+            ledger_only.append(item)
+    if len(ledger_only) != sum(missing_ledger.values()):
+        raise BinanceEarnInventoryError(
+            "No coincide la multiplicidad de asientos Earn pendientes"
+        )
+    by_year_and_direction = Counter(
+        (int(event.ledger_time[:4]), event.direction) for event in ledger_only
+    )
+
     def by_year(unmatched):
         counts = Counter()
         for (_direction, day, _asset, _qty), count in unmatched.items():
@@ -212,6 +265,11 @@ def conciliar_earn_con_ledger(earn_events, ledger_rows):
         day_only_without_other_economic_activity=without_activity,
         ledger_unmatched_by_year=by_year(missing_ledger),
         native_unmatched_by_year=by_year(missing_native),
+        ledger_only_evidence=tuple(ledger_only),
+        ledger_unmatched_by_year_direction=tuple(
+            (year, direction, count)
+            for (year, direction), count in sorted(by_year_and_direction.items())
+        ),
     )
 
 
