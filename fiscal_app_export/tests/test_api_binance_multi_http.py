@@ -924,3 +924,63 @@ def test_binance_pure_earn_unsafe_variants_still_fail_closed(client, usuario, mo
     )
     assert r.status_code == 422, r.get_data(as_text=True)[:500]
     assert "token" not in r.get_json()
+
+
+def test_binance_diagnostico_earn_en_previsualizacion(client, usuario):
+    """Subir una recompensa nativa no autoriza por sí solo lotes ni PDF."""
+    _login(client)
+    raw = (
+        "Tiempo,Moneda,Cantidad,Tipo\\n"
+        "2025-06-10,ABC,0.125,Real-time APR Rewards\\n"
+    ).encode("utf-8-sig")
+    r = client.post(
+        "/api/binance/anos",
+        data={"csv": (io.BytesIO(raw), "Earn-(UTC+1).csv")},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 200, r.get_data(as_text=True)[:400]
+    body = r.get_json()
+    diag = body["diagnostico_binance"]
+    assert diag["validez_fiscal_acreditada"] is False
+    assert "earn_lotes" in {item["codigo"] for item in diag["incidencias"]}
+    assert body["anos"] == [2025]
+
+
+def test_binance_diagnostico_earn_en_error_422_sin_token(client, usuario):
+    """Mostrar cómo subsanar sin emitir informe parcialmente calculado."""
+    _login(client)
+    raw = (
+        "Tiempo,Moneda,Cantidad,Tipo\\n"
+        "2025-06-10,ABC,0.125,Real-time APR Rewards\\n"
+    ).encode("utf-8-sig")
+    r = client.post(
+        "/api/binance/analizar",
+        data={
+            "csv": (io.BytesIO(raw), "Earn-(UTC+1).csv"),
+            "ejercicio": "2025",
+            "nombre": "Ejemplo sintético",
+        },
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 422, r.get_data(as_text=True)[:400]
+    body = r.get_json()
+    assert "token" not in body and "resumen" not in body
+    assert "earn_lotes" in {
+        item["codigo"]
+        for item in body["diagnostico_binance"]["incidencias"]
+    }
+    assert body["diagnostico_binance"]["validez_fiscal_acreditada"] is False
+
+
+def test_binance_diagnostico_spot_no_infiere_fuentes_que_no_aparecen(client, usuario):
+    """No declarar como perdido un historial que el usuario no tiene."""
+    _login(client)
+    r = client.post(
+        "/api/binance/anos",
+        data={"csv": (io.BytesIO(_spot_csv()), "Spot-(UTC+1).csv")},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 200, r.get_data(as_text=True)[:400]
+    diag = r.get_json()["diagnostico_binance"]
+    assert diag["incidencias"] == []
+    assert diag["validez_fiscal_acreditada"] is False
