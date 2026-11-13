@@ -280,12 +280,12 @@ def test_eur_explicito_distingue_candidatos_completos_de_fiat_ambiguo():
         )
     )
     report = diagnosticar_pendientes_binance(c)
-    issue = next(x for x in report["incidencias"]
+    issue = next(x for x in report["evidencias"]
                  if x["codigo"] == "adquisiciones_eur_documentadas")
-    assert issue["tipo"] == "informacion"
+    assert report["incidencias"] == []
     assert "3 adquisiciones" in issue["descripcion"]
     assert "2 con importe" in issue["descripcion"]
-    assert "1 requieren" in issue["descripcion"]
+    assert "1 con el coste" in issue["descripcion"]
     assert "USDT/USDC/EUR" in issue["siguiente_paso"]
     assert report["validez_fiscal_acreditada"] is False
 
@@ -299,4 +299,6 @@ def test_eur_explicito_no_inventa_cuadre_si_contadores_inconsistentes():
         )
     )
     report = diagnosticar_pendientes_binance(c)
-    assert "adquisiciones_eur_documentadas" not in _codes(report)
+    assert "adquisiciones_eur_documentadas" not in {
+        x["codigo"] for x in report["evidencias"]
+    }
