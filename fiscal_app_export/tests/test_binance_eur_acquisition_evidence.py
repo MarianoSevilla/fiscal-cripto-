@@ -149,3 +149,56 @@ def test_total_eur_estricto_por_fuente_y_anual():
     )
     assert audit.complete_cost_candidates == 2
     assert audit.incomplete_cost_candidates == 1
+
+
+def test_clasificador_reconoce_convert_eur_nativo_sin_cotizacion_usdt(tmp_path):
+    import csv
+    from clasificador_binance_multi import ClasificadorBinanceMulti
+    p = tmp_path / "convert.csv"
+    with p.open("w", encoding="utf-8-sig", newline="") as out:
+        writer = csv.writer(out)
+        writer.writerow([
+            "Tiempo", "Billetera", "Par", "Tipo", "Vender", "Comprar",
+            "Precio", "Precio inverso", "Fecha actualizada", "Estado",
+        ])
+        writer.writerow([
+            "2025-03-01 10:00:00", "SPOT", "EURABC", "Instant",
+            "25.00 EUR", "12.5 ABC", "1 EUR=0.5 ABC",
+            "1 ABC=2 EUR", "2025-03-01 10:00:00", "Successful",
+        ])
+    classifier = ClasificadorBinanceMulti([str(p)]).clasificar()
+    report = classifier.eur_acquisition_evidence
+    assert report is not None
+    assert len(report.candidates) == 1
+    assert report.candidates[0].source == "Convert"
+    assert report.candidates[0].asset == "ABC"
+    assert report.candidates[0].complete_cost_eur == Decimal("25.00")
+    assert report.by_year_source == ((2025, "Convert", 1),)
+    assert report.fiscal_ready is False
+
+
+def test_clasificador_fiat_con_fee_eur_no_inventa_coste_total(tmp_path):
+    import csv
+    from clasificador_binance_multi import ClasificadorBinanceMulti
+    p = tmp_path / "fiat.csv"
+    with p.open("w", encoding="utf-8-sig", newline="") as out:
+        writer = csv.writer(out)
+        writer.writerow([
+            "Tiempo", "Método", "Cantidad a gastar", "Recibir cantidad",
+            "Tarifa", "Precio", "Estado", "ID de transacción",
+        ])
+        writer.writerow([
+            "2025-01-20 16:17:16", "SEPA Instant",
+            "300.00 EUR", "307.64731901 USDC", "1.00 EUR",
+            "0.9718921 USDC/EUR", "Successful", "synthetic-identifier",
+        ])
+    classifier = ClasificadorBinanceMulti([str(p)]).clasificar()
+    report = classifier.eur_acquisition_evidence
+    assert report is not None
+    assert report.incomplete_cost_candidates == 1
+    assert report.candidates[0].eur_outlay == Decimal("300")
+    assert report.candidates[0].complete_cost_eur is None
+    assert report.candidates[0].outstanding_reason == (
+        "comision_fiat_incluida_o_adicional_no_acreditada"
+    )
+    assert report.fiscal_ready is False
