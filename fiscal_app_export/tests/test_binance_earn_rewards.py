@@ -474,7 +474,9 @@ def test_clasificador_prioriza_abonos_historicos_relacionados_con_2025(tmp_path)
             ["synthetic", "2021-01-02 11:00:00", "Spot",
              "Simple Earn Flexible Interest", "XYZ", "0.3", ""],
             ["synthetic", "2025-01-02 10:00:00", "Spot",
-             "Transaction Spend", "ABC", "-0.1", ""],
+             "Small Assets Exchange BNB", "ABC", "-0.1", ""],
+            ["synthetic", "2025-01-02 10:00:00", "Spot",
+             "Small Assets Exchange BNB", "BNB", "0.001", ""],
             ["synthetic", "2025-01-02 10:00:00", "Spot",
              "Withdraw", "XYZ", "-0.2", ""],
         ])
