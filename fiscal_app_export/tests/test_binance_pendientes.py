@@ -89,3 +89,34 @@ def test_marcador_desconocido_no_se_ignora_ni_se_exponen_datos():
     result = diagnosticar_pendientes_binance(c)
     assert _codes(result) == {"otras_incidencias"}
     assert "nueva_fuente_sin_interpretar" not in str(result)
+
+
+def test_earn_informa_anos_y_contadores_sin_detalles_privados():
+    c = _clasificador(
+        earn_reconciliation=SimpleNamespace(
+            ledger_unmatched=5,
+            ledger_unmatched_by_year=((2020, 2), (2023, 3)),
+        ),
+        fuentes_materiales_no_soportadas=["earn_fuentes_no_conciliadas"],
+    )
+    diag = diagnosticar_pendientes_binance(c)
+    issue = next(i for i in diag["incidencias"]
+                 if i["codigo"] == "earn_cobertura")
+    assert "2020 (2 movimientos)" in issue["descripcion"]
+    assert "2023 (3 movimientos)" in issue["descripcion"]
+    assert "EUR" in issue["siguiente_paso"]
+    assert diag["validez_fiscal_acreditada"] is False
+
+
+def test_earn_no_infiere_periodos_cuando_no_estan_comprobados():
+    c = _clasificador(
+        earn_reconciliation=SimpleNamespace(
+            ledger_unmatched=2,
+            ledger_unmatched_by_year=((2020, 1),),
+        )
+    )
+    diag = diagnosticar_pendientes_binance(c)
+    issue = next(i for i in diag["incidencias"]
+                 if i["codigo"] == "earn_cobertura")
+    assert "Períodos identificados" not in issue["descripcion"]
+    assert diag["validez_fiscal_acreditada"] is False
