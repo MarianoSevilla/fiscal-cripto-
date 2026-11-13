@@ -1019,3 +1019,41 @@ def test_binance_conserva_diagnostico_si_motor_bloquea_antes_del_resultado(
         i["codigo"] for i in body["diagnostico_binance"]["incidencias"]
     }
     assert body["diagnostico_binance"]["validez_fiscal_acreditada"] is False
+
+
+def test_binance_solo_ledger_earn_revela_periodos_sin_csv_nativo(client, usuario):
+    """Diagnóstico de fuente ausente sin inventar recompensas ni lotes."""
+    _login(client)
+    ledger = (
+        "ID de usuario,Tiempo,Cuenta,Operación,Moneda,Cambio,Observación\n"
+        "synthetic,2021-05-01 12:00:00,Spot,Simple Earn Flexible Subscription,ABC,-2,\n"
+        "synthetic,2023-05-01 12:00:00,Spot,Simple Earn Flexible Redemption,ABC,2,\n"
+    ).encode("utf-8-sig")
+    preview = client.post(
+        "/api/binance/anos",
+        data={"csv": (io.BytesIO(ledger), "Binance-History-(UTC+1).csv")},
+        content_type="multipart/form-data",
+    )
+    assert preview.status_code == 200, preview.get_data(as_text=True)[:400]
+    report = preview.get_json()["diagnostico_binance"]
+    issue = next(
+        i for i in report["incidencias"] if i["codigo"] == "earn_cobertura"
+    )
+    assert "2021 (1 movimientos)" in issue["descripcion"]
+    assert "2023 (1 movimientos)" in issue["descripcion"]
+    assert report["validez_fiscal_acreditada"] is False
+
+    blocked = client.post(
+        "/api/binance/analizar",
+        data={
+            "csv": (io.BytesIO(ledger), "Binance-History-(UTC+1).csv"),
+            "ejercicio": "2023",
+            "nombre": "Solo ledger synthetic",
+        },
+        content_type="multipart/form-data",
+    )
+    assert blocked.status_code == 422, blocked.get_data(as_text=True)[:400]
+    body = blocked.get_json()
+    assert "token" not in body and "resumen" not in body
+    assert any(i["codigo"] == "earn_cobertura"
+               for i in body["diagnostico_binance"]["incidencias"])
