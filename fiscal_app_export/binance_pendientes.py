@@ -89,6 +89,56 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
             "alternativos. No se pueden reconstruir compras ni costes EUR "
             "únicamente a partir de este diagnóstico.",
         )
+    reward_bridge = getattr(clasificador, "earn_reward_reconciliation", None)
+    if reward_bridge is not None:
+        missing_ledger = getattr(reward_bridge, "ledger_not_in_native", 0)
+        missing_native = getattr(reward_bridge, "native_not_in_ledger", 0)
+
+        def reward_years(grouped):
+            # Resumen agregado, sin monedas, cantidades ni fechas exactas.
+            counts = {}
+            for item in grouped or ():
+                if (isinstance(item, tuple) and len(item) == 3
+                        and type(item[0]) is int and 2009 <= item[0] <= 2100
+                        and item[1] in ("Bonus Tiered APR Rewards", "Airdrop Rewards")
+                        and type(item[2]) is int and item[2] > 0):
+                    counts[item[0]] = counts.get(item[0], 0) + item[2]
+                else:
+                    return ""
+            return ", ".join(f"{year}: {count}" for year, count in sorted(counts.items()))
+
+        if missing_ledger:
+            years = reward_years(getattr(
+                reward_bridge, "ledger_missing_by_year_kind", ()
+            ))
+            add(
+                "earn_recompensas_sin_nativo", "archivo",
+                "Recompensas Earn sin respaldo específico",
+                f"Existen {missing_ledger} abonos de intereses o airdrops en "
+                "Transaction History sin correspondencia en los CSV de "
+                "recompensas Earn aportados."
+                + (f" Por ejercicio: {years}." if years else ""),
+                "Busca los informes originales de recompensas Simple Earn de "
+                "esos ejercicios. Si Binance no los ofrece, conserva los "
+                "asientos del historial general como evidencia pendiente; "
+                "no se les asignará un coste EUR inventado.",
+            )
+        if missing_native:
+            years = reward_years(getattr(
+                reward_bridge, "native_missing_by_year_kind", ()
+            ))
+            add(
+                "earn_recompensas_sin_ledger", "revision",
+                "Recompensas Earn sin asiento del historial general",
+                f"Existen {missing_native} recompensas nativas que no tienen "
+                "correspondencia individual ni por total diario con "
+                "Transaction History."
+                + (f" Por ejercicio: {years}." if years else ""),
+                "Contrasta la cobertura y las fechas de los historiales "
+                "generales y específicos. No elimines esas recompensas ni "
+                "supongas que son duplicados.",
+            )
+
     if getattr(clasificador, "earn_events", ()) or any(
         m.startswith("earn_") for m in markers
     ):
@@ -181,6 +231,7 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
         "earn_flexible_requiere_inventario_y_valoracion_fiscal",
         "earn_ledger_sin_lotes_ni_valoracion_acreditados",
         "earn_intereses_ledger_sin_fuente_nativa_suficiente",
+        "earn_recompensas_nativas_sin_asiento_general",
         "earn_tipo_recompensa_desconocido",
         "earn_airdrop_destino_no_acreditado",
         "binance_comisiones_sin_valoracion_ni_categoria_fiscal",
