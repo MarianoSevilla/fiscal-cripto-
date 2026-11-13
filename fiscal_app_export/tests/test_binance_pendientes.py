@@ -153,9 +153,9 @@ def test_diagnostico_recompensas_historicas_diferencia_dos_brechas():
             ledger_not_in_native=5,
             native_not_in_ledger=2,
             ledger_missing_by_year_kind=(
-                (2020, "Bonus Tiered APR Rewards", 1),
-                (2021, "Bonus Tiered APR Rewards", 2),
-                (2021, "Airdrop Rewards", 2),
+                (2020, "Simple Earn Flexible Interest", 1),
+                (2021, "Simple Earn Flexible Interest", 2),
+                (2021, "Simple Earn Flexible Airdrop", 2),
             ),
             native_missing_by_year_kind=(
                 (2024, "Bonus Tiered APR Rewards", 2),
