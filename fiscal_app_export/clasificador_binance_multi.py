@@ -662,6 +662,12 @@ class ClasificadorBinanceMulti:
             self.fuentes_materiales_no_soportadas.append(
                 "earn_intereses_ledger_sin_fuente_nativa_suficiente"
             )
+        if rewards.native_not_in_ledger:
+            # Tampoco ignorar abonos nativos Bonus/Airdrop sin reflejo en
+            # el ledger: no deduplicarlos ni tratarlos como confirmados.
+            self.fuentes_materiales_no_soportadas.append(
+                "earn_recompensas_nativas_sin_asiento_general"
+            )
         if rewards.unknown_native_kinds:
             self.fuentes_materiales_no_soportadas.append(
                 "earn_tipo_recompensa_desconocido"
