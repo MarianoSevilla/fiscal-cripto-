@@ -271,14 +271,19 @@ def test_cobertura_recompensas_2020_2023_preserva_asientos_sin_lotes():
     assert candidates == ()
     assert report.ledger_records == report.ledger_not_in_native == 5
     assert report.ledger_missing_by_year_kind == (
-        (2020, "Bonus Tiered APR Rewards", 1),
-        (2021, "Bonus Tiered APR Rewards", 1),
-        (2022, "Airdrop Rewards", 2),
-        (2023, "Bonus Tiered APR Rewards", 1),
+        (2020, "Simple Earn Flexible Interest", 1),
+        (2021, "Simple Earn Flexible Interest", 1),
+        (2022, "Simple Earn Flexible Airdrop", 2),
+        (2023, "Simple Earn Flexible Interest", 1),
     )
     assert len(report.ledger_unresolved_evidence) == 5
     assert [x.ledger_ordinal for x in report.ledger_unresolved_evidence] == [
         0, 1, 2, 3, 4
+    ]
+    assert [x.ledger_operation for x in report.ledger_unresolved_evidence] == [
+        "Simple Earn Flexible Interest", "Simple Earn Flexible Interest",
+        "Simple Earn Flexible Airdrop", "Simple Earn Flexible Airdrop",
+        "Simple Earn Flexible Interest",
     ]
     assert all(
         x.relation == "sin_fuente_nativa" and x.cost_eur is None
@@ -371,7 +376,7 @@ def test_recompensa_repetida_no_se_descarta_en_resumen_anual():
     assert report.matched_by_day == 1
     assert report.ledger_not_in_native == 1
     assert report.ledger_missing_by_year_kind == (
-        (2024, "Bonus Tiered APR Rewards", 1),
+        (2024, "Simple Earn Flexible Interest", 1),
     )
     assert [x.ledger_ordinal for x in report.ledger_unresolved_evidence] == [1]
     assert report.ledger_unresolved_evidence[0].cost_eur is None
