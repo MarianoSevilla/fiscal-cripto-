@@ -33,6 +33,16 @@ _DATE = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
 _TZ = re.compile(r"\(UTC[+-]\d{1,2}\)")
 _NO_DATA_SENTINEL = "no hay datos que se ajusten a los criterios"
 
+# Tipos observados en Transaction History; solo corroboramos sus dos patas
+# cuando son idénticas en segundo/activo/importe y de signo opuesto.
+# No inferir correspondencia por cercanía temporal ni crear lotes FIFO.
+_TRANSFER_ACCOUNTS = {
+    "Transfer Between Spot and UM Futures": frozenset(("Spot", "USD-M Futures")),
+    "Transfer Between Spot and CM Futures": frozenset(("Spot", "Coin-M Futures")),
+    "Transfer Between Spot and Funding": frozenset(("Spot", "Funding")),
+    "Transfer Between Spot and Mining": frozenset(("Spot", "Pool")),
+}
+
 
 @dataclass(frozen=True)
 class BinanceHistoricalLedgerResult:
@@ -48,6 +58,11 @@ class BinanceHistoricalLedgerResult:
     # Cuenta, activo, primer instante negativo, saldo de ese instante.
     # Evidencia de conciliación, NO prueba de un coste FIFO ausente.
     primeras_insuficiencias_por_cuenta: tuple[tuple[str, str, str, Decimal], ...] = ()
+    # Número de transferencias con dos patas exactas por tipo.
+    traspasos_pareados_por_tipo: tuple[tuple[str, int], ...] = ()
+    # Número de patas que no admiten identidad exacta; NO equivale
+    # al número de transferencias ni acredita por sí solo un faltante.
+    patas_traspasos_no_pareadas_por_tipo: tuple[tuple[str, int], ...] = ()
 
     @property
     def sin_saldos_negativos_por_cuenta(self) -> bool:
@@ -114,6 +129,9 @@ def inspeccionar_historial_binance(
     pending_account_changes: dict[tuple[str, str], Decimal] = defaultdict(Decimal)
     account_balances_temporal: dict[tuple[str, str], Decimal] = defaultdict(Decimal)
     first_account_negative: dict[tuple[str, str], tuple[str, Decimal]] = {}
+    pending_transfer_rows: dict[tuple[str, str], list[tuple[str, Decimal]]] = defaultdict(list)
+    paired_transfers: Counter[str] = Counter()
+    unpaired_transfer_legs: Counter[str] = Counter()
 
     def settle() -> None:
         if pending_time is None:
@@ -135,6 +153,20 @@ def inspeccionar_historial_binance(
                     pending_time.isoformat(sep=" "), account_balances_temporal[key]
                 )
         pending_account_changes.clear()
+        for (kind, asset), legs in pending_transfer_rows.items():
+            # Una única pareja por activo/segundo/tipo; dos eventos
+            # indistinguibles en el mismo segundo quedan sin asignar.
+            if (
+                len(legs) == 2
+                and frozenset(wallet for wallet, _amount in legs)
+                    == _TRANSFER_ACCOUNTS[kind]
+                and legs[0][1] != 0
+                and legs[0][1] == -legs[1][1]
+            ):
+                paired_transfers[kind] += 1
+            else:
+                unpaired_transfer_legs[kind] += len(legs)
+        pending_transfer_rows.clear()
 
     for path in paths:
         path = Path(path)
@@ -245,6 +277,10 @@ def inspeccionar_historial_binance(
                             wallet_key = (record["Cuenta"].strip(), symbol)
                             per_account[wallet_key] += amount
                             pending_account_changes[wallet_key] += amount
+                            if kind in _TRANSFER_ACCOUNTS:
+                                pending_transfer_rows[(kind, symbol)].append(
+                                    (wallet_key[0], amount)
+                                )
                             if kind in (
                                 "Simple Earn Flexible Subscription",
                                 "Simple Earn Flexible Redemption",
@@ -275,5 +311,9 @@ def inspeccionar_historial_binance(
         primeras_insuficiencias_por_cuenta=tuple(sorted(
             (wallet, asset, day, amount)
             for (wallet, asset), (day, amount) in first_account_negative.items()
+        )),
+        traspasos_pareados_por_tipo=tuple(sorted(paired_transfers.items())),
+        patas_traspasos_no_pareadas_por_tipo=tuple(sorted(
+            unpaired_transfer_legs.items()
         )),
     )
