@@ -668,6 +668,12 @@ class ClasificadorBinanceMulti:
             self.fuentes_materiales_no_soportadas.append(
                 "earn_recompensas_nativas_sin_asiento_general"
             )
+        if rewards.ledger_other_wallet_records:
+            # No equiparar un interés recibido en Earn/Funding con un Bonus
+            # nativo dirigido a Spot, aunque coincidan día, activo e importe.
+            self.fuentes_materiales_no_soportadas.append(
+                "earn_abonos_en_custodia_no_conciliada"
+            )
         if rewards.unknown_native_kinds:
             self.fuentes_materiales_no_soportadas.append(
                 "earn_tipo_recompensa_desconocido"
