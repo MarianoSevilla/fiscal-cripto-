@@ -90,8 +90,24 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                             ):
                                 analysis_attempt[0] += 1
                                 if first_error and analysis_attempt[0] == 1:
+                                    failure = {
+                                        "ok": False,
+                                        "error": "Datos fiscales no seguros: historial incompleto",
+                                    }
+                                    if name == "binance":
+                                        failure["diagnostico_binance"] = {
+                                            "estado": "pendiente_validacion",
+                                            "validez_fiscal_acreditada": False,
+                                            "incidencias": [{
+                                                "codigo": "earn_cobertura",
+                                                "tipo": "archivo",
+                                                "titulo": "Historial Simple Earn incompleto",
+                                                "descripcion": "Faltan movimientos históricos.",
+                                                "siguiente_paso": "Añade el historial original.",
+                                            }],
+                                        }
                                     route.fulfill(status=422, content_type="application/json",
-                                                  body='{"ok":false,"error":"Datos fiscales no seguros: historial incompleto"}')
+                                                  body=json.dumps(failure))
                                 else:
                                     route.fulfill(status=200, content_type="application/json",
                                                   body=json.dumps(RESULT))
@@ -247,6 +263,13 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                             if name == "binance":
                                 assert page.locator("#fileSelected").is_visible()
                                 assert page.locator("#btnDownload").is_hidden()
+                                assert page.locator("#errorTitulo").inner_text() == (
+                                    "Informe pendiente de datos verificables"
+                                )
+                                pending = page.locator("#binanceErrorPendientes")
+                                assert pending.is_visible()
+                                assert "Historial Simple Earn incompleto" in pending.inner_text()
+                                assert "Añade el historial original." in pending.inner_text()
                             page.locator("#btnRetry").click()
                             assert page.locator("#emptyState").is_visible()
                             if name == "binance":
