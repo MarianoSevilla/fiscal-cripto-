@@ -428,3 +428,33 @@ def test_intereses_ledger_fuera_de_spot_no_pueden_acreditar_mismo_abono(wallet):
     assert entry.cost_eur is None and not entry.fiscal_ready
     assert len(candidates) == 1 and candidates[0].cost_eur is None
     assert not report.fiscal_ready
+
+
+def test_clasificador_preserva_interes_del_ledger_en_earn_sin_falsear_spot(tmp_path):
+    p = tmp_path / "historico.csv"
+    with p.open("w", encoding="utf-8-sig", newline="") as output:
+        writer = csv.writer(output)
+        writer.writerow([
+            "ID de usuario", "Tiempo", "Cuenta", "Operación",
+            "Moneda", "Cambio", "Observación"
+        ])
+        writer.writerow([
+            "synthetic", "2021-01-02 11:00:00", "Earn",
+            "Simple Earn Flexible Interest", "ABC", "0.1", ""
+        ])
+    c = ClasificadorBinanceMulti([str(p)]).clasificar()
+    bridge = c.earn_reward_reconciliation
+    assert bridge.ledger_other_wallet_records == 1
+    assert bridge.ledger_not_in_native == 1
+    assert bridge.native_not_in_ledger == 0
+    assert bridge.matched_exact == bridge.matched_by_day == 0
+    assert bridge.ledger_missing_by_year_kind == (
+        (2021, "Simple Earn Flexible Interest", 1),
+    )
+    assert len(bridge.ledger_unresolved_evidence) == 1
+    assert bridge.ledger_unresolved_evidence[0].wallet == "Earn"
+    assert bridge.ledger_unresolved_evidence[0].cost_eur is None
+    assert "earn_abonos_en_custodia_no_conciliada" in (
+        c.fuentes_materiales_no_soportadas
+    )
+    assert not bridge.fiscal_ready
