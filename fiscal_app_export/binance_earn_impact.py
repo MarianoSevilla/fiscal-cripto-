@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
+import re
 
 
 class BinanceEarnImpactError(ValueError):
@@ -50,6 +51,14 @@ def _quantity(raw):
     if isinstance(raw, (bool, float)):
         raise BinanceEarnImpactError("Cantidad histórica no válida")
     text = str(raw).strip()
+    # Binance también usa comas como separadores de miles. No interpretar
+    # agrupaciones inválidas (1,23.45) ni confundir coma decimal con miles.
+    if "," in text:
+        if not re.fullmatch(
+            r"[+-]?\\d{1,3}(?:,\\d{3})+(?:\\.\\d+)?", text
+        ):
+            raise BinanceEarnImpactError("Cantidad histórica no válida")
+        text = text.replace(",", "")
     # No asumir paridad ni convertir formatos ambiguos: las filas contables
     # ya han pasado por el clasificador principal.
     try:
