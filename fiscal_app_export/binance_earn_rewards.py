@@ -216,13 +216,21 @@ def reconcile_earn_rewards(earn_events, ledger_rows):
         kind = _LEDGER_REWARD.get(str(row.get("operación", "")).strip())
         if kind is None:
             continue
+        # Un abono en otra custodia no es el espejo Spot de Bonus/Airdrop.
+        # Rechazo explícito: no falsear la conciliación por coincidir importe
+        # y fecha mientras el destino contable es diferente o desconocido.
+        wallet = str(row.get("cuenta", "")).strip()
+        if wallet.upper() != "SPOT":
+            raise BinanceEarnRewardsError(
+                "Billetera de rendimiento Earn del ledger no conciliable"
+            )
         stamp, _precision = _time(row.get("tiempo", ""))
         asset = _asset(row.get("moneda", ""))
         amount = _amount(row.get("cambio", ""))
         ledger[(kind, stamp, asset, amount)] += 1
         ledger_entries.append((
             ordinal, kind, str(row.get("operación", "")).strip(),
-            stamp, asset, amount, str(row.get("cuenta", "")).strip(),
+            stamp, asset, amount, wallet,
         ))
 
     strict = native & ledger
