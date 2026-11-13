@@ -51,10 +51,35 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
             if years and sum(y[1] for y in missing_years) == earn_unmatched
             else ""
         )
+        missing_directions = getattr(
+            earn, "ledger_unmatched_by_year_direction", ()
+        ) or ()
+        valid_directions = all(
+            isinstance(row, tuple) and len(row) == 3
+            and type(row[0]) is int and 2009 <= row[0] <= 2100
+            and row[1] in ("subscription", "redemption")
+            and type(row[2]) is int and row[2] > 0
+            for row in missing_directions
+        )
+        if (missing_directions and valid_directions
+                and sum(row[2] for row in missing_directions) == earn_unmatched):
+            subscriptions = sum(
+                n for _year, kind, n in missing_directions
+                if kind == "subscription"
+            )
+            redemptions = earn_unmatched - subscriptions
+            directions_text = (
+                f" Desglose: {subscriptions} suscripciones y "
+                f"{redemptions} reembolsos; son movimientos, no "
+                "adquisiciones fiscales acreditadas."
+            )
+        else:
+            directions_text = ""
         add(
             "earn_cobertura", "archivo", "Historial Simple Earn incompleto",
             "Hay movimientos Simple Earn del historial general que no aparecen "
-            "en los archivos específicos aportados." + years_text,
+            "en los archivos específicos aportados." + years_text
+            + directions_text,
             "Recupera las exportaciones específicas de suscripciones y "
             "reembolsos Simple Earn de esos períodos cuando estén disponibles. "
             "Si Binance ya no las permite descargar, reúne justificantes "
