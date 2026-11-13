@@ -679,3 +679,44 @@ def test_earn_ledger_historico_sin_zip_nativo_no_se_concilia(tmp_path):
     assert "earn_fuentes_no_conciliadas" in (
         classified.fuentes_materiales_no_soportadas
     )
+
+
+def test_earn_formato_miles_con_comas_concilia_con_ledger_decimal(tmp_path):
+    """Binance exporta importes como 12,634.80000000; no perder cuatro eventos."""
+    earn = _csv(tmp_path, "earn-thousands.csv",
+                ["Fecha de suscripción", "Nombre del producto", "Moneda",
+                 "Cantidad", "Tipo", "De", "Estado"], [
+                    ["2025-01-01 12:00:00", "ABC", "ABC", "12,634.80000000",
+                     "Manual", "Spot", "Success"],
+                    ["2025-01-02 12:00:00", "ABC", "ABC", "1,793.69580555",
+                     "Manual", "Spot", "Success"],
+                ])
+    ledger = _csv(tmp_path, "ledger.csv", TX_H, [
+        ["synthetic", "2025-01-01 12:00:00", "Spot",
+         "Simple Earn Flexible Subscription", "ABC", "-12634.80000000", ""],
+        ["synthetic", "2025-01-02 12:00:00", "Spot",
+         "Simple Earn Flexible Subscription", "ABC", "-1793.69580555", ""],
+    ])
+    c = _classify([earn, ledger])
+    assert len(c.earn_events) == 2
+    assert [e.amount for e in c.earn_events] == [
+        Decimal("12634.80000000"), Decimal("1793.69580555")
+    ]
+    assert c.earn_reconciliation.native_events == 2
+    assert c.earn_reconciliation.ledger_events == 2
+    assert c.earn_reconciliation.matched_to_second == 2
+    assert c.earn_reconciliation.ledger_unmatched == 0
+    assert c.earn_reconciliation.ledger_unmatched_by_year == ()
+    assert c.earn_reconciliation.native_unmatched_by_year == ()
+    assert c.earn_reconciliation.fiscal_ready is False
+
+
+def test_earn_formato_miles_mal_agrupado_se_rechaza(tmp_path):
+    earn = _csv(tmp_path, "earn-invalid-thousands.csv",
+                ["Fecha de suscripción", "Nombre del producto", "Moneda",
+                 "Cantidad", "Tipo", "De", "Estado"], [
+                    ["2025-01-01 12:00:00", "ABC", "ABC", "1,23.40000000",
+                     "Manual", "Spot", "Success"],
+                ])
+    with pytest.raises(BinanceMultiUserError, match="cantidad no interpretable"):
+        _classify([earn])
