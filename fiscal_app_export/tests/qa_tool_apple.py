@@ -252,6 +252,16 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                             if name == "binance":
                                 assert page.locator("#fileSelected").is_visible()
                                 expect(page.locator("#btnAnalizar")).to_be_enabled()
+                                # El usuario puede añadir un ZIP/CSV sin
+                                # volver a seleccionar los dos previos.
+                                picker.set_input_files({
+                                    "name": "additional.csv",
+                                    "mimeType": "text/csv",
+                                    "buffer": b"fecha,activo,valor\\n2025-08-03,BTC,3\\n",
+                                })
+                                expect(page.locator("#btnAnalizar")).to_be_enabled(timeout=12000)
+                                assert page.locator("#fileName").inner_text() == "3 ficheros"
+                                count += 1
                             else:
                                 count = attach_valid()
                             page.locator("#btnAnalizar").click()
