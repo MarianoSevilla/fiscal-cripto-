@@ -219,3 +219,53 @@ def test_diagnostico_abonos_earn_en_custodia_fuera_de_spot():
     assert "1 apunte" in issue["descripcion"]
     assert "EUR" in issue["siguiente_paso"]
     assert report["validez_fiscal_acreditada"] is False
+
+
+def test_priorizacion_2025_muestra_riesgo_sin_presentar_visto_bueno():
+    c = _clasificador(
+        earn_reward_reconciliation=SimpleNamespace(
+            ledger_not_in_native=4,
+            native_not_in_ledger=0,
+        ),
+        earn_reward_impact_2025=SimpleNamespace(
+            exercise=2025,
+            prior_ledger_only_rewards=4,
+            with_possible_disposal=3,
+            without_observed_disposal=1,
+        ),
+    )
+    report = diagnosticar_pendientes_binance(c)
+    issue = next(i for i in report["incidencias"]
+                 if i["codigo"] == "earn_prioridad_2025")
+    assert "3 corresponden" in issue["descripcion"]
+    assert "Otros 1" in issue["descripcion"]
+    assert "no demuestra irrelevancia fiscal" in issue["descripcion"]
+    assert "sin excluir los demás" in issue["siguiente_paso"]
+    assert report["validez_fiscal_acreditada"] is False
+
+
+def test_prioridad_earn_no_inventa_impacto_2025_con_recuentos_incoherentes():
+    c = _clasificador(
+        earn_reward_impact_2025=SimpleNamespace(
+            exercise=2025,
+            prior_ledger_only_rewards=4,
+            with_possible_disposal=6,
+            without_observed_disposal=1,
+        ),
+    )
+    report = diagnosticar_pendientes_binance(c)
+    assert "earn_prioridad_2025" not in _codes(report)
+    assert report["validez_fiscal_acreditada"] is False
+
+
+def test_prioridad_earn_no_se_presenta_como_riesgo_2024():
+    c = _clasificador(
+        earn_reward_impact_2025=SimpleNamespace(
+            exercise=2024,
+            prior_ledger_only_rewards=3,
+            with_possible_disposal=2,
+            without_observed_disposal=1,
+        ),
+    )
+    report = diagnosticar_pendientes_binance(c)
+    assert "earn_prioridad_2025" not in _codes(report)
