@@ -16,6 +16,8 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
     """
     markers = set(getattr(clasificador, "fuentes_materiales_no_soportadas", ()) or ())
     incidencias = []
+    # Los hechos documentales son informativos, no incidencias.
+    evidencias = []
 
     def add(code: str, tipo: str, titulo: str, descripcion: str, siguiente_paso: str):
         incidencias.append({
@@ -34,19 +36,24 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
         if (type(complete) is int and type(incomplete) is int
                 and complete >= 0 and incomplete >= 0
                 and complete + incomplete == len(eur_candidates)):
-            add(
-                "adquisiciones_eur_documentadas", "informacion",
-                "Adquisiciones con desembolso EUR explícito",
-                f"Se identifican {len(eur_candidates)} adquisiciones nativas "
-                f"pagadas en EUR: {complete} con importe y comisión "
-                f"documentados para un coste candidato; {incomplete} "
-                "requieren aclarar una comisión antes de acreditar su "
-                "coste total. Ningún recuento acredita el FIFO global.",
-                "Conserva los comprobantes nativos de estas operaciones. "
-                "Para las restantes adquisiciones, recompensas y permutas "
-                "hay que acreditar origen, fecha, cantidad y valoración "
-                "EUR; no se presume equivalencia USDT/USDC/EUR.",
-            )
+            evidencias.append({
+                "codigo": "adquisiciones_eur_documentadas",
+                "titulo": "Adquisiciones con desembolso EUR explícito",
+                "descripcion": (
+                    f"Se identifican {len(eur_candidates)} "
+                    f"{'adquisición' if len(eur_candidates) == 1 else 'adquisiciones'} "
+                    f"nativas pagadas en EUR: {complete} con importe y comisión "
+                    "documentados como coste candidato y "
+                    f"{incomplete} con el coste total aún pendiente. "
+                    "No acredita el FIFO global."
+                ),
+                "siguiente_paso": (
+                    "Conserva los comprobantes nativos. Para las demás "
+                    "adquisiciones, recompensas y permutas hay que acreditar "
+                    "origen, fecha, cantidad y valoración EUR; no se presume "
+                    "equivalencia USDT/USDC/EUR."
+                ),
+            })
 
     if "spot_orders_ejecutadas_sin_fills_completos" in markers:
         add(
@@ -316,6 +323,7 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
         "estado": "pendiente_validacion",
         "validez_fiscal_acreditada": False,
         "incidencias": incidencias,
+        "evidencias": evidencias,
         "aviso": (
             "Este diagnóstico no verifica que el historial esté completo "
             "desde la primera adquisición ni que el FIFO global sea correcto. "
