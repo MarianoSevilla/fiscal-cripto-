@@ -1057,3 +1057,78 @@ def test_binance_solo_ledger_earn_revela_periodos_sin_csv_nativo(client, usuario
     assert "token" not in body and "resumen" not in body
     assert any(i["codigo"] == "earn_cobertura"
                for i in body["diagnostico_binance"]["incidencias"])
+
+
+def test_api_binance_recompensas_ledger_historicas_sin_nativo_bloquean_pdf(
+    client, usuario
+):
+    """El historial 2021 puede probar un abono, no coste ni fuente Earn completa."""
+    _login(client)
+    ledger = (
+        "ID de usuario,Tiempo,Cuenta,Operación,Moneda,Cambio,Observación\n"
+        "synthetic,2021-02-03 10:00:00,Spot,Simple Earn Flexible Interest,ABC,0.1,\n"
+        "synthetic,2021-02-04 10:00:00,Spot,Simple Earn Flexible Airdrop,ABC,0.2,\n"
+    ).encode("utf-8-sig")
+    preview = client.post(
+        "/api/binance/anos",
+        data={"csv": (io.BytesIO(ledger), "Binance-TX-(UTC+1).csv")},
+        content_type="multipart/form-data",
+    )
+    assert preview.status_code == 200, preview.get_data(as_text=True)[:400]
+    diag = preview.get_json()["diagnostico_binance"]
+    issue = next(i for i in diag["incidencias"]
+                 if i["codigo"] == "earn_recompensas_sin_nativo")
+    assert "2 abonos" in issue["descripcion"]
+    assert "2021: 2" in issue["descripcion"]
+    assert diag["validez_fiscal_acreditada"] is False
+
+    blocked = client.post(
+        "/api/binance/analizar",
+        data={
+            "csv": (io.BytesIO(ledger), "Binance-TX-(UTC+1).csv"),
+            "ejercicio": "2025",
+            "nombre": "Prueba sin respaldo Earn",
+        },
+        content_type="multipart/form-data",
+    )
+    assert blocked.status_code == 422, blocked.get_data(as_text=True)[:400]
+    body = blocked.get_json()
+    assert "token" not in body and "resumen" not in body
+    assert "earn_recompensas_sin_nativo" in {
+        x["codigo"] for x in body["diagnostico_binance"]["incidencias"]
+    }
+
+
+def test_api_binance_bonus_nativo_sin_ledger_exige_conciliacion(client, usuario):
+    _login(client)
+    rewards = (
+        "Tiempo,Moneda,Cantidad,Tipo\n"
+        "2024-01-04 10:00:00,ABC,0.125,Bonus Tiered APR Rewards\n"
+    ).encode("utf-8-sig")
+    preview = client.post(
+        "/api/binance/anos",
+        data={"csv": (io.BytesIO(rewards), "Earn-(UTC+1).csv")},
+        content_type="multipart/form-data",
+    )
+    assert preview.status_code == 200, preview.get_data(as_text=True)[:400]
+    diag = preview.get_json()["diagnostico_binance"]
+    issue = next(i for i in diag["incidencias"]
+                 if i["codigo"] == "earn_recompensas_sin_ledger")
+    assert "2024: 1" in issue["descripcion"]
+    assert diag["validez_fiscal_acreditada"] is False
+
+    blocked = client.post(
+        "/api/binance/analizar",
+        data={
+            "csv": (io.BytesIO(rewards), "Earn-(UTC+1).csv"),
+            "ejercicio": "2025",
+            "nombre": "Prueba bono Earn",
+        },
+        content_type="multipart/form-data",
+    )
+    assert blocked.status_code == 422, blocked.get_data(as_text=True)[:400]
+    body = blocked.get_json()
+    assert "token" not in body and "resumen" not in body
+    assert "earn_recompensas_sin_ledger" in {
+        x["codigo"] for x in body["diagnostico_binance"]["incidencias"]
+    }
