@@ -507,3 +507,51 @@ def test_custodias_no_acreditadas_no_se_inventan(wallet):
                      wallet=wallet, reference="synthetic-unknown")
     assert book.lots("BTC") == ()
     assert book.conserved("BTC")
+
+
+def test_earn_desglose_anual_sin_eliminar_multiplicidades():
+    natives = [
+        native("subscription", "2024-01-10 09:00:00", "BTC", "2"),
+        native("redemption", "2025-06-01 15:00:00", "BTC", "1"),
+    ]
+    ledger = [
+        tx("subscription", "2020-02-01 08:00:00", "BTC", "1"),
+        tx("subscription", "2020-02-01 08:00:00", "BTC", "1"),
+        tx("redemption", "2023-08-01 09:00:00", "XRP", "3"),
+        tx("subscription", "2024-01-10 09:00:02", "BTC", "2"),
+        tx("redemption", "2025-06-01 15:00:00", "BTC", "1"),
+        tx("redemption", "2025-07-01 12:00:00", "BTC", "4"),
+    ]
+    result = conciliar_earn_con_ledger(natives, ledger)
+    assert result.matched_to_second == 1
+    assert result.matched_same_day == 1
+    assert result.ledger_unmatched == 4
+    assert result.ledger_unmatched_by_year == (
+        (2020, 2), (2023, 1), (2025, 1),
+    )
+    assert result.native_unmatched_by_year == ()
+    assert not result.quantities_reconciled and not result.fiscal_ready
+
+
+def test_earn_fuentes_nativas_sin_ledger_informan_anos_distintos():
+    events = [
+        native("subscription", "2024-01-01 00:00:01", "ETH", "1"),
+        native("redemption", "2025-01-01 00:00:01", "ETH", "1"),
+    ]
+    result = conciliar_earn_con_ledger(events, [])
+    assert result.native_unmatched_by_year == ((2024, 1), (2025, 1))
+    assert result.ledger_unmatched_by_year == ()
+    assert not result.fiscal_ready
+
+
+def test_earn_solo_ledger_sin_nativos_conserva_desglose_anual():
+    ledger = [
+        tx("subscription", "2021-01-01 12:00:00", "BTC", "1"),
+        tx("redemption", "2022-01-01 12:00:00", "BTC", "1"),
+    ]
+    result = conciliar_earn_con_ledger([], ledger)
+    assert result.native_events == 0
+    assert result.ledger_events == 2
+    assert result.ledger_unmatched_by_year == ((2021, 1), (2022, 1))
+    assert result.matched_to_second == result.matched_same_day == 0
+    assert result.fiscal_ready is False
