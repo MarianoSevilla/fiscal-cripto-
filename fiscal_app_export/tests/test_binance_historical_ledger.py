@@ -257,3 +257,87 @@ def test_ledger_custodia_diversas_billeteras_sin_mezclar_sus_saldos(tmp_path):
     assert accounts[("Alpha", "BTC")] == Decimal("1")
     assert dict(report.saldos_netos)["BTC"] == Decimal("5")
     assert not report.fifo_fiscal_acreditado
+
+
+def test_ledger_transferencia_um_con_patas_exactas_y_deficit_de_custodia(tmp_path):
+    """El déficit temporal en Futuros no convierte un traspaso en una compra."""
+    z = _zip(tmp_path, "um-neutral", HEADER + (
+        "synthetic,2025-01-01 00:00:00,Spot,Deposit,USDT,3,\n"
+        "synthetic,2025-01-01 00:00:00,USD-M Futures,Deposit,USDT,0.1,\n"
+        "synthetic,2025-04-05 11:06:02,Spot,Transfer Between Spot and UM Futures,USDT,0.8,\n"
+        "synthetic,2025-04-05 11:06:02,USD-M Futures,Transfer Between Spot and UM Futures,USDT,-0.8,\n"
+    ))
+    report = inspeccionar_historial_binance([z])
+    assert dict(report.traspasos_pareados_por_tipo) == {
+        "Transfer Between Spot and UM Futures": 1
+    }
+    assert report.patas_traspasos_no_pareadas_por_tipo == ()
+    assert report.sin_saldos_negativos_globales
+    assert not report.sin_saldos_negativos_por_cuenta
+    assert report.primeras_insuficiencias_por_cuenta == (
+        ("USD-M Futures", "USDT", "2025-04-05 11:06:02", Decimal("-0.7")),
+    )
+    assert report.fifo_fiscal_acreditado is False
+
+
+def test_ledger_transferencias_de_tipos_distintos_no_se_cruzan(tmp_path):
+    z = _zip(tmp_path, "separate-transfer-types", HEADER + (
+        "synthetic,2025-01-01 00:00:00,Spot,Deposit,BTC,4,\n"
+        "synthetic,2025-01-02 00:00:00,Spot,Transfer Between Spot and CM Futures,BTC,-1,\n"
+        "synthetic,2025-01-02 00:00:00,Coin-M Futures,Transfer Between Spot and CM Futures,BTC,1,\n"
+        "synthetic,2025-01-03 00:00:00,Spot,Transfer Between Spot and Funding,BTC,-1,\n"
+        "synthetic,2025-01-03 00:00:00,Funding,Transfer Between Spot and Funding,BTC,1,\n"
+        "synthetic,2025-01-04 00:00:00,Spot,Transfer Between Spot and Mining,BTC,-1,\n"
+        "synthetic,2025-01-04 00:00:00,Pool,Transfer Between Spot and Mining,BTC,1,\n"
+    ))
+    report = inspeccionar_historial_binance([z])
+    assert dict(report.traspasos_pareados_por_tipo) == {
+        "Transfer Between Spot and CM Futures": 1,
+        "Transfer Between Spot and Funding": 1,
+        "Transfer Between Spot and Mining": 1,
+    }
+    assert report.sin_saldos_negativos_por_cuenta
+    assert report.patas_traspasos_no_pareadas_por_tipo == ()
+    assert report.fifo_fiscal_acreditado is False
+
+
+def test_ledger_transferencias_ausentes_no_se_casaran_por_proximidad(tmp_path):
+    z = _zip(tmp_path, "transfer-different-seconds", HEADER + (
+        "synthetic,2025-01-01 00:00:00,Spot,Deposit,USDT,2,\n"
+        "synthetic,2025-01-02 10:00:00,Spot,Transfer Between Spot and Funding,USDT,-1,\n"
+        "synthetic,2025-01-02 10:00:01,Funding,Transfer Between Spot and Funding,USDT,1,\n"
+    ))
+    report = inspeccionar_historial_binance([z])
+    assert report.traspasos_pareados_por_tipo == ()
+    assert dict(report.patas_traspasos_no_pareadas_por_tipo) == {
+        "Transfer Between Spot and Funding": 2
+    }
+    assert report.sin_saldos_negativos_globales
+    assert report.fifo_fiscal_acreditado is False
+
+
+@pytest.mark.parametrize("legs", [
+    (
+        "synthetic,2025-01-02 10:00:00,Spot,Transfer Between Spot and UM Futures,BTC,-1,\n"
+        "synthetic,2025-01-02 10:00:00,USD-M Futures,Transfer Between Spot and UM Futures,BTC,0.9,\n"
+    ),
+    (
+        "synthetic,2025-01-02 10:00:00,Spot,Transfer Between Spot and UM Futures,BTC,-1,\n"
+        "synthetic,2025-01-02 10:00:00,Funding,Transfer Between Spot and UM Futures,BTC,1,\n"
+    ),
+    (
+        "synthetic,2025-01-02 10:00:00,Spot,Transfer Between Spot and UM Futures,BTC,-1,\n"
+        "synthetic,2025-01-02 10:00:00,USD-M Futures,Transfer Between Spot and UM Futures,BTC,1,\n"
+        "synthetic,2025-01-02 10:00:00,Spot,Transfer Between Spot and UM Futures,BTC,-1,\n"
+        "synthetic,2025-01-02 10:00:00,USD-M Futures,Transfer Between Spot and UM Futures,BTC,1,\n"
+    ),
+])
+def test_ledger_transferencia_inexacta_o_ambigua_no_cuenta_como_pareja(tmp_path, legs):
+    z = _zip(tmp_path, "transfer-inexact", HEADER +
+        "synthetic,2025-01-01 00:00:00,Spot,Deposit,BTC,5,\n" + legs)
+    report = inspeccionar_historial_binance([z])
+    assert report.traspasos_pareados_por_tipo == ()
+    assert dict(report.patas_traspasos_no_pareadas_por_tipo) == {
+        "Transfer Between Spot and UM Futures": len(legs.strip().splitlines())
+    }
+    assert report.fifo_fiscal_acreditado is False
