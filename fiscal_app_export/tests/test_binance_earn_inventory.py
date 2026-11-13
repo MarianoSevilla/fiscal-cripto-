@@ -91,10 +91,12 @@ def test_lote_global_sobrevive_spot_earn_y_al_cambio_de_ejercicio():
     book.transfer(
         asset="XRP", quantity="119", timestamp="2024-12-19 20:09:00",
         origin="SPOT", destination="EARN_FLEXIBLE",
+        reference="synthetic-subscription-2024",
     )
     book.transfer(
         asset="XRP", quantity="50", timestamp="2025-02-02 11:02:01",
         origin="EARN_FLEXIBLE", destination="SPOT",
+        reference="synthetic-redemption-2025",
     )
     assert book.wallet_balance("SPOT", "XRP") == Decimal("50")
     assert book.wallet_balance("EARN_FLEXIBLE", "XRP") == Decimal("69")
@@ -125,7 +127,8 @@ def test_transferencia_sin_saldo_no_modifica_lotes_ni_billeteras():
     )
     with pytest.raises(BinanceEarnInventoryError, match="insuficiente"):
         book.transfer(asset="ABC", quantity="2", timestamp="2025-01-01 00:00:00",
-                      origin="SPOT", destination="EARN_FLEXIBLE")
+                      origin="SPOT", destination="EARN_FLEXIBLE",
+                      reference="synthetic-overdraft")
     assert book.wallet_balance("SPOT", "ABC") == Decimal(1)
     assert book.wallet_balance("EARN_FLEXIBLE", "ABC") == Decimal(0)
     assert len(book.lots("ABC")) == 1
@@ -162,7 +165,8 @@ def test_lotes_globales_no_se_asignan_a_billetera_que_no_custodia():
     with pytest.raises(BinanceEarnInventoryError, match="insuficiente"):
         book.transfer(asset="BTC", quantity="1",
                       timestamp="2024-01-01 00:00:01",
-                      origin="SPOT", destination="EARN_FLEXIBLE")
+                      origin="SPOT", destination="EARN_FLEXIBLE",
+                      reference="synthetic-wrong-custody")
     assert book.conserved("BTC")
 
 
@@ -371,3 +375,63 @@ def test_recompensa_del_mismo_dia_puede_afectar_orden_intradia():
     report = conciliar_earn_con_ledger(events, rows)
     assert report.day_only_with_other_economic_activity == 1
     assert not report.fiscal_ready
+
+
+def test_traslado_mismo_referencia_no_aplica_dos_veces_aunque_haya_saldo():
+    """Con fondos suficientes, un replay movería custodia sin variar el total."""
+    book = BinanceFungibleInventory()
+    book.acquire(
+        asset="XRP", quantity="10", acquired_at="2024-01-01 00:00:00",
+        wallet="SPOT", reference="synthetic-acquisition", cost_eur="100",
+    )
+    original = book.lots("XRP")
+    params = dict(
+        asset="XRP", quantity="2", timestamp="2024-01-02 12:00:00",
+        origin="SPOT", destination="EARN_FLEXIBLE",
+        reference="synthetic-transfer-001",
+    )
+    book.transfer(**params)
+    with pytest.raises(BinanceEarnInventoryError, match="repetida"):
+        book.transfer(**params)
+    assert book.wallet_balance("SPOT", "XRP") == Decimal("8")
+    assert book.wallet_balance("EARN_FLEXIBLE", "XRP") == Decimal("2")
+    assert book.lots("XRP") == original
+    assert book.conserved("XRP") and not book.fiscal_ready
+
+
+@pytest.mark.parametrize("reference", [None, "", "  ", 1, False])
+def test_traslado_sin_referencia_estable_rechazado_sin_mutacion(reference):
+    book = BinanceFungibleInventory()
+    book.acquire(
+        asset="XRP", quantity="4", acquired_at="2024-01-01 00:00:00",
+        wallet="SPOT", reference="synthetic-acquisition",
+    )
+    original = book.lots("XRP")
+    with pytest.raises(BinanceEarnInventoryError, match="ausente"):
+        book.transfer(
+            asset="XRP", quantity="1", timestamp="2024-01-02 00:00:00",
+            origin="SPOT", destination="EARN_FLEXIBLE", reference=reference,
+        )
+    assert book.lots("XRP") == original
+    assert book.wallet_balance("SPOT", "XRP") == Decimal("4")
+    assert book.wallet_balance("EARN_FLEXIBLE", "XRP") == Decimal("0")
+    assert book.conserved("XRP")
+
+
+def test_traslado_referencia_reutilizada_por_disposicion_no_muta():
+    book = BinanceFungibleInventory()
+    book.acquire(asset="BTC", quantity="3",
+                 acquired_at="2024-01-01 00:00:00",
+                 wallet="SPOT", reference="synthetic-lot", cost_eur="300")
+    book.dispose(asset="BTC", quantity="1",
+                 timestamp="2024-02-01 00:00:00",
+                 wallet="SPOT", reference="synthetic-sale")
+    lots = book.lots("BTC")
+    with pytest.raises(BinanceEarnInventoryError, match="repetida"):
+        book.transfer(asset="BTC", quantity="1",
+                      timestamp="2024-02-02 00:00:00",
+                      origin="SPOT", destination="EARN_FLEXIBLE",
+                      reference="synthetic-sale")
+    assert book.lots("BTC") == lots
+    assert book.wallet_balance("SPOT", "BTC") == Decimal("2")
+    assert book.conserved("BTC")
