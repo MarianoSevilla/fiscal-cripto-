@@ -901,6 +901,44 @@
     bitget: 'Archivos Bitget detectados',
   };
 
+  function renderBinancePendientes(diagnostico) {
+    // Mostrar SOLO incidencias detectadas, sin inferir fuentes ausentes.
+    if (EXCHANGE_PAGE !== 'binance') return;
+    const incidencias = Array.isArray(diagnostico?.incidencias)
+      ? diagnostico.incidencias.slice(0, 12) : [];
+    for (const id of ['binancePendientes', 'binanceErrorPendientes']) {
+      const target = document.getElementById(id);
+      if (!target) continue;
+      target.replaceChildren();
+      if (!incidencias.length) {
+        target.style.display = 'none';
+        continue;
+      }
+      const heading = document.createElement('strong');
+      heading.textContent = 'Información pendiente para el FIFO';
+      target.appendChild(heading);
+      const intro = document.createElement('p');
+      intro.textContent = 'La comprobación de fuentes es orientativa. '
+        + 'Aportar nuevos datos no garantiza todavía un informe fiscal válido.';
+      target.appendChild(intro);
+      const list = document.createElement('ol');
+      for (const issue of incidencias) {
+        const item = document.createElement('li');
+        item.style.marginBottom = '12px';
+        const title = document.createElement('strong');
+        title.textContent = String(issue.titulo || 'Incidencia');
+        const details = document.createElement('p');
+        details.textContent = String(issue.descripcion || '');
+        const next = document.createElement('p');
+        next.textContent = 'Qué aportar: ' + String(issue.siguiente_paso || '');
+        item.append(title, details, next);
+        list.appendChild(item);
+      }
+      target.appendChild(list);
+      target.style.display = 'block';
+    }
+  }
+
   function renderKucoinSummary(resumen, advertencias) {
     if (!kucoinSummary) return;
     if (!resumen) { kucoinSummary.style.display = 'none'; return; }
@@ -952,6 +990,7 @@
         selectedFiles = []; actualizarBoton(); return;
       }
     }
+    if (EXCHANGE_PAGE === 'binance') renderBinancePendientes(null);
     selectedFiles = files;
     fileName.textContent = files.length === 1 ? files[0].name : `${files.length} ficheros`;
     showFile();
