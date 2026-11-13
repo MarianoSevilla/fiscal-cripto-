@@ -26,6 +26,28 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
             "siguiente_paso": siguiente_paso,
         })
 
+    eur_audit = getattr(clasificador, "eur_acquisition_evidence", None)
+    eur_candidates = getattr(eur_audit, "candidates", ()) or ()
+    if eur_candidates:
+        complete = getattr(eur_audit, "complete_cost_candidates", 0)
+        incomplete = getattr(eur_audit, "incomplete_cost_candidates", 0)
+        if (type(complete) is int and type(incomplete) is int
+                and complete >= 0 and incomplete >= 0
+                and complete + incomplete == len(eur_candidates)):
+            add(
+                "adquisiciones_eur_documentadas", "informacion",
+                "Adquisiciones con desembolso EUR explícito",
+                f"Se identifican {len(eur_candidates)} adquisiciones nativas "
+                f"pagadas en EUR: {complete} con importe y comisión "
+                f"documentados para un coste candidato; {incomplete} "
+                "requieren aclarar una comisión antes de acreditar su "
+                "coste total. Ningún recuento acredita el FIFO global.",
+                "Conserva los comprobantes nativos de estas operaciones. "
+                "Para las restantes adquisiciones, recompensas y permutas "
+                "hay que acreditar origen, fecha, cantidad y valoración "
+                "EUR; no se presume equivalencia USDT/USDC/EUR.",
+            )
+
     if "spot_orders_ejecutadas_sin_fills_completos" in markers:
         add(
             "spot_fills", "archivo", "Faltan ejecuciones Spot",
