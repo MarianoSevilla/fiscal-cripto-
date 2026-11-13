@@ -241,6 +241,9 @@
       </div>
       {% if exchange_id in ['binance', 'kucoin', 'bitget'] %}
       <div id="kucoinSummary" class="kucoin-summary" style="display:none;"></div>
+      {% if exchange_id == 'binance' %}
+      <div id="binancePendientes" class="kucoin-summary" style="display:none;" aria-live="polite"></div>
+      {% endif %}
       {% endif %}
       <div class="bar-inputs-row">
         <div class="bar-field bar-field-nombre">
@@ -340,6 +343,9 @@
     </div>
     <p class="error-desc" id="errorDesc"></p>
     <ol class="error-pasos" id="errorPasos"></ol>
+    {% if exchange_id == 'binance' %}
+    <div id="binanceErrorPendientes" class="kucoin-summary" style="display:none; margin:12px 0;"></div>
+    {% endif %}
         <div id="diagConsent" style="display:none;margin:16px 0;padding:14px;border:1px solid #d9dfe5;border-radius:12px;text-align:left;">
       <strong>¿Quieres compartir el archivo con soporte?</strong>
       <p style="font-size:13px;line-height:1.5;">Es opcional y no afecta a tu cuenta. Solo se ofrecen archivos de hasta 8 MB. El archivo puede incluir operaciones y datos fiscales. Al autorizarlo, el archivo se enviará mediante Resend a <strong>colab.marianosevilla@gmail.com</strong>. La web cerrará los archivos temporales al terminar el intento. En Gmail conservaremos el adjunto solo mientras sea necesario para revisar la incidencia, con un plazo máximo previsto de 30 días; lo eliminaremos antes si termina el análisis. Resend puede conservar sus propias copias según sus plazos. Consulta la <a href="/privacidad#archivos-e-informes">Política de privacidad</a>.</p>
@@ -611,6 +617,7 @@
   const isKucoinPage  = isMultiPage;   // alias retrocompatible dentro de este script
   const kucoinSummary = document.getElementById('kucoinSummary');
   let   selectedFiles = [];   // multiarchivo: lista de File
+  let   appendBinanceFiles = false;  // tras un 422, añadir archivos sin borrar los anteriores
 
   function showFile()    { fileSelected.classList.add('visible'); }
   function hideFile()    {
@@ -664,6 +671,7 @@
   // ── RESETEAR TODO ────────────────────────
   function resetearFormulario() {
     selectedFile = null;
+    appendBinanceFiles = false;
     csvInput.value = '';
     hideFile();
     fileName.textContent = '—';
@@ -696,7 +704,15 @@
   const errorState     = document.getElementById('errorState');
   const resultsContent = document.getElementById('resultsContent');
 
-  document.getElementById('btnRetry').addEventListener('click', resetearFormulario);
+  document.getElementById('btnRetry').addEventListener('click', () => {
+    // Un fallo fiscal Binance no obliga a volver a subir todos los ZIP.
+    if (EXCHANGE_PAGE === 'binance' && selectedFiles.length) {
+      showState('empty');
+      actualizarBoton();
+    } else {
+      resetearFormulario();
+    }
+  });
 
   let selectedFile  = null;
   let currentToken  = null;
@@ -910,8 +926,16 @@
   }
 
   function handleKucoinFiles(fileList) {
-    const files = Array.from(fileList || []);
+    let files = Array.from(fileList || []);
     if (!files.length) return;
+    if (EXCHANGE_PAGE === 'binance' && appendBinanceFiles) {
+      files = selectedFiles.concat(files);
+      if (files.length > 40) {
+        mostrarErrorArchivo('Binance admite un máximo de 40 archivos por análisis.');
+        actualizarBoton();
+        return;
+      }
+    }
     for (const f of files) {
       const low = f.name.toLowerCase();
       const extensionOk = EXCHANGE_PAGE === 'binance'
@@ -957,6 +981,9 @@
           return;
         }
         renderKucoinSummary(data.resumen, data.advertencias);
+        if (EXCHANGE_PAGE === 'binance') {
+          renderBinancePendientes(data.diagnostico_binance);
+        }
         detectedYears = data.anos || [];
         renderYearChips(detectedYears);
         actualizarBoton();
@@ -1399,6 +1426,14 @@
   function parsearError(errorRaw) {
     if (!errorRaw) return { ...ERRORES.generico };
     const e = errorRaw;
+    if (EXCHANGE_PAGE === 'binance' && e.startsWith('Datos fiscales no seguros:')) {
+      return {
+        icono: '!',
+        titulo: 'Informe pendiente de datos verificables',
+        desc: esc(e),
+        pasos: ['Revisa las incidencias detectadas y añade los archivos o justificantes disponibles. No se ha generado ningún PDF.'],
+      };
+    }
     if (e === '__servidor__') return { ...ERRORES.errorServidor };
     if (e.includes('límite de análisis') || e.includes('429') || e.includes('espera')) return { ...ERRORES.rateLimitado };
     if (e.includes('CSV incorrecto') || e.includes('Historial de Transacciones') || e.includes('Buy Crypto With Fiat') || e.includes('Historial de Operaciones Spot')) return { ...ERRORES.csvIncorrectoBinance };
@@ -1576,12 +1611,22 @@
 
       if (!res.ok || !data.ok) {
         mostrarErrorApi(data.error);
+        if (EXCHANGE_PAGE === 'binance') {
+          renderBinancePendientes(data.diagnostico_binance);
+        }
         showState('error');
         if (![401, 403, 409, 413, 429].includes(res.status)) {
           offerDiagnostic(isMultiPage ? selectedFiles : [selectedFile]);
         }
-        selectedFile = null; csvInput.value = ''; hideFile();
-        fileName.textContent = '—'; btnAnalizar.disabled = true;
+        if (EXCHANGE_PAGE === 'binance' && res.status === 422) {
+          // Mantener la evidencia subida y permitir añadir más ZIP.
+          appendBinanceFiles = true;
+          csvInput.value = '';
+          actualizarBoton();
+        } else {
+          selectedFile = null; csvInput.value = ''; hideFile();
+          fileName.textContent = '—'; btnAnalizar.disabled = true;
+        }
         return;
       }
 
