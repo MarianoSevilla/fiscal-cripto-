@@ -400,3 +400,15 @@ def test_clasificador_conserva_bonus_nativo_sin_asiento_general(tmp_path):
     )
     assert c.earn_reward_candidates[0].cost_eur is None
     assert not c.earn_reward_reconciliation.fiscal_ready
+
+
+@pytest.mark.parametrize("wallet", ["Funding", "Earn", "", None])
+def test_intereses_ledger_fuera_de_spot_no_pueden_acreditar_mismo_abono(wallet):
+    native = reward(
+        "2025-01-04 12:00:00", "0.1",
+        kind="Bonus Tiered APR Rewards",
+    )
+    ledger_row = tx("2025-01-04 12:00:00", "0.1")
+    ledger_row["cuenta"] = wallet
+    with pytest.raises(BinanceEarnRewardsError, match="Billetera"):
+        reconcile_earn_rewards([native], [ledger_row])
