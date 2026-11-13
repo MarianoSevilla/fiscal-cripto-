@@ -984,3 +984,38 @@ def test_binance_diagnostico_spot_no_infiere_fuentes_que_no_aparecen(client, usu
     diag = r.get_json()["diagnostico_binance"]
     assert diag["incidencias"] == []
     assert diag["validez_fiscal_acreditada"] is False
+
+
+def test_binance_conserva_diagnostico_si_motor_bloquea_antes_del_resultado(
+    client, usuario, monkeypatch
+):
+    """El motor puede fallar antes de devolver la 3-tupla; no perder la guía."""
+    _login(client)
+    earn = (
+        "Tiempo,Moneda,Cantidad,Tipo\n"
+        "2025-04-03,ABC,0.125,Real-time APR Rewards\n"
+    ).encode("utf-8-sig")
+
+    def _motor_bloqueado(*args, **kwargs):
+        raise ValueError(
+            "Datos fiscales no seguros: inventario incompleto "
+            "para una transmisión."
+        )
+
+    monkeypatch.setattr("app.procesar_con_fifo", _motor_bloqueado)
+    r = client.post(
+        "/api/binance/analizar",
+        data={
+            "csv": (io.BytesIO(earn), "Earn-(UTC+1).csv"),
+            "ejercicio": "2025",
+            "nombre": "Ejemplo sintético",
+        },
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 422, r.get_data(as_text=True)[:400]
+    body = r.get_json()
+    assert "token" not in body and "resumen" not in body
+    assert "earn_lotes" in {
+        i["codigo"] for i in body["diagnostico_binance"]["incidencias"]
+    }
+    assert body["diagnostico_binance"]["validez_fiscal_acreditada"] is False
