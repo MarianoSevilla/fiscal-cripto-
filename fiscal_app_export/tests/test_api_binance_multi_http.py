@@ -930,8 +930,8 @@ def test_binance_diagnostico_earn_en_previsualizacion(client, usuario):
     """Subir una recompensa nativa no autoriza por sí solo lotes ni PDF."""
     _login(client)
     raw = (
-        "Tiempo,Moneda,Cantidad,Tipo\\n"
-        "2025-06-10,ABC,0.125,Real-time APR Rewards\\n"
+        "Tiempo,Moneda,Cantidad,Tipo\n"
+        "2025-06-10,ABC,0.125,Real-time APR Rewards\n"
     ).encode("utf-8-sig")
     r = client.post(
         "/api/binance/anos",
@@ -950,8 +950,8 @@ def test_binance_diagnostico_earn_en_error_422_sin_token(client, usuario):
     """Mostrar cómo subsanar sin emitir informe parcialmente calculado."""
     _login(client)
     raw = (
-        "Tiempo,Moneda,Cantidad,Tipo\\n"
-        "2025-06-10,ABC,0.125,Real-time APR Rewards\\n"
+        "Tiempo,Moneda,Cantidad,Tipo\n"
+        "2025-06-10,ABC,0.125,Real-time APR Rewards\n"
     ).encode("utf-8-sig")
     r = client.post(
         "/api/binance/analizar",
