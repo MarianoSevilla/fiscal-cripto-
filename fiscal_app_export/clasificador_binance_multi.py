@@ -136,6 +136,7 @@ class BinanceNativeExchange:
     fee_asset: Optional[str]
     fee_amount: Decimal
     payment_method: str = ""
+    order_id: str = ""  # original Spot order, not a per-fill execution ID
 
 
 _HEADER_ALIASES = {
@@ -964,6 +965,7 @@ class ClasificadorBinanceMulti:
                     recv_asset=base, recv_amount=base_qty,
                     fee_asset=fee_asset, fee_amount=fee_qty,
                     source="Spot BUY", filename=_filename,
+                    order_id=row.get("número de pedido", "").strip(),
                 )
             else:
                 self._register_exchange(
@@ -971,6 +973,7 @@ class ClasificadorBinanceMulti:
                     recv_asset=quote, recv_amount=quote_qty,
                     fee_asset=fee_asset, fee_amount=fee_qty,
                     source="Spot SELL", filename=_filename,
+                    order_id=row.get("número de pedido", "").strip(),
                 )
 
     def _reconcile_spot_orders(self) -> None:
@@ -1127,7 +1130,7 @@ class ClasificadorBinanceMulti:
         self, *, fecha: str, give_asset: str, give_amount: Decimal,
         recv_asset: str, recv_amount: Decimal,
         fee_asset: Optional[str], fee_amount: Decimal, source: str,
-        filename: str, payment_method: str = "",
+        filename: str, payment_method: str = "", order_id: str = "",
     ) -> None:
         give_asset = give_asset.upper()
         recv_asset = recv_asset.upper()
@@ -1166,7 +1169,7 @@ class ClasificadorBinanceMulti:
             given_asset=give_asset, given_amount=give_amount,
             received_asset=recv_asset, received_amount=recv_amount,
             fee_asset=fee_asset, fee_amount=fee_amount,
-            payment_method=payment_method,
+            payment_method=payment_method, order_id=order_id,
         ))
 
         if give_asset == "EUR" and recv_asset != "EUR":
