@@ -953,3 +953,33 @@ def test_funding_convert_ledger_cannot_erase_spot_convert(tmp_path):
         c.fuentes_materiales_no_soportadas
     )
     assert c._binance_tx_unmatched_rows_count >= 2
+
+
+
+def test_funding_ledger_buy_without_native_spot_stays_blocked(tmp_path):
+    """Funding's EUR-looking legs are NOT a certified Spot EUR purchase."""
+    tx = _csv(tmp_path, "funding-only.csv", TX_H, [
+        ["synthetic", "2025-01-02 11:00:00", "Funding",
+         "Transaction Spend", "EUR", "-20", ""],
+        ["synthetic", "2025-01-02 11:00:00", "Funding",
+         "Transaction Buy", "XRP", "10", ""],
+    ])
+    c = _classify([tx])
+    assert "binance_tx_cartera_distinta_no_conciliada" in (
+        c.fuentes_materiales_no_soportadas
+    )
+    assert c._binance_tx_unmatched_rows_count == 2
+
+
+def test_funding_ledger_sale_without_native_spot_stays_blocked(tmp_path):
+    """An off-Spot apparent sale cannot silently enter the tax report."""
+    tx = _csv(tmp_path, "funding-only.csv", TX_H, [
+        ["synthetic", "2025-01-02 11:00:00", "Funding",
+         "Transaction Sold", "XRP", "-5", ""],
+        ["synthetic", "2025-01-02 11:00:00", "Funding",
+         "Transaction Revenue", "EUR", "16", ""],
+    ])
+    c = _classify([tx])
+    assert "binance_tx_cartera_distinta_no_conciliada" in (
+        c.fuentes_materiales_no_soportadas
+    )
