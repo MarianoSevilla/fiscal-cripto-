@@ -387,3 +387,68 @@ def test_legacy_eur_counter_inconsistent_does_not_mislead():
     assert not any(item["codigo"] == "adquisiciones_eur_historico_legacy"
                    for item in diagnostic["evidencias"])
     assert diagnostic["validez_fiscal_acreditada"] is False
+
+
+
+def test_diagnostico_orden_intrasegundo_exige_evidencia_sin_promediar():
+    report = diagnosticar_pendientes_binance(_clasificador(
+        fuentes_materiales_no_soportadas=[
+            "binance_fifo_lotes_mismo_segundo_precio_distinto",
+            "binance_orden_intrasegundo_incierto",
+        ],
+    ))
+    assert _codes(report) == {"fifo_orden_intrasegundo"}
+    item = report["incidencias"][0]
+    assert "mismo segundo" in item["descripcion"]
+    assert "identificador único" in item["siguiente_paso"]
+    assert "No reordenes" in item["siguiente_paso"]
+    assert report["validez_fiscal_acreditada"] is False
+
+
+def test_diagnostico_carteras_spot_funding_una_sola_incidencia():
+    report = diagnosticar_pendientes_binance(_clasificador(
+        fuentes_materiales_no_soportadas=[
+            "binance_tx_cartera_distinta_no_conciliada",
+            "binance_convert_cartera_distinta_no_conciliada",
+        ],
+    ))
+    assert _codes(report) == {"cartera_binance_no_conciliada"}
+    item = report["incidencias"][0]
+    assert "cartera distinta" in item["descripcion"]
+    assert "Funding" in item["siguiente_paso"]
+    assert "No elimines" in item["siguiente_paso"]
+    assert report["validez_fiscal_acreditada"] is False
+
+
+def test_diagnostico_incidencia_nueva_mas_desconocida_no_oculta_el_resto():
+    report = diagnosticar_pendientes_binance(_clasificador(
+        fuentes_materiales_no_soportadas=[
+            "binance_fifo_lotes_mismo_segundo_precio_distinto",
+            "marcador_desconocido_privado",
+        ],
+    ))
+    assert _codes(report) == {
+        "fifo_orden_intrasegundo", "otras_incidencias",
+    }
+    assert "marcador_desconocido_privado" not in str(report)
+
+
+def test_nuevo_diagnostico_no_expone_fechas_activos_ni_importes():
+    report = diagnosticar_pendientes_binance(_clasificador(
+        fuentes_materiales_no_soportadas=[
+            "binance_fifo_lotes_mismo_segundo_precio_distinto",
+            "binance_tx_cartera_distinta_no_conciliada",
+        ],
+        compraventas=[SimpleNamespace(
+            fecha="2025-01-08 16:19:04",
+            activo="SECRET-ASSET",
+            cantidad=98765432.123456,
+        )],
+    ))
+    serialized = str(report)
+    assert "2025-01-08" not in serialized
+    assert "98765432" not in serialized
+    assert "SECRET-ASSET" not in serialized
+    assert _codes(report) == {
+        "fifo_orden_intrasegundo", "cartera_binance_no_conciliada",
+    }
