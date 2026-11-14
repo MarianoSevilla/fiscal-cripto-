@@ -59,6 +59,7 @@ from binance_dust_evidence import BinanceDustEvidenceError, audit_binance_dust
 from binance_legacy_trade_evidence import (
     BinanceLegacyEvidenceError, audit_legacy_trades,
 )
+from binance_legacy_eur_evidence import audit_legacy_eur_acquisitions
 from binance_convert_ledger_evidence import (
     BinanceConvertLedgerError, audit_convert_ledger,
 )
@@ -464,6 +465,7 @@ class ClasificadorBinanceMulti:
         self.dust_evidence_summary = None
         self.dust_evidence = ()
         self.legacy_trade_evidence = None  # solo diagnóstico, nunca lotes o PDF
+        self.legacy_eur_acquisition_evidence = None  # valores EUR candidatos, no FIFO
         self.convert_ledger_reconciliation = None
         self._commission_files: List[str] = []  # CSV temporales de la petición
         self.fuentes_materiales_no_soportadas: List[str] = []
@@ -1675,6 +1677,9 @@ class ClasificadorBinanceMulti:
                 "fecha, activo, signo o cantidad incompatibles.",
                 category="parser_error",
             ) from exc
+        self.legacy_eur_acquisition_evidence = audit_legacy_eur_acquisitions(
+            self.legacy_trade_evidence
+        )
         if self.legacy_trade_evidence.records:
             self.fuentes_materiales_no_soportadas.append(
                 "binance_legacy_trades_sin_valoracion_eur"
