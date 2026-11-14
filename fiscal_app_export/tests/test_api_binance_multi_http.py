@@ -1386,6 +1386,10 @@ def test_binance_2025_no_se_bloquea_por_comisiones_y_earn_de_2026(
     assert body["resumen"]["resultado_neto"] == pytest.approx(8)
     assert body["resumen"]["operaciones_con_resultado"] == 1
     assert body["resumen_archivos"]["ejercicio_corte"] == 2025
+    # CSV source metrics describe what the user uploaded, not the filtered
+    # fiscal calculation; only fiscal operations after 2025 are ignored.
+    assert body["resumen_archivos"]["spot_trades"]["registros"] == 3
+    assert body["resumen_archivos"]["transaction_history"]["registros"] == 2
     assert body["resumen_archivos"]["registros_posteriores_excluidos"] == 3
     assert {p["activo"]: p for p in body["posicion"]}["XRP"]["cantidad"] == pytest.approx(6)
     pdf = client.get(f"/api/descargar/{body['token']}?exchange=binance")
