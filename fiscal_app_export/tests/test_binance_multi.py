@@ -895,3 +895,61 @@ def test_legacy_eur_desajuste_nativo_no_se_oculta(tmp_path):
         c.fuentes_materiales_no_soportadas
     )
     assert c.desconocidas
+
+
+
+def test_funding_ledger_same_second_as_spot_cannot_be_deduplicated(tmp_path):
+    """Cross-wallet same-second EUR amounts are not transaction identity."""
+    spot = _csv(tmp_path, "spot.csv", SPOT_H, [
+        ["synthetic-order", "2025-01-02 11:00:00", "XRPEUR", "BUY",
+         "2", "10XRP", "20EUR", "0XRP", "", ""],
+    ])
+    ledger = _csv(tmp_path, "ledger.csv", TX_H, [
+        ["synthetic", "2025-01-02 11:00:00", "Funding",
+         "Transaction Spend", "EUR", "-20", ""],
+        ["synthetic", "2025-01-02 11:00:00", "Funding",
+         "Transaction Buy", "XRP", "10", ""],
+    ])
+    c = _classify([spot, ledger])
+    assert "binance_tx_cartera_distinta_no_conciliada" in (
+        c.fuentes_materiales_no_soportadas
+    )
+    assert c._binance_tx_unmatched_rows_count == 2
+    assert not any("se omitieron" in x for x in c.advertencias)
+
+
+def test_spot_ledger_same_wallet_exact_mirror_still_deduplicates(tmp_path):
+    spot = _csv(tmp_path, "spot.csv", SPOT_H, [
+        ["synthetic-order", "2025-01-02 11:00:00", "XRPEUR", "BUY",
+         "2", "10XRP", "20EUR", "0XRP", "", ""],
+    ])
+    ledger = _csv(tmp_path, "ledger.csv", TX_H, [
+        ["synthetic", "2025-01-02 11:00:00", "Spot",
+         "Transaction Spend", "EUR", "-20", ""],
+        ["synthetic", "2025-01-02 11:00:00", "Spot",
+         "Transaction Buy", "XRP", "10", ""],
+    ])
+    c = _classify([spot, ledger])
+    assert c._binance_tx_unmatched_rows_count == 0
+    assert "binance_tx_cartera_distinta_no_conciliada" not in (
+        c.fuentes_materiales_no_soportadas
+    )
+    assert len(c.compraventas) == 1
+
+
+def test_funding_convert_ledger_cannot_erase_spot_convert(tmp_path):
+    convert = _csv(tmp_path, "convert.csv", CONVERT_H, [
+        ["2025-01-02 11:00:00", "SPOT", "XRPEUR", "Instant",
+         "20 EUR", "10 XRP", "", "", "", "Successful"],
+    ])
+    ledger = _csv(tmp_path, "ledger.csv", TX_H, [
+        ["synthetic", "2025-01-02 11:00:00", "Funding",
+         "Binance Convert", "EUR", "-20", ""],
+        ["synthetic", "2025-01-02 11:00:00", "Funding",
+         "Binance Convert", "XRP", "10", ""],
+    ])
+    c = _classify([convert, ledger])
+    assert "binance_convert_cartera_distinta_no_conciliada" in (
+        c.fuentes_materiales_no_soportadas
+    )
+    assert c._binance_tx_unmatched_rows_count >= 2
