@@ -354,3 +354,36 @@ def test_fee_spot_eur_contadores_invalidos_no_producen_evidencia():
     assert "comisiones_spot_eur_ledger" not in {
         x["codigo"] for x in report["evidencias"]
     }
+
+
+
+def test_informa_compras_eur_legacy_sin_importes_ni_aprobar_fifo():
+    report = SimpleNamespace(
+        candidates=(object(), object(), object()),
+        complete_cost_candidates=2,
+        pending_third_asset_fee=1,
+    )
+    diagnostic = diagnosticar_pendientes_binance(_clasificador(
+        legacy_eur_acquisition_evidence=report,
+    ))
+    evidence = next(item for item in diagnostic["evidencias"]
+                    if item["codigo"] == "adquisiciones_eur_historico_legacy")
+    assert "3 compras" in evidence["descripcion"]
+    assert "2 con" in evidence["descripcion"]
+    assert "1 con comisión" in evidence["descripcion"]
+    assert "USDT/USDC" in evidence["siguiente_paso"]
+    assert diagnostic["validez_fiscal_acreditada"] is False
+
+
+def test_legacy_eur_counter_inconsistent_does_not_mislead():
+    report = SimpleNamespace(
+        candidates=(object(),),
+        complete_cost_candidates=10,
+        pending_third_asset_fee=0,
+    )
+    diagnostic = diagnosticar_pendientes_binance(_clasificador(
+        legacy_eur_acquisition_evidence=report,
+    ))
+    assert not any(item["codigo"] == "adquisiciones_eur_historico_legacy"
+                   for item in diagnostic["evidencias"])
+    assert diagnostic["validez_fiscal_acreditada"] is False
