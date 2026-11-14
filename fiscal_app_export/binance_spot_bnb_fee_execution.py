@@ -101,9 +101,17 @@ def prepare_spot_eur_bnb_fees(classifier, prices):
                         - (event.fee_amount if event.fee_asset == expected_asset
                            and expected_kind == "COMPRA" else Decimal("0"))
                         if expected_kind == "COMPRA" else event.given_amount)
+        expected_eur = (event.given_amount + (
+            event.fee_amount if event.fee_asset == "EUR" else Decimal(0)
+        ) if expected_kind == "COMPRA" else event.received_amount)
         if (op.fecha != event.local_time or op.tipo != expected_kind
-                or op.activo != expected_asset
-                or Decimal(str(op.cantidad)) != expected_qty):
+                or op.activo != expected_asset or op.contraparte != "EUR"
+                or Decimal(str(op.cantidad)) != expected_qty
+                or Decimal(str(op.importe)) != expected_eur
+                or op.fee_activo != (event.fee_asset or (
+                    expected_asset if expected_kind == "COMPRA" else "EUR"
+                ))
+                or Decimal(str(op.fee_cantidad)) != event.fee_amount):
             raise BinancePriceEvidenceError(
                 "Las operaciones FIFO y las ejecuciones nativas no coinciden"
             )
