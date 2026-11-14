@@ -1343,11 +1343,23 @@ def _pipeline_motor(clasificador, *, binance_market_prices=None) -> MotorFIFO:
     verified_fee_by_index = {
         fee.native_ordinal: fee for fee in verified_bnb_fees
     }
+    # Several fills of one documented native order may share a second.
+    # Their EUR expenses belong to individual fills, but their BNB FIFO
+    # consumption is one total disposal; no arbitrary intra-second cost
+    # allocation among those fees.
+    bnb_fees_by_second = {}
+    for fee in verified_bnb_fees:
+        bnb_fees_by_second.setdefault(fee.timestamp, []).append(fee)
+    grouped_bnb_seconds = {
+        at for at, fees in bnb_fees_by_second.items() if len(fees) > 1
+    }
     for index, op in enumerate(clasificador.compraventas):
         if verified_bnb_fees:
             ops.append(("cv_with_bnb_fee", op.fecha, (index, op)))
         else:
             ops.append(("cv", op.fecha, op))
+    for at in sorted(grouped_bnb_seconds):
+        ops.append(("bnb_fee_group", at, tuple(bnb_fees_by_second[at])))
     if priced_swaps:
         for priced in priced_swaps:
             ops.append(("verified_swap", priced.source.local_time, priced))
@@ -1375,8 +1387,12 @@ def _pipeline_motor(clasificador, *, binance_market_prices=None) -> MotorFIFO:
             from binance_spot_bnb_fee_execution import apply_spot_eur_trade_with_bnb_fee
             index, original = op
             apply_spot_eur_trade_with_bnb_fee(
-                motor, original, verified_fee_by_index.get(index)
+                motor, original, verified_fee_by_index.get(index),
+                defer_bnb_disposal=fecha in grouped_bnb_seconds,
             )
+        elif tipo == "bnb_fee_group":
+            from binance_spot_bnb_fee_execution import settle_spot_bnb_fees_same_second
+            settle_spot_bnb_fees_same_second(motor, op)
         elif tipo == "cv":
             if op.tipo == "COMPRA":
                 motor.registrar_compra(
