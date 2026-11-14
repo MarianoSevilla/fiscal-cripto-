@@ -55,6 +55,33 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
                 ),
             })
 
+    fee_bridge = getattr(clasificador, "spot_eur_fee_reconciliation", None)
+    fee_native_count = getattr(fee_bridge, "native_third_asset_fees", 0)
+    fee_match_count = getattr(fee_bridge, "ledger_matched", 0)
+    fee_missing_count = getattr(fee_bridge, "native_unmatched", 0)
+    if (type(fee_native_count) is int and fee_native_count > 0
+            and type(fee_match_count) is int and fee_match_count >= 0
+            and type(fee_missing_count) is int and fee_missing_count >= 0
+            and fee_native_count == fee_match_count + fee_missing_count):
+        evidencias.append({
+            "codigo": "comisiones_spot_eur_ledger",
+            "titulo": "Cargos de compras Spot/EUR conciliados",
+            "descripcion": (
+                f"Hay {fee_native_count} comisiones Spot/EUR pagadas en "
+                "otro criptoactivo: "
+                f"{fee_match_count} tienen un apunte del historial general "
+                "compatible por segundo, cuenta, moneda y cantidad, y "
+                f"{fee_missing_count} siguen sin correspondencia exacta. "
+                "Las coincidencias no acreditan su valoración EUR ni "
+                "identifican un lote único de la moneda de comisión."
+            ),
+            "siguiente_paso": (
+                "Conserva la fuente nativa y el historial general. "
+                "Acredita por separado el valor EUR y el tratamiento "
+                "del pago de la comisión; no añadas costes estimados."
+            ),
+        })
+
     if "spot_orders_ejecutadas_sin_fills_completos" in markers:
         add(
             "spot_fills", "archivo", "Faltan ejecuciones Spot",
