@@ -60,6 +60,7 @@ from binance_legacy_trade_evidence import (
     BinanceLegacyEvidenceError, audit_legacy_trades,
 )
 from binance_legacy_eur_evidence import audit_legacy_eur_acquisitions
+from binance_legacy_eur_execution import resolve_legacy_eur_trades
 from binance_convert_ledger_evidence import (
     BinanceConvertLedgerError, audit_convert_ledger,
 )
@@ -466,6 +467,7 @@ class ClasificadorBinanceMulti:
         self.dust_evidence = ()
         self.legacy_trade_evidence = None  # solo diagnóstico, nunca lotes o PDF
         self.legacy_eur_acquisition_evidence = None  # valores EUR candidatos, no FIFO
+        self.legacy_eur_trade_resolution = None  # pares aceptados, espejos y pendientes
         self.convert_ledger_reconciliation = None
         self._commission_files: List[str] = []  # CSV temporales de la petición
         self.fuentes_materiales_no_soportadas: List[str] = []
@@ -1680,18 +1682,8 @@ class ClasificadorBinanceMulti:
         self.legacy_eur_acquisition_evidence = audit_legacy_eur_acquisitions(
             self.legacy_trade_evidence
         )
-        if self.legacy_trade_evidence.records:
-            self.fuentes_materiales_no_soportadas.append(
-                "binance_legacy_trades_sin_valoracion_eur"
-            )
-            if self.legacy_trade_evidence.ambiguous_groups:
-                self.fuentes_materiales_no_soportadas.append(
-                    "binance_legacy_trades_grupos_ambiguos"
-                )
-            if self.legacy_trade_evidence.isolated_fee_groups:
-                self.fuentes_materiales_no_soportadas.append(
-                    "binance_legacy_fee_futuros_sin_clasificar"
-                )
+        # La aceptación de pares legacy sin riesgo se realiza después de
+        # reconciliar fuentes nativas, preservando todas las filas ambiguas.
         # Los ingresos por afiliación y descuentos de comisiones no se pueden
         # clasificar automáticamente como capital mobiliario, compras o coste
         # cero. Preservar filas originales, cantidades Decimal y multiplicidad
@@ -1722,4 +1714,50 @@ class ClasificadorBinanceMulti:
                 f"Binance: {omitted} fila(s) de Transaction History se omitieron "
                 "porque estaban reproducidas exactamente por una fuente nativa."
             )
+        # Historial antiguo: pares únicos con EUR real son operaciones
+        # fiscalmente calculables; registros con terceros activos, segundos
+        # ambiguos o contraparte cripto sin valoración siguen bloqueados.
+        # Nunca descartar un espejo nativo si las comisiones no coinciden.
+        legacy_trade_ops = {"Buy", "Sell", "Fee"}
+        blocked = {
+            (str(r.get("tiempo", "")), str(r.get("cuenta", "")).strip())
+            for r in filtered
+            if r.get("operación") in _TRADELIKE_TX
+        }
+        self.legacy_eur_trade_resolution = resolve_legacy_eur_trades(
+            self.legacy_trade_evidence, self.intercambios_nativos,
+            blocked_groups=blocked,
+        )
+        for trade in self.legacy_eur_trade_resolution.trades:
+            self._register_exchange(
+                fecha=trade.timestamp,
+                give_asset=trade.given_asset,
+                give_amount=trade.given_amount,
+                recv_asset=trade.received_asset,
+                recv_amount=trade.received_amount,
+                fee_asset=trade.fee_asset,
+                fee_amount=trade.fee_amount,
+                source="Legacy EUR ledger",
+                filename="Transaction History",
+            )
+        consumed_keys = self.legacy_eur_trade_resolution.remove_groups
+        if consumed_keys:
+            filtered = [
+                r for r in filtered
+                if (r.get("operación") not in legacy_trade_ops
+                    or (str(r.get("tiempo", "")),
+                        str(r.get("cuenta", "")).strip()) not in consumed_keys)
+            ]
+        if self.legacy_eur_trade_resolution.unresolved_groups:
+            self.fuentes_materiales_no_soportadas.append(
+                "binance_legacy_trades_sin_valoracion_eur"
+            )
+            if self.legacy_trade_evidence.ambiguous_groups:
+                self.fuentes_materiales_no_soportadas.append(
+                    "binance_legacy_trades_grupos_ambiguos"
+                )
+            if self.legacy_trade_evidence.isolated_fee_groups:
+                self.fuentes_materiales_no_soportadas.append(
+                    "binance_legacy_fee_futuros_sin_clasificar"
+                )
         self._merge_legacy_transaction_rows(filtered)
