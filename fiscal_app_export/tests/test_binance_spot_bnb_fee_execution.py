@@ -173,3 +173,84 @@ def test_income_or_external_deposit_blocks_even_if_bnb_price_known():
     c.movimientos.append(object())
     with pytest.raises(BinancePriceEvidenceError, match="otras fuentes"):
         prepare_spot_eur_bnb_fees(c, quote())
+
+
+
+def _combined_same_order(*, different_total_price=False):
+    a = trade()
+    a.order_id = "synthetic-order"
+    b = trade(given="11" if different_total_price else "10",
+              received_qty="5", fee="0.0025")
+    b.order_id = "synthetic-order"
+    ca, cb = classified(a), classified(b)
+    ca.intercambios_nativos.extend(cb.intercambios_nativos)
+    ca.compraventas.extend(cb.compraventas)
+    ca.comisiones_pendientes.extend(cb.comisiones_pendientes)
+    return ca
+
+
+def test_two_fills_same_order_second_settle_one_bnb_disposal():
+    from binance_spot_bnb_fee_execution import settle_spot_bnb_fees_same_second
+    c = _combined_same_order()
+    plan = prepare_spot_eur_bnb_fees(c, quote())
+    assert len(plan) == 2
+    assert {f.timestamp for f in plan} == {"2025-01-01 11:00:00"}
+    motor = MotorFIFO()
+    motor.registrar_compra("2024-01-01 10:00:00",
+                          "BNB", 0.02, 4.0, "EUR", "EUR", 0)
+    for i, event in enumerate(plan):
+        apply_spot_eur_trade_with_bnb_fee(
+            motor, c.compraventas[i], event, defer_bnb_disposal=True
+        )
+    assert not motor.resultados
+    settle_spot_bnb_fees_same_second(motor, plan)
+    assert len(motor.resultados) == 1
+    result = motor.resultados[0]
+    assert result.activo == "BNB"
+    assert result.cantidad_vendida == pytest.approx(0.0075)
+    assert result.precio_transmision == pytest.approx(2.25)
+    assert result.precio_coste == pytest.approx(1.5)
+    positions = {p.activo: p for p in motor.posicion_actual()}
+    assert positions["XRP"].cantidad_total == pytest.approx(15)
+    assert positions["XRP"].coste_total == pytest.approx(32.25)
+    assert positions["BNB"].cantidad_total == pytest.approx(0.0125)
+
+
+def test_same_order_distinct_all_in_prices_with_later_sale_fail_closed():
+    c = _combined_same_order(different_total_price=True)
+    sale = trade(give="XRP", given="4", received="EUR",
+                 received_qty="16", fee="0", fee_asset="EUR",
+                 at="2025-02-01 11:00:00")
+    tail = classified(sale)
+    c.intercambios_nativos.extend(tail.intercambios_nativos)
+    c.compraventas.extend(tail.compraventas)
+    with pytest.raises(BinancePriceEvidenceError, match="costes distintos"):
+        prepare_spot_eur_bnb_fees(c, quote())
+
+
+def test_ledger_spot_mirror_with_no_unmatched_rows_is_allowed():
+    c = classified(trade(), source_rows=[({
+        "operación": "Transaction Fee",
+        "tiempo": "2025-01-01 11:00:00",
+        "cuenta": "Spot", "moneda": "BNB", "cambio": "-0.005",
+    }, "synthetic.csv")])
+    c._binance_tx_unmatched_rows_count = 0
+    assert len(prepare_spot_eur_bnb_fees(c, quote())) == 1
+
+
+def test_ledger_spot_mirror_with_extra_economic_row_still_blocks():
+    c = classified(trade(), source_rows=[({
+        "operación": "Transaction Fee",
+        "tiempo": "2025-01-01 11:00:00",
+        "cuenta": "Spot", "moneda": "BNB", "cambio": "-0.005",
+    }, "synthetic.csv")])
+    c._binance_tx_unmatched_rows_count = 1
+    with pytest.raises(BinancePriceEvidenceError, match="otras fuentes"):
+        prepare_spot_eur_bnb_fees(c, quote())
+
+
+def test_distinct_native_orders_same_second_still_fail_closed():
+    c = _combined_same_order()
+    c.intercambios_nativos[1].order_id = "another-order"
+    with pytest.raises(BinancePriceEvidenceError, match="simultáneas"):
+        prepare_spot_eur_bnb_fees(c, quote())
