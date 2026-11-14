@@ -1641,3 +1641,124 @@ def test_binance_spot_bnb_fee_incomplete_stays_blocked(
     assert r.status_code == 422, r.get_data(as_text=True)[:500]
     assert "token" not in r.get_json()
     assert "resumen" not in r.get_json()
+
+
+
+def _bnb_mirror_same_order_spot_files(*, fee_ledger_variant="exact",
+                                      second_buy_eur="10"):
+    """Never use personal data: two genuine-looking same-order Spot fills."""
+    spot = (
+        SPOT_HEADER
+        + "bnb,2024-01-01 11:00:00,BNBEUR,BUY,200,0.02BNB,4EUR,0BNB,,\n"
+        + "order777,2024-06-01 11:00:00,XRPEUR,BUY,2,10XRP,20EUR,0.005BNB,,\n"
+        + f"order777,2024-06-01 11:00:00,XRPEUR,BUY,2,5XRP,{second_buy_eur}EUR,0.0025BNB,,\n"
+        + "sell,2025-06-01 11:00:00,XRPEUR,SELL,4,4XRP,16EUR,0EUR,,\n"
+    )
+    fees = (
+        "synthetic,2024-06-01 11:00:00,Spot,Transaction Fee,BNB,-0.005,\n"
+        + "synthetic,2024-06-01 11:00:00,Spot,Transaction Fee,BNB,-0.0025,\n"
+    ) if fee_ledger_variant == "exact" else (
+        "synthetic,2024-06-01 11:00:00,Spot,Transaction Fee,BNB,-0.0075,\n"
+    )
+    ledger = (
+        "ID de usuario,Tiempo,Cuenta,Operación,Moneda,Cambio,Observación\n"
+        + f"synthetic,2024-06-01 11:00:00,Spot,Transaction Spend,EUR,-{20 + float(second_buy_eur)},\n"
+        + "synthetic,2024-06-01 11:00:00,Spot,Transaction Buy,XRP,15,\n"
+        + fees
+    )
+    return spot, ledger
+
+
+def _bnb_mirror_test_market_book():
+    from datetime import datetime, timedelta, timezone
+    from decimal import Decimal
+    from binance_eur_valuation import BinanceHistoricalEURPrices, TradePriceEvidence
+    t = datetime(2024, 6, 1, 10, 0, tzinfo=timezone.utc)
+    return BinanceHistoricalEURPrices([
+        TradePriceEvidence("BNB", "EUR", Decimal("300"),
+                           t - timedelta(seconds=1), 991, "a"*64),
+    ])
+
+
+def test_binance_bnbeur_fills_misma_orden_con_ledger_espejo_pdf(
+    client, usuario, monkeypatch,
+):
+    """Same order + exact 2 fee mirrors: one fee disposal, no duplicate cost."""
+    monkeypatch.setitem(
+        flask_app.config, "BINANCE_VERIFIED_MARKET_PRICES",
+        _bnb_mirror_test_market_book(),
+    )
+    spot, ledger = _bnb_mirror_same_order_spot_files()
+    _login(client)
+    r = client.post(
+        "/api/binance/analizar",
+        data={
+            "csv": [
+                (io.BytesIO(spot.encode("utf-8-sig")), "Binance-Spot-(UTC+1).csv"),
+                (io.BytesIO(ledger.encode("utf-8-sig")), "Binance-Ledger-(UTC+1).csv"),
+            ],
+            "ejercicio": "2025",
+            "nombre": "Same-second Spot BNB mirror synthetic",
+        },
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 200, r.get_data(as_text=True)[:600]
+    data = r.get_json()
+    assert data["resumen_archivos"]["transaction_history"]["registros"] == 4
+    assert data["resumen"]["operaciones_con_resultado"] == 1
+    assert data["resumen"]["resultado_neto"] == pytest.approx(7.4)
+    assert data["operaciones"][0]["activo"] == "XRP"
+    assert data["operaciones"][0]["coste_fifo"] == pytest.approx(8.6)
+    positions = {p["activo"]: p for p in data["posicion"]}
+    assert positions["XRP"]["cantidad"] == pytest.approx(11)
+    assert positions["XRP"]["coste_total"] == pytest.approx(23.65)
+    assert positions["BNB"]["cantidad"] == pytest.approx(0.0125)
+    assert positions["BNB"]["coste_total"] == pytest.approx(2.5)
+    pdf = client.get(f"/api/descargar/{data['token']}?exchange=binance")
+    assert pdf.status_code == 200 and pdf.data.startswith(b"%PDF-")
+
+
+def test_binance_misma_orden_ledger_fee_total_sin_multiplicidad_no_se_descarta(
+    client, usuario, monkeypatch,
+):
+    """A collapsed ledger fee is NOT proof of two matching fill fees."""
+    monkeypatch.setitem(
+        flask_app.config, "BINANCE_VERIFIED_MARKET_PRICES",
+        _bnb_mirror_test_market_book(),
+    )
+    spot, ledger = _bnb_mirror_same_order_spot_files(fee_ledger_variant="collapsed")
+    _login(client)
+    r = client.post(
+        "/api/binance/analizar",
+        data={
+            "csv": [
+                (io.BytesIO(spot.encode("utf-8-sig")), "Spot-(UTC+1).csv"),
+                (io.BytesIO(ledger.encode("utf-8-sig")), "Ledger-(UTC+1).csv"),
+            ],
+            "ejercicio": "2025", "nombre": "Fee ledger no idéntico",
+        }, content_type="multipart/form-data",
+    )
+    assert r.status_code in (400, 422), r.get_data(as_text=True)[:450]
+    assert "token" not in r.get_json()
+
+
+def test_binance_misma_orden_costes_distintos_no_crea_fifo_no_ordenado(
+    client, usuario, monkeypatch,
+):
+    """If unit costs differ and later sold, seconds alone do not prove FIFO."""
+    monkeypatch.setitem(
+        flask_app.config, "BINANCE_VERIFIED_MARKET_PRICES",
+        _bnb_mirror_test_market_book(),
+    )
+    spot, ledger = _bnb_mirror_same_order_spot_files(second_buy_eur="11")
+    _login(client)
+    r = client.post(
+        "/api/binance/analizar",
+        data={"csv": [
+            (io.BytesIO(spot.encode("utf-8-sig")), "Spot-(UTC+1).csv"),
+            (io.BytesIO(ledger.encode("utf-8-sig")), "Ledger-(UTC+1).csv"),
+        ], "ejercicio": "2025", "nombre": "Fill order ambiguity"},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 422, r.get_data(as_text=True)[:450]
+    assert "token" not in r.get_json()
