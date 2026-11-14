@@ -18,6 +18,7 @@ Principios:
 from __future__ import annotations
 
 import csv
+from collections import Counter
 import hashlib
 import json
 import os
@@ -537,6 +538,9 @@ class ClasificadorBinanceMulti:
         # value = [give_total, recv_total]
         self._native_exchange_totals: Dict[tuple, List[Decimal]] = {}
         self._native_exchange_fee_totals: Dict[tuple, Dict[str, Decimal]] = {}
+        # Preserve exact fee multiplicity for same-second native fills: two
+        # fees of 0.001 BNB are NOT one fee of 0.002 BNB.
+        self._native_exchange_fee_events: Dict[tuple, Counter] = {}
         # El mismo activo/importe/segundo puede representar más de un evento:
         # una clave de conjunto no acredita una deduplicación uno-a-uno.
         self._native_transfer_keys: Dict[tuple, int] = {}
@@ -1153,6 +1157,9 @@ class ClasificadorBinanceMulti:
         if fee_asset and fee_amount > 0:
             fees = self._native_exchange_fee_totals.setdefault(native_key, {})
             fees[fee_asset] = fees.get(fee_asset, Decimal("0")) + fee_amount
+            self._native_exchange_fee_events.setdefault(
+                native_key, Counter()
+            )[(fee_asset, fee_amount)] += 1
 
         recv_net = recv_amount
         if fee_asset == recv_asset and fee_amount > 0:
@@ -1455,7 +1462,7 @@ class ClasificadorBinanceMulti:
         El matching de patas por sí solo no acredita que una comisión de otro
         activo esté ya representada en Spot/fiat/Convert.
         """
-        tx_fees: Dict[str, Decimal] = {}
+        tx_fees: Counter = Counter()
         for row in group_rows:
             if row.get("operación", "").strip() != "Transaction Fee":
                 continue
@@ -1469,8 +1476,9 @@ class ClasificadorBinanceMulti:
                     category="parser_error",
                 )
             if amount < 0:
-                tx_fees[asset] = tx_fees.get(asset, Decimal("0")) - amount
-        if tx_fees and tx_fees != self._native_exchange_fee_totals.get(key, {}):
+                tx_fees[(asset, -amount)] += 1
+        if (tx_fees
+                and tx_fees != self._native_exchange_fee_events.get(key, Counter())):
             raise BinanceMultiUserError(
                 "native_tx_fee_mismatch",
                 "Las comisiones de Transaction History no coinciden con las de "
