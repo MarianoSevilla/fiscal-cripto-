@@ -122,7 +122,7 @@ def test_interesa_solo_fee_de_tercer_activo_bnb():
     assert report.candidates == ()
 
 
-@pytest.mark.parametrize("bad", [None, 0, "60", True, 901, -721])
+@pytest.mark.parametrize("bad", [None, "60", True, 901, -721])
 def test_zona_horaria_de_export_invalida(bad):
     with pytest.raises(BinanceFeeMarketError, match="Zona horaria"):
         audit([fee()], catalog(trade()), offset=bad)
@@ -148,3 +148,11 @@ def test_trade_valido_no_significa_compra_ni_coste_fiscal_del_lote_bnb():
     assert report.candidates[0].market_value_eur is not None
     assert report.fiscal_ready is False
     assert report.candidates[0].fiscal_ready is False
+
+
+def test_utc_cero_es_valido_si_exportacion_declara_offset_cero():
+    report = audit([fee(at="2025-05-03 09:00:00")],
+                   catalog(trade()), offset=0)
+    assert report.market_reference_count == 1
+    assert report.candidates[0].timestamp_utc == "2025-05-03T09:00:00Z"
+    assert not report.fiscal_ready
