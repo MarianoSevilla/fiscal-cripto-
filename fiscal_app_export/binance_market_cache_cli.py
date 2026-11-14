@@ -197,7 +197,9 @@ def main(argv=None):
         # write the private manifest unless the operator explicitly chooses
         # the standalone manifest CLI.
         from binance_market_manifest_cli import extract_manifest_from_files
-        private_raw, _counts = extract_manifest_from_files(args.source)
+        private_raw, _counts = extract_manifest_from_files(
+            args.source, include_bnb_fees=True
+        )
         events = parse_private_manifest(private_raw)
     raw, result = build_public_price_catalog(events)
     # A catalog assembled for a specific private sequence is sensitive:
