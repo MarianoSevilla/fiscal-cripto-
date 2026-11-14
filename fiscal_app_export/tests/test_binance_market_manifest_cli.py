@@ -147,3 +147,79 @@ def test_command_writes_private_mode_and_does_not_replace_previous_manifest(
     assert "2025-01-01" not in msg
     with pytest.raises(FileExistsError):
         main(args)
+
+
+
+def test_offline_catalog_cli_accepts_original_zip_without_manual_manifest(
+    tmp_path, monkeypatch, capsys,
+):
+    """One operator command, source ZIP to pinned catalogue, never network."""
+    import binance_market_cache_cli as offline
+    from hashlib import sha256
+    from datetime import datetime, timedelta, timezone
+    from decimal import Decimal
+    from binance_eur_valuation import TradePriceEvidence
+    from binance_verified_price_catalog import (
+        load_pinned_verified_catalog, serialize_verified_catalog,
+    )
+
+    raw_spot = (SPOT_HEADER
+                + "1,2025-01-01 13:00:00,XRPUSDC,BUY,2,5XRP,10USDC,0XRP,,\n")
+    path = tmp_path / "Spot-(UTC+1).zip"
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("spot.csv", raw_spot.encode("utf-8-sig"))
+    observed = []
+
+    def offline_fetch(events):
+        observed.extend(events)
+        at = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
+        prices = [
+            TradePriceEvidence("XRP", "EUR", Decimal("2"),
+                               at-timedelta(seconds=1), 1, "a"*64),
+            TradePriceEvidence("USDC", "EUR", Decimal("0.9"),
+                               at-timedelta(seconds=1), 2, "b"*64),
+        ]
+        return serialize_verified_catalog(prices), {"events": len(events)}
+
+    monkeypatch.setattr(offline, "build_public_price_catalog", offline_fetch)
+    target = tmp_path / "catalog.json"
+    offline.main(["--source", str(path), "--output", str(target)])
+    assert len(observed) == 1
+    assert observed[0][1:] == ("USDC", "XRP")
+    assert stat.S_IMODE(target.stat().st_mode) == 0o600
+    digest = sha256(target.read_bytes()).hexdigest()
+    catalogue = load_pinned_verified_catalog(target.resolve(),
+                                              expected_sha256=digest)
+    assert catalogue.price_eur("XRP", observed[0][0]).unit_price_eur == 2
+    assert "CATALOGO_PUBLICO_OK SHA256=" in capsys.readouterr().out
+    assert not list(tmp_path.glob("*manifest*"))
+    with pytest.raises(FileExistsError):
+        offline.main(["--source", str(path), "--output", str(target)])
+
+
+def test_offline_catalog_cli_remains_compatible_with_private_manifest(
+    tmp_path, monkeypatch,
+):
+    from datetime import datetime, timezone
+    from decimal import Decimal
+    import binance_market_cache_cli as offline
+    from binance_eur_valuation import TradePriceEvidence
+    from binance_verified_price_catalog import serialize_verified_catalog
+
+    original, _ = build_private_market_manifest(classify(swap()))
+    source = tmp_path / "private_manifest.json"
+    source.write_bytes(original)
+    recorded = []
+
+    def fake_market(events):
+        recorded.extend(events)
+        at = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
+        return serialize_verified_catalog([
+            TradePriceEvidence("XRP", "EUR", Decimal("2"), at, 1, "a"*64),
+        ]), {"events": len(events)}
+
+    monkeypatch.setattr(offline, "build_public_price_catalog", fake_market)
+    output = tmp_path / "prices.json"
+    offline.main(["--manifest", str(source), "--output", str(output)])
+    assert output.is_file() and len(recorded) == 1
+    assert stat.S_IMODE(output.stat().st_mode) == 0o600
