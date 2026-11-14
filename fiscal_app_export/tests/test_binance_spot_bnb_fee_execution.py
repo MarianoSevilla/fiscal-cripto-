@@ -143,7 +143,7 @@ def test_unsupported_fee_source_keeps_previous_block():
 
 
 def test_fee_quantity_with_unrepresentable_units_rejected():
-    e = trade(fee="0.00000000000000000000019")
+    e = trade(fee="0.123456789123456789123456789")
     c = classified(e)
     with pytest.raises(BinancePriceEvidenceError, match="precisión de unidades"):
         prepare_spot_eur_bnb_fees(c, quote())
