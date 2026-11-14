@@ -602,9 +602,11 @@ class ClasificadorBinanceMulti:
         recognized = 0
         for path, filename in zip(self.filepaths, self.filenames):
             commission_count = 0
+            original_commission_count = 0
 
             def on_commission(row):
-                nonlocal commission_count
+                nonlocal commission_count, original_commission_count
+                original_commission_count += 1
                 if _after_fiscal_year(row, "transaction_history", self.final_year):
                     self.ignored_future_rows += 1
                     return
@@ -628,10 +630,14 @@ class ClasificadorBinanceMulti:
                 continue
 
             recognized += 1
+            # Preserve uploaded CSV metrics in the response: filtering a
+            # future event from this fiscal calculation must not pretend it
+            # was missing from the original source document.
+            original_row_count = len(rows) + original_commission_count
             # Keep provenance of original empty exports for strict Spot
             # orders reconciliation; filtering future-only rows is different
             # from an empty CSV with no declared coverage period.
-            if rows or commission_count:
+            if rows or original_commission_count:
                 self._source_had_original_rows.add(source)
             else:
                 self._source_had_original_empty.add(source)
@@ -643,9 +649,8 @@ class ClasificadorBinanceMulti:
                     else:
                         scoped.append(row)
                 rows = scoped
-                # The source remains detected, but only material rows up to
-                # the selected exercise are relevant to its fiscal result.
-                empty = not rows and commission_count == 0
+                # sec.registros and sec.vacio still describe ORIGINAL
+                # exports; self._source_rows alone represents fiscal scope.
             sec = self._sections[source]
             if not sec.detectado:
                 sec.detectado = True
@@ -654,7 +659,7 @@ class ClasificadorBinanceMulti:
                 # Varias exportaciones de la misma fuente: solo es "vacía" si
                 # TODAS lo son.
                 sec.vacio = sec.vacio and empty
-            sec.registros += len(rows) + commission_count
+            sec.registros += original_row_count
             if commission_count:
                 self._commission_files.append(path)
             tz = _tz_from_filename(filename)
@@ -981,7 +986,7 @@ class ClasificadorBinanceMulti:
                 self.final_year is not None
                 and "spot_orders" in self._source_had_original_rows
                 and "spot_orders" not in self._source_had_original_empty
-                and self._sections["spot_orders"].registros == 0
+                and not self._source_rows["spot_orders"]
             )
             if (self._sections["spot_orders"].detectado
                     and self._source_rows["spot_trades"]
