@@ -60,9 +60,16 @@ def parse_private_manifest(raw: bytes):
         except ValueError as exc:
             raise BinanceCatalogError("Fecha del manifiesto inexistente") from exc
         given, received = item["given_asset"], item["received_asset"]
-        if any(not isinstance(x, str) or not _ASSET.fullmatch(x)
-               for x in (given, received)) or given == received or "EUR" in (given, received):
-            raise BinanceCatalogError("Permuta del manifiesto no es cripto-cripto válida")
+        # BNB/EUR is a MARKET-ONLY reference for a BNB fee, never a
+        # fabricated economic swap. Every other EUR pair remains outside
+        # the crypto-to-crypto price manifest contract.
+        bnb_fee_price_request = (given, received) == ("BNB", "EUR")
+        if (any(not isinstance(x, str) or not _ASSET.fullmatch(x)
+                for x in (given, received)) or given == received
+                or ("EUR" in (given, received) and not bnb_fee_price_request)):
+            raise BinanceCatalogError(
+                "Referencia de mercado no válida para permuta o comisión BNB"
+            )
         results.append((at, given, received))
     return tuple(sorted(results))
 
