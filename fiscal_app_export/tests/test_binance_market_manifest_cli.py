@@ -240,3 +240,116 @@ def test_native_swap_count_matches_classifier_swaps():
     raw, summary = build_private_market_manifest(classifier)
     assert summary["native_swaps"] == 1
     assert parse_private_manifest(raw)
+
+
+
+def test_bnbeur_fee_reference_from_spot_eur_csv_without_fake_swap(tmp_path):
+    raw = (
+        SPOT_HEADER
+        + "bnb,2024-01-01 11:00:00,BNBEUR,BUY,200,0.01BNB,2EUR,0BNB,,\n"
+        + "xrp,2025-01-01 11:00:00,XRPEUR,BUY,2,10XRP,20EUR,0.005BNB,,\n"
+        + "later,2025-02-01 11:00:00,XRPEUR,SELL,3,2XRP,6EUR,0BNB,,\n"
+    )
+    path = tmp_path / "Binance-Spot-(UTC+1).csv"
+    path.write_bytes(raw.encode("utf-8-sig"))
+    private, summary = extract_manifest_from_files(
+        [path], include_bnb_fees=True
+    )
+    assert summary == {
+        "native_swaps": 0, "market_events": 1,
+        "bnb_fee_price_requests": 1,
+    }
+    assert len(parse_private_manifest(private)) == 1
+    assert json.loads(private) == {
+        "schema_version": 1,
+        "events": [{
+            "timestamp_utc": "2025-01-01T10:00:00Z",
+            "given_asset": "BNB",
+            "received_asset": "EUR",
+        }],
+    }
+    assert b"0.005" not in private
+    assert b"20EUR" not in private
+
+
+@pytest.mark.parametrize("bad", [
+    ("EUR", "BNB"), ("BTC", "EUR"), ("EUR", "XRP"),
+    ("BNB", "BNB"),
+])
+def test_market_reference_rejects_unsupported_eur_pairs(bad):
+    from datetime import timezone
+    event = {"timestamp_utc": "2025-01-01T10:00:00Z",
+             "given_asset": bad[0], "received_asset": bad[1]}
+    payload = json.dumps({"schema_version": 1, "events": [event]}).encode()
+    with pytest.raises(BinanceCatalogError):
+        parse_private_manifest(payload)
+
+
+def test_public_catalogue_fetches_bnb_eur_fee_reference_using_validated_trade():
+    from datetime import datetime, timedelta, timezone
+    from decimal import Decimal
+    from binance_eur_valuation import TradePriceEvidence
+    from binance_market_cache_cli import build_public_price_catalog
+    from binance_verified_price_catalog import load_pinned_verified_catalog
+    from hashlib import sha256
+
+    at = datetime(2025, 1, 1, 10, 0, tzinfo=timezone.utc)
+    event = ((at, "BNB", "EUR"),)
+    calls = []
+
+    def fetcher(*, symbol, base, quote, period, target_times, max_age_seconds):
+        calls.append(symbol)
+        if symbol == "BNBEUR":
+            return [TradePriceEvidence(
+                "BNB", "EUR", Decimal("300"),
+                at-timedelta(seconds=1), 999, "a"*64,
+            )]
+        raise BinanceCatalogError("Simulated missing other pairs")
+
+    raw, summary = build_public_price_catalog(event, fetcher=fetcher)
+    assert "BNBEUR" in calls
+    assert summary["events"] == 1
+    saved = Path(__file__).resolve().parent / "not_used_in_test"
+    import tempfile
+    with tempfile.TemporaryDirectory() as root:
+        path = Path(root) / "market.json"
+        path.write_bytes(raw)
+        book = load_pinned_verified_catalog(
+            path.resolve(), expected_sha256=sha256(raw).hexdigest()
+        )
+        assert book.price_eur("BNB", at).unit_price_eur == Decimal("300")
+
+
+def test_public_price_cli_includes_bnb_fee_reference_from_original_source(
+    tmp_path, monkeypatch,
+):
+    import binance_market_cache_cli as cli
+    from datetime import datetime, timezone, timedelta
+    from decimal import Decimal
+    from binance_eur_valuation import TradePriceEvidence
+    from binance_verified_price_catalog import serialize_verified_catalog
+    from hashlib import sha256
+
+    stamp = "2025-01-01 11:00:00"
+    csv_text = (
+        SPOT_HEADER
+        + f"xrp,{stamp},XRPEUR,BUY,2,10XRP,20EUR,0.005BNB,,\n"
+    )
+    path = tmp_path / "Binance-Spot-(UTC+1).csv"
+    path.write_bytes(csv_text.encode("utf-8-sig"))
+    seen = []
+
+    def fake_builder(events):
+        seen.extend(events)
+        at = datetime(2025, 1, 1, 10, 0, tzinfo=timezone.utc)
+        return serialize_verified_catalog([
+            TradePriceEvidence("BNB", "EUR", Decimal("300"),
+                               at-timedelta(seconds=1), 777, "b"*64),
+        ]), {"events": len(events)}
+
+    monkeypatch.setattr(cli, "build_public_price_catalog", fake_builder)
+    target = tmp_path / "verified.json"
+    cli.main(["--source", str(path), "--output", str(target)])
+    assert len(seen) == 1 and seen[0][1:] == ("BNB", "EUR")
+    assert stat.S_IMODE(target.stat().st_mode) == 0o600
+    assert target.read_bytes()
