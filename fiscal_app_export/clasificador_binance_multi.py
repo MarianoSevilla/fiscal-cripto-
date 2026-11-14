@@ -56,6 +56,9 @@ from binance_commission_evidence import (
     is_binance_commission, iter_binance_commissions,
 )
 from binance_dust_evidence import BinanceDustEvidenceError, audit_binance_dust
+from binance_legacy_trade_evidence import (
+    BinanceLegacyEvidenceError, audit_legacy_trades,
+)
 from binance_convert_ledger_evidence import (
     BinanceConvertLedgerError, audit_convert_ledger,
 )
@@ -460,6 +463,7 @@ class ClasificadorBinanceMulti:
         self.commission_evidence_summary = None
         self.dust_evidence_summary = None
         self.dust_evidence = ()
+        self.legacy_trade_evidence = None  # solo diagnóstico, nunca lotes o PDF
         self.convert_ledger_reconciliation = None
         self._commission_files: List[str] = []  # CSV temporales de la petición
         self.fuentes_materiales_no_soportadas: List[str] = []
@@ -1659,6 +1663,30 @@ class ClasificadorBinanceMulti:
             self.fuentes_materiales_no_soportadas.append(
                 "small_assets_exchange_bnb_sin_permuta_valorada"
             )
+        # Históricos 2019-2021: Buy/Sell/Fee son patas contables, no fills
+        # inequívocos ni compras fiscales listas. Mantener la multiplicidad,
+        # distinguir futuros y bloquear cualquier valoración sin base EUR.
+        try:
+            self.legacy_trade_evidence = audit_legacy_trades(rows)
+        except BinanceLegacyEvidenceError as exc:
+            raise BinanceMultiUserError(
+                "binance_legacy_trade_invalid",
+                "Binance contiene operaciones históricas Buy/Sell/Fee con "
+                "fecha, activo, signo o cantidad incompatibles.",
+                category="parser_error",
+            ) from exc
+        if self.legacy_trade_evidence.records:
+            self.fuentes_materiales_no_soportadas.append(
+                "binance_legacy_trades_sin_valoracion_eur"
+            )
+            if self.legacy_trade_evidence.ambiguous_groups:
+                self.fuentes_materiales_no_soportadas.append(
+                    "binance_legacy_trades_grupos_ambiguos"
+                )
+            if self.legacy_trade_evidence.isolated_fee_groups:
+                self.fuentes_materiales_no_soportadas.append(
+                    "binance_legacy_fee_futuros_sin_clasificar"
+                )
         # Los ingresos por afiliación y descuentos de comisiones no se pueden
         # clasificar automáticamente como capital mobiliario, compras o coste
         # cero. Preservar filas originales, cantidades Decimal y multiplicidad
