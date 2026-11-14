@@ -1200,3 +1200,63 @@ def test_binance_tres_zip_reales_en_formato_fiscal_fifo_y_pdf_sin_duplicar_ledge
     assert downloaded.data.startswith(b"%PDF-")
     assert len(downloaded.data) > 1000
     assert client.get(f"/api/descargar/{payload['token']}").status_code == 403
+
+
+
+def test_binance_legacy_eur_2024_2025_fiscal_fifo_descarga_pdf(client, usuario):
+    """Historical Buy/Sell ledger EUR pairs now produce the same FIFO as Spot.
+
+    Synthetic only: buy 10 XRP for 20 EUR in 2024, sell 4 for 16 EUR in
+    2025. Exactly one disposition, 8 EUR gain, 6 XRP remaining with cost 12.
+    """
+    ledger = (
+        "ID de usuario,Tiempo,Cuenta,Operación,Moneda,Cambio,Observación\n"
+        "synthetic,2024-01-02 10:00:00,Spot,Buy,XRP,10,\n"
+        "synthetic,2024-01-02 10:00:00,Spot,Sell,EUR,-20,\n"
+        "synthetic,2025-03-04 12:00:00,Spot,Sell,XRP,-4,\n"
+        "synthetic,2025-03-04 12:00:00,Spot,Buy,EUR,16,\n"
+    )
+    _login(client)
+    r = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(ledger.encode("utf-8-sig")),
+                      "Binance-Historial-(UTC+1).csv"),
+              "ejercicio": "2025",
+              "nombre": "Legado EUR sintético"},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 200, r.get_data(as_text=True)[:500]
+    data = r.get_json()
+    assert data["resumen"]["operaciones_con_resultado"] == 1
+    assert data["resumen"]["resultado_neto"] == pytest.approx(8.0)
+    assert data["operaciones"][0]["coste_fifo"] == pytest.approx(8.0)
+    assert data["operaciones"][0]["transmision"] == pytest.approx(16.0)
+    assert {p["activo"]: p for p in data["posicion"]}["XRP"]["cantidad"] == pytest.approx(6.0)
+    pdf = client.get(f"/api/descargar/{data['token']}?exchange=binance")
+    assert pdf.status_code == 200
+    assert pdf.mimetype == "application/pdf"
+    assert pdf.data.startswith(b"%PDF-")
+
+
+def test_binance_legacy_eur_con_fee_bnb_sigue_bloqueando_pdf(client, usuario):
+    """Unpriced BNB fee cannot become acquisition cost zero."""
+    ledger = (
+        "ID de usuario,Tiempo,Cuenta,Operación,Moneda,Cambio,Observación\n"
+        "synthetic,2024-01-02 10:00:00,Spot,Buy,XRP,10,\n"
+        "synthetic,2024-01-02 10:00:00,Spot,Sell,EUR,-20,\n"
+        "synthetic,2024-01-02 10:00:00,Spot,Fee,BNB,-0.001,\n"
+        "synthetic,2025-03-04 12:00:00,Spot,Sell,XRP,-4,\n"
+        "synthetic,2025-03-04 12:00:00,Spot,Buy,EUR,16,\n"
+    )
+    _login(client)
+    r = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(ledger.encode("utf-8-sig")),
+                      "Binance-Historial-(UTC+1).csv"),
+              "ejercicio": "2025",
+              "nombre": "Legado EUR fee BNB sintético"},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 422, r.get_data(as_text=True)[:500]
+    data = r.get_json()
+    assert "token" not in data and "resumen" not in data
