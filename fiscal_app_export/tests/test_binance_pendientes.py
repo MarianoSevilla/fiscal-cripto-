@@ -302,3 +302,55 @@ def test_eur_explicito_no_inventa_cuadre_si_contadores_inconsistentes():
     assert "adquisiciones_eur_documentadas" not in {
         x["codigo"] for x in report["evidencias"]
     }
+
+
+def test_evidencia_fee_spot_eur_conciliada_no_es_incidencia_ni_coste_final():
+    c = _clasificador(
+        spot_eur_fee_reconciliation=SimpleNamespace(
+            native_third_asset_fees=7,
+            ledger_matched=7,
+            native_unmatched=0,
+            indistinguishable_native_groups=2,
+            ledger_extra_on_native_keys=0,
+        ),
+    )
+    report = diagnosticar_pendientes_binance(c)
+    assert report["incidencias"] == []
+    evidence = next(x for x in report["evidencias"]
+                    if x["codigo"] == "comisiones_spot_eur_ledger")
+    assert "7 comisiones" in evidence["descripcion"]
+    assert "7 tienen" in evidence["descripcion"]
+    assert "0 siguen" in evidence["descripcion"]
+    assert "no acreditan su valoración EUR" in evidence["descripcion"]
+    assert "no añadas costes estimados" in evidence["siguiente_paso"]
+    assert report["validez_fiscal_acreditada"] is False
+
+
+def test_fee_spot_eur_incompleta_no_se_presenta_como_cotejo_completo():
+    c = _clasificador(
+        spot_eur_fee_reconciliation=SimpleNamespace(
+            native_third_asset_fees=3,
+            ledger_matched=1,
+            native_unmatched=2,
+        ),
+    )
+    report = diagnosticar_pendientes_binance(c)
+    evidence = next(x for x in report["evidencias"]
+                    if x["codigo"] == "comisiones_spot_eur_ledger")
+    assert "1 tienen" in evidence["descripcion"]
+    assert "2 siguen" in evidence["descripcion"]
+    assert report["validez_fiscal_acreditada"] is False
+
+
+def test_fee_spot_eur_contadores_invalidos_no_producen_evidencia():
+    c = _clasificador(
+        spot_eur_fee_reconciliation=SimpleNamespace(
+            native_third_asset_fees=3,
+            ledger_matched=5,
+            native_unmatched=2,
+        ),
+    )
+    report = diagnosticar_pendientes_binance(c)
+    assert "comisiones_spot_eur_ledger" not in {
+        x["codigo"] for x in report["evidencias"]
+    }
