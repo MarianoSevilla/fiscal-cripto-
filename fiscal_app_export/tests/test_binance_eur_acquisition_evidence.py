@@ -202,3 +202,105 @@ def test_clasificador_fiat_con_fee_eur_no_inventa_coste_total(tmp_path):
         "comision_fiat_incluida_o_adicional_no_acreditada"
     )
     assert report.fiscal_ready is False
+
+
+def fee_row(stamp, asset, amount, *, wallet="Spot", kind="Transaction Fee"):
+    return {
+        "tiempo": stamp, "moneda": asset, "cambio": amount,
+        "cuenta": wallet, "operación": kind,
+    }
+
+
+def test_fee_bnb_eur_conciliado_no_se_convierte_en_coste_eur():
+    from binance_eur_acquisition_evidence import conciliar_comisiones_spot_eur_ledger
+
+    e = event("Spot BUY", "2025-05-01 12:00:00",
+              "EUR", "100", "XRP", "20", fee_asset="BNB", fee="0.0002")
+    bridge = conciliar_comisiones_spot_eur_ledger(
+        [e], [fee_row("2025-05-01 12:00:00", "BNB", "-0.000200")],
+    )
+    assert bridge.native_third_asset_fees == 1
+    assert bridge.ledger_matched == 1 and bridge.native_unmatched == 0
+    assert bridge.indistinguishable_native_groups == 0
+    assert bridge.ledger_extra_on_native_keys == 0
+    assert bridge.fiscal_ready is False
+    audit = auditar_adquisiciones_eur_nativas([e])
+    assert audit.candidates[0].complete_cost_eur is None
+
+
+def test_fees_repetidos_mismo_segundo_no_se_deduplican():
+    from binance_eur_acquisition_evidence import conciliar_comisiones_spot_eur_ledger
+
+    e = event("Spot BUY", "2025-05-01 12:00:00",
+              "EUR", "100", "XRP", "20", fee_asset="BNB", fee="0.0002")
+    ledger = [fee_row("2025-05-01 12:00:00", "BNB", "-0.0002")
+              for _ in range(2)]
+    bridge = conciliar_comisiones_spot_eur_ledger([e, e], ledger)
+    assert bridge.native_third_asset_fees == 2
+    assert bridge.ledger_matched == 2
+    assert bridge.native_unmatched == 0
+    assert bridge.indistinguishable_native_groups == 1
+    assert bridge.ledger_extra_on_native_keys == 0
+    assert bridge.fiscal_ready is False
+
+
+def test_ledger_no_cubre_todas_las_fees_y_sobrantes_no_se_consumen():
+    from binance_eur_acquisition_evidence import conciliar_comisiones_spot_eur_ledger
+
+    e = event("Spot BUY", "2025-05-01 12:00:00",
+              "EUR", "100", "XRP", "20", fee_asset="BNB", fee="0.0002")
+    bridge = conciliar_comisiones_spot_eur_ledger(
+        [e, e], [
+            fee_row("2025-05-01 12:00:00", "BNB", "-0.0002"),
+            fee_row("2025-05-01 12:00:00", "BNB", "-0.0004"),
+        ],
+    )
+    assert bridge.ledger_matched == 1
+    assert bridge.native_unmatched == 1
+    assert bridge.ledger_extra_on_native_keys == 0
+
+
+def test_fee_igual_en_funding_o_otro_segundo_no_acredita_spot():
+    from binance_eur_acquisition_evidence import conciliar_comisiones_spot_eur_ledger
+
+    e = event("Spot BUY", "2025-05-01 12:00:00",
+              "EUR", "100", "XRP", "20", fee_asset="BNB", fee="0.0002")
+    bridge = conciliar_comisiones_spot_eur_ledger(
+        [e], [
+            fee_row("2025-05-01 12:00:00", "BNB", "-0.0002", wallet="Funding"),
+            fee_row("2025-05-01 12:00:01", "BNB", "-0.0002"),
+            fee_row("2025-05-01 12:00:00", "BNB", "-0.0002",
+                    kind="Commission Rebate"),
+        ],
+    )
+    assert bridge.ledger_matched == 0
+    assert bridge.native_unmatched == 1
+    assert bridge.fiscal_ready is False
+
+
+def test_fee_ledger_con_cantidad_positiva_o_no_finita_rechazada():
+    from binance_eur_acquisition_evidence import conciliar_comisiones_spot_eur_ledger
+
+    e = event("Spot BUY", "2025-05-01 12:00:00",
+              "EUR", "100", "XRP", "20", fee_asset="BNB", fee="0.0002")
+    for bad in ["0.0002", "NaN", "Infinity", "1,2.34", "0"]:
+        with pytest.raises(BinanceEURAcquisitionError):
+            conciliar_comisiones_spot_eur_ledger(
+                [e], [fee_row("2025-05-01 12:00:00", "BNB", bad)],
+            )
+
+
+def test_cargos_eur_o_en_activo_recibido_no_crean_fee_tercer_activo():
+    from binance_eur_acquisition_evidence import conciliar_comisiones_spot_eur_ledger
+
+    events = [
+        event("Spot BUY", "2025-05-01 12:00:00",
+              "EUR", "100", "XRP", "20", fee_asset="EUR", fee="1"),
+        event("Spot BUY", "2025-05-01 12:00:01",
+              "EUR", "100", "XRP", "20", fee_asset="XRP", fee="0.2"),
+        event("Spot BUY", "2025-05-01 12:00:02",
+              "USDC", "100", "XRP", "20", fee_asset="BNB", fee="0.01"),
+    ]
+    bridge = conciliar_comisiones_spot_eur_ledger(events, [])
+    assert bridge.native_third_asset_fees == 0
+    assert bridge.ledger_matched == bridge.native_unmatched == 0
