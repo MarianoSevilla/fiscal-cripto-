@@ -1460,3 +1460,67 @@ def test_binance_anos_preview_sigue_mostrando_anios_futuros_sin_filtro(
     )
     assert r.status_code == 200, r.get_data(as_text=True)[:500]
     assert r.get_json()["anos"] == [2024, 2026]
+
+
+
+def test_binance_2025_ignora_ordenes_spot_solo_de_2026(client, usuario):
+    """Future-only order CSV must not impose a reconciliation on 2025 fills."""
+    _login(client)
+    spot = (
+        SPOT_HEADER
+        + "buy,2024-01-02 10:00:00,XRPEUR,BUY,2,10XRP,20EUR,0XRP,,\n"
+        + "sell,2025-03-04 12:00:00,XRPEUR,SELL,4,4XRP,16EUR,0EUR,,\n"
+    )
+    orders_header = (
+        "Tiempo,Número de pedido,Par,Tipo¹,Lado,Precio de la orden,"
+        "Cantidad de la orden,Tiempo,Ejecutado²,Precio medio,"
+        "Total de trading³,Estado\n"
+    )
+    future_orders = (
+        orders_header
+        + "2026-02-01 11:00:00,999,XRPEUR,LIMIT,BUY,2EUR,4XRP,"
+          "2026-02-01 11:00:00,4XRP,2EUR,8EUR,Filled\n"
+    )
+    r = client.post(
+        "/api/binance/analizar",
+        data={"csv": [
+            (io.BytesIO(spot.encode("utf-8-sig")),
+             "Spot-(UTC+1).csv"),
+            (io.BytesIO(future_orders.encode("utf-8-sig")),
+             "Ordenes-(UTC+1).csv"),
+        ], "ejercicio": "2025", "nombre": "Órdenes futuras sintéticas"},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 200, r.get_data(as_text=True)[:500]
+    body = r.get_json()
+    assert body["resumen"]["resultado_neto"] == pytest.approx(8)
+    assert body["resumen_archivos"]["registros_posteriores_excluidos"] == 1
+    assert "token" in body
+
+
+def test_binance_2025_sigue_bloqueando_csv_ordenes_vacio_sin_cobertura(
+    client, usuario,
+):
+    """Empty undated order exports must never be treated as future-only."""
+    _login(client)
+    spot = (
+        SPOT_HEADER
+        + "buy,2024-01-02 10:00:00,XRPEUR,BUY,2,10XRP,20EUR,0XRP,,\n"
+        + "sell,2025-03-04 12:00:00,XRPEUR,SELL,4,4XRP,16EUR,0EUR,,\n"
+    )
+    orders = (
+        "Tiempo,Número de pedido,Par,Tipo¹,Lado,Precio de la orden,"
+        "Cantidad de la orden,Tiempo,Ejecutado²,Precio medio,"
+        "Total de trading³,Estado\n"
+        "No hay datos que se ajusten a los criterios.\n"
+    )
+    r = client.post(
+        "/api/binance/analizar",
+        data={"csv": [
+            (io.BytesIO(spot.encode("utf-8-sig")), "Spot-(UTC+1).csv"),
+            (io.BytesIO(orders.encode("utf-8-sig")), "Ordenes-(UTC+1).csv"),
+        ], "ejercicio": "2025", "nombre": "Órdenes sin cobertura"},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 422, r.get_data(as_text=True)[:500]
+    assert "token" not in r.get_json()
