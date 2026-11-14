@@ -109,6 +109,38 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
             ),
         })
 
+    if markers & {
+        "binance_fifo_lotes_mismo_segundo_precio_distinto",
+        "binance_orden_intrasegundo_incierto",
+    }:
+        add(
+            "fifo_orden_intrasegundo", "documentacion",
+            "Orden de ejecuciones Spot insuficientemente acreditado",
+            "Existen operaciones de un mismo criptoactivo en el mismo "
+            "segundo cuyo orden puede cambiar el coste FIFO de ventas "
+            "posteriores. El CSV exportado no demuestra su secuencia exacta.",
+            "Aporta un registro original de ejecuciones con identificador "
+            "único y orden temporal acreditado, o un justificante equivalente "
+            "de Binance. No reordenes los fills manualmente ni promedies "
+            "sus costes para forzar la emisión del PDF.",
+        )
+
+    if markers & {
+        "binance_tx_cartera_distinta_no_conciliada",
+        "binance_convert_cartera_distinta_no_conciliada",
+    }:
+        add(
+            "cartera_binance_no_conciliada", "documentacion",
+            "Operaciones en carteras diferentes",
+            "Un asiento del historial general aparece en una cartera "
+            "distinta de Spot. La coincidencia de fecha, activo e importe "
+            "no demuestra que sea la misma operación.",
+            "Conserva los archivos originales y aporta el detalle de "
+            "la operación y de los traspasos entre Spot y Funding, "
+            "si existen. No elimines los asientos ni los marques como "
+            "duplicados sin correspondencia verificable.",
+        )
+
     if "spot_orders_ejecutadas_sin_fills_completos" in markers:
         add(
             "spot_fills", "archivo", "Faltan ejecuciones Spot",
@@ -349,6 +381,10 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
     # No convertir marcadores internos no explicados en un falso visto bueno.
     known = {
         "spot_orders_ejecutadas_sin_fills_completos",
+        "binance_fifo_lotes_mismo_segundo_precio_distinto",
+        "binance_orden_intrasegundo_incierto",
+        "binance_tx_cartera_distinta_no_conciliada",
+        "binance_convert_cartera_distinta_no_conciliada",
         "filas_identicas_entre_exportaciones_sin_id_unico",
         "earn_fuentes_no_conciliadas",
         "earn_orden_intradia_o_origen_pendiente",
