@@ -1762,3 +1762,36 @@ def test_binance_misma_orden_costes_distintos_no_crea_fifo_no_ordenado(
     )
     assert r.status_code == 422, r.get_data(as_text=True)[:450]
     assert "token" not in r.get_json()
+
+
+
+def test_binance_spot_bnb_fee_mas_deposito_bancario_eur_pdf(
+    client, usuario, monkeypatch,
+):
+    """EUR bank funding is NOT a new crypto acquisition or BNB fee."""
+    monkeypatch.setitem(
+        flask_app.config, "BINANCE_VERIFIED_MARKET_PRICES",
+        _spot_bnb_verified_quotes(),
+    )
+    _login(client)
+    fiat = (
+        "Tiempo,Método,Importe de depósito,Recibir cantidad,Tarifa,Estado,"
+        "ID de transacción\n"
+        "2024-01-01 09:00:00,SEPA,100 EUR,100 EUR,0 EUR,Completed,synthetic\n"
+    )
+    r = client.post(
+        "/api/binance/analizar",
+        data={"csv": [
+            (io.BytesIO(_spot_bnb_fee_fixture().encode("utf-8-sig")),
+             "Binance-Spot-(UTC+1).csv"),
+            (io.BytesIO(fiat.encode("utf-8-sig")),
+             "Binance-Fiat-(UTC+1).csv"),
+        ], "ejercicio": "2025", "nombre": "Spot y banco EUR sintéticos"},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 200, r.get_data(as_text=True)[:550]
+    body = r.get_json()
+    assert body["resumen_archivos"]["fiat_deposit"]["registros"] == 1
+    assert body["resumen"]["resultado_neto"] == pytest.approx(6.4)
+    pdf = client.get(f"/api/descargar/{body['token']}?exchange=binance")
+    assert pdf.status_code == 200 and pdf.data.startswith(b"%PDF-")
