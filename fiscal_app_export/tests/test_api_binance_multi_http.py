@@ -1550,3 +1550,94 @@ def test_binance_2025_no_crea_pdf_vacio_desde_datos_solo_2026(client, usuario):
     assert "token" not in body
     assert "resumen" not in body
     assert "posteriores al ejercicio" in body["error"]
+
+
+
+def _spot_bnb_fee_fixture():
+    return (
+        SPOT_HEADER
+        + "bnb,2024-01-01 11:00:00,BNBEUR,BUY,200,0.01BNB,2EUR,0BNB,,\n"
+        + "xrp,2024-06-01 11:00:00,XRPEUR,BUY,2,10XRP,20EUR,0.005BNB,,\n"
+        + "sale,2025-06-01 11:00:00,XRPEUR,SELL,4,4XRP,16EUR,0.005BNB,,\n"
+    )
+
+
+def _spot_bnb_verified_quotes(include_2025=True):
+    from datetime import timezone, timedelta
+    from decimal import Decimal
+    from binance_eur_valuation import (
+        BinanceHistoricalEURPrices, TradePriceEvidence,
+    )
+
+    def item(at, price, ident):
+        local = datetime.strptime(at, "%Y-%m-%d %H:%M:%S")
+        utc = local.replace(tzinfo=timezone.utc)
+        return TradePriceEvidence(
+            "BNB", "EUR", Decimal(price), utc-timedelta(seconds=1),
+            ident, "a"*64,
+        )
+
+    items = [item("2024-06-01 10:00:00", "300", 71)]
+    if include_2025:
+        items.append(item("2025-06-01 10:00:00", "400", 72))
+    return BinanceHistoricalEURPrices(items)
+
+
+def test_binance_spot_fee_bnb_con_lotes_y_precio_publico_pdf(
+    client, usuario, monkeypatch,
+):
+    """BnB cost basis is historical FIFO, separate from fee EUR valuation."""
+    monkeypatch.setitem(
+        flask_app.config, "BINANCE_VERIFIED_MARKET_PRICES",
+        _spot_bnb_verified_quotes(),
+    )
+    _login(client)
+    source = _spot_bnb_fee_fixture().encode("utf-8-sig")
+    r = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(source), "Binance-Spot-(UTC+1).csv"),
+              "ejercicio": "2025", "nombre": "Spot BNB sintético"},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 200, r.get_data(as_text=True)[:600]
+    data = r.get_json()
+    assert data["resumen"]["operaciones_con_resultado"] == 2
+    assert data["resumen"]["resultado_neto"] == pytest.approx(6.4)
+    by_asset = {o["activo"]: o for o in data["operaciones"]}
+    assert by_asset["XRP"]["transmision"] == pytest.approx(14)
+    assert by_asset["XRP"]["coste_fifo"] == pytest.approx(8.6)
+    assert by_asset["BNB"]["transmision"] == pytest.approx(2)
+    assert by_asset["BNB"]["coste_fifo"] == pytest.approx(1)
+    position = {p["activo"]: p for p in data["posicion"]}
+    assert position["XRP"]["cantidad"] == pytest.approx(6)
+    assert position["XRP"]["coste_total"] == pytest.approx(12.9)
+    pdf = client.get(f"/api/descargar/{data['token']}?exchange=binance")
+    assert pdf.status_code == 200 and pdf.data.startswith(b"%PDF-")
+
+
+@pytest.mark.parametrize("scenario", ["missing_quote", "missing_bnb_lot"])
+def test_binance_spot_bnb_fee_incomplete_stays_blocked(
+    client, usuario, monkeypatch, scenario,
+):
+    """No zero-cost fee when price or original BNB acquisition is absent."""
+    source = _spot_bnb_fee_fixture()
+    if scenario == "missing_quote":
+        book = _spot_bnb_verified_quotes(include_2025=False)
+    else:
+        book = _spot_bnb_verified_quotes()
+        source = source.replace(
+            "bnb,2024-01-01 11:00:00,BNBEUR,BUY,200,0.01BNB,2EUR,0BNB,,\n",
+            "",
+        )
+    monkeypatch.setitem(flask_app.config, "BINANCE_VERIFIED_MARKET_PRICES", book)
+    _login(client)
+    r = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(source.encode("utf-8-sig")),
+                      "Binance-Spot-(UTC+1).csv"),
+              "ejercicio": "2025", "nombre": "Fee incompleta"},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 422, r.get_data(as_text=True)[:500]
+    assert "token" not in r.get_json()
+    assert "resumen" not in r.get_json()
