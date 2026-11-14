@@ -105,8 +105,10 @@ def audit_legacy_trades(rows: Iterable[Mapping[str, str]]) -> BinanceLegacyEvide
         buys = [x for x in legs if x.operation == "Buy"]
         sells = [x for x in legs if x.operation == "Sell"]
         fees = [x for x in legs if x.operation == "Fee"]
-        if not buys and not sells and fees:
-            classification = "isolated_fee"
+        if (not buys and not sells and fees
+              and account == "USD-M Futures"
+              and all(f.quantity > 0 for f in fees)):
+            classification = "isolated_futures_fee"
             isolated += 1
         elif (len(buys) == len(sells) == 1
               and buys[0].asset != sells[0].asset
