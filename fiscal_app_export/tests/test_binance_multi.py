@@ -765,3 +765,48 @@ def test_comision_bnb_spot_eur_sin_ledger_sigue_pendiente(tmp_path):
     assert bridge.ledger_matched == 0
     assert bridge.native_unmatched == 1
     assert c.eur_acquisition_evidence.candidates[0].complete_cost_eur is None
+
+
+
+def test_legacy_buy_sell_fee_diagnostico_sin_fifo_fiscal(tmp_path):
+    tx = _csv(tmp_path, "tx-legacy.csv", TX_H, [
+        ["synthetic", "2020-01-01 10:00:00", "Spot", "Buy", "BTC", "0.001", ""],
+        ["synthetic", "2020-01-01 10:00:00", "Spot", "Sell", "USDT", "-10", ""],
+        ["synthetic", "2020-01-01 10:00:00", "Spot", "Fee", "BNB", "-0.0002", ""],
+    ])
+    c = _classify([tx])
+    evidence = c.legacy_trade_evidence
+    assert evidence.records == 3
+    assert evidence.single_pair_groups == 1
+    assert not evidence.fiscal_ready
+    assert "binance_legacy_trades_sin_valoracion_eur" in c.fuentes_materiales_no_soportadas
+    assert not c.compraventas and not c.swaps
+
+
+def test_legacy_multiples_fills_y_fee_futuros_no_crean_lotes(tmp_path):
+    tx = _csv(tmp_path, "tx-legacy-multi.csv", TX_H, [
+        ["synthetic", "2020-01-01 10:00:00", "Spot", "Buy", "BTC", "0.001", ""],
+        ["synthetic", "2020-01-01 10:00:00", "Spot", "Sell", "USDT", "-10", ""],
+        ["synthetic", "2020-01-01 10:00:00", "Spot", "Buy", "BTC", "0.002", ""],
+        ["synthetic", "2020-01-01 10:00:00", "Spot", "Sell", "USDT", "-20", ""],
+        ["synthetic", "2020-01-01 10:00:00", "USD-M Futures", "Fee", "USDT", "1", ""],
+    ])
+    c = _classify([tx])
+    evidence = c.legacy_trade_evidence
+    assert evidence.records == 5
+    assert evidence.ambiguous_groups == 1
+    assert evidence.isolated_fee_groups == 1
+    assert len(evidence.groups[0].legs) == 4
+    assert "binance_legacy_trades_grupos_ambiguos" in c.fuentes_materiales_no_soportadas
+    assert "binance_legacy_fee_futuros_sin_clasificar" in c.fuentes_materiales_no_soportadas
+    assert not c.compraventas and not c.swaps
+    assert not evidence.fiscal_ready
+
+
+def test_legacy_signo_invalido_se_rechaza_sin_coste_inventado(tmp_path):
+    tx = _csv(tmp_path, "tx-legacy-invalid.csv", TX_H, [
+        ["synthetic", "2020-01-01 10:00:00", "Spot", "Buy", "BTC", "-0.001", ""],
+    ])
+    with pytest.raises(BinanceMultiUserError) as err:
+        _classify([tx])
+    assert err.value.code == "binance_legacy_trade_invalid"
