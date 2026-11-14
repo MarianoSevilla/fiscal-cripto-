@@ -562,8 +562,7 @@ class ClasificadorBinanceMulti:
                 )
         self._cross_file_rows[digest] = path
 
-    @staticmethod
-    def _stream_commission_csv(path: str):
+    def _stream_commission_csv(self, path: str):
         """Itera únicamente las filas de comisión sin retener el historial.
 
         _read_csv ya validó cabeceras, contenido y codificación completa
