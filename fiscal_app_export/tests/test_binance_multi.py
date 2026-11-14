@@ -810,3 +810,27 @@ def test_legacy_signo_invalido_se_rechaza_sin_coste_inventado(tmp_path):
     with pytest.raises(BinanceMultiUserError) as err:
         _classify([tx])
     assert err.value.code == "binance_legacy_trade_invalid"
+
+
+
+def test_legacy_eur_purchases_expose_cost_candidates_without_fifo(tmp_path):
+    tx = _csv(tmp_path, "tx-legacy-eur.csv", TX_H, [
+        ["synthetic", "2021-01-01 10:00:00", "Spot", "Buy", "BTC", "0.01", ""],
+        ["synthetic", "2021-01-01 10:00:00", "Spot", "Sell", "EUR", "-300", ""],
+        ["synthetic", "2021-01-02 10:00:00", "Spot", "Buy", "BTC", "0.02", ""],
+        ["synthetic", "2021-01-02 10:00:00", "Spot", "Sell", "EUR", "-600", ""],
+        ["synthetic", "2021-01-02 10:00:00", "Spot", "Fee", "BNB", "-0.00005", ""],
+    ])
+    classified = _classify([tx])
+    evidence = classified.legacy_eur_acquisition_evidence
+    assert len(evidence.candidates) == 2
+    assert evidence.complete_cost_candidates == 1
+    assert evidence.pending_third_asset_fee == 1
+    assert evidence.candidates[0].fee_total_cost_eur == Decimal("300")
+    assert evidence.candidates[1].eur_paid == Decimal("600")
+    assert evidence.candidates[1].fee_total_cost_eur is None
+    assert not evidence.fiscal_ready
+    assert not classified.compraventas and not classified.swaps
+    assert "binance_legacy_trades_sin_valoracion_eur" in (
+        classified.fuentes_materiales_no_soportadas
+    )
