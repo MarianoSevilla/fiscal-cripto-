@@ -1349,3 +1349,114 @@ def test_binance_cotizaciones_catalogo_offline_desde_zip_al_pdf_http(
     assert by_type["venta"]["ganancia_perdida"] == pytest.approx(-1.0)
     pdf = client.get(f"/api/descargar/{body['token']}?exchange=binance")
     assert pdf.status_code == 200 and pdf.data.startswith(b"%PDF-")
+
+
+
+def test_binance_2025_no_se_bloquea_por_comisiones_y_earn_de_2026(
+    client, usuario,
+):
+    """IRPF 2025 must not be rejected for facts that happen in 2026."""
+    _login(client)
+    spot = (
+        SPOT_HEADER
+        + "buy,2024-01-02 10:00:00,XRPEUR,BUY,2,10XRP,20EUR,0XRP,,\n"
+        + "sell,2025-03-04 12:00:00,XRPEUR,SELL,4,4XRP,16EUR,0EUR,,\n"
+        + "later,2026-01-03 12:00:00,XRPEUR,BUY,3,100XRP,300EUR,0XRP,,\n"
+    )
+    ledger = (
+        "ID de usuario,Tiempo,Cuenta,Operación,Moneda,Cambio,Observación\n"
+        "synthetic,2026-04-01 12:00:00,Spot,Referrer Commission,BNB,0.1,\n"
+        "synthetic,2026-05-01 12:00:00,Spot,Simple Earn Flexible Interest,XRP,0.25,\n"
+    )
+    uploads = [
+        (io.BytesIO(txt.encode("utf-8-sig")), name)
+        for txt, name in (
+            (spot, "Binance-Spot-(UTC+1).csv"),
+            (ledger, "Binance-Historial-(UTC+1).csv"),
+        )
+    ]
+    resp = client.post(
+        "/api/binance/analizar",
+        data={"csv": uploads, "ejercicio": "2025",
+              "nombre": "Límite anual sintético"},
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 200, resp.get_data(as_text=True)[:500]
+    body = resp.get_json()
+    assert body["resumen"]["resultado_neto"] == pytest.approx(8)
+    assert body["resumen"]["operaciones_con_resultado"] == 1
+    assert body["resumen_archivos"]["ejercicio_corte"] == 2025
+    assert body["resumen_archivos"]["registros_posteriores_excluidos"] == 3
+    assert {p["activo"]: p for p in body["posicion"]}["XRP"]["cantidad"] == pytest.approx(6)
+    pdf = client.get(f"/api/descargar/{body['token']}?exchange=binance")
+    assert pdf.status_code == 200 and pdf.data.startswith(b"%PDF-")
+
+
+def test_binance_2025_comision_en_el_propio_2025_sigue_bloqueando(
+    client, usuario,
+):
+    """Year cutoff must not hide an unresolved income event in target year."""
+    _login(client)
+    spot = (
+        SPOT_HEADER
+        + "buy,2024-01-02 10:00:00,XRPEUR,BUY,2,10XRP,20EUR,0XRP,,\n"
+        + "sell,2025-03-04 12:00:00,XRPEUR,SELL,4,4XRP,16EUR,0EUR,,\n"
+    )
+    ledger = (
+        "ID de usuario,Tiempo,Cuenta,Operación,Moneda,Cambio,Observación\n"
+        "synthetic,2025-02-01 10:00:00,Spot,Referrer Commission,BNB,0.1,\n"
+    )
+    resp = client.post(
+        "/api/binance/analizar",
+        data={"csv": [
+            (io.BytesIO(spot.encode("utf-8-sig")), "Binance-Spot-(UTC+1).csv"),
+            (io.BytesIO(ledger.encode("utf-8-sig")), "Binance-TX-(UTC+1).csv"),
+        ], "ejercicio": "2025", "nombre": "Bloqueo 2025 sintético"},
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 422, resp.get_data(as_text=True)[:500]
+    body = resp.get_json()
+    assert "token" not in body and "resumen" not in body
+    codes = {item["codigo"] for item in body["diagnostico_binance"]["incidencias"]}
+    assert "comisiones_afiliacion" in codes
+
+
+def test_binance_2025_rechaza_fecha_futura_malformada(
+    client, usuario,
+):
+    """A malformed 2026 date may never be excluded by looking only at year."""
+    _login(client)
+    raw = (
+        SPOT_HEADER
+        + "buy,2024-01-02 10:00:00,XRPEUR,BUY,2,10XRP,20EUR,0XRP,,\n"
+        + "later,2026-99-01 10:00:00,XRPEUR,SELL,4,4XRP,16EUR,0EUR,,\n"
+    )
+    r = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(raw.encode("utf-8-sig")),
+                      "Binance-Spot-(UTC+1).csv"),
+              "ejercicio": "2025", "nombre": "Fecha mala"},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 400
+    assert "token" not in r.get_json()
+
+
+def test_binance_anos_preview_sigue_mostrando_anios_futuros_sin_filtro(
+    client, usuario,
+):
+    """Discovery should not apply the fiscal year cutoff used by analysis."""
+    _login(client)
+    spot = (
+        SPOT_HEADER
+        + "buy,2024-01-02 10:00:00,XRPEUR,BUY,2,10XRP,20EUR,0XRP,,\n"
+        + "later,2026-01-03 12:00:00,XRPEUR,BUY,3,100XRP,300EUR,0XRP,,\n"
+    )
+    r = client.post(
+        "/api/binance/anos",
+        data={"csv": (io.BytesIO(spot.encode("utf-8-sig")),
+                      "Binance-Spot-(UTC+1).csv")},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 200, r.get_data(as_text=True)[:500]
+    assert r.get_json()["anos"] == [2024, 2026]
