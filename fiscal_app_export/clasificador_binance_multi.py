@@ -520,6 +520,10 @@ class ClasificadorBinanceMulti:
         self._sections: Dict[str, _Section] = {k: _Section() for k in self.SOURCE_KEYS}
         self._unknown_files = 0
         self._source_rows: Dict[str, List[Tuple[dict, str]]] = {k: [] for k in self.SOURCE_KEYS}
+        # Detect a source composed ONLY of dated post-exercise rows, without
+        # confusing it with a genuinely empty export of unknown date range.
+        self._source_had_original_rows: set[str] = set()
+        self._source_had_original_empty: set[str] = set()
         self._cross_file_rows: Dict[str, str] = {}
         self._tz_offsets: set[str] = set()
 
@@ -624,6 +628,13 @@ class ClasificadorBinanceMulti:
                 continue
 
             recognized += 1
+            # Keep provenance of original empty exports for strict Spot
+            # orders reconciliation; filtering future-only rows is different
+            # from an empty CSV with no declared coverage period.
+            if rows or commission_count:
+                self._source_had_original_rows.add(source)
+            else:
+                self._source_had_original_empty.add(source)
             if self.final_year is not None:
                 scoped = []
                 for row in rows:
@@ -966,8 +977,15 @@ class ClasificadorBinanceMulti:
             # El fichero de órdenes puede estar vacío porque corresponde a
             # un intervalo diferente del historial de operaciones. Con ambos
             # informes aportados no debe darse por completa la conciliación.
+            future_only_orders = (
+                self.final_year is not None
+                and "spot_orders" in self._source_had_original_rows
+                and "spot_orders" not in self._source_had_original_empty
+                and self._sections["spot_orders"].registros == 0
+            )
             if (self._sections["spot_orders"].detectado
-                    and self._source_rows["spot_trades"]):
+                    and self._source_rows["spot_trades"]
+                    and not future_only_orders):
                 self.fuentes_materiales_no_soportadas.append(
                     "spot_orders_ejecutadas_sin_fills_completos"
                 )
