@@ -25,7 +25,7 @@ from binance_verified_price_catalog import BinanceCatalogError
 _NATIVE_SWAP_SOURCES = frozenset({"Spot BUY", "Spot SELL", "Convert"})
 
 
-def build_private_market_manifest(classifier):
+def build_private_market_manifest(classifier, *, include_bnb_fees=False):
     """Create a bounded, deterministic source manifest without private amounts.
 
     Only recognized native Spot/Convert crypto-to-crypto exchanges participate.
@@ -36,9 +36,48 @@ def build_private_market_manifest(classifier):
     """
     seen = set()
     native_swap_count = 0
+    fee_events = 0
     for event in getattr(classifier, "intercambios_nativos", ()):
         given, received = event.given_asset, event.received_asset
         if given == "EUR" or received == "EUR":
+            # This is ONLY a public BNB/EUR price query; it is NOT an
+            # economic swap or a recognized cost basis for BNB.
+            if (include_bnb_fees
+                    and event.source in {"Spot BUY", "Spot SELL"}
+                    and event.fee_asset == "BNB"
+                    and "BNB" not in (given, received)):
+                from decimal import Decimal, InvalidOperation
+                try:
+                    fee = Decimal(str(event.fee_amount))
+                except (ValueError, TypeError, InvalidOperation) as exc:
+                    raise BinanceCatalogError(
+                        "Comisión BNB no verificable en el histórico"
+                    ) from exc
+                if not fee.is_finite() or fee < 0:
+                    raise BinanceCatalogError(
+                        "Comisión BNB no verificable en el histórico"
+                    )
+                if fee > 0:
+                    try:
+                        when = binance_export_time_to_utc(
+                            event.local_time, event.filename
+                        )
+                    except BinancePriceEvidenceError as exc:
+                        raise BinanceCatalogError(
+                            "Comisión BNB sin instante UTC acreditado"
+                        ) from exc
+                    key = (
+                        when.astimezone(timezone.utc).strftime(
+                            "%Y-%m-%dT%H:%M:%SZ"
+                        ),
+                        "BNB", "EUR",
+                    )
+                    seen.add(key)
+                    fee_events += 1
+                    if len(seen) > MAX_EVENTS:
+                        raise BinanceCatalogError(
+                            "Demasiadas marcas de mercado para el catálogo"
+                        )
             continue
         if event.source not in _NATIVE_SWAP_SOURCES:
             raise BinanceCatalogError(
@@ -68,7 +107,7 @@ def build_private_market_manifest(classifier):
     if not seen:
         raise BinanceCatalogError(
             "Los archivos aportados no contienen permutas Spot/Convert "
-            "cripto-cripto que necesiten un manifiesto de cotizaciones."
+            "cripto-cripto ni comisiones BNB con precio pendiente."
         )
     # The multi-source classifier may have reconstructed legacy swaps from
     # Transaction History that have NO original Spot/Convert source identity.
@@ -89,13 +128,16 @@ def build_private_market_manifest(classifier):
     # The verifier used by the offline market tool is the single source of
     # truth for schema, symbols, dates and maximum size.
     parse_private_manifest(raw)
-    return raw, {
+    info = {
         "native_swaps": native_swap_count,
         "market_events": len(events),
     }
+    if include_bnb_fees:
+        info["bnb_fee_price_requests"] = fee_events
+    return raw, info
 
 
-def extract_manifest_from_files(source_paths):
+def extract_manifest_from_files(source_paths, *, include_bnb_fees=False):
     """Use exactly the same ZIP/CSV secure import boundary as the website."""
     from werkzeug.datastructures import FileStorage
     from binance_uploads import save_binance_uploads
@@ -116,7 +158,9 @@ def extract_manifest_from_files(source_paths):
             uploads.append(FileStorage(stream=source, filename=path.name))
         extracted, names = save_binance_uploads(uploads, prefix="binance_manifest_")
         classifier = ClasificadorBinanceMulti(extracted, names).clasificar()
-        return build_private_market_manifest(classifier)
+        return build_private_market_manifest(
+            classifier, include_bnb_fees=include_bnb_fees
+        )
     finally:
         for source in open_streams:
             source.close()
@@ -133,8 +177,14 @@ def main(argv=None):
                         help="ZIP o CSV original de Binance; repetible")
     parser.add_argument("--output", type=Path, required=True,
                         help="JSON privado, nuevo; no se sobrescribirá")
+    parser.add_argument(
+        "--include-bnb-fees", action="store_true",
+        help="Incluir peticiones públicas BNBEUR de fees Spot, sin inventar lotes"
+    )
     args = parser.parse_args(argv)
-    raw, summary = extract_manifest_from_files(args.source)
+    raw, summary = extract_manifest_from_files(
+        args.source, include_bnb_fees=args.include_bnb_fees
+    )
     target = args.output
     if not target.is_absolute():
         parser.error("La ruta de salida privada debe ser absoluta.")
