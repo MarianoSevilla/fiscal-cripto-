@@ -14,6 +14,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from hashlib import sha256
 import json
+import os
 from pathlib import Path
 import re
 
@@ -170,18 +171,33 @@ def build_public_price_catalog(events, *, fetcher=fetch_official_spot_trades,
     }
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--manifest", type=Path, required=True)
+    input_group = parser.add_mutually_exclusive_group(required=True)
+    input_group.add_argument("--manifest", type=Path)
+    input_group.add_argument(
+        "--source", type=Path, action="append",
+        help="ZIP/CSV Binance original, repetible; crea manifiesto solo en memoria",
+    )
     parser.add_argument("--output", type=Path, required=True)
-    args = parser.parse_args()
-    if args.manifest.resolve() == args.output.resolve():
-        parser.error("No sobrescribir el manifiesto privado")
-    events = parse_private_manifest(args.manifest.read_bytes())
+    args = parser.parse_args(argv)
+    if args.manifest is not None:
+        if args.manifest.resolve() == args.output.resolve():
+            parser.error("No sobrescribir el manifiesto privado")
+        events = parse_private_manifest(args.manifest.read_bytes())
+    else:
+        # Extract only timestamps and symbols from local exports. Do not
+        # write the private manifest unless the operator explicitly chooses
+        # the standalone manifest CLI.
+        from binance_market_manifest_cli import extract_manifest_from_files
+        private_raw, _counts = extract_manifest_from_files(args.source)
+        events = parse_private_manifest(private_raw)
     raw, result = build_public_price_catalog(events)
-    # Escribir el catálogo solo tras verificar TODAS las cotizaciones.
-    # No sobrescribir pruebas anteriores sin revisión del operador.
-    with args.output.open("xb") as fh:
+    # A catalog assembled for a specific private sequence is sensitive:
+    # preserve exact provenance but never overwrite, follow output symlinks,
+    # or give read permissions to other OS users.
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+    with os.fdopen(os.open(args.output, flags, 0o600), "wb") as fh:
         fh.write(raw)
     digest = sha256(raw).hexdigest()
     # Comprobar lectura reproducible con el mismo hash que se fijaría.
