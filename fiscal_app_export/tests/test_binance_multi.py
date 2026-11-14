@@ -830,7 +830,68 @@ def test_legacy_eur_purchases_expose_cost_candidates_without_fifo(tmp_path):
     assert evidence.candidates[1].eur_paid == Decimal("600")
     assert evidence.candidates[1].fee_total_cost_eur is None
     assert not evidence.fiscal_ready
-    assert not classified.compraventas and not classified.swaps
+    assert len(classified.compraventas) == 1
+    assert classified.compraventas[0].tipo == "COMPRA"
+    assert classified.compraventas[0].importe == 300.0
+    assert classified.compraventas[0].cantidad == 0.01
+    assert not classified.swaps
+    assert len(classified.legacy_eur_trade_resolution.trades) == 1
+    assert classified.legacy_eur_trade_resolution.unresolved_groups == 1
     assert "binance_legacy_trades_sin_valoracion_eur" in (
         classified.fuentes_materiales_no_soportadas
     )
+
+
+
+def test_legacy_eur_pareja_completa_se_importa_al_fifo(tmp_path):
+    tx = _csv(tmp_path, "legacy-eur.csv", TX_H, [
+        ["synthetic", "2024-01-01 10:00:00", "Spot", "Buy", "XRP", "10", ""],
+        ["synthetic", "2024-01-01 10:00:00", "Spot", "Sell", "EUR", "-20", ""],
+        ["synthetic", "2024-01-01 10:00:00", "Spot", "Fee", "XRP", "-0.1", ""],
+        ["synthetic", "2025-01-01 12:00:00", "Spot", "Sell", "XRP", "-5", ""],
+        ["synthetic", "2025-01-01 12:00:00", "Spot", "Buy", "EUR", "15", ""],
+        ["synthetic", "2025-01-01 12:00:00", "Spot", "Fee", "EUR", "-1", ""],
+    ])
+    c = _classify([tx])
+    assert not c.fuentes_materiales_no_soportadas
+    assert not c.desconocidas
+    assert [op.tipo for op in c.compraventas] == ["COMPRA", "VENTA"]
+    assert c.compraventas[0].cantidad == pytest.approx(9.9)
+    assert c.compraventas[0].importe == pytest.approx(20.0)
+    assert c.compraventas[1].importe == pytest.approx(15.0)
+    assert c.legacy_eur_trade_resolution.unresolved_groups == 0
+    assert len(c.legacy_eur_trade_resolution.trades) == 2
+
+
+def test_legacy_eur_espejo_nativo_no_duplica_compraventa(tmp_path):
+    spot = _csv(tmp_path, "native.csv", SPOT_H, [
+        ["42", "2024-01-01 10:00:00", "XRPEUR", "BUY",
+         "2", "10XRP", "20EUR", "0XRP", "", ""],
+    ])
+    tx = _csv(tmp_path, "ledger.csv", TX_H, [
+        ["synthetic", "2024-01-01 10:00:00", "Spot", "Buy", "XRP", "10", ""],
+        ["synthetic", "2024-01-01 10:00:00", "Spot", "Sell", "EUR", "-20", ""],
+    ])
+    c = _classify([spot, tx])
+    assert len(c.compraventas) == 1
+    assert c.legacy_eur_trade_resolution.mirrored_groups == 1
+    assert not c.desconocidas
+    assert not c.fuentes_materiales_no_soportadas
+
+
+def test_legacy_eur_desajuste_nativo_no_se_oculta(tmp_path):
+    spot = _csv(tmp_path, "native.csv", SPOT_H, [
+        ["42", "2024-01-01 10:00:00", "XRPEUR", "BUY",
+         "2", "10XRP", "21EUR", "0XRP", "", ""],
+    ])
+    tx = _csv(tmp_path, "ledger.csv", TX_H, [
+        ["synthetic", "2024-01-01 10:00:00", "Spot", "Buy", "XRP", "10", ""],
+        ["synthetic", "2024-01-01 10:00:00", "Spot", "Sell", "EUR", "-20", ""],
+    ])
+    c = _classify([spot, tx])
+    assert len(c.compraventas) == 1
+    assert c.legacy_eur_trade_resolution.unresolved_groups == 1
+    assert "binance_legacy_trades_sin_valoracion_eur" in (
+        c.fuentes_materiales_no_soportadas
+    )
+    assert c.desconocidas
