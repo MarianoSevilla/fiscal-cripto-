@@ -223,3 +223,20 @@ def test_offline_catalog_cli_remains_compatible_with_private_manifest(
     offline.main(["--manifest", str(source), "--output", str(output)])
     assert output.is_file() and len(recorded) == 1
     assert stat.S_IMODE(output.stat().st_mode) == 0o600
+
+
+
+def test_rejects_non_native_swaps_missing_from_market_manifest():
+    """No successful catalogue when a legacy crypto swap was silently omitted."""
+    classifier = classify(swap())
+    classifier.swaps = [object(), object()]
+    with pytest.raises(BinanceCatalogError, match="incompleto"):
+        build_private_market_manifest(classifier)
+
+
+def test_native_swap_count_matches_classifier_swaps():
+    classifier = classify(swap())
+    classifier.swaps = [object()]
+    raw, summary = build_private_market_manifest(classifier)
+    assert summary["native_swaps"] == 1
+    assert parse_private_manifest(raw)
