@@ -202,8 +202,11 @@ def prepare_spot_eur_bnb_fees(classifier, prices):
     return tuple(verified)
 
 
-def _settle_bnb_fee_group(motor, fees):
-    """Consume one BNB FIFO disposal for the whole same-second fee group."""
+def verify_spot_bnb_fee_inventory(motor, fees):
+    """Preflight all BNB lots before altering any Spot acquisition/disposal.
+
+    Returns date, BNB quantity and the EUR fee reference; does not mutate.
+    """
     fees = tuple(fees)
     if not fees or len({fee.timestamp for fee in fees}) != 1:
         raise BinancePriceEvidenceError(
@@ -232,6 +235,12 @@ def _settle_bnb_fee_group(motor, fees):
         raise BinancePriceEvidenceError(
             "No existe inventario FIFO BNB suficiente para pagar la comisión"
         )
+    return date, amount_bnb, value_eur
+
+
+def _settle_bnb_fee_group(motor, fees):
+    """Consume one BNB FIFO disposal for the whole same-second fee group."""
+    date, amount_bnb, value_eur = verify_spot_bnb_fee_inventory(motor, fees)
     result = motor._consumir_fifo(
         dt=date, activo="BNB", cantidad=amount_bnb,
         precio_transmision=value_eur, tipo="venta",
@@ -263,6 +272,11 @@ def apply_spot_eur_trade_with_bnb_fee(motor, operation, fee=None, *,
         return
     if operation.fecha != fee.timestamp or operation.fee_activo != "BNB":
         raise BinancePriceEvidenceError("Comisión BNB de operación diferente")
+    # A single failed fee must not leave an invented XRP acquisition in
+    # memory. The grouped path preflights the whole same-second fee set from
+    # the pipeline before its first Spot fill.
+    if not defer_bnb_disposal:
+        verify_spot_bnb_fee_inventory(motor, (fee,))
     amount_bnb = _ensure_float_exact_units(fee.bnb_amount)
     # EUR expense: increase acquisition cost OR reduce sale proceeds.
     eur_before = Decimal(str(operation.importe))
