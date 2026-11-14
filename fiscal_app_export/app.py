@@ -2765,6 +2765,19 @@ def analizar_binance_multi():
                 tmp_paths, filenames,
                 final_year=max(selected_years) if selected_years else None,
             ).clasificar()
+            # Never issue an apparently valid zero-operations PDF from files
+            # that contain ONLY years after the selected fiscal exercise.
+            # Streaming commission rows are counted separately from
+            # _source_rows, so an in-scope commission must not be hidden.
+            if (selected_years
+                    and clasificador.ignored_future_rows
+                    and not any(clasificador._source_rows.values())
+                    and not clasificador._commission_files):
+                raise ValueError(
+                    "Datos fiscales no seguros: las exportaciones aportadas "
+                    "contienen únicamente registros posteriores al ejercicio "
+                    "seleccionado. Aporta el historial de los años relevantes."
+                )
             motor, rendimientos, clasificador = procesar_con_fifo(
                 clasificador, binance_market_prices=market_prices
             )
