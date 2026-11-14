@@ -728,3 +728,40 @@ def test_earn_formato_miles_mal_agrupado_se_rechaza(tmp_path):
                 ])
     with pytest.raises(BinanceMultiUserError, match="cantidad no interpretable"):
         _classify([earn])
+
+
+def test_comision_bnb_spot_eur_se_concilia_sin_sustituir_coste_fiscal(tmp_path):
+    spot = _csv(tmp_path, "spot.csv", SPOT_H, [
+        ["synthetic", "2025-01-01 10:00:00", "XRPEUR", "BUY",
+         "2", "10XRP", "20EUR", "0.001BNB", "", ""],
+    ])
+    tx = _csv(tmp_path, "ledger.csv", TX_H, [
+        ["synthetic", "2025-01-01 10:00:00", "Spot",
+         "Transaction Spend", "EUR", "-20", ""],
+        ["synthetic", "2025-01-01 10:00:00", "Spot",
+         "Transaction Buy", "XRP", "10", ""],
+        ["synthetic", "2025-01-01 10:00:00", "Spot",
+         "Transaction Fee", "BNB", "-0.001000", ""],
+    ])
+    c = _classify([spot, tx])
+    bridge = c.spot_eur_fee_reconciliation
+    assert bridge.native_third_asset_fees == 1
+    assert bridge.ledger_matched == 1
+    assert bridge.native_unmatched == 0
+    assert not bridge.fiscal_ready
+    assert c.eur_acquisition_evidence.candidates[0].complete_cost_eur is None
+    assert c.comisiones_pendientes[0]["activo"] == "BNB"
+    assert not c.earn_reward_candidates
+
+
+def test_comision_bnb_spot_eur_sin_ledger_sigue_pendiente(tmp_path):
+    spot = _csv(tmp_path, "spot.csv", SPOT_H, [
+        ["synthetic", "2025-01-01 10:00:00", "XRPEUR", "BUY",
+         "2", "10XRP", "20EUR", "0.001BNB", "", ""],
+    ])
+    c = _classify([spot])
+    bridge = c.spot_eur_fee_reconciliation
+    assert bridge.native_third_asset_fees == 1
+    assert bridge.ledger_matched == 0
+    assert bridge.native_unmatched == 1
+    assert c.eur_acquisition_evidence.candidates[0].complete_cost_eur is None
