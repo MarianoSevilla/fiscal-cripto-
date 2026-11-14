@@ -686,7 +686,11 @@ def test_binance_same_second_different_lot_cost_blocks_partial_sale(client, usua
         content_type="multipart/form-data",
     )
     assert response.status_code == 422
-    assert "token" not in response.get_json()
+    payload = response.get_json()
+    assert "token" not in payload
+    assert "fifo_orden_intrasegundo" in {
+        x["codigo"] for x in payload["diagnostico_binance"]["incidencias"]
+    }
 
 
 def test_binance_2025_position_pdf_ignores_2026_with_full_history(client, usuario):
@@ -1795,3 +1799,32 @@ def test_binance_spot_bnb_fee_mas_deposito_bancario_eur_pdf(
     assert body["resumen"]["resultado_neto"] == pytest.approx(6.4)
     pdf = client.get(f"/api/descargar/{body['token']}?exchange=binance")
     assert pdf.status_code == 200 and pdf.data.startswith(b"%PDF-")
+
+
+
+def test_binance_http_funding_sale_stays_blocked_with_specific_diagnostic(
+    client, usuario,
+):
+    """Cross-wallet accounting cannot become a Spot sale or a valid PDF."""
+    _login(client)
+    ledger = (
+        "ID de usuario,Tiempo,Cuenta,Operación,Moneda,Cambio,Observación\n"
+        "synthetic,2025-01-02 11:00:00,Funding,Transaction Sold,XRP,-5,\n"
+        "synthetic,2025-01-02 11:00:00,Funding,Transaction Revenue,EUR,16,\n"
+    )
+    r = client.post(
+        "/api/binance/analizar",
+        data={
+            "csv": (io.BytesIO(ledger.encode("utf-8-sig")),
+                    "Binance-Historial-(UTC+1).csv"),
+            "ejercicio": "2025",
+            "nombre": "Funding sintético",
+        },
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 422, r.get_data(as_text=True)[:450]
+    data = r.get_json()
+    assert "token" not in data and "resumen" not in data
+    codes = {i["codigo"] for i in data["diagnostico_binance"]["incidencias"]}
+    assert "cartera_binance_no_conciliada" in codes
+    assert data["diagnostico_binance"]["validez_fiscal_acreditada"] is False
