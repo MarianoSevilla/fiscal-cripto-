@@ -1511,6 +1511,15 @@ class ClasificadorBinanceMulti:
 
         for (fecha, _cuenta), indices in exact_groups.items():
             group_rows = [rows[i] for i in indices]
+            # Exact date, asset and quantity are still NOT identity when the
+            # ledger belongs to Funding/Earn or any other wallet. No native
+            # Spot fill may silently erase an unrelated wallet transaction.
+            if _cuenta.strip().upper() != "SPOT":
+                if any(e.local_time == fecha for e in self.intercambios_nativos):
+                    marker = "binance_tx_cartera_distinta_no_conciliada"
+                    if marker not in self.fuentes_materiales_no_soportadas:
+                        self.fuentes_materiales_no_soportadas.append(marker)
+                continue
             ops = {r.get("operación", "").strip() for r in group_rows}
             # Venta
             if {"Transaction Sold", "Transaction Revenue"} <= ops and not (
@@ -1567,6 +1576,15 @@ class ClasificadorBinanceMulti:
 
         for indices in clusters:
             group_rows = [rows[i] for i in indices]
+            # Native Convert wallet provenance is not proven by mere
+            # equality of local seconds and currencies. Funding Convert
+            # ledger entries must not be mistaken for Spot executions.
+            if any(str(x.get("cuenta", "")).strip().upper() != "SPOT"
+                   for x in group_rows):
+                marker = "binance_convert_cartera_distinta_no_conciliada"
+                if marker not in self.fuentes_materiales_no_soportadas:
+                    self.fuentes_materiales_no_soportadas.append(marker)
+                continue
             fecha = _fecha(group_rows[0].get("tiempo"))
             legs = self._tx_group_legs(
                 group_rows, {"Binance Convert"}, {"Binance Convert"}
