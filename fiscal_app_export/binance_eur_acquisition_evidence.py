@@ -138,3 +138,99 @@ def auditar_adquisiciones_eur_nativas(native_events):
         complete_cost_candidates=complete_count,
         incomplete_cost_candidates=len(entries) - complete_count,
     )
+
+
+@dataclass(frozen=True)
+class BinanceSpotEURFeeBridge:
+    """Concordancia por multiplicidades, NO identidad ni valoración EUR.
+
+    Dos cargos iguales al mismo segundo pueden ser indistinguibles. No se
+    descarta ninguno y no se deduce qué lote de BNB sufragó la comisión.
+    """
+    native_third_asset_fees: int
+    ledger_matched: int
+    native_unmatched: int
+    indistinguishable_native_groups: int
+    ledger_extra_on_native_keys: int
+
+    @property
+    def fiscal_ready(self) -> bool:
+        return False
+
+
+def conciliar_comisiones_spot_eur_ledger(native_events, ledger_rows):
+    """Coteja comisiones Spot BUY/EUR en tercera moneda con Transaction Fee.
+
+    Requiere segundo, cuenta Spot, activo y valor negativo exactos. Una
+    igualdad no autoriza a fusionar filas ni acredita el contravalor EUR.
+    Solo se examinan filas contables de los mismos segundos y activos que
+    los fees nativos; las otras operaciones no se reinterpretan.
+    """
+    from datetime import datetime
+
+    native = Counter()
+    for event in native_events:
+        if (str(getattr(event, "source", "")).strip() != "Spot BUY"
+                or str(getattr(event, "given_asset", "")).strip().upper() != "EUR"):
+            continue
+        fee = _positive(getattr(event, "fee_amount", 0), allow_zero=True)
+        asset = str(getattr(event, "fee_asset", "") or "").strip().upper()
+        acquired = str(getattr(event, "received_asset", "")).strip().upper()
+        if fee == 0 or asset in {"", "EUR", acquired}:
+            continue
+        stamp = str(getattr(event, "local_time", ""))
+        try:
+            if len(stamp) != 19:
+                raise ValueError("not a second")
+            datetime.strptime(stamp, "%Y-%m-%d %H:%M:%S")
+        except ValueError as exc:
+            raise BinanceEURAcquisitionError(
+                "Fecha de comisión Spot no acreditada"
+            ) from exc
+        native[(stamp, asset, fee)] += 1
+
+    ledger = Counter()
+    relevant_stamps_assets = {(stamp, asset) for stamp, asset, _ in native}
+    for row in ledger_rows:
+        if str(row.get("operación", "")).strip() != "Transaction Fee":
+            continue
+        stamp = str(row.get("tiempo", "")).strip()
+        asset = str(row.get("moneda", "")).strip().upper()
+        if (stamp, asset) not in relevant_stamps_assets:
+            continue
+        if str(row.get("cuenta", "")).strip().upper() != "SPOT":
+            continue
+        raw = str(row.get("cambio", "")).strip()
+        if "," in raw:
+            import re
+            if not re.fullmatch(
+                r"[+-]?\d{1,3}(?:,\d{3})+(?:\.\d+)?", raw
+            ):
+                raise BinanceEURAcquisitionError(
+                    "Importe de comisión Spot inválido"
+                )
+            raw = raw.replace(",", "")
+        try:
+            signed = Decimal(raw)
+        except (InvalidOperation, ValueError) as exc:
+            raise BinanceEURAcquisitionError(
+                "Importe de comisión Spot inválido"
+            ) from exc
+        if not signed.is_finite() or signed >= 0:
+            raise BinanceEURAcquisitionError(
+                "Signo de comisión Spot incoherente"
+            )
+        ledger[(stamp, asset, -signed)] += 1
+
+    matched = native & ledger
+    return BinanceSpotEURFeeBridge(
+        native_third_asset_fees=sum(native.values()),
+        ledger_matched=sum(matched.values()),
+        native_unmatched=sum((native - matched).values()),
+        indistinguishable_native_groups=sum(
+            1 for n in native.values() if n > 1
+        ),
+        ledger_extra_on_native_keys=sum(
+            max(0, ledger[key] - n) for key, n in native.items()
+        ),
+    )
