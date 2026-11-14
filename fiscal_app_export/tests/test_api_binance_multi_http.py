@@ -1260,3 +1260,92 @@ def test_binance_legacy_eur_con_fee_bnb_sigue_bloqueando_pdf(client, usuario):
     assert r.status_code == 422, r.get_data(as_text=True)[:500]
     data = r.get_json()
     assert "token" not in data and "resumen" not in data
+
+
+
+def test_binance_cotizaciones_catalogo_offline_desde_zip_al_pdf_http(
+    client, usuario, monkeypatch, tmp_path,
+):
+    """E2E synthetic: Binance ZIP -> offline catalogue -> pinned EUR -> FIFO PDF.
+
+    Market downloads are MOCKED: this verifies the code bridge and cannot
+    certify prices for real trading days or user data. The server never calls
+    any public market download endpoint.
+    """
+    from hashlib import sha256
+    from datetime import datetime, timedelta, timezone
+    from decimal import Decimal
+
+    import binance_market_cache_cli as offline
+    from binance_eur_valuation import TradePriceEvidence
+    from binance_verified_price_catalog import (
+        load_pinned_verified_catalog, serialize_verified_catalog,
+    )
+
+    def make_zip(contents, filename):
+        data = io.BytesIO()
+        with zipfile.ZipFile(data, "w", zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("original.csv", contents.encode("utf-8-sig"))
+        return (data.getvalue(), filename)
+
+    origin = (
+        SPOT_HEADER
+        + "buy,2024-12-01 10:00:00,XRPEUR,BUY,1,10XRP,10EUR,0XRP,,\n"
+    )
+    disposals = (
+        SPOT_HEADER
+        + "swap,2025-01-01 13:00:00,XRPUSDC,SELL,2.2,5XRP,11USDC,0USDC,,\n"
+        + "sale,2025-01-02 13:00:00,USDCEUR,SELL,0.818181818,11USDC,9EUR,0EUR,,\n"
+    )
+    annual = make_zip(origin, "Binance-Spot-2024-(UTC+1).zip")
+    latest = make_zip(disposals, "Binance-Spot-2025-(UTC+1).zip")
+    source_path = tmp_path / latest[1]
+    source_path.write_bytes(latest[0])
+
+    market_calls = []
+
+    def verified_offline_builder(events):
+        market_calls.extend(events)
+        t = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
+        records = [
+            TradePriceEvidence("XRP", "EUR", Decimal("2"),
+                               t-timedelta(seconds=1), 1, "a"*64),
+            TradePriceEvidence("USDC", "EUR", Decimal("0.9"),
+                               t-timedelta(seconds=1), 2, "b"*64),
+        ]
+        return serialize_verified_catalog(records), {"events": len(events)}
+
+    monkeypatch.setattr(offline, "build_public_price_catalog",
+                        verified_offline_builder)
+    catalog_path = tmp_path / "prices_private.json"
+    offline.main(["--source", str(source_path), "--output", str(catalog_path)])
+    assert len(market_calls) == 1
+    pinned_hash = sha256(catalog_path.read_bytes()).hexdigest()
+    prices = load_pinned_verified_catalog(catalog_path.resolve(),
+                                          expected_sha256=pinned_hash)
+    monkeypatch.setitem(flask_app.config, "BINANCE_VERIFIED_MARKET_PRICES", prices)
+
+    _login(client)
+    r = client.post(
+        "/api/binance/analizar",
+        data={
+            "csv": [
+                (io.BytesIO(annual[0]), annual[1]),
+                (io.BytesIO(latest[0]), latest[1]),
+            ],
+            "ejercicio": "2025",
+            "nombre": "E2E precios y ZIP sintéticos",
+        },
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 200, r.get_data(as_text=True)[:480]
+    body = r.get_json()
+    assert body["resumen"]["operaciones_con_resultado"] == 2
+    assert body["resumen"]["resultado_neto"] == pytest.approx(4.0)
+    by_type = {item["tipo"]: item for item in body["operaciones"]}
+    assert by_type["swap"]["coste_fifo"] == pytest.approx(5.0)
+    assert by_type["swap"]["transmision"] == pytest.approx(10.0)
+    assert by_type["venta"]["coste_fifo"] == pytest.approx(10.0)
+    assert by_type["venta"]["ganancia_perdida"] == pytest.approx(-1.0)
+    pdf = client.get(f"/api/descargar/{body['token']}?exchange=binance")
+    assert pdf.status_code == 200 and pdf.data.startswith(b"%PDF-")
