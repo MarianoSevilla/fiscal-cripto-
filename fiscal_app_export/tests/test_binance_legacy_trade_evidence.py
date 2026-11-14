@@ -47,6 +47,11 @@ def test_isolated_positive_futures_fee_never_spot():
     assert r.isolated_fee_groups == 1 and r.single_pair_groups == 0
 
 
+def test_orphan_spot_fee_is_ambiguous_not_a_futures_fee():
+    r = audit_legacy_trades([line("Fee", "BNB", "-0.0002")])
+    assert r.ambiguous_groups == 1 and r.isolated_fee_groups == 0
+
+
 def test_nonlegacy_rows_ignored_and_no_double_count():
     r = audit_legacy_trades([line("Transaction Fee", "BNB", "-1"),
                              line("Sell", "USDT", "-1")])
