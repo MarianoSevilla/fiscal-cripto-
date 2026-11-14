@@ -65,12 +65,19 @@ def prepare_spot_eur_bnb_fees(classifier, prices):
         raise BinancePriceEvidenceError(
             "Falta catálogo EUR histórico verificable de comisiones BNB"
         )
+    # Verified EUR bank cash movements do not create/consume crypto lots.
+    # Unknown, non-EUR and crypto transfers still fail closed.
+    unsupported_movements = [
+        m for m in getattr(classifier, "movimientos", ())
+        if not (getattr(m, "subtipo", "") in ("Depósito fiat", "Retiro fiat")
+                and getattr(m, "activo", "") == "EUR")
+    ]
     if (getattr(classifier, "fuentes_materiales_no_soportadas", ())
             or getattr(classifier, "desconocidas", ())
             or getattr(classifier, "swaps", ())
             or getattr(classifier, "rendimientos", ())
             or getattr(classifier, "earn_events", ())
-            or getattr(classifier, "movimientos", ())
+            or unsupported_movements
             # Raw Transaction History may legitimately duplicate Spot fills.
             # Allow it ONLY if every economic ledger row was dropped by
             # _filter_exact_tx_duplicates (legs + fees reconciled exactly).
