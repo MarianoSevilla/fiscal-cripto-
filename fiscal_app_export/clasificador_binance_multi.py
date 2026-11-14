@@ -233,6 +233,46 @@ def _read_csv(path: str, *, on_commission=None) -> Tuple[List[str], List[dict], 
     return headers, rows, (sentinel or valid_count == 0)
 
 
+# Year-scoped analysis: each supported native source has a documented event
+# timestamp. A later event cannot change a previous tax year's FIFO.
+# Unknown file formats remain fail-closed and are never quietly discarded.
+_SOURCE_TIME_FIELD = {
+    "transaction_history": "tiempo",
+    "spot_trades": "tiempo",
+    "spot_orders": "tiempo",
+    "convert_orders": "tiempo",
+    "recurring_convert": "momento de creación",
+    "fiat_trade": "tiempo",
+    "fiat_deposit": "tiempo",
+    "fiat_withdrawal": "tiempo",
+    "fiat_exchange": "hora de creación",
+    "crypto_deposit": "tiempo",
+    "crypto_withdrawal": "tiempo",
+    "earn_flexible_subscription": "fecha de suscripción",
+    "earn_flexible_redemption": "fecha de canje",
+    "earn_flexible_rewards": "tiempo",
+    "earn_flexible_exchange": "tiempo",
+}
+
+
+def _after_fiscal_year(row: dict, source: str, final_year: int | None) -> bool:
+    """Exclude strictly future facts; malformed dates must never be hidden.
+
+    Validate the original date before excluding it. Retain unknown/undated
+    facts for normal parser rejection rather than assume they're in the future.
+    """
+    if final_year is None:
+        return False
+    field = _SOURCE_TIME_FIELD.get(source)
+    if field is None or field not in row:
+        return False
+    raw = str(row[field]).strip()
+    # _fecha validates calendar days, clock and Binance-supported year forms.
+    # It also handles date-only reward records without invented time values.
+    normalized = _fecha(raw)
+    return int(normalized[:4]) > final_year
+
+
 _SIG = {
     "transaction_history": {"tiempo", "cuenta", "operación", "moneda", "cambio"},
     "spot_trades": {"número de pedido", "tiempo", "par", "lado", "precio",
@@ -435,7 +475,13 @@ class ClasificadorBinanceMulti:
         "earn_flexible_rewards", "earn_flexible_exchange",
     )
 
-    def __init__(self, filepaths: List[str], filenames: Optional[List[str]] = None):
+    def __init__(self, filepaths: List[str], filenames: Optional[List[str]] = None,
+                 *, final_year: int | None = None):
+        if final_year is not None and (type(final_year) is not int
+                                       or not 2017 <= final_year <= 2100):
+            raise ValueError("El ejercicio final de Binance no es válido")
+        self.final_year = final_year
+        self.ignored_future_rows = 0
         self.filepaths = list(filepaths)
         self.filenames = list(filenames) if filenames else [Path(p).name for p in filepaths]
         if len(self.filepaths) != len(self.filenames):
@@ -493,6 +539,9 @@ class ClasificadorBinanceMulti:
         out = {k: v.as_dict() for k, v in self._sections.items()}
         out["no_reconocidos"] = self._unknown_files
         out["timezone_offsets"] = sorted(self._tz_offsets)
+        if self.final_year is not None:
+            out["ejercicio_corte"] = self.final_year
+            out["registros_posteriores_excluidos"] = self.ignored_future_rows
         return out
 
     def _track_original_row(self, source: str, row: dict, path: str) -> None:
@@ -536,7 +585,8 @@ class ClasificadorBinanceMulti:
                     )
                 row = {key: raw[i].strip() for i, key in enumerate(keys)}
                 if is_binance_commission(row):
-                    yield row
+                    if not _after_fiscal_year(row, "transaction_history", self.final_year):
+                        yield row
 
     def _iter_commission_source_rows(self):
         for path in self._commission_files:
@@ -552,6 +602,9 @@ class ClasificadorBinanceMulti:
 
             def on_commission(row):
                 nonlocal commission_count
+                if _after_fiscal_year(row, "transaction_history", self.final_year):
+                    self.ignored_future_rows += 1
+                    return
                 commission_count += 1
                 self._track_original_row("transaction_history", row, path)
 
@@ -572,6 +625,17 @@ class ClasificadorBinanceMulti:
                 continue
 
             recognized += 1
+            if self.final_year is not None:
+                scoped = []
+                for row in rows:
+                    if _after_fiscal_year(row, source, self.final_year):
+                        self.ignored_future_rows += 1
+                    else:
+                        scoped.append(row)
+                rows = scoped
+                # The source remains detected, but only material rows up to
+                # the selected exercise are relevant to its fiscal result.
+                empty = not rows and commission_count == 0
             sec = self._sections[source]
             if not sec.detectado:
                 sec.detectado = True
