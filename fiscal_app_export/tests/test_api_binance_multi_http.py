@@ -1132,3 +1132,71 @@ def test_api_binance_bonus_nativo_sin_ledger_exige_conciliacion(client, usuario)
     assert "earn_recompensas_sin_ledger" in {
         x["codigo"] for x in body["diagnostico_binance"]["incidencias"]
     }
+
+
+
+def test_binance_tres_zip_reales_en_formato_fiscal_fifo_y_pdf_sin_duplicar_ledger(
+    client, usuario,
+):
+    """Usuario sube ZIP originales: Spot multi-año y ledger espejo de venta.
+
+    Datos enteramente inventados. El apunte contable es espejo del fill Spot:
+    no puede crear una segunda venta ni consumir dos veces el lote global.
+    FIFO: 10 XRP por 20 EUR (2024), vende 4 por 16 EUR (2025).
+    Ganancia = 16 - 4*2 = 8 EUR; posición = 6 XRP, coste 12 EUR.
+    """
+    def z(csv_text, zip_name):
+        memory = io.BytesIO()
+        with zipfile.ZipFile(memory, "w", zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("historial.csv", csv_text.encode("utf-8-sig"))
+        memory.seek(0)
+        return (memory, zip_name)
+
+    spot_2024 = (
+        SPOT_HEADER
+        + "b2024,2024-01-02 10:00:00,XRPEUR,BUY,2,10XRP,20EUR,0XRP,,\n"
+    )
+    spot_2025 = (
+        SPOT_HEADER
+        + "s2025,2025-03-04 12:00:00,XRPEUR,SELL,4,4XRP,16EUR,0EUR,,\n"
+    )
+    ledger_2025 = (
+        "ID de usuario,Tiempo,Cuenta,Operación,Moneda,Cambio,Observación\n"
+        "synthetic,2025-03-04 12:00:00,Spot,Transaction Sold,XRP,-4,\n"
+        "synthetic,2025-03-04 12:00:00,Spot,Transaction Revenue,EUR,16,\n"
+    )
+
+    _login(client)
+    response = client.post(
+        "/api/binance/analizar",
+        data={
+            "csv": [
+                z(spot_2024, "Binance-Spot-2024-(UTC+1).zip"),
+                z(spot_2025, "Binance-Spot-2025-(UTC+1).zip"),
+                z(ledger_2025, "Binance-Historial-2025-(UTC+1).zip"),
+            ],
+            "ejercicio": "2025",
+            "nombre": "Ensayo multizip sintético",
+        },
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 200, response.get_data(as_text=True)[:400]
+    payload = response.get_json()
+    assert payload["ok"] is True
+    assert payload["resumen_archivos"]["spot_trades"]["registros"] == 2
+    assert payload["resumen_archivos"]["transaction_history"]["registros"] == 2
+    assert payload["resumen"]["operaciones_con_resultado"] == 1
+    assert payload["resumen"]["resultado_neto"] == pytest.approx(8.0)
+    assert len(payload["operaciones"]) == 1
+    assert payload["operaciones"][0]["coste_fifo"] == pytest.approx(8.0)
+    assert payload["operaciones"][0]["transmision"] == pytest.approx(16.0)
+    positions = {p["activo"]: p for p in payload["posicion"]}
+    assert positions["XRP"]["cantidad"] == pytest.approx(6.0)
+    assert positions["XRP"]["coste_total"] == pytest.approx(12.0)
+
+    downloaded = client.get(f"/api/descargar/{payload['token']}?exchange=binance")
+    assert downloaded.status_code == 200
+    assert downloaded.mimetype == "application/pdf"
+    assert downloaded.data.startswith(b"%PDF-")
+    assert len(downloaded.data) > 1000
+    assert client.get(f"/api/descargar/{payload['token']}").status_code == 403
