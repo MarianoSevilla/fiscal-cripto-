@@ -55,6 +55,33 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
                 ),
             })
 
+    legacy_eur = getattr(clasificador, "legacy_eur_acquisition_evidence", None)
+    legacy_candidates = getattr(legacy_eur, "candidates", ()) or ()
+    if legacy_candidates:
+        complete = getattr(legacy_eur, "complete_cost_candidates", None)
+        pending = getattr(legacy_eur, "pending_third_asset_fee", None)
+        if (type(complete) is int and type(pending) is int
+                and complete >= 0 and pending >= 0
+                and complete + pending == len(legacy_candidates)):
+            evidencias.append({
+                "codigo": "adquisiciones_eur_historico_legacy",
+                "titulo": "Compras históricas con contrapartida EUR",
+                "descripcion": (
+                    f"El historial antiguo contiene {len(legacy_candidates)} "
+                    f"compras con desembolso EUR explícito: {complete} con "
+                    "importe y comisiones expresables directamente en EUR "
+                    f"como coste candidato y {pending} con comisión en otra "
+                    "criptomoneda aún sin valorar. Estos datos no acreditan "
+                    "los lotes ni el FIFO global."
+                ),
+                "siguiente_paso": (
+                    "Valora y documenta por separado las comisiones pagadas "
+                    "en criptomonedas, las permutas y los ingresos anteriores. "
+                    "No se equiparan USDT/USDC y EUR ni se crean compras "
+                    "fiscales automáticamente."
+                ),
+            })
+
     fee_bridge = getattr(clasificador, "spot_eur_fee_reconciliation", None)
     fee_native_count = getattr(fee_bridge, "native_third_asset_fees", 0)
     fee_match_count = getattr(fee_bridge, "ledger_matched", 0)
