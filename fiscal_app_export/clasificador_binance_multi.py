@@ -1515,10 +1515,13 @@ class ClasificadorBinanceMulti:
             # ledger belongs to Funding/Earn or any other wallet. No native
             # Spot fill may silently erase an unrelated wallet transaction.
             if _cuenta.strip().upper() != "SPOT":
-                if any(e.local_time == fecha for e in self.intercambios_nativos):
-                    marker = "binance_tx_cartera_distinta_no_conciliada"
-                    if marker not in self.fuentes_materiales_no_soportadas:
-                        self.fuentes_materiales_no_soportadas.append(marker)
+                # Not merely a reconciliation issue: an unmatched Funding
+                # Spend/Buy or Sold/Revenue may otherwise enter the legacy
+                # EUR parser as if its fiscal origin were proven. Fail closed
+                # even when there is NO native Spot event in the same second.
+                marker = "binance_tx_cartera_distinta_no_conciliada"
+                if marker not in self.fuentes_materiales_no_soportadas:
+                    self.fuentes_materiales_no_soportadas.append(marker)
                 continue
             ops = {r.get("operación", "").strip() for r in group_rows}
             # Venta
