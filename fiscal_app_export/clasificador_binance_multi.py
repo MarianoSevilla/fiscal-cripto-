@@ -49,6 +49,7 @@ from binance_earn_impact import (
 )
 from binance_eur_acquisition_evidence import (
     BinanceEURAcquisitionError, auditar_adquisiciones_eur_nativas,
+    conciliar_comisiones_spot_eur_ledger,
 )
 from binance_commission_evidence import (
     BinanceCommissionEvidenceError, audit_binance_commissions,
@@ -454,6 +455,7 @@ class ClasificadorBinanceMulti:
         # Compras nativas contra EUR: evidencia de origen de coste,
         # no adquisición global autorizada para MotorFIFO.
         self.eur_acquisition_evidence = None
+        self.spot_eur_fee_reconciliation = None
         self.earn_reward_candidates = ()  # nunca se inyecta en MotorFIFO/PDF
         self.commission_evidence_summary = None
         self.dust_evidence_summary = None
@@ -636,6 +638,21 @@ class ClasificadorBinanceMulti:
                 "binance_convert_fuentes_no_conciliadas"
             )
         self._process_transaction_history()
+        # Cargos Spot/EUR en BNB y otras monedas: conservar las dos fuentes.
+        # El cotejo por multiconjunto no demuestra qué lote BNB se consumió
+        # ni cuál era el valor de la comisión expresado en EUR.
+        try:
+            self.spot_eur_fee_reconciliation = conciliar_comisiones_spot_eur_ledger(
+                self.intercambios_nativos,
+                (row for row, _ in self._source_rows["transaction_history"]),
+            )
+        except BinanceEURAcquisitionError as exc:
+            raise BinanceMultiUserError(
+                "binance_fee_spot_eur_invalida",
+                "Binance: hay cargos de comisión Spot/EUR con importe, "
+                "signo o referencia contable no verificable.",
+                category="parser_error",
+            ) from exc
         # Conciliación únicamente informativa. No elimina registros, no crea
         # lotes ni rebaja el bloqueo fiscal de Simple Earn en app.py.
         if (any(e.source in ("earn_flexible_subscription",
