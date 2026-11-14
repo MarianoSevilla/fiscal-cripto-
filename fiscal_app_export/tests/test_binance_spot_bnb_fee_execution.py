@@ -254,3 +254,18 @@ def test_distinct_native_orders_same_second_still_fail_closed():
     c.intercambios_nativos[1].order_id = "another-order"
     with pytest.raises(BinancePriceEvidenceError, match="simultáneas"):
         prepare_spot_eur_bnb_fees(c, quote())
+
+
+
+def test_eur_bank_cash_transfer_does_not_block_crypto_fifo():
+    c = classified(trade())
+    c.movimientos.append(SimpleNamespace(subtipo="Depósito fiat", activo="EUR"))
+    c.movimientos.append(SimpleNamespace(subtipo="Retiro fiat", activo="EUR"))
+    assert len(prepare_spot_eur_bnb_fees(c, quote())) == 1
+
+
+def test_non_eur_bank_cash_transfer_does_not_get_assumed_safe():
+    c = classified(trade())
+    c.movimientos.append(SimpleNamespace(subtipo="Depósito fiat", activo="USDT"))
+    with pytest.raises(BinancePriceEvidenceError, match="otras fuentes"):
+        prepare_spot_eur_bnb_fees(c, quote())
