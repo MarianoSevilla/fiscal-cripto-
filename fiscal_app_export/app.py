@@ -1382,10 +1382,22 @@ def _pipeline_motor(clasificador, *, binance_market_prices=None) -> MotorFIFO:
                 )
             ops.append(("reward", income.fecha, income))
     ops.sort(key=lambda x: x[1])
+    prechecked_bnb_seconds = set()
     for tipo, fecha, op in ops:
         if tipo == "cv_with_bnb_fee":
-            from binance_spot_bnb_fee_execution import apply_spot_eur_trade_with_bnb_fee
+            from binance_spot_bnb_fee_execution import (
+                apply_spot_eur_trade_with_bnb_fee,
+                verify_spot_bnb_fee_inventory,
+            )
             index, original = op
+            if (fecha in grouped_bnb_seconds
+                    and fecha not in prechecked_bnb_seconds):
+                # Check total BNB holdings before recording the FIRST Spot
+                # fill of a same-second order; fail atomically if insufficient.
+                verify_spot_bnb_fee_inventory(
+                    motor, bnb_fees_by_second[fecha]
+                )
+                prechecked_bnb_seconds.add(fecha)
             apply_spot_eur_trade_with_bnb_fee(
                 motor, original, verified_fee_by_index.get(index),
                 defer_bnb_disposal=fecha in grouped_bnb_seconds,
