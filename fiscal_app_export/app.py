@@ -1282,6 +1282,14 @@ def _pipeline_motor(clasificador, *, binance_market_prices=None) -> MotorFIFO:
     cotizaciones en la red desde este pipeline ni se asume paridad.
     """
     priced_swaps = ()
+    verified_bnb_fees = ()
+    if (binance_market_prices is not None
+            and isinstance(clasificador, ClasificadorBinanceMulti)
+            and clasificador.comisiones_pendientes):
+        from binance_spot_bnb_fee_execution import prepare_spot_eur_bnb_fees
+        verified_bnb_fees = prepare_spot_eur_bnb_fees(
+            clasificador, binance_market_prices
+        )
     if binance_market_prices is not None and isinstance(clasificador, ClasificadorBinanceMulti):
         if clasificador.swaps:
             from binance_valuation_audit import valorar_permutas_nativas
@@ -1332,8 +1340,14 @@ def _pipeline_motor(clasificador, *, binance_market_prices=None) -> MotorFIFO:
                 )
     motor = MotorFIFO()
     ops = []
-    for op in clasificador.compraventas:
-        ops.append(("cv", op.fecha, op))
+    verified_fee_by_index = {
+        fee.native_ordinal: fee for fee in verified_bnb_fees
+    }
+    for index, op in enumerate(clasificador.compraventas):
+        if verified_bnb_fees:
+            ops.append(("cv_with_bnb_fee", op.fecha, (index, op)))
+        else:
+            ops.append(("cv", op.fecha, op))
     if priced_swaps:
         for priced in priced_swaps:
             ops.append(("verified_swap", priced.source.local_time, priced))
@@ -1357,7 +1371,13 @@ def _pipeline_motor(clasificador, *, binance_market_prices=None) -> MotorFIFO:
             ops.append(("reward", income.fecha, income))
     ops.sort(key=lambda x: x[1])
     for tipo, fecha, op in ops:
-        if tipo == "cv":
+        if tipo == "cv_with_bnb_fee":
+            from binance_spot_bnb_fee_execution import apply_spot_eur_trade_with_bnb_fee
+            index, original = op
+            apply_spot_eur_trade_with_bnb_fee(
+                motor, original, verified_fee_by_index.get(index)
+            )
+        elif tipo == "cv":
             if op.tipo == "COMPRA":
                 motor.registrar_compra(
                     fecha=op.fecha, activo=op.activo, cantidad=op.cantidad,
@@ -1403,6 +1423,11 @@ def _pipeline_motor(clasificador, *, binance_market_prices=None) -> MotorFIFO:
             and getattr(clasificador, "earn_principal_only_audit", None) is not None):
         from binance_earn_transfer_only import validate_principal_only_motor
         validate_principal_only_motor(clasificador.earn_principal_only_audit, motor)
+    if verified_bnb_fees:
+        # Fix the acceptance evidence only after ALL fee disposals completed.
+        # Pending rows remain intact for audit; the validator compares their
+        # number with the proven one-to-one settlements.
+        clasificador._binance_verified_bnb_fees = tuple(verified_bnb_fees)
     if priced_swaps:
         # Fijar esta prueba interna solo después de aplicar TODOS los swaps.
         # Los validadores posteriores vuelven a comprobar identidad y cantidad.
@@ -1874,7 +1899,9 @@ def _validar_aceptacion_fifo(motor, clasificador=None) -> None:
                 "Datos fiscales no seguros: Binance contiene permutas o rendimientos "
                 "sin valoración histórica acreditada en EUR."
             )
-        if getattr(clasificador, "comisiones_pendientes", ()):
+        fees_pending = tuple(getattr(clasificador, "comisiones_pendientes", ()))
+        fees_settled = tuple(getattr(clasificador, "_binance_verified_bnb_fees", ()))
+        if fees_pending and len(fees_pending) != len(fees_settled):
             raise ValueError(
                 "Datos fiscales no seguros: Binance contiene comisiones en cripto "
                 "sin valoración EUR y tratamiento fiscal verificable."
