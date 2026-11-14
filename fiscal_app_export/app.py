@@ -2760,8 +2760,10 @@ def analizar_binance_multi():
             # Si el FIFO falla por una insuficiencia material, la respuesta
             # 422 debe explicar qué fuente puede aportar el usuario.
             # La clasificación y el cálculo siguen ejecutándose una sola vez.
+            selected_years = _años_seleccionados(ejercicio)
             clasificador = ClasificadorBinanceMulti(
-                tmp_paths, filenames
+                tmp_paths, filenames,
+                final_year=max(selected_years) if selected_years else None,
             ).clasificar()
             motor, rendimientos, clasificador = procesar_con_fifo(
                 clasificador, binance_market_prices=market_prices
