@@ -514,6 +514,9 @@ class ClasificadorBinanceMulti:
         self.legacy_trade_evidence = None  # solo diagnóstico, nunca lotes o PDF
         self.legacy_eur_acquisition_evidence = None  # valores EUR candidatos, no FIFO
         self.legacy_eur_trade_resolution = None  # pares aceptados, espejos y pendientes
+        # Residual ledger rows AFTER exact native reconciliation; never
+        # infer that raw Transaction History is safe simply by its presence.
+        self._binance_tx_unmatched_rows_count = None
         self.convert_ledger_reconciliation = None
         self._commission_files: List[str] = []  # CSV temporales de la petición
         self.fuentes_materiales_no_soportadas: List[str] = []
@@ -1723,6 +1726,7 @@ class ClasificadorBinanceMulti:
     def _process_transaction_history(self) -> None:
         rows = [row for row, _filename in self._source_rows["transaction_history"]]
         if not rows and not self._commission_files:
+            self._binance_tx_unmatched_rows_count = 0
             return
         # Los registros Earn del ledger general pueden aparecer SIN los
         # ZIP especializados. El parser heredado los marca MOVIMIENTO y una
@@ -1846,4 +1850,5 @@ class ClasificadorBinanceMulti:
                 self.fuentes_materiales_no_soportadas.append(
                     "binance_legacy_fee_futuros_sin_clasificar"
                 )
+        self._binance_tx_unmatched_rows_count = len(filtered)
         self._merge_legacy_transaction_rows(filtered)
