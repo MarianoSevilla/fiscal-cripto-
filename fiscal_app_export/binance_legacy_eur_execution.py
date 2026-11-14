@@ -97,7 +97,7 @@ def resolve_legacy_eur_trades(evidence: BinanceLegacyEvidence,
                            and e.given_amount == candidate.given_amount
                            and e.received_asset == candidate.received_asset
                            and e.received_amount == candidate.received_amount
-                           and (e.fee_asset or None) == candidate.fee_asset
+                           and (e.fee_asset if e.fee_amount else None) == candidate.fee_asset
                            and e.fee_amount == candidate.fee_amount)]
             if len(mirrors) == 1 and len(relevant) == 1:
                 mirrored += 1
