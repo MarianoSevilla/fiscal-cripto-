@@ -101,6 +101,9 @@ def prepare_spot_eur_bnb_fees(classifier, prices):
                         - (event.fee_amount if event.fee_asset == expected_asset
                            and expected_kind == "COMPRA" else Decimal("0"))
                         if expected_kind == "COMPRA" else event.given_amount)
+        if (event.fee_asset == "BNB" and event.fee_amount > 0
+                and "BNB" not in (event.given_asset, event.received_asset)):
+            _ensure_float_exact_units(event.fee_amount)
         expected_eur = (event.given_amount + (
             event.fee_amount if event.fee_asset == "EUR" else Decimal(0)
         ) if expected_kind == "COMPRA" else event.received_amount)
