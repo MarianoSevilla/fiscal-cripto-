@@ -109,3 +109,8 @@ def test_orphan_fee_or_futures_never_imported():
 def test_only_validated_evidence_is_accepted():
     with pytest.raises(TypeError):
         resolve_legacy_eur_trades([], ())
+
+def test_native_zero_fee_label_is_equivalent_to_no_fee():
+    r = resolve(row("Sell", "EUR", "-20"), row("Buy", "XRP", "10"),
+                native=[native(fee_asset="XRP", fee_amount="0")])
+    assert r.mirrored_groups == 1 and not r.trades
