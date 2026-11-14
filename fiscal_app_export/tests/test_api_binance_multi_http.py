@@ -1528,3 +1528,25 @@ def test_binance_2025_sigue_bloqueando_csv_ordenes_vacio_sin_cobertura(
     )
     assert r.status_code == 422, r.get_data(as_text=True)[:500]
     assert "token" not in r.get_json()
+
+
+
+def test_binance_2025_no_crea_pdf_vacio_desde_datos_solo_2026(client, usuario):
+    """2026-only source cannot certify a zero-trade 2025 report."""
+    _login(client)
+    raw = (
+        SPOT_HEADER
+        + "later,2026-01-03 12:00:00,XRPEUR,BUY,3,100XRP,300EUR,0XRP,,\n"
+    )
+    r = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(raw.encode("utf-8-sig")),
+                      "Binance-Spot-(UTC+1).csv"),
+              "ejercicio": "2025", "nombre": "Historial exclusivamente futuro"},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 422, r.get_data(as_text=True)[:500]
+    body = r.get_json()
+    assert "token" not in body
+    assert "resumen" not in body
+    assert "posteriores al ejercicio" in body["error"]
