@@ -71,7 +71,11 @@ def prepare_spot_eur_bnb_fees(classifier, prices):
             or getattr(classifier, "rendimientos", ())
             or getattr(classifier, "earn_events", ())
             or getattr(classifier, "movimientos", ())
-            or any(classifier._source_rows["transaction_history"])
+            # Raw Transaction History may legitimately duplicate Spot fills.
+            # Allow it ONLY if every economic ledger row was dropped by
+            # _filter_exact_tx_duplicates (legs + fees reconciled exactly).
+            or (bool(classifier._source_rows["transaction_history"])
+                and getattr(classifier, "_binance_tx_unmatched_rows_count", None) != 0)
             or getattr(classifier, "_commission_files", ())):
         raise BinancePriceEvidenceError(
             "Comisión BNB con otras fuentes económicas sin conciliación completa"
@@ -81,10 +85,21 @@ def prepare_spot_eur_bnb_fees(classifier, prices):
         raise BinancePriceEvidenceError(
             "Comisiones BNB sin identidad unívoca de operaciones Spot/EUR"
         )
-    if len({e.local_time for e in native}) != len(native):
-        raise BinancePriceEvidenceError(
-            "Comisiones BNB con ejecuciones simultáneas sin orden acreditado"
-        )
+    # Same-second fills are admissible only with a single native Spot
+    # order ID, pair and side. Different orders in the same second lack
+    # a documented intrasecond sequence, so their lot allocation remains
+    # blocked rather than inferred from CSV row order.
+    by_second = {}
+    for event in native:
+        by_second.setdefault(event.local_time, []).append(event)
+    for at, group in by_second.items():
+        if len(group) > 1 and (
+                any(not getattr(e, "order_id", "") for e in group)
+                or len({(e.order_id, e.source, e.given_asset, e.received_asset)
+                        for e in group}) != 1):
+            raise BinancePriceEvidenceError(
+                "Comisiones BNB con ejecuciones simultáneas sin orden acreditado"
+            )
     for event, op in zip(native, trades):
         if (event.source not in ("Spot BUY", "Spot SELL")
                 or not ((event.given_asset == "EUR") ^ (event.received_asset == "EUR"))
@@ -143,10 +158,94 @@ def prepare_spot_eur_bnb_fees(classifier, prices):
         verified.append(VerifiedBNBSpotFee(
             index, event.local_time, event.fee_amount, value, bnb_price.path,
         ))
+    # A single native order may contain multiple fills. If two acquisitions
+    # have distinct all-in EUR unit costs and a later sale uses those lots,
+    # their true FIFO sequence is not proven by second-resolution exports.
+    indexed_fees = {f.native_ordinal: f for f in verified}
+    last_sold = {}
+    for event in native:
+        if event.received_asset == "EUR":
+            last_sold[event.given_asset] = max(
+                event.local_time, last_sold.get(event.given_asset, "")
+            )
+    last_sold["BNB"] = max(
+        last_sold.get("BNB", ""),
+        *(e.timestamp for e in verified),
+    )
+    for at, group in by_second.items():
+        if len(group) <= 1 or group[0].given_asset != "EUR":
+            continue
+        asset = group[0].received_asset
+        if last_sold.get(asset, "") <= at:
+            continue
+        unit_costs = set()
+        for i, event in enumerate(native):
+            if event.local_time != at or event.received_asset != asset:
+                continue
+            net = event.received_amount - (
+                event.fee_amount if event.fee_asset == asset
+                else Decimal("0")
+            )
+            fee_eur = (event.fee_amount if event.fee_asset == "EUR"
+                       else indexed_fees[i].eur_value if i in indexed_fees
+                       else Decimal("0"))
+            if net <= 0:
+                raise BinancePriceEvidenceError(
+                    "Cantidad neta de adquisición no verificable"
+                )
+            unit_costs.add((event.given_amount + fee_eur) / net)
+        if len(unit_costs) > 1:
+            raise BinancePriceEvidenceError(
+                "Orden de lotes de una misma orden Spot con costes distintos "
+                "no acreditado para ventas posteriores"
+            )
     return tuple(verified)
 
 
-def apply_spot_eur_trade_with_bnb_fee(motor, operation, fee=None):
+def _settle_bnb_fee_group(motor, fees):
+    """Consume one BNB FIFO disposal for the whole same-second fee group."""
+    fees = tuple(fees)
+    if not fees or len({fee.timestamp for fee in fees}) != 1:
+        raise BinancePriceEvidenceError(
+            "Grupo de comisiones BNB sin segundo único acreditado"
+        )
+    at = fees[0].timestamp
+    qty = sum((fee.bnb_amount for fee in fees), Decimal("0"))
+    price = sum((fee.eur_value for fee in fees), Decimal("0"))
+    amount_bnb = _ensure_float_exact_units(qty)
+    value_eur = _eur_float(price)
+    if qty <= 0 or price <= 0:
+        raise BinancePriceEvidenceError(
+            "Grupo de comisiones BNB con importes no positivos"
+        )
+    date = motor._parsear_fecha(at)
+    lots = motor.inventario.get("BNB", ())
+    if any(x.cantidad_restante > 0 and x.fecha >= date for x in lots):
+        raise BinancePriceEvidenceError(
+            "BNB para comisiones sin orden cronológico de adquisición verificado"
+        )
+    available = sum(
+        (Decimal(str(x.cantidad_restante)) for x in lots
+         if x.cantidad_restante > 0), Decimal("0")
+    )
+    if available < qty:
+        raise BinancePriceEvidenceError(
+            "No existe inventario FIFO BNB suficiente para pagar la comisión"
+        )
+    result = motor._consumir_fifo(
+        dt=date, activo="BNB", cantidad=amount_bnb,
+        precio_transmision=value_eur, tipo="venta",
+        nota="Comisiones Binance Spot pagadas con BNB (referencia EUR verificada)",
+    )
+    if result is None or result.inventario_incompleto:
+        raise BinancePriceEvidenceError(
+            "La disposición fiscal agrupada de BNB no está acreditada"
+        )
+    motor.resultados.append(result)
+
+
+def apply_spot_eur_trade_with_bnb_fee(motor, operation, fee=None, *,
+                                      defer_bnb_disposal=False):
     """Apply original EUR trade and separately dispose fee BNB FIFO lots."""
     if fee is None:
         if operation.tipo == "COMPRA":
@@ -165,20 +264,6 @@ def apply_spot_eur_trade_with_bnb_fee(motor, operation, fee=None):
     if operation.fecha != fee.timestamp or operation.fee_activo != "BNB":
         raise BinancePriceEvidenceError("Comisión BNB de operación diferente")
     amount_bnb = _ensure_float_exact_units(fee.bnb_amount)
-    cost_fee = _eur_float(fee.eur_value)
-    # Fully check the original BNB FIFO stock before changing even a single lot.
-    current = motor.inventario.get("BNB", ())
-    date = motor._parsear_fecha(fee.timestamp)
-    if any(x.cantidad_restante > 0 and x.fecha >= date for x in current):
-        raise BinancePriceEvidenceError(
-            "BNB para comisiones sin orden cronológico de adquisición verificado"
-        )
-    available = sum((Decimal(str(x.cantidad_restante))
-                     for x in current if x.cantidad_restante > 0), Decimal(0))
-    if available < fee.bnb_amount:
-        raise BinancePriceEvidenceError(
-            "No existe inventario FIFO BNB suficiente para pagar la comisión"
-        )
     # EUR expense: increase acquisition cost OR reduce sale proceeds.
     eur_before = Decimal(str(operation.importe))
     eur_effective = (eur_before + fee.eur_value if operation.tipo == "COMPRA"
@@ -198,15 +283,10 @@ def apply_spot_eur_trade_with_bnb_fee(motor, operation, fee=None):
             operation.fecha, operation.activo, operation.cantidad,
             adjusted, "EUR", "BNB", amount_bnb,
         )
-    # Paying a fee with BNB consumes its OWN historical FIFO lot, with its
-    # independent capital gain/loss; fee market price is NOT that lot's cost.
-    result = motor._consumir_fifo(
-        dt=date, activo="BNB", cantidad=amount_bnb,
-        precio_transmision=cost_fee, tipo="venta",
-        nota="Comisión de Binance Spot pagada con BNB (valor EUR acreditado)",
-    )
-    if result is None or result.inventario_incompleto:
-        raise BinancePriceEvidenceError(
-            "La disposición fiscal de BNB para comisiones no está acreditada"
-        )
-    motor.resultados.append(result)
+    if not defer_bnb_disposal:
+        _settle_bnb_fee_group(motor, (fee,))
+
+
+def settle_spot_bnb_fees_same_second(motor, fees):
+    """Commit grouped BNB FIFO disposal after all fills of one native order."""
+    _settle_bnb_fee_group(motor, fees)
