@@ -70,6 +70,16 @@ def build_private_market_manifest(classifier):
             "Los archivos aportados no contienen permutas Spot/Convert "
             "cripto-cripto que necesiten un manifiesto de cotizaciones."
         )
+    # The multi-source classifier may have reconstructed legacy swaps from
+    # Transaction History that have NO original Spot/Convert source identity.
+    # Never announce a complete price request when those swaps are absent
+    # from the native evidence being enumerated.
+    classifier_swaps = getattr(classifier, "swaps", None)
+    if classifier_swaps is not None and len(classifier_swaps) != native_swap_count:
+        raise BinanceCatalogError(
+            "Hay permutas adicionales sin detalle nativo Spot/Convert; "
+            "el manifiesto de cotizaciones quedaría incompleto."
+        )
     events = [
         {"timestamp_utc": at, "given_asset": given, "received_asset": received}
         for at, given, received in sorted(seen)
