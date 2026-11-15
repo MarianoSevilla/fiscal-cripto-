@@ -1366,6 +1366,9 @@ def _pipeline_motor(clasificador, *, binance_market_prices=None) -> MotorFIFO:
                 key = (event.local_time, event.given_asset)
                 counts[key] = counts.get(key, 0) + 1
             if any(n > 1 for n in counts.values()):
+                marker = "binance_orden_intrasegundo_incierto"
+                if marker not in clasificador.fuentes_materiales_no_soportadas:
+                    clasificador.fuentes_materiales_no_soportadas.append(marker)
                 raise BinancePriceEvidenceError(
                     "Orden de disposiciones Binance dentro del mismo segundo no acreditado"
                 )
@@ -1380,6 +1383,9 @@ def _pipeline_motor(clasificador, *, binance_market_prices=None) -> MotorFIFO:
                 if event.received_asset != "EUR":
                     directions.setdefault((at, event.received_asset), set()).add("in")
             if any(len(kinds) > 1 for kinds in directions.values()):
+                marker = "binance_orden_intrasegundo_incierto"
+                if marker not in clasificador.fuentes_materiales_no_soportadas:
+                    clasificador.fuentes_materiales_no_soportadas.append(marker)
                 raise BinancePriceEvidenceError(
                     "Adquisición y disposición del mismo activo sin orden intrasegundo"
                 )
