@@ -1346,6 +1346,34 @@ def test_binance_tres_zip_reales_en_formato_fiscal_fifo_y_pdf_sin_duplicar_ledge
 
 
 
+def test_binance_legacy_lotes_simultaneos_con_costes_distintos_no_pdf(
+        client, usuario):
+    """Dos grupos de origen legacy sin orden probatorio no generan coste FIFO."""
+    ledger = (
+        "ID de usuario,Tiempo,Cuenta,Operación,Moneda,Cambio,Observación\n"
+        "synthetic,2024-01-02 10:00:00,Spot,Sell,EUR,-4,\n"
+        "synthetic,2024-01-02 10:00:00,Spot,Buy,XRP,2,\n"
+        "synthetic,2024-01-02 10:00:00,spot,Sell,EUR,-6,\n"
+        "synthetic,2024-01-02 10:00:00,spot,Buy,XRP,2,\n"
+        "synthetic,2025-03-04 12:00:00,Spot,Sell,XRP,-1,\n"
+        "synthetic,2025-03-04 12:00:00,Spot,Buy,EUR,3,\n"
+    )
+    _login(client)
+    response = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(ledger.encode("utf-8-sig")),
+                      "Binance-Historial-(UTC+1).csv"),
+              "ejercicio": "2025", "nombre": "Legado intrasegundo sintético"},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 422, response.get_data(as_text=True)[:400]
+    payload = response.get_json()
+    assert "token" not in payload
+    assert "fifo_orden_intrasegundo" in {
+        i["codigo"] for i in payload["diagnostico_binance"]["incidencias"]
+    }
+
+
 def test_binance_legacy_eur_2024_2025_fiscal_fifo_descarga_pdf(client, usuario):
     """Historical Buy/Sell ledger EUR pairs now produce the same FIFO as Spot.
 
