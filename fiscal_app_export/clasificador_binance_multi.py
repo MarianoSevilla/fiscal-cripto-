@@ -1053,6 +1053,12 @@ class ClasificadorBinanceMulti:
                 continue
             if base_qty == 0:
                 continue
+            # A canceled/expired order MAY have genuine partial fills.
+            # NEW, REJECTED or an unknown status with positive execution is
+            # contradictory and must not silently validate a fiscal fill.
+            if status not in executed_states | {"canceled", "cancelled", "expired"}:
+                missing_or_mismatched = True
+                continue
 
             try:
                 quote_qty, quote_asset = _amount_asset(
