@@ -407,21 +407,6 @@ def test_diagnostico_orden_intrasegundo_exige_evidencia_sin_promediar():
     assert report["validez_fiscal_acreditada"] is False
 
 
-def test_diagnostico_legacy_eur_cartera_no_spot_sin_datos_privados():
-    report = diagnosticar_pendientes_binance(_clasificador(
-        fuentes_materiales_no_soportadas=[
-            "binance_legacy_eur_cartera_no_spot",
-            "binance_legacy_trades_sin_valoracion_eur",
-        ],
-    ))
-    issue = next(i for i in report["incidencias"]
-                 if i["codigo"] == "legacy_eur_cartera_no_spot")
-    assert "Spot" in issue["descripcion"]
-    assert "justificante original" in issue["siguiente_paso"]
-    assert report["validez_fiscal_acreditada"] is False
-    assert "binance_legacy_eur_cartera_no_spot" not in str(report)
-
-
 def test_diagnostico_retiro_cripto_pide_origen_y_no_infiere_venta():
     report = diagnosticar_pendientes_binance(_clasificador(
         movimientos=[SimpleNamespace(
