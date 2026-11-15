@@ -121,6 +121,26 @@ def test_analizar_binance_multi_genera_fifo_sintetico(client, usuario):
     assert "token" in body and body["token"]
 
 
+def test_binance_spot_quantities_precision_loss_never_issue_pdf(client, usuario):
+    """A valid Decimal with too many units cannot be silently rounded."""
+    _login(client)
+    spot = (
+        SPOT_HEADER
+        + "42,2025-01-01 10:00:00,XRPEUR,BUY,2,"
+        "0.1234567890123456789XRP,20EUR,0XRP,,\n"
+    ).encode("utf-8-sig")
+    response = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(spot), "Binance-Spot-(UTC+1).csv"),
+              "ejercicio": "2025", "nombre": "Precisión sintética"},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 400, response.get_data(as_text=True)[:400]
+    payload = response.get_json()
+    assert "redondeados" in payload["error"]
+    assert "token" not in payload and "resumen" not in payload
+
+
 def test_permuta_convert_sin_valor_eur_da_422_sin_pdf(client, usuario):
     _login(client)
     csv_bytes = (
