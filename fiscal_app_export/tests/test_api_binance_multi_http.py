@@ -190,6 +190,28 @@ def test_binance_fiat_bancario_sin_offset_no_bloquea_spot_fiscal(
     assert "token" in body
 
 
+def test_binance_legacy_no_eur_responde_422_con_diagnostico_sin_pdf(client, usuario):
+    """Historical non-EUR ledger operations cannot become EUR FIFO PDFs."""
+    _login(client)
+    ledger = (
+        "ID de usuario,Tiempo,Cuenta,Operación,Moneda,Cambio,Observación\n"
+        "synthetic,2022-01-01 10:00:00,Spot,Transaction Sold,XRP,-2,\n"
+        "synthetic,2022-01-01 10:00:00,Spot,Transaction Revenue,USDC,4,\n"
+    ).encode("utf-8-sig")
+    response = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(ledger), "Binance-Historial-(UTC+1).csv"),
+              "ejercicio": "2025", "nombre": "No EUR sintético"},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 422, response.get_data(as_text=True)[:500]
+    body = response.get_json()
+    assert "token" not in body and "resumen" not in body
+    assert "historial_legacy_pendiente" in {
+        item["codigo"] for item in body["diagnostico_binance"]["incidencias"]
+    }
+
+
 def test_binance_spot_quantities_precision_loss_never_issue_pdf(client, usuario):
     """A valid Decimal with too many units cannot be silently rounded."""
     _login(client)
