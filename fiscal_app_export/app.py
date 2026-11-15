@@ -1964,7 +1964,6 @@ def _validar_aceptacion_fifo(motor, clasificador=None) -> None:
         # Tampoco sería fiable la posición final si se omite el depósito.
         if any(
             getattr(m, "subtipo", "") == "Depósito cripto"
-            and getattr(m, "cantidad", 0) > 0
             for m in getattr(clasificador, "movimientos", ())
         ):
             raise ValueError(
@@ -1977,7 +1976,6 @@ def _validar_aceptacion_fifo(motor, clasificador=None) -> None:
         # del FIFO y presentar la posición como acreditada sería inseguro.
         if any(
             getattr(m, "subtipo", "") == "Retiro cripto"
-            and getattr(m, "cantidad", 0) < 0
             for m in getattr(clasificador, "movimientos", ())
         ):
             raise ValueError(
