@@ -2933,10 +2933,19 @@ def analizar_binance_multi():
             # privados o trazas internas de validación.
             from binance_eur_valuation import BinancePriceEvidenceError
             if isinstance(exc, BinancePriceEvidenceError):
-                return jsonify({
+                payload = {
                     "error": "Datos fiscales no seguros: no se ha podido acreditar "
                              "la valoración EUR de una o varias permutas Binance."
-                }), 422
+                }
+                # La vista de diagnóstico omite importes, activos, fechas e
+                # identificadores privados. También es útil cuando el fallo
+                # de cotización ocurre antes del validador fiscal posterior.
+                if clasificador is not None:
+                    from binance_pendientes import diagnosticar_pendientes_binance
+                    payload["diagnostico_binance"] = diagnosticar_pendientes_binance(
+                        clasificador
+                    )
+                return jsonify(payload), 422
             if isinstance(exc, ValueError) and str(exc).startswith("Datos fiscales no seguros:"):
                 payload = {"error": str(exc)}
                 if clasificador is not None:
