@@ -109,6 +109,18 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
             ),
         })
 
+    if "binance_zona_horaria_sin_acreditar" in markers:
+        add(
+            "zona_horaria_binance", "archivo",
+            "Zona horaria de las operaciones sin acreditar",
+            "Al menos un archivo con operaciones no indica un desplazamiento "
+            "UTC válido. Su hora local no permite reconstruir el orden "
+            "cronológico fiscal entre fuentes diferentes.",
+            "Vuelve a exportar los historiales originales con la misma zona "
+            "horaria UTC explícita en sus nombres (por ejemplo, UTC+1). "
+            "No modifiques las horas ni inventes un offset para continuar.",
+        )
+
     if markers & {
         "binance_fifo_lotes_mismo_segundo_precio_distinto",
         "binance_orden_intrasegundo_incierto",
@@ -398,6 +410,7 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
 
     # No convertir marcadores internos no explicados en un falso visto bueno.
     known = {
+        "binance_zona_horaria_sin_acreditar",
         "spot_orders_ejecutadas_sin_fills_completos",
         "binance_fifo_lotes_mismo_segundo_precio_distinto",
         "binance_orden_intrasegundo_incierto",
