@@ -400,6 +400,8 @@ def test_diagnostico_orden_intrasegundo_exige_evidencia_sin_promediar():
     assert _codes(report) == {"fifo_orden_intrasegundo"}
     item = report["incidencias"][0]
     assert "mismo segundo" in item["descripcion"]
+    assert "Spot o Convert" in item["descripcion"]
+    assert "conversiones Convert" in item["siguiente_paso"]
     assert "identificador único" in item["siguiente_paso"]
     assert "No reordenes" in item["siguiente_paso"]
     assert report["validez_fiscal_acreditada"] is False
