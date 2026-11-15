@@ -956,12 +956,12 @@ def test_binance_dos_permutas_mismo_segundo_requieren_orden_y_diagnostico(
     _login(client)
     buys = (
         SPOT_HEADER
-        + "buy,2024-12-01 10:00:00,XRPEUR,BUY,2,10XRP,20EUR,0XRP,,\\n"
+        + "buy,2024-12-01 10:00:00,XRPEUR,BUY,2,10XRP,20EUR,0XRP,,\n"
     ).encode("utf-8-sig")
     convert = (
         CONVERT_HEADER
-        + "2025-01-01 13:00:00,SPOT,XRPUSDC,Instant,1 XRP,2 USDC,,,,Successful\\n"
-        + "2025-01-01 13:00:00,SPOT,XRPBTC,Instant,1 XRP,0.02 BTC,,,,Successful\\n"
+        + "2025-01-01 13:00:00,SPOT,XRPUSDC,Instant,1 XRP,2 USDC,,,,Successful\n"
+        + "2025-01-01 13:00:00,SPOT,XRPBTC,Instant,1 XRP,0.02 BTC,,,,Successful\n"
     ).encode("utf-8-sig")
     response = client.post(
         "/api/binance/analizar",
