@@ -331,6 +331,40 @@ def test_spot_orden_cancelada_no_ejecutada_no_exige_fills(tmp_path):
     assert c.fuentes_materiales_no_soportadas == []
 
 
+@pytest.mark.parametrize("status", ["New", "Rejected", "Unexpected State"])
+def test_spot_orden_con_ejecucion_positiva_y_estado_incompatible_bloquea(
+        tmp_path, status):
+    fills = _csv(tmp_path, "fills.csv", SPOT_H, [
+        ["42", "2025-01-01 10:00:00", "XRPEUR", "BUY", "2",
+         "4XRP", "8EUR", "0XRP", "", ""],
+    ])
+    orders = _csv(tmp_path, "orders.csv", SPOT_ORDER_H, [
+        ["2025-01-01 09:59:59", "42", "XRPEUR", "Limit", "BUY", "2",
+         "10XRP", "2025-01-01 10:00:00", "4XRP", "2", "8EUR", status],
+    ])
+    c = _classify([fills, orders])
+    assert "spot_orders_ejecutadas_sin_fills_completos" in (
+        c.fuentes_materiales_no_soportadas
+    )
+
+
+@pytest.mark.parametrize("status", ["Canceled", "Expired", "Partially Filled"])
+def test_spot_orden_parcial_cancelada_o_expirada_con_fills_cuadrados(
+        tmp_path, status):
+    fills = _csv(tmp_path, "fills.csv", SPOT_H, [
+        ["42", "2025-01-01 10:00:00", "XRPEUR", "BUY", "2",
+         "4XRP", "8EUR", "0XRP", "", ""],
+    ])
+    orders = _csv(tmp_path, "orders.csv", SPOT_ORDER_H, [
+        ["2025-01-01 09:59:59", "42", "XRPEUR", "Limit", "BUY", "2",
+         "10XRP", "2025-01-01 10:00:00", "4XRP", "2", "8EUR", status],
+    ])
+    c = _classify([fills, orders])
+    assert "spot_orders_ejecutadas_sin_fills_completos" not in (
+        c.fuentes_materiales_no_soportadas
+    )
+
+
 def test_tx_fee_no_conciliada_con_spot_no_se_descarta(tmp_path):
     spot = _csv(tmp_path, "spot.csv", SPOT_H, [
         ["42", "2025-01-01 10:00:00", "XRPEUR", "BUY", "2", "10XRP", "20EUR", "0XRP", "", ""],
