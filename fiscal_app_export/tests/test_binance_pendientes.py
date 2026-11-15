@@ -408,17 +408,19 @@ def test_diagnostico_orden_intrasegundo_exige_evidencia_sin_promediar():
 
 
 def test_diagnostico_retiro_cripto_pide_origen_y_no_infiere_venta():
-    report = diagnosticar_pendientes_binance(_clasificador(
-        movimientos=[SimpleNamespace(
-            subtipo="Retiro cripto", activo="PRIVATE", cantidad=-3,
-        )],
-    ))
-    assert _codes(report) == {"retiros_destino"}
-    issue = report["incidencias"][0]
-    assert "cartera" in issue["siguiente_paso"]
-    assert "No registres automáticamente" in issue["siguiente_paso"]
-    assert "PRIVATE" not in str(report)
-    assert report["validez_fiscal_acreditada"] is False
+    for amount in (-3.0, 0.0):
+        # Decimal 1e-400 can become float 0.0. Source identity still blocks.
+        report = diagnosticar_pendientes_binance(_clasificador(
+            movimientos=[SimpleNamespace(
+                subtipo="Retiro cripto", activo="PRIVATE", cantidad=amount,
+            )],
+        ))
+        assert _codes(report) == {"retiros_destino"}
+        issue = report["incidencias"][0]
+        assert "cartera" in issue["siguiente_paso"]
+        assert "No registres automáticamente" in issue["siguiente_paso"]
+        assert "PRIVATE" not in str(report)
+        assert report["validez_fiscal_acreditada"] is False
 
 
 def test_diagnostico_carteras_spot_funding_una_sola_incidencia():
