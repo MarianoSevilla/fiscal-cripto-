@@ -28,6 +28,7 @@ import fifo_pdf_lifecycle as _pdf_lifecycle
 import traceback
 import threading
 from datetime import datetime, timedelta
+from decimal import Decimal
 from zoneinfo import ZoneInfo
 from flask import Flask, request, jsonify, send_file, send_from_directory, redirect, url_for, render_template, session, abort, g
 from flask_limiter import Limiter
