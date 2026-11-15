@@ -732,6 +732,61 @@ def test_binance_permuta_tras_fills_mismo_segundo_coste_distinto_no_emite_pdf(
     }
 
 
+def test_binance_convert_lotes_simultaneos_costes_distintos_solo_bloquean_al_consumirse(
+        client, usuario, monkeypatch):
+    """No elegir arbitrariamente qué lote USDC creado por Convert sale primero."""
+    from datetime import timezone
+    from decimal import Decimal
+    from binance_eur_valuation import BinanceHistoricalEURPrices, TradePriceEvidence
+
+    at = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
+    prices = BinanceHistoricalEURPrices([
+        TradePriceEvidence("XRP", "EUR", Decimal("2"), at, 1, "a"*64),
+        TradePriceEvidence("BTC", "EUR", Decimal("100"), at, 2, "b"*64),
+        TradePriceEvidence("USDC", "EUR", Decimal("0.9"), at, 3, "c"*64),
+    ])
+    monkeypatch.setitem(flask_app.config, "BINANCE_VERIFIED_MARKET_PRICES", prices)
+    _login(client)
+    buys = (
+        SPOT_HEADER
+        + "buy-xrp,2024-12-01 10:00:00,XRPEUR,BUY,2,5XRP,10EUR,0XRP,,\n"
+        + "buy-btc,2024-12-02 10:00:00,BTCEUR,BUY,100,1BTC,100EUR,0BTC,,\n"
+    )
+    sale = "sell-usdc,2025-02-01 10:00:00,USDCEUR,SELL,1,5USDC,5EUR,0EUR,,\n"
+    convert = (
+        CONVERT_HEADER
+        + "2025-01-01 13:00:00,SPOT,XRPUSDC,Instant,"
+        "1 XRP,2 USDC,,,,Successful\n"
+        + "2025-01-01 13:00:00,SPOT,BTCUSDC,Instant,"
+        "0.05 BTC,10 USDC,,,,Successful\n"
+    ).encode("utf-8-sig")
+
+    def submit(spot_text):
+        return client.post(
+            "/api/binance/analizar",
+            data={"csv": [(io.BytesIO(spot_text.encode("utf-8-sig")),
+                           "Binance-Spot-(UTC+1).csv"),
+                          (io.BytesIO(convert), "Binance-Convert-(UTC+1).csv")],
+                  "ejercicio": "2025", "nombre": "Ensayo Convert sintético"},
+            content_type="multipart/form-data",
+        )
+
+    # Si los lotes no se consumen después, su orden no altera el FIFO.
+    without_disposal = submit(buys)
+    assert without_disposal.status_code == 200, without_disposal.get_data(as_text=True)[:500]
+    assert "token" in without_disposal.get_json()
+
+    # La venta parcial posterior sí depende de qué lote se consuma primero:
+    # 2 USDC a 1 EUR/u y 10 USDC a 0,9 EUR/u carecen de orden acreditado.
+    with_disposal = submit(buys + sale)
+    assert with_disposal.status_code == 422, with_disposal.get_data(as_text=True)[:500]
+    payload = with_disposal.get_json()
+    assert "token" not in payload
+    assert "fifo_orden_intrasegundo" in {
+        item["codigo"] for item in payload["diagnostico_binance"]["incidencias"]
+    }
+
+
 def test_binance_2025_position_pdf_ignores_2026_with_full_history(client, usuario):
     """IRPF 2025 no puede mostrar en posición el saldo posterior de 2026."""
     _login(client)
