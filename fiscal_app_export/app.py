@@ -1308,6 +1308,50 @@ def _pipeline_motor(clasificador, *, binance_market_prices=None) -> MotorFIFO:
             priced_swaps = valorar_permutas_nativas(clasificador, binance_market_prices)
             if len(priced_swaps) != len(clasificador.swaps):
                 raise BinancePriceEvidenceError("No están valoradas todas las permutas Binance")
+            # Dos adquisiciones al mismo segundo pueden crear lotes con
+            # distinto coste unitario: esto también ocurre con Convert, o
+            # mezclando una compra EUR y una permuta que recibe el mismo
+            # activo. No escoger el orden del CSV cuando después se consumen
+            # esos lotes; el importe FIFO de una venta dependería de ello.
+            acquired_unit_costs = {}
+            for event in clasificador.intercambios_nativos:
+                if event.given_asset == "EUR" and event.received_asset != "EUR":
+                    net_qty = event.received_amount - (
+                        event.fee_amount if event.fee_asset == event.received_asset
+                        else Decimal("0")
+                    )
+                    if net_qty <= 0:
+                        raise BinancePriceEvidenceError(
+                            "Adquisición EUR sin cantidad neta verificable"
+                        )
+                    eur_cost = event.given_amount + (
+                        event.fee_amount if event.fee_asset == "EUR"
+                        else Decimal("0")
+                    )
+                    acquired_unit_costs.setdefault(
+                        (event.local_time, event.received_asset), set()
+                    ).add(eur_cost / net_qty)
+            for priced in priced_swaps:
+                event = priced.source
+                acquired_unit_costs.setdefault(
+                    (event.local_time, event.received_asset), set()
+                ).add(priced.valuation.fiscal_value_eur / event.received_amount)
+            latest_disposal = {}
+            for event in clasificador.intercambios_nativos:
+                if event.given_asset != "EUR" and event.given_asset != event.received_asset:
+                    latest_disposal[event.given_asset] = max(
+                        event.local_time, latest_disposal.get(event.given_asset, "")
+                    )
+            if any(
+                len(unit_costs) > 1 and latest_disposal.get(asset, "") > at
+                for (at, asset), unit_costs in acquired_unit_costs.items()
+            ):
+                marker = "binance_fifo_lotes_mismo_segundo_precio_distinto"
+                if marker not in clasificador.fuentes_materiales_no_soportadas:
+                    clasificador.fuentes_materiales_no_soportadas.append(marker)
+                raise BinancePriceEvidenceError(
+                    "Orden de lotes recibidos por Spot/Convert no acreditado"
+                )
             # El CSV de órdenes carece de milisegundos. Si existen varias
             # disposiciones del mismo activo dentro del mismo segundo, no
             # se conoce qué hecho consumió cada lote en primer lugar.
