@@ -1972,6 +1972,20 @@ def _validar_aceptacion_fifo(motor, clasificador=None) -> None:
                 "cuyos lotes de adquisición, fechas y costes no están "
                 "reconstruidos en el FIFO. Requiere conciliar su origen."
             )
+        # Un retiro de cripto no demuestra que el destino sea una cartera
+        # propia. Puede ser traspaso neutral, pago o transmisión; omitirlo
+        # del FIFO y presentar la posición como acreditada sería inseguro.
+        if any(
+            getattr(m, "subtipo", "") == "Retiro cripto"
+            and getattr(m, "cantidad", 0) < 0
+            for m in getattr(clasificador, "movimientos", ())
+        ):
+            raise ValueError(
+                "Datos fiscales no seguros: Binance contiene retiradas de "
+                "criptomonedas sin acreditar su destino y tratamiento en el "
+                "inventario global. Requiere conciliar cartera receptora o "
+                "transmisión, según corresponda."
+            )
         if (getattr(clasificador, "valoraciones_pendientes", ())
                 and not priced_swaps):
             raise ValueError(
