@@ -693,6 +693,45 @@ def test_binance_same_second_different_lot_cost_blocks_partial_sale(client, usua
     }
 
 
+def test_binance_permuta_tras_fills_mismo_segundo_coste_distinto_no_emite_pdf(
+        client, usuario, monkeypatch):
+    """Ni con cotizaciones EUR válidas se puede elegir un lote sin orden."""
+    from datetime import timezone
+    from decimal import Decimal
+    from binance_eur_valuation import BinanceHistoricalEURPrices, TradePriceEvidence
+
+    at = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
+    prices = BinanceHistoricalEURPrices([
+        TradePriceEvidence("XRP", "EUR", Decimal("2"), at, 1, "a"*64),
+        TradePriceEvidence("USDC", "EUR", Decimal("0.9"), at, 2, "b"*64),
+    ])
+    monkeypatch.setitem(flask_app.config, "BINANCE_VERIFIED_MARKET_PRICES", prices)
+    _login(client)
+    spot = (
+        SPOT_HEADER
+        + "42,2024-12-01 10:00:00,XRPEUR,BUY,2,2XRP,4EUR,0XRP,,\n"
+        + "42,2024-12-01 10:00:00,XRPEUR,BUY,3,2XRP,6EUR,0XRP,,\n"
+    ).encode("utf-8-sig")
+    convert = (
+        CONVERT_HEADER
+        + "2025-01-01 13:00:00,SPOT,XRPUSDC,Instant,"
+        "1 XRP,2 USDC,,,,Successful\n"
+    ).encode("utf-8-sig")
+    response = client.post(
+        "/api/binance/analizar",
+        data={"csv": [(io.BytesIO(spot), "Binance-Spot-(UTC+1).csv"),
+                      (io.BytesIO(convert), "Binance-Convert-(UTC+1).csv")],
+              "ejercicio": "2025", "nombre": "Ensayo permuta intrasegundo"},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 422
+    payload = response.get_json()
+    assert "token" not in payload
+    assert "fifo_orden_intrasegundo" in {
+        item["codigo"] for item in payload["diagnostico_binance"]["incidencias"]
+    }
+
+
 def test_binance_2025_position_pdf_ignores_2026_with_full_history(client, usuario):
     """IRPF 2025 no puede mostrar en posición el saldo posterior de 2026."""
     _login(client)
