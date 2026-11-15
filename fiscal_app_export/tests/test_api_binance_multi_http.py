@@ -359,6 +359,34 @@ def test_http_solo_deposito_externo_no_emite_posicion_fifo_vacia(client, usuario
 
 
 
+def test_http_retiro_cripto_sin_destino_acreditado_bloquea_fifo(client, usuario):
+    """Ni una compra local documenta si un retiro fue traslado o pago."""
+    _login(client)
+    spot = (
+        SPOT_HEADER
+        + "buy,2025-01-01 10:00:00,XRPEUR,BUY,2,10XRP,20EUR,0XRP,,\n"
+    ).encode("utf-8-sig")
+    withdrawal = (
+        "Tiempo,Moneda,Red,Cantidad,Dirección,TXID,Tarifa,Estado\n"
+        "2025-01-02 10:00:00,XRP,XRP,3,synthetic-address,synthetic-tx,0,Completed\n"
+    ).encode("utf-8-sig")
+    response = client.post(
+        "/api/binance/analizar",
+        data={"csv": [
+            (io.BytesIO(spot), "Binance-Spot-(UTC+1).csv"),
+            (io.BytesIO(withdrawal), "Binance-Withdraw-(UTC+1).csv"),
+        ], "ejercicio": "2025", "nombre": "Retiro sin origen sintético"},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 422, response.get_data(as_text=True)[:400]
+    payload = response.get_json()
+    assert "retiradas" in payload["error"].lower()
+    assert "token" not in payload and "resumen" not in payload
+    assert "retiros_destino" in {
+        i["codigo"] for i in payload["diagnostico_binance"]["incidencias"]
+    }
+
+
 def test_http_earn_recompensa_no_se_emite_como_fifo_vacio(client, usuario):
     """Fuente Earn reconocida; sin base EUR de recompensa nunca hay PDF."""
     _login(client)
