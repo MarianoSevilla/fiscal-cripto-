@@ -111,11 +111,48 @@ def test_cuatro_zip_earn_se_reconocen_sin_fabricar_fifo(tmp_path):
             Path(p).unlink(missing_ok=True)
 
 
-@pytest.mark.parametrize("value", ["0", "-1", "1,23", "1,2.3", "NaN", "Infinity"])
+@pytest.mark.parametrize("value", ["-1", "1,23", "1,2.3", "NaN", "Infinity"])
 def test_earn_cantidades_invalidas_no_se_omiten(tmp_path, value):
     path = _fake_csv(tmp_path, "reward.csv", REW, [
         ["2025-05-03", "ABC", value, "Real-time APR Rewards"],
     ])
+    with pytest.raises(BinanceMultiUserError) as exc:
+        ClasificadorBinanceMulti([str(path)]).clasificar()
+    assert exc.value.code == "invalid_earn_amount"
+
+
+def test_earn_ticker_t_y_recompensa_cero_son_validos_sin_lote_inventado(tmp_path):
+    """All fixtures synthetic: a one-letter ticker and a zero rewards row."""
+    sub = _fake_csv(tmp_path, "sub.csv", SUB, [
+        ["2024-01-01 10:00:00", "T", "T", "2", "Auto", "SPOT", "Success"],
+    ])
+    rewards = _fake_csv(tmp_path, "reward.csv", REW, [
+        ["2024-01-01", "T", "0", "Bonus Tiered APR Rewards"],
+        ["2024-01-02", "T", "0.00000001", "Real-time APR Rewards"],
+    ])
+    c = ClasificadorBinanceMulti([str(sub), str(rewards)]).clasificar()
+    assert len(c.earn_events) == 2
+    assert all(e.asset == "T" for e in c.earn_events)
+    assert [e.amount for e in c.earn_events] == [
+        Decimal("2"), Decimal("0.00000001")]
+    assert c.earn_zero_reward_rows == 1
+    assert c.resumen_archivos["recompensas_earn_cantidad_cero"] == 1
+    assert c.resumen_archivos["earn_flexible_rewards"]["registros"] == 2
+    assert c.compraventas == []
+    assert "earn_flexible_requiere_inventario_y_valoracion_fiscal" in (
+        c.fuentes_materiales_no_soportadas
+    )
+
+
+@pytest.mark.parametrize("source,headers,row", [
+    ("subscription", SUB,
+     ["2025-05-03 10:00:00", "ABC", "ABC", "0", "Auto", "SPOT", "Success"]),
+    ("redemption", RED,
+     ["2025-05-03 10:00:00", "ABC", "ABC", "0", "Fast", "SPOT", "Success"]),
+])
+def test_earn_cantidad_cero_de_principal_sigue_rechazada(
+        tmp_path, source, headers, row):
+    path = _fake_csv(tmp_path, f"{source}.csv", headers, [row])
     with pytest.raises(BinanceMultiUserError) as exc:
         ClasificadorBinanceMulti([str(path)]).clasificar()
     assert exc.value.code == "invalid_earn_amount"
