@@ -2984,10 +2984,19 @@ def analizar_binance_multi():
             # privados o trazas internas de validación.
             from binance_eur_valuation import BinancePriceEvidenceError
             if isinstance(exc, BinancePriceEvidenceError):
-                payload = {
-                    "error": "Datos fiscales no seguros: no se ha podido acreditar "
-                             "la valoración EUR de una o varias permutas Binance."
-                }
+                markers = set(getattr(
+                    clasificador, "fuentes_materiales_no_soportadas", ()
+                ) or ()) if clasificador is not None else set()
+                if markers & {
+                    "binance_orden_intrasegundo_incierto",
+                    "binance_fifo_lotes_mismo_segundo_precio_distinto",
+                }:
+                    message = ("Datos fiscales no seguros: no se ha podido acreditar "
+                               "el orden temporal de las operaciones Binance.")
+                else:
+                    message = ("Datos fiscales no seguros: no se ha podido acreditar "
+                               "la valoración EUR de una o varias permutas Binance.")
+                payload = {"error": message}
                 # La vista de diagnóstico omite importes, activos, fechas e
                 # identificadores privados. También es útil cuando el fallo
                 # de cotización ocurre antes del validador fiscal posterior.
