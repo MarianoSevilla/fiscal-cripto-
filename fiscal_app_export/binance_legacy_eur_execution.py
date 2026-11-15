@@ -50,6 +50,13 @@ def resolve_legacy_eur_trades(evidence: BinanceLegacyEvidence,
     remove: set[tuple[str, str]] = set()
     mirrored = unresolved = 0
     for group in evidence.groups:
+        # Buy/Sell/Fee in Funding, Margin, Futures or Earn is not a Spot
+        # execution. Matching two EUR legs cannot by itself establish its
+        # fiscal identity, nor justify deleting a supposed Spot mirror.
+        # Accept only the wallet explicitly documented as Spot.
+        if group.account.strip().casefold() != "spot":
+            unresolved += 1
+            continue
         if (group.timestamp, group.account) in blocked:
             unresolved += 1
             continue
