@@ -411,6 +411,35 @@ def test_http_retiro_cripto_sin_destino_acreditado_bloquea_fifo(
     }
 
 
+def test_http_binance_deposito_funding_no_acepta_espejo_spot(
+        client, usuario):
+    """A Funding ledger deposit must not disappear behind native Spot amount."""
+    _login(client)
+    native = (
+        "Tiempo,Moneda,Red,Cantidad,Dirección,TXID,Estado\n"
+        "2025-01-02 10:00:00,XRP,XRP,10,synthetic-address,"
+        "synthetic-id,Completed\n"
+    ).encode("utf-8-sig")
+    ledger = (
+        "ID de usuario,Tiempo,Cuenta,Operación,Moneda,Cambio,Observación\n"
+        "synthetic,2025-01-02 10:00:00,Funding,Deposit,XRP,10,\n"
+    ).encode("utf-8-sig")
+    response = client.post(
+        "/api/binance/analizar",
+        data={"csv": [
+            (io.BytesIO(native), "Binance-Deposits-(UTC+1).csv"),
+            (io.BytesIO(ledger), "Binance-TX-(UTC+1).csv"),
+        ], "ejercicio": "2025", "nombre": "Cross-wallet sintético"},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 422, response.get_data(as_text=True)[:500]
+    body = response.get_json()
+    assert "token" not in body
+    assert "cartera_binance_no_conciliada" in {
+        item["codigo"] for item in body["diagnostico_binance"]["incidencias"]
+    }
+
+
 def test_http_earn_recompensa_no_se_emite_como_fifo_vacio(client, usuario):
     """Fuente Earn reconocida; sin base EUR de recompensa nunca hay PDF."""
     _login(client)
