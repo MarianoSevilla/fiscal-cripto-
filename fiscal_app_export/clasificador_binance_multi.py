@@ -1150,6 +1150,26 @@ class ClasificadorBinanceMulti:
         recv_asset = recv_asset.upper()
         fee_asset = fee_asset.upper() if fee_asset else None
 
+        # The shared FIFO engine stores quantities and monetary totals as
+        # float. Never silently turn a positive native Decimal into zero or
+        # round away units before recording the fiscal fact. This preflight
+        # runs before ANY native totals, fee or inventory mutation.
+        try:
+            exact_float_bridge = all(
+                Decimal(str(float(value))) == value
+                for value in (give_amount, recv_amount, fee_amount)
+            )
+        except (ValueError, TypeError, OverflowError, InvalidOperation):
+            exact_float_bridge = False
+        if not exact_float_bridge:
+            raise BinanceMultiUserError(
+                "binance_float_precision_loss",
+                "Binance contiene cantidades económicas que el motor FIFO "
+                "actual no puede representar sin perder unidades. No se "
+                "puede emitir el informe con importes redondeados.",
+                category="parser_error",
+            )
+
         if source.startswith("Spot "):
             source_group = "spot"
         elif source == "Convert":
