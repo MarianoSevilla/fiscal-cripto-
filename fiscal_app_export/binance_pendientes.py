@@ -173,10 +173,13 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
 
     if "spot_orders_ejecutadas_sin_fills_completos" in markers:
         add(
-            "spot_fills", "archivo", "Faltan ejecuciones Spot",
-            "Hay órdenes Spot ejecutadas sin el detalle completo de sus operaciones.",
-            "Descarga el Historial de operaciones Spot (ejecuciones o fills) "
-            "de las fechas correspondientes y añádelo a los archivos.",
+            "spot_fills", "archivo", "Órdenes y ejecuciones Spot sin conciliar",
+            "El conjunto de órdenes Spot no coincide completamente con las "
+            "ejecuciones (fills) aportadas. Puede faltar el detalle de una "
+            "orden o el archivo de órdenes correspondiente a algún año.",
+            "Aporta los historiales de órdenes Spot y de ejecuciones Spot "
+            "que cubran los mismos períodos, incluidos años anteriores "
+            "necesarios para el FIFO. No suprimas fills sin conciliarlos.",
         )
 
     earn = getattr(clasificador, "earn_reconciliation", None)
