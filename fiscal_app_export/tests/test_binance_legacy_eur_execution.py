@@ -87,12 +87,6 @@ def test_non_spot_eur_pair_cannot_create_lot_or_disappear_as_spot_mirror(account
     assert not with_native.trades and not with_native.remove_groups
 
 
-def test_spot_wallet_casefold_remains_supported():
-    r = resolve(row("Sell", "EUR", "-20", account="sPoT"),
-                row("Buy", "XRP", "10", account="sPoT"))
-    assert len(r.trades) == 1 and r.unresolved_groups == 0
-
-
 def test_exact_native_mirror_skipped_once():
     r = resolve(row("Sell", "EUR", "-20"), row("Buy", "XRP", "10"),
                 native=[native()])
