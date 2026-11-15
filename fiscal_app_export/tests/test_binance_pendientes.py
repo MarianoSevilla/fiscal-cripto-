@@ -422,6 +422,20 @@ def test_diagnostico_legacy_eur_cartera_no_spot_sin_datos_privados():
     assert "binance_legacy_eur_cartera_no_spot" not in str(report)
 
 
+def test_diagnostico_retiro_cripto_pide_origen_y_no_infiere_venta():
+    report = diagnosticar_pendientes_binance(_clasificador(
+        movimientos=[SimpleNamespace(
+            subtipo="Retiro cripto", activo="PRIVATE", cantidad=-3,
+        )],
+    ))
+    assert _codes(report) == {"retiros_destino"}
+    issue = report["incidencias"][0]
+    assert "cartera" in issue["siguiente_paso"]
+    assert "No registres automáticamente" in issue["siguiente_paso"]
+    assert "PRIVATE" not in str(report)
+    assert report["validez_fiscal_acreditada"] is False
+
+
 def test_diagnostico_carteras_spot_funding_una_sola_incidencia():
     report = diagnosticar_pendientes_binance(_clasificador(
         fuentes_materiales_no_soportadas=[
