@@ -1858,6 +1858,17 @@ class ClasificadorBinanceMulti:
             self.legacy_trade_evidence, self.intercambios_nativos,
             blocked_groups=blocked,
         )
+        # An EUR-looking pair in Funding, Margin, Futures or Earn cannot be
+        # accepted as a Spot purchase or silently erased as its mirror.
+        # Retain a generic diagnostic marker, never a private wallet label.
+        if any(
+            group.classification == "single_pair_unvalued"
+            and group.account.strip().casefold() != "spot"
+            for group in self.legacy_trade_evidence.groups
+        ):
+            self.fuentes_materiales_no_soportadas.append(
+                "binance_legacy_eur_cartera_no_spot"
+            )
         for trade in self.legacy_eur_trade_resolution.trades:
             self._register_exchange(
                 fecha=trade.timestamp,
