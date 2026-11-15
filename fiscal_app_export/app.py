@@ -1916,6 +1916,30 @@ def _validar_aceptacion_fifo(motor, clasificador=None) -> None:
     # falte la valoración fiscal EUR. Nunca emitir un PDF parcial ni asumir
     # paridad de stablecoins / coste cero / comisión irrelevante.
     if isinstance(clasificador, ClasificadorBinanceMulti):
+        # Without an explicit, valid UTC offset per source file, two local
+        # seconds cannot safely be compared across ZIP/CSV exports. This is
+        # a fiscal-acceptance gate, not a parser restriction: users can still
+        # obtain the file diagnosis without inventing a timezone.
+        from binance_eur_valuation import (
+            BinancePriceEvidenceError, binance_export_time_to_utc,
+        )
+        economic_files = {
+            filename
+            for rows in clasificador._source_rows.values()
+            for _row, filename in rows
+        }
+        try:
+            for filename in economic_files:
+                binance_export_time_to_utc("2025-01-01 12:00:00", filename)
+        except BinancePriceEvidenceError as exc:
+            marker = "binance_zona_horaria_sin_acreditar"
+            if marker not in clasificador.fuentes_materiales_no_soportadas:
+                clasificador.fuentes_materiales_no_soportadas.append(marker)
+            raise ValueError(
+                "Datos fiscales no seguros: los archivos Binance contienen "
+                "operaciones sin un desplazamiento UTC explícito y válido. "
+                "No se puede acreditar el orden cronológico del FIFO."
+            ) from exc
         priced_swaps = getattr(clasificador, "_binance_verified_swaps", ())
         if priced_swaps:
             from binance_valuation_audit import BinanceSwapAuditRecord
