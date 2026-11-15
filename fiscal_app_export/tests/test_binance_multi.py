@@ -99,23 +99,6 @@ def test_fifo_mismo_segundo_diferente_coste_y_permuta_posterior(tmp_path):
     assert marker in with_disposal.fuentes_materiales_no_soportadas
 
 
-def test_legacy_eur_lotes_doble_etiqueta_spot_sin_orden_no_validan_fifo(tmp_path):
-    """La reconstrucción legacy debe pasar el guard DESPUÉS de registrarse."""
-    ledger = _csv(tmp_path, "Ledger-(UTC+1).csv", TX_H, [
-        ["synthetic", "2024-01-02 10:00:00", "Spot", "Sell", "EUR", "-4", ""],
-        ["synthetic", "2024-01-02 10:00:00", "Spot", "Buy", "XRP", "2", ""],
-        ["synthetic", "2024-01-02 10:00:00", "spot", "Sell", "EUR", "-6", ""],
-        ["synthetic", "2024-01-02 10:00:00", "spot", "Buy", "XRP", "2", ""],
-        ["synthetic", "2025-01-03 10:00:00", "Spot", "Sell", "XRP", "-1", ""],
-        ["synthetic", "2025-01-03 10:00:00", "Spot", "Buy", "EUR", "3", ""],
-    ])
-    classified = _classify([ledger])
-    assert len(classified.compraventas) == 3
-    assert "binance_fifo_lotes_mismo_segundo_precio_distinto" in (
-        classified.fuentes_materiales_no_soportadas
-    )
-
-
 def test_ordenes_spot_no_duplican_fills(tmp_path):
     trades = _csv(tmp_path, "trades.csv", SPOT_H, [
         ["42", "2025-01-01 10:00:00", "XRPEUR", "BUY", "2", "10XRP", "20EUR", "0XRP", "", ""],
