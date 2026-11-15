@@ -143,19 +143,6 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
             "duplicados sin correspondencia verificable.",
         )
 
-    if "binance_legacy_eur_cartera_no_spot" in markers:
-        add(
-            "legacy_eur_cartera_no_spot", "documentacion",
-            "Compras o ventas EUR antiguas en una cartera distinta de Spot",
-            "El historial general contiene pares Buy/Sell con EUR en una "
-            "cartera distinta de Spot. Sus apuntes no acreditan por sí solos "
-            "una operación Spot ni permiten descartar un duplicado.",
-            "Aporta el justificante original y el historial de la cartera "
-            "correspondiente para identificar el tipo económico de operación "
-            "y su posible relación con Spot. No traslades esas operaciones "
-            "a Spot manualmente ni las suprimas del CSV.",
-        )
-
     if "spot_orders_ejecutadas_sin_fills_completos" in markers:
         add(
             "spot_fills", "archivo", "Faltan ejecuciones Spot",
@@ -413,7 +400,6 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
     # No convertir marcadores internos no explicados en un falso visto bueno.
     known = {
         "spot_orders_ejecutadas_sin_fills_completos",
-        "binance_legacy_eur_cartera_no_spot",
         "binance_fifo_lotes_mismo_segundo_precio_distinto",
         "binance_orden_intrasegundo_incierto",
         "binance_tx_cartera_distinta_no_conciliada",
