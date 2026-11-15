@@ -712,7 +712,6 @@ class ClasificadorBinanceMulti:
         self._process_fiat_cash()
         self._process_earn_flexible()
         self._process_optional_sources()
-        self._guard_eur_intrasecond_order()
         # Las 2 patas contables de Convert son espejo, no 2 permutas nuevas.
         # Se exige correspondencia unívoca cuando ambas fuentes cubren el
         # mismo día. No se infiere un instante de ejecución fiscal desde ellas.
@@ -733,6 +732,11 @@ class ClasificadorBinanceMulti:
                 "binance_convert_fuentes_no_conciliadas"
             )
         self._process_transaction_history()
+        # El historial legacy puede aportar compras y ventas EUR adicionales;
+        # comprobar el orden solo después de registrar TODAS las fuentes.
+        # De otro modo dos lotes legacy con precios distintos podrían llegar
+        # al motor FIFO sin detectar su secuencia intrasegundo incierta.
+        self._guard_eur_intrasecond_order()
         # Cargos Spot/EUR en BNB y otras monedas: conservar las dos fuentes.
         # El cotejo por multiconjunto no demuestra qué lote BNB se consumió
         # ni cuál era el valor de la comisión expresado en EUR.
