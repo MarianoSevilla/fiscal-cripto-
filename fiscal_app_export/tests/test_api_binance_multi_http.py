@@ -933,6 +933,7 @@ def test_binance_precio_eur_verificado_no_acepta_compra_y_swap_mismo_segundo(
     )
     assert response.status_code == 422
     payload = response.get_json()
+    assert "orden temporal" in payload["error"]
     assert "token" not in payload
     assert "fifo_orden_intrasegundo" in {
         item["codigo"] for item in payload["diagnostico_binance"]["incidencias"]
@@ -972,6 +973,7 @@ def test_binance_dos_permutas_mismo_segundo_requieren_orden_y_diagnostico(
     )
     assert response.status_code == 422, response.get_data(as_text=True)[:450]
     payload = response.get_json()
+    assert "orden temporal" in payload["error"]
     assert "token" not in payload
     assert "fifo_orden_intrasegundo" in {
         item["codigo"] for item in payload["diagnostico_binance"]["incidencias"]
