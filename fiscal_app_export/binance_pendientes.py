@@ -320,7 +320,6 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
 
     if any(
         getattr(m, "subtipo", "") == "Depósito cripto"
-        and getattr(m, "cantidad", 0) > 0
         for m in getattr(clasificador, "movimientos", ())
     ):
         add(
@@ -334,7 +333,6 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
 
     if any(
         getattr(m, "subtipo", "") == "Retiro cripto"
-        and getattr(m, "cantidad", 0) < 0
         for m in getattr(clasificador, "movimientos", ())
     ):
         add(
