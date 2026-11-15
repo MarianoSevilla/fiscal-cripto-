@@ -77,6 +77,28 @@ def test_spot_preserva_fills_y_fee_en_activo_recibido(tmp_path):
     assert c.comisiones_pendientes == []
 
 
+def test_fifo_mismo_segundo_diferente_coste_y_permuta_posterior(tmp_path):
+    """Una permuta posterior también consume lotes FIFO, no solo ventas EUR."""
+    spot = _csv(tmp_path, "Binance-Spot-(UTC+1).csv", SPOT_H, [
+        ["42", "2024-12-01 10:00:00", "XRPEUR", "BUY", "2",
+         "2XRP", "4EUR", "0XRP", "", ""],
+        ["42", "2024-12-01 10:00:00", "XRPEUR", "BUY", "3",
+         "2XRP", "6EUR", "0XRP", "", ""],
+    ])
+    marker = "binance_fifo_lotes_mismo_segundo_precio_distinto"
+    without_disposal = _classify([spot])
+    assert marker not in without_disposal.fuentes_materiales_no_soportadas
+
+    convert = _csv(tmp_path, "Binance-Convert-(UTC+1).csv", CONVERT_H, [
+        ["2025-01-01 13:00:00", "SPOT", "XRPUSDC", "Instant",
+         "1 XRP", "2 USDC", "", "", "", "Successful"],
+    ])
+    with_disposal = _classify([spot, convert])
+    assert len(with_disposal.swaps) == 1
+    assert with_disposal.swaps[0].activo_entregado == "XRP"
+    assert marker in with_disposal.fuentes_materiales_no_soportadas
+
+
 def test_ordenes_spot_no_duplican_fills(tmp_path):
     trades = _csv(tmp_path, "trades.csv", SPOT_H, [
         ["42", "2025-01-01 10:00:00", "XRPEUR", "BUY", "2", "10XRP", "20EUR", "0XRP", "", ""],
