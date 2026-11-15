@@ -167,6 +167,29 @@ def test_binance_fuentes_mixtas_con_zona_desconocida_bloquean_fifo(
     }
 
 
+def test_binance_fiat_bancario_sin_offset_no_bloquea_spot_fiscal(
+        client, usuario):
+    """Bank cash does not create fiscal crypto lots or set their chronology."""
+    _login(client)
+    bank_cash = (
+        "Tiempo,Método,Importe de depósito,Recibir cantidad,"
+        "Tarifa,Estado,ID de transacción\n"
+        "2025-01-05 09:00:00,SEPA,100 EUR,99 EUR,1 EUR,Successful,synthetic\n"
+    ).encode("utf-8-sig")
+    response = client.post(
+        "/api/binance/analizar",
+        data={"csv": [
+            (io.BytesIO(_spot_csv()), "Binance-Spot-(UTC+1).csv"),
+            (io.BytesIO(bank_cash), "Bank-cash-without-UTC.csv"),
+        ], "ejercicio": "2025", "nombre": "Banco complementario sintético"},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 200, response.get_data(as_text=True)[:450]
+    body = response.get_json()
+    assert body["resumen"]["operaciones_con_resultado"] == 1
+    assert "token" in body
+
+
 def test_binance_spot_quantities_precision_loss_never_issue_pdf(client, usuario):
     """A valid Decimal with too many units cannot be silently rounded."""
     _login(client)
