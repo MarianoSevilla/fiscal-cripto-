@@ -115,14 +115,16 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
     }:
         add(
             "fifo_orden_intrasegundo", "documentacion",
-            "Orden de ejecuciones Spot insuficientemente acreditado",
-            "Existen operaciones de un mismo criptoactivo en el mismo "
-            "segundo cuyo orden puede cambiar el coste FIFO de ventas "
-            "posteriores. El CSV exportado no demuestra su secuencia exacta.",
-            "Aporta un registro original de ejecuciones con identificador "
-            "único y orden temporal acreditado, o un justificante equivalente "
-            "de Binance. No reordenes los fills manualmente ni promedies "
-            "sus costes para forzar la emisión del PDF.",
+            "Orden temporal de operaciones Binance no acreditado",
+            "Existen operaciones Spot o Convert de un mismo criptoactivo en "
+            "el mismo segundo cuyo orden puede cambiar el coste FIFO de "
+            "transmisiones posteriores. El CSV exportado no demuestra su "
+            "secuencia exacta.",
+            "Aporta el detalle original de ejecuciones Spot o conversiones "
+            "Convert con identificador único y orden temporal acreditado, "
+            "o un justificante equivalente de Binance. Un ID de orden por "
+            "sí solo no prueba la secuencia. No reordenes las operaciones "
+            "manualmente ni promedies sus costes para generar el PDF.",
         )
 
     if markers & {
