@@ -30,6 +30,19 @@ def _codes(report):
     return {i["codigo"] for i in report["incidencias"]}
 
 
+def test_legacy_fiscal_no_valorable_tiene_diagnostico_sin_lotes_inventados():
+    r = diagnosticar_pendientes_binance(_clasificador(
+        fuentes_materiales_no_soportadas=[
+            "binance_legacy_tx_sin_valoracion_o_identidad"
+        ],
+    ))
+    assert {i["codigo"] for i in r["incidencias"]} == {
+        "historial_legacy_pendiente"
+    }
+    assert r["validez_fiscal_acreditada"] is False
+    assert "coste cero" in r["incidencias"][0]["descripcion"]
+
+
 def test_sin_marcadores_no_inventa_archivos_ni_autoriza_fifo():
     result = diagnosticar_pendientes_binance(_clasificador())
     assert result["estado"] == "pendiente_validacion"
