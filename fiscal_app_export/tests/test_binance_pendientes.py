@@ -30,6 +30,18 @@ def _codes(report):
     return {i["codigo"] for i in report["incidencias"]}
 
 
+def test_spot_ordenes_y_fills_pueden_faltar_en_ambos_sentidos():
+    r = diagnosticar_pendientes_binance(_clasificador(
+        fuentes_materiales_no_soportadas=[
+            "spot_orders_ejecutadas_sin_fills_completos"
+        ],
+    ))
+    item = next(i for i in r["incidencias"] if i["codigo"] == "spot_fills")
+    assert "órdenes" in item["descripcion"]
+    assert "ejecuciones" in item["descripcion"]
+    assert "mismos períodos" in item["siguiente_paso"]
+
+
 def test_legacy_fiscal_no_valorable_tiene_diagnostico_sin_lotes_inventados():
     r = diagnosticar_pendientes_binance(_clasificador(
         fuentes_materiales_no_soportadas=[
