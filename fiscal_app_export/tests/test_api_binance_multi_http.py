@@ -1402,6 +1402,9 @@ def test_binance_legacy_eur_otra_cartera_no_crea_fifo_ni_pdf(
     assert response.status_code == 422, response.get_data(as_text=True)[:400]
     payload = response.get_json()
     assert "token" not in payload and "resumen" not in payload
+    assert "legacy_eur_cartera_no_spot" in {
+        x["codigo"] for x in payload["diagnostico_binance"]["incidencias"]
+    }
 
 
 def test_binance_legacy_eur_con_fee_bnb_sigue_bloqueando_pdf(client, usuario):
