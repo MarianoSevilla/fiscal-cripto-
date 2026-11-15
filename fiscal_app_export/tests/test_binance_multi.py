@@ -567,6 +567,45 @@ def test_spot_sin_archivo_ordenes_acepta_fills_y_no_infiere_ordenes(tmp_path):
     assert not c.fuentes_materiales_no_soportadas
 
 
+@pytest.mark.parametrize("source_headers,native_row,ledger_op,ledger_qty", [
+    (DEPOSIT_H, ["2025-01-01 10:00:00", "XRP", "XRP", "10",
+                 "synthetic", "tx-id-1", "Completed"], "Deposit", "10"),
+    (WITHDRAW_H, ["2025-01-01 10:00:00", "XRP", "XRP", "10",
+                  "synthetic", "tx-id-1", "0", "Completed"], "Withdraw", "-10"),
+])
+@pytest.mark.parametrize("wallet", ["Funding", "Earn"])
+def test_transferencia_crypto_otra_cartera_no_se_borra_como_espejo_spot(
+        tmp_path, source_headers, native_row, ledger_op, ledger_qty, wallet):
+    """Equal second/asset/amount across wallets is not a transfer identity."""
+    source = _csv(tmp_path, "native.csv", source_headers, [native_row])
+    tx = _csv(tmp_path, "ledger.csv", TX_H, [
+        ["synthetic", "2025-01-01 10:00:00", wallet,
+         ledger_op, "XRP", ledger_qty, ""],
+    ])
+    c = _classify([source, tx])
+    assert "binance_transfer_cartera_distinta_no_conciliada" in (
+        c.fuentes_materiales_no_soportadas
+    )
+    assert c._binance_tx_unmatched_rows_count == 1
+    assert not any("se omitieron" in item for item in c.advertencias)
+
+
+def test_transferencia_crypto_spot_espejo_nativo_sigue_conciliando(tmp_path):
+    native = _csv(tmp_path, "native.csv", DEPOSIT_H, [
+        ["2025-01-01 10:00:00", "XRP", "XRP", "10",
+         "synthetic", "tx-id-1", "Completed"],
+    ])
+    ledger = _csv(tmp_path, "ledger.csv", TX_H, [
+        ["synthetic", "2025-01-01 10:00:00", "Spot",
+         "Deposit", "XRP", "10", ""],
+    ])
+    c = _classify([native, ledger])
+    assert c._binance_tx_unmatched_rows_count == 0
+    assert "binance_transfer_cartera_distinta_no_conciliada" not in (
+        c.fuentes_materiales_no_soportadas
+    )
+
+
 def test_dos_deposit_tx_con_una_transferencia_nativa_no_se_borran_ambos(tmp_path):
     dep = _csv(tmp_path, "deposit.csv", DEPOSIT_H, [
         ["2025-01-01 10:00:00", "XRP", "XRP", "10", "synthetic", "tx-id-1", "Completed"],
