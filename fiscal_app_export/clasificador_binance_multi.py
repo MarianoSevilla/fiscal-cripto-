@@ -393,7 +393,7 @@ def _decimal(raw: str, *, field: str) -> Decimal:
 _EARN_NUMBER = re.compile(r"^(?:[0-9]+|[0-9]{1,3}(?:,[0-9]{3})+)(?:\.[0-9]+)?$")
 
 
-def _earn_amount(raw: str) -> Decimal:
+def _earn_amount(raw: str, *, allow_zero: bool = False) -> Decimal:
     """Decimal exacto; separadores de miles solo con agrupación de 3."""
     val = str(raw or "").strip()
     if not _EARN_NUMBER.fullmatch(val):
@@ -403,7 +403,7 @@ def _earn_amount(raw: str) -> Decimal:
             category="parser_error",
         )
     value = Decimal(val.replace(",", ""))
-    if not value.is_finite() or value <= 0:
+    if not value.is_finite() or value < 0 or (value == 0 and not allow_zero):
         raise BinanceMultiUserError(
             "invalid_earn_amount",
             "Binance Earn contiene una cantidad no positiva o no finita.",
@@ -500,6 +500,7 @@ class ClasificadorBinanceMulti:
         self.comisiones_pendientes: List[dict] = []
         self.intercambios_nativos: List[BinanceNativeExchange] = []
         self.earn_events: List[BinanceEarnEvent] = []
+        self.earn_zero_reward_rows = 0
         self.earn_reconciliation = None  # diagnóstico no fiscal, en memoria
         self.earn_principal_only_audit = None
         self.earn_reward_reconciliation = None
@@ -551,6 +552,7 @@ class ClasificadorBinanceMulti:
         out = {k: v.as_dict() for k, v in self._sections.items()}
         out["no_reconocidos"] = self._unknown_files
         out["timezone_offsets"] = sorted(self._tz_offsets)
+        out["recompensas_earn_cantidad_cero"] = self.earn_zero_reward_rows
         if self.final_year is not None:
             out["ejercicio_corte"] = self.final_year
             out["registros_posteriores_excluidos"] = self.ignored_future_rows
@@ -1268,7 +1270,7 @@ class ClasificadorBinanceMulti:
                         category="parser_error",
                     )
                 asset = row.get("moneda", "").strip().upper()
-                if not re.fullmatch(r"[A-Z0-9]{2,20}", asset):
+                if not re.fullmatch(r"[A-Z0-9]{1,20}", asset):
                     raise BinanceMultiUserError(
                         "invalid_transfer_asset",
                         "Binance contiene una transferencia sin identificador de activo válido.",
@@ -1392,7 +1394,7 @@ class ClasificadorBinanceMulti:
                     )
 
                 asset = row.get("moneda", "").strip().upper()
-                if not re.fullmatch(r"[A-Z0-9]{2,20}", asset):
+                if not re.fullmatch(r"[A-Z0-9]{1,20}", asset):
                     raise BinanceMultiUserError(
                         "invalid_earn_asset",
                         "Binance Earn contiene un activo no reconocible.",
@@ -1406,10 +1408,23 @@ class ClasificadorBinanceMulti:
                         category="parser_error",
                     )
                 date, precision = _earn_time(time_raw)
+                amount = _earn_amount(
+                    amount_raw, allow_zero=source == "earn_flexible_rewards"
+                )
+                if amount == 0:
+                    # A literal Binance zero reward is not an acquisition.
+                    # Account for the original row without inventing units.
+                    if not self.earn_zero_reward_rows:
+                        self.advertencias.append(
+                            "Binance Earn: recompensas declaradas con cantidad "
+                            "cero no generan lotes FIFO."
+                        )
+                    self.earn_zero_reward_rows += 1
+                    continue
                 self.earn_events.append(BinanceEarnEvent(
                     source=source, filename=filename,
                     original_time=date, precision=precision,
-                    asset=asset, amount=_earn_amount(amount_raw),
+                    asset=asset, amount=amount,
                     kind=kind, origin=origin, destination=destination,
                 ))
 
@@ -1754,7 +1769,23 @@ class ClasificadorBinanceMulti:
                         row.get("observación", ""),
                     ])
 
-            legacy = ClasificadorBinanceTx(tmp_path).clasificar()
+            try:
+                legacy = ClasificadorBinanceTx(tmp_path).clasificar()
+            except ValueError as exc:
+                # The legacy parser may reject non-EUR trades, ambiguous
+                # execution order or fees. Preserve ALL original ledger
+                # rows for audit and block fiscal acceptance explicitly;
+                # never infer costs or issue a partial PDF.
+                if not str(exc).startswith("Datos fiscales no seguros:"):
+                    raise
+                marker = "binance_legacy_tx_sin_valoracion_o_identidad"
+                if marker not in self.fuentes_materiales_no_soportadas:
+                    self.fuentes_materiales_no_soportadas.append(marker)
+                self.advertencias.append(
+                    "Binance: el historial antiguo contiene operaciones que "
+                    "no se pueden incorporar con seguridad al FIFO."
+                )
+                return
             self.compraventas.extend(legacy.compraventas)
             self.swaps.extend(legacy.swaps)
             self.rendimientos.extend(legacy.rendimientos)
