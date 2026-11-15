@@ -77,6 +77,24 @@ def test_spot_preserva_fills_y_fee_en_activo_recibido(tmp_path):
     assert c.comisiones_pendientes == []
 
 
+@pytest.mark.parametrize("received_qty,fee", [
+    ("0." + "0" * 399 + "1", "0XRP"),
+    ("0.1234567890123456789", "0XRP"),
+    ("10", "0.1234567890123456789BNB"),
+])
+def test_native_spot_rejects_decimal_quantity_or_fee_lost_in_float(
+        tmp_path, received_qty, fee):
+    """Do not create a rounded or zero-sized native fiscal lot."""
+    path = _csv(tmp_path, "Spot-(UTC+1).csv", SPOT_H, [
+        ["42", "2025-01-01 10:00:00", "XRPEUR", "BUY", "2",
+         f"{received_qty}XRP", "20EUR", fee, "", ""],
+    ])
+    with pytest.raises(BinanceMultiUserError) as exc:
+        _classify([path])
+    assert exc.value.code == "binance_float_precision_loss"
+    assert "redondeados" in str(exc.value)
+
+
 def test_fifo_mismo_segundo_diferente_coste_y_permuta_posterior(tmp_path):
     """Una permuta posterior también consume lotes FIFO, no solo ventas EUR."""
     spot = _csv(tmp_path, "Binance-Spot-(UTC+1).csv", SPOT_H, [
