@@ -1694,6 +1694,18 @@ class ClasificadorBinanceMulti:
             if op not in transfer_map:
                 continue
             source, sign = transfer_map[op]
+            # Native crypto deposit/withdrawal CSVs do not establish the
+            # wallet of an unrelated ledger entry. Only a Spot ledger row
+            # may be a duplicate of the native Spot-facing transfer. Never
+            # delete a Funding/Earn/Margin entry solely because second,
+            # asset and amount match a native file.
+            if source.startswith("crypto_") and (
+                str(row.get("cuenta", "")).strip().upper() != "SPOT"
+            ):
+                marker = "binance_transfer_cartera_distinta_no_conciliada"
+                if marker not in self.fuentes_materiales_no_soportadas:
+                    self.fuentes_materiales_no_soportadas.append(marker)
+                continue
             fecha = _fecha(row.get("tiempo"))
             asset = row.get("moneda", "").strip().upper()
             amount = _decimal(row.get("cambio"), field="Cambio")
