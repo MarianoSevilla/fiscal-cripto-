@@ -657,6 +657,34 @@ def test_csv_cabecera_vacia_se_rechaza(tmp_path):
 
 
 
+def test_transferencia_cripto_con_ticker_de_un_caracter_es_valida(tmp_path):
+    """One-character ticker is valid in a native Binance crypto deposit."""
+    path = _csv(tmp_path, "deposit.csv", DEPOSIT_H, [
+        ["2025-01-01 10:00:00", "T", "T", "2", "synthetic", "synthetic-tx", "Completed"],
+    ])
+    c = _classify([path])
+    assert len(c.movimientos) == 1
+    assert c.movimientos[0].activo == "T"
+    assert c.movimientos[0].subtipo == "Depósito cripto"
+
+
+def test_ledger_historico_no_eur_preservado_como_bloqueo_no_parser_fatal(tmp_path):
+    """Non-EUR legacy trade is evidence, never an EUR-priced tax lot."""
+    path = _csv(tmp_path, "ledger.csv", TX_H, [
+        ["synthetic", "2022-01-01 10:00:00", "Spot",
+         "Transaction Sold", "XRP", "-2", ""],
+        ["synthetic", "2022-01-01 10:00:00", "Spot",
+         "Transaction Revenue", "USDC", "4", ""],
+    ])
+    c = _classify([path])
+    assert "binance_legacy_tx_sin_valoracion_o_identidad" in (
+        c.fuentes_materiales_no_soportadas
+    )
+    assert c._binance_tx_unmatched_rows_count == 2
+    assert c.compraventas == [] and c.swaps == []
+    assert c._source_rows["transaction_history"]
+
+
 def test_fiat_cash_usa_neto_recibido_en_depositos_y_bruto_sustraido_en_retiros(tmp_path):
     deposit = _csv(tmp_path, "fiat_deposit.csv", [
         "Tiempo", "Método", "Importe de depósito", "Recibir cantidad",
