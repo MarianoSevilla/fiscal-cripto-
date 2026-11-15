@@ -1923,9 +1923,18 @@ def _validar_aceptacion_fifo(motor, clasificador=None) -> None:
         from binance_eur_valuation import (
             BinancePriceEvidenceError, binance_export_time_to_utc,
         )
+        # Spot orders reconcile fills but never create fiscal operations;
+        # bank deposits/withdrawals likewise do not create crypto lots.
+        # Requiring a timezone on those auxiliary files would reject an
+        # otherwise fully evidenced FIFO without improving lot chronology.
+        fiscal_sources = {
+            "spot_trades", "convert_orders", "fiat_trade",
+            "transaction_history",
+        }
         economic_files = {
             filename
-            for rows in clasificador._source_rows.values()
+            for source, rows in clasificador._source_rows.items()
+            if source in fiscal_sources
             for _row, filename in rows
         }
         try:
