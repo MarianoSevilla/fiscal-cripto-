@@ -80,20 +80,6 @@ jobs:
       - name: Full Python regression
         run: python -m pytest -q -rs --import-mode=importlib --disable-warnings --maxfail=1 fiscal_app_export/tests tests
 
-      # Temporary, source-only artifact for isolated LOCAL execution of the
-      # original private ZIPs. Never upload customers' files or CI secrets.
-      - name: Temporary checkout for private offline FIFO verification
-        run: |
-          tar --exclude='__pycache__' --exclude='*.pyc' --exclude='.env*' --exclude='*.db' -czf binance-pr-source.tar.gz fiscal_app_export
-
-      - name: Deliver source-only offline verification artifact
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6 (node24)
-        with:
-          name: binance-private-local-source
-          path: binance-pr-source.tar.gz
-          retention-days: 1
-          if-no-files-found: error
-
   postgres-bootstrap:
     name: postgres-bootstrap
     runs-on: ubuntu-24.04
