@@ -130,6 +130,7 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
     if markers & {
         "binance_tx_cartera_distinta_no_conciliada",
         "binance_convert_cartera_distinta_no_conciliada",
+        "binance_transfer_cartera_distinta_no_conciliada",
     }:
         add(
             "cartera_binance_no_conciliada", "documentacion",
@@ -402,6 +403,7 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
         "binance_orden_intrasegundo_incierto",
         "binance_tx_cartera_distinta_no_conciliada",
         "binance_convert_cartera_distinta_no_conciliada",
+        "binance_transfer_cartera_distinta_no_conciliada",
         "filas_identicas_entre_exportaciones_sin_id_unico",
         "earn_fuentes_no_conciliadas",
         "earn_orden_intradia_o_origen_pendiente",
