@@ -109,6 +109,21 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
             ),
         })
 
+    if "binance_legacy_tx_sin_valoracion_o_identidad" in markers:
+        add(
+            "historial_legacy_pendiente", "documentacion",
+            "Operaciones del historial histórico sin base fiscal suficiente",
+            "El historial general de Binance contiene operaciones que no "
+            "pueden incorporarse a un FIFO completo con los datos aportados. "
+            "Pueden existir contrapartidas distintas del EUR, comisiones o "
+            "ejecuciones simultáneas sin correspondencia inequívoca. "
+            "Los registros originales no se han borrado ni tratado como coste cero.",
+            "Contrasta esas operaciones con las fuentes nativas Spot/Convert "
+            "del período histórico y, cuando no estén disponibles, con "
+            "justificantes originales de fecha, unidades, valor EUR y comisiones. "
+            "No generes el informe hasta conciliarlas.",
+        )
+
     if "binance_zona_horaria_sin_acreditar" in markers:
         add(
             "zona_horaria_binance", "archivo",
@@ -410,6 +425,7 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
 
     # No convertir marcadores internos no explicados en un falso visto bueno.
     known = {
+        "binance_legacy_tx_sin_valoracion_o_identidad",
         "binance_zona_horaria_sin_acreditar",
         "spot_orders_ejecutadas_sin_fills_completos",
         "binance_fifo_lotes_mismo_segundo_precio_distinto",
