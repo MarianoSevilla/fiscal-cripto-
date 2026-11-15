@@ -121,6 +121,52 @@ def test_analizar_binance_multi_genera_fifo_sintetico(client, usuario):
     assert "token" in body and body["token"]
 
 
+@pytest.mark.parametrize("filename", [
+    "Binance-Spot.csv",
+    "Binance-Spot-(UTC+15).csv",
+    "Binance-Spot-(UTC+1:99).csv",
+])
+def test_binance_sin_zona_utc_valida_no_emite_fifo(client, usuario, filename):
+    """A valid Spot/EUR ledger still needs explicit UTC chronology for FIFO."""
+    _login(client)
+    response = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(_spot_csv()), filename),
+              "ejercicio": "2025", "nombre": "UTC ausente sintético"},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 422, response.get_data(as_text=True)[:450]
+    body = response.get_json()
+    assert "desplazamiento UTC" in body["error"]
+    assert "token" not in body and "resumen" not in body
+    assert "zona_horaria_binance" in {
+        item["codigo"] for item in body["diagnostico_binance"]["incidencias"]
+    }
+
+
+def test_binance_fuentes_mixtas_con_zona_desconocida_bloquean_fifo(
+        client, usuario):
+    """One properly named ZIP cannot validate the other unnamed CSV times."""
+    _login(client)
+    bought = (SPOT_HEADER
+              + "a,2025-01-01 10:00:00,XRPEUR,BUY,2,10XRP,20EUR,0XRP,,\n").encode("utf-8-sig")
+    sold = (SPOT_HEADER
+            + "b,2025-02-01 10:00:00,XRPEUR,SELL,3,5XRP,15EUR,0EUR,,\n").encode("utf-8-sig")
+    response = client.post(
+        "/api/binance/analizar",
+        data={"csv": [(io.BytesIO(bought), "Spot-(UTC+1).csv"),
+                      (io.BytesIO(sold), "Spot-no-offset.csv")],
+              "ejercicio": "2025", "nombre": "Fuentes UTC mixtas sintéticas"},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 422, response.get_data(as_text=True)[:450]
+    body = response.get_json()
+    assert "token" not in body
+    assert "zona_horaria_binance" in {
+        item["codigo"] for item in body["diagnostico_binance"]["incidencias"]
+    }
+
+
 def test_binance_spot_quantities_precision_loss_never_issue_pdf(client, usuario):
     """A valid Decimal with too many units cannot be silently rounded."""
     _login(client)
