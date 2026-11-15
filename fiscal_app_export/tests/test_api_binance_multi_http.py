@@ -335,12 +335,14 @@ def test_http_deposito_externo_no_se_oculta_aunque_haya_compras_locales(client, 
     assert "resumen" not in body
 
 
-def test_http_solo_deposito_externo_no_emite_posicion_fifo_vacia(client, usuario):
+@pytest.mark.parametrize("quantity", ["10", "1e-400"])
+def test_http_solo_deposito_externo_no_emite_posicion_fifo_vacia(
+        client, usuario, quantity):
     """Un depósito sin coste no se traduce en una cartera FIFO vacía."""
     _login(client)
     deposit_csv = (
         "Tiempo,Moneda,Red,Cantidad,Dirección,TXID,Estado\n"
-        "2025-04-04 10:00:00,XRP,XRP,10,synthetic-address,"
+        f"2025-04-04 10:00:00,XRP,XRP,{quantity},synthetic-address,"
         "synthetic-deposit,Completed\n"
     ).encode("utf-8-sig")
     r = client.post(
@@ -359,7 +361,9 @@ def test_http_solo_deposito_externo_no_emite_posicion_fifo_vacia(client, usuario
 
 
 
-def test_http_retiro_cripto_sin_destino_acreditado_bloquea_fifo(client, usuario):
+@pytest.mark.parametrize("quantity", ["3", "1e-400"])
+def test_http_retiro_cripto_sin_destino_acreditado_bloquea_fifo(
+        client, usuario, quantity):
     """Ni una compra local documenta si un retiro fue traslado o pago."""
     _login(client)
     spot = (
@@ -368,7 +372,7 @@ def test_http_retiro_cripto_sin_destino_acreditado_bloquea_fifo(client, usuario)
     ).encode("utf-8-sig")
     withdrawal = (
         "Tiempo,Moneda,Red,Cantidad,Dirección,TXID,Tarifa,Estado\n"
-        "2025-01-02 10:00:00,XRP,XRP,3,synthetic-address,synthetic-tx,0,Completed\n"
+        f"2025-01-02 10:00:00,XRP,XRP,{quantity},synthetic-address,synthetic-tx,0,Completed\n"
     ).encode("utf-8-sig")
     response = client.post(
         "/api/binance/analizar",
