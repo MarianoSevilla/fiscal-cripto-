@@ -894,14 +894,18 @@ class ClasificadorBinanceMulti:
         # adquisiciones no se consumen en una transmisión posterior. Evitar
         # bloquear compras sin ventas, pero nunca elegir arbitrariamente qué
         # lote se consumió cuando sí hay una venta posterior del activo.
-        latest_eur_disposal: Dict[str, str] = {}
+        # Una permuta Spot/Convert consume lotes del activo entregado,
+        # exactamente igual que una venta por EUR. Limitar el control a
+        # ventas EUR permitiría escoger arbitrariamente entre fills comprados
+        # con costes distintos si su primera disposición fuera una permuta.
+        latest_native_disposal: Dict[str, str] = {}
         for trade in self.intercambios_nativos:
-            if trade.received_asset == "EUR" and trade.given_asset != "EUR":
-                previous = latest_eur_disposal.get(trade.given_asset, "")
+            if trade.given_asset != "EUR" and trade.given_asset != trade.received_asset:
+                previous = latest_native_disposal.get(trade.given_asset, "")
                 if trade.local_time > previous:
-                    latest_eur_disposal[trade.given_asset] = trade.local_time
+                    latest_native_disposal[trade.given_asset] = trade.local_time
         if any(
-            len(prices) > 1 and latest_eur_disposal.get(asset, "") > timestamp
+            len(prices) > 1 and latest_native_disposal.get(asset, "") > timestamp
             for (timestamp, asset), prices in purchase_unit_costs.items()
         ):
             self.fuentes_materiales_no_soportadas.append(
