@@ -438,6 +438,19 @@ def test_diagnostico_carteras_spot_funding_una_sola_incidencia():
     assert report["validez_fiscal_acreditada"] is False
 
 
+def test_diagnostico_transferencia_otra_cartera_solicita_trazabilidad():
+    report = diagnosticar_pendientes_binance(_clasificador(
+        fuentes_materiales_no_soportadas=[
+            "binance_transfer_cartera_distinta_no_conciliada",
+        ],
+    ))
+    assert _codes(report) == {"cartera_binance_no_conciliada"}
+    issue = report["incidencias"][0]
+    assert "Spot" in issue["descripcion"]
+    assert "traspasos" in issue["siguiente_paso"]
+    assert report["validez_fiscal_acreditada"] is False
+
+
 def test_diagnostico_incidencia_nueva_mas_desconocida_no_oculta_el_resto():
     report = diagnosticar_pendientes_binance(_clasificador(
         fuentes_materiales_no_soportadas=[
