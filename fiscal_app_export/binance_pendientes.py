@@ -345,6 +345,23 @@ def diagnosticar_pendientes_binance(clasificador) -> dict:
             "comisiones y justificante, sin inventar el coste.",
         )
 
+    if any(
+        getattr(m, "subtipo", "") == "Retiro cripto"
+        and getattr(m, "cantidad", 0) < 0
+        for m in getattr(clasificador, "movimientos", ())
+    ):
+        add(
+            "retiros_destino", "documentacion",
+            "Destino de retiradas de criptomonedas",
+            "Una retirada puede ser un traspaso entre carteras propias o "
+            "una entrega a un tercero. El CSV de Binance no acredita esa "
+            "distinción ni el inventario posterior del activo.",
+            "Aporta el historial y la titularidad de la cartera receptora "
+            "o, si fue un pago o transmisión, el justificante económico. "
+            "No registres automáticamente el retiro como venta ni como "
+            "traspaso neutral sin esa evidencia.",
+        )
+
     commission = getattr(clasificador, "commission_evidence_summary", None)
     if getattr(commission, "records", 0):
         add(
