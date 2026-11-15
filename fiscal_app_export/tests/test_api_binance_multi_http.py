@@ -1579,6 +1579,48 @@ def test_binance_legacy_eur_con_fee_bnb_sigue_bloqueando_pdf(client, usuario):
 
 
 
+def test_binance_catalogo_parcial_spot_y_convert_nunca_emite_pdf(
+        client, usuario, monkeypatch):
+    """A price catalog for one native swap cannot validate a second swap."""
+    from datetime import timezone
+    from decimal import Decimal
+    from binance_eur_valuation import (
+        BinanceHistoricalEURPrices, TradePriceEvidence,
+    )
+
+    at = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
+    prices = BinanceHistoricalEURPrices([
+        TradePriceEvidence("XRP", "EUR", Decimal("2"), at, 1, "a" * 64),
+        TradePriceEvidence("USDC", "EUR", Decimal("0.9"), at, 2, "b" * 64),
+    ])
+    monkeypatch.setitem(flask_app.config, "BINANCE_VERIFIED_MARKET_PRICES",
+                        prices)
+    spot = (
+        SPOT_HEADER
+        + "buy-xrp,2024-12-01 10:00:00,XRPEUR,BUY,1,10XRP,10EUR,0XRP,,\n"
+        + "buy-btc,2024-12-02 10:00:00,BTCEUR,BUY,100,2BTC,200EUR,0BTC,,\n"
+        + "swap,2025-01-01 13:00:00,XRPUSDC,SELL,2,5XRP,10USDC,0USDC,,\n"
+    ).encode("utf-8-sig")
+    convert = (
+        CONVERT_HEADER
+        + "2025-01-02 13:00:00,SPOT,BTCXRP,Instant,"
+        "1 BTC,100 XRP,,,,Successful\n"
+    ).encode("utf-8-sig")
+    _login(client)
+    response = client.post(
+        "/api/binance/analizar",
+        data={"csv": [
+            (io.BytesIO(spot), "Binance-Spot-(UTC+1).csv"),
+            (io.BytesIO(convert), "Binance-Convert-(UTC+1).csv"),
+        ], "ejercicio": "2025", "nombre": "Catálogo incompleto sintético"},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 422, response.get_data(as_text=True)[:500]
+    payload = response.get_json()
+    assert "valoración" in payload["error"]
+    assert "token" not in payload and "resumen" not in payload
+
+
 def test_binance_cotizaciones_catalogo_offline_desde_zip_al_pdf_http(
     client, usuario, monkeypatch, tmp_path,
 ):
