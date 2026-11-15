@@ -1381,6 +1381,29 @@ def test_binance_legacy_eur_2024_2025_fiscal_fifo_descarga_pdf(client, usuario):
     assert pdf.data.startswith(b"%PDF-")
 
 
+@pytest.mark.parametrize("wallet", ["Funding", "Margin", "USD-M Futures"])
+def test_binance_legacy_eur_otra_cartera_no_crea_fifo_ni_pdf(
+        client, usuario, wallet):
+    """Un asiento EUR de otra cartera no constituye una ejecución Spot."""
+    ledger = (
+        "ID de usuario,Tiempo,Cuenta,Operación,Moneda,Cambio,Observación\n"
+        + f"synthetic,2024-01-02 10:00:00,{wallet},Buy,XRP,10,\n"
+        + f"synthetic,2024-01-02 10:00:00,{wallet},Sell,EUR,-20,\n"
+        + f"synthetic,2025-03-04 12:00:00,{wallet},Sell,XRP,-4,\n"
+        + f"synthetic,2025-03-04 12:00:00,{wallet},Buy,EUR,16,\n"
+    ).encode("utf-8-sig")
+    _login(client)
+    response = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(ledger), "Binance-Historial-(UTC+1).csv"),
+              "ejercicio": "2025", "nombre": "No Spot sintético"},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 422, response.get_data(as_text=True)[:400]
+    payload = response.get_json()
+    assert "token" not in payload and "resumen" not in payload
+
+
 def test_binance_legacy_eur_con_fee_bnb_sigue_bloqueando_pdf(client, usuario):
     """Unpriced BNB fee cannot become acquisition cost zero."""
     ledger = (
