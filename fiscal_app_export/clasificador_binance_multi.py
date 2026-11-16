@@ -118,6 +118,9 @@ class BinanceEarnEvent:
     kind: str
     origin: str
     destination: str
+    # Cabeceras y celdas originales, preservadas para productos Earn cuya
+    # semántica de billetera/estado no coincide con las plantillas Flexible.
+    raw_fields: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -254,6 +257,9 @@ _SOURCE_TIME_FIELD = {
     "earn_flexible_redemption": "fecha de canje",
     "earn_flexible_rewards": "tiempo",
     "earn_flexible_exchange": "tiempo",
+    "earn_locked_subscription": "fecha de suscripción",
+    "earn_locked_redemption": "fecha de canje",
+    "earn_locked_rewards": "tiempo",
 }
 
 
@@ -305,14 +311,29 @@ _SIG = {
     },
     "earn_flexible_rewards": {"tiempo", "moneda", "cantidad", "tipo"},
     "earn_flexible_exchange": {"tiempo", "moneda", "cantidad", "a", "estado"},
+    # Firmas exactas de las tres exportaciones Simple Earn Locked originales.
+    # Evitan aceptar variantes que el parser todavía no sabe interpretar.
+    "earn_locked_subscription": {
+        "fecha de suscripción", "moneda", "importe total",
+        "periodo de bloqueo", "tipo", "de",
+    },
+    "earn_locked_redemption": {
+        "fecha de canje", "moneda", "importe de redención", "canjear por",
+        "hora estimada de llegada", "estado",
+    },
+    "earn_locked_rewards": {
+        "tiempo", "moneda", "interés", "periodo de bloqueo", "tae", "tipo",
+    },
 }
 
 
 def detect_binance_source(headers: Iterable[str]) -> str:
     norm = {_norm_header(h) for h in headers}
-    # Las dos firmas cortas tienen que coincidir EXACTAMENTE para no
-    # apropiarse de otro formato Binance con columnas adicionales.
-    for name in ("earn_flexible_rewards", "earn_flexible_exchange"):
+    # Estas firmas tienen que coincidir EXACTAMENTE para no apropiarse de
+    # otro formato Binance con columnas adicionales.
+    for name in ("earn_flexible_rewards", "earn_flexible_exchange",
+                 "earn_locked_subscription", "earn_locked_redemption",
+                 "earn_locked_rewards"):
         if norm == _SIG[name]:
             return name
     for name in ("earn_flexible_subscription", "earn_flexible_redemption"):
@@ -475,6 +496,8 @@ class ClasificadorBinanceMulti:
         "crypto_deposit", "crypto_withdrawal", "transaction_history",
         "earn_flexible_subscription", "earn_flexible_redemption",
         "earn_flexible_rewards", "earn_flexible_exchange",
+        "earn_locked_subscription", "earn_locked_redemption",
+        "earn_locked_rewards",
     )
 
     def __init__(self, filepaths: List[str], filenames: Optional[List[str]] = None,
@@ -1359,6 +1382,8 @@ class ClasificadorBinanceMulti:
         for source in (
             "earn_flexible_subscription", "earn_flexible_redemption",
             "earn_flexible_rewards", "earn_flexible_exchange",
+            "earn_locked_subscription", "earn_locked_redemption",
+            "earn_locked_rewards",
         ):
             rows = self._source_rows[source]
             if not rows:
@@ -1370,27 +1395,46 @@ class ClasificadorBinanceMulti:
                 continue
 
             for row, filename in rows:
-                if source != "earn_flexible_rewards":
+                is_locked = source.startswith("earn_locked_")
+                if not is_locked and source != "earn_flexible_rewards":
                     if not self._native_status_ok(row.get("estado"), source):
                         continue
-                if source == "earn_flexible_subscription":
+                if source in ("earn_flexible_subscription", "earn_locked_subscription"):
                     time_raw = row.get("fecha de suscripción")
-                    amount_raw = row.get("cantidad")
+                    amount_raw = row.get(
+                        "importe total" if is_locked else "cantidad"
+                    )
                     kind = row.get("tipo", "")
-                    origin = row.get("de", "")
-                    destination = "Earn Flexible"
-                elif source == "earn_flexible_redemption":
+                    origin = (
+                        "origen no acreditado" if is_locked else row.get("de", "")
+                    )
+                    destination = (
+                        "destino no acreditado" if is_locked else "Earn Flexible"
+                    )
+                elif source in ("earn_flexible_redemption", "earn_locked_redemption"):
                     time_raw = row.get("fecha de canje")
-                    amount_raw = row.get("principal reembolsado")
-                    kind = row.get("método", "")
-                    origin = "Earn Flexible"
-                    destination = row.get("canjear por", "")
+                    amount_raw = row.get(
+                        "importe de redención" if is_locked else "principal reembolsado"
+                    )
+                    kind = (
+                        row.get("estado", "") if is_locked
+                        else row.get("método", "")
+                    )
+                    origin = (
+                        "origen no acreditado" if is_locked else "Earn Flexible"
+                    )
+                    destination = (
+                        "destino no acreditado" if is_locked
+                        else row.get("canjear por", "")
+                    )
                 else:
                     time_raw = row.get("tiempo")
-                    amount_raw = row.get("cantidad")
+                    amount_raw = row.get(
+                        "interés" if is_locked else "cantidad"
+                    )
                     kind = row.get("tipo", "")
-                    origin = "Earn Flexible"
-                    destination = (
+                    origin = "origen no acreditado" if is_locked else "Earn Flexible"
+                    destination = "destino no acreditado" if is_locked else (
                         "SPOT" if kind == "Bonus Tiered APR Rewards"
                         else "Earn Flexible" if kind == "Real-time APR Rewards"
                         else "destino no acreditado"
@@ -1429,11 +1473,16 @@ class ClasificadorBinanceMulti:
                     original_time=date, precision=precision,
                     asset=asset, amount=amount,
                     kind=kind, origin=origin, destination=destination,
+                    raw_fields=tuple((str(k), str(v)) for k, v in row.items()),
                 ))
 
-        if self.earn_events:
+        if any(event.source.startswith("earn_flexible_") for event in self.earn_events):
             self.fuentes_materiales_no_soportadas.append(
                 "earn_flexible_requiere_inventario_y_valoracion_fiscal"
+            )
+        if any(event.source.startswith("earn_locked_") for event in self.earn_events):
+            self.fuentes_materiales_no_soportadas.append(
+                "earn_locked_requiere_inventario_y_valoracion_fiscal"
             )
 
     def _process_optional_sources(self) -> None:

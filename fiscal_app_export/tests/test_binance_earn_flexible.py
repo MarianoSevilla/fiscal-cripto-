@@ -25,6 +25,11 @@ RED = ["Fecha de canje", "Nombre del producto", "Moneda", "Principal Reembolsado
        "Método", "Canjear por", "Estado"]
 REW = ["Tiempo", "Moneda", "Cantidad", "Tipo"]
 EXC = ["Tiempo", "Moneda", "Cantidad", "A", "Estado"]
+LOCK_SUB = ["Fecha de suscripción", "Moneda", "Importe total",
+            "Periodo de Bloqueo", "Tipo", "De"]
+LOCK_RED = ["Fecha de canje", "Moneda", "Importe de Redención",
+            "Canjear por", "Hora estimada de llegada", "Estado"]
+LOCK_REW = ["Tiempo", "Moneda", "Interés", "Periodo de Bloqueo", "TAE", "Tipo"]
 
 
 def _fake_csv(tmp_path, name, header, rows):
@@ -62,6 +67,78 @@ def test_firmas_de_los_cuatro_earn_flexible():
     assert detect_binance_source(REW) == "earn_flexible_rewards"
     assert detect_binance_source(EXC) == "earn_flexible_exchange"
     assert detect_binance_source(REW + ["Operación"]) == "unknown"
+
+
+def test_firmas_locked_exigen_cabeceras_exactas():
+    assert detect_binance_source(LOCK_SUB) == "earn_locked_subscription"
+    assert detect_binance_source(LOCK_RED) == "earn_locked_redemption"
+    assert detect_binance_source(LOCK_REW) == "earn_locked_rewards"
+    assert detect_binance_source(LOCK_REW + ["Operación"]) == "unknown"
+
+
+def test_tres_zip_locked_se_conservan_sin_identidad_billetera_ni_lote(tmp_path):
+    # Filas totalmente sintéticas que siguen la estructura de las tres
+    # exportaciones Binance Locked originales.
+    uploads = [
+        _fake_zip(tmp_path, "locked-sub", LOCK_SUB, [
+            ["2021-06-01 09:10:11", "BNB", "1.25", "90 días", "Auto", "Spot"],
+        ]),
+        _fake_zip(tmp_path, "locked-red", LOCK_RED, [
+            ["2021-09-01 10:11:12", "BNB", "1.25", "BNB", "2021-09-01 10:12:00", "Success"],
+        ]),
+        _fake_zip(tmp_path, "locked-reward", LOCK_REW, [
+            ["2021-06-02", "BNB", "0.01", "90 días", "5.00%", "Staking Rewards"],
+            ["2021-06-02", "BNB", "0.01", "90 días", "5.00%", "Staking Rewards"],
+        ]),
+    ]
+    paths, names = save_binance_uploads(uploads)
+    try:
+        c = ClasificadorBinanceMulti(paths, names, final_year=2025).clasificar()
+        locked = [event for event in c.earn_events if event.source.startswith("earn_locked_")]
+        assert len(locked) == 4  # Filas iguales se conservan, no se deduplican.
+        assert c.resumen_archivos["no_reconocidos"] == 0
+        assert c.resumen_archivos["earn_locked_subscription"]["registros"] == 1
+        assert c.resumen_archivos["earn_locked_redemption"]["registros"] == 1
+        assert c.resumen_archivos["earn_locked_rewards"]["registros"] == 2
+        assert [event.source for event in locked] == [
+            "earn_locked_subscription", "earn_locked_redemption",
+            "earn_locked_rewards", "earn_locked_rewards",
+        ]
+        assert all(event.origin == "origen no acreditado" for event in locked)
+        assert all(event.destination == "destino no acreditado" for event in locked)
+        assert all(event.raw_fields for event in locked)
+        assert locked[0].raw_fields[2] == ("importe total", "1.25")
+        assert locked[1].raw_fields[-2] == ("hora estimada de llegada", "2021-09-01 10:12:00")
+        assert [event.precision for event in locked] == ["second", "second", "day", "day"]
+        assert c.compraventas == [] and c.swaps == []
+        assert c.rendimientos == [] and c.movimientos == []
+        assert c.valoraciones_pendientes == []
+        assert c.earn_reward_reconciliation.native_records == 0
+        assert "earn_locked_requiere_inventario_y_valoracion_fiscal" in (
+            c.fuentes_materiales_no_soportadas
+        )
+        assert "earn_flexible_requiere_inventario_y_valoracion_fiscal" not in (
+            c.fuentes_materiales_no_soportadas
+        )
+    finally:
+        for path in paths:
+            Path(path).unlink(missing_ok=True)
+
+
+def test_locked_staking_reward_no_se_identifica_con_asiento_de_ledger(tmp_path):
+    locked = _fake_csv(tmp_path, "locked.csv", LOCK_REW, [
+        ["2021-06-02", "BNB", "0.01", "90 días", "5.00%", "Staking Rewards"],
+    ])
+    ledger = _fake_csv(tmp_path, "tx.csv", [
+        "ID de usuario", "Tiempo", "Cuenta", "Operación", "Moneda", "Cambio", "Observación",
+    ], [
+        ["synthetic", "2021-06-02 12:00:00", "Spot", "Staking Rewards", "BNB", "0.01", "synthetic"],
+    ])
+    c = ClasificadorBinanceMulti([str(locked), str(ledger)]).clasificar()
+    assert len([event for event in c.earn_events if event.source == "earn_locked_rewards"]) == 1
+    assert c.earn_reward_reconciliation.native_records == 0
+    assert c.earn_reward_reconciliation.matched_exact == 0
+    assert c.compraventas == [] and c.rendimientos == []
 
 
 def test_cuatro_zip_earn_se_reconocen_sin_fabricar_fifo(tmp_path):
