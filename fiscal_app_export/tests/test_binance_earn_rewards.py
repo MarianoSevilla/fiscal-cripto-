@@ -454,7 +454,25 @@ def test_clasificador_conserva_rewards_nativo_como_evidencia_no_fiscal(tmp_path)
     assert "earn_recompensas_nativas_sin_asiento_general" in (
         c.fuentes_materiales_no_soportadas
     )
+    assert "earn_airdrop_destino_no_acreditado" not in (
+        c.fuentes_materiales_no_soportadas
+    )
     assert not bridge.fiscal_ready
+
+
+def test_clasificador_reserva_advertencia_de_destino_no_acreditado_a_airdrop(tmp_path):
+    p = tmp_path / "airdrop.csv"
+    with p.open("w", encoding="utf-8-sig", newline="") as output:
+        writer = csv.writer(output)
+        writer.writerow(["Tiempo", "Moneda", "Cantidad", "Tipo"])
+        writer.writerow([
+            "2021-05-06 07:08:09", "ABC", "0.0042", "Airdrop Rewards"
+        ])
+    c = ClasificadorBinanceMulti([str(p)]).clasificar()
+    assert c.earn_reward_candidates[0].expected_wallet is None
+    assert "earn_airdrop_destino_no_acreditado" in (
+        c.fuentes_materiales_no_soportadas
+    )
 
 
 @pytest.mark.parametrize("wallet", ["Funding", "Earn", "", None])
