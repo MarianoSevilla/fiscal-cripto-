@@ -155,6 +155,39 @@ def test_tipo_no_documentado_no_crea_lote():
     assert candidates == ()
 
 
+def test_rewards_nativo_se_conserva_sin_identidad_billetera_ni_lote_fiscal():
+    native = reward("2021-05-06 07:08:09", "0.0042", kind="Rewards")
+    # La coincidencia aproximada con Flexible Interest no demuestra que sea
+    # el mismo evento: Rewards no se reasigna a otra categoría del ledger.
+    ledger = tx("2021-05-06 07:08:09", "0.0042")
+    bridge, candidates = reconcile_earn_rewards([native], [ledger])
+
+    assert bridge.native_records == bridge.ledger_records == 1
+    assert bridge.unknown_native_kinds == 0
+    assert bridge.matched_exact == bridge.matched_by_day == 0
+    assert bridge.native_not_in_ledger == bridge.ledger_not_in_native == 1
+    assert bridge.unlocated_native_rewards == 1
+    assert bridge.candidate_lots == len(candidates) == 1
+    candidate = candidates[0]
+    assert candidate.kind == "Rewards"
+    assert candidate.expected_wallet is None
+    assert candidate.precision == "second"
+    assert candidate.acquired_at_for_fifo is None
+    assert candidate.cost_eur is None
+    assert not candidate.fiscal_ready and not bridge.fiscal_ready
+
+
+def test_rewards_repetidos_se_conservan_como_registros_distintos():
+    event = reward("2021-05-06", "0.0042", kind="Rewards")
+    bridge, candidates = reconcile_earn_rewards([event, event], [])
+    assert bridge.unknown_native_kinds == 0
+    assert bridge.native_records == bridge.candidate_lots == len(candidates) == 2
+    assert bridge.unlocated_native_rewards == 2
+    assert [candidate.source_ordinal for candidate in candidates] == [0, 1]
+    assert all(candidate.expected_wallet is None for candidate in candidates)
+    assert all(candidate.cost_eur is None for candidate in candidates)
+
+
 @pytest.mark.parametrize("bad", ["NaN", "Infinity", "-1", "0", "0.1x", 0.1])
 def test_interes_ledger_invalido_se_rechaza(bad):
     with pytest.raises(BinanceEarnRewardsError):
@@ -400,6 +433,28 @@ def test_clasificador_conserva_bonus_nativo_sin_asiento_general(tmp_path):
     )
     assert c.earn_reward_candidates[0].cost_eur is None
     assert not c.earn_reward_reconciliation.fiscal_ready
+
+
+def test_clasificador_conserva_rewards_nativo_como_evidencia_no_fiscal(tmp_path):
+    p = tmp_path / "rewards.csv"
+    with p.open("w", encoding="utf-8-sig", newline="") as output:
+        writer = csv.writer(output)
+        writer.writerow(["Tiempo", "Moneda", "Cantidad", "Tipo"])
+        writer.writerow(["2021-05-06 07:08:09", "ABC", "0.0042", "Rewards"])
+    c = ClasificadorBinanceMulti([str(p)]).clasificar()
+    bridge = c.earn_reward_reconciliation
+    assert bridge.native_records == bridge.candidate_lots == 1
+    assert bridge.unknown_native_kinds == 0
+    assert bridge.unlocated_native_rewards == 1
+    assert bridge.native_not_in_ledger == 1
+    assert c.earn_reward_candidates[0].kind == "Rewards"
+    assert c.earn_reward_candidates[0].expected_wallet is None
+    assert c.earn_reward_candidates[0].cost_eur is None
+    assert c.earn_reward_candidates[0].acquired_at_for_fifo is None
+    assert "earn_recompensas_nativas_sin_asiento_general" in (
+        c.fuentes_materiales_no_soportadas
+    )
+    assert not bridge.fiscal_ready
 
 
 @pytest.mark.parametrize("wallet", ["Funding", "Earn", "", None])

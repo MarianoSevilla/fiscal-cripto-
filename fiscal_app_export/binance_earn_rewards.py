@@ -27,6 +27,9 @@ _KNOWN = {
     # Recompensa verificada, pero la fuente nativa no acredita destino.
     # Solo un asiento del ledger con cuenta SPOT acredita su recepción.
     "Airdrop Rewards": None,
+    # Categoría nativa genérica: conservar como evidencia sin deducir
+    # billetera ni equipararla a una operación concreta del ledger.
+    "Rewards": None,
 }
 _LEDGER_REWARD = {
     "Simple Earn Flexible Interest": "Bonus Tiered APR Rewards",
@@ -164,6 +167,7 @@ def reconcile_earn_rewards(earn_events, ledger_rows):
     ningún registro espejo del ledger crea un segundo candidato.
 
     Solo Bonus Tiered y Airdrop se concilian contra tipos EXACTOS del ledger.
+    "Rewards" se conserva como evento nativo sin mapeo de identidad.
     Real-time APR no necesita asiento Spot: no se intenta emparejar con
     "Simple Earn Flexible Interest", ni siquiera si coinciden cantidades.
     Los contadores de ausencias son diagnósticos, NO cierres fiscales.
