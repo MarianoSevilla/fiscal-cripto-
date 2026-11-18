@@ -424,9 +424,9 @@ def test_fills_spot_repetidos_se_conservan_y_ledger_espejo_se_omite_una_vez(tmp_
     spot_rows = []
     tx_rows = []
     groups = [
-        ("2031-08-04 23:03:15", "0.1", "12.345", 5),
-        ("2031-09-03 12:07:27", "0.25", "56.78", 2),
-        ("2031-09-03 12:07:27", "0.5", "90.12", 2),
+        ("2032-02-07 08:11:13", "0.1", "12.345", 5),
+        ("2032-02-07 08:12:46", "0.25", "56.78", 2),
+        ("2032-02-07 08:12:46", "0.5", "90.12", 2),
     ]
     order = 0
     for timestamp, base_qty, quote_qty, count in groups:
