@@ -414,6 +414,63 @@ def test_dos_fills_spot_identicos_dentro_del_mismo_csv_no_se_deduplican(tmp_path
     assert not c.fuentes_materiales_no_soportadas
 
 
+def test_fills_spot_repetidos_se_conservan_y_ledger_espejo_se_omite_una_vez(tmp_path):
+    """Repeated fills survive; aggregate ledger mirrors do not double them.
+
+    All amounts and IDs are synthetic. The fixture covers multiple identical
+    fills in one second and two distinct repeated fill amounts at another
+    second, then checks that native Spot is the sole economic source.
+    """
+    spot_rows = []
+    tx_rows = []
+    groups = [
+        ("2031-08-04 23:03:15", "0.1", "12.345", 5),
+        ("2031-09-03 12:07:27", "0.25", "56.78", 2),
+        ("2031-09-03 12:07:27", "0.5", "90.12", 2),
+    ]
+    order = 0
+    for timestamp, base_qty, quote_qty, count in groups:
+        for _ in range(count):
+            order += 1
+            spot_rows.append([
+                f"synthetic-order-{order}", timestamp, "ETHUSDT", "SELL",
+                "123.45", f"{base_qty}ETH", f"{quote_qty}USDT",
+                "0USDT", "", "",
+            ])
+            tx_rows.extend([
+                ["synthetic-user", timestamp, "Spot", "Transaction Sold",
+                 "ETH", f"-{base_qty}", ""],
+                ["synthetic-user", timestamp, "Spot", "Transaction Revenue",
+                 "USDT", quote_qty, ""],
+            ])
+
+    spot = _csv(tmp_path, "synthetic_spot.csv", SPOT_H, spot_rows)
+    ledger = _csv(tmp_path, "synthetic_ledger.csv", TX_H, tx_rows)
+    classified = _classify([spot, ledger])
+
+    # Nine actual native fills remain nine operations. The 18 ledger legs are
+    # omitted only after their per-second asset totals match native Spot.
+    assert len(classified.intercambios_nativos) == 9
+    assert len(classified.swaps) == 9
+    assert sum(x.cantidad_entregada for x in classified.swaps) == pytest.approx(2.0)
+    assert classified._binance_tx_unmatched_rows_count == 0
+
+
+def test_csv_igual_dentro_de_dos_zip_se_rechaza_por_identidad_de_bytes(tmp_path):
+    """Two ZIP exports of identical CSV bytes cannot silently double-count."""
+    csv_bytes = b"Tiempo,Cuenta,Operaci\xc3\xb3n,Moneda,Cambio\n2025-01-01 10:00:00,Spot,Deposit,ABC,1\n"
+    uploads = []
+    for name in ("first.zip", "second.zip"):
+        path = tmp_path / name
+        with zipfile.ZipFile(path, "w") as archive:
+            archive.writestr("export.csv", csv_bytes)
+        uploads.append(_Upload(path))
+
+    with pytest.raises(BinanceUploadError) as exc:
+        save_binance_uploads(uploads)
+    assert exc.value.code == "duplicate_file"
+
+
 def test_spot_par_no_coincide_con_activos_no_pasa_al_fifo(tmp_path):
     p = _csv(tmp_path, "spot.csv", SPOT_H, [
         ["42", "2025-01-01 10:00:00", "BTCEUR", "BUY", "2", "1XRP", "2EUR", "0XRP", "", ""],
