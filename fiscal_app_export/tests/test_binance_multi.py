@@ -456,6 +456,28 @@ def test_fills_spot_repetidos_se_conservan_y_ledger_espejo_se_omite_una_vez(tmp_
     assert classified._binance_tx_unmatched_rows_count == 0
 
 
+def test_totales_iguales_con_multiplicidad_distinta_no_omiten_ledger(tmp_path):
+    """Aggregate equality alone is not enough to identify native executions."""
+    spot = _csv(tmp_path, "synthetic_spot.csv", SPOT_H, [
+        ["synthetic-order", "2031-01-01 10:00:00", "ETHUSDT", "SELL",
+         "100", "1ETH", "100USDT", "0USDT", "", ""],
+    ])
+    ledger = _csv(tmp_path, "synthetic_ledger.csv", TX_H, [
+        ["synthetic-user", "2031-01-01 10:00:00", "Spot",
+         "Transaction Sold", "ETH", "-0.4", ""],
+        ["synthetic-user", "2031-01-01 10:00:00", "Spot",
+         "Transaction Revenue", "USDT", "40", ""],
+        ["synthetic-user", "2031-01-01 10:00:00", "Spot",
+         "Transaction Sold", "ETH", "-0.6", ""],
+        ["synthetic-user", "2031-01-01 10:00:00", "Spot",
+         "Transaction Revenue", "USDT", "60", ""],
+    ])
+
+    with pytest.raises(BinanceMultiUserError) as exc:
+        _classify([spot, ledger])
+    assert exc.value.code == "native_tx_execution_multiplicity_mismatch"
+
+
 def test_csv_igual_dentro_de_dos_zip_se_rechaza_por_identidad_de_bytes(tmp_path):
     """Two ZIP exports of identical CSV bytes cannot silently double-count."""
     csv_bytes = b"Tiempo,Cuenta,Operaci\xc3\xb3n,Moneda,Cambio\n2025-01-01 10:00:00,Spot,Deposit,ABC,1\n"

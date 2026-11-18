@@ -1583,6 +1583,58 @@ class ClasificadorBinanceMulti:
                 category="parser_error",
             )
 
+    def _require_native_tx_execution_multiplicity(
+        self, key: tuple, group_rows: List[dict],
+        negative_ops: set[str], positive_ops: set[str],
+    ) -> None:
+        """Require each ledger leg amount to occur as often as native fills.
+
+        Matching only the aggregate per-second totals can hide a different
+        execution partition (for example, one native fill against two ledger
+        rows whose sum is equal). Preserve the ledger evidence and fail closed
+        unless both sides' amount multisets match the native execution rows.
+        """
+        source_group, fecha, give_asset, recv_asset = key
+        native_sources = {
+            "spot": ("Spot BUY", "Spot SELL"),
+            "convert": ("Convert",),
+            "fiat": ("Fiat trade",),
+        }.get(source_group, ())
+        native_events = [
+            event for event in self.intercambios_nativos
+            if event.source in native_sources
+            and event.local_time == fecha
+            and event.given_asset == give_asset
+            and event.received_asset == recv_asset
+        ]
+        native_give = Counter(
+            (event.given_asset, event.given_amount) for event in native_events
+        )
+        native_receive = Counter(
+            (event.received_asset, event.received_amount) for event in native_events
+        )
+        tx_give: Counter = Counter()
+        tx_receive: Counter = Counter()
+        for row in group_rows:
+            operation = row.get("operación", "").strip()
+            if operation not in negative_ops | positive_ops:
+                continue
+            asset = row.get("moneda", "").strip().upper()
+            amount = _decimal(row.get("cambio"), field="Cambio")
+            if operation in negative_ops and amount < 0:
+                tx_give[(asset, -amount)] += 1
+            elif operation in positive_ops and amount > 0:
+                tx_receive[(asset, amount)] += 1
+
+        if native_give != tx_give or native_receive != tx_receive:
+            raise BinanceMultiUserError(
+                "native_tx_execution_multiplicity_mismatch",
+                "Las patas de Transaction History no reproducen la cantidad y "
+                "multiplicidad de cada ejecución nativa. No se puede conciliar "
+                "ni omitir el ledger con seguridad.",
+                category="parser_error",
+            )
+
     def _filter_exact_tx_duplicates(self, rows: List[dict]) -> List[dict]:
         """Elimina solo duplicados demostrados frente a fuentes nativas.
 
@@ -1635,6 +1687,10 @@ class ClasificadorBinanceMulti:
                 ) if legs else None)
                 if native_key:
                     self._require_matched_native_tx_fees(native_key, group_rows)
+                    self._require_native_tx_execution_multiplicity(
+                        native_key, group_rows,
+                        {"Transaction Sold"}, {"Transaction Revenue"},
+                    )
                     drop.update(indices)
                     continue
 
@@ -1652,6 +1708,10 @@ class ClasificadorBinanceMulti:
                 ) if legs else None)
                 if native_key:
                     self._require_matched_native_tx_fees(native_key, group_rows)
+                    self._require_native_tx_execution_multiplicity(
+                        native_key, group_rows,
+                        {"Transaction Spend"}, {"Transaction Buy"},
+                    )
                     drop.update(indices)
 
         # Binance Convert: reproducir la ventana temporal del legacy y comparar
