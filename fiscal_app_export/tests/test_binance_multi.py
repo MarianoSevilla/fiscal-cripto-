@@ -478,6 +478,66 @@ def test_totales_iguales_con_multiplicidad_distinta_no_omiten_ledger(tmp_path):
     assert exc.value.code == "native_tx_execution_multiplicity_mismatch"
 
 
+def test_ledger_agregado_misma_orden_y_fees_por_fill_espejo_seguro(tmp_path):
+    """The ledger may aggregate order legs but retain two exact fill fees."""
+    spot = _csv(tmp_path, "spot.csv", SPOT_H, [
+        ["order-1", "2031-01-01 10:00:00", "XRPEUR", "BUY",
+         "2", "10XRP", "20EUR", "0.005BNB", "", ""],
+        ["order-1", "2031-01-01 10:00:00", "XRPEUR", "BUY",
+         "2", "5XRP", "10EUR", "0.0025BNB", "", ""],
+    ])
+    ledger = _csv(tmp_path, "ledger.csv", TX_H, [
+        ["synthetic", "2031-01-01 10:00:00", "Spot", "Transaction Spend", "EUR", "-30", ""],
+        ["synthetic", "2031-01-01 10:00:00", "Spot", "Transaction Buy", "XRP", "15", ""],
+        ["synthetic", "2031-01-01 10:00:00", "Spot", "Transaction Fee", "BNB", "-0.005", ""],
+        ["synthetic", "2031-01-01 10:00:00", "Spot", "Transaction Fee", "BNB", "-0.0025", ""],
+    ])
+    c = _classify([spot, ledger])
+    assert len(c.intercambios_nativos) == 2
+    assert c._binance_tx_unmatched_rows_count == 0
+    assert c.fuentes_materiales_no_soportadas == []
+
+
+def test_ledger_agregado_dos_ordenes_no_acredita_identidad(tmp_path):
+    """Fees alone do not justify aggregating fills from different orders."""
+    spot = _csv(tmp_path, "spot.csv", SPOT_H, [
+        ["order-1", "2031-01-01 10:00:00", "XRPEUR", "BUY",
+         "2", "10XRP", "20EUR", "0.005BNB", "", ""],
+        ["order-2", "2031-01-01 10:00:00", "XRPEUR", "BUY",
+         "2", "5XRP", "10EUR", "0.0025BNB", "", ""],
+    ])
+    ledger = _csv(tmp_path, "ledger.csv", TX_H, [
+        ["synthetic", "2031-01-01 10:00:00", "Spot", "Transaction Spend", "EUR", "-30", ""],
+        ["synthetic", "2031-01-01 10:00:00", "Spot", "Transaction Buy", "XRP", "15", ""],
+        ["synthetic", "2031-01-01 10:00:00", "Spot", "Transaction Fee", "BNB", "-0.005", ""],
+        ["synthetic", "2031-01-01 10:00:00", "Spot", "Transaction Fee", "BNB", "-0.0025", ""],
+    ])
+    with pytest.raises(BinanceMultiUserError) as exc:
+        _classify([spot, ledger])
+    assert exc.value.code == "native_tx_execution_multiplicity_mismatch"
+
+
+def test_ledger_misma_orden_particiones_distintas_no_espejo(tmp_path):
+    """The all-fees-matched exception must not excuse split trade legs."""
+    spot = _csv(tmp_path, "spot.csv", SPOT_H, [
+        ["order-1", "2031-01-01 10:00:00", "XRPEUR", "BUY",
+         "2", "10XRP", "20EUR", "0.005BNB", "", ""],
+        ["order-1", "2031-01-01 10:00:00", "XRPEUR", "BUY",
+         "2", "5XRP", "10EUR", "0.0025BNB", "", ""],
+    ])
+    ledger = _csv(tmp_path, "ledger.csv", TX_H, [
+        ["synthetic", "2031-01-01 10:00:00", "Spot", "Transaction Spend", "EUR", "-18", ""],
+        ["synthetic", "2031-01-01 10:00:00", "Spot", "Transaction Spend", "EUR", "-12", ""],
+        ["synthetic", "2031-01-01 10:00:00", "Spot", "Transaction Buy", "XRP", "9", ""],
+        ["synthetic", "2031-01-01 10:00:00", "Spot", "Transaction Buy", "XRP", "6", ""],
+        ["synthetic", "2031-01-01 10:00:00", "Spot", "Transaction Fee", "BNB", "-0.005", ""],
+        ["synthetic", "2031-01-01 10:00:00", "Spot", "Transaction Fee", "BNB", "-0.0025", ""],
+    ])
+    with pytest.raises(BinanceMultiUserError) as exc:
+        _classify([spot, ledger])
+    assert exc.value.code == "native_tx_execution_multiplicity_mismatch"
+
+
 def test_csv_igual_dentro_de_dos_zip_se_rechaza_por_identidad_de_bytes(tmp_path):
     """Two ZIP exports of identical CSV bytes cannot silently double-count."""
     csv_bytes = b"Tiempo,Cuenta,Operaci\xc3\xb3n,Moneda,Cambio\n2025-01-01 10:00:00,Spot,Deposit,ABC,1\n"
