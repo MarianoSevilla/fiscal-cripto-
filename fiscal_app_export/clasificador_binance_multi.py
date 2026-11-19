@@ -1626,14 +1626,52 @@ class ClasificadorBinanceMulti:
             elif operation in positive_ops and amount > 0:
                 tx_receive[(asset, amount)] += 1
 
-        if native_give != tx_give or native_receive != tx_receive:
-            raise BinanceMultiUserError(
-                "native_tx_execution_multiplicity_mismatch",
-                "Las patas de Transaction History no reproducen la cantidad y "
-                "multiplicidad de cada ejecución nativa. No se puede conciliar "
-                "ni omitir el ledger con seguridad.",
-                category="parser_error",
+        if native_give == tx_give and native_receive == tx_receive:
+            return
+
+        # Some Binance Spot exports aggregate trade legs for multiple fills
+        # from ONE order while retaining one fee row for each native fill.
+        # Accept this mirror only if both ledger legs are exact single sums,
+        # all native fills have the same nonempty order ID, and every fill
+        # has its own fee mirrored exactly by a ledger fee event.
+        # Do not extend this exception to unrelated orders, missing fees, or
+        # differently partitioned trade legs.
+        single_order = (
+            source_group == "spot" and len(native_events) > 1
+            and bool(native_events[0].order_id)
+            and all(event.order_id == native_events[0].order_id
+                    for event in native_events)
+        )
+        if single_order:
+            aggregated_give = Counter({(
+                give_asset, sum((event.given_amount for event in native_events),
+                                Decimal("0"))): 1})
+            aggregated_receive = Counter({(
+                recv_asset, sum((event.received_amount for event in native_events),
+                                Decimal("0"))): 1})
+            native_fees = Counter(
+                (event.fee_asset, event.fee_amount) for event in native_events
+                if event.fee_asset and event.fee_amount > 0
             )
+            ledger_fees = Counter(
+                (row.get("moneda", "").strip().upper(),
+                 -_decimal(row.get("cambio"), field="Cambio"))
+                for row in group_rows
+                if row.get("operación", "").strip() == "Transaction Fee"
+            )
+            if (tx_give == aggregated_give
+                    and tx_receive == aggregated_receive
+                    and sum(native_fees.values()) == len(native_events)
+                    and ledger_fees == native_fees):
+                return
+
+        raise BinanceMultiUserError(
+            "native_tx_execution_multiplicity_mismatch",
+            "Las patas de Transaction History no reproducen la cantidad y "
+            "multiplicidad de cada ejecución nativa. No se puede conciliar "
+            "ni omitir el ledger con seguridad.",
+            category="parser_error",
+        )
 
     def _filter_exact_tx_duplicates(self, rows: List[dict]) -> List[dict]:
         """Elimina solo duplicados demostrados frente a fuentes nativas.
