@@ -12,7 +12,7 @@ from playwright.sync_api import expect, sync_playwright
 TOOLS = ("fiscal", "binance", "bitvavo", "bit2me", "kraken", "coinbase", "nexo",
          "cryptocom", "uphold", "mexc", "bitget", "kucoin")
 WIDTHS = (375, 768, 1440)
-MULTI = {"bitget", "kucoin"}
+MULTI = {"binance", "bitget", "kucoin"}
 RESULT = {
     "ok": True,
     "token": "synthetic-ui-token",
@@ -90,8 +90,24 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                             ):
                                 analysis_attempt[0] += 1
                                 if first_error and analysis_attempt[0] == 1:
+                                    failure = {
+                                        "ok": False,
+                                        "error": "Datos fiscales no seguros: historial incompleto",
+                                    }
+                                    if name == "binance":
+                                        failure["diagnostico_binance"] = {
+                                            "estado": "pendiente_validacion",
+                                            "validez_fiscal_acreditada": False,
+                                            "incidencias": [{
+                                                "codigo": "earn_cobertura",
+                                                "tipo": "archivo",
+                                                "titulo": "Historial Simple Earn incompleto",
+                                                "descripcion": "Faltan movimientos históricos.",
+                                                "siguiente_paso": "Añade el historial original.",
+                                            }],
+                                        }
                                     route.fulfill(status=422, content_type="application/json",
-                                                  body='{"ok":false,"error":"Datos fiscales no seguros: historial incompleto"}')
+                                                  body=json.dumps(failure))
                                 else:
                                     route.fulfill(status=200, content_type="application/json",
                                                   body=json.dumps(RESULT))
@@ -196,9 +212,11 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                             bad_filename = "incorrect.csv" if name == "mexc" else "incorrect.txt"
                             picker.set_input_files({"name": bad_filename, "mimeType": "text/plain",
                                                     "buffer": b"invalid format"})
-                            assert "fichero" in page.locator("#dropHint").inner_text().lower() or (
-                                "aceptan" in page.locator("#dropHint").inner_text().lower()
-                            )
+                            invalid_hint = page.locator("#dropHint").inner_text().lower()
+                            assert (
+                                "fichero" in invalid_hint or "aceptan" in invalid_hint
+                                or (name == "binance" and "binance admite archivos .csv y .zip" in invalid_hint)
+                            ), (name, width, invalid_hint)
                             assert page.locator("#btnAnalizar").is_disabled()
 
                         def attach_valid():
@@ -239,9 +257,36 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                         if first_error:
                             page.locator("#errorState").wait_for(state="visible")
                             assert page.locator("#btnRetry").is_visible()
+                            # Un bloqueo fiscal 422 de Binance conserva los
+                            # ZIP ya elegidos: no debe duplicar el lote al
+                            # pulsar "Volver a intentarlo".
+                            if name == "binance":
+                                assert page.locator("#fileSelected").is_visible()
+                                assert page.locator("#btnDownload").is_hidden()
+                                assert page.locator("#errorTitulo").inner_text() == (
+                                    "Informe pendiente de datos verificables"
+                                )
+                                pending = page.locator("#binanceErrorPendientes")
+                                assert pending.is_visible()
+                                assert "Historial Simple Earn incompleto" in pending.inner_text()
+                                assert "Añade el historial original." in pending.inner_text()
                             page.locator("#btnRetry").click()
                             assert page.locator("#emptyState").is_visible()
-                            count = attach_valid()
+                            if name == "binance":
+                                assert page.locator("#fileSelected").is_visible()
+                                expect(page.locator("#btnAnalizar")).to_be_enabled()
+                                # El usuario puede añadir un ZIP/CSV sin
+                                # volver a seleccionar los dos previos.
+                                picker.set_input_files({
+                                    "name": "additional.csv",
+                                    "mimeType": "text/csv",
+                                    "buffer": b"fecha,activo,valor\\n2025-08-03,BTC,3\\n",
+                                })
+                                expect(page.locator("#btnAnalizar")).to_be_enabled(timeout=12000)
+                                assert page.locator("#fileName").inner_text() == "3 ficheros"
+                                count += 1
+                            else:
+                                count = attach_valid()
                             page.locator("#btnAnalizar").click()
                         page.locator("#resultsContent").wait_for(state="visible")
                         assert page.locator("#kpiOps").inner_text() == "2"
@@ -322,7 +367,7 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                             assert page.locator('meta[name="robots"]').get_attribute(
                                 "content"
                             ) == "noindex, nofollow"
-                            assert page.locator("#csvInput").get_attribute("accept") == ".csv"
+                            assert page.locator("#csvInput").get_attribute("accept") == ".csv,.zip"
                             assert page.locator("#btnAnalizar").is_disabled()
                             assert page.locator("#emptyState").is_visible()
                             assert page.locator(".tool-video").count() == 1

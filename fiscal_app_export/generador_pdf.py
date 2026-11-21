@@ -549,7 +549,8 @@ def _portada(story, styles, resumen, nombre_usuario, ejercicio, exchange, period
     story.append(t3)
 
 
-def _resumen_ejecutivo(story, styles, resumen, motor, ejercicio, exchange, rendimientos):
+def _resumen_ejecutivo(story, styles, resumen, motor, ejercicio, exchange, rendimientos,
+                       posiciones_snapshot=None):
     """
     Sección 'Resumen Ejecutivo' premium — aparece justo después de la portada v2,
     antes del gráfico y las tablas de datos.
@@ -565,7 +566,8 @@ def _resumen_ejecutivo(story, styles, resumen, motor, ejercicio, exchange, rendi
     ejercicio = (ejercicio or "").strip()
 
     # ── Calcular métricas de contexto ─────────────────────────────────────────
-    _posicion_actual = motor.posicion_actual()
+    _posicion_actual = (posiciones_snapshot if posiciones_snapshot is not None
+                        else motor.posicion_actual())
     if motor.resultados:
         n_activos = len(set(r.activo for r in motor.resultados))
     else:
@@ -1637,11 +1639,12 @@ def _notas_faq(notas: list, styles) -> list:
 
 
 def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rendimientos=None,
-                clasificador_stats=None) -> bytes:
+                clasificador_stats=None, *, posiciones_snapshot=None) -> bytes:
     styles = _build_styles()
     buf = io.BytesIO()
     resumen    = motor.resumen_fiscal()
-    posiciones = motor.posicion_actual()
+    posiciones = (posiciones_snapshot if posiciones_snapshot is not None
+                  else motor.posicion_actual())
     rendimientos = rendimientos or []
 
     doc = SimpleDocTemplate(
@@ -1666,7 +1669,10 @@ def generar_pdf(motor, nombre_usuario="", ejercicio="", exchange="Binance", rend
     _portada_v2(story, styles, resumen, nombre_usuario, ejercicio, exchange)
 
     # 2. RESUMEN EJECUTIVO (bases imponibles + metadatos + nota FIFO)
-    _resumen_ejecutivo(story, styles, resumen, motor, ejercicio, exchange, rendimientos)
+    _resumen_ejecutivo(
+        story, styles, resumen, motor, ejercicio, exchange, rendimientos,
+        posiciones_snapshot=posiciones_snapshot
+    )
 
     # 3. COMPENSACIONES + MODELO 721
     for fl in _bloque_compensaciones(

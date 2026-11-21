@@ -28,6 +28,7 @@ import fifo_pdf_lifecycle as _pdf_lifecycle
 import traceback
 import threading
 from datetime import datetime, timedelta
+from decimal import Decimal
 from zoneinfo import ZoneInfo
 from flask import Flask, request, jsonify, send_file, send_from_directory, redirect, url_for, render_template, session, abort, g
 from flask_limiter import Limiter
@@ -64,6 +65,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from clasificador import ClasificadorBinance
 from clasificador_binance_tx import ClasificadorBinanceTx
+from clasificador_binance_multi import ClasificadorBinanceMulti, BinanceMultiUserError
+from binance_uploads import save_binance_uploads, BinanceUploadError
 from clasificador_bit2me import ClasificadorBit2Me
 from clasificador_bit2me_excel import (
     ClasificadorBit2MeExcel, validar_columnas_bit2me_excel, Bit2MeExcelError,
@@ -136,6 +139,19 @@ _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Por defecto exige clave real y HTTPS; sólo development/testing locales explícitos
 # permiten una excepción. No altera la clave suministrada ni las firmas existentes.
 app.config.update(build_security_config(os.environ))
+
+# El catálogo de mercado se genera offline desde Binance Vision con ZIP +
+# CHECKSUM; nunca se construye a partir de CSV privados ni se descarga aquí.
+# Ambas variables son operativas: si se instala solo una, fallar al arrancar.
+_binance_catalog_path = (os.environ.get("BINANCE_MARKET_CATALOG_PATH") or "").strip()
+_binance_catalog_hash = (os.environ.get("BINANCE_MARKET_CATALOG_SHA256") or "").strip()
+if bool(_binance_catalog_path) != bool(_binance_catalog_hash):
+    raise RuntimeError("Configuración incompleta de catálogo Binance verificado")
+if _binance_catalog_path:
+    from binance_verified_price_catalog import load_pinned_verified_catalog
+    app.config["BINANCE_VERIFIED_MARKET_PRICES"] = load_pinned_verified_catalog(
+        _binance_catalog_path, expected_sha256=_binance_catalog_hash
+    )
 
 # STG-LOCK-001: preserve preflight firewall from the dedicated staging branch.
 # Validate the Railway identity, isolated PostgreSQL hostname, and absence
@@ -643,16 +659,16 @@ EXCHANGE_PAGES = {
         "exchange_name":    "Binance",
         "exchange_logo":    "B",
         "page_title":       "Informe FIFO Binance para Hacienda | Mariano Sevilla",
-        "page_meta_desc":   "Sube el CSV de Binance y calcula ganancias y pérdidas con FIFO obligatorio. Informe PDF para declarar Binance en la declaración de la renta.",
+        "page_meta_desc":   "Sube los historiales de Binance y calcula ganancias y pérdidas con FIFO obligatorio. Informe PDF para declarar Binance en la declaración de la renta.",
         "page_canonical":   f"{_BASE_URL}/binance",
         "page_og_title":    "Informe fiscal Binance para Hacienda — FIFO automático | Mariano Sevilla",
-        "page_og_desc":     "Sube el CSV de Binance y calcula las plusvalías crypto con FIFO. Informe PDF para tu gestor.",
+        "page_og_desc":     "Sube los historiales de Binance y calcula las plusvalías crypto con FIFO. Informe PDF para tu gestor.",
         "page_schema_name": "Informe FIFO Binance — Mariano Sevilla",
         "page_h1":          "Genera tu informe fiscal de Binance para Hacienda",
-        "hero_desc":        "La herramienta lee el CSV de Binance, aplica el método FIFO obligatorio según la normativa española y calcula tus plusvalías y pérdidas patrimoniales. Descarga el informe PDF con los importes exactos para las casillas 1626 y 1627 de la declaración de la renta.",
+        "hero_desc":        "Sube los historiales de Binance que correspondan a tu actividad. La herramienta combina Spot, Convert, operaciones fiat y transferencias, evita duplicidades y aplica FIFO sin inventar valoraciones EUR.",
         "how_to": [
-            {"title": "Exporta el CSV de Binance (Transaction History)",
-             "desc":  "En tu cuenta de Binance ve a Wallet → Historial de transacciones → Exportar. Selecciona «All Transactions», elige el rango completo desde tu primera operación hasta hoy y descarga el fichero CSV."},
+            {"title": "Descarga tus historiales de Binance",
+             "desc":  "Exporta el historial completo desde tu primera operación. Según tu actividad, descarga Operaciones Spot, Órdenes Convert, depósitos, retiros y compras/ventas fiat. Puedes subir directamente los CSV o ZIP de Binance. Transaction History se usa como fuente complementaria cuando corresponde."},
             _HOW_TO_STEP2, _HOW_TO_STEP3,
         ],
     },
@@ -1047,7 +1063,8 @@ def _validar_password(password: str) -> tuple[bool, str]:
 # ── VALIDACIÓN Y SANITIZACIÓN ─────────────────
 
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
-MAX_CSV_ROWS        = 100_000            # filas máximas permitidas por CSV (≈ 10 MB de datos reales)
+MAX_CSV_ROWS        = 100_000            # límite conservador compartido por los demás exchanges
+MAX_BINANCE_CSV_ROWS = 350_000            # límite independiente: históricos Binance multi-año
 MAX_KUCOIN_FILES    = 8                  # KuCoin es multiarchivo: tope de ficheros por análisis
 MAX_BITGET_FILES    = 8                  # Bitget es multiarchivo: tope de ficheros por análisis
 AÑO_MIN = 2009
@@ -1259,14 +1276,147 @@ def _validar_csv(filepath: str, exchange: str) -> tuple[bool, str]:
 
 # ── PIPELINES ─────────────────────────────────
 
-def _pipeline_motor(clasificador) -> MotorFIFO:
-    """Pipeline común: clasificador → motor FIFO."""
+def _pipeline_motor(clasificador, *, binance_market_prices=None) -> MotorFIFO:
+    """Pipeline común; Binance solo acepta swaps con mercado EUR verificado.
+
+    El proveedor histórico se carga fuera de la petición. Nunca se buscan
+    cotizaciones en la red desde este pipeline ni se asume paridad.
+    """
+    priced_swaps = ()
+    verified_bnb_fees = ()
+    if (binance_market_prices is not None
+            and isinstance(clasificador, ClasificadorBinanceMulti)
+            and clasificador.comisiones_pendientes):
+        from binance_spot_bnb_fee_execution import prepare_spot_eur_bnb_fees
+        verified_bnb_fees = prepare_spot_eur_bnb_fees(
+            clasificador, binance_market_prices
+        )
+    if binance_market_prices is not None and isinstance(clasificador, ClasificadorBinanceMulti):
+        if clasificador.swaps:
+            from binance_valuation_audit import valorar_permutas_nativas
+            from binance_eur_valuation import BinanceHistoricalEURPrices, BinancePriceEvidenceError
+            if not isinstance(binance_market_prices, BinanceHistoricalEURPrices):
+                raise BinancePriceEvidenceError("Proveedor histórico Binance sin validar")
+            # Fiat trade contra USD/GBP/etc. no constituye automáticamente
+            # una permuta cripto-cripto bajo el art. 37.1.h. Rechazarla ANTES
+            # de consultar precios y no aplicar esa regla fiscal indebidamente.
+            for event in clasificador.intercambios_nativos:
+                if (event.given_asset != "EUR" and event.received_asset != "EUR"
+                        and event.source not in {"Spot BUY", "Spot SELL", "Convert"}):
+                    raise BinancePriceEvidenceError(
+                        "Permuta fiat/externa sin tratamiento acreditado"
+                    )
+            priced_swaps = valorar_permutas_nativas(clasificador, binance_market_prices)
+            if len(priced_swaps) != len(clasificador.swaps):
+                raise BinancePriceEvidenceError("No están valoradas todas las permutas Binance")
+            # Dos adquisiciones al mismo segundo pueden crear lotes con
+            # distinto coste unitario: esto también ocurre con Convert, o
+            # mezclando una compra EUR y una permuta que recibe el mismo
+            # activo. No escoger el orden del CSV cuando después se consumen
+            # esos lotes; el importe FIFO de una venta dependería de ello.
+            acquired_unit_costs = {}
+            for event in clasificador.intercambios_nativos:
+                if event.given_asset == "EUR" and event.received_asset != "EUR":
+                    net_qty = event.received_amount - (
+                        event.fee_amount if event.fee_asset == event.received_asset
+                        else Decimal("0")
+                    )
+                    if net_qty <= 0:
+                        raise BinancePriceEvidenceError(
+                            "Adquisición EUR sin cantidad neta verificable"
+                        )
+                    eur_cost = event.given_amount + (
+                        event.fee_amount if event.fee_asset == "EUR"
+                        else Decimal("0")
+                    )
+                    acquired_unit_costs.setdefault(
+                        (event.local_time, event.received_asset), set()
+                    ).add(eur_cost / net_qty)
+            for priced in priced_swaps:
+                event = priced.source
+                acquired_unit_costs.setdefault(
+                    (event.local_time, event.received_asset), set()
+                ).add(priced.valuation.fiscal_value_eur / event.received_amount)
+            latest_disposal = {}
+            for event in clasificador.intercambios_nativos:
+                if event.given_asset != "EUR" and event.given_asset != event.received_asset:
+                    latest_disposal[event.given_asset] = max(
+                        event.local_time, latest_disposal.get(event.given_asset, "")
+                    )
+            if any(
+                len(unit_costs) > 1 and latest_disposal.get(asset, "") > at
+                for (at, asset), unit_costs in acquired_unit_costs.items()
+            ):
+                marker = "binance_fifo_lotes_mismo_segundo_precio_distinto"
+                if marker not in clasificador.fuentes_materiales_no_soportadas:
+                    clasificador.fuentes_materiales_no_soportadas.append(marker)
+                raise BinancePriceEvidenceError(
+                    "Orden de lotes recibidos por Spot/Convert no acreditado"
+                )
+            # El CSV de órdenes carece de milisegundos. Si existen varias
+            # disposiciones del mismo activo dentro del mismo segundo, no
+            # se conoce qué hecho consumió cada lote en primer lugar.
+            counts = {}
+            for priced in priced_swaps:
+                event = priced.source
+                if event.source not in {"Spot BUY", "Spot SELL", "Convert"}:
+                    raise BinancePriceEvidenceError(
+                        "Permuta fiat/externa sin tratamiento acreditado"
+                    )
+                key = (event.local_time, event.given_asset)
+                counts[key] = counts.get(key, 0) + 1
+            if any(n > 1 for n in counts.values()):
+                marker = "binance_orden_intrasegundo_incierto"
+                if marker not in clasificador.fuentes_materiales_no_soportadas:
+                    clasificador.fuentes_materiales_no_soportadas.append(marker)
+                raise BinancePriceEvidenceError(
+                    "Orden de disposiciones Binance dentro del mismo segundo no acreditado"
+                )
+            # La misma marca de segundo no prueba si se compró el activo
+            # antes o después de venderlo/convertirlo. Evaluar TODAS las
+            # fuentes nativas, no solo la cotización EUR o la lista de swaps.
+            directions = {}
+            for event in clasificador.intercambios_nativos:
+                at = event.local_time
+                if event.given_asset != "EUR":
+                    directions.setdefault((at, event.given_asset), set()).add("out")
+                if event.received_asset != "EUR":
+                    directions.setdefault((at, event.received_asset), set()).add("in")
+            if any(len(kinds) > 1 for kinds in directions.values()):
+                marker = "binance_orden_intrasegundo_incierto"
+                if marker not in clasificador.fuentes_materiales_no_soportadas:
+                    clasificador.fuentes_materiales_no_soportadas.append(marker)
+                raise BinancePriceEvidenceError(
+                    "Adquisición y disposición del mismo activo sin orden intrasegundo"
+                )
     motor = MotorFIFO()
     ops = []
-    for op in clasificador.compraventas:
-        ops.append(("cv", op.fecha, op))
-    for op in clasificador.swaps:
-        ops.append(("swap", op.fecha, op))
+    verified_fee_by_index = {
+        fee.native_ordinal: fee for fee in verified_bnb_fees
+    }
+    # Several fills of one documented native order may share a second.
+    # Their EUR expenses belong to individual fills, but their BNB FIFO
+    # consumption is one total disposal; no arbitrary intra-second cost
+    # allocation among those fees.
+    bnb_fees_by_second = {}
+    for fee in verified_bnb_fees:
+        bnb_fees_by_second.setdefault(fee.timestamp, []).append(fee)
+    grouped_bnb_seconds = {
+        at for at, fees in bnb_fees_by_second.items() if len(fees) > 1
+    }
+    for index, op in enumerate(clasificador.compraventas):
+        if verified_bnb_fees:
+            ops.append(("cv_with_bnb_fee", op.fecha, (index, op)))
+        else:
+            ops.append(("cv", op.fecha, op))
+    for at in sorted(grouped_bnb_seconds):
+        ops.append(("bnb_fee_group", at, tuple(bnb_fees_by_second[at])))
+    if priced_swaps:
+        for priced in priced_swaps:
+            ops.append(("verified_swap", priced.source.local_time, priced))
+    else:
+        for op in clasificador.swaps:
+            ops.append(("swap", op.fecha, op))
     # Coinbase and Bitvavo record the received reward only in rendimientos.
     # A fiscal income entry also creates one acquisition lot at its verified
     # EUR value. Crypto.com ALREADY adds this lot in its parser: never add
@@ -1283,8 +1433,30 @@ def _pipeline_motor(clasificador) -> MotorFIFO:
                 )
             ops.append(("reward", income.fecha, income))
     ops.sort(key=lambda x: x[1])
+    prechecked_bnb_seconds = set()
     for tipo, fecha, op in ops:
-        if tipo == "cv":
+        if tipo == "cv_with_bnb_fee":
+            from binance_spot_bnb_fee_execution import (
+                apply_spot_eur_trade_with_bnb_fee,
+                verify_spot_bnb_fee_inventory,
+            )
+            index, original = op
+            if (fecha in grouped_bnb_seconds
+                    and fecha not in prechecked_bnb_seconds):
+                # Check total BNB holdings before recording the FIRST Spot
+                # fill of a same-second order; fail atomically if insufficient.
+                verify_spot_bnb_fee_inventory(
+                    motor, bnb_fees_by_second[fecha]
+                )
+                prechecked_bnb_seconds.add(fecha)
+            apply_spot_eur_trade_with_bnb_fee(
+                motor, original, verified_fee_by_index.get(index),
+                defer_bnb_disposal=fecha in grouped_bnb_seconds,
+            )
+        elif tipo == "bnb_fee_group":
+            from binance_spot_bnb_fee_execution import settle_spot_bnb_fees_same_second
+            settle_spot_bnb_fees_same_second(motor, op)
+        elif tipo == "cv":
             if op.tipo == "COMPRA":
                 motor.registrar_compra(
                     fecha=op.fecha, activo=op.activo, cantidad=op.cantidad,
@@ -1306,21 +1478,50 @@ def _pipeline_motor(clasificador) -> MotorFIFO:
                 cantidad_recibida=op.cantidad_recibida,
                 nota=op.nota
             )
+        elif tipo == "verified_swap":
+            from binance_fiscal_swap import aplicar_permuta_binance_valorada
+            source = op.source
+            aplicar_permuta_binance_valorada(
+                motor,
+                fecha_local=source.local_time,
+                export_filename=source.filename,
+                given_asset=source.given_asset,
+                given_amount=source.given_amount,
+                received_asset=source.received_asset,
+                received_amount=source.received_amount,
+                fee_amount=source.fee_amount,
+                valuation=op.valuation,
+            )
         elif tipo == "reward":
             motor.registrar_compra(
                 fecha=op.fecha, activo=op.activo, cantidad=op.cantidad,
                 importe=op.valor_eur, contraparte="EUR",
                 fee_activo="EUR", fee_cantidad=0.0,
             )
+    if (isinstance(clasificador, ClasificadorBinanceMulti)
+            and getattr(clasificador, "earn_principal_only_audit", None) is not None):
+        from binance_earn_transfer_only import validate_principal_only_motor
+        validate_principal_only_motor(clasificador.earn_principal_only_audit, motor)
+    if verified_bnb_fees:
+        # Fix the acceptance evidence only after ALL fee disposals completed.
+        # Pending rows remain intact for audit; the validator compares their
+        # number with the proven one-to-one settlements.
+        clasificador._binance_verified_bnb_fees = tuple(verified_bnb_fees)
+    if priced_swaps:
+        # Fijar esta prueba interna solo después de aplicar TODOS los swaps.
+        # Los validadores posteriores vuelven a comprobar identidad y cantidad.
+        clasificador._binance_verified_swaps = tuple(priced_swaps)
     return motor
 
 
-def procesar_con_fifo(clasificador) -> tuple:
+def procesar_con_fifo(clasificador, *, binance_market_prices=None) -> tuple:
     """Pipeline genérico: clasificador ya instanciado → motor FIFO + rendimientos + clasificador.
     Devuelve 3-tupla (motor, rendimientos, clasificador) para permitir extracción de telemetría
     (swaps totales, movimientos, desconocidas) que solo viven en el clasificador.
     """
-    motor = _pipeline_motor(clasificador)
+    motor = _pipeline_motor(
+        clasificador, binance_market_prices=binance_market_prices
+    )
     rendimientos = clasificador.rendimientos if hasattr(clasificador, 'rendimientos') else []
     return motor, rendimientos, clasificador
 
@@ -1366,6 +1567,18 @@ def procesar_binance(filepath: str) -> tuple:
 
 def procesar_binance_tx(filepath: str) -> tuple:
     return procesar_con_fifo(ClasificadorBinanceTx(filepath).clasificar())
+
+
+def procesar_binance_multi(filepaths: list, filenames: list = None, *, market_prices=None) -> tuple:
+    """Binance multifuente, con valoración opcional desde mercado verificado.
+
+    Sin catálogo previo, los swaps siguen bloqueados y nunca se descarga
+    mercado público dentro de esta solicitud.
+    """
+    return procesar_con_fifo(
+        ClasificadorBinanceMulti(filepaths, filenames).clasificar(),
+        binance_market_prices=market_prices,
+    )
 
 
 def procesar_bitvavo(filepath: str) -> tuple:
@@ -1691,6 +1904,133 @@ def _validar_aceptacion_fifo(motor, clasificador=None) -> None:
     """
     _validar_aceptacion_fuentes_fifo(clasificador)
 
+    # Legacy Transaction History: tampoco emitir un informe parcial si Binance
+    # introduce un tipo de evento nuevo que el parser todavía no interpreta.
+    if isinstance(clasificador, ClasificadorBinanceTx) and getattr(clasificador, "desconocidas", ()):
+        raise ValueError(
+            "Datos fiscales no seguros: Binance contiene operaciones no interpretadas. "
+            "Sube las fuentes nativas Spot/Convert/Fiat o revisa el historial."
+        )
+
+    # Binance multifuente: la reconstrucción económica puede ser completa aunque
+    # falte la valoración fiscal EUR. Nunca emitir un PDF parcial ni asumir
+    # paridad de stablecoins / coste cero / comisión irrelevante.
+    if isinstance(clasificador, ClasificadorBinanceMulti):
+        # Without an explicit, valid UTC offset per source file, two local
+        # seconds cannot safely be compared across ZIP/CSV exports. This is
+        # a fiscal-acceptance gate, not a parser restriction: users can still
+        # obtain the file diagnosis without inventing a timezone.
+        from binance_eur_valuation import (
+            BinancePriceEvidenceError, binance_export_time_to_utc,
+        )
+        # Spot orders reconcile fills but never create fiscal operations;
+        # bank deposits/withdrawals likewise do not create crypto lots.
+        # Requiring a timezone on those auxiliary files would reject an
+        # otherwise fully evidenced FIFO without improving lot chronology.
+        fiscal_sources = {
+            "spot_trades", "convert_orders", "fiat_trade",
+            "transaction_history",
+        }
+        economic_files = {
+            filename
+            for source, rows in clasificador._source_rows.items()
+            if source in fiscal_sources
+            for _row, filename in rows
+        }
+        try:
+            for filename in economic_files:
+                binance_export_time_to_utc("2025-01-01 12:00:00", filename)
+        except BinancePriceEvidenceError as exc:
+            marker = "binance_zona_horaria_sin_acreditar"
+            if marker not in clasificador.fuentes_materiales_no_soportadas:
+                clasificador.fuentes_materiales_no_soportadas.append(marker)
+            raise ValueError(
+                "Datos fiscales no seguros: los archivos Binance contienen "
+                "operaciones sin un desplazamiento UTC explícito y válido. "
+                "No se puede acreditar el orden cronológico del FIFO."
+            ) from exc
+        priced_swaps = getattr(clasificador, "_binance_verified_swaps", ())
+        if priced_swaps:
+            from binance_valuation_audit import BinanceSwapAuditRecord
+            if (len(priced_swaps) != len(clasificador.swaps)
+                    or len(priced_swaps) != len(clasificador.valoraciones_pendientes)
+                    or not all(isinstance(record, BinanceSwapAuditRecord)
+                               for record in priced_swaps)
+                    or len([r for r in motor.resultados if r.tipo_operacion == "swap"])
+                    != len(priced_swaps)):
+                raise ValueError(
+                    "Datos fiscales no seguros: permutas Binance no conciliadas "
+                    "con el cálculo FIFO valorado."
+                )
+        if (getattr(clasificador, "earn_events", ())
+                and getattr(clasificador, "earn_principal_only_audit", None) is None):
+            rewards_section = getattr(
+                clasificador, "_sections", {}
+            ).get("earn_flexible_rewards")
+            if (rewards_section is not None and rewards_section.detectado
+                    and rewards_section.vacio):
+                raise ValueError(
+                    "Datos fiscales no seguros: el CSV "
+                    "de recompensas de Binance Simple Earn está vacío, pero "
+                    "no acredita el período de fechas que cubre. No se puede "
+                    "descartar que existan rendimientos Earn omitidos."
+                )
+            raise ValueError(
+                "Datos fiscales no seguros: Binance Simple Earn contiene "
+                "suscripciones, redenciones o recompensas pendientes de "
+                "conciliar con el inventario FIFO y de valorar en EUR."
+            )
+        if getattr(clasificador, "desconocidas", ()):
+            raise ValueError(
+                "Datos fiscales no seguros: Binance contiene operaciones no "
+                "interpretadas que podrían afectar al FIFO."
+            )
+        if getattr(clasificador, "fuentes_materiales_no_soportadas", ()):
+            raise ValueError(
+                "Datos fiscales no seguros: Binance contiene una fuente con "
+                "operaciones que todavía no se pueden reconstruir con seguridad."
+            )
+        # Los depósitos cripto aportan cantidad, pero sus lotes externos
+        # (fecha/coste de adquisición) no se incorporan al motor FIFO.
+        # Aunque existan compras locales suficientes, una venta posterior
+        # podría consumir los lotes equivocados por orden histórico.
+        # Tampoco sería fiable la posición final si se omite el depósito.
+        if any(
+            getattr(m, "subtipo", "") == "Depósito cripto"
+            for m in getattr(clasificador, "movimientos", ())
+        ):
+            raise ValueError(
+                "Datos fiscales no seguros: Binance contiene depósitos cripto "
+                "cuyos lotes de adquisición, fechas y costes no están "
+                "reconstruidos en el FIFO. Requiere conciliar su origen."
+            )
+        # Un retiro de cripto no demuestra que el destino sea una cartera
+        # propia. Puede ser traspaso neutral, pago o transmisión; omitirlo
+        # del FIFO y presentar la posición como acreditada sería inseguro.
+        if any(
+            getattr(m, "subtipo", "") == "Retiro cripto"
+            for m in getattr(clasificador, "movimientos", ())
+        ):
+            raise ValueError(
+                "Datos fiscales no seguros: Binance contiene retiradas de "
+                "criptomonedas sin acreditar su destino y tratamiento en el "
+                "inventario global. Requiere conciliar cartera receptora o "
+                "transmisión, según corresponda."
+            )
+        if (getattr(clasificador, "valoraciones_pendientes", ())
+                and not priced_swaps):
+            raise ValueError(
+                "Datos fiscales no seguros: Binance contiene permutas o rendimientos "
+                "sin valoración histórica acreditada en EUR."
+            )
+        fees_pending = tuple(getattr(clasificador, "comisiones_pendientes", ()))
+        fees_settled = tuple(getattr(clasificador, "_binance_verified_bnb_fees", ()))
+        if fees_pending and len(fees_pending) != len(fees_settled):
+            raise ValueError(
+                "Datos fiscales no seguros: Binance contiene comisiones en cripto "
+                "sin valoración EUR y tratamiento fiscal verificable."
+            )
+
     # El clasificador Binance TX agrupa Transaction Fee con las patas de
     # compra/venta, pero no traslada su coste ni el activo empleado al motor
     # FIFO. Evitar un informe IRPF con comisión omitida (incluso si está
@@ -1720,10 +2060,16 @@ def _validar_aceptacion_fifo(motor, clasificador=None) -> None:
     # histórico FIFO o paridad 1:1, no con ambos precios de mercado en EUR.
     # Incluso un único precio FMV del CSV no demuestra el máximo exigible.
     swaps = getattr(clasificador, "swaps", ()) if clasificador is not None else ()
-    if any(
-        getattr(op, "activo_entregado", None) != getattr(op, "activo_recibido", None)
-        for op in swaps
-    ) or any(r.tipo_operacion == "swap" for r in motor.resultados):
+    verified_binance_swaps = (
+        isinstance(clasificador, ClasificadorBinanceMulti)
+        and bool(getattr(clasificador, "_binance_verified_swaps", ()))
+    )
+    if not verified_binance_swaps and (
+        any(
+            getattr(op, "activo_entregado", None) != getattr(op, "activo_recibido", None)
+            for op in swaps
+        ) or any(r.tipo_operacion == "swap" for r in motor.resultados)
+    ):
         raise ValueError(
             "Datos fiscales no seguros: existen permutas entre criptomonedas "
             "sin valoración suficiente de mercado en EUR para ambos activos. "
@@ -1785,7 +2131,7 @@ def _validar_aceptacion_bit2me_fiscal(clasificador) -> None:
         )
 
 
-def _motor_a_json(motor, clasificador=None) -> tuple:
+def _motor_a_json(motor, clasificador=None, *, posiciones_snapshot=None) -> tuple:
     """Convierte el resultado del motor FIFO validado a JSON para la UI."""
     _validar_aceptacion_fifo(motor, clasificador)
     motor.validar_integridad()
@@ -1797,7 +2143,8 @@ def _motor_a_json(motor, clasificador=None) -> tuple:
             "precio_medio": round(p.precio_medio, 4),
             "coste_total": round(p.coste_total, 4),
         }
-        for p in motor.posicion_actual()
+        for p in (posiciones_snapshot if posiciones_snapshot is not None
+                  else motor.posicion_actual())
     ]
     operaciones = [
         {
@@ -2433,12 +2780,294 @@ def _guardar_csvs_multi(archivos, max_files: int, label: str) -> tuple:
     return tmp_paths, filenames
 
 
+def _guardar_csvs_binance(archivos) -> tuple:
+    """Acepta CSV y ZIP nativos Binance; extracción limitada y sin zip-slip."""
+    return save_binance_uploads(
+        archivos,
+        prefix=_pdf_lifecycle.PDF_PREFIX,
+        max_uploads=40,
+        max_csv_files=60,
+        max_member_bytes=MAX_FILE_SIZE_BYTES,
+        max_total_bytes=50 * 1024 * 1024,
+    )
+
+
 def _guardar_csvs_kucoin(archivos) -> tuple:
     return _guardar_csvs_multi(archivos, MAX_KUCOIN_FILES, "KuCoin")
 
 
 def _guardar_csvs_bitget(archivos) -> tuple:
     return _guardar_csvs_multi(archivos, MAX_BITGET_FILES, "Bitget")
+
+
+@app.route("/api/binance/anos", methods=["POST"])
+@login_required
+@limiter.limit("30 per minute")
+def api_binance_anos():
+    """Detecta ejercicios y fuentes Binance sin ejecutar el MotorFIFO."""
+    archivos = request.files.getlist("csv") or request.files.getlist("files")
+    tmp_paths: list = []
+    try:
+        tmp_paths, filenames = _guardar_csvs_binance(archivos)
+        csv_rows = sum(_contar_csv_rows(p) for p in tmp_paths)
+        if csv_rows > MAX_BINANCE_CSV_ROWS:
+            return jsonify({
+                "ok": False,
+                "error": f"Los CSV de Binance suman demasiadas filas ({csv_rows:,}). "
+                         f"El máximo permitido es {MAX_BINANCE_CSV_ROWS:,} filas.",
+            }), 400
+        clasificador = ClasificadorBinanceMulti(tmp_paths, filenames).clasificar()
+
+        años: set = set()
+        for grupo in (
+            clasificador.compraventas, clasificador.swaps,
+            clasificador.movimientos, clasificador.rendimientos,
+        ):
+            for op in grupo:
+                try:
+                    años.add(int(str(op.fecha)[:4]))
+                except (ValueError, TypeError):
+                    pass
+
+        # Simple Earn guarda fecha en original_time (a veces solo día).
+        # Incluso un ZIP de 2025 puede incluir recompensas fechadas en 2024.
+        for evento in getattr(clasificador, "earn_events", ()):
+            años.add(int(evento.original_time[:4]))
+        # El historial solo con ingresos por afiliación no debe mostrar
+        # "sin ejercicios"; sus filas se procesan por streaming.
+        commission_audit = getattr(clasificador, "commission_evidence_summary", None)
+        if commission_audit is not None:
+            años.update(commission_audit.years)
+
+        from binance_pendientes import diagnosticar_pendientes_binance
+        return jsonify({
+            "ok": True,
+            "anos": sorted(años),
+            "resumen": clasificador.resumen_archivos,
+            "advertencias": clasificador.advertencias,
+            "diagnostico_binance": diagnosticar_pendientes_binance(clasificador),
+        })
+    except (BinanceMultiUserError, BinanceUploadError, ValueError) as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"ok": False, "error": _error_amigable(exc)}), 500
+    finally:
+        for p in tmp_paths:
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
+
+
+@app.route("/api/binance/analizar", methods=["POST"])
+@login_required
+@limiter.limit("3 per 10 minutes", exempt_when=_is_admin)
+@limiter.limit("6 per hour",       exempt_when=_is_admin)
+@limiter.limit("15 per day",       exempt_when=_is_admin)
+def analizar_binance_multi():
+    """Análisis fiscal Binance multifuente; aislado del endpoint legacy single-file."""
+    uid = current_user.id
+    tmp_paths: list = []
+    filenames: list = []
+
+    with _analisis_lock:
+        if uid in _analisis_en_curso:
+            return jsonify({
+                "error": "Ya tienes un análisis en proceso. "
+                         "Espera a que termine antes de lanzar otro."
+            }), 409
+        _analisis_en_curso.add(uid)
+
+    t_start = time.time()
+    csv_rows = 0
+    clasificador = None
+    try:
+        archivos = request.files.getlist("csv") or request.files.getlist("files")
+        nombre = _sanitizar_texto(request.form.get("nombre", ""))
+        ejercicio = _sanitizar_texto(request.form.get("ejercicio", ""), max_len=40)
+
+        valido_ej, error_ej = _validar_ejercicio(ejercicio)
+        if not valido_ej:
+            return jsonify({"error": error_ej}), 400
+
+        try:
+            tmp_paths, filenames = _guardar_csvs_binance(archivos)
+        except (BinanceUploadError, ValueError) as exc:
+            return jsonify({"error": str(exc)}), 400
+
+        csv_rows = sum(_contar_csv_rows(p) for p in tmp_paths)
+        if csv_rows > MAX_BINANCE_CSV_ROWS:
+            return jsonify({
+                "error": f"Los CSV de Binance suman demasiadas filas ({csv_rows:,}). "
+                         f"El máximo permitido es {MAX_BINANCE_CSV_ROWS:,} filas."
+            }), 400
+
+        _ev_list = [_capturar_evidencia(p, exchange="binance") for p in tmp_paths]
+        _evidencia_json = json.dumps(_ev_list) if _ev_list else None
+
+        try:
+            market_prices = app.config.get("BINANCE_VERIFIED_MARKET_PRICES")
+            # Conservar el clasificador antes de entrar en el motor.
+            # Si el FIFO falla por una insuficiencia material, la respuesta
+            # 422 debe explicar qué fuente puede aportar el usuario.
+            # La clasificación y el cálculo siguen ejecutándose una sola vez.
+            selected_years = _años_seleccionados(ejercicio)
+            clasificador = ClasificadorBinanceMulti(
+                tmp_paths, filenames,
+                final_year=max(selected_years) if selected_years else None,
+            ).clasificar()
+            # Never issue an apparently valid zero-operations PDF from files
+            # that contain ONLY years after the selected fiscal exercise.
+            # Streaming commission rows are counted separately from
+            # _source_rows, so an in-scope commission must not be hidden.
+            if (selected_years
+                    and clasificador.ignored_future_rows
+                    and not any(clasificador._source_rows.values())
+                    and not clasificador._commission_files):
+                raise ValueError(
+                    "Datos fiscales no seguros: las exportaciones aportadas "
+                    "contienen únicamente registros posteriores al ejercicio "
+                    "seleccionado. Aporta el historial de los años relevantes."
+                )
+            motor, rendimientos, clasificador = procesar_con_fifo(
+                clasificador, binance_market_prices=market_prices
+            )
+            # El historial completo sigue usándose para calcular lotes FIFO,
+            # pero la posición mostrada para IRPF/721 debe ser el cierre del
+            # ejercicio seleccionado, no el saldo de años posteriores.
+            # Capturar ANTES de filtrar resultados; posicion_a_fecha necesita
+            # todas las transmisiones anteriores al cierre para reconstruir.
+            years = _años_seleccionados(ejercicio)
+            posiciones_snapshot = (
+                motor.posicion_a_fecha(datetime(max(years), 12, 31, 23, 59, 59, 999999))
+                if years else None
+            )
+            _filtrar_motor_por_ejercicio(motor, ejercicio)
+            rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
+            resumen, posicion, operaciones = _motor_a_json(
+                motor, clasificador, posiciones_snapshot=posiciones_snapshot
+            )
+            advertencias = motor.advertencias + clasificador.advertencias
+            rendimientos_json = _rendimientos_a_json(rendimientos)
+            pdf_bytes = generar_pdf(
+                motor, nombre, ejercicio, "Binance", rendimientos,
+                posiciones_snapshot=posiciones_snapshot
+            )
+
+            processing_ms = int((time.time() - t_start) * 1000)
+            distinct_assets = len({op["activo"] for op in operaciones}) if operaciones else 0
+            report_id = _registrar_informe(
+                exchange="binance",
+                fiscal_year=_ejercicio_a_fiscal_year(ejercicio),
+                csv_rows=csv_rows,
+                distinct_assets=distinct_assets,
+                processing_ms=processing_ms,
+                fifo_operations=resumen.get("operaciones_con_resultado", len(operaciones)),
+                fifo_swaps=len(clasificador.swaps),
+                fifo_rendimientos=len(rendimientos_json),
+                fifo_movimientos=len(clasificador.movimientos),
+                fifo_advertencias=len(advertencias),
+                fifo_desconocidas=len(clasificador.desconocidas),
+                resultado_neto=resumen.get("resultado_neto"),
+                ganancias_brutas=resumen.get("ganancias_brutas"),
+                perdidas_brutas=resumen.get("perdidas_brutas"),
+                fiscal_years_str=(ejercicio or "")[:50],
+            )
+            pdf_tmp = _guardar_pdf_temporal(tmp_paths[0], pdf_bytes)
+            token = os.path.basename(pdf_tmp)
+            _guardar_token_pdf(token, report_id)
+
+            return jsonify({
+                "ok": True,
+                "resumen": resumen,
+                "operaciones": operaciones,
+                "posicion": posicion,
+                "rendimientos": rendimientos_json,
+                "advertencias": advertencias,
+                "resumen_archivos": clasificador.resumen_archivos,
+                "token": token,
+                "estimacion": False,
+            })
+
+        except Exception as exc:
+            _err_category = getattr(exc, "category", "parser_error")
+            _err_code = getattr(exc, "code", None)
+            _registrar_informe(
+                exchange="binance",
+                fiscal_year=_ejercicio_a_fiscal_year(ejercicio),
+                csv_rows=csv_rows,
+                distinct_assets=0,
+                processing_ms=int((time.time() - t_start) * 1000),
+                status="failed",
+                error_type=type(exc).__name__,
+                error_category=_err_category,
+            )
+            try:
+                record_processing_error_safe(
+                    user_id=current_user.id if current_user.is_authenticated else None,
+                    email=current_user.email if current_user.is_authenticated else None,
+                    exchange="binance",
+                    stage="classify",
+                    exc=exc,
+                    csv_filename="",
+                    csv_size=None,
+                    parser="ClasificadorBinanceMulti",
+                    error_category=_err_category,
+                    error_code=_err_code,
+                    csv_context=_evidencia_json,
+                )
+            except Exception as tracking_exc:
+                app.logger.error(
+                    "[ERROR_TRACKING] diagnostic recording failed exception=%s",
+                    type(tracking_exc).__name__,
+                )
+            if isinstance(exc, (BinanceMultiUserError, BinanceUploadError)):
+                return jsonify({"error": str(exc)}), 400
+            # La falta de trades públicos EUR, un CHECKSUM inválido o un
+            # instante ambiguo es insuficiencia fiscal, NO error del servidor.
+            # Mensaje estable: nunca exponer al cliente datos de mercado
+            # privados o trazas internas de validación.
+            from binance_eur_valuation import BinancePriceEvidenceError
+            if isinstance(exc, BinancePriceEvidenceError):
+                markers = set(getattr(
+                    clasificador, "fuentes_materiales_no_soportadas", ()
+                ) or ()) if clasificador is not None else set()
+                if markers & {
+                    "binance_orden_intrasegundo_incierto",
+                    "binance_fifo_lotes_mismo_segundo_precio_distinto",
+                }:
+                    message = ("Datos fiscales no seguros: no se ha podido acreditar "
+                               "el orden temporal de las operaciones Binance.")
+                else:
+                    message = ("Datos fiscales no seguros: no se ha podido acreditar "
+                               "la valoración EUR de una o varias permutas Binance.")
+                payload = {"error": message}
+                # La vista de diagnóstico omite importes, activos, fechas e
+                # identificadores privados. También es útil cuando el fallo
+                # de cotización ocurre antes del validador fiscal posterior.
+                if clasificador is not None:
+                    from binance_pendientes import diagnosticar_pendientes_binance
+                    payload["diagnostico_binance"] = diagnosticar_pendientes_binance(
+                        clasificador
+                    )
+                return jsonify(payload), 422
+            if isinstance(exc, ValueError) and str(exc).startswith("Datos fiscales no seguros:"):
+                payload = {"error": str(exc)}
+                if clasificador is not None:
+                    from binance_pendientes import diagnosticar_pendientes_binance
+                    payload["diagnostico_binance"] = diagnosticar_pendientes_binance(
+                        clasificador
+                    )
+                return jsonify(payload), 422
+            return jsonify({"error": _error_amigable(exc)}), 500
+    finally:
+        with _analisis_lock:
+            _analisis_en_curso.discard(uid)
+        for p in tmp_paths:
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
 
 
 @app.route("/api/kucoin/anos", methods=["POST"])

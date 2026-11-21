@@ -221,9 +221,11 @@
     <!-- Columna izquierda: drop zone + nombre/año -->
     <div class="bar-left">
       <div class="bar-dropzone" id="dropZone">
-        <input type="file" id="csvInput" aria-label="Seleccionar historial de operaciones" aria-describedby="dropHint" accept="{% if exchange_id == 'mexc' %}.xlsx,.xls{% elif exchange_id == 'bit2me' and bit2me_excel_enabled %}.csv,.xlsx,.xls{% else %}.csv{% endif %}"{% if exchange_id in ['kucoin', 'bitget'] %} multiple{% endif %}>
+        <input type="file" id="csvInput" aria-label="Seleccionar historial de operaciones" aria-describedby="dropHint" accept="{% if exchange_id == 'mexc' %}.xlsx,.xls{% elif exchange_id == 'bit2me' and bit2me_excel_enabled %}.csv,.xlsx,.xls{% elif exchange_id == 'binance' %}.csv,.zip{% else %}.csv{% endif %}"{% if exchange_id in ['binance', 'kucoin', 'bitget'] %} multiple{% endif %}>
         <span style="font-size:22px;flex-shrink:0;">📂</span>
-        {% if exchange_id == 'mexc' %}
+        {% if exchange_id == 'binance' %}
+        <span class="bar-drop-text" id="dropHint">Arrastra aquí <strong>los CSV o ZIP de Binance</strong> que tengas o haz clic para seleccionarlos<br><span style="font-size:11px;opacity:0.65;">Operaciones Spot, Convert, depósitos, retiros y operaciones fiat · puedes subir varios a la vez</span></span>
+        {% elif exchange_id == 'mexc' %}
         <span class="bar-drop-text" id="dropHint">Arrastra aquí el XLS/XLSX de {{ exchange_name }} o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Solo ficheros .xls / .xlsx</span></span>
         {% elif exchange_id == 'kucoin' %}
         <span class="bar-drop-text" id="dropHint">Arrastra aquí <strong>todos los CSV de KuCoin</strong> que tengas o haz clic para seleccionarlos<br><span style="font-size:11px;opacity:0.65;">Cuenta de trading, financiación, órdenes fiat, depósitos cripto · puedes subir varios a la vez · si alguno está vacío, no pasa nada</span></span>
@@ -237,8 +239,11 @@
         <span class="bar-drop-text" id="dropHint">Arrastra aquí tu CSV o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Solo ficheros .csv</span></span>
         {% endif %}
       </div>
-      {% if exchange_id in ['kucoin', 'bitget'] %}
+      {% if exchange_id in ['binance', 'kucoin', 'bitget'] %}
       <div id="kucoinSummary" class="kucoin-summary" style="display:none;"></div>
+      {% if exchange_id == 'binance' %}
+      <div id="binancePendientes" class="kucoin-summary" style="display:none;" aria-live="polite"></div>
+      {% endif %}
       {% endif %}
       <div class="bar-inputs-row">
         <div class="bar-field bar-field-nombre">
@@ -247,7 +252,7 @@
         </div>
         <div class="bar-field bar-field-year" id="ejercicio-section">
           <span class="tool-year-label" id="yearLabel">Ejercicio fiscal</span>
-          <div id="year-placeholder-bar" class="year-placeholder-bar">Sube {% if exchange_id == 'mexc' %}el archivo Excel{% elif exchange_id in ['kucoin', 'bitget'] %}los CSV{% else %}el CSV{% endif %} para detectar</div>
+          <div id="year-placeholder-bar" class="year-placeholder-bar">Sube {% if exchange_id == 'mexc' %}el archivo Excel{% elif exchange_id == 'binance' %}los archivos{% elif exchange_id in ['kucoin', 'bitget'] %}los CSV{% else %}el CSV{% endif %} para detectar</div>
           <div id="year-chips-wrap" style="display:none">
             <div id="year-chips" class="year-chips" role="group" aria-labelledby="yearLabel"></div>
             <p id="year-none-warn" class="year-none-warn-bar" style="display:none">Selecciona al menos un ejercicio</p>
@@ -276,7 +281,7 @@
   <!-- Meta: warning + estado fichero + botones post-análisis -->
   <div class="bar-meta">
     <div class="bar-warning">
-      <strong>⚠ Importante:</strong> {% if exchange_id == 'mexc' %}El archivo Excel debe incluir todo el historial desde tu primera operación, no solo el año que quieres declarar.{% elif exchange_id in ['kucoin', 'bitget'] %}Los CSV deben incluir todo el historial desde tu primera operación, no solo el año que quieres declarar.{% else %}El CSV debe incluir todo el historial desde tu primera operación, no solo el año que quieres declarar.{% endif %}
+      <strong>⚠ Importante:</strong> {% if exchange_id == 'mexc' %}El archivo Excel debe incluir todo el historial desde tu primera operación, no solo el año que quieres declarar.{% elif exchange_id == 'binance' %}Los archivos deben cubrir todo tu historial relevante desde la primera adquisición, no solo el año que quieres declarar.{% elif exchange_id in ['kucoin', 'bitget'] %}Los CSV deben incluir todo el historial desde tu primera operación, no solo el año que quieres declarar.{% else %}El CSV debe incluir todo el historial desde tu primera operación, no solo el año que quieres declarar.{% endif %}
     </div>
     <div class="bar-file-selected" id="fileSelected">
       <span>📄</span><span id="fileName">—</span>
@@ -338,6 +343,9 @@
     </div>
     <p class="error-desc" id="errorDesc"></p>
     <ol class="error-pasos" id="errorPasos"></ol>
+    {% if exchange_id == 'binance' %}
+    <div id="binanceErrorPendientes" class="kucoin-summary" style="display:none; margin:12px 0;"></div>
+    {% endif %}
         <div id="diagConsent" style="display:none;margin:16px 0;padding:14px;border:1px solid #d9dfe5;border-radius:12px;text-align:left;">
       <strong>¿Quieres compartir el archivo con soporte?</strong>
       <p style="font-size:13px;line-height:1.5;">Es opcional y no afecta a tu cuenta. Solo se ofrecen archivos de hasta 8 MB. El archivo puede incluir operaciones y datos fiscales. Al autorizarlo, el archivo se enviará mediante Resend a <strong>colab.marianosevilla@gmail.com</strong>. La web cerrará los archivos temporales al terminar el intento. En Gmail conservaremos el adjunto solo mientras sea necesario para revisar la incidencia, con un plazo máximo previsto de 30 días; lo eliminaremos antes si termina el análisis. Resend puede conservar sus propias copias según sus plazos. Consulta la <a href="/privacidad#archivos-e-informes">Política de privacidad</a>.</p>
@@ -548,7 +556,7 @@
 
   const instrucciones = {
     binance: {
-      hint: 'Arrastra aquí el CSV de Binance o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Historial de Operaciones Spot · solo ficheros .csv</span>',
+      hint: 'Arrastra aquí <strong>los CSV o ZIP de Binance</strong> que tengas o haz clic para seleccionarlos<br><span style="font-size:11px;opacity:0.65;">Operaciones Spot, Convert, depósitos, retiros y operaciones fiat · puedes subir varios a la vez</span>',
     },
     kraken: {
       hint: 'Arrastra aquí el CSV de Kraken o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Exportación de Ledgers · solo ficheros .csv</span>',
@@ -604,11 +612,12 @@
   const btnNuevo     = document.getElementById('btnNuevo');
 
   // Flujo MULTIARCHIVO (KuCoin y Bitget comparten el mismo patrón)
-  const MULTI_PAGES   = ['kucoin', 'bitget'];
+  const MULTI_PAGES   = ['binance', 'kucoin', 'bitget'];
   const isMultiPage   = MULTI_PAGES.includes(EXCHANGE_PAGE);
   const isKucoinPage  = isMultiPage;   // alias retrocompatible dentro de este script
   const kucoinSummary = document.getElementById('kucoinSummary');
   let   selectedFiles = [];   // multiarchivo: lista de File
+  let   appendBinanceFiles = false;  // tras un 422, añadir archivos sin borrar los anteriores
 
   function showFile()    { fileSelected.classList.add('visible'); }
   function hideFile()    {
@@ -662,6 +671,7 @@
   // ── RESETEAR TODO ────────────────────────
   function resetearFormulario() {
     selectedFile = null;
+    appendBinanceFiles = false;
     csvInput.value = '';
     hideFile();
     fileName.textContent = '—';
@@ -694,7 +704,15 @@
   const errorState     = document.getElementById('errorState');
   const resultsContent = document.getElementById('resultsContent');
 
-  document.getElementById('btnRetry').addEventListener('click', resetearFormulario);
+  document.getElementById('btnRetry').addEventListener('click', () => {
+    // Un fallo fiscal Binance no obliga a volver a subir todos los ZIP.
+    if (EXCHANGE_PAGE === 'binance' && selectedFiles.length) {
+      showState('empty');
+      actualizarBoton();
+    } else {
+      resetearFormulario();
+    }
+  });
 
   let selectedFile  = null;
   let currentToken  = null;
@@ -855,6 +873,15 @@
 
   // ── MULTIARCHIVO: selección + resumen ──────────────────────────────────
   const MULTI_SUMMARY_SECTIONS = {
+    binance: [
+      ['spot_trades',       'Operaciones Spot'],
+      ['convert_orders',    'Convert'],
+      ['fiat_trade',        'Compras/ventas fiat'],
+      ['crypto_deposit',    'Depósitos cripto'],
+      ['crypto_withdrawal', 'Retiros cripto'],
+      ['transaction_history','Historial de transacciones'],
+      ['spot_orders',       'Órdenes Spot (auditoría)'],
+    ],
     kucoin: [
       ['trading',         'Cuenta de trading'],
       ['financiacion',    'Cuenta de financiación'],
@@ -869,9 +896,48 @@
     ],
   };
   const MULTI_SUMMARY_TITLE = {
+    binance: 'Fuentes Binance detectadas',
     kucoin: 'Archivos KuCoin detectados',
     bitget: 'Archivos Bitget detectados',
   };
+
+  function renderBinancePendientes(diagnostico) {
+    // Mostrar SOLO incidencias detectadas, sin inferir fuentes ausentes.
+    if (EXCHANGE_PAGE !== 'binance') return;
+    const incidencias = Array.isArray(diagnostico?.incidencias)
+      ? diagnostico.incidencias.slice(0, 12) : [];
+    for (const id of ['binancePendientes', 'binanceErrorPendientes']) {
+      const target = document.getElementById(id);
+      if (!target) continue;
+      target.replaceChildren();
+      if (!incidencias.length) {
+        target.style.display = 'none';
+        continue;
+      }
+      const heading = document.createElement('strong');
+      heading.textContent = 'Información pendiente para el FIFO';
+      target.appendChild(heading);
+      const intro = document.createElement('p');
+      intro.textContent = 'La comprobación de fuentes es orientativa. '
+        + 'Aportar nuevos datos no garantiza todavía un informe fiscal válido.';
+      target.appendChild(intro);
+      const list = document.createElement('ol');
+      for (const issue of incidencias) {
+        const item = document.createElement('li');
+        item.style.marginBottom = '12px';
+        const title = document.createElement('strong');
+        title.textContent = String(issue.titulo || 'Incidencia');
+        const details = document.createElement('p');
+        details.textContent = String(issue.descripcion || '');
+        const next = document.createElement('p');
+        next.textContent = 'Qué aportar: ' + String(issue.siguiente_paso || '');
+        item.append(title, details, next);
+        list.appendChild(item);
+      }
+      target.appendChild(list);
+      target.style.display = 'block';
+    }
+  }
 
   function renderKucoinSummary(resumen, advertencias) {
     if (!kucoinSummary) return;
@@ -882,25 +948,41 @@
       const s = resumen[key] || {};
       let estado, cls;
       if (!s.detectado)               { estado = 'no detectado'; cls = 'ks-muted'; }
-      else if (key === 'financial_record') { estado = 'sólo auditoría'; cls = 'ks-muted'; }
+      else if (key === 'financial_record' || key === 'spot_orders') { estado = 'sólo auditoría'; cls = 'ks-muted'; }
       else if (s.vacio)               { estado = 'archivo vacío'; cls = 'ks-warn'; }
       else                            { estado = (s.registros || 0) + ' registros'; cls = 'ks-ok'; }
       html += `<div class="ks-row"><span>${label}:</span><span class="${cls}">${estado}</span></div>`;
     });
-    const noRec = (resumen.no_reconocidos || []);
-    if (noRec.length) {
+    const noRec = resumen.no_reconocidos || [];
+    if (Array.isArray(noRec) && noRec.length) {
       html += `<div class="ks-row"><span class="ks-warn">No reconocidos:</span><span>${noRec.join(', ')}</span></div>`;
+    } else if (Number.isInteger(noRec) && noRec > 0) {
+      html += `<div class="ks-row"><span class="ks-warn">No reconocidos:</span><span>${noRec} archivo(s)</span></div>`;
     }
     kucoinSummary.innerHTML = html;
     kucoinSummary.style.display = 'block';
   }
 
   function handleKucoinFiles(fileList) {
-    const files = Array.from(fileList || []);
+    let files = Array.from(fileList || []);
     if (!files.length) return;
+    if (EXCHANGE_PAGE === 'binance' && appendBinanceFiles) {
+      files = selectedFiles.concat(files);
+      if (files.length > 40) {
+        mostrarErrorArchivo('Binance admite un máximo de 40 archivos por análisis.');
+        actualizarBoton();
+        return;
+      }
+    }
     for (const f of files) {
-      if (!f.name.toLowerCase().endsWith('.csv')) {
-        mostrarErrorArchivo('Todos los ficheros deben ser .csv');
+      const low = f.name.toLowerCase();
+      const extensionOk = EXCHANGE_PAGE === 'binance'
+        ? (low.endsWith('.csv') || low.endsWith('.zip'))
+        : low.endsWith('.csv');
+      if (!extensionOk) {
+        mostrarErrorArchivo(EXCHANGE_PAGE === 'binance'
+          ? 'Binance admite archivos .csv y .zip descargados directamente desde Binance'
+          : 'Todos los ficheros deben ser .csv');
         selectedFiles = []; actualizarBoton(); return;
       }
       if (f.size > 10 * 1024 * 1024) {
@@ -908,6 +990,7 @@
         selectedFiles = []; actualizarBoton(); return;
       }
     }
+    if (EXCHANGE_PAGE === 'binance') renderBinancePendientes(null);
     selectedFiles = files;
     fileName.textContent = files.length === 1 ? files[0].name : `${files.length} ficheros`;
     showFile();
@@ -937,6 +1020,9 @@
           return;
         }
         renderKucoinSummary(data.resumen, data.advertencias);
+        if (EXCHANGE_PAGE === 'binance') {
+          renderBinancePendientes(data.diagnostico_binance);
+        }
         detectedYears = data.anos || [];
         renderYearChips(detectedYears);
         actualizarBoton();
@@ -1379,6 +1465,14 @@
   function parsearError(errorRaw) {
     if (!errorRaw) return { ...ERRORES.generico };
     const e = errorRaw;
+    if (EXCHANGE_PAGE === 'binance' && e.startsWith('Datos fiscales no seguros:')) {
+      return {
+        icono: '!',
+        titulo: 'Informe pendiente de datos verificables',
+        desc: esc(e),
+        pasos: ['Revisa las incidencias detectadas y añade los archivos o justificantes disponibles. No se ha generado ningún PDF.'],
+      };
+    }
     if (e === '__servidor__') return { ...ERRORES.errorServidor };
     if (e.includes('límite de análisis') || e.includes('429') || e.includes('espera')) return { ...ERRORES.rateLimitado };
     if (e.includes('CSV incorrecto') || e.includes('Historial de Transacciones') || e.includes('Buy Crypto With Fiat') || e.includes('Historial de Operaciones Spot')) return { ...ERRORES.csvIncorrectoBinance };
@@ -1556,12 +1650,22 @@
 
       if (!res.ok || !data.ok) {
         mostrarErrorApi(data.error);
+        if (EXCHANGE_PAGE === 'binance') {
+          renderBinancePendientes(data.diagnostico_binance);
+        }
         showState('error');
         if (![401, 403, 409, 413, 429].includes(res.status)) {
           offerDiagnostic(isMultiPage ? selectedFiles : [selectedFile]);
         }
-        selectedFile = null; csvInput.value = ''; hideFile();
-        fileName.textContent = '—'; btnAnalizar.disabled = true;
+        if (EXCHANGE_PAGE === 'binance' && res.status === 422) {
+          // Mantener la evidencia subida y permitir añadir más ZIP.
+          appendBinanceFiles = true;
+          csvInput.value = '';
+          actualizarBoton();
+        } else {
+          selectedFile = null; csvInput.value = ''; hideFile();
+          fileName.textContent = '—'; btnAnalizar.disabled = true;
+        }
         return;
       }
 
