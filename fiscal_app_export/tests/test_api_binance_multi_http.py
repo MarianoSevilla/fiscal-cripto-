@@ -2204,3 +2204,44 @@ def test_binance_http_funding_sale_stays_blocked_with_specific_diagnostic(
     codes = {i["codigo"] for i in data["diagnostico_binance"]["incidencias"]}
     assert "cartera_binance_no_conciliada" in codes
     assert data["diagnostico_binance"]["validez_fiscal_acreditada"] is False
+
+
+def test_binance_previsualizacion_entrega_borrador_documental_sin_FIFO(client, usuario):
+    """El usuario puede descargar cobertura sin calcular costes ni emitir PDF."""
+    _login(client)
+    r = client.post(
+        "/api/binance/anos",
+        data={"csv": (io.BytesIO(_spot_csv()), "Spot-(UTC+1).csv")},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 200, r.get_data(as_text=True)[:400]
+    b = r.get_json()["borrador_binance"]
+    assert b["estado"] == "INCOMPLETO_NO_APTO_PARA_DECLARAR"
+    assert b["no_es_informe_fiscal"] is True
+    assert b["ganancias_y_perdidas_eur"] is None
+    assert b["costes_fifo_calculados"] is False
+    assert b["pdf_fiscal_disponible"] is False
+    assert "token" not in b
+
+
+def test_binance_error_fiscal_422_incluye_borrador_sin_token(client, usuario):
+    """Ante fuentes incompletas, ofrece cobertura, jamás un informe fiscal."""
+    _login(client)
+    raw = (
+        "Tiempo,Moneda,Cantidad,Tipo\\n"
+        "2025-06-10,ABC,0.125,Real-time APR Rewards\\n"
+    ).replace("\\n", "\n").encode("utf-8-sig")
+    r = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(raw), "Earn-(UTC+1).csv"),
+              "ejercicio": "2025", "nombre": "Ejemplo inventado"},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 422, r.get_data(as_text=True)[:500]
+    data = r.get_json()
+    assert "token" not in data and "resumen" not in data
+    b = data["borrador_binance"]
+    assert b["no_es_informe_fiscal"] is True
+    assert b["ejercicio_solicitado"] == "2025"
+    assert b["ganancias_y_perdidas_eur"] is None
+    assert any(p["codigo"] == "earn_lotes" for p in b["pendientes"])
