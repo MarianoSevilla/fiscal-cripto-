@@ -629,6 +629,26 @@ class ClasificadorBinanceMulti:
         for path in self._commission_files:
             yield from self._stream_commission_csv(path)
 
+    def detected_years(self) -> tuple[int, ...]:
+        """Años de TODAS las filas reconocidas, incluidas las pendientes FIFO.
+
+        No se excluyen años porque sus movimientos todavía no puedan
+        transformarse en compraventas o rendimientos fiscalmente válidos.
+        """
+        years: set[int] = set()
+        for source, items in self._source_rows.items():
+            field = _SOURCE_TIME_FIELD.get(source)
+            if not field:
+                continue
+            for row, _filename in items:
+                raw = row.get(field)
+                if raw:
+                    years.add(int(_fecha(raw)[:4]))
+        audit = self.commission_evidence_summary
+        if audit is not None:
+            years.update(audit.years)
+        return tuple(sorted(years))
+
     def clasificar(self) -> "ClasificadorBinanceMulti":
         if not self.filepaths:
             raise BinanceMultiUserError("no_files", "No se recibió ningún archivo de Binance.")
