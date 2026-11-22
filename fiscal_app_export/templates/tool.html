@@ -1659,7 +1659,7 @@
   const ERRORES = {
     rateLimitado: {
       icono: '⏱', titulo: 'Límite de análisis alcanzado',
-      desc: 'Has realizado demasiados análisis seguidos. <strong>Espera 10 minutos</strong> y vuelve a intentarlo.',
+      desc: 'Has alcanzado temporalmente el límite de análisis. Vuelve a intentarlo más tarde.',
       pasos: [],
     },
     csvIncorrectoBinance: {
@@ -1716,9 +1716,40 @@
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
-  function parsearError(errorRaw) {
+  function formatearEsperaRateLimit(segundos) {
+    let restante = segundos;
+    const unidades = [
+      ['día', 86400], ['hora', 3600], ['minuto', 60], ['segundo', 1],
+    ];
+    const partes = [];
+    for (const [unidad, valor] of unidades) {
+      const cantidad = Math.floor(restante / valor);
+      restante %= valor;
+      if (cantidad) partes.push(`${cantidad} ${unidad}${cantidad === 1 ? '' : 's'}`);
+    }
+    return partes.join(' y ');
+  }
+
+  function parsearError(errorRaw, retryAfter = null) {
+    const e = String(errorRaw || '');
+    if (retryAfter?.status === 429
+        || /\b429\b|l[ií]mite.*an[aá]lisis|demasiados intentos|rate limit/i.test(e)) {
+      const bodyDelay = retryAfter && Number.isSafeInteger(retryAfter.body)
+        && retryAfter.body > 0 ? retryAfter.body : null;
+      const headerText = retryAfter && retryAfter.header != null
+        ? String(retryAfter.header).trim() : '';
+      const headerDelay = /^\d+$/.test(headerText) && Number.isSafeInteger(Number(headerText))
+        && Number(headerText) > 0 ? Number(headerText) : null;
+      const delayIsConsistent = bodyDelay === null || headerDelay === null
+        || bodyDelay === headerDelay;
+      const verifiedDelay = delayIsConsistent ? (bodyDelay ?? headerDelay) : null;
+      const error = { ...ERRORES.rateLimitado };
+      if (verifiedDelay !== null) {
+        error.desc = `Has alcanzado temporalmente el límite de análisis. Podrás volver a intentarlo en ${formatearEsperaRateLimit(verifiedDelay)}.`;
+      }
+      return error;
+    }
     if (!errorRaw) return { ...ERRORES.generico };
-    const e = errorRaw;
     if (EXCHANGE_PAGE === 'binance' && e.startsWith('Datos fiscales no seguros:')) {
       return {
         icono: '!',
@@ -1728,7 +1759,6 @@
       };
     }
     if (e === '__servidor__') return { ...ERRORES.errorServidor };
-    if (e.includes('límite de análisis') || e.includes('429') || e.includes('espera')) return { ...ERRORES.rateLimitado };
     if (e.includes('CSV incorrecto') || e.includes('Historial de Transacciones') || e.includes('Buy Crypto With Fiat') || e.includes('Historial de Operaciones Spot')) return { ...ERRORES.csvIncorrectoBinance };
     if (e.includes('no parece ser un CSV de')) return { ...ERRORES.exchangeEquivocado, desc: esc(e) };
     if (e.includes('futuros') || e.includes('copy trading') || e.includes('futures')) {
@@ -1764,8 +1794,8 @@
     return { ...ERRORES.generico };
   }
 
-  function mostrarErrorApi(errorRaw) {
-    const err = parsearError(errorRaw);
+  function mostrarErrorApi(errorRaw, retryAfter = null) {
+    const err = parsearError(errorRaw, retryAfter);
     document.getElementById('errorIcon').textContent   = err.icono;
     document.getElementById('errorTitulo').textContent = err.titulo;
     const descEl  = document.getElementById('errorDesc');
@@ -1918,7 +1948,11 @@
       }
 
       if (!res.ok || !data.ok) {
-        mostrarErrorApi(data.error);
+        mostrarErrorApi(data.error, res.status === 429 ? {
+          status: res.status,
+          body: data.retry_after_seconds,
+          header: res.headers.get('Retry-After'),
+        } : null);
         if (EXCHANGE_PAGE === 'binance') {
           renderBinancePendientes(data.diagnostico_binance);
           renderBorradorBinance(data.borrador_binance, data.token_pdf_diagnostico);

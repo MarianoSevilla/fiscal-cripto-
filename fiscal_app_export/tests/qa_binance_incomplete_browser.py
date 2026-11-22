@@ -3,6 +3,7 @@
 Usa Flask real con SQLite temporal y usuario ficticio, sin proveedores externos
 ni datos privados. La ruta fiscal debe seguir bloqueada en el caso incompleto.
 """
+import json
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -79,5 +80,75 @@ def run_binance_incomplete(origin, cookie_name, cookie_value):
                     print("BINANCE_INCOMPLETE_CHROMIUM_PASS", width, flush=True)
                 finally:
                     context.close()
+        finally:
+            browser.close()
+
+
+def run_binance_rate_limit_ui(origin, cookie_name, cookie_value):
+    """Renderiza esperas 429 reales del servidor y fallback sin inventar plazos."""
+    cases = (
+        (600, "10 minutos"),
+        (3600, "1 hora"),
+        (86400, "1 día"),
+        (None, None),
+    )
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        try:
+            for width in (375, 1280):
+                for retry_after, expected_wait in cases:
+                    context = browser.new_context(viewport={"width": width, "height": 812})
+                    context.route("**/*", allow_local)
+                    context.add_cookies([{
+                        "name": cookie_name, "value": cookie_value,
+                        "url": origin, "httpOnly": True, "sameSite": "Lax",
+                    }])
+                    try:
+                        page = context.new_page()
+                        page.set_default_timeout(16000)
+                        payload = {
+                            "error": "Has alcanzado un límite temporal de análisis. Espera antes de volver a intentarlo.",
+                            "ok": False,
+                        }
+                        headers = {"content-type": "application/json"}
+                        if retry_after is not None:
+                            payload["retry_after_seconds"] = retry_after
+                            payload["error"] = (
+                                "Has alcanzado un límite temporal de análisis. "
+                                f"Podrás volver a intentarlo en {expected_wait}."
+                            )
+                            headers["Retry-After"] = str(retry_after)
+                        response_body = json.dumps(payload)
+
+                        def fulfill_rate_limit(route, request=None):
+                            return route.fulfill(
+                                status=429, headers=headers, body=response_body
+                            )
+
+                        page.route("**/api/binance/analizar", fulfill_rate_limit)
+                        response = page.goto(origin + "/binance", wait_until="domcontentloaded")
+                        assert response and response.status == 200
+                        page.locator("#csvInput").set_input_files({
+                            "name": "Earn-(UTC+1).csv",
+                            "mimeType": "text/csv", "buffer": EARN_SYNTHETIC,
+                        })
+                        page.locator("#binancePendientes").wait_for(state="visible")
+                        page.locator("#btnAnalizar").click()
+                        page.locator("#errorState").wait_for(state="visible")
+                        description = page.locator("#errorDesc").inner_text()
+                        assert "Has alcanzado temporalmente el límite de análisis." in description
+                        if expected_wait:
+                            assert f"Podrás volver a intentarlo en {expected_wait}." in description, (
+                                width, expected_wait, description
+                            )
+                        else:
+                            assert "Vuelve a intentarlo más tarde." in description
+                            assert not any(value in description for value in (
+                                "10 minutos", "1 hora", "1 día"
+                            )), (width, description)
+                        assert page.locator("#errorTitulo").inner_text() == "Límite de análisis alcanzado"
+                        print("BINANCE_RATE_LIMIT_UI_PASS", width, retry_after, flush=True)
+                    finally:
+                        context.close()
         finally:
             browser.close()

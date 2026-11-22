@@ -2395,3 +2395,55 @@ def test_binance_previsualizacion_no_emite_pdf_antes_del_analisis(client, usuari
     assert data["borrador_binance"]["pdf_fiscal_disponible"] is False
     assert "token_pdf_diagnostico" not in data
     assert "token" not in data
+
+
+def test_rate_limit_retry_after_uses_latest_breached_window():
+    from types import SimpleNamespace
+    from app import _rate_limit_retry_after_seconds
+
+    now = 1_000
+    limits = [
+        SimpleNamespace(breached=True, reset_at=now + 600),
+        SimpleNamespace(breached=True, reset_at=now + 3_600),
+        SimpleNamespace(breached=False, reset_at=now + 86_400),
+    ]
+    assert _rate_limit_retry_after_seconds(limits, now=now) == 3_600
+    assert _rate_limit_retry_after_seconds(limits[2:], now=now) is None
+
+
+@pytest.mark.parametrize(
+    ("seconds", "expected"),
+    [(600, "10 minutos"), (3_600, "1 hora"), (86_400, "1 día")],
+)
+def test_rate_limit_wait_copy_matches_retry_window(seconds, expected):
+    from app import _format_rate_limit_wait
+
+    assert _format_rate_limit_wait(seconds) == expected
+
+
+def test_binance_rate_limit_returns_actual_retry_after(client, usuario, _app, monkeypatch):
+    from app import limiter
+
+    monkeypatch.setitem(_app.config, "RATELIMIT_ENABLED", True)
+    limiter.reset()
+    _login(client)
+
+    for _ in range(3):
+        response = client.post(
+            "/api/binance/analizar",
+            data={},
+            content_type="multipart/form-data",
+        )
+        assert response.status_code == 400
+
+    response = client.post(
+        "/api/binance/analizar",
+        data={},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 429
+    payload = response.get_json()
+    retry_after = int(response.headers["Retry-After"])
+    assert retry_after > 0
+    assert payload["retry_after_seconds"] == retry_after
+    assert "10 minutos" in payload["error"]

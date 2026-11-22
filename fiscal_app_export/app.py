@@ -6066,15 +6066,61 @@ def _api_stats_data():
     })
 
 
+def _rate_limit_retry_after_seconds(limits, now=None):
+    """Return the wait for every breached window, not just the shortest one."""
+    now = int(time.time()) if now is None else int(now)
+    reset_times = [
+        int(limit.reset_at) for limit in limits
+        if getattr(limit, "breached", False)
+    ]
+    if not reset_times:
+        return None
+    return max(0, max(reset_times) - now)
+
+
+def _current_rate_limit_retry_after_seconds():
+    try:
+        return _rate_limit_retry_after_seconds(limiter.current_limits)
+    except Exception:
+        # Keep the 429 response available if limiter storage is unavailable.
+        return None
+
+
+def _format_rate_limit_wait(seconds):
+    seconds = max(1, int(seconds))
+    if seconds < 60:
+        return f"{seconds} segundos"
+    minutes, seconds = divmod(seconds, 60)
+    if minutes < 60:
+        unit = "minuto" if minutes == 1 else "minutos"
+        return f"{minutes} {unit}" + (f" y {seconds} segundos" if seconds else "")
+    hours, minutes = divmod(minutes, 60)
+    if hours < 24:
+        unit = "hora" if hours == 1 else "horas"
+        return f"{hours} {unit}" + (f" y {minutes} minutos" if minutes else "")
+    days, hours = divmod(hours, 24)
+    unit = "día" if days == 1 else "días"
+    return f"{days} {unit}" + (f" y {hours} horas" if hours else "")
+
+
 @app.errorhandler(429)
 def ratelimit_error(e):
-    # Rutas API: devolver JSON (consumido por JS del frontend)
+    # Rutas API: devolver JSON (consumido por JS del frontend).
     if request.path.startswith("/api/"):
-        if request.path in AUTH_POST_PATHS:
-            return jsonify({"error": "Has realizado demasiados intentos. Espera antes de volver a intentarlo."}), 429
-        return jsonify({
-            "error": "Has alcanzado el límite de análisis. Por favor espera 10 minutos antes de intentarlo de nuevo."
-        }), 429
+        retry_after = _current_rate_limit_retry_after_seconds()
+        auth_route = request.path in AUTH_POST_PATHS
+        message = (
+            "Has realizado demasiados intentos."
+            if auth_route else "Has alcanzado un límite temporal de análisis."
+        )
+        payload = {"error": message + " Espera antes de volver a intentarlo."}
+        headers = {"Cache-Control": "no-store"}
+        if retry_after is not None and retry_after > 0:
+            wait = _format_rate_limit_wait(retry_after)
+            payload["error"] = message + f" Podrás volver a intentarlo en {wait}."
+            payload["retry_after_seconds"] = retry_after
+            headers["Retry-After"] = str(retry_after)
+        return jsonify(payload), 429, headers
     # Rutas de navegador: devolver HTML — nunca mostrar JSON a un visitante
     retry_after = getattr(e, "retry_after", None)
     wait = f"Espera {int(retry_after)} segundos e " if retry_after else "Por favor "
