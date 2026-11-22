@@ -141,6 +141,15 @@ def check_back_end(app, identities):
             user = resp.json.get("user")
             if role == "visitante":
                 assert user is None
+                # Cliente realmente anónimo de un contexto Flask aislado.
+                unauth = client.post(
+                    "/api/binance/diagnostico-pdf",
+                    json={"token": "falso"},
+                    follow_redirects=False,
+                )
+                assert unauth.status_code in (302, 401, 403), (
+                    "El PDF diagnóstico exige autenticación", unauth.status_code
+                )
             else:
                 assert user["email"].endswith("@example.invalid")
                 assert user["is_admin"] == (role == "administrador")
