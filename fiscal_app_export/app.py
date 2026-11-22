@@ -2853,6 +2853,54 @@ def api_binance_recuperar_spot():
     return response
 
 
+def _token_pdf_diagnostico_binance(borrador):
+    """Token firmado, ligado al usuario. No almacena PDF ni archivos subidos."""
+    from itsdangerous import URLSafeTimedSerializer
+    serializer = URLSafeTimedSerializer(
+        app.secret_key, salt="binance-diagnostico-no-fiscal-v1"
+    )
+    return serializer.dumps({
+        "uid": str(current_user.id),
+        "borrador": borrador,
+    })
+
+
+@app.route("/api/binance/diagnostico-pdf", methods=["POST"])
+@login_required
+@limiter.limit("20 per hour", exempt_when=_is_admin)
+def descargar_pdf_diagnostico_binance():
+    """Descarga PDF documental firmado: NO usa la ruta del informe fiscal."""
+    from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+    from binance_diagnostico_pdf import generar_pdf_diagnostico_binance
+    raw = request.get_json(silent=True)
+    token = raw.get("token") if isinstance(raw, dict) else None
+    if not isinstance(token, str) or not 0 < len(token) <= 50000:
+        return jsonify({"error": "Diagnóstico inválido. Repite el análisis."}), 400
+    serializer = URLSafeTimedSerializer(
+        app.secret_key, salt="binance-diagnostico-no-fiscal-v1"
+    )
+    try:
+        decoded = serializer.loads(token, max_age=3600)
+    except (BadSignature, SignatureExpired):
+        return jsonify({"error": "Diagnóstico caducado. Repite el análisis."}), 400
+    if not isinstance(decoded, dict) or decoded.get("uid") != str(current_user.id):
+        return jsonify({"error": "Este diagnóstico no pertenece a tu sesión."}), 403
+    try:
+        content = generar_pdf_diagnostico_binance(decoded.get("borrador"))
+    except ValueError:
+        return jsonify({"error": "No es posible crear el diagnóstico solicitado."}), 400
+    response = send_file(
+        BytesIO(content),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name="Binance_diagnostico_INCOMPLETO_NO_FISCAL.pdf",
+    )
+    response.headers["Cache-Control"] = "no-store, private"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
 @app.route("/api/binance/anos", methods=["POST"])
 @login_required
 @limiter.limit("30 per minute")
@@ -2897,15 +2945,14 @@ def api_binance_anos():
         from binance_pendientes import diagnosticar_pendientes_binance
         from binance_borrador import construir_borrador_binance
         diagnostico = diagnosticar_pendientes_binance(clasificador)
+        borrador = construir_borrador_binance(clasificador, diagnostico)
         return jsonify({
             "ok": True,
             "anos": sorted(años),
             "resumen": clasificador.resumen_archivos,
             "advertencias": clasificador.advertencias,
             "diagnostico_binance": diagnostico,
-            "borrador_binance": construir_borrador_binance(
-                clasificador, diagnostico
-            ),
+            "borrador_binance": borrador,
         })
     except (BinanceMultiUserError, BinanceUploadError, ValueError) as exc:
         return jsonify({"ok": False, "error": str(exc)}), 400
@@ -3113,6 +3160,9 @@ def analizar_binance_multi():
                     payload["borrador_binance"] = construir_borrador_binance(
                         clasificador, diagnostico, ejercicio
                     )
+                    payload["token_pdf_diagnostico"] = _token_pdf_diagnostico_binance(
+                        payload["borrador_binance"]
+                    )
                 return jsonify(payload), 422
             if isinstance(exc, ValueError) and str(exc).startswith("Datos fiscales no seguros:"):
                 payload = {"error": str(exc)}
@@ -3123,6 +3173,9 @@ def analizar_binance_multi():
                     payload["diagnostico_binance"] = diagnostico
                     payload["borrador_binance"] = construir_borrador_binance(
                         clasificador, diagnostico, ejercicio
+                    )
+                    payload["token_pdf_diagnostico"] = _token_pdf_diagnostico_binance(
+                        payload["borrador_binance"]
                     )
                 return jsonify(payload), 422
             return jsonify({"error": _error_amigable(exc)}), 500
