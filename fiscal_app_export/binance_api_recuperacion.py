@@ -36,7 +36,8 @@ def _positive_decimal(value, field: str, *, allow_zero: bool = False) -> str:
         raise BinanceApiRecoveryError("Binance devolvió cantidades o precios inválidos.") from exc
     if not number.is_finite() or number < 0 or (number == 0 and not allow_zero):
         raise BinanceApiRecoveryError("Binance devolvió cantidades o precios inválidos.")
-    return str(number)
+    # Evitar notación exponencial: el CSV nativo acepta decimales ordinarios.
+    return format(number, "f")
 
 
 class BinanceReadOnlySpot:
