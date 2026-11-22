@@ -305,3 +305,22 @@ def test_sparse_trade_rejects_out_of_archive_day_or_naive_dates():
             symbol="XRPEUR", base="XRP", quote="EUR",
             target_times=[datetime(2025, 1, 1, 12)],
         )
+
+
+def test_binance_utc0_sin_signo_es_offset_cero_valido():
+    """La etiqueta UTC0 del export real es equivalente a UTC+0."""
+    at = "2025-06-01 12:30:00"
+    plain = binance_export_time_to_utc(at, "Historial-(UTC0).csv")
+    canonical = binance_export_time_to_utc(at, "Historial-(UTC+0).csv")
+    assert plain == canonical
+    assert plain.utcoffset().total_seconds() == 0
+
+
+@pytest.mark.parametrize("bad_name", [
+    "Historial-(UTC1).csv",
+    "Historial-(UTC03:30).csv",
+    "Historial-(UTC).csv",
+])
+def test_binance_solo_utc0_se_acepta_sin_signo(bad_name):
+    with pytest.raises(BinancePriceEvidenceError):
+        binance_export_time_to_utc("2025-06-01 12:30:00", bad_name)
