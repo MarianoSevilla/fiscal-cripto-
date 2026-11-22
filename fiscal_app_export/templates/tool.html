@@ -1271,6 +1271,9 @@
           return;
         }
         renderKucoinSummary(data.resumen, data.advertencias);
+        if (EXCHANGE_PAGE === 'binance') {
+          renderBinancePendientes(data.diagnostico_binance);
+        }
         detectedYears = data.anos || [];
         renderYearChips(detectedYears);
         actualizarBoton();
