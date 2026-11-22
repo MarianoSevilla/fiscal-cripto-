@@ -57,6 +57,7 @@ def test_api_spot_privada_exporta_identidades_fills_y_comisiones():
     assert rows[0]["Cantidad"] == "900.0001USDT"
     assert rows[0]["Tarifa"] == "0.0001BNB"
     assert rows[0]["Tiempo"] == "2025-01-01 00:00:00"
+    assert rows[0]["Tiempo unix ms API"] == "1735689600000"
     signed = [call for call in fake.calls if call[0].endswith("myTrades")]
     assert len(signed) == 1
     assert signed[0][1]["X-MBX-APIKEY"] == "K" * 64
