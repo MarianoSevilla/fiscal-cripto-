@@ -69,13 +69,23 @@ class BinanceReadOnlySpot:
                 if len(data) > 3 * 1024 * 1024:
                     raise BinanceApiRecoveryError("Respuesta Binance demasiado extensa.")
                 return json.loads(data.decode("utf-8"))
-        except (HTTPError, URLError, TimeoutError, UnicodeDecodeError,
+        except HTTPError as exc:
+            if exc.code == 451:
+                raise BinanceApiRecoveryError(
+                    "Binance no admite consultas API desde la ubicación de "
+                    "este servidor. Utiliza las exportaciones CSV/ZIP originales."
+                ) from None
+            raise BinanceApiRecoveryError(
+                "Binance ha rechazado la petición API. Comprueba permisos, "
+                "límite de consultas e IP autorizada."
+            ) from None
+        except (URLError, TimeoutError, UnicodeDecodeError,
                 json.JSONDecodeError) as exc:
             # NO incluir URLs firmadas ni mensajes remotos en logs/respuestas.
             raise BinanceApiRecoveryError(
                 "Binance no ha permitido consultar la API. Comprueba la "
                 "clave de solo lectura, su configuración IP y los límites."
-            ) from exc
+            ) from None
 
     def _get(self, path: str, parameters: dict | None = None, *, signed=False):
         if path not in (
