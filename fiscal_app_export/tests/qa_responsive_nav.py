@@ -247,6 +247,43 @@ def main():
                         total += 1
                     finally:
                         page.close()
+
+            # Desktop: mismo permiso de enlaces, semántica nativa y retorno de foco.
+            for role, payload, has_advisory, has_stats in profiles:
+                page = browser.new_page(viewport={"width":1280,"height":812})
+                page.set_default_timeout(5000)
+                page.route("https://**/*", lambda r: r.abort())
+                page.route("**/api/me", lambda r, data=payload: r.fulfill(
+                    status=200, content_type="application/json", body=json.dumps(data),
+                ))
+                errors = []
+                page.on("pageerror", lambda error: errors.append(str(error)))
+                try:
+                    page.goto(origin, wait_until="domcontentloaded")
+                    page.locator("#snavAvatarWrap:not(.snav-hidden)").wait_for()
+                    avatar = page.locator("#snavAvatar")
+                    dropdown = page.locator("#snavDropdown")
+                    avatar.focus()
+                    page.keyboard.press("Enter")
+                    assert dropdown.is_visible(), role
+                    assert avatar.get_attribute("aria-expanded") == "true"
+                    assert avatar.get_attribute("aria-controls") == "snavDropdown"
+                    assert dropdown.get_attribute("role") is None
+                    assert dropdown.locator('[role="menuitem"]').count() == 0
+                    assert dropdown.locator('a[href="/dashboard"]').is_visible()
+                    assert dropdown.locator('a[href="/account"]').is_visible()
+                    assert dropdown.locator('a[href="/admin/asesoramiento"]').is_visible() == has_advisory
+                    assert dropdown.locator('a[href="/admin/recursos"]').is_visible() == has_advisory
+                    assert dropdown.locator('a[href="/admin/contactos"]').is_visible() == has_stats
+                    assert dropdown.locator('a[href="/admin/comunicaciones"]').is_visible() == has_stats
+                    page.keyboard.press("Escape")
+                    assert not dropdown.is_visible()
+                    assert avatar.get_attribute("aria-expanded") == "false"
+                    assert avatar.evaluate("(e) => document.activeElement === e")
+                    assert not errors, (role, errors)
+                    total += 1
+                finally:
+                    page.close()
         finally:
             browser.close()
     print(f"QA responsive navegación: {total} casos PASS (datos simulados)")
