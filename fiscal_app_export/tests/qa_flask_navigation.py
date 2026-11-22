@@ -285,6 +285,12 @@ def main():
         from qa_tool_apple import run_tool_apple
         run_tool_apple(origin, app.config.get("SESSION_COOKIE_NAME", "session"),
                        flask_cookie(app, identities["usuario"]))
+        # Binance: aceptación UX real con CSV sintético y PDF no fiscal.
+        from qa_binance_incomplete_browser import run_binance_incomplete
+        run_binance_incomplete(
+            origin, app.config.get("SESSION_COOKIE_NAME", "session"),
+            flask_cookie(app, identities["usuario"]),
+        )
         # 03-A: Modelo 721 Apple con estados y POST 422 exclusivamente sintéticos.
         from qa_modelo721_apple import run_modelo721_apple
         run_modelo721_apple(origin, app.config.get("SESSION_COOKIE_NAME", "session"),
