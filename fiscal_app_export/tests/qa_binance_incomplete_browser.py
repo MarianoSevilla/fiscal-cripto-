@@ -118,14 +118,14 @@ def run_binance_rate_limit_ui(origin, cookie_name, cookie_value):
                                 f"Podrás volver a intentarlo en {expected_wait}."
                             )
                             headers["Retry-After"] = str(retry_after)
-                        awaitable = page.route(
-                            "**/api/binance/analizar",
-                            lambda route, body=json.dumps(payload), response_headers=headers: route.fulfill(
-                                status=429, headers=response_headers, body=body
-                            ),
-                        )
-                        # Playwright's sync API applies the route immediately.
-                        assert awaitable is None
+                        response_body = json.dumps(payload)
+
+                        def fulfill_rate_limit(route, request=None):
+                            return route.fulfill(
+                                status=429, headers=headers, body=response_body
+                            )
+
+                        page.route("**/api/binance/analizar", fulfill_rate_limit)
                         response = page.goto(origin + "/binance", wait_until="domcontentloaded")
                         assert response and response.status == 200
                         page.locator("#csvInput").set_input_files({
