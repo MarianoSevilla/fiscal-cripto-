@@ -924,13 +924,43 @@
     if (!button) continue;
     button.addEventListener('click', () => {
       if (!borradorBinance) return;
-      const blob = new Blob([JSON.stringify(borradorBinance, null, 2)], {
-        type: 'application/json;charset=utf-8'
+      const resumen = borradorBinance.operaciones_detectadas || {};
+      const lines = [
+        'BINANCE · BORRADOR DE OPERACIONES DETECTADAS',
+        'INCOMPLETO — NO ES UN INFORME FISCAL NI UN CÁLCULO FIFO VALIDADO',
+        '',
+        'Ejercicio solicitado: ' + String(borradorBinance.ejercicio_solicitado || 'todos'),
+        'NO contiene ganancias, pérdidas ni costes EUR atribuibles.',
+        '',
+        'REGISTROS CLASIFICADOS (pueden coincidir entre fuentes)',
+        'Compraventas candidatas: ' + String(resumen.compraventas_candidatas || 0),
+        'Permutas candidatas: ' + String(resumen.permutas_candidatas || 0),
+        'Rendimientos candidatos: ' + String(resumen.rendimientos_candidatos || 0),
+        'Movimientos candidatos: ' + String(resumen.movimientos_candidatos || 0),
+        'Sin reconocer: ' + String(resumen.operaciones_no_reconocidas || 0),
+        '',
+        'FUENTES APORTADAS',
+        ...(borradorBinance.fuentes || []).map(x =>
+          String(x.tipo) + ': ' + String(x.registros) + ' registros'
+        ),
+        '',
+        'DATOS Y COMPROBACIONES PENDIENTES',
+        ...(borradorBinance.pendientes || []).flatMap((x, i) => [
+          String(i + 1) + '. ' + String(x.titulo || 'Pendiente'),
+          String(x.descripcion || ''),
+          'Siguiente paso: ' + String(x.siguiente_paso || ''),
+          ''
+        ]),
+        'IMPORTANTE: este documento no es válido para declarar a Hacienda.',
+        'Conserva las exportaciones originales de Binance y de otras carteras.'
+      ];
+      const blob = new Blob([lines.join('\\n')], {
+        type: 'text/plain;charset=utf-8'
       });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.href = url;
-      link.download = 'binance_borrador_INCOMPLETO_NO_FISCAL.json';
+      link.download = 'binance_BORRADOR_INCOMPLETO_NO_FISCAL.txt';
       document.body.appendChild(link);
       link.click();
       link.remove();
