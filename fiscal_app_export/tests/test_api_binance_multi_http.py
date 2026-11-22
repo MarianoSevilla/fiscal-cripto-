@@ -2383,8 +2383,10 @@ def test_binance_pdf_diagnostico_requiere_firma_y_usuario(client, usuario, _app)
     assert response.mimetype != "application/pdf"
 
 
-def test_binance_pdf_diagnostico_no_anonimo(client):
-    response = client.post("/api/binance/diagnostico-pdf", json={"token": "falso"})
+def test_binance_pdf_diagnostico_no_anonimo(_app):
+    # Cliente independiente: otros tests sí inician sesión con la fixture compartida.
+    anonimo = _app.test_client()
+    response = anonimo.post("/api/binance/diagnostico-pdf", json={"token": "falso"})
     assert response.status_code in (302, 401, 403)
 
 
