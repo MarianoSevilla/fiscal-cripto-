@@ -50,11 +50,15 @@ def binance_export_time_to_utc(local_time: str, export_filename: str) -> datetim
     No se interpreta una fecha naive como UTC: un offset ausente/ambiguo impide
     vincular la transacción con cotizaciones históricas verificables.
     """
-    match = re.search(r"\(UTC([+-])(\d{1,2})(?::(\d{2}))?\)", str(export_filename), re.I)
+    match = re.search(r"\(UTC([+-]?)(\d{1,2})(?::(\d{2}))?\)", str(export_filename), re.I)
     if not match:
         raise BinancePriceEvidenceError("Exportación Binance sin zona horaria UTC explícita")
     hours = int(match.group(2))
     minutes = int(match.group(3) or "0")
+    # Binance también exporta UTC cero como "(UTC0)" sin signo.
+    # Otros desplazamientos sin signo siguen siendo ambiguos y se rechazan.
+    if match.group(1) == "" and (hours != 0 or minutes != 0):
+        raise BinancePriceEvidenceError("Offset UTC de exportación sin signo")
     if minutes >= 60 or hours > 14 or (hours == 14 and minutes > 0):
         raise BinancePriceEvidenceError("Offset UTC de exportación fuera de rango")
     offset = timedelta(hours=hours, minutes=minutes)
