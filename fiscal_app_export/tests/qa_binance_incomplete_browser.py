@@ -60,6 +60,11 @@ def run_binance_incomplete(origin, cookie_name, cookie_value):
                         ".binance-incomplete-notice"
                     ).inner_text()
                     assert not page.locator("#btnDownload").is_visible()
+                    Path("qa-artifacts").mkdir(parents=True, exist_ok=True)
+                    page.locator("#binanceIncompleteState").screenshot(
+                        path=f"qa-artifacts/home_binance_incomplete_{width}.png",
+                        animations="disabled",
+                    )
                     assert page.locator("#binanceIncompleteGroups details").count() >= 1
                     assert page.locator("#binancePdfFeedback").inner_text() == ""
                     assert page.evaluate(
