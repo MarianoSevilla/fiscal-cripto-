@@ -187,6 +187,9 @@ def run_binance_rate_limit_ui(origin, cookie_name, cookie_value):
                             "mimeType": "text/csv", "buffer": EARN_SYNTHETIC,
                         })
                         page.locator("#binancePendientes").wait_for(state="visible")
+                        page.locator(
+                            'input[name="alcance_datos"][value="solo_binance"]'
+                        ).check()
                         page.locator("#btnAnalizar").click()
                         page.locator("#errorState").wait_for(state="visible")
                         description = page.locator("#errorDesc").inner_text()
