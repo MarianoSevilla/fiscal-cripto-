@@ -106,6 +106,21 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                                                 "siguiente_paso": "Añade el historial original.",
                                             }],
                                         }
+                                    if name == "binance":
+                                        failure["borrador_binance"] = {
+                                            "estado": "INCOMPLETO_NO_APTO_PARA_DECLARAR",
+                                            "no_es_informe_fiscal": True,
+                                            "ejercicio_solicitado": "2025",
+                                            "fuentes": [{"tipo": "transaction_history", "registros": 2}],
+                                            "pendientes": [{
+                                                "codigo": "earn_cobertura",
+                                                "grupo": "earn",
+                                                "titulo": "Historial Simple Earn incompleto",
+                                                "descripcion": "Faltan movimientos históricos.",
+                                                "siguiente_paso": "Añade el historial original.",
+                                            }]
+                                        }
+                                        failure["token_pdf_diagnostico"] = "token-sintetico-sin-descarga"
                                     route.fulfill(status=422, content_type="application/json",
                                                   body=json.dumps(failure))
                                 else:
@@ -252,40 +267,47 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                             '.year-chip[data-year="2025"]'
                         ).count() == 1, (name, width)
                         if width == 375:
-                            assert page.locator("#fileSelected").is_visible()
+                            assert page.locator("#fileSelected").is_visible(), (
+                                name, width, "chip del archivo no visible tras selección",
+                                page.locator("#fileName").inner_text(),
+                                page.locator("#fileSelected").get_attribute("class"),
+                                page.locator("#year-chips-wrap").is_visible(),
+                            )
                         page.locator("#btnAnalizar").click()
                         if first_error:
-                            page.locator("#errorState").wait_for(state="visible")
-                            assert page.locator("#btnRetry").is_visible()
-                            # Un bloqueo fiscal 422 de Binance conserva los
-                            # ZIP ya elegidos: no debe duplicar el lote al
-                            # pulsar "Volver a intentarlo".
                             if name == "binance":
+                                page.locator("#binanceIncompleteState").wait_for(state="visible")
+                                assert not page.locator("#errorState").is_visible()
                                 assert page.locator("#fileSelected").is_visible()
                                 assert page.locator("#btnDownload").is_hidden()
-                                assert page.locator("#errorTitulo").inner_text() == (
-                                    "Informe pendiente de datos verificables"
-                                )
-                                pending = page.locator("#binanceErrorPendientes")
-                                assert pending.is_visible()
-                                assert "Historial Simple Earn incompleto" in pending.inner_text()
-                                assert "Añade el historial original." in pending.inner_text()
-                            page.locator("#btnRetry").click()
-                            assert page.locator("#emptyState").is_visible()
-                            if name == "binance":
-                                assert page.locator("#fileSelected").is_visible()
-                                expect(page.locator("#btnAnalizar")).to_be_enabled()
-                                # El usuario puede añadir un ZIP/CSV sin
-                                # volver a seleccionar los dos previos.
+                                assert "Archivo Binance procesado correctamente" in page.locator(
+                                    "#binanceIncompleteTitle"
+                                ).inner_text()
+                                assert "Informe fiscal pendiente" in page.locator(
+                                    ".binance-incomplete-notice"
+                                ).inner_text()
+                                earn = page.locator("#binanceIncompleteGroups details")
+                                assert earn.count() == 1
+                                earn.first.locator("summary").click()
+                                assert "Historial Simple Earn incompleto" in earn.inner_text()
+                                assert "Añade el historial original." in earn.inner_text()
+                                assert page.locator("#binanceDiagnosticoPdf").is_enabled()
+                                # Tras el bloqueo conserva los dos archivos
+                                # y permite añadir otro sin duplicarlos.
+                                expect(page.locator("#btnAnalizar")).to_be_enabled(timeout=12000)
                                 picker.set_input_files({
                                     "name": "additional.csv",
                                     "mimeType": "text/csv",
-                                    "buffer": b"fecha,activo,valor\\n2025-08-03,BTC,3\\n",
+                                    "buffer": b"fecha,activo,valor\n2025-08-03,BTC,3\n",
                                 })
                                 expect(page.locator("#btnAnalizar")).to_be_enabled(timeout=12000)
                                 assert page.locator("#fileName").inner_text() == "3 ficheros"
                                 count += 1
                             else:
+                                page.locator("#errorState").wait_for(state="visible")
+                                assert page.locator("#btnRetry").is_visible()
+                                page.locator("#btnRetry").click()
+                                assert page.locator("#emptyState").is_visible()
                                 count = attach_valid()
                             page.locator("#btnAnalizar").click()
                         page.locator("#resultsContent").wait_for(state="visible")
