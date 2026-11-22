@@ -1158,7 +1158,10 @@
         selectedFiles = []; actualizarBoton(); return;
       }
     }
-    if (EXCHANGE_PAGE === 'binance') renderBinancePendientes(null);
+    if (EXCHANGE_PAGE === 'binance') {
+      renderBinancePendientes(null);
+      renderBorradorBinance(null);
+    }
     selectedFiles = files;
     fileName.textContent = files.length === 1 ? files[0].name : `${files.length} ficheros`;
     showFile();
