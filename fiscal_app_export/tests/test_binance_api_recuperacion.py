@@ -119,3 +119,10 @@ def test_export_api_conserva_cabecera_nativa_reconocida_por_importador(tmp_path)
     assert len(records) == 1
     assert records[0]["número de pedido"] == "99"
     assert records[0]["tarifa"] == "0.0001BNB"
+
+
+def test_binance_utc0_del_csv_de_cliente_es_equivalente_a_utc_mas_cero():
+    from clasificador_binance_multi import _tz_from_filename
+    assert _tz_from_filename("Binance-Historial-de-transacciones-202611080844(UTC0)-part1-of1.csv") == "UTC+0:00"
+    assert _tz_from_filename("Binance-API-Spot-BTCUSDT-(UTC+0).csv") == "UTC+0:00"
+    assert _tz_from_filename("Binance-SinZona.csv") is None
