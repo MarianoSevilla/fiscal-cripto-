@@ -1,0 +1,26 @@
+name: Binance validation source bundle (temporary)
+on:
+  push:
+    branches:
+      - feature/binance-multisource-importer-20261109
+    paths:
+      - .github/workflows/binance-validation-source-temporary.yml
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Package repository source only (never private CSV files)
+        run: |
+          tar -czf /tmp/binance-validation-src.tar.gz             --exclude='.git' --exclude='__pycache__'             --exclude='*.pdf' --exclude='*.csv' --exclude='*.zip'             --exclude='*.xlsx' --exclude='*.env'             --exclude='*.png' --exclude='*.jpg' --exclude='*.jpeg'             -C "$GITHUB_WORKSPACE" .
+          test -s /tmp/binance-validation-src.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binance-pr194-source-no-client-data
+          path: /tmp/binance-validation-src.tar.gz
+          retention-days: 1
+          if-no-files-found: error
