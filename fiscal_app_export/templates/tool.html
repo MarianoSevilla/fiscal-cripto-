@@ -246,6 +246,44 @@
       <button id="binanceBorradorPreview" type="button" style="display:none; margin:10px 0; padding:10px 14px; border-radius:8px;">
         Descargar borrador de operaciones (no válido para Hacienda)
       </button>
+      {% if config.get('BINANCE_API_RECOVERY_ENABLED', False) %}
+      <details id="binanceApiRecovery" class="kucoin-summary" style="margin:10px 0;">
+        <summary style="cursor:pointer;font-weight:600;">Recuperar operaciones Spot mediante API de Binance (opcional)</summary>
+        <p style="margin:10px 0;font-size:13px;line-height:1.6;">
+          Necesitas una <strong>Tax Report API de solo lectura</strong> de Binance.
+          Utilizamos la clave y el secreto únicamente durante esta consulta HTTPS;
+          no los guardamos. No habilites permisos de trading ni retiradas.
+          El archivo recuperado sirve para completar tus CSV, pero no demuestra
+          por sí solo que tu historial o tu FIFO estén completos.
+        </p>
+        <label for="binanceApiSymbol">Par Spot (por ejemplo BTCUSDT)</label>
+        <input id="binanceApiSymbol" type="text" maxlength="20" placeholder="BTCUSDT"
+          autocomplete="off" spellcheck="false" style="display:block;width:100%;margin:6px 0 10px;">
+        <label for="binanceApiFromId">ID de ejecución inicial (0 = primeras disponibles)</label>
+        <input id="binanceApiFromId" type="number" min="0" step="1" value="0"
+          style="display:block;width:100%;margin:6px 0 10px;">
+        <label for="binanceApiKey">API Key de lectura</label>
+        <input id="binanceApiKey" type="password" autocomplete="off"
+          style="display:block;width:100%;margin:6px 0 10px;">
+        <label for="binanceApiSecret">API Secret</label>
+        <input id="binanceApiSecret" type="password" autocomplete="off"
+          style="display:block;width:100%;margin:6px 0 10px;">
+        <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;margin:10px 0;">
+          <input type="checkbox" id="binanceApiConsent">
+          <span>Autorizo una consulta temporal a Binance con mi clave de lectura.
+          Comprendo que pueden faltar operaciones históricas, Convert, Earn o carteras externas.</span>
+        </label>
+        <button type="button" id="binanceApiRetrieve"
+          style="padding:10px 14px;border-radius:8px;">Descargar ejecuciones Spot</button>
+        <p id="binanceApiStatus" role="status" aria-live="polite"
+          style="font-size:13px;line-height:1.6;margin-top:8px;"></p>
+        <p style="font-size:12px;color:var(--muted);">La consulta se limita a un par
+          por descarga (hasta 5.000 ejecuciones). Si indica más registros,
+          repite desde el siguiente ID. Añade el CSV descargado al resto de
+          archivos Binance para volver a comprobar el FIFO.</p>
+      </details>
+      {% endif %}
+
       {% endif %}
       {% endif %}
       <div class="bar-inputs-row">
@@ -965,6 +1003,69 @@
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
+    });
+  }
+
+
+  // Recuperación opcional de un único par Spot mediante credenciales efímeras.
+  // Ninguna clave se persiste en localStorage, sessionStorage, cookies o logs.
+  const binanceApiBtn = document.getElementById('binanceApiRetrieve');
+  if (EXCHANGE_PAGE === 'binance' && binanceApiBtn) {
+    binanceApiBtn.addEventListener('click', async () => {
+      const key = document.getElementById('binanceApiKey');
+      const secret = document.getElementById('binanceApiSecret');
+      const symbol = document.getElementById('binanceApiSymbol');
+      const cursor = document.getElementById('binanceApiFromId');
+      const consent = document.getElementById('binanceApiConsent');
+      const status = document.getElementById('binanceApiStatus');
+      const fromId = Number(cursor.value);
+      if (!consent.checked || !key.value || !secret.value
+          || !/^[A-Z0-9]{5,20}$/.test(symbol.value.trim())
+          || !Number.isSafeInteger(fromId) || fromId < 0) {
+        status.textContent = 'Indica el par, credenciales de lectura, ID válido y autorización.';
+        return;
+      }
+      binanceApiBtn.disabled = true;
+      status.textContent = 'Consultando operaciones Spot en Binance…';
+      try {
+        const res = await fetch('/api/binance/recuperar-spot', {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            api_key: key.value, api_secret: secret.value,
+            symbol: symbol.value.trim(), from_id: fromId
+          })
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          status.textContent = String(data.error || 'Consulta no disponible.');
+          return;
+        }
+        const count = res.headers.get('X-Binance-Records') || '?';
+        const next = res.headers.get('X-Binance-Next-ID');
+        const more = res.headers.get('X-Binance-Has-More') === 'true';
+        const blob = await res.blob();
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.href = url;
+        link.download = 'Binance-API-Spot-' + symbol.value.trim() + '-(UTC+0).csv';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+        if (more && next) cursor.value = next;
+        status.textContent = 'Recuperadas ' + count + ' ejecuciones Spot. '
+          + 'Añade el CSV descargado a tus archivos Binance. '
+          + (more ? 'Quedan más: repite desde el ID ' + next + '.'
+                  : 'La API no garantiza cobertura histórica completa.');
+      } catch (_) {
+        status.textContent = 'No se pudo completar la recuperación. No se guardaron credenciales.';
+      } finally {
+        // Purgar los campos en cuanto termina la solicitud.
+        key.value = '';
+        secret.value = '';
+        binanceApiBtn.disabled = false;
+      }
     });
   }
 
