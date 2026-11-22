@@ -47,7 +47,7 @@ def run_binance_incomplete(origin, cookie_name, cookie_value):
                         "name": "Earn-(UTC+1).csv",
                         "mimeType": "text/csv", "buffer": EARN_SYNTHETIC,
                     })
-                    page.locator("#binanceBorradorPreview").wait_for(state="visible")
+                    page.locator("#binancePendientes").wait_for(state="visible")
                     assert "Vista previa del archivo" in page.locator("#binancePendientes").inner_text()
                     assert "Qué aportar:" not in page.locator("#binancePendientes").inner_text()
                     page.locator("#btnAnalizar").click()
