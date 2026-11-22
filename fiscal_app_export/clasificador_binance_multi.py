@@ -480,7 +480,8 @@ def _row_digest(source: str, row: dict) -> bytes:
 
 
 def _tz_from_filename(name: str) -> Optional[str]:
-    m = re.search(r"\(UTC([+-]\d{1,2})(?::(\d{2}))?\)", str(name or ""), re.I)
+    # Binance también exporta la zona cero como "(UTC0)" sin signo.
+    m = re.search(r"\(UTC([+-]?\d{1,2})(?::(\d{2}))?\)", str(name or ""), re.I)
     if not m:
         return None
     minutes = m.group(2) or "00"
