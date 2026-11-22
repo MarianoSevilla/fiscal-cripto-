@@ -769,7 +769,9 @@
         resolve(result);
       };
       reader.onerror = () => resolve([]);
-      reader.readAsText(file.slice(0, 1024 * 1024), 'utf-8');
+      // Analizar el CSV completo (máximo 10 MB validado al subirlo):
+      // los ejercicios posteriores pueden quedar fuera del primer MiB.
+      reader.readAsText(file, 'utf-8');
     });
   }
 
