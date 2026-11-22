@@ -243,9 +243,6 @@
       <div id="kucoinSummary" class="kucoin-summary" style="display:none;"></div>
       {% if exchange_id == 'binance' %}
       <div id="binancePendientes" class="kucoin-summary" style="display:none;" aria-live="polite"></div>
-      <button id="binanceBorradorPreview" class="binance-preview-pdf" type="button" style="display:none;">
-        Descargar diagnóstico preliminar en PDF
-      </button>
       {% if config.get('BINANCE_API_RECOVERY_ENABLED', False) %}
       <details id="binanceApiRecovery" class="kucoin-summary" style="margin:10px 0;">
         <summary style="cursor:pointer;font-weight:600;">Recuperar operaciones Spot mediante API de Binance (opcional)</summary>
@@ -988,9 +985,6 @@
     borradorBinance = datos && datos.no_es_informe_fiscal === true
       && datos.estado === 'INCOMPLETO_NO_APTO_PARA_DECLARAR' ? datos : null;
     tokenPdfBinance = borradorBinance && typeof token === 'string' ? token : null;
-    const previewButton = document.getElementById('binanceBorradorPreview');
-    if (previewButton) previewButton.style.display =
-      tokenPdfBinance ? 'inline-flex' : 'none';
     const finalButton = document.getElementById('binanceDiagnosticoPdf');
     if (finalButton) finalButton.disabled = !tokenPdfBinance;
   }
@@ -1038,7 +1032,7 @@
       button.disabled = !tokenPdfBinance;
     }
   }
-  for (const id of ['binanceBorradorPreview', 'binanceDiagnosticoPdf']) {
+  for (const id of ['binanceDiagnosticoPdf']) {
     const button = document.getElementById(id);
     if (button) button.addEventListener('click', () => descargarDiagnosticoBinance(button));
   }
