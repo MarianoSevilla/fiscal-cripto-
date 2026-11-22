@@ -56,7 +56,10 @@ def construir_borrador_binance(clasificador, diagnostico: dict, ejercicio: str =
         "version": 1,
         "estado": "INCOMPLETO_NO_APTO_PARA_DECLARAR",
         "tipo": "BORRADOR_DOCUMENTAL_NO_FIFO_FISCAL",
-        "ejercicio_solicitado": str(ejercicio or "todos")[:40],
+        "ejercicio_solicitado": (
+            "Todos" if str(ejercicio or "").strip().lower() in ("", "all", "todos")
+            else str(ejercicio)[:40]
+        ),
         "no_es_informe_fiscal": True,
         "costes_fifo_calculados": False,
         "ganancias_y_perdidas_eur": None,
