@@ -2840,12 +2840,17 @@ def api_binance_anos():
             años.update(commission_audit.years)
 
         from binance_pendientes import diagnosticar_pendientes_binance
+        from binance_borrador import construir_borrador_binance
+        diagnostico = diagnosticar_pendientes_binance(clasificador)
         return jsonify({
             "ok": True,
             "anos": sorted(años),
             "resumen": clasificador.resumen_archivos,
             "advertencias": clasificador.advertencias,
-            "diagnostico_binance": diagnosticar_pendientes_binance(clasificador),
+            "diagnostico_binance": diagnostico,
+            "borrador_binance": construir_borrador_binance(
+                clasificador, diagnostico
+            ),
         })
     except (BinanceMultiUserError, BinanceUploadError, ValueError) as exc:
         return jsonify({"ok": False, "error": str(exc)}), 400
@@ -3047,16 +3052,22 @@ def analizar_binance_multi():
                 # de cotización ocurre antes del validador fiscal posterior.
                 if clasificador is not None:
                     from binance_pendientes import diagnosticar_pendientes_binance
-                    payload["diagnostico_binance"] = diagnosticar_pendientes_binance(
-                        clasificador
+                    from binance_borrador import construir_borrador_binance
+                    diagnostico = diagnosticar_pendientes_binance(clasificador)
+                    payload["diagnostico_binance"] = diagnostico
+                    payload["borrador_binance"] = construir_borrador_binance(
+                        clasificador, diagnostico, ejercicio
                     )
                 return jsonify(payload), 422
             if isinstance(exc, ValueError) and str(exc).startswith("Datos fiscales no seguros:"):
                 payload = {"error": str(exc)}
                 if clasificador is not None:
                     from binance_pendientes import diagnosticar_pendientes_binance
-                    payload["diagnostico_binance"] = diagnosticar_pendientes_binance(
-                        clasificador
+                    from binance_borrador import construir_borrador_binance
+                    diagnostico = diagnosticar_pendientes_binance(clasificador)
+                    payload["diagnostico_binance"] = diagnostico
+                    payload["borrador_binance"] = construir_borrador_binance(
+                        clasificador, diagnostico, ejercicio
                     )
                 return jsonify(payload), 422
             return jsonify({"error": _error_amigable(exc)}), 500
