@@ -232,6 +232,9 @@ def main():
                         assert menu.locator('a[href="/dashboard"]').is_visible()
                         assert menu.locator('a[href="/admin/asesoramiento"]').count() == int(has_advisory)
                         assert menu.locator('a[href="/stats"]').count() == int(has_stats)
+                        assert menu.locator('a[href="/admin/recursos"]').count() == int(has_advisory)
+                        assert menu.locator('a[href="/admin/contactos"]').count() == int(has_stats)
+                        assert menu.locator('a[href="/admin/comunicaciones"]').count() == int(has_stats)
                         assert menu.locator('a[href="/signup/"]').count() == 0
                         assert not errors, (role,width,errors)
                         page.keyboard.press("Tab")
