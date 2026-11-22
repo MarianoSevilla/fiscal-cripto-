@@ -97,7 +97,8 @@ def audit_convert_ledger(native_exchanges, transaction_rows, *, max_lag_seconds=
             continue
         at = _stamp(row.get("tiempo"))
         asset = str(row.get("moneda", "")).strip().upper()
-        if not re.fullmatch(r"[A-Z0-9]{2,20}", asset):
+        # Binance comercializa tokens de un solo carácter (p. ej., W).
+        if not re.fullmatch(r"[A-Z0-9]{1,20}", asset):
             raise BinanceConvertLedgerError("Moneda de apunte Convert inválida")
         qty = _quantity(row.get("cambio"))
         bins[(asset, qty)].append((at, idx))
