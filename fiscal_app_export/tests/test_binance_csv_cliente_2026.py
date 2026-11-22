@@ -73,7 +73,7 @@ def test_selector_de_binance_lee_csv_completo_y_no_solo_un_megabyte():
         for year in (2023, 2024, 2025, 2026)
     )
     csv_texto = cabecera + primeras + ultimas
-    patron = re.compile(r"\\b(20(?:0[9]|[12][0-9]|3[0-9]))-\\d{2}-\\d{2}\\b")
+    patron = re.compile(r"\b(20(?:0[9]|[12][0-9]|3[0-9]))-\d{2}-\d{2}\b")
     primeros_anios = set(patron.findall(csv_texto[:1024 * 1024]))
     todos_los_anios = set(patron.findall(csv_texto))
     assert primeros_anios == {"2021", "2022"}
