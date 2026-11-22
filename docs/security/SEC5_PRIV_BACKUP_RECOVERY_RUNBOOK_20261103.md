@@ -60,6 +60,38 @@ Esta sección **no ordena ejecutar comandos ahora**.
 
 **Próximo punto de control:** la restauración **estructural** está comprobada mediante el ensayo local declarado, por lo que no se debe repetir sin necesidad. A partir de ahora se requiere reconstruir las decisiones de privacidad, modificaciones y eventos financieros posteriores al corte y custodiar evidencia externa antes de considerar una recuperación de producción. Cualquier restauración productiva y cambio de infraestructura exigirá autorización expresa. No subir a GitHub datos de clientes, backups, hashes de filas ni credenciales.
 
+## 6. Rutina manual, copias y recuperación
+
+Esta sección completa el procedimiento operativo. No autoriza una restauración ni requiere activar un servicio nuevo.
+
+### Copias manuales cifradas
+
+1. Usar el script y las instrucciones existentes `marianosevilla_backup_manual_pg18_v2.py` / `INSTRUCCIONES_backup_manual_marianosevilla_v2.md`. Ejecutar primero `--preflight-only`; detenerse ante cualquier `NO-GO`. No copiar comandos con contraseñas ni introducirlas en chat, variables de entorno o historial del shell.
+2. Solo tras preflight PASS, ejecutar la copia cifrada `age` y el ensayo estructural local PG18 que incorpora el procedimiento. Aceptar el corte únicamente si la herramienta indica PASS de copia cifrada, comprobación de integridad, tablas ORM, Alembic, restricciones, restauración PG18 y limpieza. Nunca crear ni conservar un dump en claro.
+3. Anotar en un registro local privado, sin filas ni datos de clientes: fecha/hora real de finalización, identificador, resultado de cada control, y cuándo se verificó la segunda copia. Conservar la contraseña de cifrado separada del archivo. Un hash calculado ahora sirve como control de cambios futuros, pero no acredita retroactivamente el origen de una copia.
+
+### Frecuencia y conservación
+
+- Mientras no se cobren informes ni exista actividad financiera de clientes: una copia completa semanal y otra antes de una migración o cambio productivo relevante. Conservar las cuatro últimas copias semanales verificadas; retirar una antigua solo después de comprobar su sucesora y revisar que no exista una obligación de conservación o incidente abierto.
+- Cuando se acepten pagos o aumente la actividad de clientes: elevar a una copia diaria, además de la copia previa a cada migración/cambio relevante. Conservar siete cortes diarios y cuatro semanales, rotando únicamente tras verificar copia e integridad. Antes de empezar a cobrar, revisar si el volumen hace necesaria una solución automática gestionada; esta decisión y cualquier compra/configuración requieren su propio acuerdo.
+- Revisar mensualmente que el calendario, acceso a la ubicación secundaria y conservación siguen siendo adecuados. No mantener archivos más tiempo del previsto por comodidad; una supresión exigible o un incidente de privacidad prevalece sobre la rotación ordinaria y debe tratarse según el procedimiento aplicable.
+
+Las copias son puntos completos e independientes, no una sincronización continua. **Se pueden perder todas las altas, modificaciones, análisis, estados de solicitud y movimientos financieros ocurridos después del último corte disponible.** Una segunda copia del mismo archivo evita perderlo por avería del Mac, pero no reduce esa ventana temporal de pérdida.
+
+### Segunda copia fuera del Mac
+
+Después de cada PASS, copiar el archivo cifrado y su comprobante de integridad a una ubicación independiente del Mac: un disco externo cifrado guardado en otra ubicación física, o almacenamiento remoto protegido por cuenta con MFA. Verificar que la copia secundaria coincide mediante el checksum del archivo cifrado. Mantener la contraseña de `age` en un gestor de contraseñas independiente; no guardarla junto al archivo ni enviarla al proveedor de almacenamiento. No se necesita subir el archivo, la contraseña ni el checksum al chat, GitHub o Railway. Este paso es responsabilidad del titular y no se da por completado hasta verificarlo localmente.
+
+### Restauración y reapertura
+
+1. **Autoridad y alcance:** solo el titular del servicio puede autorizar por escrito una recuperación productiva concreta, identificando el corte y el plan de ejecución. La autorización no se deriva de este runbook ni de un PASS estructural. El titular designará a quien la ejecute; sin responsable, corte o plan de reversión definidos, no se modifica producción.
+2. **Preservar el estado más reciente:** si producción sigue accesible, no sobrescribirla. Antes de un corte, generar y verificar una copia cifrada actual. Identificar la ventana entre la copia candidata y el incidente; obtener fuentes posteriores para pagos, reembolsos/contracargos, solicitudes y cambios operativos. Si la ventana no puede acotarse, anotarla como desconocida y detener la reapertura.
+3. **Ensayo aislado:** restaurar la copia elegida en una base nueva, PostgreSQL 18 temporal, sin tráfico ni credenciales de producción. Revisar esquema/Alembic, relaciones, roles y salud de la aplicación con datos sintéticos. No conectar la copia al servicio público ni cambiar `DATABASE_URL`.
+4. **Conciliación previa:** comparar cada evento financiero con la fuente externa disponible (Stripe y banco/proveedor aplicable) y cada solicitud/estado con registros posteriores al corte. Reaplicar cambios posteriores por identificadores verificados, sin duplicar cobros ni perder operaciones. Aplicar y comprobar bloqueos/supresiones posteriores al corte antes de permitir acceso; no decidir por coincidencia de email. Si faltan fuentes, identidad o evidencia de privacidad, mantener el entorno restaurado aislado.
+5. **Puerta de reapertura:** documentar un acta sin datos personales que confirme integridad del backup, estructura PG18/Alembic, reconciliación financiera y de solicitudes, aplicación de supresiones/bloqueos, permisos, pruebas de rutas y una comprobación de generación/descarga con datos sintéticos. Verificar que no se exponen registros suprimidos y que pagos/estados no tienen duplicados o faltantes. El titular autoriza la reapertura tras revisar el acta. Si cualquier control no pasa, **NO-GO**: no exponer la base y continuar recuperación aislada.
+
+Una restauración estructural satisface solo la parte técnica del punto 3. No acredita que el negocio, sus pagos, solicitudes ni decisiones posteriores estén recuperados. Con el estado observado, esa recuperación integral sigue sin verificarse y no es necesaria para cerrar la preparación de F1-06.
+
 ## Referencias
 
 - Procedimiento local histórico: `docs/payments/S01_OFFLINE_PRODUCTION_BACKUP_REHEARSAL.md` y `fiscal_app_export/tools/s01_rehearse_restored_backup.py`.
