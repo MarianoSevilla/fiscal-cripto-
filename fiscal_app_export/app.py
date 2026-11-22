@@ -2871,7 +2871,9 @@ def api_binance_anos():
             }), 400
         clasificador = ClasificadorBinanceMulti(tmp_paths, filenames).clasificar()
 
-        años: set = set()
+        # Incluir también años con operaciones pendientes de valoración,
+        # no solo objetos FIFO ya reconstruidos.
+        años: set = set(clasificador.detected_years())
         for grupo in (
             clasificador.compraventas, clasificador.swaps,
             clasificador.movimientos, clasificador.rendimientos,
