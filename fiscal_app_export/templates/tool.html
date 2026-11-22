@@ -243,6 +243,9 @@
       <div id="kucoinSummary" class="kucoin-summary" style="display:none;"></div>
       {% if exchange_id == 'binance' %}
       <div id="binancePendientes" class="kucoin-summary" style="display:none;" aria-live="polite"></div>
+      <button id="binanceBorradorPreview" type="button" style="display:none; margin:10px 0; padding:10px 14px; border-radius:8px;">
+        Descargar borrador de operaciones (no válido para Hacienda)
+      </button>
       {% endif %}
       {% endif %}
       <div class="bar-inputs-row">
@@ -345,6 +348,9 @@
     <ol class="error-pasos" id="errorPasos"></ol>
     {% if exchange_id == 'binance' %}
     <div id="binanceErrorPendientes" class="kucoin-summary" style="display:none; margin:12px 0;"></div>
+    <button id="binanceBorradorError" type="button" style="display:none; margin:10px 0; padding:10px 14px; border-radius:8px;">
+      Descargar borrador incompleto (sin coste FIFO ni resultado fiscal)
+    </button>
     {% endif %}
         <div id="diagConsent" style="display:none;margin:16px 0;padding:14px;border:1px solid #d9dfe5;border-radius:12px;text-align:left;">
       <strong>¿Quieres compartir el archivo con soporte?</strong>
@@ -901,6 +907,37 @@
     bitget: 'Archivos Bitget detectados',
   };
 
+  // Se descarga únicamente el diagnóstico documental ya generado por el servidor.
+  // No calcula un FIFO parcial, ni inventa un coste o una ganancia.
+  let borradorBinance = null;
+  function renderBorradorBinance(datos) {
+    if (EXCHANGE_PAGE !== 'binance') return;
+    borradorBinance = datos && datos.no_es_informe_fiscal === true
+      && datos.estado === 'INCOMPLETO_NO_APTO_PARA_DECLARAR' ? datos : null;
+    for (const id of ['binanceBorradorPreview', 'binanceBorradorError']) {
+      const button = document.getElementById(id);
+      if (button) button.style.display = borradorBinance ? 'inline-block' : 'none';
+    }
+  }
+  for (const id of ['binanceBorradorPreview', 'binanceBorradorError']) {
+    const button = document.getElementById(id);
+    if (!button) continue;
+    button.addEventListener('click', () => {
+      if (!borradorBinance) return;
+      const blob = new Blob([JSON.stringify(borradorBinance, null, 2)], {
+        type: 'application/json;charset=utf-8'
+      });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.href = url;
+      link.download = 'binance_borrador_INCOMPLETO_NO_FISCAL.json';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    });
+  }
+
   function renderBinancePendientes(diagnostico) {
     // Mostrar SOLO incidencias detectadas, sin inferir fuentes ausentes.
     if (EXCHANGE_PAGE !== 'binance') return;
@@ -1022,6 +1059,7 @@
         renderKucoinSummary(data.resumen, data.advertencias);
         if (EXCHANGE_PAGE === 'binance') {
           renderBinancePendientes(data.diagnostico_binance);
+          renderBorradorBinance(data.borrador_binance);
         }
         detectedYears = data.anos || [];
         renderYearChips(detectedYears);
@@ -1614,6 +1652,7 @@
       return;
     }
 
+    if (EXCHANGE_PAGE === 'binance') renderBorradorBinance(null);
     const ejercicioVal = getEjercicioValue();
     console.log('[FIFO] Enviando ejercicio:', ejercicioVal || '(todos)');
 
@@ -1652,6 +1691,7 @@
         mostrarErrorApi(data.error);
         if (EXCHANGE_PAGE === 'binance') {
           renderBinancePendientes(data.diagnostico_binance);
+          renderBorradorBinance(data.borrador_binance);
         }
         showState('error');
         if (![401, 403, 409, 413, 429].includes(res.status)) {
