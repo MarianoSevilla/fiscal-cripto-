@@ -2291,3 +2291,34 @@ def test_binance_api_recuperacion_devuelve_csv_no_pdf_sin_filtrar_claves(
     assert b"Numero de pedido" in r.data
     assert b"K" * 64 not in r.data and b"S" * 64 not in r.data
     assert b"PDF" not in r.data
+
+
+def test_binance_vista_previa_muestra_todos_los_anos_del_ledger_con_token_w(
+    client, usuario
+):
+    """Fechas del historial general: no ocultar años por faltar FIFO."""
+    _login(client)
+    rows = [
+        "ID de usuario,Hora,Cuenta,Operación,Moneda,Cambiar,Comentario"
+    ]
+    for year in range(2021, 2027):
+        rows.extend([
+            f"synthetic,{year}-01-03 12:00:00,Spot,Binance Convert,W,-2.5,",
+            f"synthetic,{year}-01-03 12:00:00,Spot,Binance Convert,USDC,1.5,",
+        ])
+    raw = ("\\n".join(rows) + "\\n").replace("\\n", "\n").encode("utf-8-sig")
+    r = client.post(
+        "/api/binance/anos",
+        data={"csv": (io.BytesIO(raw), "Binance-Historial-(UTC0).csv")},
+        content_type="multipart/form-data",
+    )
+    assert r.status_code == 200, r.get_data(as_text=True)[:500]
+    data = r.get_json()
+    assert data["ok"] is True
+    assert data["anos"] == [2021, 2022, 2023, 2024, 2025, 2026]
+    assert data["resumen"]["transaction_history"]["registros"] == 12
+    b = data["borrador_binance"]
+    assert b["estado"] == "INCOMPLETO_NO_APTO_PARA_DECLARAR"
+    assert b["pdf_fiscal_disponible"] is False
+    assert b["ganancias_y_perdidas_eur"] is None
+    assert "token" not in data
