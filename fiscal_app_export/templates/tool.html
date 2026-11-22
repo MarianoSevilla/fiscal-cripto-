@@ -1171,40 +1171,25 @@
   }
 
   function renderBinancePendientes(diagnostico) {
-    // Mostrar SOLO incidencias detectadas, sin inferir fuentes ausentes.
+    // La vista previa no repite las incidencias completas: se consultan
+    // una sola vez en el resultado posterior al análisis.
     if (EXCHANGE_PAGE !== 'binance') return;
-    const incidencias = Array.isArray(diagnostico?.incidencias)
-      ? diagnostico.incidencias.slice(0, 12) : [];
-    for (const id of ['binancePendientes', 'binanceErrorPendientes']) {
-      const target = document.getElementById(id);
-      if (!target) continue;
-      target.replaceChildren();
-      if (!incidencias.length) {
-        target.style.display = 'none';
-        continue;
-      }
+    const target = document.getElementById('binancePendientes');
+    if (!target) return;
+    target.replaceChildren();
+    const issues = Array.isArray(diagnostico?.incidencias)
+      ? diagnostico.incidencias : [];
+    target.style.display = issues.length ? 'block' : 'none';
+    if (issues.length) {
       const heading = document.createElement('strong');
-      heading.textContent = 'Información pendiente para el FIFO';
-      target.appendChild(heading);
-      const intro = document.createElement('p');
-      intro.textContent = 'La comprobación de fuentes es orientativa. '
-        + 'Aportar nuevos datos no garantiza todavía un informe fiscal válido.';
-      target.appendChild(intro);
-      const list = document.createElement('ol');
-      for (const issue of incidencias) {
-        const item = document.createElement('li');
-        item.style.marginBottom = '12px';
-        const title = document.createElement('strong');
-        title.textContent = String(issue.titulo || 'Incidencia');
-        const details = document.createElement('p');
-        details.textContent = String(issue.descripcion || '');
-        const next = document.createElement('p');
-        next.textContent = 'Qué aportar: ' + String(issue.siguiente_paso || '');
-        item.append(title, details, next);
-        list.appendChild(item);
-      }
-      target.appendChild(list);
-      target.style.display = 'block';
+      heading.textContent = 'Vista previa del archivo';
+      const description = document.createElement('p');
+      description.textContent = 'Formato reconocido. Se han identificado ' +
+        issues.length + (issues.length === 1
+          ? ' aspecto que requiere documentación.'
+          : ' aspectos que requieren documentación.') +
+        ' Pulsa Generar para consultar el resultado.';
+      target.append(heading, description);
     }
   }
 
@@ -1292,10 +1277,6 @@
           return;
         }
         renderKucoinSummary(data.resumen, data.advertencias);
-        if (EXCHANGE_PAGE === 'binance') {
-          renderBinancePendientes(data.diagnostico_binance);
-          renderBorradorBinance(data.borrador_binance);
-        }
         detectedYears = data.anos || [];
         renderYearChips(detectedYears);
         actualizarBoton();
@@ -1436,6 +1417,9 @@
     emptyState.style.display     = state === 'empty'   ? 'block' : 'none';
     loadingState.style.display   = state === 'loading' ? 'block' : 'none';
     errorState.style.display     = state === 'error'   ? 'block' : 'none';
+    const incompleteState = document.getElementById('binanceIncompleteState');
+    if (incompleteState) incompleteState.style.display =
+      state === 'incomplete' ? 'block' : 'none';
     if (state !== 'error') {
       document.getElementById('diagConsent').style.display = 'none';
       failedDiagnosticFiles = [];
@@ -1922,25 +1906,32 @@
         return;
       }
 
+      // Un informe fiscal pendiente no equivale a error de lectura/procesamiento.
+      if (EXCHANGE_PAGE === 'binance' && res.status === 422
+          && data.borrador_binance?.no_es_informe_fiscal === true
+          && data.borrador_binance?.estado === 'INCOMPLETO_NO_APTO_PARA_DECLARAR') {
+        renderBorradorBinance(data.borrador_binance, data.token_pdf_diagnostico);
+        renderBinanceResultadoIncompleto(data);
+        showState('incomplete');
+        // Conservar los archivos anteriores para adjuntar nuevas exportaciones.
+        appendBinanceFiles = true;
+        csvInput.value = '';
+        actualizarBoton();
+        return;
+      }
+
       if (!res.ok || !data.ok) {
         mostrarErrorApi(data.error);
         if (EXCHANGE_PAGE === 'binance') {
           renderBinancePendientes(data.diagnostico_binance);
-          renderBorradorBinance(data.borrador_binance);
+          renderBorradorBinance(data.borrador_binance, data.token_pdf_diagnostico);
         }
         showState('error');
         if (![401, 403, 409, 413, 429].includes(res.status)) {
           offerDiagnostic(isMultiPage ? selectedFiles : [selectedFile]);
         }
-        if (EXCHANGE_PAGE === 'binance' && res.status === 422) {
-          // Mantener la evidencia subida y permitir añadir más ZIP.
-          appendBinanceFiles = true;
-          csvInput.value = '';
-          actualizarBoton();
-        } else {
-          selectedFile = null; csvInput.value = ''; hideFile();
-          fileName.textContent = '—'; btnAnalizar.disabled = true;
-        }
+        selectedFile = null; csvInput.value = ''; hideFile();
+        fileName.textContent = '—'; btnAnalizar.disabled = true;
         return;
       }
 
