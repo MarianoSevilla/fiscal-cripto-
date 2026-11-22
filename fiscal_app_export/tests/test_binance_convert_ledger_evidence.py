@@ -125,3 +125,16 @@ def test_multisource_convert_reconciliation_exact_split_and_no_second_swap(tmp_p
     assert c.convert_ledger_reconciliation.reconciled_where_ledger_exists
     assert len(c.swaps) == 1
     assert not c.convert_ledger_reconciliation.fiscal_ready
+
+
+def test_convert_de_token_con_simbolo_unico_no_rompe_la_lectura():
+    """Una exportación legítima puede contener el token W de un carácter."""
+    ledger = [
+        row("2025-01-03 12:00:01", "W", "-2.5"),
+        row("2025-01-03 12:00:01", "USDC", "1.5"),
+    ]
+    resultado = audit_convert_ledger([], ledger)
+    assert resultado.native_swaps == 0
+    assert resultado.matched == 0
+    assert resultado.reconciled_where_ledger_exists
+    assert not resultado.fiscal_ready
