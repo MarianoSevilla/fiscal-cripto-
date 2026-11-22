@@ -6,8 +6,38 @@ identificadores, transacciones individuales o valores EUR inventados.
 """
 from __future__ import annotations
 
+import os
+import re
 
-def construir_borrador_binance(clasificador, diagnostico: dict, ejercicio: str = "") -> dict:
+
+_ACCIONES = {
+    "archivo": "CORREGIR_ARCHIVO",
+    "formato": "CORREGIR_ARCHIVO",
+    "documentacion": "APORTAR_DOCUMENTACION",
+    "soporte": "CONTACTAR_SOPORTE",
+    "reintentar": "REINTENTAR",
+}
+
+
+def clasificar_accion_incidencia(tipo: str) -> str:
+    """Reduce las incidencias a un próximo paso concreto y seguro."""
+    return _ACCIONES.get(str(tipo or "").strip().lower(), "MANTENER_PROVISIONAL")
+
+
+def _nombre_seguro(value: str) -> str:
+    name = os.path.basename(str(value or "").replace("\\", "/"))
+    name = re.sub(r"[\x00-\x1f\x7f]", "", name).strip()
+    return name[:120] or "archivo sin nombre"
+
+
+def construir_borrador_binance(
+    clasificador,
+    diagnostico: dict,
+    ejercicio: str = "",
+    *,
+    archivos_aportados: list | None = None,
+    alcance_declarado: str = "no_confirmado",
+) -> dict:
     if clasificador is None or not isinstance(diagnostico, dict):
         raise ValueError("El borrador requiere clasificación y diagnóstico")
 
@@ -50,7 +80,33 @@ def construir_borrador_binance(clasificador, diagnostico: dict, ejercicio: str =
             for key in ("codigo", "titulo", "descripcion", "siguiente_paso")
         }
         entry["grupo"] = grupo_incidencia(entry["codigo"])
+        entry["accion"] = clasificar_accion_incidencia(item.get("tipo"))
         incidencias.append(entry)
+
+    evidencias = []
+    for item in (diagnostico.get("evidencias") or ())[:30]:
+        if not isinstance(item, dict):
+            continue
+        evidencias.append({
+            key: str(item.get(key) or "")[:1600]
+            for key in ("codigo", "titulo", "descripcion", "siguiente_paso")
+        })
+
+    uploaded = []
+    for item in (archivos_aportados or ())[:40]:
+        if not isinstance(item, dict):
+            continue
+        raw_bytes = item.get("bytes")
+        uploaded.append({
+            "nombre": _nombre_seguro(item.get("nombre", "")),
+            "formato": str(item.get("formato") or "").lower()[:10],
+            "bytes": raw_bytes if type(raw_bytes) is int and raw_bytes >= 0 else None,
+        })
+
+    try:
+        years = sorted({int(year) for year in clasificador.detected_years()})
+    except (AttributeError, TypeError, ValueError):
+        years = []
 
     return {
         "version": 1,
@@ -60,6 +116,8 @@ def construir_borrador_binance(clasificador, diagnostico: dict, ejercicio: str =
             "Todos" if str(ejercicio or "").strip().lower() in ("", "all", "todos")
             else str(ejercicio)[:40]
         ),
+        "periodos_detectados": years,
+        "alcance_declarado": str(alcance_declarado or "no_confirmado")[:32],
         "no_es_informe_fiscal": True,
         "costes_fifo_calculados": False,
         "ganancias_y_perdidas_eur": None,
@@ -77,7 +135,9 @@ def construir_borrador_binance(clasificador, diagnostico: dict, ejercicio: str =
             "operaciones_no_reconocidas": contar("desconocidas"),
             "comisiones_referidos_analizadas": cantidad_comisiones,
         },
+        "archivos_aportados": uploaded,
         "fuentes": fuentes,
+        "evidencias": evidencias,
         "pendientes": incidencias,
         "nota": (
             "Las cantidades de tipos de evento son registros clasificados, "

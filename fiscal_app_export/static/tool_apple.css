@@ -952,6 +952,22 @@
   margin: 0 0 5px;
 }
 .binance-incomplete-issues > p { color: var(--muted); margin: 0 0 12px; }
+.binance-scope-confirm {
+  margin: 14px 0 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  min-width: 0;
+  color: var(--text);
+}
+.binance-scope-confirm legend { padding: 0 6px; font-weight: 700; }
+.binance-scope-confirm p,
+.binance-scope-confirm small { display: block; margin: 4px 0 10px; color: var(--muted); line-height: 1.5; }
+.binance-scope-confirm label { display: flex; align-items: flex-start; gap: 9px; margin: 8px 0; line-height: 1.45; }
+.binance-scope-confirm input { margin-top: 3px; flex: 0 0 auto; }
+.error-support-link { margin: 10px 0; font-size: .9rem; }
+.binance-incomplete-issues ul { padding-left: 1.2rem; }
+.binance-incomplete-issues li { margin: 5px 0; color: var(--muted); line-height: 1.5; overflow-wrap: anywhere; }
 .binance-issues-group {
   border: 1px solid var(--border);
   border-radius: 10px;

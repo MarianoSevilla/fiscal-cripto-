@@ -239,6 +239,17 @@
         <span class="bar-drop-text" id="dropHint">Arrastra aquí tu CSV o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Solo ficheros .csv</span></span>
         {% endif %}
       </div>
+      {% if exchange_id == 'binance' %}
+      <fieldset class="binance-scope-confirm" aria-describedby="binanceScopeHelp">
+        <legend>Alcance del historial</legend>
+        <p id="binanceScopeHelp">¿Has utilizado otros exchanges o wallets con criptoactivos durante los ejercicios que quieres analizar?</p>
+        <label><input type="radio" name="alcance_datos" value="solo_binance"> No. Solo he utilizado Binance en ese período.</label>
+        <label><input type="radio" name="alcance_datos" value="otras_fuentes"> Sí. También he utilizado otros exchanges o wallets.</label>
+        <label><input type="radio" name="alcance_datos" value="no_se"> No estoy seguro.</label>
+        <p id="binanceScopeError" role="alert" hidden></p>
+        <small>Esta respuesta no sustituye las comprobaciones del motor. Si hubo otras fuentes o no puedes confirmarlo, el resultado será provisional.</small>
+      </fieldset>
+      {% endif %}
       {% if exchange_id in ['binance', 'kucoin', 'bitget'] %}
       <div id="kucoinSummary" class="kucoin-summary" style="display:none;"></div>
       {% if exchange_id == 'binance' %}
@@ -381,6 +392,7 @@
     </div>
     <p class="error-desc" id="errorDesc"></p>
     <ol class="error-pasos" id="errorPasos"></ol>
+    <p id="errorSupportLink" class="error-support-link" hidden>Si el problema técnico persiste, <a href="/contacto">contacta con soporte</a>. No adjuntes archivos fiscales salvo que el envío voluntario aparezca y lo autorices expresamente.</p>
         <div id="diagConsent" style="display:none;margin:16px 0;padding:14px;border:1px solid #d9dfe5;border-radius:12px;text-align:left;">
       <strong>¿Quieres compartir el archivo con soporte?</strong>
       <p style="font-size:13px;line-height:1.5;">Es opcional y no afecta a tu cuenta. Solo se ofrecen archivos de hasta 8 MB. El archivo puede incluir operaciones y datos fiscales. Al autorizarlo, el archivo se enviará mediante Resend a <strong>colab.marianosevilla@gmail.com</strong>. La web cerrará los archivos temporales al terminar el intento. En Gmail conservaremos el adjunto solo mientras sea necesario para revisar la incidencia, con un plazo máximo previsto de 30 días; lo eliminaremos antes si termina el análisis. Resend puede conservar sus propias copias según sus plazos. Consulta la <a href="/privacidad#archivos-e-informes">Política de privacidad</a>.</p>
@@ -398,14 +410,14 @@
 
 
   {% if exchange_id == 'binance' %}
-  <!-- Resultado fiscal INCOMPLETO: la importación funcionó. Nunca es un error técnico. -->
+  <!-- Resultado fiscal provisional: proceso técnico correcto, cobertura fiscal insuficiente. -->
   <section class="binance-incomplete-state" id="binanceIncompleteState"
            aria-labelledby="binanceIncompleteTitle">
     <div class="binance-incomplete-success">
       <span class="binance-incomplete-check" aria-hidden="true">✓</span>
       <div>
-        <h3 id="binanceIncompleteTitle">Archivo Binance procesado correctamente</h3>
-        <p>La web ha leído los archivos y reconocido los formatos aportados.</p>
+        <h3 id="binanceIncompleteTitle">Resultado provisional: faltan datos</h3>
+        <p>Los archivos se han procesado, pero este documento no es un informe fiscal definitivo.</p>
       </div>
     </div>
     <div class="binance-incomplete-metrics">
@@ -413,11 +425,12 @@
       <div><strong id="binanceIncompleteYear">—</strong><span>Ejercicio solicitado</span></div>
     </div>
     <div class="binance-incomplete-notice">
-      <h4>Informe fiscal pendiente de completar</h4>
+      <h4>No es válido para declarar</h4>
       <p>El análisis ha finalizado, pero faltan datos para acreditar determinadas
          operaciones y sus costes de adquisición. <strong>Esto no significa que
          tu CSV sea incorrecto.</strong></p>
-      <p>No se han inventado importes ni se ha generado un informe FIFO fiscal definitivo.</p>
+      <p>No se han inventado importes ni se han mostrado cálculos parciales cuya independencia no esté demostrada. Puedes añadir archivos y repetir el análisis.</p>
+      <p id="binanceIncompleteScope"></p>
     </div>
     <div class="binance-incomplete-actions">
       <button id="binanceDiagnosticoPdf" class="binance-pdf-button" type="button">
@@ -429,6 +442,10 @@
     </div>
     <p class="binance-incomplete-feedback" id="binancePdfFeedback" role="status" aria-live="polite"></p>
     <section class="binance-incomplete-issues" aria-labelledby="binanceIncompleteIssuesTitle">
+      <h4>Archivos y operaciones identificados</h4>
+      <p id="binanceIncompleteFactsNote">Los nombres y formatos describen los archivos recibidos. Los recuentos son registros candidatos; no demuestran cobertura completa ni operaciones únicas.</p>
+      <ul id="binanceIncompleteFiles"></ul>
+      <ul id="binanceIncompleteFacts"></ul>
       <h4 id="binanceIncompleteIssuesTitle">Información pendiente para el FIFO</h4>
       <p>Despliega un apartado para consultar qué falta y qué documentos pueden ayudarte.</p>
       <div id="binanceIncompleteGroups"></div>
@@ -945,6 +962,12 @@
     const ejercicioOk = !_fetchingAños && (!detectedYears.length || selectedYears.length > 0);
     btnAnalizar.disabled = !(archivoOk && ejercicioOk);
   }
+  document.querySelectorAll('input[name="alcance_datos"]').forEach(input => {
+    input.addEventListener('change', () => {
+      const warning = document.getElementById('binanceScopeError');
+      if (warning) { warning.hidden = true; warning.textContent = ''; }
+    });
+  });
 
   // ── MULTIARCHIVO: selección + resumen ──────────────────────────────────
   const MULTI_SUMMARY_SECTIONS = {
@@ -1047,6 +1070,54 @@
     const year = String(report.ejercicio_solicitado || 'Todos').trim();
     document.getElementById('binanceIncompleteYear').textContent =
       year.toLowerCase() === 'todos' ? 'Todos' : year;
+    const scopeLabels = {
+      solo_binance: 'Declaraste que Binance era tu única fuente durante el período. Esta declaración no sustituye las comprobaciones del motor.',
+      otras_fuentes: 'Declaraste actividad en otros exchanges o wallets. Este análisis Binance no cubre esa actividad y no puede ser definitivo.',
+      no_se: 'No pudiste confirmar si hubo otros exchanges o wallets. El alcance permanece sin verificar y el resultado es provisional.',
+      no_confirmado: 'El alcance de otros exchanges y wallets no está confirmado. El resultado es provisional.',
+    };
+    document.getElementById('binanceIncompleteScope').textContent =
+      scopeLabels[report.alcance_declarado] || scopeLabels.no_confirmado;
+
+    const filesRoot = document.getElementById('binanceIncompleteFiles');
+    filesRoot.replaceChildren();
+    for (const file of (report.archivos_aportados || []).slice(0, 40)) {
+      if (!file || typeof file !== 'object') continue;
+      const item = document.createElement('li');
+      const size = Number.isSafeInteger(file.bytes) && file.bytes >= 0
+        ? ` · ${file.bytes.toLocaleString('es-ES')} bytes` : '';
+      item.textContent = `${String(file.nombre || 'Archivo')} · ${String(file.formato || 'formato no disponible')}${size}`;
+      filesRoot.appendChild(item);
+    }
+    if (!filesRoot.children.length) {
+      const item = document.createElement('li');
+      item.textContent = 'El servidor no recibió nombres de archivo utilizables.';
+      filesRoot.appendChild(item);
+    }
+
+    const factsRoot = document.getElementById('binanceIncompleteFacts');
+    factsRoot.replaceChildren();
+    const operationLabels = [
+      ['compraventas_candidatas', 'Compras/ventas candidatas'],
+      ['permutas_candidatas', 'Permutas candidatas'],
+      ['movimientos_candidatos', 'Movimientos candidatos'],
+      ['rendimientos_candidatos', 'Rendimientos candidatos'],
+      ['operaciones_no_reconocidas', 'Registros sin reconocer'],
+      ['comisiones_referidos_analizadas', 'Registros de comisiones revisados'],
+    ];
+    for (const [key, label] of operationLabels) {
+      const value = report.operaciones_detectadas?.[key];
+      if (!Number.isSafeInteger(value) || value < 0) continue;
+      const item = document.createElement('li');
+      item.textContent = `${label}: ${value.toLocaleString('es-ES')}`;
+      factsRoot.appendChild(item);
+    }
+    for (const evidence of (report.evidencias || []).slice(0, 30)) {
+      if (!evidence || typeof evidence !== 'object') continue;
+      const item = document.createElement('li');
+      item.textContent = `${String(evidence.titulo || 'Evidencia identificada')}: ${String(evidence.descripcion || '')}`;
+      factsRoot.appendChild(item);
+    }
 
     const groupsRoot = document.getElementById('binanceIncompleteGroups');
     groupsRoot.replaceChildren();
@@ -1076,7 +1147,18 @@
         const prefix = document.createElement('strong');
         prefix.textContent = 'Qué aportar: ';
         next.append(prefix, document.createTextNode(String(issue.siguiente_paso || '')));
-        item.append(h, description, next);
+        const action = document.createElement('p');
+        const actionLabels = {
+          CORREGIR_ARCHIVO: 'Corregir o volver a exportar el archivo',
+          APORTAR_DOCUMENTACION: 'Aportar documentación original',
+          CONTACTAR_SOPORTE: 'Contactar con soporte',
+          REINTENTAR: 'Volver a intentarlo',
+          MANTENER_PROVISIONAL: 'Mantener el resultado como provisional',
+        };
+        const actionLabel = document.createElement('strong');
+        actionLabel.textContent = 'Siguiente paso: ';
+        action.append(actionLabel, document.createTextNode(actionLabels[issue.accion] || actionLabels.MANTENER_PROVISIONAL));
+        item.append(h, description, action, next);
         list.appendChild(item);
       }
       details.appendChild(list);
@@ -1257,17 +1339,22 @@
     const fd = new FormData();
     files.forEach(f => fd.append('csv', f));
     fetch('/api/' + EXCHANGE_PAGE + '/anos', { method: 'POST', body: fd, credentials: 'include' })
-      .then(r => r.json())
-      .then(data => {
+      .then(r => r.json().then(data => ({ data, status: r.status })))
+      .then(({ data, status }) => {
         _fetchingAños = false;
         yearNodetect.textContent = 'Sin años detectados';
         if (!data.ok) {
-          mostrarErrorApi(data.error || 'No se pudieron leer los ficheros');
+          mostrarErrorApi(data.error || 'No se pudieron leer los ficheros', null, status);
           showState('error');
-          selectedFiles = []; csvInput.value = ''; hideFile();
-          fileName.textContent = '—';
-          renderKucoinSummary(null);
-          detectedYears = []; renderYearChips([]); actualizarBoton();
+          if (status >= 500 && isMultiPage) {
+            offerDiagnostic(files);
+            detectedYears = []; renderYearChips([]); actualizarBoton();
+          } else {
+            selectedFiles = []; csvInput.value = ''; hideFile();
+            fileName.textContent = '—';
+            renderKucoinSummary(null);
+            detectedYears = []; renderYearChips([]); actualizarBoton();
+          }
           return;
         }
         renderKucoinSummary(data.resumen, data.advertencias);
@@ -1281,7 +1368,13 @@
       .catch(() => {
         _fetchingAños = false;
         yearNodetect.textContent = 'Sin años detectados';
-        detectedYears = []; renderYearChips([]); actualizarBoton();
+        detectedYears = []; renderYearChips([]);
+        if (isMultiPage) {
+          mostrarErrorApi('__servidor__');
+          showState('error');
+          offerDiagnostic(files);
+        }
+        actualizarBoton();
       });
   }
 
@@ -1794,8 +1887,14 @@
     return { ...ERRORES.generico };
   }
 
-  function mostrarErrorApi(errorRaw, retryAfter = null) {
+  function mostrarErrorApi(errorRaw, retryAfter = null, httpStatus = null) {
     const err = parsearError(errorRaw, retryAfter);
+    if (Number(httpStatus) >= 500) {
+      err.icono = '⚙';
+      err.titulo = 'No se pudo completar el análisis';
+      err.desc = 'Ha ocurrido un problema técnico. Esto no significa que tus archivos sean incorrectos. Conserva los originales y vuelve a intentarlo.';
+      err.pasos = ['Vuelve a intentarlo en unos minutos.', 'Si vuelve a ocurrir, contacta con soporte indicando el paso en el que se detuvo el análisis.'];
+    }
     document.getElementById('errorIcon').textContent   = err.icono;
     document.getElementById('errorTitulo').textContent = err.titulo;
     const descEl  = document.getElementById('errorDesc');
@@ -1809,6 +1908,8 @@
       pasosEl.innerHTML     = '';
       pasosEl.style.display = 'none';
     }
+    const support = document.getElementById('errorSupportLink');
+    if (support) support.hidden = !(Number(httpStatus) >= 500 || errorRaw === '__servidor__');
   }
 
   // Archivo de soporte: nunca se envía automáticamente ni al producirse un error.
@@ -1898,6 +1999,18 @@
       return;
     }
 
+    let alcanceBinance = null;
+    if (EXCHANGE_PAGE === 'binance') {
+      alcanceBinance = document.querySelector('input[name="alcance_datos"]:checked')?.value || '';
+      if (!alcanceBinance) {
+        const warning = document.getElementById('binanceScopeError');
+        warning.textContent = 'Selecciona una respuesta para confirmar el alcance de tus archivos.';
+        warning.hidden = false;
+        warning.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+    }
+
     if (EXCHANGE_PAGE === 'binance') renderBorradorBinance(null);
     const ejercicioVal = getEjercicioValue();
     console.log('[FIFO] Enviando ejercicio:', ejercicioVal || '(todos)');
@@ -1912,6 +2025,7 @@
     const formData = new FormData();
     formData.append('nombre', sanitizarTexto(document.getElementById('nombre').value.trim()));
     formData.append('ejercicio', sanitizarTexto(ejercicioVal));
+    if (EXCHANGE_PAGE === 'binance') formData.append('alcance_datos', alcanceBinance);
     const endpoint = isMultiPage ? ('/api/' + EXCHANGE_PAGE + '/analizar') : '/api/analizar';
     if (isMultiPage) {
       selectedFiles.forEach(f => formData.append('csv', f));
@@ -1927,9 +2041,9 @@
       if (res.status === 409) {
         // Análisis ya en proceso: mostrar aviso y conservar el fichero seleccionado
         // para que el usuario pueda reintentar cuando termine.
-        mostrarErrorApi(data.error);
+        mostrarErrorApi(data.error, null, res.status);
         showState('error');
-        btnAnalizar.disabled = false;
+        actualizarBoton();
         return;
       }
 
@@ -1952,7 +2066,7 @@
           status: res.status,
           body: data.retry_after_seconds,
           header: res.headers.get('Retry-After'),
-        } : null);
+        } : null, res.status);
         if (EXCHANGE_PAGE === 'binance') {
           renderBinancePendientes(data.diagnostico_binance);
           renderBorradorBinance(data.borrador_binance, data.token_pdf_diagnostico);
@@ -1961,8 +2075,14 @@
         if (![401, 403, 409, 413, 429].includes(res.status)) {
           offerDiagnostic(isMultiPage ? selectedFiles : [selectedFile]);
         }
-        selectedFile = null; csvInput.value = ''; hideFile();
-        fileName.textContent = '—'; btnAnalizar.disabled = true;
+        const canRetrySameFiles = isMultiPage && (res.status === 429 || res.status >= 500);
+        if (!canRetrySameFiles) {
+          selectedFile = null; csvInput.value = ''; hideFile();
+          fileName.textContent = '—'; btnAnalizar.disabled = true;
+        } else {
+          csvInput.value = '';
+          actualizarBoton();
+        }
         return;
       }
 
@@ -1980,8 +2100,13 @@
     } catch (err) {
       mostrarErrorApi('__servidor__');
       showState('error');
-      selectedFile = null; csvInput.value = ''; hideFile();
-      fileName.textContent = '—'; btnAnalizar.disabled = true;
+      if (isMultiPage && selectedFiles.length) {
+        csvInput.value = '';
+        actualizarBoton();
+      } else {
+        selectedFile = null; csvInput.value = ''; hideFile();
+        fileName.textContent = '—'; btnAnalizar.disabled = true;
+      }
     } finally {
       detenerProgreso();
       btnText.textContent = 'Generar';

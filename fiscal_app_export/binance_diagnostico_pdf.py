@@ -48,7 +48,9 @@ def _validar_borrador(borrador: dict) -> None:
             or borrador.get("pdf_fiscal_disponible") is not False
             or borrador.get("ganancias_y_perdidas_eur") is not None
             or not isinstance(borrador.get("pendientes"), list)
-            or not isinstance(borrador.get("fuentes"), list)):
+            or not isinstance(borrador.get("fuentes"), list)
+            or not isinstance(borrador.get("evidencias", []), list)
+            or not isinstance(borrador.get("archivos_aportados", []), list)):
         raise ValueError("Borrador Binance no apto para informe diagnóstico")
 
 
@@ -147,14 +149,38 @@ def generar_pdf_diagnostico_binance(borrador: dict) -> bytes:
         Paragraph(
             "<b>Documento de diagnóstico, no declaración tributaria.</b> "
             "No contiene costes FIFO, ganancias ni pérdidas en euros. "
-            "No utilices este documento para presentar la declaración ante la AEAT.",
+            "No se muestran cálculos parciales porque la suficiencia e "
+            "independencia de los lotes o valoraciones incompletos no están "
+            "acreditadas. No utilices este documento para presentar la "
+            "declaración ante la AEAT.",
             body,
         ),
         Paragraph(
             f"<b>Ejercicio solicitado:</b> {_texto(borrador.get('ejercicio_solicitado') or 'todos', 40)}"
+            f"<br/><b>Años detectados en los archivos:</b> {_texto(', '.join(map(str, borrador.get('periodos_detectados') or [])) or 'no disponibles', 120)}"
+            f"<br/><b>Alcance declarado:</b> {_texto({'solo_binance': 'el usuario declara que solo utilizó Binance', 'otras_fuentes': 'el usuario declara actividad en otros exchanges o wallets', 'no_se': 'el usuario no pudo confirmar si hubo otros exchanges o wallets'}.get(borrador.get('alcance_declarado'), 'no confirmado'), 180)}"
             f"<br/><b>Fecha del diagnóstico:</b> {datetime.now(timezone.utc).strftime('%d/%m/%Y %H:%M UTC')}",
             body,
         ),
+        Paragraph(
+            "La declaración de alcance del usuario no reemplaza los controles "
+            "del motor ni demuestra que los archivos cubran toda la actividad.", small,
+        ),
+        Paragraph("Archivos y formatos aportados", h2),
+    ]
+    uploaded = [x for x in (borrador.get("archivos_aportados") or [])[:40] if isinstance(x, dict)]
+    if uploaded:
+        for item in uploaded:
+            name = _texto(item.get("nombre") or "archivo sin nombre", 120)
+            extension = _texto(item.get("formato") or "formato no disponible", 16)
+            size = item.get("bytes")
+            size_text = f"{size:,} bytes" if type(size) is int and size >= 0 else "tamaño no disponible"
+            story.append(Paragraph(
+                f"<b>{name}</b> · formato indicado por la extensión: {extension} · {size_text}", small
+            ))
+    else:
+        story.append(Paragraph("No se conservó un inventario individual de archivos.", body))
+    story += [
         Paragraph("Fuentes reconocidas", h2),
     ]
     fuentes = (borrador.get("fuentes") or [])[:40]
@@ -190,6 +216,20 @@ def generar_pdf_diagnostico_binance(borrador: dict) -> bytes:
             story += [
                 Paragraph("Registros clasificados (no son operaciones fiscales)", h2),
                 Paragraph(_texto(" · ".join(summary), 1000), small),
+                Paragraph(
+                    "Son eventos candidatos clasificados. No representan operaciones "
+                    "únicas, adquisiciones/transmisiones conciliadas ni un FIFO completo.", small,
+                ),
+            ]
+
+    evidence = [x for x in (borrador.get("evidencias") or [])[:30] if isinstance(x, dict)]
+    if evidence:
+        story.append(Paragraph("Hechos documentales identificados", h2))
+        for item in evidence:
+            story += [
+                Paragraph(_texto(item.get("titulo") or "Evidencia documental", 200), issue_title),
+                Paragraph(_texto(item.get("descripcion"), 1600), body),
+                Paragraph(f"<b>Cómo completar:</b> {_texto(item.get('siguiente_paso'), 1600)}", small),
             ]
 
     pending = [x for x in (borrador.get("pendientes") or [])[:50] if isinstance(x, dict)]
@@ -211,17 +251,21 @@ def generar_pdf_diagnostico_binance(borrador: dict) -> bytes:
             story += [
                 Paragraph(f"{index}. {title}", issue_title),
                 Paragraph(description, body),
-                Paragraph(f"<b>Qué aportar:</b> {next_step}", small),
+                Paragraph(
+                    f"<b>Acción:</b> {_texto({'CORREGIR_ARCHIVO': 'corregir o volver a exportar el archivo', 'APORTAR_DOCUMENTACION': 'aportar documentación original', 'CONTACTAR_SOPORTE': 'contactar con soporte', 'REINTENTAR': 'volver a intentarlo', 'MANTENER_PROVISIONAL': 'mantener el resultado como provisional'}.get(issue.get('accion'), 'mantener el resultado como provisional'), 100)}"
+                    f"<br/><b>Qué aportar:</b> {next_step}", small,
+                ),
             ]
     story += [
         Spacer(1, 6 * mm),
         Paragraph("Próximos pasos", h2),
         Paragraph(
             "Si dispones de más exportaciones originales de Binance (Spot, Convert, "
-            "Earn, depósitos o retiradas), incorpóralas en la herramienta. "
+            "Earn, depósitos o retiradas), añádelas y repite el análisis. "
             "Conserva los archivos originales y este diagnóstico. "
-            "Si no puedes recuperar los documentos pendientes, consulta con "
-            "un profesional antes de utilizar cifras fiscales.", body,
+            "Si declaraste actividad en otros exchanges o wallets, aporta también "
+            "sus historiales antes de solicitar un informe definitivo. Si no puedes "
+            "recuperar los documentos pendientes, consulta con un profesional.", body,
         ),
         Paragraph(
             "<b>Limitación:</b> contar registros no demuestra cobertura histórica "
