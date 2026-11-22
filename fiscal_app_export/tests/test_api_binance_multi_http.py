@@ -2322,3 +2322,81 @@ def test_binance_vista_previa_muestra_todos_los_anos_del_ledger_con_token_w(
     assert b["pdf_fiscal_disponible"] is False
     assert b["ganancias_y_perdidas_eur"] is None
     assert "token" not in data
+
+
+def test_binance_422_pdf_diagnostico_es_documento_no_fiscal(client, usuario):
+    """Solo un diagnóstico firmado se convierte en PDF; jamás en PDF FIFO."""
+    _login(client)
+    raw = (
+        "Tiempo,Moneda,Cantidad,Tipo\n"
+        "2025-06-10,ABC,0.125,Real-time APR Rewards\n"
+    ).encode("utf-8-sig")
+    result = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(raw), "Earn-(UTC+1).csv"),
+              "ejercicio": "2025", "nombre": "Sintético"},
+        content_type="multipart/form-data",
+    )
+    assert result.status_code == 422, result.get_data(as_text=True)[:500]
+    data = result.get_json()
+    assert "token" not in data
+    assert "ganancias_y_perdidas_eur" not in data
+    assert data["borrador_binance"]["estado"] == "INCOMPLETO_NO_APTO_PARA_DECLARAR"
+    assert data["borrador_binance"]["no_es_informe_fiscal"] is True
+    signed = data["token_pdf_diagnostico"]
+    assert isinstance(signed, str) and len(signed) > 20
+    pdf = client.post("/api/binance/diagnostico-pdf", json={"token": signed})
+    assert pdf.status_code == 200, pdf.get_data(as_text=True)[:150]
+    assert pdf.mimetype == "application/pdf"
+    assert pdf.data.startswith(b"%PDF-")
+    assert pdf.headers["Cache-Control"] == "no-store, private"
+    assert "NO_FISCAL" in pdf.headers["Content-Disposition"]
+
+
+def test_binance_pdf_diagnostico_requiere_firma_y_usuario(client, usuario, _app):
+    """No aceptar JSON fiscal arbitrario, expiraciones o firmas de otras cuentas."""
+    _login(client)
+    from itsdangerous import URLSafeTimedSerializer
+    signer = URLSafeTimedSerializer(
+        _app.secret_key, salt="binance-diagnostico-no-fiscal-v1"
+    )
+    denied = client.post("/api/binance/diagnostico-pdf", json={"token": "falso"})
+    assert denied.status_code == 400
+    other = signer.dumps({"uid": "usuario-diferente", "borrador": {}})
+    result = client.post("/api/binance/diagnostico-pdf", json={"token": other})
+    assert result.status_code == 403
+
+    import binance_borrador
+    from types import SimpleNamespace
+    fake = SimpleNamespace(
+        compraventas=[], swaps=[], rendimientos=[], movimientos=[], desconocidas=[],
+        resumen_archivos={"spot_trades": {"detectado": True, "registros": 1}},
+        commission_evidence_summary=None,
+    )
+    b = binance_borrador.construir_borrador_binance(
+        fake, {"incidencias": []}, "2025"
+    )
+    b["pdf_fiscal_disponible"] = True
+    invalid = signer.dumps({"uid": str(usuario), "borrador": b})
+    response = client.post("/api/binance/diagnostico-pdf", json={"token": invalid})
+    assert response.status_code == 400
+    assert response.mimetype != "application/pdf"
+
+
+def test_binance_pdf_diagnostico_no_anonimo(client):
+    response = client.post("/api/binance/diagnostico-pdf", json={"token": "falso"})
+    assert response.status_code in (302, 401, 403)
+
+
+def test_binance_previsualizacion_incluye_token_documental_y_no_fiscal(client, usuario):
+    _login(client)
+    response = client.post(
+        "/api/binance/anos",
+        data={"csv": (io.BytesIO(_spot_csv()), "Spot-(UTC+1).csv")},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["borrador_binance"]["pdf_fiscal_disponible"] is False
+    assert data["token_pdf_diagnostico"]
+    assert "token" not in data
