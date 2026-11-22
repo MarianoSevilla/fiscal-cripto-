@@ -2388,7 +2388,7 @@ def test_binance_pdf_diagnostico_no_anonimo(client):
     assert response.status_code in (302, 401, 403)
 
 
-def test_binance_previsualizacion_incluye_token_documental_y_no_fiscal(client, usuario):
+def test_binance_previsualizacion_no_emite_pdf_antes_del_analisis(client, usuario):
     _login(client)
     response = client.post(
         "/api/binance/anos",
@@ -2398,5 +2398,5 @@ def test_binance_previsualizacion_incluye_token_documental_y_no_fiscal(client, u
     assert response.status_code == 200
     data = response.get_json()
     assert data["borrador_binance"]["pdf_fiscal_disponible"] is False
-    assert data["token_pdf_diagnostico"]
+    assert "token_pdf_diagnostico" not in data
     assert "token" not in data
