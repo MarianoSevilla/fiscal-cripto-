@@ -2800,6 +2800,59 @@ def _guardar_csvs_bitget(archivos) -> tuple:
     return _guardar_csvs_multi(archivos, MAX_BITGET_FILES, "Bitget")
 
 
+# Solo habilitar tras validación del flujo de credenciales en entorno aislado.
+# La clave y el secreto NO se almacenan ni se incorporan a trazas o BD.
+app.config["BINANCE_API_RECOVERY_ENABLED"] = (
+    os.environ.get("BINANCE_API_RECOVERY_ENABLED", "").strip().lower()
+    in ("1", "true", "yes")
+)
+
+
+@app.route("/api/binance/recuperar-spot", methods=["POST"])
+@login_required
+@limiter.limit("2 per 10 minutes")
+def api_binance_recuperar_spot():
+    """Recuperación opt-in de UN par Spot, sin permiso para escribir en Binance.
+
+    Nunca trata el histórico API como fuente total garantizada ni genera PDF.
+    La exportación resultante se ofrece para añadirla al importador multifuente.
+    """
+    if not app.config.get("BINANCE_API_RECOVERY_ENABLED", False):
+        return jsonify({"error": "La recuperación mediante API aún no está habilitada."}), 404
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        return jsonify({"error": "Selecciona un par y credenciales API de lectura."}), 400
+
+    # No registrar ni propagar los campos que contienen credenciales.
+    key, secret = body.get("api_key"), body.get("api_secret")
+    symbol = body.get("symbol")
+    from_id = body.get("from_id", 0)
+    from binance_api_recuperacion import BinanceReadOnlySpot, BinanceApiRecoveryError
+    try:
+        if type(from_id) is not int:
+            raise BinanceApiRecoveryError("Identificador inicial inválido.")
+        result = BinanceReadOnlySpot(key, secret).retrieve(
+            symbol, from_id=from_id
+        )
+    except BinanceApiRecoveryError as exc:
+        return jsonify({"error": str(exc)}), 422
+
+    response = send_file(
+        BytesIO(result["csv"]), mimetype="text/csv; charset=utf-8",
+        as_attachment=True,
+        download_name=f"Binance-API-Spot-{result['symbol']}-(UTC+0).csv",
+    )
+    response.headers["Cache-Control"] = "no-store, private"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["X-Binance-Has-More"] = (
+        "true" if result["has_more"] else "false"
+    )
+    response.headers["X-Binance-Next-ID"] = str(result["next_id"])
+    response.headers["X-Binance-Records"] = str(result["records"])
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
 @app.route("/api/binance/anos", methods=["POST"])
 @login_required
 @limiter.limit("30 per minute")
