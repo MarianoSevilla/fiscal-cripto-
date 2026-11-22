@@ -2953,7 +2953,6 @@ def api_binance_anos():
             "advertencias": clasificador.advertencias,
             "diagnostico_binance": diagnostico,
             "borrador_binance": borrador,
-            "token_pdf_diagnostico": _token_pdf_diagnostico_binance(borrador),
         })
     except (BinanceMultiUserError, BinanceUploadError, ValueError) as exc:
         return jsonify({"ok": False, "error": str(exc)}), 400
