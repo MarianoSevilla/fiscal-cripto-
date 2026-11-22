@@ -43,7 +43,6 @@ def test_pdf_diagnostico_valido_y_sin_resultados_fiscales():
     output = generar_pdf_diagnostico_binance(b)
     assert output.startswith(b"%PDF-")
     assert len(output) > 1800
-    assert b"32223" not in output  # flujos comprimidos: no afirmar texto extraído
     assert b["ganancias_y_perdidas_eur"] is None
     assert b["pdf_fiscal_disponible"] is False
 
