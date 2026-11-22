@@ -243,8 +243,8 @@
       <div id="kucoinSummary" class="kucoin-summary" style="display:none;"></div>
       {% if exchange_id == 'binance' %}
       <div id="binancePendientes" class="kucoin-summary" style="display:none;" aria-live="polite"></div>
-      <button id="binanceBorradorPreview" type="button" style="display:none; margin:10px 0; padding:10px 14px; border-radius:8px;">
-        Descargar borrador de operaciones (no válido para Hacienda)
+      <button id="binanceBorradorPreview" class="binance-preview-pdf" type="button" style="display:none;">
+        Descargar diagnóstico preliminar en PDF
       </button>
       {% if config.get('BINANCE_API_RECOVERY_ENABLED', False) %}
       <details id="binanceApiRecovery" class="kucoin-summary" style="margin:10px 0;">
@@ -384,12 +384,6 @@
     </div>
     <p class="error-desc" id="errorDesc"></p>
     <ol class="error-pasos" id="errorPasos"></ol>
-    {% if exchange_id == 'binance' %}
-    <div id="binanceErrorPendientes" class="kucoin-summary" style="display:none; margin:12px 0;"></div>
-    <button id="binanceBorradorError" type="button" style="display:none; margin:10px 0; padding:10px 14px; border-radius:8px;">
-      Descargar borrador incompleto (sin coste FIFO ni resultado fiscal)
-    </button>
-    {% endif %}
         <div id="diagConsent" style="display:none;margin:16px 0;padding:14px;border:1px solid #d9dfe5;border-radius:12px;text-align:left;">
       <strong>¿Quieres compartir el archivo con soporte?</strong>
       <p style="font-size:13px;line-height:1.5;">Es opcional y no afecta a tu cuenta. Solo se ofrecen archivos de hasta 8 MB. El archivo puede incluir operaciones y datos fiscales. Al autorizarlo, el archivo se enviará mediante Resend a <strong>colab.marianosevilla@gmail.com</strong>. La web cerrará los archivos temporales al terminar el intento. En Gmail conservaremos el adjunto solo mientras sea necesario para revisar la incidencia, con un plazo máximo previsto de 30 días; lo eliminaremos antes si termina el análisis. Resend puede conservar sus propias copias según sus plazos. Consulta la <a href="/privacidad#archivos-e-informes">Política de privacidad</a>.</p>
@@ -404,6 +398,46 @@
     </div>
     <button class="btn-retry" type="button" id="btnRetry">Volver a intentarlo</button>
   </div>
+
+
+  {% if exchange_id == 'binance' %}
+  <!-- Resultado fiscal INCOMPLETO: la importación funcionó. Nunca es un error técnico. -->
+  <section class="binance-incomplete-state" id="binanceIncompleteState"
+           aria-labelledby="binanceIncompleteTitle">
+    <div class="binance-incomplete-success">
+      <span class="binance-incomplete-check" aria-hidden="true">✓</span>
+      <div>
+        <h3 id="binanceIncompleteTitle">Archivo Binance procesado correctamente</h3>
+        <p>La web ha leído los archivos y reconocido los formatos aportados.</p>
+      </div>
+    </div>
+    <div class="binance-incomplete-metrics">
+      <div><strong id="binanceIncompleteRows">—</strong><span>Registros del historial</span></div>
+      <div><strong id="binanceIncompleteYear">—</strong><span>Ejercicio solicitado</span></div>
+    </div>
+    <div class="binance-incomplete-notice">
+      <h4>Informe fiscal pendiente de completar</h4>
+      <p>El análisis ha finalizado, pero faltan datos para acreditar determinadas
+         operaciones y sus costes de adquisición. <strong>Esto no significa que
+         tu CSV sea incorrecto.</strong></p>
+      <p>No se han inventado importes ni se ha generado un informe FIFO fiscal definitivo.</p>
+    </div>
+    <div class="binance-incomplete-actions">
+      <button id="binanceDiagnosticoPdf" class="binance-pdf-button" type="button">
+        Descargar informe de diagnóstico (PDF)
+      </button>
+      <button id="binanceAddFiles" class="binance-add-files-button" type="button">
+        Añadir archivos de Binance
+      </button>
+    </div>
+    <p class="binance-incomplete-feedback" id="binancePdfFeedback" role="status" aria-live="polite"></p>
+    <section class="binance-incomplete-issues" aria-labelledby="binanceIncompleteIssuesTitle">
+      <h4 id="binanceIncompleteIssuesTitle">Información pendiente para el FIFO</h4>
+      <p>Despliega un apartado para consultar qué falta y qué documentos pueden ayudarte.</p>
+      <div id="binanceIncompleteGroups"></div>
+    </section>
+  </section>
+  {% endif %}
 
   <!-- RESULTADOS -->
   <div class="results-content" id="resultsContent">
@@ -945,64 +979,131 @@
     bitget: 'Archivos Bitget detectados',
   };
 
-  // Se descarga únicamente el diagnóstico documental ya generado por el servidor.
-  // No calcula un FIFO parcial, ni inventa un coste o una ganancia.
+  // El diagnóstico PDF no es el informe fiscal. El servidor firma su contenido
+  // para que nadie pueda sustituir los resultados por cifras falsas.
   let borradorBinance = null;
-  function renderBorradorBinance(datos) {
+  let tokenPdfBinance = null;
+  function renderBorradorBinance(datos, token) {
     if (EXCHANGE_PAGE !== 'binance') return;
     borradorBinance = datos && datos.no_es_informe_fiscal === true
       && datos.estado === 'INCOMPLETO_NO_APTO_PARA_DECLARAR' ? datos : null;
-    for (const id of ['binanceBorradorPreview', 'binanceBorradorError']) {
-      const button = document.getElementById(id);
-      if (button) button.style.display = borradorBinance ? 'inline-block' : 'none';
+    tokenPdfBinance = borradorBinance && typeof token === 'string' ? token : null;
+    const previewButton = document.getElementById('binanceBorradorPreview');
+    if (previewButton) previewButton.style.display =
+      tokenPdfBinance ? 'inline-flex' : 'none';
+    const finalButton = document.getElementById('binanceDiagnosticoPdf');
+    if (finalButton) finalButton.disabled = !tokenPdfBinance;
+  }
+
+  async function descargarDiagnosticoBinance(button) {
+    if (!tokenPdfBinance) return;
+    const feedback = document.getElementById('binancePdfFeedback');
+    button.disabled = true;
+    const originalLabel = button.textContent;
+    button.textContent = 'Preparando PDF…';
+    if (feedback) feedback.textContent = '';
+    try {
+      const response = await fetch('/api/binance/diagnostico-pdf', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: tokenPdfBinance })
+      });
+      if (!response.ok) {
+        const json = await response.json().catch(() => ({}));
+        if (feedback) feedback.textContent =
+          json.error || 'No se pudo descargar el diagnóstico. Repite el análisis.';
+        return;
+      }
+      if (!(response.headers.get('Content-Type') || '').includes('application/pdf')) {
+        if (feedback) feedback.textContent = 'El servidor no devolvió un PDF válido.';
+        return;
+      }
+      const bytes = await response.blob();
+      const url = URL.createObjectURL(bytes);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'Binance_diagnostico_INCOMPLETO_NO_FISCAL.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+      if (feedback) feedback.textContent =
+        'Descarga preparada. Este PDF es un diagnóstico, no un informe fiscal.';
+    } catch (_) {
+      if (feedback) feedback.textContent =
+        'No se pudo descargar el diagnóstico. Comprueba la conexión y vuelve a intentarlo.';
+    } finally {
+      button.textContent = originalLabel;
+      button.disabled = !tokenPdfBinance;
     }
   }
-  for (const id of ['binanceBorradorPreview', 'binanceBorradorError']) {
+  for (const id of ['binanceBorradorPreview', 'binanceDiagnosticoPdf']) {
     const button = document.getElementById(id);
-    if (!button) continue;
-    button.addEventListener('click', () => {
-      if (!borradorBinance) return;
-      const resumen = borradorBinance.operaciones_detectadas || {};
-      const lines = [
-        'BINANCE · BORRADOR DE OPERACIONES DETECTADAS',
-        'INCOMPLETO — NO ES UN INFORME FISCAL NI UN CÁLCULO FIFO VALIDADO',
-        '',
-        'Ejercicio solicitado: ' + String(borradorBinance.ejercicio_solicitado || 'todos'),
-        'NO contiene ganancias, pérdidas ni costes EUR atribuibles.',
-        '',
-        'REGISTROS CLASIFICADOS (pueden coincidir entre fuentes)',
-        'Compraventas candidatas: ' + String(resumen.compraventas_candidatas || 0),
-        'Permutas candidatas: ' + String(resumen.permutas_candidatas || 0),
-        'Rendimientos candidatos: ' + String(resumen.rendimientos_candidatos || 0),
-        'Movimientos candidatos: ' + String(resumen.movimientos_candidatos || 0),
-        'Sin reconocer: ' + String(resumen.operaciones_no_reconocidas || 0),
-        '',
-        'FUENTES APORTADAS',
-        ...(borradorBinance.fuentes || []).map(x =>
-          String(x.tipo) + ': ' + String(x.registros) + ' registros'
-        ),
-        '',
-        'DATOS Y COMPROBACIONES PENDIENTES',
-        ...(borradorBinance.pendientes || []).flatMap((x, i) => [
-          String(i + 1) + '. ' + String(x.titulo || 'Pendiente'),
-          String(x.descripcion || ''),
-          'Siguiente paso: ' + String(x.siguiente_paso || ''),
-          ''
-        ]),
-        'IMPORTANTE: este documento no es válido para declarar a Hacienda.',
-        'Conserva las exportaciones originales de Binance y de otras carteras.'
-      ];
-      const blob = new Blob([lines.join('\n')], {
-        type: 'text/plain;charset=utf-8'
-      });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.href = url;
-      link.download = 'binance_BORRADOR_INCOMPLETO_NO_FISCAL.txt';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
+    if (button) button.addEventListener('click', () => descargarDiagnosticoBinance(button));
+  }
+
+  function renderBinanceResultadoIncompleto(data) {
+    if (EXCHANGE_PAGE !== 'binance') return;
+    const report = data.borrador_binance || {};
+    const source = (report.fuentes || []).find(x => x.tipo === 'transaction_history');
+    const count = source && Number.isSafeInteger(source.registros) ? source.registros : null;
+    document.getElementById('binanceIncompleteRows').textContent =
+      count === null ? '—' : count.toLocaleString('es-ES');
+    const year = String(report.ejercicio_solicitado || 'Todos').trim();
+    document.getElementById('binanceIncompleteYear').textContent =
+      year.toLowerCase() === 'todos' ? 'Todos' : year;
+
+    const groupsRoot = document.getElementById('binanceIncompleteGroups');
+    groupsRoot.replaceChildren();
+    const issues = (report.pendientes || []).filter(x => x && typeof x === 'object');
+    const categories = [
+      ['operaciones', 'Operaciones y movimientos'],
+      ['earn', 'Earn y recompensas'],
+      ['comisiones', 'Ingresos y reembolsos de comisiones']
+    ];
+    for (const [groupId, groupName] of categories) {
+      const groupIssues = issues.filter(x => (x.grupo || 'operaciones') === groupId);
+      if (!groupIssues.length) continue;
+      const details = document.createElement('details');
+      details.className = 'binance-issues-group';
+      const summary = document.createElement('summary');
+      summary.textContent = groupName + ' · ' + groupIssues.length +
+        (groupIssues.length === 1 ? ' incidencia' : ' incidencias');
+      details.appendChild(summary);
+      const list = document.createElement('ol');
+      for (const issue of groupIssues) {
+        const item = document.createElement('li');
+        const h = document.createElement('strong');
+        h.textContent = String(issue.titulo || 'Información pendiente');
+        const description = document.createElement('p');
+        description.textContent = String(issue.descripcion || '');
+        const next = document.createElement('p');
+        const prefix = document.createElement('strong');
+        prefix.textContent = 'Qué aportar: ';
+        next.append(prefix, document.createTextNode(String(issue.siguiente_paso || '')));
+        item.append(h, description, next);
+        list.appendChild(item);
+      }
+      details.appendChild(list);
+      groupsRoot.appendChild(details);
+    }
+    if (!groupsRoot.children.length) {
+      const p = document.createElement('p');
+      p.textContent = 'Para completar el informe fiscal necesitas documentación adicional verificable.';
+      groupsRoot.appendChild(p);
+    }
+    const feedback = document.getElementById('binancePdfFeedback');
+    if (feedback) feedback.textContent = '';
+  }
+  const addBinanceFiles = document.getElementById('binanceAddFiles');
+  if (addBinanceFiles) {
+    addBinanceFiles.addEventListener('click', () => {
+      const input = document.getElementById('csvInput');
+      if (input) {
+        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        input.click();
+      }
     });
   }
 
