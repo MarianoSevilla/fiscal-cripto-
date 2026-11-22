@@ -64,7 +64,7 @@ def run_binance_incomplete(origin, cookie_name, cookie_value):
                     assert "Earn-(UTC+1).csv" in page.locator(
                         "#binanceIncompleteFiles"
                     ).inner_text()
-                    assert "candidatas" in page.locator(
+                    assert "candidatos" in page.locator(
                         "#binanceIncompleteFactsNote"
                     ).inner_text()
                     assert not page.locator("#btnDownload").is_visible()
