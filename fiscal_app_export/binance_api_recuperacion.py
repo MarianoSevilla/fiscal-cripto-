@@ -179,7 +179,7 @@ class BinanceReadOnlySpot:
                     qty + base,
                     quoteqty + quote,
                     commission + fee_asset,
-                    "", "", tid,
+                    "", "", tid, epoch,
                 ))
             highest = max(seen)
             if highest < cursor:
@@ -200,7 +200,7 @@ class BinanceReadOnlySpot:
             "Número de pedido", "Tiempo", "Par", "Lado", "Precio",
             "Ejecutado", "Cantidad", "Tarifa",
             "Par de conversión de AOR", "Tasa de conversión de AOR",
-            "ID de ejecución API",
+            "ID de ejecución API", "Tiempo unix ms API",
         ])
         writer.writerows(collected)
         return {
