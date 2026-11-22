@@ -101,3 +101,20 @@ def test_api_no_exagera_cobertura_de_1000_fills():
     # Cuando un proveedor repite la misma página pese a fromId, falla cerrado.
     with pytest.raises(BinanceApiRecoveryError, match="Secuencia"):
         reader.retrieve("BTCUSDT")
+
+
+def test_export_api_conserva_cabecera_nativa_reconocida_por_importador(tmp_path):
+    """La descarga de API entra por el importador existente sin conversiones heurísticas."""
+    from clasificador_binance_multi import _read_csv, detect_binance_source
+    fake = FakeTransport()
+    data = BinanceReadOnlySpot(
+        "K" * 64, "S" * 64, transport=fake
+    ).retrieve("BTCUSDT")["csv"]
+    path = tmp_path / "Binance-API-Spot-BTCUSDT-(UTC+0).csv"
+    path.write_bytes(data)
+    headers, records, is_empty = _read_csv(str(path))
+    assert not is_empty
+    assert detect_binance_source(headers) == "spot_trades"
+    assert len(records) == 1
+    assert records[0]["número de pedido"] == "99"
+    assert records[0]["tarifa"] == "0.0001BNB"
