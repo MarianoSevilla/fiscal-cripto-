@@ -2245,3 +2245,49 @@ def test_binance_error_fiscal_422_incluye_borrador_sin_token(client, usuario):
     assert b["ejercicio_solicitado"] == "2025"
     assert b["ganancias_y_perdidas_eur"] is None
     assert any(p["codigo"] == "earn_lotes" for p in b["pendientes"])
+
+
+def test_binance_api_recuperacion_desactivada_por_defecto(client, usuario):
+    _login(client)
+    r = client.post(
+        "/api/binance/recuperar-spot",
+        json={"api_key": "K" * 64, "api_secret": "S" * 64,
+              "symbol": "BTCUSDT", "from_id": 0},
+    )
+    assert r.status_code == 404
+    assert "token" not in r.get_json()
+
+
+def test_binance_api_recuperacion_devuelve_csv_no_pdf_sin_filtrar_claves(
+    client, usuario, _app, monkeypatch
+):
+    _login(client)
+    monkeypatch.setitem(_app.config, "BINANCE_API_RECOVERY_ENABLED", True)
+    import binance_api_recuperacion
+
+    class SoloPrueba:
+        def __init__(self, key, secret):
+            assert key == "K" * 64 and secret == "S" * 64
+
+        def retrieve(self, symbol, *, from_id=0):
+            assert symbol == "BTCUSDT" and from_id == 0
+            return {
+                "csv": b"Numero de pedido,Tiempo\n1,2025-01-01 00:00:00\n",
+                "next_id": 13, "has_more": True,
+                "records": 1, "symbol": "BTCUSDT",
+            }
+
+    monkeypatch.setattr(binance_api_recuperacion, "BinanceReadOnlySpot", SoloPrueba)
+    r = client.post(
+        "/api/binance/recuperar-spot",
+        json={"api_key": "K" * 64, "api_secret": "S" * 64,
+              "symbol": "BTCUSDT", "from_id": 0},
+    )
+    assert r.status_code == 200, r.get_data(as_text=True)[:500]
+    assert r.headers["Cache-Control"] == "no-store, private"
+    assert r.headers["X-Binance-Has-More"] == "true"
+    assert r.headers["X-Binance-Next-ID"] == "13"
+    assert r.mimetype == "text/csv"
+    assert b"Numero de pedido" in r.data
+    assert b"K" * 64 not in r.data and b"S" * 64 not in r.data
+    assert b"PDF" not in r.data
