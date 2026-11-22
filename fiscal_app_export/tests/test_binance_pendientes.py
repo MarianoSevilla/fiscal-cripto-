@@ -1,0 +1,510 @@
+"""Pruebas sintéticas del diagnóstico, nunca con operaciones reales."""
+
+import sys
+from pathlib import Path
+from types import SimpleNamespace
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from binance_pendientes import diagnosticar_pendientes_binance
+
+
+def _clasificador(**overrides):
+    data = {
+        "fuentes_materiales_no_soportadas": [],
+        "earn_reconciliation": None,
+        "earn_events": [],
+        "movimientos": [],
+        "commission_evidence_summary": None,
+        "dust_evidence_summary": None,
+        "valoraciones_pendientes": [],
+        "comisiones_pendientes": [],
+        "desconocidas": [],
+        "_unknown_files": 0,
+    }
+    data.update(overrides)
+    return SimpleNamespace(**data)
+
+
+def _codes(report):
+    return {i["codigo"] for i in report["incidencias"]}
+
+
+def test_spot_ordenes_y_fills_pueden_faltar_en_ambos_sentidos():
+    r = diagnosticar_pendientes_binance(_clasificador(
+        fuentes_materiales_no_soportadas=[
+            "spot_orders_ejecutadas_sin_fills_completos"
+        ],
+    ))
+    item = next(i for i in r["incidencias"] if i["codigo"] == "spot_fills")
+    assert "órdenes" in item["descripcion"]
+    assert "ejecuciones" in item["descripcion"]
+    assert "mismos períodos" in item["siguiente_paso"]
+
+
+def test_legacy_fiscal_no_valorable_tiene_diagnostico_sin_lotes_inventados():
+    r = diagnosticar_pendientes_binance(_clasificador(
+        fuentes_materiales_no_soportadas=[
+            "binance_legacy_tx_sin_valoracion_o_identidad"
+        ],
+    ))
+    assert {i["codigo"] for i in r["incidencias"]} == {
+        "historial_legacy_pendiente"
+    }
+    assert r["validez_fiscal_acreditada"] is False
+    assert "coste cero" in r["incidencias"][0]["descripcion"]
+
+
+def test_sin_marcadores_no_inventa_archivos_ni_autoriza_fifo():
+    result = diagnosticar_pendientes_binance(_clasificador())
+    assert result["estado"] == "pendiente_validacion"
+    assert result["validez_fiscal_acreditada"] is False
+    assert result["incidencias"] == []
+    assert "primera adquisición" in result["aviso"]
+
+
+def test_cobertura_earn_parcial_y_solapamiento_son_incidencias_distintas():
+    c = _clasificador(
+        fuentes_materiales_no_soportadas=[
+            "earn_fuentes_no_conciliadas",
+            "filas_identicas_entre_exportaciones_sin_id_unico",
+        ],
+        earn_reconciliation=SimpleNamespace(ledger_unmatched=7),
+        earn_events=[object()],
+    )
+    result = diagnosticar_pendientes_binance(c)
+    assert {"earn_cobertura", "earn_lotes", "solapamiento"} <= _codes(result)
+    assert "otras_incidencias" not in _codes(result)
+    assert all(isinstance(i["siguiente_paso"], str) for i in result["incidencias"])
+
+
+def test_deposito_externo_pide_origen_no_impone_coste_cero():
+    c = _clasificador(movimientos=[
+        SimpleNamespace(subtipo="Depósito cripto", cantidad=3),
+    ])
+    result = diagnosticar_pendientes_binance(c)
+    assert _codes(result) == {"depositos_origen"}
+    assert "coste EUR" in result["incidencias"][0]["siguiente_paso"]
+    assert "coste cero" not in result["incidencias"][0]["siguiente_paso"]
+
+
+def test_separa_spot_comisiones_permutas_y_dust():
+    c = _clasificador(
+        fuentes_materiales_no_soportadas=[
+            "spot_orders_ejecutadas_sin_fills_completos",
+            "small_assets_exchange_bnb_sin_permuta_valorada",
+        ],
+        commission_evidence_summary=SimpleNamespace(records=10),
+        dust_evidence_summary=SimpleNamespace(rows=4),
+        valoraciones_pendientes=[{"motivo": "permuta_sin_valor_eur"}],
+        comisiones_pendientes=[{"motivo": "fee"}],
+    )
+    result = diagnosticar_pendientes_binance(c)
+    assert {
+        "spot_fills", "comisiones_afiliacion", "conversion_saldos",
+        "valoracion_eur", "comisiones_cripto",
+    } <= _codes(result)
+    assert result["validez_fiscal_acreditada"] is False
+
+
+def test_marcador_desconocido_no_se_ignora_ni_se_exponen_datos():
+    c = _clasificador(
+        fuentes_materiales_no_soportadas=["nueva_fuente_sin_interpretar"],
+    )
+    result = diagnosticar_pendientes_binance(c)
+    assert _codes(result) == {"otras_incidencias"}
+    assert "nueva_fuente_sin_interpretar" not in str(result)
+
+
+def test_earn_informa_anos_y_contadores_sin_detalles_privados():
+    c = _clasificador(
+        earn_reconciliation=SimpleNamespace(
+            ledger_unmatched=5,
+            ledger_unmatched_by_year=((2020, 2), (2023, 3)),
+            ledger_unmatched_by_year_direction=(
+                (2020, "subscription", 1),
+                (2020, "redemption", 1),
+                (2023, "subscription", 3),
+            ),
+        ),
+        fuentes_materiales_no_soportadas=["earn_fuentes_no_conciliadas"],
+    )
+    diag = diagnosticar_pendientes_binance(c)
+    issue = next(i for i in diag["incidencias"]
+                 if i["codigo"] == "earn_cobertura")
+    assert "2020 (2 movimientos)" in issue["descripcion"]
+    assert "2023 (3 movimientos)" in issue["descripcion"]
+    assert "4 suscripciones y 1 reembolso" in issue["descripcion"]
+    assert "no adquisiciones fiscales acreditadas" in issue["descripcion"]
+    assert "EUR" in issue["siguiente_paso"]
+    assert diag["validez_fiscal_acreditada"] is False
+
+
+def test_earn_no_infiere_periodos_cuando_no_estan_comprobados():
+    c = _clasificador(
+        earn_reconciliation=SimpleNamespace(
+            ledger_unmatched=2,
+            ledger_unmatched_by_year=((2020, 1),),
+        )
+    )
+    diag = diagnosticar_pendientes_binance(c)
+    issue = next(i for i in diag["incidencias"]
+                 if i["codigo"] == "earn_cobertura")
+    assert "Períodos identificados" not in issue["descripcion"]
+    assert diag["validez_fiscal_acreditada"] is False
+
+
+def test_earn_no_deduce_tipos_si_contadores_no_coinciden():
+    c = _clasificador(
+        earn_reconciliation=SimpleNamespace(
+            ledger_unmatched=3,
+            ledger_unmatched_by_year=((2021, 3),),
+            ledger_unmatched_by_year_direction=((2021, "subscription", 2),),
+        ),
+    )
+    issue = next(i for i in diagnosticar_pendientes_binance(c)["incidencias"]
+                 if i["codigo"] == "earn_cobertura")
+    assert "2021 (3 movimientos)" in issue["descripcion"]
+    assert "Desglose:" not in issue["descripcion"]
+
+
+def test_diagnostico_recompensas_historicas_diferencia_dos_brechas():
+    c = _clasificador(
+        fuentes_materiales_no_soportadas=[
+            "earn_intereses_ledger_sin_fuente_nativa_suficiente",
+            "earn_recompensas_nativas_sin_asiento_general",
+        ],
+        earn_reward_reconciliation=SimpleNamespace(
+            ledger_not_in_native=5,
+            native_not_in_ledger=2,
+            ledger_missing_by_year_kind=(
+                (2020, "Simple Earn Flexible Interest", 1),
+                (2021, "Simple Earn Flexible Interest", 2),
+                (2021, "Simple Earn Flexible Airdrop", 2),
+            ),
+            native_missing_by_year_kind=(
+                (2024, "Bonus Tiered APR Rewards", 2),
+            ),
+        ),
+    )
+    diag = diagnosticar_pendientes_binance(c)
+    codes = _codes(diag)
+    assert "earn_recompensas_sin_nativo" in codes
+    assert "earn_recompensas_sin_ledger" in codes
+    assert "otras_incidencias" not in codes
+    missing = next(x for x in diag["incidencias"]
+                   if x["codigo"] == "earn_recompensas_sin_nativo")
+    assert "2020: 1" in missing["descripcion"]
+    assert "2021: 4" in missing["descripcion"]
+    assert "5 abonos" in missing["descripcion"]
+    assert "coste EUR inventado" in missing["siguiente_paso"]
+    native = next(x for x in diag["incidencias"]
+                  if x["codigo"] == "earn_recompensas_sin_ledger")
+    assert "2024: 2" in native["descripcion"]
+    assert "2 recompensas nativas" in native["descripcion"]
+    assert diag["validez_fiscal_acreditada"] is False
+
+
+def test_diagnostico_recompensas_sin_ano_comprobado_no_inventa_ano():
+    c = _clasificador(
+        earn_reward_reconciliation=SimpleNamespace(
+            ledger_not_in_native=4,
+            native_not_in_ledger=0,
+            ledger_missing_by_year_kind=(
+                ("fecha-secreta", "Bonus Tiered APR Rewards", 4),
+            ),
+        )
+    )
+    issue = next(x for x in diagnosticar_pendientes_binance(c)["incidencias"]
+                 if x["codigo"] == "earn_recompensas_sin_nativo")
+    assert "fecha-secreta" not in issue["descripcion"]
+    assert "Por ejercicio:" not in issue["descripcion"]
+
+
+def test_diagnostico_abonos_earn_en_custodia_fuera_de_spot():
+    c = _clasificador(
+        fuentes_materiales_no_soportadas=[
+            "earn_abonos_en_custodia_no_conciliada",
+        ],
+        earn_reward_reconciliation=SimpleNamespace(
+            ledger_not_in_native=1,
+            native_not_in_ledger=0,
+            ledger_other_wallet_records=1,
+            ledger_missing_by_year_kind=(
+                (2021, "Simple Earn Flexible Interest", 1),
+            ),
+        ),
+    )
+    report = diagnosticar_pendientes_binance(c)
+    assert "earn_custodia_no_conciliada" in _codes(report)
+    assert "earn_recompensas_sin_nativo" in _codes(report)
+    assert "otras_incidencias" not in _codes(report)
+    issue = next(i for i in report["incidencias"]
+                 if i["codigo"] == "earn_custodia_no_conciliada")
+    assert "1 apunte" in issue["descripcion"]
+    assert "EUR" in issue["siguiente_paso"]
+    assert report["validez_fiscal_acreditada"] is False
+
+
+def test_priorizacion_2025_muestra_riesgo_sin_presentar_visto_bueno():
+    c = _clasificador(
+        earn_reward_reconciliation=SimpleNamespace(
+            ledger_not_in_native=4,
+            native_not_in_ledger=0,
+        ),
+        earn_reward_impact_2025=SimpleNamespace(
+            exercise=2025,
+            prior_ledger_only_rewards=4,
+            with_possible_disposal=3,
+            without_observed_disposal=1,
+        ),
+    )
+    report = diagnosticar_pendientes_binance(c)
+    issue = next(i for i in report["incidencias"]
+                 if i["codigo"] == "earn_prioridad_2025")
+    assert "3 corresponden" in issue["descripcion"]
+    assert "Otros 1" in issue["descripcion"]
+    assert "no demuestra irrelevancia fiscal" in issue["descripcion"]
+    assert "sin excluir los demás" in issue["siguiente_paso"]
+    assert report["validez_fiscal_acreditada"] is False
+
+
+def test_prioridad_earn_no_inventa_impacto_2025_con_recuentos_incoherentes():
+    c = _clasificador(
+        earn_reward_impact_2025=SimpleNamespace(
+            exercise=2025,
+            prior_ledger_only_rewards=4,
+            with_possible_disposal=6,
+            without_observed_disposal=1,
+        ),
+    )
+    report = diagnosticar_pendientes_binance(c)
+    assert "earn_prioridad_2025" not in _codes(report)
+    assert report["validez_fiscal_acreditada"] is False
+
+
+def test_prioridad_earn_no_se_presenta_como_riesgo_2024():
+    c = _clasificador(
+        earn_reward_impact_2025=SimpleNamespace(
+            exercise=2024,
+            prior_ledger_only_rewards=3,
+            with_possible_disposal=2,
+            without_observed_disposal=1,
+        ),
+    )
+    report = diagnosticar_pendientes_binance(c)
+    assert "earn_prioridad_2025" not in _codes(report)
+
+
+def test_eur_explicito_distingue_candidatos_completos_de_fiat_ambiguo():
+    c = _clasificador(
+        eur_acquisition_evidence=SimpleNamespace(
+            candidates=(object(), object(), object()),
+            complete_cost_candidates=2,
+            incomplete_cost_candidates=1,
+        )
+    )
+    report = diagnosticar_pendientes_binance(c)
+    issue = next(x for x in report["evidencias"]
+                 if x["codigo"] == "adquisiciones_eur_documentadas")
+    assert report["incidencias"] == []
+    assert "3 adquisiciones" in issue["descripcion"]
+    assert "2 con importe" in issue["descripcion"]
+    assert "1 con el coste" in issue["descripcion"]
+    assert "USDT/USDC/EUR" in issue["siguiente_paso"]
+    assert report["validez_fiscal_acreditada"] is False
+
+
+def test_eur_explicito_no_inventa_cuadre_si_contadores_inconsistentes():
+    c = _clasificador(
+        eur_acquisition_evidence=SimpleNamespace(
+            candidates=(object(), object()),
+            complete_cost_candidates=3,
+            incomplete_cost_candidates=1,
+        )
+    )
+    report = diagnosticar_pendientes_binance(c)
+    assert "adquisiciones_eur_documentadas" not in {
+        x["codigo"] for x in report["evidencias"]
+    }
+
+
+def test_evidencia_fee_spot_eur_conciliada_no_es_incidencia_ni_coste_final():
+    c = _clasificador(
+        spot_eur_fee_reconciliation=SimpleNamespace(
+            native_third_asset_fees=7,
+            ledger_matched=7,
+            native_unmatched=0,
+            indistinguishable_native_groups=2,
+            ledger_extra_on_native_keys=0,
+        ),
+    )
+    report = diagnosticar_pendientes_binance(c)
+    assert report["incidencias"] == []
+    evidence = next(x for x in report["evidencias"]
+                    if x["codigo"] == "comisiones_spot_eur_ledger")
+    assert "7 comisiones" in evidence["descripcion"]
+    assert "7 tienen" in evidence["descripcion"]
+    assert "0 siguen" in evidence["descripcion"]
+    assert "no acreditan su valoración EUR" in evidence["descripcion"]
+    assert "no añadas costes estimados" in evidence["siguiente_paso"]
+    assert report["validez_fiscal_acreditada"] is False
+
+
+def test_fee_spot_eur_incompleta_no_se_presenta_como_cotejo_completo():
+    c = _clasificador(
+        spot_eur_fee_reconciliation=SimpleNamespace(
+            native_third_asset_fees=3,
+            ledger_matched=1,
+            native_unmatched=2,
+        ),
+    )
+    report = diagnosticar_pendientes_binance(c)
+    evidence = next(x for x in report["evidencias"]
+                    if x["codigo"] == "comisiones_spot_eur_ledger")
+    assert "1 tienen" in evidence["descripcion"]
+    assert "2 siguen" in evidence["descripcion"]
+    assert report["validez_fiscal_acreditada"] is False
+
+
+def test_fee_spot_eur_contadores_invalidos_no_producen_evidencia():
+    c = _clasificador(
+        spot_eur_fee_reconciliation=SimpleNamespace(
+            native_third_asset_fees=3,
+            ledger_matched=5,
+            native_unmatched=2,
+        ),
+    )
+    report = diagnosticar_pendientes_binance(c)
+    assert "comisiones_spot_eur_ledger" not in {
+        x["codigo"] for x in report["evidencias"]
+    }
+
+
+
+def test_informa_compras_eur_legacy_sin_importes_ni_aprobar_fifo():
+    report = SimpleNamespace(
+        candidates=(object(), object(), object()),
+        complete_cost_candidates=2,
+        pending_third_asset_fee=1,
+    )
+    diagnostic = diagnosticar_pendientes_binance(_clasificador(
+        legacy_eur_acquisition_evidence=report,
+    ))
+    evidence = next(item for item in diagnostic["evidencias"]
+                    if item["codigo"] == "adquisiciones_eur_historico_legacy")
+    assert "3 compras" in evidence["descripcion"]
+    assert "2 con" in evidence["descripcion"]
+    assert "1 con comisión" in evidence["descripcion"]
+    assert "USDT/USDC" in evidence["siguiente_paso"]
+    assert diagnostic["validez_fiscal_acreditada"] is False
+
+
+def test_legacy_eur_counter_inconsistent_does_not_mislead():
+    report = SimpleNamespace(
+        candidates=(object(),),
+        complete_cost_candidates=10,
+        pending_third_asset_fee=0,
+    )
+    diagnostic = diagnosticar_pendientes_binance(_clasificador(
+        legacy_eur_acquisition_evidence=report,
+    ))
+    assert not any(item["codigo"] == "adquisiciones_eur_historico_legacy"
+                   for item in diagnostic["evidencias"])
+    assert diagnostic["validez_fiscal_acreditada"] is False
+
+
+
+def test_diagnostico_orden_intrasegundo_exige_evidencia_sin_promediar():
+    report = diagnosticar_pendientes_binance(_clasificador(
+        fuentes_materiales_no_soportadas=[
+            "binance_fifo_lotes_mismo_segundo_precio_distinto",
+            "binance_orden_intrasegundo_incierto",
+        ],
+    ))
+    assert _codes(report) == {"fifo_orden_intrasegundo"}
+    item = report["incidencias"][0]
+    assert "mismo segundo" in item["descripcion"]
+    assert "Spot o Convert" in item["descripcion"]
+    assert "conversiones Convert" in item["siguiente_paso"]
+    assert "identificador único" in item["siguiente_paso"]
+    assert "No reordenes" in item["siguiente_paso"]
+    assert report["validez_fiscal_acreditada"] is False
+
+
+def test_diagnostico_retiro_cripto_pide_origen_y_no_infiere_venta():
+    for amount in (-3.0, 0.0):
+        # Decimal 1e-400 can become float 0.0. Source identity still blocks.
+        report = diagnosticar_pendientes_binance(_clasificador(
+            movimientos=[SimpleNamespace(
+                subtipo="Retiro cripto", activo="PRIVATE", cantidad=amount,
+            )],
+        ))
+        assert _codes(report) == {"retiros_destino"}
+        issue = report["incidencias"][0]
+        assert "cartera" in issue["siguiente_paso"]
+        assert "No registres automáticamente" in issue["siguiente_paso"]
+        assert "PRIVATE" not in str(report)
+        assert report["validez_fiscal_acreditada"] is False
+
+
+def test_diagnostico_carteras_spot_funding_una_sola_incidencia():
+    report = diagnosticar_pendientes_binance(_clasificador(
+        fuentes_materiales_no_soportadas=[
+            "binance_tx_cartera_distinta_no_conciliada",
+            "binance_convert_cartera_distinta_no_conciliada",
+        ],
+    ))
+    assert _codes(report) == {"cartera_binance_no_conciliada"}
+    item = report["incidencias"][0]
+    assert "cartera distinta" in item["descripcion"]
+    assert "Funding" in item["siguiente_paso"]
+    assert "No elimines" in item["siguiente_paso"]
+    assert report["validez_fiscal_acreditada"] is False
+
+
+def test_diagnostico_transferencia_otra_cartera_solicita_trazabilidad():
+    report = diagnosticar_pendientes_binance(_clasificador(
+        fuentes_materiales_no_soportadas=[
+            "binance_transfer_cartera_distinta_no_conciliada",
+        ],
+    ))
+    assert _codes(report) == {"cartera_binance_no_conciliada"}
+    issue = report["incidencias"][0]
+    assert "Spot" in issue["descripcion"]
+    assert "traspasos" in issue["siguiente_paso"]
+    assert report["validez_fiscal_acreditada"] is False
+
+
+def test_diagnostico_incidencia_nueva_mas_desconocida_no_oculta_el_resto():
+    report = diagnosticar_pendientes_binance(_clasificador(
+        fuentes_materiales_no_soportadas=[
+            "binance_fifo_lotes_mismo_segundo_precio_distinto",
+            "marcador_desconocido_privado",
+        ],
+    ))
+    assert _codes(report) == {
+        "fifo_orden_intrasegundo", "otras_incidencias",
+    }
+    assert "marcador_desconocido_privado" not in str(report)
+
+
+def test_nuevo_diagnostico_no_expone_fechas_activos_ni_importes():
+    report = diagnosticar_pendientes_binance(_clasificador(
+        fuentes_materiales_no_soportadas=[
+            "binance_fifo_lotes_mismo_segundo_precio_distinto",
+            "binance_tx_cartera_distinta_no_conciliada",
+        ],
+        compraventas=[SimpleNamespace(
+            fecha="2025-01-08 16:19:04",
+            activo="SECRET-ASSET",
+            cantidad=98765432.123456,
+        )],
+    ))
+    serialized = str(report)
+    assert "2025-01-08" not in serialized
+    assert "98765432" not in serialized
+    assert "SECRET-ASSET" not in serialized
+    assert _codes(report) == {
+        "fifo_orden_intrasegundo", "cartera_binance_no_conciliada",
+    }

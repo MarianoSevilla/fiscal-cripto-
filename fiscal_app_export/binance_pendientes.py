@@ -1,0 +1,473 @@
+"""Diagnóstico orientativo para recuperar evidencia faltante de Binance.
+
+No infiere que una fuente no subida contenga operaciones, no deduplica eventos
+y NUNCA habilita por sí solo la emisión de informes FIFO.
+No expone cantidades, fechas de operaciones ni datos identificativos.
+"""
+
+from __future__ import annotations
+
+
+def diagnosticar_pendientes_binance(clasificador) -> dict:
+    """Describe vías de subsanación a partir de incidencias ya detectadas.
+
+    La decisión de aceptación fiscal sigue siendo exclusiva del validador
+    existente; esta función no calcula, corrige ni autoriza lotes FIFO.
+    """
+    markers = set(getattr(clasificador, "fuentes_materiales_no_soportadas", ()) or ())
+    incidencias = []
+    # Los hechos documentales son informativos, no incidencias.
+    evidencias = []
+
+    def add(code: str, tipo: str, titulo: str, descripcion: str, siguiente_paso: str):
+        incidencias.append({
+            "codigo": code,
+            "tipo": tipo,
+            "titulo": titulo,
+            "descripcion": descripcion,
+            "siguiente_paso": siguiente_paso,
+        })
+
+    eur_audit = getattr(clasificador, "eur_acquisition_evidence", None)
+    eur_candidates = getattr(eur_audit, "candidates", ()) or ()
+    if eur_candidates:
+        complete = getattr(eur_audit, "complete_cost_candidates", 0)
+        incomplete = getattr(eur_audit, "incomplete_cost_candidates", 0)
+        if (type(complete) is int and type(incomplete) is int
+                and complete >= 0 and incomplete >= 0
+                and complete + incomplete == len(eur_candidates)):
+            evidencias.append({
+                "codigo": "adquisiciones_eur_documentadas",
+                "titulo": "Adquisiciones con desembolso EUR explícito",
+                "descripcion": (
+                    f"Se identifican {len(eur_candidates)} "
+                    f"{'adquisición' if len(eur_candidates) == 1 else 'adquisiciones'} "
+                    f"nativas pagadas en EUR: {complete} con importe y comisión "
+                    "documentados como coste candidato y "
+                    f"{incomplete} con el coste total aún pendiente. "
+                    "No acredita el FIFO global."
+                ),
+                "siguiente_paso": (
+                    "Conserva los comprobantes nativos. Para las demás "
+                    "adquisiciones, recompensas y permutas hay que acreditar "
+                    "origen, fecha, cantidad y valoración EUR; no se presume "
+                    "equivalencia USDT/USDC/EUR."
+                ),
+            })
+
+    legacy_eur = getattr(clasificador, "legacy_eur_acquisition_evidence", None)
+    legacy_candidates = getattr(legacy_eur, "candidates", ()) or ()
+    if legacy_candidates:
+        complete = getattr(legacy_eur, "complete_cost_candidates", None)
+        pending = getattr(legacy_eur, "pending_third_asset_fee", None)
+        if (type(complete) is int and type(pending) is int
+                and complete >= 0 and pending >= 0
+                and complete + pending == len(legacy_candidates)):
+            evidencias.append({
+                "codigo": "adquisiciones_eur_historico_legacy",
+                "titulo": "Compras históricas con contrapartida EUR",
+                "descripcion": (
+                    f"El historial antiguo contiene {len(legacy_candidates)} "
+                    f"compras con desembolso EUR explícito: {complete} con "
+                    "importe y comisiones expresables directamente en EUR "
+                    f"como coste candidato y {pending} con comisión en otra "
+                    "criptomoneda aún sin valorar. Estos datos no acreditan "
+                    "los lotes ni el FIFO global."
+                ),
+                "siguiente_paso": (
+                    "Valora y documenta por separado las comisiones pagadas "
+                    "en criptomonedas, las permutas y los ingresos anteriores. "
+                    "No se equiparan USDT/USDC y EUR ni se crean compras "
+                    "fiscales automáticamente."
+                ),
+            })
+
+    fee_bridge = getattr(clasificador, "spot_eur_fee_reconciliation", None)
+    fee_native_count = getattr(fee_bridge, "native_third_asset_fees", 0)
+    fee_match_count = getattr(fee_bridge, "ledger_matched", 0)
+    fee_missing_count = getattr(fee_bridge, "native_unmatched", 0)
+    if (type(fee_native_count) is int and fee_native_count > 0
+            and type(fee_match_count) is int and fee_match_count >= 0
+            and type(fee_missing_count) is int and fee_missing_count >= 0
+            and fee_native_count == fee_match_count + fee_missing_count):
+        evidencias.append({
+            "codigo": "comisiones_spot_eur_ledger",
+            "titulo": "Cargos de compras Spot/EUR conciliados",
+            "descripcion": (
+                f"Hay {fee_native_count} comisiones Spot/EUR pagadas en "
+                "otro criptoactivo: "
+                f"{fee_match_count} tienen un apunte del historial general "
+                "compatible por segundo, cuenta, moneda y cantidad, y "
+                f"{fee_missing_count} siguen sin correspondencia exacta. "
+                "Las coincidencias no acreditan su valoración EUR ni "
+                "identifican un lote único de la moneda de comisión."
+            ),
+            "siguiente_paso": (
+                "Conserva la fuente nativa y el historial general. "
+                "Acredita por separado el valor EUR y el tratamiento "
+                "del pago de la comisión; no añadas costes estimados."
+            ),
+        })
+
+    if "binance_legacy_tx_sin_valoracion_o_identidad" in markers:
+        add(
+            "historial_legacy_pendiente", "documentacion",
+            "Operaciones del historial histórico sin base fiscal suficiente",
+            "El historial general de Binance contiene operaciones que no "
+            "pueden incorporarse a un FIFO completo con los datos aportados. "
+            "Pueden existir contrapartidas distintas del EUR, comisiones o "
+            "ejecuciones simultáneas sin correspondencia inequívoca. "
+            "Los registros originales no se han borrado ni tratado como coste cero.",
+            "Contrasta esas operaciones con las fuentes nativas Spot/Convert "
+            "del período histórico y, cuando no estén disponibles, con "
+            "justificantes originales de fecha, unidades, valor EUR y comisiones. "
+            "No generes el informe hasta conciliarlas.",
+        )
+
+    if "binance_zona_horaria_sin_acreditar" in markers:
+        add(
+            "zona_horaria_binance", "archivo",
+            "Zona horaria de las operaciones sin acreditar",
+            "Al menos un archivo con operaciones no indica un desplazamiento "
+            "UTC válido. Su hora local no permite reconstruir el orden "
+            "cronológico fiscal entre fuentes diferentes.",
+            "Vuelve a exportar los historiales originales con la misma zona "
+            "horaria UTC explícita en sus nombres (por ejemplo, UTC+1). "
+            "No modifiques las horas ni inventes un offset para continuar.",
+        )
+
+    if markers & {
+        "binance_fifo_lotes_mismo_segundo_precio_distinto",
+        "binance_orden_intrasegundo_incierto",
+    }:
+        add(
+            "fifo_orden_intrasegundo", "documentacion",
+            "Orden temporal de operaciones Binance no acreditado",
+            "Existen operaciones Spot o Convert de un mismo criptoactivo en "
+            "el mismo segundo cuyo orden puede cambiar el coste FIFO de "
+            "transmisiones posteriores. El CSV exportado no demuestra su "
+            "secuencia exacta.",
+            "Aporta el detalle original de ejecuciones Spot o conversiones "
+            "Convert con identificador único y orden temporal acreditado, "
+            "o un justificante equivalente de Binance. Un ID de orden por "
+            "sí solo no prueba la secuencia. No reordenes las operaciones "
+            "manualmente ni promedies sus costes para generar el PDF.",
+        )
+
+    if markers & {
+        "binance_tx_cartera_distinta_no_conciliada",
+        "binance_convert_cartera_distinta_no_conciliada",
+        "binance_transfer_cartera_distinta_no_conciliada",
+    }:
+        add(
+            "cartera_binance_no_conciliada", "documentacion",
+            "Operaciones en carteras diferentes",
+            "Un asiento del historial general aparece en una cartera "
+            "distinta de Spot. La coincidencia de fecha, activo e importe "
+            "no demuestra que sea la misma operación.",
+            "Conserva los archivos originales y aporta el detalle de "
+            "la operación y de los traspasos entre Spot y Funding, "
+            "si existen. No elimines los asientos ni los marques como "
+            "duplicados sin correspondencia verificable.",
+        )
+
+    if "spot_orders_ejecutadas_sin_fills_completos" in markers:
+        add(
+            "spot_fills", "archivo", "Órdenes y ejecuciones Spot sin conciliar",
+            "El conjunto de órdenes Spot no coincide completamente con las "
+            "ejecuciones (fills) aportadas. Puede faltar el detalle de una "
+            "orden o el archivo de órdenes correspondiente a algún año.",
+            "Aporta los historiales de órdenes Spot y de ejecuciones Spot "
+            "que cubran los mismos períodos, incluidos años anteriores "
+            "necesarios para el FIFO. No suprimas fills sin conciliarlos.",
+        )
+
+    earn = getattr(clasificador, "earn_reconciliation", None)
+    earn_unmatched = getattr(earn, "ledger_unmatched", 0) if earn is not None else 0
+    if earn_unmatched:
+        missing_years = getattr(earn, "ledger_unmatched_by_year", ()) or ()
+        # Únicamente años + contadores: no enviar cantidades, activos,
+        # fechas exactas ni registros privados al navegador.
+        years = []
+        for pair in missing_years:
+            if (isinstance(pair, tuple) and len(pair) == 2
+                    and type(pair[0]) is int and type(pair[1]) is int
+                    and 2009 <= pair[0] <= 2100 and pair[1] > 0):
+                years.append(f"{pair[0]} ({pair[1]} " + ("movimiento" if pair[1] == 1 else "movimientos") + ")")
+        years_text = (
+            " Períodos identificados: " + ", ".join(years) + "."
+            if years and sum(y[1] for y in missing_years) == earn_unmatched
+            else ""
+        )
+        missing_directions = getattr(
+            earn, "ledger_unmatched_by_year_direction", ()
+        ) or ()
+        valid_directions = all(
+            isinstance(row, tuple) and len(row) == 3
+            and type(row[0]) is int and 2009 <= row[0] <= 2100
+            and row[1] in ("subscription", "redemption")
+            and type(row[2]) is int and row[2] > 0
+            for row in missing_directions
+        )
+        if (missing_directions and valid_directions
+                and sum(row[2] for row in missing_directions) == earn_unmatched):
+            subscriptions = sum(
+                n for _year, kind, n in missing_directions
+                if kind == "subscription"
+            )
+            redemptions = earn_unmatched - subscriptions
+            directions_text = (
+                f" Desglose: {subscriptions} "
+                f"{'suscripción' if subscriptions == 1 else 'suscripciones'} y "
+                f"{redemptions} "
+                f"{'reembolso' if redemptions == 1 else 'reembolsos'}; "
+                "son movimientos, no "
+                "adquisiciones fiscales acreditadas."
+            )
+        else:
+            directions_text = ""
+        add(
+            "earn_cobertura", "archivo", "Historial Simple Earn incompleto",
+            "Hay movimientos Simple Earn del historial general que no aparecen "
+            "en los archivos específicos aportados." + years_text
+            + directions_text,
+            "Recupera las exportaciones específicas de suscripciones y "
+            "reembolsos Simple Earn de esos períodos cuando estén disponibles. "
+            "Si Binance ya no las permite descargar, reúne justificantes "
+            "alternativos. No se pueden reconstruir compras ni costes EUR "
+            "únicamente a partir de este diagnóstico.",
+        )
+    reward_bridge = getattr(clasificador, "earn_reward_reconciliation", None)
+    if reward_bridge is not None:
+        missing_ledger = getattr(reward_bridge, "ledger_not_in_native", 0)
+        missing_native = getattr(reward_bridge, "native_not_in_ledger", 0)
+
+        def reward_years(grouped):
+            # Resumen agregado, sin monedas, cantidades ni fechas exactas.
+            counts = {}
+            for item in grouped or ():
+                if (isinstance(item, tuple) and len(item) == 3
+                        and type(item[0]) is int and 2009 <= item[0] <= 2100
+                        and item[1] in (
+                            "Bonus Tiered APR Rewards", "Airdrop Rewards",
+                            "Simple Earn Flexible Interest",
+                            "Simple Earn Flexible Airdrop",
+                        )
+                        and type(item[2]) is int and item[2] > 0):
+                    counts[item[0]] = counts.get(item[0], 0) + item[2]
+                else:
+                    return ""
+            return ", ".join(f"{year}: {count}" for year, count in sorted(counts.items()))
+
+        if missing_ledger:
+            years = reward_years(getattr(
+                reward_bridge, "ledger_missing_by_year_kind", ()
+            ))
+            add(
+                "earn_recompensas_sin_nativo", "archivo",
+                "Recompensas Earn sin respaldo específico",
+                f"Existen {missing_ledger} abonos de intereses o airdrops en "
+                "Transaction History sin correspondencia en los CSV de "
+                "recompensas Earn aportados."
+                + (f" Por ejercicio: {years}." if years else ""),
+                "Busca los informes originales de recompensas Simple Earn de "
+                "esos ejercicios. Si Binance no los ofrece, conserva los "
+                "asientos del historial general como evidencia pendiente; "
+                "no se les asignará un coste EUR inventado.",
+            )
+        if missing_native:
+            years = reward_years(getattr(
+                reward_bridge, "native_missing_by_year_kind", ()
+            ))
+            add(
+                "earn_recompensas_sin_ledger", "revision",
+                "Recompensas Earn sin asiento del historial general",
+                f"Existen {missing_native} recompensas nativas que no tienen "
+                "correspondencia individual ni por total diario con "
+                "Transaction History."
+                + (f" Por ejercicio: {years}." if years else ""),
+                "Contrasta la cobertura y las fechas de los historiales "
+                "generales y específicos. No elimines esas recompensas ni "
+                "supongas que son duplicados.",
+            )
+
+    exposure = getattr(clasificador, "earn_reward_impact_2025", None)
+    if (exposure is not None
+            and getattr(exposure, "exercise", None) == 2025
+            and getattr(exposure, "prior_ledger_only_rewards", 0) > 0):
+        total = exposure.prior_ledger_only_rewards
+        possible = exposure.with_possible_disposal
+        remaining = exposure.without_observed_disposal
+        # No presentar esto como prueba de coste, consumo de lotes ni
+        # ausencia de otros exchanges o transmisiones no documentadas.
+        if (type(total) is int and type(possible) is int
+                and type(remaining) is int and total == possible + remaining
+                and 0 <= possible <= total):
+            add(
+                "earn_prioridad_2025", "revision",
+                "Prioridad documental de recompensas Earn para 2025",
+                f"De {total} abonos históricos sin CSV específico de Earn, "
+                f"{possible} corresponden a activos con posibles salidas "
+                f"económicas observadas en 2025. Otros {remaining} no "
+                "aparecen en esos tipos de salida en las fuentes revisadas. "
+                "La ausencia de coincidencia no demuestra irrelevancia fiscal.",
+                "Prioriza la documentación de adquisiciones y valoraciones "
+                "EUR de los activos con posibles salidas en 2025, sin "
+                "excluir los demás del inventario global.",
+            )
+
+    other_wallet = getattr(reward_bridge, "ledger_other_wallet_records", 0)
+    if other_wallet:
+        add(
+            "earn_custodia_no_conciliada", "revision",
+            "Rendimientos Earn en otra custodia",
+            f"El historial general contiene {other_wallet} " + ("apunte" if other_wallet == 1 else "apuntes") + " de "
+            "rendimiento Earn contabilizados fuera de Spot. No es correcto "
+            "relacionarlos con abonos Spot solo por moneda, fecha e importe.",
+            "Conserva el histórico original y acredita la cuenta receptora "
+            "con movimientos de custodia y saldos. Sin esa conciliación "
+            "no se generarán lotes fiscales ni costes EUR inferidos.",
+        )
+
+    if getattr(clasificador, "earn_events", ()) or any(
+        m.startswith("earn_") for m in markers
+    ):
+        add(
+            "earn_lotes", "documentacion", "Lotes y recompensas Simple Earn",
+            "Los movimientos internos no son compras nuevas; las recompensas "
+            "pueden necesitar fecha y valoración EUR para crear un lote.",
+            "Aporta exportaciones y justificantes de las recompensas. "
+            "El cálculo seguirá bloqueado hasta verificar su tratamiento fiscal.",
+        )
+
+    if "filas_identicas_entre_exportaciones_sin_id_unico" in markers:
+        add(
+            "solapamiento", "revision", "Exportaciones solapadas",
+            "Hay registros indistinguibles entre archivos distintos. "
+            "No podemos saber automáticamente si son el mismo evento.",
+            "Revisa los rangos de exportación y aporta el identificador "
+            "de operación o una exportación sin solapamientos si está disponible.",
+        )
+
+    if any(
+        getattr(m, "subtipo", "") == "Depósito cripto"
+        for m in getattr(clasificador, "movimientos", ())
+    ):
+        add(
+            "depositos_origen", "documentacion", "Origen de depósitos de criptomonedas",
+            "El depósito acredita la entrada en Binance, pero no necesariamente "
+            "la fecha y el coste de la adquisición original.",
+            "Aporta el historial del exchange o monedero de origen. Para una "
+            "adquisición aislada, documenta fecha, activo, cantidad, coste EUR, "
+            "comisiones y justificante, sin inventar el coste.",
+        )
+
+    if any(
+        getattr(m, "subtipo", "") == "Retiro cripto"
+        for m in getattr(clasificador, "movimientos", ())
+    ):
+        add(
+            "retiros_destino", "documentacion",
+            "Destino de retiradas de criptomonedas",
+            "Una retirada puede ser un traspaso entre carteras propias o "
+            "una entrega a un tercero. El CSV de Binance no acredita esa "
+            "distinción ni el inventario posterior del activo.",
+            "Aporta el historial y la titularidad de la cartera receptora "
+            "o, si fue un pago o transmisión, el justificante económico. "
+            "No registres automáticamente el retiro como venta ni como "
+            "traspaso neutral sin esa evidencia.",
+        )
+
+    commission = getattr(clasificador, "commission_evidence_summary", None)
+    if getattr(commission, "records", 0):
+        add(
+            "comisiones_afiliacion", "documentacion", "Ingresos y reembolsos de comisiones",
+            "Los movimientos de afiliación y de devolución de comisiones "
+            "no pueden clasificarse en bloque como compras.",
+            "Aporta información del programa de referidos, ingresos y "
+            "reembolsos para determinar su tratamiento y valoración EUR.",
+        )
+
+    dust = getattr(clasificador, "dust_evidence_summary", None)
+    if getattr(dust, "rows", 0):
+        add(
+            "conversion_saldos", "documentacion", "Conversión de pequeños saldos a BNB",
+            "Los apuntes de conversión requieren identificar ambas patas "
+            "y sus valores de mercado antes de actualizar el inventario.",
+            "Aporta el detalle de las conversiones y, si se dispone de ellos, "
+            "justificantes de sus precios y comisiones.",
+        )
+
+    if getattr(clasificador, "valoraciones_pendientes", ()):
+        add(
+            "valoracion_eur", "documentacion", "Valoraciones en euros pendientes",
+            "Hay permutas o rendimientos sin valoración histórica "
+            "suficientemente acreditada en euros.",
+            "Es necesario documentar el valor en euros en la fecha de cada "
+            "operación con una fuente verificable; no se asumirá paridad "
+            "entre stablecoins y euros.",
+        )
+
+    if getattr(clasificador, "comisiones_pendientes", ()):
+        add(
+            "comisiones_cripto", "documentacion", "Comisiones pagadas en cripto",
+            "Falta acreditar la valoración y el tratamiento de alguna comisión.",
+            "Aporta fecha, activo, cantidad, valor en EUR y documento de "
+            "la operación a la que corresponde.",
+        )
+
+    if getattr(clasificador, "desconocidas", ()) or getattr(
+        clasificador, "_unknown_files", 0
+    ):
+        add(
+            "fuente_no_interpretada", "archivo", "Operaciones o archivos no reconocidos",
+            "Existe información que el importador todavía no puede interpretar.",
+            "Sube la exportación original completa e identifica el tipo de "
+            "operación; no suprimas las filas no reconocidas.",
+        )
+
+    # No convertir marcadores internos no explicados en un falso visto bueno.
+    known = {
+        "binance_legacy_tx_sin_valoracion_o_identidad",
+        "binance_zona_horaria_sin_acreditar",
+        "spot_orders_ejecutadas_sin_fills_completos",
+        "binance_fifo_lotes_mismo_segundo_precio_distinto",
+        "binance_orden_intrasegundo_incierto",
+        "binance_tx_cartera_distinta_no_conciliada",
+        "binance_convert_cartera_distinta_no_conciliada",
+        "binance_transfer_cartera_distinta_no_conciliada",
+        "filas_identicas_entre_exportaciones_sin_id_unico",
+        "earn_fuentes_no_conciliadas",
+        "earn_orden_intradia_o_origen_pendiente",
+        "earn_recompensas_sin_orden_intradia_acreditado",
+        "earn_flexible_requiere_inventario_y_valoracion_fiscal",
+        "earn_ledger_sin_lotes_ni_valoracion_acreditados",
+        "earn_intereses_ledger_sin_fuente_nativa_suficiente",
+        "earn_recompensas_nativas_sin_asiento_general",
+        "earn_abonos_en_custodia_no_conciliada",
+        "earn_tipo_recompensa_desconocido",
+        "earn_airdrop_destino_no_acreditado",
+        "binance_comisiones_sin_valoracion_ni_categoria_fiscal",
+        "small_assets_exchange_bnb_sin_permuta_valorada",
+        "archivo Binance no reconocido",
+    }
+    if markers - known:
+        add(
+            "otras_incidencias", "revision", "Otras operaciones pendientes",
+            "Existen inconsistencias adicionales que necesitan "
+            "conciliación y revisión antes de calcular el FIFO.",
+            "Conserva todos los archivos originales y revisa las "
+            "operaciones señaladas; no elimines datos para evitar el bloqueo.",
+        )
+
+    return {
+        "estado": "pendiente_validacion",
+        "validez_fiscal_acreditada": False,
+        "incidencias": incidencias,
+        "evidencias": evidencias,
+        "aviso": (
+            "Este diagnóstico no verifica que el historial esté completo "
+            "desde la primera adquisición ni que el FIFO global sea correcto. "
+            "No autoriza la generación del PDF."
+        ),
+    }
