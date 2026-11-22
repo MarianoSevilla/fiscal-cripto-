@@ -32,14 +32,25 @@ def construir_borrador_binance(clasificador, diagnostico: dict, ejercicio: str =
     if type(cantidad_comisiones) is not int or cantidad_comisiones < 0:
         cantidad_comisiones = None
 
+    def grupo_incidencia(codigo: str) -> str:
+        # La agrupación solo organiza el diagnóstico; no modifica cálculos.
+        label = codigo.lower()
+        if any(mark in label for mark in ("earn", "recompensa", "reward", "staking", "lotes")):
+            return "earn"
+        if any(mark in label for mark in ("comision", "comisiones", "rebate", "referid")):
+            return "comisiones"
+        return "operaciones"
+
     incidencias = []
     for item in (diagnostico.get("incidencias") or ())[:50]:
         if not isinstance(item, dict):
             continue
-        incidencias.append({
+        entry = {
             key: str(item.get(key) or "")[:1600]
             for key in ("codigo", "titulo", "descripcion", "siguiente_paso")
-        })
+        }
+        entry["grupo"] = grupo_incidencia(entry["codigo"])
+        incidencias.append(entry)
 
     return {
         "version": 1,
