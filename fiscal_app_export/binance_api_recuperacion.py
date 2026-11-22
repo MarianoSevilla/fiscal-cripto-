@@ -17,7 +17,7 @@ import re
 import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 _BASE = "https://api.binance.com"
 _SYMBOL = re.compile(r"^[A-Z0-9]{5,20}$")
@@ -40,6 +40,12 @@ def _positive_decimal(value, field: str, *, allow_zero: bool = False) -> str:
     return format(number, "f")
 
 
+class _NoRedirect(HTTPRedirectHandler):
+    """No reenviar encabezados de API a otro host por una redirección."""
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise BinanceApiRecoveryError("Binance ha redirigido la consulta API.")
+
+
 class BinanceReadOnlySpot:
     """API acotada: no permite crear órdenes, transferencias o retiradas."""
 
@@ -58,7 +64,7 @@ class BinanceReadOnlySpot:
     def _urllib_transport(url: str, headers: dict) -> dict:
         request = Request(url, headers=headers, method="GET")
         try:
-            with urlopen(request, timeout=8) as response:
+            with build_opener(_NoRedirect()).open(request, timeout=8) as response:
                 data = response.read(3 * 1024 * 1024 + 1)
                 if len(data) > 3 * 1024 * 1024:
                     raise BinanceApiRecoveryError("Respuesta Binance demasiado extensa.")
