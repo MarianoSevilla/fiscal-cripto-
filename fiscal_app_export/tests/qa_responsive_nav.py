@@ -253,9 +253,12 @@ def main():
                 page = browser.new_page(viewport={"width":1280,"height":812})
                 page.set_default_timeout(5000)
                 page.route("https://**/*", lambda r: r.abort())
-                page.route("**/api/me", lambda r, data=payload: r.fulfill(
-                    status=200, content_type="application/json", body=json.dumps(data),
-                ))
+                def fake_auth_desktop(route):
+                    route.fulfill(
+                        status=200, content_type="application/json",
+                        body=json.dumps(payload),
+                    )
+                page.route("**/api/me", fake_auth_desktop)
                 errors = []
                 page.on("pageerror", lambda error: errors.append(str(error)))
                 try:
