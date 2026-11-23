@@ -273,10 +273,10 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                                 page.locator("#fileSelected").get_attribute("class"),
                                 page.locator("#year-chips-wrap").is_visible(),
                             )
-                        if name == "binance":
-                            page.locator(
-                                'input[name="alcance_datos"][value="solo_binance"]'
-                            ).check()
+                        scope_value = "solo_binance" if name == "binance" else "solo_exchange"
+                        page.locator(
+                            'input[name="alcance_datos"][value="' + scope_value + '"]'
+                        ).check()
                         page.locator("#btnAnalizar").click()
                         if first_error:
                             if name == "binance":
