@@ -55,15 +55,15 @@ def run_fifo_results_browser(origin, cookie_name, cookie_value):
                     try:
                         page = context.new_page()
                         page.set_default_timeout(16000)
-                        page.route("**/api/analizar", lambda route, s=status, b=body: route.fulfill(
+                        page.route("**/api/analizar", lambda route, _request, s=status, b=body: route.fulfill(
                             status=s, content_type="application/json", body=json.dumps(b),
                         ))
-                        page.route("**/api/fifo/diagnostico-pdf", lambda route: route.fulfill(
+                        page.route("**/api/fifo/diagnostico-pdf", lambda route, _request: route.fulfill(
                             status=200, content_type="application/pdf",
                             headers={"Content-Disposition": 'attachment; filename="Bitvavo_diagnostico_INCOMPLETO_NO_FISCAL.pdf"'},
                             body=SYNTHETIC_PDF,
                         ))
-                        page.route("**/api/descargar/synthetic.pdf**", lambda route: route.fulfill(
+                        page.route("**/api/descargar/synthetic.pdf**", lambda route, _request: route.fulfill(
                             status=200, content_type="application/pdf",
                             headers={"Content-Disposition": 'attachment; filename="informe_FIFO.pdf"'},
                             body=SYNTHETIC_PDF,
