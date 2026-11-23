@@ -1,6 +1,7 @@
 """Synthetic Chromium checks for definitive, error and provisional UI results."""
 import json
 import os
+import tempfile
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -63,7 +64,7 @@ def run_fifo_results_browser(origin, cookie_name, cookie_value):
                             headers={"Content-Disposition": 'attachment; filename="Bitvavo_diagnostico_INCOMPLETO_NO_FISCAL.pdf"'},
                             body=SYNTHETIC_PDF,
                         ))
-                        page.route("**/api/descargar/synthetic.pdf**", lambda route, _request: route.fulfill(
+                        page.route("**/api/descargar/**", lambda route, _request: route.fulfill(
                             status=200, content_type="application/pdf",
                             headers={"Content-Disposition": 'attachment; filename="informe_FIFO.pdf"'},
                             body=SYNTHETIC_PDF,
@@ -79,7 +80,10 @@ def run_fifo_results_browser(origin, cookie_name, cookie_value):
                             assert page.locator("#btnDownload").is_visible()
                             with page.expect_download(timeout=16000) as info:
                                 page.locator("#btnDownload").click()
-                            assert Path(info.value.path()).read_bytes().startswith(b"%PDF-")
+                            with tempfile.TemporaryDirectory() as tmp:
+                                downloaded = Path(tmp) / info.value.suggested_filename
+                                info.value.save_as(downloaded)
+                                assert downloaded.read_bytes().startswith(b"%PDF-")
                         elif outcome == "error":
                             page.locator("#errorState").wait_for(state="visible")
                             assert "problema técnico" in page.locator("#errorDesc").inner_text()
@@ -93,7 +97,10 @@ def run_fifo_results_browser(origin, cookie_name, cookie_value):
                             with page.expect_download(timeout=16000) as info:
                                 page.locator("#fifoProvisionalPdf").click()
                             assert "NO_FISCAL" in info.value.suggested_filename
-                            assert Path(info.value.path()).read_bytes().startswith(b"%PDF-")
+                            with tempfile.TemporaryDirectory() as tmp:
+                                downloaded = Path(tmp) / info.value.suggested_filename
+                                info.value.save_as(downloaded)
+                                assert downloaded.read_bytes().startswith(b"%PDF-")
                         assert page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 2")
                         print("FIFO_RESULTS_CHROMIUM_PASS", outcome, width, flush=True)
                     finally:
