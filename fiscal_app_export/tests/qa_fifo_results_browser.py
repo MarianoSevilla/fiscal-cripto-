@@ -13,10 +13,17 @@ SYNTHETIC_PDF = b"%PDF-1.4\n% synthetic browser fixture\n%%EOF\n"
 
 
 def _local_only(route):
-    if urlsplit(route.request.url).hostname == "127.0.0.1":
-        route.continue_()
-    else:
+    parsed = urlsplit(route.request.url)
+    if parsed.hostname != "127.0.0.1":
         route.abort()
+    elif parsed.path == "/api/fifo/diagnostico-pdf" or parsed.path.startswith("/api/descargar/"):
+        route.fulfill(
+            status=200, content_type="application/pdf",
+            headers={"Content-Disposition": 'attachment; filename="synthetic_diagnostic_INCOMPLETO_NO_FISCAL.pdf"'},
+            body=SYNTHETIC_PDF,
+        )
+    else:
+        route.continue_()
 
 
 def run_fifo_results_browser(origin, cookie_name, cookie_value):
@@ -58,16 +65,6 @@ def run_fifo_results_browser(origin, cookie_name, cookie_value):
                         page.set_default_timeout(16000)
                         page.route("**/api/analizar", lambda route, _request, s=status, b=body: route.fulfill(
                             status=s, content_type="application/json", body=json.dumps(b),
-                        ))
-                        page.route("**/api/fifo/diagnostico-pdf", lambda route, _request: route.fulfill(
-                            status=200, content_type="application/pdf",
-                            headers={"Content-Disposition": 'attachment; filename="Bitvavo_diagnostico_INCOMPLETO_NO_FISCAL.pdf"'},
-                            body=SYNTHETIC_PDF,
-                        ))
-                        page.route("**/api/descargar/**", lambda route, _request: route.fulfill(
-                            status=200, content_type="application/pdf",
-                            headers={"Content-Disposition": 'attachment; filename="informe_FIFO.pdf"'},
-                            body=SYNTHETIC_PDF,
                         ))
                         page.goto(origin + "/bitvavo", wait_until="domcontentloaded")
                         page.locator("#csvInput").set_input_files({
