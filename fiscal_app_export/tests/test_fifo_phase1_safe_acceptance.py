@@ -295,10 +295,13 @@ for index, quote in enumerate(("USDT", "EUR")):
         response = client.post("/api/analizar", data={
             "csv": (io.BytesIO(b"Date,Test\n2025-01-01,1\n"), "synthetic.csv"),
             "exchange": "bitget", "nombre": "Synthetic", "ejercicio": "2025",
+            "alcance_datos": "solo_exchange",
         }, content_type="multipart/form-data")
     assert response.status_code == (422 if index == 0 else 200)
     if index == 0:
-        assert "token" not in response.json
+        assert response.json["result_type"] == "provisional"
+        assert response.json["borrador_fifo"]["no_es_informe_fiscal"] is True
+        assert response.json["borrador_fifo"]["ganancias_y_perdidas_eur"] is None
         assert not pdf.exists()
     else:
         assert response.json["resumen"]["resultado_neto"] == 50
@@ -308,7 +311,7 @@ for index, quote in enumerate(("USDT", "EUR")):
         reports = FifoReport.query.order_by(FifoReport.id).all()
         assert len(reports) == index + 1
         assert reports[-1].status == ("failed" if index == 0 else "generated")
-print("P0_PHASE1_SQLITE: PASS 422 failed / 200 generated")
+print("P0_PHASE1_SQLITE: PASS 422 provisional / 200 generated")
 '''
     program = program.replace("PDF_FILE", repr(str(pdf_file)))
     env = {
