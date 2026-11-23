@@ -49,16 +49,23 @@ def run_binance_incomplete(origin, cookie_name, cookie_value):
                         "mimeType": "text/csv", "buffer": EARN_SYNTHETIC,
                     })
                     page.locator("#binancePendientes").wait_for(state="visible")
+                    page.locator('input[name="alcance_datos"][value="solo_binance"]').check()
                     assert "Vista previa del archivo" in page.locator("#binancePendientes").inner_text()
                     assert "Qué aportar:" not in page.locator("#binancePendientes").inner_text()
                     page.locator("#btnAnalizar").click()
                     page.locator("#binanceIncompleteState").wait_for(state="visible")
                     assert not page.locator("#errorState").is_visible()
-                    assert "procesado correctamente" in page.locator(
+                    assert "Resultado provisional" in page.locator(
                         "#binanceIncompleteTitle"
                     ).inner_text()
-                    assert "Informe fiscal pendiente de completar" in page.locator(
+                    assert "No es válido para declarar" in page.locator(
                         ".binance-incomplete-notice"
+                    ).inner_text()
+                    assert "Earn-(UTC+1).csv" in page.locator(
+                        "#binanceIncompleteFiles"
+                    ).inner_text()
+                    assert "candidatos" in page.locator(
+                        "#binanceIncompleteFactsNote"
                     ).inner_text()
                     assert not page.locator("#btnDownload").is_visible()
                     Path("qa-artifacts").mkdir(parents=True, exist_ok=True)
@@ -78,6 +85,53 @@ def run_binance_incomplete(origin, cookie_name, cookie_value):
                     assert Path(download.path()).read_bytes().startswith(b"%PDF-")
                     assert not errors, errors
                     print("BINANCE_INCOMPLETE_CHROMIUM_PASS", width, flush=True)
+                finally:
+                    context.close()
+        finally:
+            browser.close()
+
+
+def run_binance_internal_error_ui(origin, cookie_name, cookie_value):
+    """A server failure is not blamed on the upload; original files remain retryable."""
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        try:
+            for width in (375, 1280):
+                context = browser.new_context(viewport={"width": width, "height": 812})
+                context.route("**/*", allow_local)
+                context.add_cookies([{
+                    "name": cookie_name, "value": cookie_value,
+                    "url": origin, "httpOnly": True, "sameSite": "Lax",
+                }])
+                try:
+                    page = context.new_page()
+                    page.set_default_timeout(16000)
+                    page.route("**/api/binance/analizar", lambda route: route.fulfill(
+                        status=500,
+                        content_type="application/json",
+                        body=json.dumps({
+                            "result_type": "technical_error",
+                            "error": "PRIVATE traceback that must not be shown",
+                        }),
+                    ))
+                    response = page.goto(origin + "/binance", wait_until="domcontentloaded")
+                    assert response and response.status == 200
+                    page.locator("#csvInput").set_input_files({
+                        "name": "Earn-(UTC+1).csv",
+                        "mimeType": "text/csv", "buffer": EARN_SYNTHETIC,
+                    })
+                    page.locator("#binancePendientes").wait_for(state="visible")
+                    page.locator('input[name="alcance_datos"][value="solo_binance"]').check()
+                    page.locator("#btnAnalizar").click()
+                    page.locator("#errorState").wait_for(state="visible")
+                    description = page.locator("#errorDesc").inner_text()
+                    assert "problema técnico" in description
+                    assert "tus archivos sean incorrectos" in description
+                    assert "PRIVATE traceback" not in page.locator("#errorState").inner_text()
+                    assert page.locator("#errorSupportLink a[href='/contacto']").is_visible()
+                    page.locator("#btnRetry").click()
+                    assert page.locator("#btnAnalizar").is_enabled()
+                    print("BINANCE_INTERNAL_ERROR_RETRY_CHROMIUM_PASS", width, flush=True)
                 finally:
                     context.close()
         finally:
@@ -133,6 +187,9 @@ def run_binance_rate_limit_ui(origin, cookie_name, cookie_value):
                             "mimeType": "text/csv", "buffer": EARN_SYNTHETIC,
                         })
                         page.locator("#binancePendientes").wait_for(state="visible")
+                        page.locator(
+                            'input[name="alcance_datos"][value="solo_binance"]'
+                        ).check()
                         page.locator("#btnAnalizar").click()
                         page.locator("#errorState").wait_for(state="visible")
                         description = page.locator("#errorDesc").inner_text()

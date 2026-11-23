@@ -300,6 +300,11 @@ def main():
             origin, app.config.get("SESSION_COOKIE_NAME", "session"),
             flask_cookie(app, identities["usuario"]),
         )
+        from qa_binance_incomplete_browser import run_binance_internal_error_ui
+        run_binance_internal_error_ui(
+            origin, app.config.get("SESSION_COOKIE_NAME", "session"),
+            flask_cookie(app, identities["usuario"]),
+        )
         from qa_binance_incomplete_browser import run_binance_rate_limit_ui
         run_binance_rate_limit_ui(
             origin, app.config.get("SESSION_COOKIE_NAME", "session"),

@@ -4,7 +4,9 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from binance_borrador import construir_borrador_binance
+from binance_borrador import (
+    construir_borrador_binance, clasificar_accion_incidencia,
+)
 
 
 def _clasificador():
@@ -25,11 +27,19 @@ def _clasificador():
 
 def test_borrador_separa_cobertura_de_resultado_fiscal():
     diagnostico = {"incidencias": [
-        {"codigo": "origen", "titulo": "Lotes pendientes",
+        {"codigo": "origen", "tipo": "documentacion", "titulo": "Lotes pendientes",
          "descripcion": "Falta coste de adquisición",
          "siguiente_paso": "Aportar fuente original"}
-    ]}
-    b = construir_borrador_binance(_clasificador(), diagnostico, "2025")
+    ], "evidencias": [{
+        "codigo": "compras_eur", "titulo": "Compras pagadas en EUR",
+        "descripcion": "Hay adquisiciones con precio y comisión documentados.",
+        "siguiente_paso": "Conservar recibos originales",
+    }]}
+    b = construir_borrador_binance(
+        _clasificador(), diagnostico, "2025",
+        archivos_aportados=[{"nombre": "Binance/Spot-(UTC+1).csv", "formato": "csv", "bytes": 123}],
+        alcance_declarado="solo_binance",
+    )
     assert b["estado"] == "INCOMPLETO_NO_APTO_PARA_DECLARAR"
     assert b["no_es_informe_fiscal"] is True
     assert b["pdf_fiscal_disponible"] is False
@@ -39,7 +49,13 @@ def test_borrador_separa_cobertura_de_resultado_fiscal():
     assert b["operaciones_detectadas"]["comisiones_referidos_analizadas"] == 12
     assert len(b["fuentes"]) == 2
     assert b["pendientes"][0]["codigo"] == "origen"
+    assert b["pendientes"][0]["accion"] == "APORTAR_DOCUMENTACION"
     assert "siguiente_paso" in b["pendientes"][0]
+    assert b["evidencias"][0]["titulo"] == "Compras pagadas en EUR"
+    assert b["archivos_aportados"] == [{
+        "nombre": "Spot-(UTC+1).csv", "formato": "csv", "bytes": 123,
+    }]
+    assert b["alcance_declarado"] == "solo_binance"
 
 
 def test_borrador_no_expone_datos_de_usuario_ni_cotizaciones():
@@ -60,3 +76,11 @@ def test_sin_clasificacion_no_se_emite_borrador_engañoso():
     import pytest
     with pytest.raises(ValueError):
         construir_borrador_binance(None, {"incidencias": []})
+
+
+def test_clasificacion_de_acciones_de_incidente_es_sencilla_y_conservadora():
+    assert clasificar_accion_incidencia("archivo") == "CORREGIR_ARCHIVO"
+    assert clasificar_accion_incidencia("documentacion") == "APORTAR_DOCUMENTACION"
+    assert clasificar_accion_incidencia("soporte") == "CONTACTAR_SOPORTE"
+    assert clasificar_accion_incidencia("reintentar") == "REINTENTAR"
+    assert clasificar_accion_incidencia("nuevo_tipo_no_previsto") == "MANTENER_PROVISIONAL"

@@ -273,6 +273,10 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                                 page.locator("#fileSelected").get_attribute("class"),
                                 page.locator("#year-chips-wrap").is_visible(),
                             )
+                        if name == "binance":
+                            page.locator(
+                                'input[name="alcance_datos"][value="solo_binance"]'
+                            ).check()
                         page.locator("#btnAnalizar").click()
                         if first_error:
                             if name == "binance":
@@ -280,10 +284,10 @@ def run_tool_apple(origin, cookie_name, cookie_value):
                                 assert not page.locator("#errorState").is_visible()
                                 assert page.locator("#fileSelected").is_visible()
                                 assert page.locator("#btnDownload").is_hidden()
-                                assert "Archivo Binance procesado correctamente" in page.locator(
+                                assert "Resultado provisional" in page.locator(
                                     "#binanceIncompleteTitle"
                                 ).inner_text()
-                                assert "Informe fiscal pendiente" in page.locator(
+                                assert "No es válido para declarar" in page.locator(
                                     ".binance-incomplete-notice"
                                 ).inner_text()
                                 earn = page.locator("#binanceIncompleteGroups details")

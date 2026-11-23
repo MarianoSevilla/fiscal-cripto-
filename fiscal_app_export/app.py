@@ -2853,6 +2853,59 @@ def api_binance_recuperar_spot():
     return response
 
 
+def _archivos_binance_aportados(archivos):
+    """Inventario de nombre y extensión, sin leer ni copiar el contenido."""
+    output = []
+    for upload in (archivos or [])[:40]:
+        name = (getattr(upload, "filename", "") or "").replace("\\", "/").rsplit("/", 1)[-1]
+        suffix = os.path.splitext(name)[1].lower().lstrip(".")[:10]
+        size = getattr(upload, "content_length", None)
+        output.append({
+            "nombre": name[:120] or "archivo sin nombre",
+            "formato": suffix or "no disponible",
+            "bytes": size if type(size) is int and size >= 0 else None,
+        })
+    return output
+
+
+def _borrador_binance_para_usuario(
+    clasificador, ejercicio, archivos_aportados, alcance_declarado
+):
+    from binance_pendientes import diagnosticar_pendientes_binance
+    from binance_borrador import construir_borrador_binance
+
+    diagnostico = diagnosticar_pendientes_binance(clasificador)
+    if alcance_declarado in {"otras_fuentes", "no_se"}:
+        diagnostico = dict(diagnostico)
+        incidencias = list(diagnostico.get("incidencias") or [])
+        incidencias.append({
+            "codigo": "alcance_externo_no_incluido",
+            "tipo": "documentacion",
+            "titulo": "La actividad pudo incluir otros exchanges o wallets",
+            "descripcion": (
+                "Con tu respuesta, o porque no se pudo confirmarla, este análisis "
+                "de Binance no cubre todas tus fuentes de criptoactivos. No se "
+                "puede emitir un FIFO global o un informe fiscal definitivo."
+            ),
+            "siguiente_paso": (
+                "Aporta los historiales originales de cada exchange y wallet "
+                "utilizado durante el período, junto con los movimientos que "
+                "permitan conciliar transferencias y costes. Repite el análisis "
+                "cuando la herramienta admita esas fuentes o contacta con soporte "
+                "para confirmar su disponibilidad."
+            ),
+        })
+        diagnostico["incidencias"] = incidencias
+
+    return construir_borrador_binance(
+        clasificador,
+        diagnostico,
+        ejercicio,
+        archivos_aportados=archivos_aportados,
+        alcance_declarado=alcance_declarado,
+    ), diagnostico
+
+
 def _token_pdf_diagnostico_binance(borrador):
     """Token firmado, ligado al usuario. No almacena PDF ni archivos subidos."""
     from itsdangerous import URLSafeTimedSerializer
@@ -2942,10 +2995,10 @@ def api_binance_anos():
         if commission_audit is not None:
             años.update(commission_audit.years)
 
-        from binance_pendientes import diagnosticar_pendientes_binance
-        from binance_borrador import construir_borrador_binance
-        diagnostico = diagnosticar_pendientes_binance(clasificador)
-        borrador = construir_borrador_binance(clasificador, diagnostico)
+        uploaded = _archivos_binance_aportados(archivos)
+        borrador, diagnostico = _borrador_binance_para_usuario(
+            clasificador, "", uploaded, "no_confirmado"
+        )
         return jsonify({
             "ok": True,
             "anos": sorted(años),
@@ -2957,7 +3010,19 @@ def api_binance_anos():
     except (BinanceMultiUserError, BinanceUploadError, ValueError) as exc:
         return jsonify({"ok": False, "error": str(exc)}), 400
     except Exception as exc:
-        return jsonify({"ok": False, "error": _error_amigable(exc)}), 500
+        app.logger.error(
+            "[BINANCE_PREVIEW] internal failure type=%s", type(exc).__name__
+        )
+        return jsonify({
+            "ok": False,
+            "result_type": "technical_error",
+            "error_code": "internal_error",
+            "error": (
+                "Ha ocurrido un problema técnico al revisar los archivos. "
+                "Esto no significa que sean incorrectos. Conserva los originales "
+                "y vuelve a intentarlo."
+            ),
+        }), 500
     finally:
         for p in tmp_paths:
             try:
@@ -2988,8 +3053,21 @@ def analizar_binance_multi():
     t_start = time.time()
     csv_rows = 0
     clasificador = None
+    archivos_aportados = []
+    alcance_declarado = request.form.get("alcance_datos", "").strip()
     try:
         archivos = request.files.getlist("csv") or request.files.getlist("files")
+        if alcance_declarado not in {"solo_binance", "otras_fuentes", "no_se"}:
+            return jsonify({
+                "ok": False,
+                "result_type": "processing_error",
+                "error_code": "scope_confirmation_required",
+                "error": (
+                    "Confirma si utilizaste otros exchanges o wallets durante "
+                    "los ejercicios seleccionados."
+                ),
+            }), 400
+        archivos_aportados = _archivos_binance_aportados(archivos)
         nombre = _sanitizar_texto(request.form.get("nombre", ""))
         ejercicio = _sanitizar_texto(request.form.get("ejercicio", ""), max_len=40)
 
@@ -3023,6 +3101,22 @@ def analizar_binance_multi():
                 tmp_paths, filenames,
                 final_year=max(selected_years) if selected_years else None,
             ).clasificar()
+            if alcance_declarado != "solo_binance":
+                borrador, diagnostico = _borrador_binance_para_usuario(
+                    clasificador, ejercicio, archivos_aportados,
+                    alcance_declarado,
+                )
+                return jsonify({
+                    "ok": False,
+                    "error": (
+                        "El análisis de Binance es provisional porque declaraste "
+                        "actividad en otros exchanges/wallets o no pudiste "
+                        "confirmar que Binance sea el historial completo."
+                    ),
+                    "diagnostico_binance": diagnostico,
+                    "borrador_binance": borrador,
+                    "token_pdf_diagnostico": _token_pdf_diagnostico_binance(borrador),
+                }), 422
             # Never issue an apparently valid zero-operations PDF from files
             # that contain ONLY years after the selected fiscal exercise.
             # Streaming commission rows are counted separately from
@@ -3153,13 +3247,12 @@ def analizar_binance_multi():
                 # identificadores privados. También es útil cuando el fallo
                 # de cotización ocurre antes del validador fiscal posterior.
                 if clasificador is not None:
-                    from binance_pendientes import diagnosticar_pendientes_binance
-                    from binance_borrador import construir_borrador_binance
-                    diagnostico = diagnosticar_pendientes_binance(clasificador)
-                    payload["diagnostico_binance"] = diagnostico
-                    payload["borrador_binance"] = construir_borrador_binance(
-                        clasificador, diagnostico, ejercicio
+                    borrador, diagnostico = _borrador_binance_para_usuario(
+                        clasificador, ejercicio, archivos_aportados,
+                        alcance_declarado,
                     )
+                    payload["diagnostico_binance"] = diagnostico
+                    payload["borrador_binance"] = borrador
                     payload["token_pdf_diagnostico"] = _token_pdf_diagnostico_binance(
                         payload["borrador_binance"]
                     )
@@ -3167,18 +3260,29 @@ def analizar_binance_multi():
             if isinstance(exc, ValueError) and str(exc).startswith("Datos fiscales no seguros:"):
                 payload = {"error": str(exc)}
                 if clasificador is not None:
-                    from binance_pendientes import diagnosticar_pendientes_binance
-                    from binance_borrador import construir_borrador_binance
-                    diagnostico = diagnosticar_pendientes_binance(clasificador)
-                    payload["diagnostico_binance"] = diagnostico
-                    payload["borrador_binance"] = construir_borrador_binance(
-                        clasificador, diagnostico, ejercicio
+                    borrador, diagnostico = _borrador_binance_para_usuario(
+                        clasificador, ejercicio, archivos_aportados,
+                        alcance_declarado,
                     )
+                    payload["diagnostico_binance"] = diagnostico
+                    payload["borrador_binance"] = borrador
                     payload["token_pdf_diagnostico"] = _token_pdf_diagnostico_binance(
                         payload["borrador_binance"]
                     )
                 return jsonify(payload), 422
-            return jsonify({"error": _error_amigable(exc)}), 500
+            app.logger.error(
+                "[BINANCE_ANALYSIS] internal failure type=%s", type(exc).__name__
+            )
+            return jsonify({
+                "ok": False,
+                "result_type": "technical_error",
+                "error_code": "internal_error",
+                "error": (
+                    "Ha ocurrido un problema técnico al procesar el análisis. "
+                    "Esto no significa que tus archivos sean incorrectos. "
+                    "Conserva los originales y vuelve a intentarlo."
+                ),
+            }), 500
     finally:
         with _analisis_lock:
             _analisis_en_curso.discard(uid)

@@ -10,6 +10,7 @@ import zipfile
 from datetime import datetime
 
 import pytest
+from flask.testing import FlaskClient
 
 _TEST_DB = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
 os.environ.setdefault("DATABASE_URL", f"sqlite:///{_TEST_DB}")
@@ -19,6 +20,20 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from app import app as flask_app, db
 from models import User
+
+
+class BinanceScopeTestClient(FlaskClient):
+    """Represent the new browser scope confirmation in existing route tests."""
+    def post(self, *args, **kwargs):
+        path = args[0] if args else kwargs.get("path", "")
+        data = kwargs.get("data")
+        if (path == "/api/binance/analizar" and isinstance(data, dict)
+                and "alcance_datos" not in data):
+            kwargs["data"] = {**data, "alcance_datos": "solo_binance"}
+        return super().post(*args, **kwargs)
+
+
+flask_app.test_client_class = BinanceScopeTestClient
 
 
 SPOT_HEADER = (
@@ -2343,14 +2358,81 @@ def test_binance_422_pdf_diagnostico_es_documento_no_fiscal(client, usuario):
     assert "ganancias_y_perdidas_eur" not in data
     assert data["borrador_binance"]["estado"] == "INCOMPLETO_NO_APTO_PARA_DECLARAR"
     assert data["borrador_binance"]["no_es_informe_fiscal"] is True
+    assert data["borrador_binance"]["archivos_aportados"][0]["nombre"] == "Earn-(UTC+1).csv"
+    assert data["borrador_binance"]["archivos_aportados"][0]["formato"] == "csv"
+    assert data["borrador_binance"]["alcance_declarado"] == "solo_binance"
+    assert isinstance(data["borrador_binance"]["evidencias"], list)
     signed = data["token_pdf_diagnostico"]
     assert isinstance(signed, str) and len(signed) > 20
     pdf = client.post("/api/binance/diagnostico-pdf", json={"token": signed})
     assert pdf.status_code == 200, pdf.get_data(as_text=True)[:150]
     assert pdf.mimetype == "application/pdf"
     assert pdf.data.startswith(b"%PDF-")
+    assert b"INCOMPLETO" in pdf.data and b"NO FISCAL" in pdf.data
     assert pdf.headers["Cache-Control"] == "no-store, private"
     assert "NO_FISCAL" in pdf.headers["Content-Disposition"]
+
+
+def test_binance_requiere_confirmar_alcance_antes_de_analizar(client, usuario):
+    _login(client)
+    response = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(_spot_csv()), "Binance-Spot-(UTC+1).csv"),
+              "ejercicio": "2025", "alcance_datos": ""},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 400
+    body = response.get_json()
+    assert body["error_code"] == "scope_confirmation_required"
+    assert "token_pdf_diagnostico" not in body
+
+
+def test_binance_otros_exchanges_o_wallets_forzan_resultado_provisional(client, usuario):
+    _login(client)
+    response = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(_spot_csv()), "Binance-Spot-(UTC+1).csv"),
+              "ejercicio": "2025", "alcance_datos": "otras_fuentes"},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 422
+    body = response.get_json()
+    draft = body["borrador_binance"]
+    assert draft["estado"] == "INCOMPLETO_NO_APTO_PARA_DECLARAR"
+    assert draft["alcance_declarado"] == "otras_fuentes"
+    assert draft["no_es_informe_fiscal"] is True
+    assert draft["ganancias_y_perdidas_eur"] is None
+    assert "token" not in body
+    assert any(x["codigo"] == "alcance_externo_no_incluido" for x in draft["pendientes"])
+    pdf = client.post(
+        "/api/binance/diagnostico-pdf",
+        json={"token": body["token_pdf_diagnostico"]},
+    )
+    assert pdf.status_code == 200
+    assert pdf.data.startswith(b"%PDF-")
+
+
+def test_binance_error_interno_no_expone_detalles_ni_culpabiliza_archivo(
+    client, usuario, monkeypatch
+):
+    _login(client)
+    import app as app_module
+
+    def fail_internal(*args, **kwargs):
+        raise RuntimeError("PRIVATE traceback / secret internal detail")
+
+    monkeypatch.setattr(app_module, "procesar_con_fifo", fail_internal)
+    response = client.post(
+        "/api/binance/analizar",
+        data={"csv": (io.BytesIO(_spot_csv()), "Binance-Spot-(UTC+1).csv"),
+              "ejercicio": "2025", "alcance_datos": "solo_binance"},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 500
+    body = response.get_json()
+    assert body["result_type"] == "technical_error"
+    assert "PRIVATE traceback" not in body["error"]
+    assert "incorrectos" in body["error"]
 
 
 def test_binance_pdf_diagnostico_requiere_firma_y_usuario(client, usuario, _app):
