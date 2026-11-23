@@ -1,6 +1,7 @@
 """Synthetic Chromium checks for definitive, error and provisional UI results."""
 import json
 import os
+import re
 import tempfile
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -16,12 +17,6 @@ def _local_only(route):
     parsed = urlsplit(route.request.url)
     if parsed.hostname != "127.0.0.1":
         route.abort()
-    elif parsed.path == "/api/fifo/diagnostico-pdf" or parsed.path.startswith("/api/descargar/"):
-        route.fulfill(
-            status=200, content_type="application/pdf",
-            headers={"Content-Disposition": 'attachment; filename="synthetic_diagnostic_INCOMPLETO_NO_FISCAL.pdf"'},
-            body=SYNTHETIC_PDF,
-        )
     else:
         route.continue_()
 
@@ -55,7 +50,6 @@ def run_fifo_results_browser(origin, cookie_name, cookie_value):
                     context = browser.new_context(
                         viewport={"width": width, "height": 812}, accept_downloads=True,
                     )
-                    context.route("**/*", _local_only)
                     context.add_cookies([{
                         "name": cookie_name, "value": cookie_value,
                         "url": origin, "httpOnly": True, "sameSite": "Lax",
@@ -63,6 +57,17 @@ def run_fifo_results_browser(origin, cookie_name, cookie_value):
                     try:
                         page = context.new_page()
                         page.set_default_timeout(16000)
+                        page.route("**/*", _local_only)
+                        page.route(re.compile(r".*/api/fifo/diagnostico-pdf$"), lambda route: route.fulfill(
+                            status=200, content_type="application/pdf",
+                            headers={"Content-Disposition": 'attachment; filename="synthetic_diagnostic_INCOMPLETO_NO_FISCAL.pdf"'},
+                            body=SYNTHETIC_PDF,
+                        ))
+                        page.route(re.compile(r".*/api/descargar/synthetic[.]pdf([?].*)?$"), lambda route: route.fulfill(
+                            status=200, content_type="application/pdf",
+                            headers={"Content-Disposition": 'attachment; filename="synthetic_fifo_report.pdf"'},
+                            body=SYNTHETIC_PDF,
+                        ))
                         page.route("**/api/analizar", lambda route, _request, s=status, b=body: route.fulfill(
                             status=s, content_type="application/json", body=json.dumps(b),
                         ))
