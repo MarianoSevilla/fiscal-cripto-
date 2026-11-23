@@ -494,9 +494,13 @@ def test_bitget_empty_spot_header_only_http_422_without_pdf_token_or_success(mon
         response = client.post("/api/bitget/analizar", data={
             "csv": [(io.BytesIO(_bitget_spot_bytes()), "spot_header_only.csv")],
             "ejercicio": "2025", "nombre": "Synthetic",
+            "alcance_datos": "solo_exchange",
         }, content_type="multipart/form-data")
     assert response.status_code == 422
-    assert "Datos fiscales no seguros" in response.get_json()["error"]
+    assert response.get_json()["result_type"] == "provisional"
+    assert response.get_json()["borrador_fifo"]["no_es_informe_fiscal"] is True
+    assert response.get_json()["borrador_fifo"]["ganancias_y_perdidas_eur"] is None
     assert "token" not in response.get_json()
+    assert response.get_json()["token_pdf_diagnostico_fifo"]
     assert not tokens and not pdf_calls
     assert reports and all(report.get("status") == "failed" for report in reports)
