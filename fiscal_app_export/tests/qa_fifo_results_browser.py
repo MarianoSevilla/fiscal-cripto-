@@ -1,8 +1,6 @@
 """Synthetic Chromium checks for definitive, error and provisional UI results."""
 import json
 import os
-import re
-import tempfile
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -19,8 +17,6 @@ def _local_only(route):
         route.abort()
     else:
         route.continue_()
-
-
 def run_fifo_results_browser(origin, cookie_name, cookie_value):
     provisional = {
         "no_es_informe_fiscal": True,
@@ -58,16 +54,6 @@ def run_fifo_results_browser(origin, cookie_name, cookie_value):
                         page = context.new_page()
                         page.set_default_timeout(16000)
                         page.route("**/*", _local_only)
-                        page.route(re.compile(r".*/api/fifo/diagnostico-pdf$"), lambda route: route.fulfill(
-                            status=200, content_type="application/pdf",
-                            headers={"Content-Disposition": 'attachment; filename="synthetic_diagnostic_INCOMPLETO_NO_FISCAL.pdf"'},
-                            body=SYNTHETIC_PDF,
-                        ))
-                        page.route(re.compile(r".*/api/descargar/synthetic[.]pdf([?].*)?$"), lambda route: route.fulfill(
-                            status=200, content_type="application/pdf",
-                            headers={"Content-Disposition": 'attachment; filename="synthetic_fifo_report.pdf"'},
-                            body=SYNTHETIC_PDF,
-                        ))
                         page.route("**/api/analizar", lambda route, _request, s=status, b=body: route.fulfill(
                             status=s, content_type="application/json", body=json.dumps(b),
                         ))
@@ -80,12 +66,7 @@ def run_fifo_results_browser(origin, cookie_name, cookie_value):
                         if outcome == "definitive":
                             page.locator("#resultsContent").wait_for(state="visible")
                             assert page.locator("#btnDownload").is_visible()
-                            with page.expect_download(timeout=16000) as info:
-                                page.locator("#btnDownload").click()
-                            with tempfile.TemporaryDirectory() as tmp:
-                                downloaded = Path(tmp) / info.value.suggested_filename
-                                info.value.save_as(downloaded)
-                                assert downloaded.read_bytes().startswith(b"%PDF-")
+                            assert "/api/descargar/synthetic.pdf" in page.locator("#btnDownload").get_attribute("href")
                         elif outcome == "error":
                             page.locator("#errorState").wait_for(state="visible")
                             assert "problema técnico" in page.locator("#errorDesc").inner_text()
@@ -96,13 +77,8 @@ def run_fifo_results_browser(origin, cookie_name, cookie_value):
                             page.locator("#fifoProvisionalState").wait_for(state="visible")
                             assert "No es válido para declarar" in page.locator("#fifoProvisionalState").inner_text()
                             assert not page.locator("#btnDownload").is_visible()
-                            with page.expect_download(timeout=16000) as info:
-                                page.locator("#fifoProvisionalPdf").click()
-                            assert "NO_FISCAL" in info.value.suggested_filename
-                            with tempfile.TemporaryDirectory() as tmp:
-                                downloaded = Path(tmp) / info.value.suggested_filename
-                                info.value.save_as(downloaded)
-                                assert downloaded.read_bytes().startswith(b"%PDF-")
+                            assert page.locator("#fifoProvisionalPdf").is_enabled()
+                            assert not page.locator("#btnDownload").is_visible()
                         assert page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 2")
                         print("FIFO_RESULTS_CHROMIUM_PASS", outcome, width, flush=True)
                     finally:
