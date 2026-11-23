@@ -152,8 +152,10 @@ def test_analizar_multiarchivo_usdt_rechazado_sin_token(client, usuario):
         "ejercicio": "2025", "nombre": "Synthetic",
     }, content_type="multipart/form-data")
     assert response.status_code == 422
-    assert "Datos fiscales no seguros" in response.get_json()["error"]
-    assert "token" not in response.get_json()
+    payload = response.get_json()
+    assert payload["result_type"] == "provisional"
+    assert payload["borrador_fifo"]["no_es_informe_fiscal"] is True
+    assert payload["borrador_fifo"]["ganancias_y_perdidas_eur"] is None
 
 
 def test_analizar_un_solo_fichero_eur_valido(client, usuario):
@@ -168,11 +170,12 @@ def test_analizar_un_solo_fichero_eur_valido(client, usuario):
     ).encode("utf-8")
     response = client.post("/api/kucoin/analizar", data={
         "csv": [(io.BytesIO(csv_bytes), "trading.csv")],
-        "ejercicio": "2025", "nombre": "Synthetic",
+        "ejercicio": "2025", "nombre": "Synthetic", "alcance_datos": "solo_exchange",
     }, content_type="multipart/form-data")
     assert response.status_code == 200, response.get_data(as_text=True)[:300]
     body = response.get_json()
     assert body["ok"] is True
+    assert body["result_type"] == "definitive"
     assert body["resumen"]["resultado_neto"] == 50
     assert body["token"]
 
@@ -180,7 +183,7 @@ def test_analizar_un_solo_fichero_eur_valido(client, usuario):
 def test_analizar_solo_vacio_no_rompe(client, usuario):
     _login(client)
     r = client.post("/api/kucoin/analizar",
-                    data={"csv": [_file(F_VACIO)], "ejercicio": "all"},
+                    data={"csv": [_file(F_VACIO)], "ejercicio": "all", "alcance_datos": "solo_exchange"},
                     content_type="multipart/form-data")
     assert r.status_code == 200
     body = r.get_json()

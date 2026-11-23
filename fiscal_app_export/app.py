@@ -1904,6 +1904,22 @@ def _validar_aceptacion_fifo(motor, clasificador=None) -> None:
     """
     _validar_aceptacion_fuentes_fifo(clasificador)
 
+    # Any classifier that explicitly records unknown rows must fail closed:
+    # an unparsed event may be an acquisition, disposal, reward or transfer.
+    # Previously this guard covered only a subset of exchange classifiers.
+    unknowns_already_guarded = (
+        ClasificadorBinanceMulti, ClasificadorBinanceTx, ClasificadorBitvavo,
+        ClasificadorMEXC, ClasificadorBitget, ClasificadorBitgetMulti,
+        ClasificadorKuCoin,
+    )
+    if (clasificador is not None
+            and not isinstance(clasificador, unknowns_already_guarded)
+            and getattr(clasificador, "desconocidas", ())):
+        raise ValueError(
+            "Datos fiscales no seguros: hay registros del historial que no se han "
+            "podido interpretar y podrían afectar al cálculo FIFO. Revisa la exportación."
+        )
+
     # Legacy Transaction History: tampoco emitir un informe parcial si Binance
     # introduce un tipo de evento nuevo que el parser todavía no interpreta.
     if isinstance(clasificador, ClasificadorBinanceTx) and getattr(clasificador, "desconocidas", ()):
@@ -2918,6 +2934,148 @@ def _token_pdf_diagnostico_binance(borrador):
     })
 
 
+def _borrador_fifo_generico(exchange, clasificador, ejercicio, archivos, alcance, motivo):
+    """Resumen documental sin importes fiscales para herramientas FIFO legacy."""
+    nombre_exchange = {
+        "bitvavo": "Bitvavo", "bit2me": "Bit2Me", "kraken": "Kraken",
+        "coinbase": "Coinbase", "nexo": "Nexo", "cryptocom": "Crypto.com",
+        "uphold": "Uphold", "mexc": "MEXC", "bitget": "Bitget", "kucoin": "KuCoin",
+        "binance": "Binance",
+    }.get(exchange, "Exchange")
+    arrays = {
+        "compraventas_candidatas": "compraventas",
+        "permutas_candidatas": "swaps",
+        "rendimientos_candidatos": "rendimientos",
+        "movimientos_candidatos": "movimientos",
+        "operaciones_no_reconocidas": "desconocidas",
+    }
+    counts = {}
+    for key, attr in arrays.items():
+        try:
+            value = getattr(clasificador, attr, ()) if clasificador is not None else ()
+            counts[key] = len(value or ())
+        except (TypeError, AttributeError):
+            counts[key] = 0
+
+    safe_files = []
+    for i, item in enumerate((archivos or [])[:40], start=1):
+        if not isinstance(item, dict):
+            continue
+        suffix = str(item.get("formato") or "no disponible").lower()[:10]
+        size = item.get("bytes")
+        safe_files.append({
+            "nombre": f"archivo-{i}",
+            "formato": suffix,
+            "bytes": size if type(size) is int and size >= 0 else None,
+        })
+    if not safe_files:
+        safe_files = [{"nombre": "archivo procesado", "formato": "no disponible", "bytes": None}]
+
+    years = []
+    try:
+        years = sorted({int(year) for year in clasificador.detected_years()})
+    except (AttributeError, TypeError, ValueError):
+        pass
+    alcance_text = {
+        "solo_exchange": "El usuario declara que solo utilizó este exchange.",
+        "otras_fuentes": "El usuario declara actividad en otros exchanges o wallets.",
+        "no_se": "El usuario no pudo confirmar si hubo otros exchanges o wallets.",
+        "no_confirmado": "El alcance no está confirmado.",
+    }.get(alcance, "El alcance no está confirmado.")
+    issue = {
+        "titulo": "Faltan datos para acreditar el cálculo fiscal completo",
+        "descripcion": str(motivo or "El análisis detectó una insuficiencia que impide emitir el informe definitivo.")[:600],
+        "siguiente_paso": (
+            "Aporta la exportación completa del período y, según corresponda, los historiales de otros exchanges/wallets, "
+            "documentos de adquisición y transferencias, y valoraciones en EUR verificables. Después, repite el análisis."
+        ),
+        "accion": "APORTAR_DOCUMENTACION",
+    }
+    return {
+        "version": 1, "estado": "INCOMPLETO_NO_APTO_PARA_DECLARAR",
+        "tipo": "BORRADOR_DOCUMENTAL_NO_FIFO_FISCAL", "exchange_nombre": nombre_exchange,
+        "ejercicio_solicitado": "Todos" if not ejercicio or ejercicio == "all" else str(ejercicio)[:40],
+        "periodos_detectados": years, "alcance_declarado": alcance,
+        "alcance_descripcion": alcance_text, "no_es_informe_fiscal": True,
+        "costes_fifo_calculados": False, "ganancias_y_perdidas_eur": None,
+        "pdf_fiscal_disponible": False,
+        "descripcion": "Diagnóstico documental. No calcula ganancias, pérdidas ni costes FIFO.",
+        "operaciones_detectadas": counts, "archivos_aportados": safe_files,
+        "fuentes": [], "evidencias": [], "pendientes": [issue],
+        "siguiente_paso": issue["siguiente_paso"],
+        "nota": "Los contadores son registros clasificados; no prueban que el historial esté completo.",
+    }
+
+
+def _resumen_insuficiencia_fifo(error):
+    """Mapea validaciones internas a instrucciones seguras sin repetir valores del CSV."""
+    text = str(error).lower()
+    if "inventario" in text or "adquisicion" in text or "lotes" in text:
+        return "No se ha podido acreditar el coste o la fecha de adquisición de todas las unidades transmitidas."
+    if "permuta" in text or "valoración" in text or "valoracion" in text or "eur" in text:
+        return "Hay operaciones o rendimientos cuya valoración histórica en EUR no está acreditada."
+    if "no interpretadas" in text or "no reconocid" in text or "omitieron" in text or "omitido" in text:
+        return "Hay registros o fuentes que el sistema no ha podido interpretar o incluir con seguridad."
+    return "Una comprobación fiscal de integridad ha detectado datos insuficientes para emitir un informe definitivo."
+
+
+def _archivos_diagnostico_generico(paths):
+    result = []
+    for path in (paths or [])[:40]:
+        try:
+            result.append({"formato": os.path.splitext(path)[1].lstrip(".")[:10], "bytes": os.path.getsize(path)})
+        except OSError:
+            result.append({"formato": "no disponible", "bytes": None})
+    return result
+
+
+def _token_pdf_diagnostico_fifo(borrador):
+    from itsdangerous import URLSafeTimedSerializer
+    serializer = URLSafeTimedSerializer(app.secret_key, salt="fifo-diagnostico-no-fiscal-v1")
+    return serializer.dumps({"uid": str(current_user.id), "borrador": borrador})
+
+
+@app.route("/api/fifo/diagnostico-pdf", methods=["POST"])
+@login_required
+@limiter.limit("20 per hour", exempt_when=_is_admin)
+def descargar_pdf_diagnostico_fifo():
+    from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+    from binance_diagnostico_pdf import generar_pdf_diagnostico_binance
+    raw = request.get_json(silent=True)
+    token = raw.get("token") if isinstance(raw, dict) else None
+    if not isinstance(token, str) or not 0 < len(token) <= 50000:
+        return jsonify({"error": "Diagnóstico inválido. Repite el análisis."}), 400
+    serializer = URLSafeTimedSerializer(app.secret_key, salt="fifo-diagnostico-no-fiscal-v1")
+    try:
+        decoded = serializer.loads(token, max_age=3600)
+    except (BadSignature, SignatureExpired):
+        return jsonify({"error": "Diagnóstico caducado. Repite el análisis."}), 400
+    if not isinstance(decoded, dict) or decoded.get("uid") != str(current_user.id):
+        return jsonify({"error": "Este diagnóstico no pertenece a tu sesión."}), 403
+    borrador = decoded.get("borrador")
+    try:
+        content = generar_pdf_diagnostico_binance(borrador)
+    except ValueError:
+        return jsonify({"error": "No es posible crear el diagnóstico solicitado."}), 400
+    slug = re.sub(r"[^a-z0-9]+", "_", str((borrador or {}).get("exchange_nombre", "fifo")).lower()).strip("_")
+    response = send_file(BytesIO(content), mimetype="application/pdf", as_attachment=True,
+                         download_name=f"{slug or 'fifo'}_diagnostico_INCOMPLETO_NO_FISCAL.pdf")
+    response.headers["Cache-Control"] = "no-store, private"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
+def _respuesta_provisional_fifo(exchange, clasificador, ejercicio, archivos, alcance, motivo):
+    borrador = _borrador_fifo_generico(exchange, clasificador, ejercicio, archivos, alcance, motivo)
+    return jsonify({
+        "ok": False, "result_type": "provisional",
+        "error": "El historial se ha procesado, pero faltan datos verificables para un informe fiscal definitivo.",
+        "borrador_fifo": borrador,
+        "token_pdf_diagnostico_fifo": _token_pdf_diagnostico_fifo(borrador),
+    }), 422
+
+
 @app.route("/api/binance/diagnostico-pdf", methods=["POST"])
 @login_required
 @limiter.limit("20 per hour", exempt_when=_is_admin)
@@ -3108,6 +3266,7 @@ def analizar_binance_multi():
                 )
                 return jsonify({
                     "ok": False,
+                    "result_type": "provisional",
                     "error": (
                         "El análisis de Binance es provisional porque declaraste "
                         "actividad en otros exchanges/wallets o no pudiste "
@@ -3180,6 +3339,7 @@ def analizar_binance_multi():
 
             return jsonify({
                 "ok": True,
+                "result_type": "definitive",
                 "resumen": resumen,
                 "operaciones": operaciones,
                 "posicion": posicion,
@@ -3258,7 +3418,7 @@ def analizar_binance_multi():
                     )
                 return jsonify(payload), 422
             if isinstance(exc, ValueError) and str(exc).startswith("Datos fiscales no seguros:"):
-                payload = {"error": str(exc)}
+                payload = {"ok": False, "result_type": "provisional", "error": str(exc)}
                 if clasificador is not None:
                     borrador, diagnostico = _borrador_binance_para_usuario(
                         clasificador, ejercicio, archivos_aportados,
@@ -3380,6 +3540,10 @@ def api_bitget_anos():
 def _csv_diagnostic_allowed(user):
     """Gate both the UI and transport; restrict smoke tests to one account."""
     if not user.is_authenticated:
+        return False
+    # Do not advertise an opt-in channel that cannot deliver. The endpoint
+    # uses this same key to submit and independently checks consent and limits.
+    if not os.environ.get("RESEND_API_KEY"):
         return False
     if app.config.get("CSV_DIAGNOSTIC_SUPPORT_ENABLED"):
         return True
@@ -3547,10 +3711,21 @@ def analizar():
         nombre    = _sanitizar_texto(request.form.get("nombre", ""))
         ejercicio = _sanitizar_texto(request.form.get("ejercicio", ""), max_len=40)  # "all" o "2024,2025"
         exchange  = _sanitizar_texto(request.form.get("exchange", "binance"), max_len=20).lower()
+        alcance_declarado = request.form.get("alcance_datos", "").strip()
 
         # Validar exchange
         if exchange not in ("binance", "bit2me", "bitvavo", "kraken", "coinbase", "nexo", "cryptocom", "uphold", "mexc", "bitget"):
             return jsonify({"error": "Exchange no soportado."}), 400
+        alcance_valido = {"solo_binance", "otras_fuentes", "no_se"} if exchange == "binance" else {"solo_exchange", "otras_fuentes", "no_se"}
+        if not alcance_declarado:
+            # Direct API callers without the UI's scope declaration stay provisional.
+            alcance_declarado = "no_se"
+        elif alcance_declarado not in alcance_valido:
+            return jsonify({
+                "ok": False, "result_type": "processing_error",
+                "error_code": "invalid_scope_confirmation",
+                "error": "La confirmación del alcance no es válida. Vuelve a responder en la herramienta.",
+            }), 400
 
         # Validar ejercicio fiscal
         valido_ej, error_ej = _validar_ejercicio(ejercicio)
@@ -3788,6 +3963,21 @@ def analizar():
                                         clasificador_stats=_clasificador_stats)
 
             processing_ms   = int((time.time() - t_start) * 1000)
+
+            alcance_unico = "solo_binance" if exchange == "binance" else "solo_exchange"
+            if alcance_declarado != alcance_unico or _bit2me_excel:
+                motivo_provisional = (
+                    "El Excel de operaciones de Bit2Me es una estimación y no acredita por sí solo las valoraciones ni el historial fiscal completo."
+                    if _bit2me_excel else
+                    "El alcance confirmado incluye otras fuentes o no se pudo confirmar. Este análisis de un solo exchange no acredita el FIFO global."
+                )
+                return _respuesta_provisional_fifo(
+                    exchange, clasificador, ejercicio,
+                    [{"formato": _suffix.lstrip("."), "bytes": os.path.getsize(tmp_path)}],
+                    alcance_declarado,
+                    motivo_provisional,
+                )
+
             distinct_assets = len({op["activo"] for op in operaciones}) if operaciones else 0
 
             # ── FASE 2A: extraer telemetría estratégica ──────────────────────────
@@ -3853,6 +4043,7 @@ def analizar():
 
             return jsonify({
                 "ok": True,
+                "result_type": "definitive",
                 "resumen": resumen,
                 "operaciones": operaciones,
                 "posicion": posicion,
@@ -3927,8 +4118,16 @@ def analizar():
                     type(tracking_exc).__name__,
                 )
             if isinstance(e, ValueError) and str(e).startswith("Datos fiscales no seguros:"):
-                return jsonify({"error": str(e)}), 422
-            return jsonify({"error": _error_amigable(e)}), 500
+                if clasificador is not None:
+                    return _respuesta_provisional_fifo(
+                        exchange, clasificador, ejercicio,
+                        [{"formato": _suffix.lstrip("."),
+                          "bytes": os.path.getsize(tmp_path) if tmp_path and os.path.exists(tmp_path) else None}],
+                        alcance_declarado or "no_confirmado",
+                        _resumen_insuficiencia_fifo(e),
+                    )
+                return jsonify({"ok": False, "result_type": "processing_error", "error": str(e)}), 422
+            return jsonify({"ok": False, "result_type": "processing_error", "error": _error_amigable(e)}), 500
 
     finally:
         # Siempre liberar el bloqueo y limpiar el fichero temporal,
@@ -3971,6 +4170,12 @@ def analizar_kucoin():
         archivos  = request.files.getlist("csv") or request.files.getlist("files")
         nombre    = _sanitizar_texto(request.form.get("nombre", ""))
         ejercicio = _sanitizar_texto(request.form.get("ejercicio", ""), max_len=40)
+        alcance_declarado = request.form.get("alcance_datos", "").strip()
+        if not alcance_declarado:
+            alcance_declarado = "no_se"
+        elif alcance_declarado not in {"solo_exchange", "otras_fuentes", "no_se"}:
+            return jsonify({"ok": False, "result_type": "processing_error",
+                            "error": "La confirmación del alcance no es válida. Vuelve a responder en la herramienta."}), 400
 
         valido_ej, error_ej = _validar_ejercicio(ejercicio)
         if not valido_ej:
@@ -3999,6 +4204,12 @@ def analizar_kucoin():
             _filtrar_motor_por_ejercicio(motor, ejercicio)
             rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
             resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
+            if alcance_declarado != "solo_exchange":
+                return _respuesta_provisional_fifo(
+                    "kucoin", clasificador, ejercicio, _archivos_diagnostico_generico(tmp_paths),
+                    alcance_declarado,
+                    "El análisis solo cubre KuCoin; el alcance declarado incluye o puede incluir otras fuentes.",
+                )
             # Las advertencias fiscales de KuCoin (ambigüedades, productos no cubiertos,
             # pares USD) viven en el clasificador; las fusionamos con las del motor.
             advertencias = motor.advertencias + (clasificador.advertencias if clasificador else [])
@@ -4037,6 +4248,7 @@ def analizar_kucoin():
 
             return jsonify({
                 "ok": True,
+                "result_type": "definitive",
                 "resumen": resumen,
                 "operaciones": operaciones,
                 "posicion": posicion,
@@ -4091,8 +4303,14 @@ def analizar_kucoin():
                     type(tracking_exc).__name__,
                 )
             if isinstance(e, ValueError) and str(e).startswith("Datos fiscales no seguros:"):
-                return jsonify({"error": str(e)}), 422
-            return jsonify({"error": _error_amigable(e)}), 500
+                return _respuesta_provisional_fifo(
+                    "kucoin", clasificador if "clasificador" in locals() else None,
+                    ejercicio if "ejercicio" in locals() else "",
+                    _archivos_diagnostico_generico(tmp_paths),
+                    alcance_declarado if "alcance_declarado" in locals() else "no_confirmado",
+                    _resumen_insuficiencia_fifo(e),
+                )
+            return jsonify({"ok": False, "result_type": "processing_error", "error": _error_amigable(e)}), 500
 
     finally:
         with _analisis_lock:
@@ -4134,6 +4352,12 @@ def analizar_bitget():
         archivos  = request.files.getlist("csv") or request.files.getlist("files")
         nombre    = _sanitizar_texto(request.form.get("nombre", ""))
         ejercicio = _sanitizar_texto(request.form.get("ejercicio", ""), max_len=40)
+        alcance_declarado = request.form.get("alcance_datos", "").strip()
+        if not alcance_declarado:
+            alcance_declarado = "no_se"
+        elif alcance_declarado not in {"solo_exchange", "otras_fuentes", "no_se"}:
+            return jsonify({"ok": False, "result_type": "processing_error",
+                            "error": "La confirmación del alcance no es válida. Vuelve a responder en la herramienta."}), 400
 
         valido_ej, error_ej = _validar_ejercicio(ejercicio)
         if not valido_ej:
@@ -4161,6 +4385,12 @@ def analizar_bitget():
             _filtrar_motor_por_ejercicio(motor, ejercicio)
             rendimientos = _filtrar_rendimientos_por_ejercicio(rendimientos, ejercicio)
             resumen, posicion, operaciones = _motor_a_json(motor, clasificador)
+            if alcance_declarado != "solo_exchange":
+                return _respuesta_provisional_fifo(
+                    "bitget", clasificador, ejercicio, _archivos_diagnostico_generico(tmp_paths),
+                    alcance_declarado,
+                    "El análisis solo cubre Bitget; el alcance declarado incluye o puede incluir otras fuentes.",
+                )
             advertencias = motor.advertencias + (clasificador.advertencias if clasificador else [])
             rendimientos_json = _rendimientos_a_json(rendimientos)
             pdf_bytes = generar_pdf_bitget(motor, nombre, ejercicio, rendimientos)
@@ -4197,6 +4427,7 @@ def analizar_bitget():
 
             return jsonify({
                 "ok": True,
+                "result_type": "definitive",
                 "resumen": resumen,
                 "operaciones": operaciones,
                 "posicion": posicion,
@@ -4251,8 +4482,14 @@ def analizar_bitget():
                     type(tracking_exc).__name__,
                 )
             if isinstance(e, ValueError) and str(e).startswith("Datos fiscales no seguros:"):
-                return jsonify({"error": str(e)}), 422
-            return jsonify({"error": _error_amigable(e)}), 500
+                return _respuesta_provisional_fifo(
+                    "bitget", clasificador if "clasificador" in locals() else None,
+                    ejercicio if "ejercicio" in locals() else "",
+                    _archivos_diagnostico_generico(tmp_paths),
+                    alcance_declarado if "alcance_declarado" in locals() else "no_confirmado",
+                    _resumen_insuficiencia_fifo(e),
+                )
+            return jsonify({"ok": False, "result_type": "processing_error", "error": _error_amigable(e)}), 500
 
     finally:
         with _analisis_lock:
