@@ -131,7 +131,8 @@ def test_off_csv_informe_fiscal_sigue_funcionando(client, usuario, flag_off):
     _login(client)
     r = client.post("/api/analizar",
                     data={"csv": (io.BytesIO(_CSV_INFORME.encode()), "informe.csv"),
-                          "exchange": "bit2me", "ejercicio": "2024", "nombre": "B"},
+                          "exchange": "bit2me", "ejercicio": "2024", "nombre": "B",
+                          "alcance_datos": "solo_exchange"},
                     content_type="multipart/form-data")
     assert r.status_code == 200
     body = r.get_json()
@@ -150,21 +151,21 @@ def test_on_anos_detecta_2025(client, usuario, flag_on):
     body = r.get_json()
     assert body["ok"] is True and body["anos"] == [2025]
 
-def test_on_analizar_acepta_xlsx_y_devuelve_resumen_motor(client, usuario, flag_on):
+def test_on_analizar_excel_bit2me_devuelve_provisional_no_fiscal(client, usuario, flag_on):
     _login(client)
     r = client.post("/api/analizar",
                     data={"csv": (_xlsx([row for row in _ROWS if not (
                         row[0] == "Trade" and row[3] == 148.40
                     )]), "bit2me.xlsx"), "exchange": "bit2me",
-                          "ejercicio": "2025", "nombre": "B"},
+                          "ejercicio": "2025", "nombre": "B",
+                          "alcance_datos": "solo_exchange"},
                     content_type="multipart/form-data")
-    assert r.status_code == 200
+    assert r.status_code == 422
     body = r.get_json()
-    assert body["ok"] is True
-    assert body["estimacion"] is True
-    assert "token" in body and body["token"]
-    assert any("ORIENTATIVO" in a for a in body["advertencias"])
-    assert "operaciones_con_resultado" in body["resumen"]
+    assert body["result_type"] == "provisional"
+    assert body["borrador_fifo"]["no_es_informe_fiscal"] is True
+    assert body["borrador_fifo"]["ganancias_y_perdidas_eur"] is None
+    assert body["token_pdf_diagnostico_fifo"]
 
 def test_on_permuta_sin_fmv_rechazada_422_sin_pdf(client, usuario, flag_on):
     _login(client)
@@ -172,12 +173,14 @@ def test_on_permuta_sin_fmv_rechazada_422_sin_pdf(client, usuario, flag_on):
     rows = [_row("Trade", 100, "XRP", 100, "ALGO", fecha="2025-03-01 10:00")]
     r = client.post("/api/analizar",
                     data={"csv": (_xlsx(rows), "bit2me.xlsx"), "exchange": "bit2me",
-                          "ejercicio": "2025", "nombre": "B"},
+                          "ejercicio": "2025", "nombre": "B",
+                          "alcance_datos": "solo_exchange"},
                     content_type="multipart/form-data")
     body = r.get_json()
     assert r.status_code == 422
-    assert "Datos fiscales no seguros" in body["error"]
-    assert "token" not in body and "resumen" not in body
+    assert body["result_type"] == "provisional"
+    assert "token_pdf_diagnostico_fifo" in body
+    assert "resumen" not in body
 
 def test_on_rechaza_extension_no_soportada(client, usuario, flag_on):
     _login(client)
@@ -205,7 +208,8 @@ def test_smoke_excel_real(client, usuario, flag_on):
     with open(_REAL, "rb") as fh:
         r = client.post("/api/analizar",
                         data={"csv": (fh, "bit2me.xlsx"), "exchange": "bit2me",
-                              "ejercicio": "2025", "nombre": "Real"},
+                              "ejercicio": "2025", "nombre": "Real",
+                              "alcance_datos": "solo_exchange"},
                         content_type="multipart/form-data")
     body = r.get_json()
     assert body["ok"] is True and body["estimacion"] is True
@@ -224,6 +228,7 @@ def test_synthetic_csv_end_to_end_real_pdf_download_once(client, usuario, flag_o
         data={
             "csv": (io.BytesIO(_CSV_INFORME.encode("utf-8")), "synthetic-fiscal.csv"),
             "exchange": "bit2me", "ejercicio": "2024", "nombre": "Prueba sintética",
+            "alcance_datos": "solo_exchange",
         },
         content_type="multipart/form-data",
     )

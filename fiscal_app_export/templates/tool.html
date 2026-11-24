@@ -239,17 +239,15 @@
         <span class="bar-drop-text" id="dropHint">Arrastra aquí tu CSV o haz clic para seleccionarlo<br><span style="font-size:11px;opacity:0.65;">Solo ficheros .csv</span></span>
         {% endif %}
       </div>
-      {% if exchange_id == 'binance' %}
       <fieldset class="binance-scope-confirm" aria-describedby="binanceScopeHelp">
         <legend>Alcance del historial</legend>
         <p id="binanceScopeHelp">¿Has utilizado otros exchanges o wallets con criptoactivos durante los ejercicios que quieres analizar?</p>
-        <label><input type="radio" name="alcance_datos" value="solo_binance"> No. Solo he utilizado Binance en ese período.</label>
+        <label><input type="radio" name="alcance_datos" value="{% if exchange_id == 'binance' %}solo_binance{% else %}solo_exchange{% endif %}"> No. Solo he utilizado <span id="scopeExchangeName">{{ exchange_name or 'el exchange seleccionado' }}</span> en ese período.</label>
         <label><input type="radio" name="alcance_datos" value="otras_fuentes"> Sí. También he utilizado otros exchanges o wallets.</label>
         <label><input type="radio" name="alcance_datos" value="no_se"> No estoy seguro.</label>
         <p id="binanceScopeError" role="alert" hidden></p>
-        <small>Esta respuesta no sustituye las comprobaciones del motor. Si hubo otras fuentes o no puedes confirmarlo, el resultado será provisional.</small>
+        <small>Esta respuesta no sustituye las comprobaciones del motor ni demuestra que la exportación esté completa. Si hubo otras fuentes o no puedes confirmarlo, el resultado será provisional.</small>
       </fieldset>
-      {% endif %}
       {% if exchange_id in ['binance', 'kucoin', 'bitget'] %}
       <div id="kucoinSummary" class="kucoin-summary" style="display:none;"></div>
       {% if exchange_id == 'binance' %}
@@ -453,6 +451,27 @@
   </section>
   {% endif %}
 
+  {% if not exchange_id or exchange_id != 'binance' %}
+  <section class="fifo-provisional-state binance-incomplete-state" id="fifoProvisionalState" aria-labelledby="fifoProvisionalTitle">
+    <div class="binance-incomplete-success"><span class="binance-incomplete-check" aria-hidden="true">✓</span><div>
+      <h3 id="fifoProvisionalTitle">Resultado provisional: faltan datos</h3>
+      <p>El archivo se ha procesado, pero el documento no es un informe fiscal definitivo.</p>
+    </div></div>
+    <div class="binance-incomplete-notice"><h4>No es válido para declarar</h4>
+      <p>No se han mostrado importes fiscales parciales porque su exactitud depende de datos que faltan.</p>
+      <p id="fifoProvisionalReason"></p><p id="fifoProvisionalScope"></p>
+      <p id="fifoProvisionalNext"></p>
+    </div>
+    <ul id="fifoProvisionalFacts" aria-label="Información documental identificada"></ul>
+    <div class="binance-incomplete-actions">
+      <button id="fifoProvisionalPdf" class="binance-pdf-button" type="button">Descargar diagnóstico provisional (PDF)</button>
+      <button id="fifoProvisionalAdd" class="binance-add-files-button" type="button">Añadir archivos y repetir</button>
+    </div>
+    <p id="fifoProvisionalFeedback" role="status" aria-live="polite"></p>
+    <p><strong>Este documento es un diagnóstico documental. No es un informe fiscal FIFO ni debe utilizarse para presentar una declaración.</strong></p>
+  </section>
+  {% endif %}
+
   <!-- RESULTADOS -->
   <div class="results-content" id="resultsContent">
 
@@ -643,6 +662,8 @@
   const EXCHANGE_PAGE = '{{ exchange_id }}';
   const CSV_DIAG_ENABLED = {{ 'true' if csv_diag_allowed else 'false' }};
   let failedDiagnosticFiles = [];
+  let tokenPdfFifo = null;
+  let provisionalFifo = null;
   const BIT2ME_EXCEL_ENABLED = {{ 'true' if bit2me_excel_enabled else 'false' }};
   let selectedExchange = EXCHANGE_PAGE || 'binance';
 
@@ -680,6 +701,8 @@
     document.querySelectorAll('.exchange-btn:not(.coming-soon)').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     selectedExchange = btn.dataset.exchange;
+    const scopeName = document.getElementById('scopeExchangeName');
+    if (scopeName) scopeName.textContent = btn.querySelector('.exchange-name')?.textContent || selectedExchange;
     const info = instrucciones[selectedExchange] || instrucciones.binance;
     document.getElementById('dropHint').innerHTML = info.hint;
   }
@@ -797,8 +820,8 @@
   const resultsContent = document.getElementById('resultsContent');
 
   document.getElementById('btnRetry').addEventListener('click', () => {
-    // Un fallo fiscal Binance no obliga a volver a subir todos los ZIP.
-    if (EXCHANGE_PAGE === 'binance' && selectedFiles.length) {
+    // Mantener los archivos ya elegidos permite reintentar sin repetir la selección.
+    if ((isMultiPage && selectedFiles.length) || selectedFile) {
       showState('empty');
       actualizarBoton();
     } else {
@@ -1509,7 +1532,10 @@
     errorState.style.display     = state === 'error'   ? 'block' : 'none';
     const incompleteState = document.getElementById('binanceIncompleteState');
     if (incompleteState) incompleteState.style.display =
-      state === 'incomplete' ? 'block' : 'none';
+      state === 'incomplete' && EXCHANGE_PAGE === 'binance' ? 'block' : 'none';
+    const genericIncomplete = document.getElementById('fifoProvisionalState');
+    if (genericIncomplete) genericIncomplete.style.display =
+      state === 'incomplete' && EXCHANGE_PAGE !== 'binance' ? 'block' : 'none';
     if (state !== 'error') {
       document.getElementById('diagConsent').style.display = 'none';
       failedDiagnosticFiles = [];
@@ -1517,6 +1543,69 @@
     resultsContent.style.display = state === 'results' ? 'block' : 'none';
   }
   showState('empty');
+
+  async function descargarDiagnosticoFifo() {
+    if (!tokenPdfFifo) return;
+    const button = document.getElementById('fifoProvisionalPdf');
+    const feedback = document.getElementById('fifoProvisionalFeedback');
+    button.disabled = true;
+    try {
+      const response = await fetch('/api/fifo/diagnostico-pdf', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: tokenPdfFifo }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        feedback.textContent = data.error || 'No se pudo descargar el diagnóstico. Repite el análisis.';
+        return;
+      }
+      const blob = await response.blob();
+      if (!(response.headers.get('Content-Type') || '').includes('application/pdf')) {
+        feedback.textContent = 'El servidor no devolvió un PDF válido.';
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${String(provisionalFifo?.exchange_nombre || 'fifo')}_diagnostico_INCOMPLETO_NO_FISCAL.pdf`;
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+      feedback.textContent = 'Diagnóstico descargado. No es un informe fiscal.';
+    } catch (_) {
+      feedback.textContent = 'No se pudo descargar el diagnóstico. Comprueba la conexión y vuelve a intentarlo.';
+    } finally { button.disabled = false; }
+  }
+
+  function renderProvisionalFifo(data) {
+    provisionalFifo = data.borrador_fifo || {};
+    tokenPdfFifo = typeof data.token_pdf_diagnostico_fifo === 'string' ? data.token_pdf_diagnostico_fifo : null;
+    const report = provisionalFifo;
+    document.getElementById('fifoProvisionalReason').textContent = report.pendientes?.[0]?.descripcion || data.error || '';
+    document.getElementById('fifoProvisionalScope').textContent = report.alcance_descripcion || 'El alcance de los datos no está acreditado.';
+    document.getElementById('fifoProvisionalNext').textContent = report.siguiente_paso || 'Aporta historiales y documentación original y repite el análisis.';
+    const facts = document.getElementById('fifoProvisionalFacts');
+    facts.replaceChildren();
+    const labels = {
+      compraventas_candidatas: 'Compraventas candidatas', permutas_candidatas: 'Permutas candidatas',
+      rendimientos_candidatos: 'Rendimientos candidatos', movimientos_candidatos: 'Movimientos candidatos',
+      operaciones_no_reconocidas: 'Registros no reconocidos',
+    };
+    for (const [key, label] of Object.entries(labels)) {
+      const value = report.operaciones_detectadas?.[key];
+      if (!Number.isSafeInteger(value) || value < 0) continue;
+      const li = document.createElement('li'); li.textContent = `${label}: ${value.toLocaleString('es-ES')} (registros clasificados; no prueba integridad)`; facts.appendChild(li);
+    }
+    document.getElementById('fifoProvisionalPdf').disabled = !tokenPdfFifo;
+    document.getElementById('fifoProvisionalFeedback').textContent = '';
+  }
+  const fifoPdfButton = document.getElementById('fifoProvisionalPdf');
+  if (fifoPdfButton) fifoPdfButton.addEventListener('click', descargarDiagnosticoFifo);
+  const fifoAddButton = document.getElementById('fifoProvisionalAdd');
+  if (fifoAddButton) fifoAddButton.addEventListener('click', () => {
+    document.getElementById('csvInput')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.getElementById('csvInput')?.click();
+  });
 
   // ── FORMATEO ─────────────────────────────
   function fmt(n, dec = 4) {
@@ -1801,7 +1890,7 @@
     generico: {
       icono: '✕', titulo: 'Error al procesar el fichero',
       desc: 'No se ha podido procesar el CSV. Comprueba que es un fichero exportado directamente desde tu exchange sin modificaciones.',
-      pasos: [],
+      pasos: ['Descarga de nuevo la exportación original del exchange y comprueba que corresponde al formato solicitado.', 'Incluye el período completo y no abras ni guardes el archivo con una hoja de cálculo. Después, vuelve a intentarlo.'],
     },
   };
 
@@ -1843,12 +1932,12 @@
       return error;
     }
     if (!errorRaw) return { ...ERRORES.generico };
-    if (EXCHANGE_PAGE === 'binance' && e.startsWith('Datos fiscales no seguros:')) {
+    if (e.startsWith('Datos fiscales no seguros:')) {
       return {
         icono: '!',
-        titulo: 'Informe pendiente de datos verificables',
-        desc: esc(e),
-        pasos: ['Revisa las incidencias detectadas y añade los archivos o justificantes disponibles. No se ha generado ningún PDF.'],
+        titulo: 'No se puede emitir el informe fiscal definitivo',
+        desc: EXCHANGE_PAGE === 'binance' ? esc(e) : 'Una comprobación de integridad ha impedido emitir un informe fiscal definitivo.',
+        pasos: ['Aporta la exportación completa y la documentación original que pueda faltar. Después, vuelve a analizar los archivos. No se ha emitido un informe fiscal.'],
       };
     }
     if (e === '__servidor__') return { ...ERRORES.errorServidor };
@@ -1881,7 +1970,7 @@
       return {
         icono: '✕', titulo: 'Error al procesar el fichero',
         desc: 'No se ha podido procesar el archivo XLS/XLSX. Comprueba que es una exportación original de MEXC sin modificaciones.',
-        pasos: [],
+        pasos: ['Descarga el XLS/XLSX original desde MEXC para el período completo.', 'Vuelve a seleccionarlo sin abrirlo ni guardarlo con otra aplicación.'],
       };
     }
     return { ...ERRORES.generico };
@@ -2000,7 +2089,7 @@
     }
 
     let alcanceBinance = null;
-    if (EXCHANGE_PAGE === 'binance') {
+    if (document.querySelector('input[name="alcance_datos"]')) {
       alcanceBinance = document.querySelector('input[name="alcance_datos"]:checked')?.value || '';
       if (!alcanceBinance) {
         const warning = document.getElementById('binanceScopeError');
@@ -2025,7 +2114,10 @@
     const formData = new FormData();
     formData.append('nombre', sanitizarTexto(document.getElementById('nombre').value.trim()));
     formData.append('ejercicio', sanitizarTexto(ejercicioVal));
-    if (EXCHANGE_PAGE === 'binance') formData.append('alcance_datos', alcanceBinance);
+    if (EXCHANGE_PAGE) formData.append('alcance_datos', alcanceBinance);
+    else formData.append('alcance_datos', selectedExchange === 'binance'
+      ? (alcanceBinance === 'solo_exchange' ? 'solo_binance' : alcanceBinance)
+      : alcanceBinance);
     const endpoint = isMultiPage ? ('/api/' + EXCHANGE_PAGE + '/analizar') : '/api/analizar';
     if (isMultiPage) {
       selectedFiles.forEach(f => formData.append('csv', f));
@@ -2037,6 +2129,15 @@
     try {
       const res  = await fetch(endpoint, { method: 'POST', body: formData, credentials: 'include' });
       const data = await res.json();
+
+      if (EXCHANGE_PAGE !== 'binance' && res.status === 422
+          && data.result_type === 'provisional' && data.borrador_fifo?.no_es_informe_fiscal === true) {
+        renderProvisionalFifo(data);
+        showState('incomplete');
+        selectedFile = null; csvInput.value = ''; hideFile();
+        fileName.textContent = '—'; btnAnalizar.disabled = true;
+        return;
+      }
 
       if (res.status === 409) {
         // Análisis ya en proceso: mostrar aviso y conservar el fichero seleccionado
@@ -2075,7 +2176,7 @@
         if (![401, 403, 409, 413, 429].includes(res.status)) {
           offerDiagnostic(isMultiPage ? selectedFiles : [selectedFile]);
         }
-        const canRetrySameFiles = isMultiPage && (res.status === 429 || res.status >= 500);
+      const canRetrySameFiles = res.status === 429 || res.status >= 500;
         if (!canRetrySameFiles) {
           selectedFile = null; csvInput.value = ''; hideFile();
           fileName.textContent = '—'; btnAnalizar.disabled = true;
@@ -2100,7 +2201,7 @@
     } catch (err) {
       mostrarErrorApi('__servidor__');
       showState('error');
-      if (isMultiPage && selectedFiles.length) {
+      if ((isMultiPage && selectedFiles.length) || selectedFile) {
         csvInput.value = '';
         actualizarBoton();
       } else {

@@ -89,6 +89,17 @@ def test_feature_off_fails_closed(authenticated_client):
     provider.assert_not_called()
 
 
+def test_unavailable_provider_hides_opt_in_channel_and_rejects_transfer(authenticated_client, monkeypatch):
+    monkeypatch.delenv("RESEND_API_KEY", raising=False)
+    page = authenticated_client.get("/bitvavo")
+    assert page.status_code == 200
+    assert "const CSV_DIAG_ENABLED = false" in page.get_data(as_text=True)
+    with patch("requests.post") as provider:
+        response = send(authenticated_client)
+    assert response.status_code == 404
+    provider.assert_not_called()
+
+
 def test_unauthenticated_never_calls_provider(authenticated_client):
     anonymous = flask_app.test_client()
     with patch("requests.post") as provider:

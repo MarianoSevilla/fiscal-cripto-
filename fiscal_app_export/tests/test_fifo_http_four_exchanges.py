@@ -22,6 +22,7 @@ os.environ.setdefault("DATABASE_URL", "sqlite:///" + _TEST_DB)
 os.environ.setdefault("SECRET_KEY", "synthetic-only-05c2-secret")
 
 from app import app as flask_app, db  # noqa: E402
+from app import _borrador_fifo_generico, _resumen_insuficiencia_fifo, _validar_aceptacion_fifo  # noqa: E402
 from models import User  # noqa: E402
 
 
@@ -150,6 +151,7 @@ def _analyse(client, exchange, *, with_purchase):
         "exchange": exchange,
         "nombre": "Informe de prueba - sin datos personales",
         "ejercicio": "2025",
+        "alcance_datos": "solo_binance" if exchange == "binance" else "solo_exchange",
     }, content_type="multipart/form-data")
 
 
@@ -161,6 +163,7 @@ def test_csv_fifo_pdf_download_and_replay_rejected(client, exchange):
     assert response.status_code == 200, (exchange, response.get_data(as_text=True)[:450])
     data = response.get_json()
     assert data["ok"] is True
+    assert data["result_type"] == "definitive"
     operations = data["operaciones"]
     assert len(operations) == 1, (exchange, operations)
     operation = operations[0]
@@ -187,14 +190,95 @@ def test_csv_fifo_pdf_download_and_replay_rejected(client, exchange):
 
 @pytest.mark.parametrize("exchange", EXCHANGES)
 def test_sale_without_acquisition_is_rejected_without_pdf_token(client, exchange):
-    """Fail closed on incomplete inventory instead of emitting a fiscal report."""
+    """Material gaps produce a clearly provisional PDF, never a fiscal token."""
     response = _analyse(client, exchange, with_purchase=False)
     assert response.status_code == 422, (exchange, response.status_code,
                                          response.get_data(as_text=True)[:450])
     data = response.get_json()
-    assert "Datos fiscales no seguros" in data["error"]
-    assert "token" not in data
+    assert data["result_type"] == "provisional"
+    assert data["borrador_fifo"]["no_es_informe_fiscal"] is True
+    assert data["borrador_fifo"]["costes_fifo_calculados"] is False
+    assert data["borrador_fifo"]["ganancias_y_perdidas_eur"] is None
+    assert data["token_pdf_diagnostico_fifo"]
     assert "resumen" not in data
+
+
+@pytest.mark.parametrize("exchange", ["bitvavo", "kraken", "coinbase"])
+def test_declared_other_sources_get_documentary_provisional_pdf(client, exchange):
+    response = client.post("/api/analizar", data={
+        "csv": (io.BytesIO(_csv_bytes(exchange, with_purchase=True)), exchange + "-synthetic.csv"),
+        "exchange": exchange, "nombre": "Synthetic", "ejercicio": "2025",
+        "alcance_datos": "otras_fuentes",
+    }, content_type="multipart/form-data")
+    assert response.status_code == 422
+    data = response.get_json()
+    assert data["result_type"] == "provisional"
+    assert "resumen" not in data and "operaciones" not in data and "token" not in data
+    report = data["borrador_fifo"]
+    assert report["no_es_informe_fiscal"] is True
+    assert report["pdf_fiscal_disponible"] is False
+    assert report["ganancias_y_perdidas_eur"] is None
+    pdf = client.post("/api/fifo/diagnostico-pdf", json={"token": data["token_pdf_diagnostico_fifo"]})
+    assert pdf.status_code == 200
+    assert pdf.mimetype == "application/pdf"
+    with pdfplumber.open(io.BytesIO(pdf.data)) as document:
+        text = "\n".join(page.extract_text() or "" for page in document.pages)
+    assert "NO VÁLIDO PARA DECLARAR" in text
+    assert "10 EUR" not in text
+
+
+def test_missing_fifo_scope_is_treated_as_unconfirmed(client):
+    response = client.post("/api/analizar", data={
+        "csv": (io.BytesIO(_csv_bytes("bitvavo", with_purchase=True)), "x.csv"),
+        "exchange": "bitvavo", "ejercicio": "2025",
+    }, content_type="multipart/form-data")
+    assert response.status_code == 422
+    assert response.get_json()["result_type"] == "provisional"
+
+
+def test_internal_processing_error_is_distinct_and_does_not_leak_exception(client, monkeypatch):
+    import app as application
+
+    def fail(_path):
+        raise RuntimeError("PRIVATE-CUSTOMER-CONTENT")
+
+    monkeypatch.setattr(application, "procesar_bitvavo", fail)
+    monkeypatch.setattr(application, "record_processing_error_safe", lambda **_kwargs: None)
+    response = _analyse(client, "bitvavo", with_purchase=True)
+    assert response.status_code == 500
+    payload = response.get_json()
+    assert payload["result_type"] == "processing_error"
+    assert "PRIVATE-CUSTOMER-CONTENT" not in payload["error"]
+    assert "borrador_fifo" not in payload and "token_pdf_diagnostico_fifo" not in payload
+
+
+def test_generic_provisional_builder_never_copies_csv_error_values():
+    class SyntheticClassifier:
+        compraventas = [object()]
+        swaps = []
+        rendimientos = []
+        movimientos = []
+        desconocidas = []
+        def detected_years(self):
+            return [2025]
+
+    report = _borrador_fifo_generico(
+        "bitvavo", SyntheticClassifier(), "2025", [{"formato": "csv", "bytes": 23}],
+        "solo_exchange", _resumen_insuficiencia_fifo(ValueError("inventario insuficiente: SECRET-CUSTOMER-123")),
+    )
+    assert report["operaciones_detectadas"]["compraventas_candidatas"] == 1
+    assert report["pendientes"][0]["descripcion"] == (
+        "No se ha podido acreditar el coste o la fecha de adquisición de todas las unidades transmitidas."
+    )
+    assert "SECRET-CUSTOMER-123" not in str(report)
+
+
+def test_unknown_rows_block_definitive_fifo_for_every_classifier():
+    class UnknownClassifier:
+        desconocidas = [object()]
+
+    with pytest.raises(ValueError, match="no se han podido interpretar"):
+        _validar_aceptacion_fifo(type("Motor", (), {"resultados": [], "advertencias": []})(), UnknownClassifier())
 
 
 def test_missing_pdf_preserves_session_token_until_response_is_ready(client):
@@ -356,6 +440,7 @@ def test_binance_legacy_unique_eur_pairs_still_generate_fiscal_pdf(client):
     response = client.post("/api/analizar", data={
         "csv": (io.BytesIO(_binance_legacy_bytes()), "binance-classic-synthetic.csv"),
         "exchange": "binance", "nombre": "Synthetic", "ejercicio": "2025",
+        "alcance_datos": "solo_binance",
     }, content_type="multipart/form-data")
     assert response.status_code == 200, response.get_data(as_text=True)[:550]
     payload = response.get_json()
@@ -463,15 +548,17 @@ def test_binance_tx_nonzero_fee_cannot_generate_incomplete_fiscal_pdf(
             fee_currency, fee_amount, fee_on_sale
         )), "binance-tx-fee-synthetic.csv"),
         "exchange": "binance", "nombre": "Synthetic", "ejercicio": "2025",
+        "alcance_datos": "solo_binance",
     }, content_type="multipart/form-data")
     assert response.status_code == 422, (
         fee_currency, fee_on_sale, response.get_data(as_text=True)[:550]
     )
     payload = response.get_json() or {}
-    assert "Datos fiscales no seguros" in payload.get("error", "")
-    assert "Transaction Fee" in payload.get("error", "")
-    assert "token" not in payload and "resumen" not in payload
-    assert "operaciones" not in payload
+    assert payload["result_type"] == "provisional"
+    assert payload["borrador_fifo"]["no_es_informe_fiscal"] is True
+    assert payload["borrador_fifo"]["ganancias_y_perdidas_eur"] is None
+    assert payload["token_pdf_diagnostico_fifo"]
+    assert "resumen" not in payload and "operaciones" not in payload
 
 
 @pytest.mark.parametrize("with_zero_fee", [False, True])
@@ -484,6 +571,7 @@ def test_binance_tx_without_material_fee_keeps_eur_fifo_and_pdf(client, with_zer
     response = client.post("/api/analizar", data={
         "csv": (io.BytesIO(file_bytes), "binance-tx-zero-fee-synthetic.csv"),
         "exchange": "binance", "nombre": "Synthetic", "ejercicio": "2025",
+        "alcance_datos": "solo_binance",
     }, content_type="multipart/form-data")
     assert response.status_code == 200, response.get_data(as_text=True)[:600]
     payload = response.get_json() or {}

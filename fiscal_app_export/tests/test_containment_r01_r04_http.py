@@ -106,9 +106,13 @@ def test_http_422_no_token_no_pdf_no_generated_record(monkeypatch, tmp_path, mod
         resp = client.post("/api/analizar", data={
             "csv": (io.BytesIO(b"Date,Test\\n2025-01-01,1\\n"), "synthetic.csv"),
             "exchange": exchange, "nombre": "synthetic", "ejercicio": "2025",
+            "alcance_datos": "solo_exchange",
         }, content_type="multipart/form-data")
     assert resp.status_code == 422, resp.get_data(as_text=True)[:350]
-    assert resp.json and "Datos fiscales no seguros" in resp.json["error"]
+    assert resp.json and resp.json["result_type"] == "provisional"
+    assert resp.json["borrador_fifo"]["no_es_informe_fiscal"] is True
+    assert resp.json["borrador_fifo"]["ganancias_y_perdidas_eur"] is None
+    assert resp.json["token_pdf_diagnostico_fifo"]
     assert "token" not in resp.json and "resumen" not in resp.json
     assert not pdf_calls and not tokens
     assert reports and all(row.get("status") == "failed" for row in reports)
@@ -132,6 +136,7 @@ def test_http_valid_eur_200_json_pdf_and_success_record(monkeypatch, tmp_path):
         resp = client.post("/api/analizar", data={
             "csv": (io.BytesIO(b"Date,Test\\n2025-01-01,1\\n"), "synthetic.csv"),
             "exchange": "bitvavo", "nombre": "synthetic", "ejercicio": "2025",
+            "alcance_datos": "solo_exchange",
         }, content_type="multipart/form-data")
     assert resp.status_code == 200, resp.get_data(as_text=True)[:350]
     assert resp.json["resumen"]["resultado_neto"] == 50

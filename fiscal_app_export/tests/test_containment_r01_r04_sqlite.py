@@ -81,6 +81,7 @@ for mode in ("swap", "nexo", "none", "partial", "uphold", "valid"):
         resp = client.post("/api/analizar", data={
             "csv": (io.BytesIO(b"Date,Value\n2025-01-01,1\n"), "synthetic.csv"),
             "exchange": exchange, "nombre": "Synthetic", "ejercicio": "2025",
+            "alcance_datos": "solo_exchange",
         }, content_type="multipart/form-data")
     if mode == "valid":
         assert resp.status_code == 200, (mode, resp.get_data(as_text=True)[:400])
@@ -88,7 +89,10 @@ for mode in ("swap", "nexo", "none", "partial", "uphold", "valid"):
         assert Path(PDF_DEST).read_bytes() == b"%PDF-ISOLATED"
     else:
         assert resp.status_code == 422, (mode, resp.get_data(as_text=True)[:400])
-        assert "token" not in resp.json and "resumen" not in resp.json
+        assert resp.json["result_type"] == "provisional"
+        assert resp.json["borrador_fifo"]["no_es_informe_fiscal"] is True
+        assert resp.json["borrador_fifo"]["ganancias_y_perdidas_eur"] is None
+        assert "resumen" not in resp.json
         assert not Path(PDF_DEST).exists()
     with app.app_context():
         reports = list(FifoReport.query.order_by(FifoReport.id).all())

@@ -82,6 +82,7 @@ def _watermark(canvas, doc):
 def generar_pdf_diagnostico_binance(borrador: dict) -> bytes:
     """Produce únicamente diagnóstico de cobertura, no resultados patrimoniales."""
     _validar_borrador(borrador)
+    exchange = str(borrador.get("exchange_nombre") or "Binance")[:40]
     styles = getSampleStyleSheet()
     h1 = ParagraphStyle(
         "BinanceDiagTitle", parent=styles["Heading1"], fontName="Helvetica-Bold",
@@ -118,12 +119,12 @@ def generar_pdf_diagnostico_binance(borrador: dict) -> bytes:
     pdf = SimpleDocTemplate(
         bio, pagesize=A4, leftMargin=19 * mm, rightMargin=19 * mm,
         topMargin=20 * mm, bottomMargin=27 * mm,
-        title="Diagnóstico Binance - Incompleto, no fiscal",
+        title=f"Diagnóstico {exchange} - Incompleto, no fiscal",
         author="marianosevilla.com",
         pageCompression=1,
     )
     story = [
-        Paragraph("MARIANOSEVILLA.COM / BINANCE", small),
+        Paragraph(f"MARIANOSEVILLA.COM / {_texto(exchange.upper(), 40)}", small),
         Spacer(1, 4 * mm),
         Paragraph("Informe de diagnóstico FIFO", h1),
         Paragraph(
@@ -158,7 +159,7 @@ def generar_pdf_diagnostico_binance(borrador: dict) -> bytes:
         Paragraph(
             f"<b>Ejercicio solicitado:</b> {_texto(borrador.get('ejercicio_solicitado') or 'todos', 40)}"
             f"<br/><b>Años detectados en los archivos:</b> {_texto(', '.join(map(str, borrador.get('periodos_detectados') or [])) or 'no disponibles', 120)}"
-            f"<br/><b>Alcance declarado:</b> {_texto({'solo_binance': 'el usuario declara que solo utilizó Binance', 'otras_fuentes': 'el usuario declara actividad en otros exchanges o wallets', 'no_se': 'el usuario no pudo confirmar si hubo otros exchanges o wallets'}.get(borrador.get('alcance_declarado'), 'no confirmado'), 180)}"
+            f"<br/><b>Alcance declarado:</b> {_texto(borrador.get('alcance_descripcion') or {'solo_binance': 'el usuario declara que solo utilizó Binance', 'otras_fuentes': 'el usuario declara actividad en otros exchanges o wallets', 'no_se': 'el usuario no pudo confirmar si hubo otros exchanges o wallets'}.get(borrador.get('alcance_declarado'), 'no confirmado'), 180)}"
             f"<br/><b>Fecha del diagnóstico:</b> {datetime.now(timezone.utc).strftime('%d/%m/%Y %H:%M UTC')}",
             body,
         ),
@@ -260,8 +261,7 @@ def generar_pdf_diagnostico_binance(borrador: dict) -> bytes:
         Spacer(1, 6 * mm),
         Paragraph("Próximos pasos", h2),
         Paragraph(
-            "Si dispones de más exportaciones originales de Binance (Spot, Convert, "
-            "Earn, depósitos o retiradas), añádelas y repite el análisis. "
+            f"Si dispones de más exportaciones originales de {exchange} o de otras fuentes, añádelas y repite el análisis. "
             "Conserva los archivos originales y este diagnóstico. "
             "Si declaraste actividad en otros exchanges o wallets, aporta también "
             "sus historiales antes de solicitar un informe definitivo. Si no puedes "
