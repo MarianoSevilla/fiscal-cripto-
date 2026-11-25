@@ -33,9 +33,14 @@ def test_procfile_only_verifies_schema_before_gunicorn():
     assert "db.create_all" not in proc
 
 
-def test_startup_gate_remains_readonly_and_exact_revision():
+def test_startup_gate_remains_readonly_and_accepts_only_two_transition_heads():
     source = GATE.read_text(encoding="utf-8")
-    assert "EXPECTED_HEAD = \"a2b3c4d5e6f7\"" in source
+    assert 'PRE_CREDITS_HEAD = "z9a0b1c2d3e4"' in source
+    assert 'POST_CREDITS_HEAD = "a2b3c4d5e6f7"' in source
+    assert "pre-credit schema contains partial credit tables" in source
+    assert "database revision is not an approved transition state" in source
+    assert "EXPECTED_GRAPH_HEAD = \"a2b3c4d5e6f7\"" in source
+    assert "post_credits.down_revision != PRE_CREDITS_HEAD" in source
     assert "SET TRANSACTION READ ONLY" in source
     assert "transaction.rollback()" in source
     assert "REQUIRED_CONSTRAINTS" in source
@@ -86,6 +91,7 @@ def test_gate_failure_reports_only_fixed_schema_categories():
         ROOT / "tools" / "s01_rehearse_restored_backup.py"
     ).read_text(encoding="utf-8")
     for code in ("GRAPH", "DATABASE", "READONLY", "TABLES", "REVISION",
+                 "PARTIAL_CREDITS",
                  "COLUMNS", "ADVISORY_COLUMNS", "CONSTRAINTS", "INDEXES",
                  "CHECK", "INTERNAL"):
         assert code in rehearsal
