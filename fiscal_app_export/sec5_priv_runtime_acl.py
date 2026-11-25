@@ -9,6 +9,20 @@ from __future__ import annotations
 from psycopg2 import sql
 
 
+# Fail closed on schema drift with named tables, not a brittle table count.
+# This inventory is intentionally reviewed alongside ORM/migration changes.
+EXPECTED_ORM_TABLES = frozenset({
+    "advisory_audit_log", "advisory_internal_notes", "communication_campaigns",
+    "communication_deliveries", "contactos", "credit_analyses",
+    "credit_ledger_entries", "credit_purchases", "credit_report_artifacts",
+    "credit_stripe_event_receipts", "credit_wallets", "fifo_reports",
+    "fiscal_advisory_files", "fiscal_advisory_requests",
+    "fiscal_advisory_status_history", "incidents", "processing_errors",
+    "resource_requests", "resources", "s01_stripe_checkout_attempts",
+    "s01_stripe_event_receipts", "s01_stripe_notification_outbox", "users",
+})
+
+
 def grant_existing_runtime_acl(cursor, *, login: str, model_tables: set[str]) -> dict:
     """Apply explicit grants. Caller owns the transaction and creates LOGIN.
 
@@ -16,8 +30,13 @@ def grant_existing_runtime_acl(cursor, *, login: str, model_tables: set[str]) ->
     schema CREATE, or TRUNCATE. A database administrator executes this only
     after separately validating the instance, database and target identity.
     """
-    if not login or len(model_tables) != 17 or "alembic_version" in model_tables:
-        raise ValueError("SEC5 runtime ACL: unexpected ORM inventory")
+    if not login or model_tables != EXPECTED_ORM_TABLES:
+        missing = EXPECTED_ORM_TABLES - model_tables
+        unexpected = model_tables - EXPECTED_ORM_TABLES
+        raise ValueError(
+            "SEC5 runtime ACL: unexpected ORM inventory; "
+            f"missing={sorted(missing)} unexpected={sorted(unexpected)}"
+        )
     if any(not name or "." in name or "\x00" in name for name in model_tables):
         raise ValueError("SEC5 runtime ACL: invalid table identifier")
 

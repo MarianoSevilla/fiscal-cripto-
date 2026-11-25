@@ -18,7 +18,7 @@ La capacidad de **estadísticas potentes, agregadas, sin seguimiento individual 
 - **A — Agregado realmente anónimo:** conservar estadísticas únicamente después de evaluar irreversibilidad, tamaño de grupos y posible enlace indirecto. La seudonimización no excluye RGPD.
 - **H — En espera de verificación:** no implantar supresión irreversible sin aclarar obligaciones, custodio, proveedor o estado de pago. No justifica uso ordinario indefinido.
 
-## 2. Matriz de revisión aprobada como criterio de diseño: 17 tablas ORM
+## 2. Matriz de revisión aprobada como criterio de diseño: 17 tablas ORM originales
 
 **Cómo leer la tabla:** se aprueba **el momento de revisión interna**, no un calendario de eliminación; «destino» describe alternativas condicionadas al análisis de finalidad, base jurídica, excepciones y datos concretos. La aprobación **no convalida automáticamente la base jurídica de cada tratamiento ni autoriza traducir la tabla a código**. La ejecución exige evaluación, pruebas y autorización separadas.
 
@@ -41,6 +41,19 @@ La capacidad de **estadísticas potentes, agregadas, sin seguimiento individual 
 | `communication_deliveries` | **O/L:** entrega, incidencias y evidencia de baja | **Revisión a 90 días** del último intento cerrado; excepciones para reclamación y oposición | Suprimir trazas de entrega innecesarias, pero **preservar evidencia mínima de oposición/baja** para impedir nuevas comunicaciones improcedentes; distinguir prueba de consentimiento de log completo |
 | `resources` | **O:** catálogo editorial | Desde despublicación: revisar solo material editorial o datos personales accidentales; **sin retención de usuario aplicable por defecto** | No borrar recursos por baja de un solicitante; `storage_key` es metadato y no acredita que exista bucket |
 | `resource_requests` | **O/L:** solicitud, validación de entrega y posible prueba de consentimiento | Desde enviado/rechazado/retirado con cierre efectivo: **revisión a 90 días**; pendientes H | Suprimir UID de exchange, Telegram, IP y contacto innecesarios; conservar prueba mínima de consentimiento/oposición de manera separada y válida. Los `marketing_consent=True` **anteriores a PR #161 no prueban consentimiento libre** |
+
+### Addendum técnico · tablas del MVP de créditos (25/11/2026)
+
+La decisión aprobada el 02/11/2026 cubría únicamente las 17 tablas entonces inventariadas. Las seis tablas de créditos se incorporan al inventario ORM actual, pero **no heredan esa aprobación**: su finalidad y criterios siguen pendientes de revisión; este addendum no autoriza retención indefinida, borrado, bloqueo ni cambios de producción.
+
+| Tabla ORM | Finalidad / estado actual | Disparador y criterio de revisión | Límite actual; no se aprueba purga |
+|---|---|---|---|
+| `credit_wallets` | Estado de saldo y reservas por usuario | Revisar solo al cerrar cuenta con saldo y reservas a cero y sin revisión abierta | No caducan los créditos; FK RESTRICT; no hay borrado automatizado |
+| `credit_ledger_entries` | Movimientos de abono, reserva, consumo y liberación | Revisión ligada a conciliación y responsabilidades de créditos/pagos | No borrar movimientos abiertos, inciertos o disputados; plazo por decidir |
+| `credit_purchases` | Paquete, importe, estado y referencias de pago | Revisión al cerrar conciliación, reembolso y cualquier disputa | Evidencia económica vinculada; plazo y base por decidir |
+| `credit_stripe_event_receipts` | Deduplificación y evidencia de eventos Stripe | Revisar junto con la compra vinculada y el fin de reintentos | No borrar operaciones abiertas o disputadas |
+| `credit_analyses` | Metadatos vinculables del análisis, huella y corrección | Revisar al resolver soporte, corrección de 30 días y acceso al resultado | No contiene CSV original; no hay purga automatizada ni criterio aprobado |
+| `credit_report_artifacts` | PDF fiscal cifrado para descarga del titular | Vencimiento técnico de 365 días; revisión de su ejecución efectiva | Limpieza oportunista, no programada; cifrado AES-GCM no equivale a supresión |
 
 ### Plazos aplicables fuera del reloj de revisión
 

@@ -5,7 +5,7 @@
 **Fecha de corte:** 28/10/2026.  
 **Repositorio base:** `MarianoSevilla/fiscal-cripto-`, `main@2b360475f2ec2bb9c7a2e032a6db8efc57161d66`.  
 **Fuentes del código:** `fiscal_app_export/models.py`, `app.py::_anonymize_user`, `static/privacidad.html#conservacion`, `communications/`, `fifo_pdf_lifecycle.py`.  
-**Alcance de la comprobación:** modelo ORM (17 tablas), comportamiento de la función de eliminación y texto publicado. **No** auditoría de todas las tablas físicas, copias de seguridad o datos de producción.
+**Alcance de la comprobación:** modelo ORM (23 tablas en el corte de esta revisión), comportamiento de la función de eliminación y texto publicado. **No** auditoría de todas las tablas físicas, copias de seguridad o datos de producción.
 
 ## 1. Conclusión sobre «Eliminar mi cuenta»
 
@@ -20,7 +20,7 @@ La función **desactiva y desidentifica parcialmente** la fila de `users`, **no*
 
 El mensaje de la página `/privacidad#conservacion` ya advierte que la eliminación no borra automáticamente todas las filas relacionadas. No cambiar su texto para prometer borrado global.
 
-## 2. Matriz de las 17 tablas del modelo ORM
+## 2. Matriz de las 23 tablas del modelo ORM
 
 **Lectura:** «Actual» es lo que hace el código al eliminar una cuenta. «Acordar» es una decisión pendiente antes de programar una limpieza. No se fijan plazos legales hipotéticos.
 
@@ -43,8 +43,14 @@ El mensaje de la página `/privacidad#conservacion` ya advierte que la eliminaci
 | `communication_deliveries` | `user_id` opcional, **email copiado**, estado/proveedor/error | Permanece aunque el email de `users` cambie | Evidencia mínima de oposición/entrega, plazo y minimización de diagnósticos de proveedor |
 | `resources` | Catálogo de contenido, ubicación de almacenamiento | Permanece; no es fila personal por defecto | Ciclo editorial independiente; revisar solo campos libres que puedan incorporar datos |
 | `resource_requests` | **Nombre/email**, UID de exchange, Telegram, IP, notas y `marketing_consent`, sin FK a usuario | Permanece por separado; no afectada por eliminar cuenta | Separar entrega del recurso, consentimiento y afiliación; plazos y prueba del consentimiento |
+| `credit_wallets` | Saldo disponible/reservado, bloqueo y usuario titular | Permanece; FK RESTRICT impide borrar la cuenta mientras exista la cartera | Mantener mientras haya créditos, reservas o revisiones pendientes; no hay política aprobada ni purga automática |
+| `credit_ledger_entries` | Movimientos de créditos, deltas, clave de idempotencia y referencia | Permanece; vinculada al usuario y protegida por FK RESTRICT | Evidencia de movimientos y conciliación del saldo; conservar mientras exista responsabilidad sobre créditos/pagos y revisar según obligaciones aplicables; sin purga automática |
+| `credit_purchases` | Paquete, importe, créditos, estado e identificadores de Stripe | Permanece; vinculada al usuario y protegida por FK RESTRICT | Evidencia de compra, pago, devolución y conciliación; acceso restringido y conservación según obligaciones aplicables; sin purga automática |
+| `credit_stripe_event_receipts` | ID/tipo de evento Stripe y compra vinculada | Permanece; evita procesar dos veces un evento mientras exista la compra | Mantener con la evidencia de compra necesaria para idempotencia y conciliación; no purgar eventos de compras abiertas o disputadas |
+| `credit_analyses` | Usuario, exchange, ejercicios, filas, huella de archivos, créditos y vínculo de corrección | Permanece; no almacena los CSV, pero sí metadatos vinculables y una huella | Revisar junto con el expediente, corrección de 30 días, soporte y estado de pago; no hay borrado periódico implementado |
+| `credit_report_artifacts` | PDF adquirido cifrado AES-GCM, versión de clave y vencimiento | El código fija 365 días; elimina de forma oportunista al almacenar otro documento o al intentar descargar uno vencido, no mediante una tarea programada | Dato fiscal de alto impacto; acceso por usuario, conservar solo hasta el vencimiento implementado y verificar la eliminación física conforme a la política aprobada |
 
-**Observación de alcance:** las 17 tablas declaradas en el ORM se comparan con esta matriz mediante una prueba de regresión. Si se incorporan nuevas migraciones, comparar también con el esquema PostgreSQL real antes de actualizar la política.
+**Observación de alcance:** las 23 tablas declaradas en el ORM se comparan con esta matriz mediante una prueba de regresión. Toda nueva tabla requiere finalidad y criterio de conservación documentados antes de actualizar el inventario; comparar también con el esquema PostgreSQL real.
 
 ## 3. Datos fuera de estas tablas
 

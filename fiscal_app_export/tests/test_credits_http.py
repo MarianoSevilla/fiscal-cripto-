@@ -7,9 +7,10 @@ import time
 import base64
 import tempfile
 import os
+from pathlib import Path
 
 import pytest
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, render_template_string
 from flask_login import LoginManager, login_required
 
 from models import db, User, CreditWallet, CreditPurchase, CreditAnalysis
@@ -91,6 +92,26 @@ def _login(client, user_id):
     with client.session_transaction() as sess:
         sess["_user_id"] = str(user_id)
         sess["_fresh"] = True
+
+
+def test_template_pilot_gate_matches_disabled_by_default_server_boundary(web):
+    app, _ = web
+    with app.test_request_context("/"):
+        app.config["CREDITS_ENABLED"] = False
+        assert render_template_string(
+            "{{ credits_pilot_enabled | tojson }}"
+        ) == "false"
+        app.config["CREDITS_ENABLED"] = True
+        assert render_template_string(
+            "{{ credits_pilot_enabled | tojson }}"
+        ) == "true"
+
+
+def test_fifo_tool_ui_has_no_status_poll_for_disabled_credit_pilot():
+    template = Path(__file__).resolve().parents[1] / "templates" / "tool.html"
+    source = template.read_text(encoding="utf-8")
+    assert "creditsPilotEnabled = {{ credits_pilot_enabled | tojson }}" in source
+    assert "fetch('/api/credits/status'" not in source
 
 
 def _file(data=b"Date,Symbol,Amount\n2025-01-01,BTC,1\n"):

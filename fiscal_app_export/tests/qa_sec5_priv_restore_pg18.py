@@ -23,7 +23,9 @@ from sqlalchemy.orm import Session
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from models import db, User, ProcessingError  # noqa: E402
-from sec5_priv_runtime_acl import grant_existing_runtime_acl  # noqa: E402
+from sec5_priv_runtime_acl import (  # noqa: E402
+    grant_existing_runtime_acl, EXPECTED_ORM_TABLES,
+)
 from sec5_priv_recovery_evidence import (  # noqa: E402
     RecoveryEvidenceError, persist_immutable, read_pinned,
 )
@@ -277,7 +279,7 @@ def main():
             "postgresql+psycopg2://postgres:" + PG_PASSWORD +
             "@127.0.0.1:5432/" + DB,
         )
-        assert len(db.Model.metadata.tables) == 17
+        assert set(db.Model.metadata.tables) == EXPECTED_ORM_TABLES
         db.Model.metadata.create_all(engine)
         with Session(engine) as session:
             a = User(email="restore-a@example.invalid", is_active=True)
@@ -468,7 +470,7 @@ def main():
         with _tx() as cur:
             outcome = grant_existing_runtime_acl(
                 cur, login=APP_LOGIN, model_tables=set(db.Model.metadata.tables))
-            assert outcome["orm_tables"] == 17
+            assert outcome["orm_tables"] == len(EXPECTED_ORM_TABLES)
             cur.execute(sql.SQL("GRANT CONNECT ON DATABASE {} TO {}").format(
                 sql.Identifier(DB), sql.Identifier(LEGAL_LOGIN)))
             cur.execute(sql.SQL("GRANT USAGE ON SCHEMA {} TO {}").format(

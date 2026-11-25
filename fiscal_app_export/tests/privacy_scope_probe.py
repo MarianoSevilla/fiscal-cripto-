@@ -10,7 +10,9 @@ from models import (
     FiscalAdvisoryRequest, S01StripeCheckoutAttempt, S01StripeEventReceipt,
     S01StripeNotificationOutbox, FiscalAdvisoryFile, FiscalAdvisoryStatusHistory,
     AdvisoryInternalNote, AdvisoryAuditLog, CommunicationCampaign,
-    CommunicationDelivery, Resource, ResourceRequest,
+    CommunicationDelivery, Resource, ResourceRequest, CreditWallet,
+    CreditLedgerEntry, CreditPurchase, CreditStripeEventReceipt, CreditAnalysis,
+    CreditReportArtifact,
 )
 
 MODELS = (
@@ -18,7 +20,9 @@ MODELS = (
     FiscalAdvisoryRequest, S01StripeCheckoutAttempt, S01StripeEventReceipt,
     S01StripeNotificationOutbox, FiscalAdvisoryFile, FiscalAdvisoryStatusHistory,
     AdvisoryInternalNote, AdvisoryAuditLog, CommunicationCampaign,
-    CommunicationDelivery, Resource, ResourceRequest,
+    CommunicationDelivery, Resource, ResourceRequest, CreditWallet,
+    CreditLedgerEntry, CreditPurchase, CreditStripeEventReceipt, CreditAnalysis,
+    CreditReportArtifact,
 )
 
 # References tied to subject by a verified user ID.
@@ -28,6 +32,10 @@ SUBJECT_FIELDS = {
     FiscalAdvisoryRequest: ("user_id",),
     FiscalAdvisoryFile: ("user_id",),
     CommunicationDelivery: ("user_id",),
+    CreditWallet: ("user_id",),
+    CreditLedgerEntry: ("user_id",),
+    CreditPurchase: ("user_id",),
+    CreditAnalysis: ("user_id",),
 }
 
 # References to the user AS an actor/employee; never claim these are
@@ -127,6 +135,12 @@ def inventory_verified_user_synthetic(session, *, user_id, original_email):
             (FiscalAdvisoryStatusHistory, FiscalAdvisoryStatusHistory.request_id.in_(case_ids)),
             (AdvisoryInternalNote, AdvisoryInternalNote.request_id.in_(case_ids)),
             (AdvisoryAuditLog, AdvisoryAuditLog.request_id.in_(case_ids)),  # No FK, candidate only
+            (CreditStripeEventReceipt, CreditStripeEventReceipt.purchase_id.in_(
+                select(CreditPurchase.id).where(CreditPurchase.user_id == user_id)
+            )),
+            (CreditReportArtifact, CreditReportArtifact.analysis_id.in_(
+                select(CreditAnalysis.id).where(CreditAnalysis.user_id == user_id)
+            )),
         )
         for model, condition in descendant_conditions:
             result["indirect_case_refs"][model.__tablename__] = (

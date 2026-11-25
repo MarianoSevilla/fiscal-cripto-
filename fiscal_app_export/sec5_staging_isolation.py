@@ -11,6 +11,7 @@ import os
 import sys
 
 from sqlalchemy.engine import make_url
+from sec5_priv_runtime_acl import EXPECTED_ORM_TABLES
 
 STAGING_ENV_ID = "b2937140-78f7-4347-a9bc-c96333e03b9b"
 STAGING_SERVICE_ID = "3eecda71-9f53-4b33-a308-887d835b7fce"
@@ -80,7 +81,7 @@ def validate_runtime_acl(role_row: tuple, grants: list[tuple], model_tables: set
     # any role membership
     if tuple(role_row) != expected_role:
         raise StagingIsolationError("runtime role not least-privileged")
-    if len(model_tables) != 17:
+    if model_tables != EXPECTED_ORM_TABLES:
         raise StagingIsolationError("ORM table inventory changed")
     records = {t: (s, i, u, d) for t, s, i, u, d in grants}
     if len(records) != len(grants):
@@ -142,7 +143,7 @@ def verify_readonly() -> None:
                 print(
                     "SEC5 STAGING ISOLATION: PASS "
                     "(PostgreSQL18, read-only, staging-only hostname, "
-                    "providers disabled, limited_role=verified, 17 ORM ACL)",
+                    f"providers disabled, limited_role=verified, {len(EXPECTED_ORM_TABLES)} reviewed ORM ACL)",
                     flush=True,
                 )
             finally:

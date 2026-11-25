@@ -38,6 +38,12 @@ def _pilot_ready() -> bool:
                 and (current_app.config.get("STRIPE_CREDITS_TEST_WEBHOOK_SECRET") or "").strip().startswith("whsec_"))
 
 
+@credits_bp.app_context_processor
+def _credits_template_context():
+    """Render the same server-side readiness gate used by the API boundary."""
+    return {"credits_pilot_enabled": _pilot_ready()}
+
+
 def _csrf_ok() -> bool:
     token = request.headers.get("X-Credits-CSRF", "")
     expected = session.get(_CSRF_SESSION_KEY, "")

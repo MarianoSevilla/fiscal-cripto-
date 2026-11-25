@@ -22,7 +22,7 @@ def test_ci_only_record_rehearsal_cannot_be_an_application_endpoint():
         'host="127.0.0.1"',
         'CREATE DATABASE {}',
         'DROP DATABASE {} WITH (FORCE)',
-        'len(model_tables) == 17',
+        'model_tables == EXPECTED_ORM_TABLES',
         'grant_existing_runtime_acl(',
         'inject_failure=True',
         'inject_failure_after_delete=True',

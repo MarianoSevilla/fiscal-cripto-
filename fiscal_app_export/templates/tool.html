@@ -661,11 +661,9 @@
 
 <script>
   const EXCHANGE_PAGE = '{{ exchange_id }}';
-  let creditsPilotEnabled = false;
-  const creditsStatusReady = fetch('/api/credits/status', { credentials: 'same-origin' })
-    .then(r => r.ok ? r.json() : null)
-    .then(data => { creditsPilotEnabled = data?.enabled === true; })
-    .catch(() => { creditsPilotEnabled = false; });
+  // La misma puerta de configuración del servidor evita llamadas de estado
+  // al piloto cuando está desactivado. El recorrido FIFO gratuito no cambia.
+  const creditsPilotEnabled = {{ credits_pilot_enabled | tojson }};
   const CSV_DIAG_ENABLED = {{ 'true' if csv_diag_allowed else 'false' }};
   let failedDiagnosticFiles = [];
   let tokenPdfFifo = null;
@@ -2089,7 +2087,6 @@
   }
 
   async function authorizeCreditAnalysis(files, exchange, years) {
-    await creditsStatusReady;
     if (!creditsPilotEnabled) return null;
     const quoteForm = new FormData();
     quoteForm.append('exchange', exchange);

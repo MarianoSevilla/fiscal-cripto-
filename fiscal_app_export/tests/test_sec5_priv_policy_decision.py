@@ -1,9 +1,13 @@
 """Control documental SEC5-PRIV: contrato de decisión, sin acceso a usuarios ni DB."""
 import re
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 POLICY = ROOT.parent / "docs" / "security" / "SEC5_PRIV_POLITICA_PARA_APROBACION_20261101.md"
+from models import db
+from sec5_priv_runtime_acl import EXPECTED_ORM_TABLES
 
 
 def _policy():
@@ -14,8 +18,12 @@ def test_policy_covers_exactly_every_orm_table():
     orm = (ROOT / "models.py").read_text(encoding="utf-8")
     actual = set(re.findall(r'^\s+__tablename__\s*=\s*"([a-z0-9_]+)"', orm, flags=re.M))
     rows = re.findall(r'^\| `([a-z0-9_]+)` \|', _policy(), flags=re.M)
-    assert len(rows) == len(set(rows)) == len(actual) == 17
+    assert len(rows) == len(set(rows)) == len(actual)
     assert set(rows) == actual
+
+
+def test_runtime_acl_allowlist_matches_current_orm_names():
+    assert set(db.Model.metadata.tables) == EXPECTED_ORM_TABLES
 
 
 def test_policy_is_not_authorization_for_retention_or_erasure():

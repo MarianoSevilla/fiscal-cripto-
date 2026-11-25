@@ -63,13 +63,12 @@ def test_blocking_document_preserves_exceptions_and_avoids_misleading_flags():
     assert "no despliega" in note
 
 
-def test_both_documents_do_not_drop_the_17_table_scope():
+def test_current_policy_covers_the_complete_orm_table_inventory():
     note = PROVIDERS.read_text(encoding="utf-8")
     policy = POLICY.read_text(encoding="utf-8")
     source = (ROOT / "models.py").read_text(encoding="utf-8")
     names = set(re.findall(r'^\s+__tablename__\s*=\s*"([a-z0-9_]+)"', source, flags=re.M))
     rows = re.findall(r'^\| `([a-z0-9_]+)` \|', policy, flags=re.M)
-    assert len(names) == 17
     assert len(rows) == len(names)
     assert set(rows) == names
     assert "17 tablas ORM" in note

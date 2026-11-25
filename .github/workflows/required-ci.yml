@@ -161,7 +161,7 @@ jobs:
           SEC5_PRIV_PREFLIGHT_PG18_ONLY: "1"
         run: python fiscal_app_export/tests/qa_sec5_priv_role_preflight_pg18.py
 
-      - name: SEC5-PRIV exact 17-table runtime GRANTs and full PostgreSQL 18 Flask smoke
+      - name: SEC5-PRIV exact reviewed ORM runtime GRANTs and full PostgreSQL 18 Flask smoke
         env:
           SEC5_RUNTIME_ACL_CI_ONLY: "1"
         run: python fiscal_app_export/tests/qa_sec5_runtime_grants_pg18.py
