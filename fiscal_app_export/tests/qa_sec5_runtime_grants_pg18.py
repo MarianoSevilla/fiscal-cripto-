@@ -112,7 +112,7 @@ def _negative_privileges(password, tables):
         assert cur.fetchone() == (False, False, False, False, False,
                                   False, False, True)
         cur.execute("SELECT version_num FROM public.alembic_version")
-        assert cur.fetchone() == ("z9a0b1c2d3e4",)
+        assert cur.fetchone() == ("a2b3c4d5e6f7",)
         _deny(cur, "DELETE FROM public.alembic_version")
         _deny(cur, "TRUNCATE TABLE public.contactos")
         _deny(cur, "CREATE TABLE public.sec5_unauthorized_ci (id integer)")

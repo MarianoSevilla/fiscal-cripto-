@@ -361,6 +361,7 @@
       Descargar PDF
     </a>
   </div>
+  <p id="creditsUsageNotice" role="status" aria-live="polite" hidden></p>
 
   <!-- ESTADO VACÍO -->
   <div class="empty-state" id="emptyState">
@@ -660,9 +661,16 @@
 
 <script>
   const EXCHANGE_PAGE = '{{ exchange_id }}';
+  let creditsPilotEnabled = false;
+  const creditsStatusReady = fetch('/api/credits/status', { credentials: 'same-origin' })
+    .then(r => r.ok ? r.json() : null)
+    .then(data => { creditsPilotEnabled = data?.enabled === true; })
+    .catch(() => { creditsPilotEnabled = false; });
   const CSV_DIAG_ENABLED = {{ 'true' if csv_diag_allowed else 'false' }};
   let failedDiagnosticFiles = [];
   let tokenPdfFifo = null;
+  let creditDiagnosticDownloadUrl = null;
+  let creditCorrectionOf = null;
   let provisionalFifo = null;
   const BIT2ME_EXCEL_ENABLED = {{ 'true' if bit2me_excel_enabled else 'false' }};
   let selectedExchange = EXCHANGE_PAGE || 'binance';
@@ -1026,29 +1034,32 @@
   // para que nadie pueda sustituir los resultados por cifras falsas.
   let borradorBinance = null;
   let tokenPdfBinance = null;
-  function renderBorradorBinance(datos, token) {
+  let creditBinanceDownloadUrl = null;
+  function renderBorradorBinance(datos, token, downloadUrl) {
     if (EXCHANGE_PAGE !== 'binance') return;
     borradorBinance = datos && datos.no_es_informe_fiscal === true
       && datos.estado === 'INCOMPLETO_NO_APTO_PARA_DECLARAR' ? datos : null;
     tokenPdfBinance = borradorBinance && typeof token === 'string' ? token : null;
+    creditBinanceDownloadUrl = borradorBinance && typeof downloadUrl === 'string' ? downloadUrl : null;
     const finalButton = document.getElementById('binanceDiagnosticoPdf');
-    if (finalButton) finalButton.disabled = !tokenPdfBinance;
+    if (finalButton) finalButton.disabled = !tokenPdfBinance && !creditBinanceDownloadUrl;
   }
 
   async function descargarDiagnosticoBinance(button) {
-    if (!tokenPdfBinance) return;
+    if (!tokenPdfBinance && !creditBinanceDownloadUrl) return;
     const feedback = document.getElementById('binancePdfFeedback');
     button.disabled = true;
     const originalLabel = button.textContent;
     button.textContent = 'Preparando PDF…';
     if (feedback) feedback.textContent = '';
     try {
-      const response = await fetch('/api/binance/diagnostico-pdf', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: tokenPdfBinance })
-      });
+      const response = creditBinanceDownloadUrl
+        ? await fetch(creditBinanceDownloadUrl, { credentials: 'same-origin' })
+        : await fetch('/api/binance/diagnostico-pdf', {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: tokenPdfBinance })
+          });
       if (!response.ok) {
         const json = await response.json().catch(() => ({}));
         if (feedback) feedback.textContent =
@@ -1545,16 +1556,18 @@
   showState('empty');
 
   async function descargarDiagnosticoFifo() {
-    if (!tokenPdfFifo) return;
+    if (!tokenPdfFifo && !creditDiagnosticDownloadUrl) return;
     const button = document.getElementById('fifoProvisionalPdf');
     const feedback = document.getElementById('fifoProvisionalFeedback');
     button.disabled = true;
     try {
-      const response = await fetch('/api/fifo/diagnostico-pdf', {
-        method: 'POST', credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: tokenPdfFifo }),
-      });
+      const response = creditDiagnosticDownloadUrl
+        ? await fetch(creditDiagnosticDownloadUrl, { credentials: 'same-origin' })
+        : await fetch('/api/fifo/diagnostico-pdf', {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: tokenPdfFifo }),
+          });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         feedback.textContent = data.error || 'No se pudo descargar el diagnóstico. Repite el análisis.';
@@ -1579,7 +1592,9 @@
 
   function renderProvisionalFifo(data) {
     provisionalFifo = data.borrador_fifo || {};
+    creditCorrectionOf = data.credit_correction_used ? null : (data.credit_analysis_id || null);
     tokenPdfFifo = typeof data.token_pdf_diagnostico_fifo === 'string' ? data.token_pdf_diagnostico_fifo : null;
+    creditDiagnosticDownloadUrl = typeof data.download_url === 'string' ? data.download_url : null;
     const report = provisionalFifo;
     document.getElementById('fifoProvisionalReason').textContent = report.pendientes?.[0]?.descripcion || data.error || '';
     document.getElementById('fifoProvisionalScope').textContent = report.alcance_descripcion || 'El alcance de los datos no está acreditado.';
@@ -1597,7 +1612,9 @@
       const li = document.createElement('li'); li.textContent = `${label}: ${value.toLocaleString('es-ES')} (registros clasificados; no prueba integridad)`; facts.appendChild(li);
     }
     document.getElementById('fifoProvisionalPdf').disabled = !tokenPdfFifo;
-    document.getElementById('fifoProvisionalFeedback').textContent = '';
+    document.getElementById('fifoProvisionalFeedback').textContent = Number.isInteger(data.credits_charged)
+      ? `Análisis completado: ${data.credits_charged} créditos consumidos. Puedes descargar de nuevo este diagnóstico durante 12 meses sin coste adicional.`
+      : '';
   }
   const fifoPdfButton = document.getElementById('fifoProvisionalPdf');
   if (fifoPdfButton) fifoPdfButton.addEventListener('click', descargarDiagnosticoFifo);
@@ -1740,6 +1757,13 @@
   function renderResultados(data) {
     allData = data;
     añoActivo = 'todos';
+    const creditsNotice = document.getElementById('creditsUsageNotice');
+    if (creditsNotice) {
+      creditsNotice.hidden = !Number.isInteger(data.credits_charged);
+      creditsNotice.textContent = Number.isInteger(data.credits_charged)
+        ? `Análisis completado: ${data.credits_charged} créditos consumidos. Puedes volver a descargar este PDF durante 12 meses sin coste adicional.`
+        : '';
+    }
 
     // Selector de año (solo si hay más de un año en las operaciones)
     const años = [...new Set(data.operaciones.map(op => op.fecha.slice(0, 4)))].sort();
@@ -2056,6 +2080,70 @@
     }
   });
 
+  function newCreditIdempotencyKey() {
+    if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+    const bytes = new Uint8Array(16); window.crypto.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40; bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = [...bytes].map(x => x.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+  }
+
+  async function authorizeCreditAnalysis(files, exchange, years) {
+    await creditsStatusReady;
+    if (!creditsPilotEnabled) return null;
+    const quoteForm = new FormData();
+    quoteForm.append('exchange', exchange);
+    quoteForm.append('fiscal_years', years || 'all');
+    if (creditCorrectionOf) quoteForm.append('correction_of_id', creditCorrectionOf);
+    files.forEach(file => quoteForm.append('csv', file));
+    const quoteResponse = await fetch('/api/credits/quote', {
+      method: 'POST', credentials: 'same-origin', body: quoteForm,
+    });
+    const quote = await quoteResponse.json().catch(() => ({}));
+    if (!quoteResponse.ok) throw new Error(quote.error || 'No se ha podido cotizar el análisis.');
+    if (quote.already_acquired && quote.download_url) {
+      const reuse = window.confirm(quote.message + '\n\n¿Descargarlo ahora?');
+      if (reuse) window.location.assign(quote.download_url);
+      return null;
+    }
+    if (quote.balance.available < quote.max_credits) {
+      const choice = window.prompt(
+        `Saldo insuficiente: tienes ${quote.balance.available} créditos y este análisis puede consumir hasta ${quote.max_credits}.\n` +
+        'Paquetes disponibles: 1 Básico (110 créditos, 15,90 €), 2 Estándar (230, 29,90 €), 3 Avanzado (460, 49,90 €).\n' +
+        'Escribe 1, 2 o 3 para abrir el Checkout de prueba. No hay cobros reales.'
+      );
+      const packageKey = ({ '1': 'basic', '2': 'standard', '3': 'advanced' })[choice];
+      if (!packageKey) return null;
+      const csrf = await fetch('/api/credits/csrf', { credentials: 'same-origin' }).then(r => r.json());
+      const purchaseResponse = await fetch(`/api/credits/purchases/${packageKey}`, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'X-Credits-CSRF': csrf.csrf_token, 'Idempotency-Key': newCreditIdempotencyKey() },
+      });
+      const purchase = await purchaseResponse.json().catch(() => ({}));
+      if (!purchaseResponse.ok || !purchase.checkout_url) throw new Error(purchase.error || 'No se pudo iniciar Checkout.');
+      window.location.assign(purchase.checkout_url);
+      return null;
+    }
+    const consent = window.confirm(
+      (quote.correction_free
+        ? 'Esta es tu corrección gratuita dentro del plazo de 30 días.\nNo se consumirán créditos.\n'
+        : `Presupuesto máximo: ${quote.max_credits} créditos (${quote.row_credits} por volumen + ${quote.complexity_credits} por archivos adicionales).\nSaldo disponible: ${quote.balance.available}.\n` +
+          'Se consumen si el análisis termina con un resultado definitivo o provisional útil. Los errores restituyen la reserva.\n') +
+      '¿Autorizas el análisis?'
+    );
+    if (!consent) return null;
+    const csrf = await fetch('/api/credits/csrf', { credentials: 'same-origin' }).then(r => r.json());
+    const authResponse = await fetch('/api/credits/authorize', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-Credits-CSRF': csrf.csrf_token,
+                 'Idempotency-Key': newCreditIdempotencyKey() },
+      body: JSON.stringify({ quote_token: quote.quote_token }),
+    });
+    const authorization = await authResponse.json().catch(() => ({}));
+    if (!authResponse.ok || !authorization.analysis_id) throw new Error(authorization.error || 'No se pudo reservar el saldo.');
+    return authorization.analysis_id;
+  }
+
   // ── SUBMIT ───────────────────────────────
   btnAnalizar.addEventListener('click', async () => {
     if (isKucoinPage) {
@@ -2104,6 +2192,17 @@
     const ejercicioVal = getEjercicioValue();
     console.log('[FIFO] Enviando ejercicio:', ejercicioVal || '(todos)');
 
+    let creditAnalysisId = null;
+    try {
+      const filesForQuote = isMultiPage ? selectedFiles : [selectedFile];
+      const exchangeForQuote = EXCHANGE_PAGE || selectedExchange;
+      creditAnalysisId = await authorizeCreditAnalysis(filesForQuote, exchangeForQuote, ejercicioVal || 'all');
+      if (creditsPilotEnabled && !creditAnalysisId) return;
+    } catch (creditError) {
+      mostrarErrorApi(creditError.message || 'No se ha podido autorizar el análisis.');
+      showState('error'); actualizarBoton(); return;
+    }
+
     btnAnalizar.disabled = true;
     btnText.textContent  = 'Procesando…';
     hideDownload();
@@ -2125,6 +2224,7 @@
       formData.append('csv', selectedFile);
       formData.append('exchange', selectedExchange);
     }
+    if (creditAnalysisId) formData.append('credit_analysis_id', creditAnalysisId);
 
     try {
       const res  = await fetch(endpoint, { method: 'POST', body: formData, credentials: 'include' });
@@ -2152,8 +2252,13 @@
       if (EXCHANGE_PAGE === 'binance' && res.status === 422
           && data.borrador_binance?.no_es_informe_fiscal === true
           && data.borrador_binance?.estado === 'INCOMPLETO_NO_APTO_PARA_DECLARAR') {
-        renderBorradorBinance(data.borrador_binance, data.token_pdf_diagnostico);
+        creditCorrectionOf = data.credit_correction_used ? null : (data.credit_analysis_id || null);
+        renderBorradorBinance(data.borrador_binance, data.token_pdf_diagnostico, data.download_url);
         renderBinanceResultadoIncompleto(data);
+        if (Number.isInteger(data.credits_charged)) {
+          const feedback = document.getElementById('binancePdfFeedback');
+          if (feedback) feedback.textContent = `Análisis provisional completado: ${data.credits_charged} créditos consumidos. El PDF se puede descargar de nuevo durante 12 meses.`;
+        }
         showState('incomplete');
         // Conservar los archivos anteriores para adjuntar nuevas exportaciones.
         appendBinanceFiles = true;
@@ -2163,20 +2268,21 @@
       }
 
       if (!res.ok || !data.ok) {
-        mostrarErrorApi(data.error, res.status === 429 ? {
+        mostrarErrorApi([data.error, data.credit_message].filter(Boolean).join(' '), res.status === 429 ? {
           status: res.status,
           body: data.retry_after_seconds,
           header: res.headers.get('Retry-After'),
         } : null, res.status);
         if (EXCHANGE_PAGE === 'binance') {
           renderBinancePendientes(data.diagnostico_binance);
-          renderBorradorBinance(data.borrador_binance, data.token_pdf_diagnostico);
+          renderBorradorBinance(data.borrador_binance, data.token_pdf_diagnostico, data.download_url);
         }
         showState('error');
         if (![401, 403, 409, 413, 429].includes(res.status)) {
           offerDiagnostic(isMultiPage ? selectedFiles : [selectedFile]);
         }
-      const canRetrySameFiles = res.status === 429 || res.status >= 500;
+      const creditStateUnknown = String(data.credit_message || '').includes('No se ha podido confirmar el estado');
+      const canRetrySameFiles = !creditStateUnknown && (res.status === 429 || res.status >= 500);
         if (!canRetrySameFiles) {
           selectedFile = null; csvInput.value = ''; hideFile();
           fileName.textContent = '—'; btnAnalizar.disabled = true;
@@ -2189,7 +2295,7 @@
 
       currentToken = data.token;
       renderResultados(data);
-      btnDownload.href     = `/api/descargar/${currentToken}?exchange=${selectedExchange}`;
+      btnDownload.href     = data.download_url || `/api/descargar/${currentToken}?exchange=${selectedExchange}`;
       btnDownload.download = `informe_fiscal_cripto_${selectedExchange}.pdf`;
       showDownload();
       showNuevo();

@@ -232,6 +232,15 @@ if not _db_url.startswith("sqlite"):
     _engine_opts["connect_args"] = {"connect_timeout": 5}
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = _engine_opts
 
+# FIFO credits remain unavailable unless explicitly enabled in test mode.
+# In particular, a live Stripe key can never satisfy the pilot's mode gate.
+app.config["CREDITS_ENABLED"] = os.environ.get("FIFO_CREDITS_ENABLED", "false").lower() == "true"
+app.config["CREDITS_TEST_MODE"] = os.environ.get("FIFO_CREDITS_TEST_MODE", "false").lower() == "true"
+app.config["STRIPE_CREDITS_TEST_SECRET"] = os.environ.get("STRIPE_CREDITS_TEST_SECRET", "")
+app.config["STRIPE_CREDITS_TEST_WEBHOOK_SECRET"] = os.environ.get("STRIPE_CREDITS_TEST_WEBHOOK_SECRET", "")
+app.config["FIFO_CREDITS_REPORT_KEY"] = os.environ.get("FIFO_CREDITS_REPORT_KEY", "")
+app.config["APP_BASE_URL"] = os.environ.get("APP_BASE_URL", "https://www.marianosevilla.com").rstrip("/")
+
 # Tamaño máximo de payload global — corta uploads gigantes antes de llegar a disco.
 # Los CSV válidos son <10 MB; los ficheros de asesoramiento tienen su propio check a 10 MB.
 # Flask devuelve 413 automáticamente si se supera este límite.
@@ -251,6 +260,9 @@ migrate = Migrate(app, db)
 # ── BLUEPRINTS ────────────────────────────────
 from communications import comms_bp          # noqa: E402
 app.register_blueprint(comms_bp)
+from credits_routes import credits_bp, register_analysis_hooks  # noqa: E402
+app.register_blueprint(credits_bp)
+register_analysis_hooks(app)
 
 # ── RESEND (email) ────────────────────────────
 resend.api_key = os.environ.get("RESEND_API_KEY", "")

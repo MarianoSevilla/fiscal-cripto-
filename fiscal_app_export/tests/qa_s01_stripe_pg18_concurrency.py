@@ -27,8 +27,10 @@ sys.path.insert(0, str(APP_DIR))
 from models import (  # noqa: E402
     db, FiscalAdvisoryRequest, FiscalAdvisoryStatusHistory,
     S01StripeCheckoutAttempt, S01StripeEventReceipt,
-    S01StripeNotificationOutbox,
+    S01StripeNotificationOutbox, User, CreditWallet, CreditAnalysis,
+    CreditLedgerEntry,
 )
+from credit_ledger import reserve_analysis, balance, CreditError  # noqa: E402
 
 DB_NAME = "s01_concurrency_pg18_ci"
 CI_USER = "postgres"
@@ -325,6 +327,114 @@ def _rollback_probe():
     _verify(item, receipts=1, status="paid_received")
 
 
+def _credit_reservation_worker(barrier, result_queue, *, user_id, key, amount,
+                               fingerprint_data=None):
+    """Race the same/different idempotency keys against actual PG row locks."""
+    try:
+        _guard()
+        app = _app()
+        with app.app_context():
+            barrier.wait(timeout=15)
+            try:
+                analysis = reserve_analysis(
+                    user_id=user_id, idempotency_key=key, exchange="binance",
+                    fiscal_years="2025", csv_rows=442, file_count=1,
+                    file_fingerprint=hashlib.sha256(
+                        (fingerprint_data if fingerprint_data is not None else key).encode()
+                    ).hexdigest(),
+                    max_credits=amount,
+                )
+                result_queue.put(("ok", analysis.id, balance(user_id)))
+            except CreditError as exc:
+                db.session.rollback()
+                category = "duplicate" if "idéntico" in str(exc) else "insufficient"
+                result_queue.put((category, "", balance(user_id)))
+            finally:
+                db.session.remove(); db.engine.dispose()
+    except Exception as exc:
+        result_queue.put(("error", type(exc).__name__ + ": " + str(exc)[:200], {}))
+
+
+def _run_credit_pair(*, user_id, keys, amounts, fingerprint_data=None):
+    ctx = mp.get_context("spawn")
+    barrier = ctx.Barrier(2); results = ctx.Queue()
+    procs = [
+        ctx.Process(target=_credit_reservation_worker,
+                    args=(barrier, results), kwargs={"user_id": user_id,
+                                                     "key": keys[i],
+                                                     "amount": amounts[i],
+                                                     "fingerprint_data": (
+                                                         fingerprint_data[i]
+                                                         if fingerprint_data else None)})
+        for i in range(2)
+    ]
+    for proc in procs: proc.start()
+    try:
+        for proc in procs:
+            proc.join(timeout=25)
+            if proc.is_alive():
+                proc.terminate(); proc.join(timeout=5)
+                raise AssertionError("Deadlock/timeout in concurrent credit reserve")
+            if proc.exitcode != 0:
+                raise AssertionError("Credit reserve worker exited with error")
+        observed = [results.get(timeout=3) for _ in procs]
+        if any(row[0] == "error" for row in observed):
+            raise AssertionError(f"Credit reserve PG18 worker failure: {observed!r}")
+        return observed
+    finally:
+        for proc in procs:
+            if proc.is_alive(): proc.kill(); proc.join(timeout=5)
+        results.close(); results.join_thread()
+
+
+def _credit_concurrency_probe():
+    user = User(email="credits-pg18@example.invalid", is_active=True)
+    db.session.add(user); db.session.flush()
+    db.session.add(CreditWallet(user_id=user.id, available_credits=100))
+    db.session.commit()
+    user_id = user.id
+    db.session.remove()
+
+    # Same idempotency key must create one reservation and one ledger event.
+    result = _run_credit_pair(user_id=user_id,
+                              keys=("same-analysis-key", "same-analysis-key"),
+                              amounts=(30, 30))
+    assert all(x[0] == "ok" for x in result), result
+    assert result[0][1] == result[1][1], result
+    db.session.remove()
+    assert CreditAnalysis.query.filter_by(user_id=user_id).count() == 1
+    assert CreditLedgerEntry.query.filter_by(user_id=user_id, entry_type="reserve").count() == 1
+    assert balance(user_id) == {"available": 70, "reserved": 30, "frozen": False}
+
+    # Distinct simultaneous reservations cannot spend the same remaining 70.
+    result = _run_credit_pair(user_id=user_id,
+                              keys=("analysis-race-a", "analysis-race-b"),
+                              amounts=(50, 50))
+    assert sorted(x[0] for x in result) == ["insufficient", "ok"], result
+    db.session.remove()
+    assert balance(user_id) == {"available": 20, "reserved": 80, "frozen": False}
+    assert CreditAnalysis.query.filter_by(user_id=user_id).count() == 2
+
+    # Different browser idempotency keys for the identical file set must not
+    # bypass the same-report duplicate guard under concurrent requests.
+    duplicate_user = User(email="credits-duplicate-pg18@example.invalid", is_active=True)
+    db.session.add(duplicate_user); db.session.flush()
+    db.session.add(CreditWallet(user_id=duplicate_user.id, available_credits=100))
+    db.session.commit(); duplicate_user_id = duplicate_user.id
+    db.session.remove()
+    result = _run_credit_pair(
+        user_id=duplicate_user_id,
+        keys=("same-file-tab-a", "same-file-tab-b"), amounts=(30, 30),
+        fingerprint_data=("same-file-set", "same-file-set"),
+    )
+    assert sorted(row[0] for row in result) == ["duplicate", "ok"], result
+    db.session.remove()
+    assert CreditAnalysis.query.filter_by(user_id=duplicate_user_id).count() == 1
+    assert CreditLedgerEntry.query.filter_by(
+        user_id=duplicate_user_id, entry_type="reserve").count() == 1
+    assert balance(duplicate_user_id) == {"available": 70, "reserved": 30, "frozen": False}
+
+
 def main():
     _guard()
     _create_test_database()
@@ -378,13 +488,15 @@ def main():
             ]
             _verify(uncertain, receipts=0, status="quote_sent")
             _rollback_probe()
+            _credit_concurrency_probe()
 
             db.session.remove()
             db.engine.dispose()
         print(
             "S01 PG18: same-event race PASS; different-event same-PI PASS; "
             "conflicting PaymentIntents PASS; uncertain-state blocking PASS; "
-            "transaction rollback and retry PASS (synthetic-only)",
+            "transaction rollback and retry PASS; credit same-key idempotency "
+            "and competing balance reservations PASS (synthetic-only)",
             flush=True,
         )
     finally:

@@ -18,7 +18,7 @@ HOST = "127.0.0.1"
 PORT = 5432
 USER = "postgres"
 PASSWORD = "ci-only-test-password"
-HEAD = "z9a0b1c2d3e4"  # S01 TEST outbox schema (dependent on PR #39)
+HEAD = "a2b3c4d5e6f7"  # FIFO credit pilot ledger
 
 
 def _create_db(name: str) -> str:

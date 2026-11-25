@@ -16,11 +16,17 @@ from sqlalchemy import inspect, text
 from app import app, db
 
 
-EXPECTED_HEAD = "z9a0b1c2d3e4"
+EXPECTED_HEAD = "a2b3c4d5e6f7"
 SCHEMA_TABLES = (
     "s01_stripe_checkout_attempts",
     "s01_stripe_event_receipts",
     "s01_stripe_notification_outbox",
+    "credit_wallets",
+    "credit_ledger_entries",
+    "credit_purchases",
+    "credit_stripe_event_receipts",
+    "credit_analyses",
+    "credit_report_artifacts",
 )
 REQUIRED_COLUMNS = (
     "rafa_fee_cents",
@@ -44,8 +50,33 @@ REQUIRED_CONSTRAINTS = {
         "ck_s01_outbox_kind",
         "ck_s01_outbox_status",
     },
+    "credit_wallets": {
+        "credit_wallets_pkey", "ck_credit_wallet_available",
+        "ck_credit_wallet_reserved",
+    },
+    "credit_ledger_entries": {
+        "credit_ledger_entries_pkey", "ck_credit_ledger_nonzero",
+        "credit_ledger_entries_idempotency_key_key",
+    },
+    "credit_purchases": {
+        "credit_purchases_pkey", "credit_purchases_idempotency_key_key",
+        "credit_purchases_checkout_session_id_key", "credit_purchases_stripe_event_id_key",
+        "ck_credit_purchase_status", "ck_credit_purchase_amount_credits",
+        "ck_credit_purchase_currency",
+    },
+    "credit_stripe_event_receipts": {"credit_stripe_event_receipts_pkey"},
+    "credit_analyses": {
+        "credit_analyses_pkey", "ck_credit_analysis_status",
+        "ck_credit_analysis_amounts", "uq_credit_analysis_user_key",
+        "uq_credit_analysis_free_correction",
+    },
+    "credit_report_artifacts": {"credit_report_artifacts_pkey"},
 }
-REQUIRED_INDEXES = {"ix_s01_attempt_status", "ix_s01_outbox_status"}
+REQUIRED_INDEXES = {
+    "ix_s01_attempt_status", "ix_s01_outbox_status",
+    "ix_credit_ledger_user_created", "ix_credit_purchases_user_id",
+    "ix_credit_analysis_user_created", "ix_credit_report_artifacts_expires_at",
+}
 
 
 class StartupSchemaError(RuntimeError):
@@ -57,7 +88,7 @@ def _migration_head() -> str:
     cfg.set_main_option("script_location", str(Path(__file__).resolve().parent / "migrations"))
     heads = ScriptDirectory.from_config(cfg).get_heads()
     if tuple(heads) != (EXPECTED_HEAD,):
-        raise StartupSchemaError("migration graph is not the approved S01 single head")
+        raise StartupSchemaError("migration graph is not the approved application single head")
     return EXPECTED_HEAD
 
 
@@ -86,7 +117,7 @@ def verify_schema_readonly() -> None:
 
                 versions = conn.execute(text("SELECT version_num FROM public.alembic_version")).scalars().all()
                 if versions != [expected]:
-                    raise StartupSchemaError("database revision does not match approved S01 head")
+                    raise StartupSchemaError("database revision does not match approved application head")
 
                 for table, model in db.metadata.tables.items():
                     known_columns = {
@@ -120,7 +151,8 @@ def verify_schema_readonly() -> None:
                             "SELECT indexname FROM pg_indexes "
                             "WHERE schemaname = 'public' AND tablename IN "
                             "('s01_stripe_checkout_attempts', 's01_stripe_event_receipts', "
-                            "'s01_stripe_notification_outbox')"
+                            "'s01_stripe_notification_outbox', 'credit_ledger_entries', "
+                            "'credit_purchases', 'credit_analyses', 'credit_report_artifacts')"
                         )
                     ).all()
                 }
@@ -134,11 +166,11 @@ def verify_schema_readonly() -> None:
 # Explicit fixed taxonomy; never print arbitrary exceptions from SQLAlchemy
 # because DBAPI errors can contain connection strings and client data.
 _SAFE_FAILURE_CODES = {
-    "migration graph is not the approved S01 single head": "GRAPH",
+    "migration graph is not the approved application single head": "GRAPH",
     "PostgreSQL is required for this startup gate": "DATABASE",
     "database inspection is not read-only": "READONLY",
     "required application tables are absent": "TABLES",
-    "database revision does not match approved S01 head": "REVISION",
+    "database revision does not match approved application head": "REVISION",
     "model columns are missing from PostgreSQL": "COLUMNS",
     "required advisory breakdown columns missing": "ADVISORY_COLUMNS",
     "S01 financial integrity constraints missing": "CONSTRAINTS",

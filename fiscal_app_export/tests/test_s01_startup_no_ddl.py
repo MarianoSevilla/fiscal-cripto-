@@ -35,7 +35,7 @@ def test_procfile_only_verifies_schema_before_gunicorn():
 
 def test_startup_gate_remains_readonly_and_exact_revision():
     source = GATE.read_text(encoding="utf-8")
-    assert "EXPECTED_HEAD = \"z9a0b1c2d3e4\"" in source
+    assert "EXPECTED_HEAD = \"a2b3c4d5e6f7\"" in source
     assert "SET TRANSACTION READ ONLY" in source
     assert "transaction.rollback()" in source
     assert "REQUIRED_CONSTRAINTS" in source
