@@ -15,6 +15,7 @@ import tempfile
 from datetime import datetime
 
 import openpyxl
+import pdfplumber
 import pytest
 
 _TEST_DB = tempfile.NamedTemporaryFile(suffix=".db", delete=False).name
@@ -139,6 +140,16 @@ def test_off_csv_informe_fiscal_sigue_funcionando(client, usuario, flag_off):
     assert body["ok"] is True
     assert body["resumen"]["operaciones_con_resultado"] == 1
     assert body.get("estimacion") is False
+    download = client.get("/api/descargar/" + body["token"] + "?exchange=bit2me")
+    assert download.status_code == 200
+    with pdfplumber.open(io.BytesIO(download.data)) as document:
+        report_text = " ".join(
+            (page.extract_text() or "") for page in document.pages
+        ).split()
+    report_text = " ".join(report_text)
+    assert "Alcance de las fuentes" in report_text
+    assert "archivos aportados de Bit2Me" in report_text
+    assert "no representa un FIFO global" in report_text
 
 
 # ── FLAG ON: el Excel funciona ────────────────────────────────────────────────
