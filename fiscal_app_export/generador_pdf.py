@@ -14,6 +14,7 @@ from reportlab.platypus import (
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
 from datetime import datetime
+from xml.sax.saxutils import escape
 import io
 
 # Conjunto de stablecoins reutilizado del motor para clasificar venta vs permuta.
@@ -39,6 +40,34 @@ def _td_safe(text: str, max_chars: int = 300) -> str:
     if len(s) > max_chars:
         return s[:max_chars - 1] + "…"
     return s
+
+
+def _append_scope_note(story, styles, exchange):
+    """Make the single-exchange source boundary visible in the definitive PDF."""
+    if not exchange:
+        return
+    exchange_label = escape(_td_safe(exchange, 80))
+    note = (
+        f"Este informe solo incluye las operaciones reconocidas en los archivos aportados "
+        f"de {exchange_label}. No integra operaciones de otros exchanges o wallets y no "
+        "representa un FIFO global. El sistema tampoco puede comprobar que el historial "
+        "exportado esté completo."
+    )
+    paragraph = Paragraph(
+        "<b>Alcance de las fuentes:</b> " + note,
+        styles["body_muted"],
+    )
+    box = Table([[paragraph]], colWidths=[168 * mm])
+    box.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), INFO_BG),
+        ("BOX", (0, 0), (-1, -1), 0.5, BORDER),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+    ]))
+    story.append(Spacer(1, 3 * mm))
+    story.append(box)
 
 
 # ── PALETA PRINT-FRIENDLY ─────────────────────────────────────────────────────
@@ -648,6 +677,7 @@ def _resumen_ejecutivo(story, styles, resumen, motor, ejercicio, exchange, rendi
         ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
     ] + meta_bgs))
     story.append(t_meta)
+    _append_scope_note(story, styles, exchange)
     story.append(Spacer(1, 5 * mm))
 
     # ── Tabla: Determinación de Bases Imponibles ──────────────────────────────
@@ -1965,6 +1995,7 @@ def generar_pdf_bit2me(clasificador, nombre_usuario="", ejercicio="") -> bytes:
 
     # Portada
     _portada(story, styles, resumen, nombre_usuario, ejercicio, "Bit2Me")
+    _append_scope_note(story, styles, "Bit2Me")
 
     # Operaciones con resultado
     if clasificador.resultados:

@@ -37,6 +37,11 @@ EXCHANGES = {
     "coinbase": (25.0, 0.005),
 }
 
+EXCHANGE_LABELS = {
+    "binance": "Binance", "bitvavo": "Bitvavo", "kraken": "Kraken",
+    "coinbase": "Coinbase",
+}
+
 
 def _csv_bytes(exchange, *, with_purchase):
     stream = io.StringIO(newline="")
@@ -185,6 +190,13 @@ def test_csv_fifo_pdf_download_and_replay_rejected(client, exchange):
     with pdfplumber.open(io.BytesIO(download.data)) as pdf:
         text = "\n".join(page.extract_text() or "" for page in pdf.pages)
     assert "BTC" in text, (exchange, text[:350])
+    normalized = " ".join(text.split())
+    assert "2025" in normalized, (exchange, "fiscal year missing")
+    assert "Exchange analizado" in normalized, (exchange, "exchange metadata missing")
+    assert "Alcance de las fuentes" in normalized, (exchange, "source scope missing")
+    assert f"archivos aportados de {EXCHANGE_LABELS[exchange]}" in normalized
+    assert "historial exportado" in normalized and "completo" in normalized
+    assert "no representa un FIFO global" in normalized
     assert client.get("/api/descargar/" + token).status_code == 403
 
 
