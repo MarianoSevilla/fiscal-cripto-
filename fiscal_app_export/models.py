@@ -403,6 +403,109 @@ class S01StripeNotificationOutbox(db.Model):
     sent_at = db.Column(db.DateTime, nullable=True)
 
 
+# ── FIFO credits pilot: dormant unless explicitly enabled ────────────────────
+class CreditWallet(db.Model):
+    __tablename__ = "credit_wallets"
+    __table_args__ = (
+        db.CheckConstraint("available_credits >= 0", name="ck_credit_wallet_available"),
+        db.CheckConstraint("reserved_credits >= 0", name="ck_credit_wallet_reserved"),
+    )
+
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="RESTRICT"), primary_key=True)
+    available_credits = db.Column(db.Integer, nullable=False, default=0)
+    reserved_credits = db.Column(db.Integer, nullable=False, default=0)
+    frozen = db.Column(db.Boolean, nullable=False, default=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+
+class CreditLedgerEntry(db.Model):
+    """Append-only accounting movements. Idempotency is enforced by the DB."""
+    __tablename__ = "credit_ledger_entries"
+    __table_args__ = (
+        db.CheckConstraint("available_delta != 0 OR reserved_delta != 0", name="ck_credit_ledger_nonzero"),
+        db.Index("ix_credit_ledger_user_created", "user_id", "created_at"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    entry_type = db.Column(db.String(24), nullable=False)
+    available_delta = db.Column(db.Integer, nullable=False)
+    reserved_delta = db.Column(db.Integer, nullable=False, default=0)
+    idempotency_key = db.Column(db.String(160), unique=True, nullable=False)
+    reference_id = db.Column(db.String(100), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
+class CreditPurchase(db.Model):
+    __tablename__ = "credit_purchases"
+    __table_args__ = (
+        db.CheckConstraint("status IN ('pending','paid','refund_review','refunded','cancelled')", name="ck_credit_purchase_status"),
+        db.CheckConstraint("amount_cents > 0 AND credits > 0", name="ck_credit_purchase_amount_credits"),
+        db.CheckConstraint("currency = 'eur'", name="ck_credit_purchase_currency"),
+    )
+
+    id = db.Column(db.String(36), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True)
+    package_key = db.Column(db.String(20), nullable=False)
+    amount_cents = db.Column(db.Integer, nullable=False)
+    credits = db.Column(db.Integer, nullable=False)
+    currency = db.Column(db.String(3), nullable=False, default="eur")
+    status = db.Column(db.String(20), nullable=False, default="pending")
+    idempotency_key = db.Column(db.String(100), unique=True, nullable=False)
+    checkout_session_id = db.Column(db.String(255), unique=True, nullable=True)
+    payment_intent_id = db.Column(db.String(255), nullable=True)
+    stripe_event_id = db.Column(db.String(255), unique=True, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    paid_at = db.Column(db.DateTime, nullable=True)
+
+
+class CreditStripeEventReceipt(db.Model):
+    __tablename__ = "credit_stripe_event_receipts"
+
+    stripe_event_id = db.Column(db.String(255), primary_key=True)
+    purchase_id = db.Column(db.String(36), db.ForeignKey("credit_purchases.id", ondelete="RESTRICT"), nullable=False)
+    event_type = db.Column(db.String(100), nullable=False)
+    received_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
+class CreditAnalysis(db.Model):
+    __tablename__ = "credit_analyses"
+    __table_args__ = (
+        db.CheckConstraint("status IN ('reserved','consumed','released','settlement_unknown')", name="ck_credit_analysis_status"),
+        db.CheckConstraint("reserved_credits >= 0 AND charged_credits >= 0 AND charged_credits <= reserved_credits", name="ck_credit_analysis_amounts"),
+        db.UniqueConstraint("user_id", "idempotency_key", name="uq_credit_analysis_user_key"),
+        db.UniqueConstraint("correction_of_id", name="uq_credit_analysis_free_correction"),
+        db.Index("ix_credit_analysis_user_created", "user_id", "created_at"),
+    )
+
+    id = db.Column(db.String(36), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    idempotency_key = db.Column(db.String(100), nullable=False)
+    exchange = db.Column(db.String(40), nullable=False)
+    fiscal_years = db.Column(db.String(50), nullable=False)
+    csv_rows = db.Column(db.Integer, nullable=False)
+    file_count = db.Column(db.Integer, nullable=False)
+    file_fingerprint = db.Column(db.String(64), nullable=False)
+    reserved_credits = db.Column(db.Integer, nullable=False)
+    charged_credits = db.Column(db.Integer, nullable=False, default=0)
+    status = db.Column(db.String(24), nullable=False, default="reserved")
+    result_type = db.Column(db.String(24), nullable=True)
+    correction_of_id = db.Column(db.String(36), db.ForeignKey("credit_analyses.id", ondelete="RESTRICT"), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    correction_expires_at = db.Column(db.DateTime, nullable=False)
+
+
+class CreditReportArtifact(db.Model):
+    """Encrypted report bytes for repeat downloads during the retention window."""
+    __tablename__ = "credit_report_artifacts"
+
+    analysis_id = db.Column(db.String(36), db.ForeignKey("credit_analyses.id", ondelete="RESTRICT"), primary_key=True)
+    ciphertext = db.Column(db.LargeBinary, nullable=False)
+    key_version = db.Column(db.String(30), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False, index=True)
+
+
 class FiscalAdvisoryFile(db.Model):
     __tablename__ = "fiscal_advisory_files"
 

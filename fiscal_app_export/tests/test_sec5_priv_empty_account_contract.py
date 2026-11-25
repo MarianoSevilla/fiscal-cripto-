@@ -18,7 +18,7 @@ def test_scenario_is_in_existing_ci_pg18_lab_not_in_flask():
         "_assert_empty_account_rehearsal", "main",
     } <= functions
     assert "inventory_verified_user_synthetic(" in text
-    assert "scope[\"tables_modeled\"] != 17" in text
+    assert "scope[\"tables_modeled\"] != len(MODELS)" in text
     assert "if account.role != \"user\" or account.plan != \"free\"" in text
     assert "select(User).where(User.id == user_id).with_for_update()" in text
     assert "session.delete(account)" in text

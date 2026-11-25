@@ -27,7 +27,7 @@ DB_NAME = "s01_local_rehearsal"
 DB_USER = "postgres"
 PORT = 55435
 PRE_REV = "v5w6x7y8z9a0"
-POST_REV = "z9a0b1c2d3e4"
+POST_REV = "a2b3c4d5e6f7"
 NEW_TABLES = (
     "s01_stripe_checkout_attempts",
     "s01_stripe_event_receipts",
@@ -133,7 +133,7 @@ def run_step(label: str, args: list[str], *, env: dict[str, str],
         if label.startswith("Gate de arranque READ ONLY"):
             match = re.search(
                 rb"S01 G04 STARTUP: NO-GO "
-                rb"\((GRAPH|DATABASE|READONLY|TABLES|REVISION|COLUMNS|"
+                rb"\((GRAPH|DATABASE|READONLY|TABLES|REVISION|PARTIAL_CREDITS|COLUMNS|"
                 rb"ADVISORY_COLUMNS|CONSTRAINTS|INDEXES|CHECK|INTERNAL); "
                 rb"details protected\)",
                 result.stdout or b"",
@@ -423,9 +423,9 @@ def main():
                 [sys.executable, str(BASE / "bootstrap_db.py")],
                 env=app_env, cwd=BASE, timeout=600,
             )
-            # G04: the exact web startup gate must now pass READ ONLY.
-            # It must fail against the pre-migration version and succeed
-            # only after the authorized, explicit bootstrap above.
+            # G04: the transition-aware web startup gate passes READ ONLY
+            # before and after an explicitly authorized upgrade; it never
+            # performs the migration itself.
             run_step(
                 f"Gate de arranque READ ONLY pasada {repetition}",
                 [sys.executable, str(BASE / "startup_schema_gate.py")],

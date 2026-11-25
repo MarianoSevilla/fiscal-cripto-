@@ -18,7 +18,13 @@ HOST = "127.0.0.1"
 PORT = 5432
 USER = "postgres"
 PASSWORD = "ci-only-test-password"
-HEAD = "z9a0b1c2d3e4"  # S01 TEST outbox schema (dependent on PR #39)
+HEAD = "a2b3c4d5e6f7"  # FIFO credit pilot ledger
+PRE_CREDITS_HEAD = "z9a0b1c2d3e4"
+CREDIT_TABLES = (
+    "credit_wallets", "credit_ledger_entries", "credit_purchases",
+    "credit_stripe_event_receipts", "credit_analyses",
+    "credit_report_artifacts",
+)
 
 
 def _create_db(name: str) -> str:
@@ -28,6 +34,12 @@ def _create_db(name: str) -> str:
     try:
         conn.autocommit = True
         with conn.cursor() as cur:
+            cur.execute("SELECT current_setting('server_version_num')::integer")
+            version_num = cur.fetchone()[0]
+            if not 180000 <= version_num < 190000:
+                raise AssertionError(
+                    f"PG18 transition test requires PostgreSQL 18; got {version_num}"
+                )
             cur.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(name)))
     finally:
         conn.close()
@@ -85,6 +97,14 @@ def _startup(name: str, success: bool = True) -> subprocess.CompletedProcess:
     )
 
 
+def _healthz(name: str) -> None:
+    _run(name, """
+from app import app
+response = app.test_client().get('/healthz', base_url='https://marianosevilla.com')
+assert response.status_code == 200, response.status_code
+""")
+
+
 def _table_count(name: str) -> int:
     with _db_conn(name) as conn, conn.cursor() as cur:
         cur.execute(
@@ -94,10 +114,36 @@ def _table_count(name: str) -> int:
         return cur.fetchone()[0]
 
 
-def _assert_version(name: str) -> None:
+def _assert_version(name: str, expected: str = HEAD) -> None:
     with _db_conn(name) as conn, conn.cursor() as cur:
         cur.execute("SELECT version_num FROM alembic_version")
-        assert cur.fetchall() == [(HEAD,)], "Alembic head mismatch"
+        assert cur.fetchall() == [(expected,)], "Alembic head mismatch"
+
+
+def _build_pre_credit_schema(name: str) -> None:
+    """Create the real pre-MVP revision on ephemeral PG18, without credit DDL."""
+    script = f"""
+from app import app, db
+from bootstrap_db import FRESH_SCHEMA_BASELINE
+from flask_migrate import stamp, upgrade
+from startup_schema_gate import CREDIT_SCHEMA_TABLES, PRE_CREDITS_HEAD
+with app.app_context():
+    for table_name in CREDIT_SCHEMA_TABLES:
+        db.metadata.remove(db.metadata.tables[table_name])
+    db.create_all()
+    stamp(revision=FRESH_SCHEMA_BASELINE)
+    upgrade(revision=PRE_CREDITS_HEAD)
+"""
+    _run(name, script)
+
+
+def _upgrade_to_credit_head(name: str) -> None:
+    _run(name, f"""
+from app import app
+from flask_migrate import upgrade
+with app.app_context():
+    upgrade(revision={HEAD!r})
+""")
 
 
 def main() -> None:
@@ -120,6 +166,45 @@ def main() -> None:
         )
         row = cur.fetchone()
         assert row and row[0], "Legacy seed/data migrations were skipped"
+
+    # 1b. The transitional build must cold-start against the real prior
+    # production head, then remain startable after the additive migration.
+    transition = _create_db("bootstrap_credit_transition_ci")
+    _build_pre_credit_schema(transition)
+    _assert_version(transition, PRE_CREDITS_HEAD)
+    with _db_conn(transition) as conn, conn.cursor() as cur:
+        cur.execute(
+            "SELECT tablename FROM pg_tables WHERE schemaname='public'"
+        )
+        assert not (set(CREDIT_TABLES) & {row[0] for row in cur.fetchall()}), (
+            "pre-credit fixture unexpectedly contains credit tables"
+        )
+    _startup(transition)  # fresh process == service restart on old schema
+    _startup(transition)
+    _healthz(transition)
+    with _db_conn(transition) as conn, conn.cursor() as cur:
+        cur.execute("CREATE TABLE credit_wallets (user_id INTEGER PRIMARY KEY)")
+    partial_count = _table_count(transition)
+    _startup(transition, success=False)
+    assert _table_count(transition) == partial_count, (
+        "startup gate changed a partial pre-credit schema"
+    )
+    with _db_conn(transition) as conn, conn.cursor() as cur:
+        cur.execute("DROP TABLE credit_wallets")
+    _startup(transition)  # recovery to known old schema; no automatic repair
+    _upgrade_to_credit_head(transition)
+    _assert_version(transition)
+    _startup(transition)  # fresh process == service restart on migrated schema
+    _startup(transition)
+    _healthz(transition)
+
+    # A version marker alone is insufficient: incomplete migration artifacts
+    # fail closed, and the read-only gate does not repair them.
+    with _db_conn(transition) as conn, conn.cursor() as cur:
+        cur.execute("DROP TABLE credit_ledger_entries")
+    count_before = _table_count(transition)
+    _startup(transition, success=False)
+    assert _table_count(transition) == count_before
 
     # 2. Existing, fully versioned database with user data must retain that data.
     _run(fresh, """

@@ -130,7 +130,7 @@ def _seed(session):
 def _test_count_only_read_only(engine, a_id, b_id):
     declared = {m.__tablename__ for m in MODELS}
     actual = set(db.Model.metadata.tables)
-    assert len(actual) == 17 and actual == declared
+    assert actual == declared
     for model, columns in {**SUBJECT_FIELDS, **ACTOR_FIELDS, **EMAIL_CANDIDATES}.items():
         assert all(col in model.__table__.columns for col in columns)
 
@@ -139,7 +139,7 @@ def _test_count_only_read_only(engine, a_id, b_id):
         scope = inventory_verified_user_synthetic(
             session, user_id=a_id, original_email="subject_a@example.invalid"
         )
-        assert scope["tables_modeled"] == 17
+        assert scope["tables_modeled"] == len(MODELS)
         assert scope["verified_subject_refs"]["fifo_reports.user_id"] == 1
         assert scope["verified_subject_refs"]["fiscal_advisory_requests.user_id"] == 1
         assert scope["copied_email_candidates"]["processing_errors.email"] == 2

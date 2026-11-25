@@ -56,7 +56,7 @@ def _graph():
     cfg.set_main_option("script_location", str(ROOT / "migrations"))
     script = ScriptDirectory.from_config(cfg)
     heads = tuple(script.get_heads())
-    assert heads == ("z9a0b1c2d3e4",), (
+    assert heads == ("a2b3c4d5e6f7",), (
         f"Se requiere un solo Alembic head S01: {heads!r}"
     )
     known = {rev.revision for rev in script.walk_revisions()}

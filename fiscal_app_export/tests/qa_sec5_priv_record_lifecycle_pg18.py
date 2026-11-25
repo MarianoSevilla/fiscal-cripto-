@@ -24,9 +24,13 @@ from models import (  # noqa: E402
     Contacto, CommunicationCampaign,
     S01StripeCheckoutAttempt, S01StripeEventReceipt,
 )
-from sec5_priv_runtime_acl import grant_existing_runtime_acl  # noqa: E402
+from sec5_priv_runtime_acl import (  # noqa: E402
+    grant_existing_runtime_acl, EXPECTED_ORM_TABLES,
+)
 from sec5_priv_advisory_file_probe import inspect_advisory_file_metadata  # noqa: E402
-from privacy_scope_probe import inventory_verified_user_synthetic  # noqa: E402
+from privacy_scope_probe import (  # noqa: E402
+    MODELS, inventory_verified_user_synthetic,
+)
 
 DB = "sec5_priv_lifecycle_ci"
 APP_LOGIN = "sec5_lifecycle_runtime_ci"
@@ -415,11 +419,11 @@ def _rehearse_empty_account_row_only(
                 return False
             if account.role != "user" or account.plan != "free":
                 raise PermissionError("Staff or paid account requires review")
-            # Verify email/active status and classify all known 17-model links.
+            # Verify identity and classify all model links, including credits.
             scope = inventory_verified_user_synthetic(
                 session, user_id=user_id, original_email=original_email
             )
-            if scope["tables_modeled"] != 17:
+            if scope["tables_modeled"] != len(MODELS):
                 raise RuntimeError("Unexpected ORM inventory")
             for key in (
                 "verified_subject_refs", "staff_actor_refs",
@@ -558,7 +562,8 @@ def main():
             connect_args={"connect_timeout": 5, "options": "-c statement_timeout=5000"},
         )
         model_tables = set(db.Model.metadata.tables)
-        assert len(model_tables) == 17 and "alembic_version" not in model_tables
+        assert model_tables == EXPECTED_ORM_TABLES
+        assert "alembic_version" not in model_tables
         db.Model.metadata.create_all(engine)
 
         with admin.cursor() as cur:
@@ -591,7 +596,7 @@ def main():
             """).format(sql.Identifier(VAULT)))
             grants = grant_existing_runtime_acl(
                 cur, login=APP_LOGIN, model_tables=model_tables)
-            assert grants["orm_tables"] == 17
+            assert grants["orm_tables"] == len(EXPECTED_ORM_TABLES)
             cur.execute(sql.SQL("GRANT USAGE ON SCHEMA {} TO {}").format(
                 sql.Identifier(VAULT), sql.Identifier(LEGAL_LOGIN)))
             cur.execute(sql.SQL("GRANT SELECT ON {}.ledger TO {}").format(

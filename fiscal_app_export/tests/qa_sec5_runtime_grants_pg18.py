@@ -18,7 +18,7 @@ from psycopg2 import errors, sql
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from sec5_priv_runtime_acl import grant_existing_runtime_acl
+from sec5_priv_runtime_acl import grant_existing_runtime_acl, EXPECTED_ORM_TABLES
 
 HOST = "127.0.0.1"
 DBNAME = "sec5_runtime_acl_ci"
@@ -112,7 +112,7 @@ def _negative_privileges(password, tables):
         assert cur.fetchone() == (False, False, False, False, False,
                                   False, False, True)
         cur.execute("SELECT version_num FROM public.alembic_version")
-        assert cur.fetchone() == ("z9a0b1c2d3e4",)
+        assert cur.fetchone() == ("a2b3c4d5e6f7",)
         _deny(cur, "DELETE FROM public.alembic_version")
         _deny(cur, "TRUNCATE TABLE public.contactos")
         _deny(cur, "CREATE TABLE public.sec5_unauthorized_ci (id integer)")
@@ -134,7 +134,8 @@ def main():
     _guard()
     from app import db
     tables = set(db.metadata.tables)
-    assert len(tables) == 17 and "alembic_version" not in tables
+    assert tables == EXPECTED_ORM_TABLES
+    assert "alembic_version" not in tables
     password = secrets.token_hex(24)
 
     admin = _connect("postgres", "postgres", PASS_ADMIN)
@@ -179,7 +180,7 @@ def main():
                 summary = grant_existing_runtime_acl(
                     cur, login=ROLE, model_tables=tables
                 )
-        assert summary["orm_tables"] == 17 and summary["alembic_readonly"]
+        assert summary["orm_tables"] == len(EXPECTED_ORM_TABLES) and summary["alembic_readonly"]
         assert summary["future_grants"] is False
 
         # Actual web startup on the least-privileged login.
@@ -227,7 +228,7 @@ with app.app_context():
 '''
         _child(ROLE, password, smoke)
         _negative_privileges(password, tables)
-        print("SEC5_RUNTIME_ACL_PG18: PASS (17 ORM; full-schema startup; "
+        print(f"SEC5_RUNTIME_ACL_PG18: PASS ({len(EXPECTED_ORM_TABLES)} reviewed ORM tables; full-schema startup; "
               "synthetic user/FIFO/advisory/contact DML; deny DDL/vault; "
               "no providers; no Railway)")
     finally:

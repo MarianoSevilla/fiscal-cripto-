@@ -2,7 +2,7 @@
 
 **Estado:** especificación de revisión; no aprobada para ejecutar. **Fecha:** 28/10/2026.
 **Fuentes:** `SEC5_PRIV_011_013_RETENTION_MATRIX.md`, `SEC5_PRIV_011_013_DECISION_PROPOSAL.md` y `fiscal_app_export/models.py`.
-**Alcance:** solo criterios verificables de diseño para las 17 tablas ORM. Ninguna migración, purga, despliegue, cambio de permisos ni acceso a datos reales.
+**Alcance:** solo criterios verificables de diseño para las 23 tablas ORM del corte actual. Ninguna migración, purga, despliegue, cambio de permisos ni acceso a datos reales.
 
 ## 1. Decisión de arquitectura mínima
 
@@ -13,7 +13,7 @@ Separar tres operaciones que no son equivalentes:
 
 **No introducir un job automático ni cambios de esquema hasta demostrar las condiciones siguientes.** Los umbrales 30/90/180 días son *revisiones candidatas*, no fechas de borrado ni plazos impuestos por ley.
 
-## 2. Decisiones por conjunto (cobertura de las 17 tablas)
+## 2. Decisiones por conjunto (cobertura de las 23 tablas)
 
 | Tabla | Evento que debe acreditarse | Revisión / destino propuesto | Puerta de seguridad |
 |---|---|---|---|
@@ -34,6 +34,12 @@ Separar tres operaciones que no son equivalentes:
 | `communication_deliveries` | Último intento | Revisar detalle de entrega a 90 días | No borrar prueba mínima de baja o consentimiento sin análisis separado |
 | `resources` | Despublicación de catálogo | Sin plazo personal general | Revisar únicamente campos editoriales con datos personales |
 | `resource_requests` | Envío, rechazo o resolución | Revisar a 90 días; minimizar UID, Telegram, IP y datos de entrega | Email sin FK; conservar prueba mínima de consentimiento/oposición por separado |
+| `credit_wallets` | Cierre de cuenta y saldo/reserva a cero | Revisar solo cuando no queden créditos, reservas ni revisión abierta | FK RESTRICT; créditos acumulables sin caducidad aprobada |
+| `credit_ledger_entries` | Movimiento de saldo y conciliación | Mantener mientras exista responsabilidad sobre créditos/pagos y las obligaciones aplicables | Claves idempotentes; no eliminar evidencia abierta o disputada |
+| `credit_purchases` | Compra, pago, cancelación o devolución | Conservar lo necesario para conciliación, reembolsos, disputas y obligaciones aplicables | Importe y referencias Stripe vinculadas al titular; acceso restringido |
+| `credit_stripe_event_receipts` | Evento de pago o reembolso recibido | Mantener con la evidencia de la compra y sus necesidades de deduplicación | No purgar operaciones abiertas, inciertas o disputadas |
+| `credit_analyses` | Análisis completado, corrección o soporte | Revisar junto al expediente y sus vínculos; no hay purga automatizada | Exchange, ejercicio, filas y huella siguen siendo metadatos vinculables; no contiene CSV original |
+| `credit_report_artifacts` | PDF adquirido, creado y vencido | Vencimiento configurado a 365 días; eliminación actualmente oportunista al almacenar/solicitar, no programada | PDF fiscal cifrado AES-GCM y descarga del titular; verificar la purga antes de declarar eliminación efectiva |
 
 ## 3. Reglas obligatorias antes de implementar
 
@@ -54,7 +60,7 @@ La conservación de la prueba de oposición o de un consentimiento válido requi
 
 ## 4. Pruebas de aceptación antes de autorizar ejecución
 
-1. **Cobertura:** inventario ORM y esquema PostgreSQL desechable concuerdan; las 17 tablas se clasifican y cualquier tabla nueva falla la regresión documental.
+1. **Cobertura:** inventario ORM y esquema PostgreSQL desechable concuerdan; las 23 tablas actuales se clasifican y cualquier tabla nueva falla la regresión documental.
 2. **Aislamiento:** eliminación solicitada por A jamás modifica filas, ficheros ni referencias de B; emails coincidentes/ambiguos exigen revisión.
 3. **Bloqueo:** registros bloqueados no aparecen en vista de usuario, búsquedas internas corrientes, campañas, exportaciones ni tareas normales; solo acceso excepcional autorizado queda auditado.
 4. **Integridad:** ningún proceso borra pagos no conciliados, solicitudes abiertas, información imprescindible para una descarga adquirida ni evidencia de disputas/reembolsos.

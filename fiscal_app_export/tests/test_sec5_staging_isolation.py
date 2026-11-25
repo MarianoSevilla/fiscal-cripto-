@@ -12,6 +12,7 @@ from sec5_staging_isolation import (
     PROJECT_ID, STAGING_ENV_ID, STAGING_SERVICE_ID,
     RUNTIME_DATABASE, RUNTIME_LOGIN, validate_runtime_acl,
 )
+from sec5_priv_runtime_acl import EXPECTED_ORM_TABLES
 
 
 @pytest.fixture
@@ -111,14 +112,13 @@ def role_row():
 
 
 def grant_rows():
-    return [(f"orm_{i}", True, True, True, True) for i in range(17)] + [
+    return [(name, True, True, True, True) for name in sorted(EXPECTED_ORM_TABLES)] + [
         ("alembic_version", True, False, False, False)
     ]
 
 
 def test_valid_runtime_pg18_catalog_contract():
-    validate_runtime_acl(role_row(), grant_rows(),
-                         {f"orm_{i}" for i in range(17)})
+    validate_runtime_acl(role_row(), grant_rows(), set(EXPECTED_ORM_TABLES))
 
 
 @pytest.mark.parametrize("index", list(range(3, 13)))
@@ -126,8 +126,7 @@ def test_any_privilege_elevation_fails(index):
     r = list(role_row())
     r[index] = not r[index]
     with pytest.raises(StagingIsolationError):
-        validate_runtime_acl(tuple(r), grant_rows(),
-                             {f"orm_{i}" for i in range(17)})
+        validate_runtime_acl(tuple(r), grant_rows(), set(EXPECTED_ORM_TABLES))
 
 
 @pytest.mark.parametrize("case", ["superuser", "database", "alembic", "missing",
@@ -135,7 +134,7 @@ def test_any_privilege_elevation_fails(index):
 def test_catalog_grant_invariants_fail(case):
     r = list(role_row())
     grants = grant_rows()
-    tables = {f"orm_{i}" for i in range(17)}
+    tables = set(EXPECTED_ORM_TABLES)
     if case == "superuser":
         r[4] = True
     elif case == "database":
@@ -147,7 +146,7 @@ def test_catalog_grant_invariants_fail(case):
     elif case == "extra":
         grants.append(("foreign_table", True, False, False, False))
     elif case == "missing_grant":
-        grants[0] = ("orm_0", True, False, True, True)
+        grants[0] = (sorted(EXPECTED_ORM_TABLES)[0], True, False, True, True)
     elif case == "duplicate":
         grants.append(grants[0])
     with pytest.raises(StagingIsolationError):

@@ -19,7 +19,7 @@ from sqlalchemy.engine import make_url
 
 from staging_isolation import validate_staging_isolation
 from sec5_staging_isolation import STAGING_VARIABLES
-from sec5_priv_runtime_acl import grant_existing_runtime_acl
+from sec5_priv_runtime_acl import grant_existing_runtime_acl, EXPECTED_ORM_TABLES
 
 DBNAME = "sec5_priv_stage_20261101"
 ROLE = "sec5_runtime_stage"
@@ -176,7 +176,7 @@ def provision() -> None:
                         result = grant_existing_runtime_acl(
                             cur, login=ROLE, model_tables=set(db.metadata.tables)
                         )
-                        if result["orm_tables"] != 17:
+                        if result["orm_tables"] != len(EXPECTED_ORM_TABLES):
                             raise RuntimeError("Unexpected ORM table inventory")
                     dbapi.commit()
                 finally:
@@ -193,7 +193,7 @@ def provision() -> None:
             print(
                 "SEC5 STAGING ROLE: PASS "
                 "(fresh isolated staging database; full Alembic bootstrap; "
-                "17-table limited login; startup verified; old staging DB unchanged)",
+                f"{len(EXPECTED_ORM_TABLES)}-table reviewed login; startup verified; old staging DB unchanged)",
                 flush=True,
             )
         except BaseException:

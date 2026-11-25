@@ -4,6 +4,7 @@ This is NOT a live privacy route or a deletion/blocking implementation.
 """
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -17,7 +18,8 @@ sys.path.insert(0, str(HERE))
 from models import (
     db, User, FifoReport, ProcessingError, Contacto,
     FiscalAdvisoryRequest, S01StripeCheckoutAttempt, S01StripeEventReceipt,
-    S01StripeNotificationOutbox,
+    S01StripeNotificationOutbox, CreditWallet, CreditLedgerEntry,
+    CreditPurchase, CreditStripeEventReceipt, CreditAnalysis, CreditReportArtifact,
 )
 from privacy_scope_probe import (
     MODELS, SUBJECT_FIELDS, ACTOR_FIELDS, EMAIL_CANDIDATES,
@@ -59,10 +61,10 @@ def _case(session, user, email):
     return entry
 
 
-def test_all_17_orm_models_included_without_guessing_unlinked_records():
+def test_all_orm_models_included_without_guessing_unlinked_records():
     actual = {t.name for t in db.Model.metadata.tables.values()}
     declared = {model.__tablename__ for model in MODELS}
-    assert actual == declared and len(actual) == 17
+    assert actual == declared
     for model, cols in {**SUBJECT_FIELDS, **ACTOR_FIELDS, **EMAIL_CANDIDATES}.items():
         assert model.__tablename__ in actual
         for col in cols:
@@ -79,6 +81,29 @@ def test_probe_only_counts_and_does_not_cross_accounts_or_mutate(synthetic_datab
         ProcessingError(user_id=a.id, email=a.email, exchange="binance"),
         ProcessingError(user_id=None, email=a.email, exchange="kraken"),
         Contacto(nombre="Fixture", email=a.email, tipo_consulta="otros", mensaje="test"),
+    ])
+    s.add_all([
+        CreditWallet(user_id=a.id, available_credits=10),
+        CreditLedgerEntry(user_id=a.id, entry_type="purchase", available_delta=10,
+                          reserved_delta=0, idempotency_key="scope-ledger-a"),
+        CreditPurchase(id="scope-purchase-a", user_id=a.id, package_key="basic",
+                       amount_cents=1590, credits=10, currency="eur",
+                       status="paid", idempotency_key="scope-purchase-key-a"),
+        CreditAnalysis(id="scope-analysis-a", user_id=a.id,
+                       idempotency_key="scope-analysis-key-a", exchange="binance",
+                       fiscal_years="2025", csv_rows=1, file_count=1,
+                       file_fingerprint="a" * 64, reserved_credits=10,
+                       charged_credits=10, status="consumed", result_type="provisional",
+                       correction_expires_at=datetime.utcnow()),
+    ])
+    s.flush()
+    s.add_all([
+        CreditStripeEventReceipt(stripe_event_id="evt_scope_a",
+                                 purchase_id="scope-purchase-a",
+                                 event_type="checkout.session.completed"),
+        CreditReportArtifact(analysis_id="scope-analysis-a", ciphertext=b"synthetic",
+                             key_version="aes256gcm-v1",
+                             expires_at=datetime.utcnow()),
     ])
     ca = _case(s, a, a.email)
     # Deliberately duplicate A's email on a case tied to B. This MUST remain
@@ -120,7 +145,7 @@ def test_probe_only_counts_and_does_not_cross_accounts_or_mutate(synthetic_datab
         s, user_id=a.id, original_email=a.email
     )
 
-    assert scope["tables_modeled"] == 17
+    assert scope["tables_modeled"] == len(MODELS)
     assert scope["verified_subject_refs"]["fifo_reports.user_id"] == 1
     assert scope["verified_subject_refs"]["processing_errors.user_id"] == 1
     assert scope["copied_email_candidates"]["processing_errors.email"] == 2
@@ -129,6 +154,12 @@ def test_probe_only_counts_and_does_not_cross_accounts_or_mutate(synthetic_datab
     assert scope["indirect_case_refs"]["s01_stripe_checkout_attempts"] == 1
     assert scope["indirect_case_refs"]["s01_stripe_event_receipts"] == 1
     assert scope["indirect_case_refs"]["s01_stripe_notification_outbox"] == 1
+    assert scope["verified_subject_refs"]["credit_wallets.user_id"] == 1
+    assert scope["verified_subject_refs"]["credit_ledger_entries.user_id"] == 1
+    assert scope["verified_subject_refs"]["credit_purchases.user_id"] == 1
+    assert scope["verified_subject_refs"]["credit_analyses.user_id"] == 1
+    assert scope["indirect_case_refs"]["credit_stripe_event_receipts"] == 1
+    assert scope["indirect_case_refs"]["credit_report_artifacts"] == 1
     assert not scope["delete_permitted"]
     assert not scope["blocking_proven"]
     assert not scope["external_systems_checked"]
