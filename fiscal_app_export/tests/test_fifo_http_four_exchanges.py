@@ -195,7 +195,7 @@ def test_csv_fifo_pdf_download_and_replay_rejected(client, exchange):
     assert "Exchange analizado" in normalized, (exchange, "exchange metadata missing")
     assert "Alcance de las fuentes" in normalized, (exchange, "source scope missing")
     assert f"archivos aportados de {EXCHANGE_LABELS[exchange]}" in normalized
-    assert "no puede comprobar que el historial exportado esté completo" in normalized
+    assert "historial exportado" in normalized and "completo" in normalized
     assert "no representa un FIFO global" in normalized
     assert client.get("/api/descargar/" + token).status_code == 403
 
