@@ -18,7 +18,7 @@ depends_on = None
 def upgrade():
     op.execute(
         "ALTER TABLE credit_analyses "
-        "ADD COLUMN execution_started_at TIMESTAMP NULL"
+        "ADD COLUMN IF NOT EXISTS execution_started_at TIMESTAMP NULL"
     )
     op.execute(
         "ALTER TABLE credit_analyses "
