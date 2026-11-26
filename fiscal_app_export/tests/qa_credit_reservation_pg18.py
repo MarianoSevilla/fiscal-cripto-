@@ -341,7 +341,8 @@ finally:
 
 # A child dies after receiving the request and while preflight validation is
 # reading the upload, before begin_analysis commits. Its session lock disappears.
-validation_id = authorize(owner_client, csv_bytes("VALIDATION-CUT"))
+validation_raw = csv_bytes("VALIDATION-CUT")
+validation_id = authorize(owner_client, validation_raw)
 CHILD_VALIDATION = r'''
 import io, os, sys, time
 sys.path.insert(0, __CREDIT_QA_APP_ROOT__)
@@ -387,7 +388,7 @@ def launch_cut(program, user_id, analysis_id, raw, exit_code):
     assert child.returncode == exit_code, (child.returncode, child.stdout[-800:])
     return child.stdout
 
-launch_cut(CHILD_VALIDATION, owner_id, validation_id, CSV, 91)
+launch_cut(CHILD_VALIDATION, owner_id, validation_id, validation_raw, 91)
 validation_recovered = owner_client.post(
     f"/api/credits/analyses/{validation_id}/recover",
     headers={"X-Credits-CSRF": csrf(owner_client)})
@@ -396,7 +397,8 @@ assert validation_recovered.json["status"] == "released"
 
 # Terminate after the real FIFO work and PDF construction started. The outcome
 # is uncertain: retain reserved credits, record the state and freeze the wallet.
-unknown_id = authorize(other_client, csv_bytes("FIFO-CRASH"))
+unknown_raw = csv_bytes("FIFO-CRASH")
+unknown_id = authorize(other_client, unknown_raw)
 CHILD_FIFO_CRASH = r'''
 import io, os, sys, time
 sys.path.insert(0, __CREDIT_QA_APP_ROOT__)
@@ -420,7 +422,7 @@ client.post("/api/analizar", data={
  headers={"X-Credit-Analysis-ID": os.environ["CREDIT_QA_ANALYSIS_ID"]})
 os._exit(1)
 '''
-launch_cut(CHILD_FIFO_CRASH, other_id, unknown_id, CSV, 92)
+launch_cut(CHILD_FIFO_CRASH, other_id, unknown_id, unknown_raw, 92)
 unknown_recovered = other_client.post(
     f"/api/credits/analyses/{unknown_id}/recover",
     headers={"X-Credits-CSRF": csrf(other_client)})
@@ -433,7 +435,8 @@ with app.app_context():
 
 # Terminate after settlement commits but before the HTTP response. The consumed
 # result must remain recoverable as a free repeat download, never another debit.
-post_settlement_id = authorize(owner_client, csv_bytes("SETTLED-RESPONSE-CUT"))
+post_settlement_raw = csv_bytes("SETTLED-RESPONSE-CUT")
+post_settlement_id = authorize(owner_client, post_settlement_raw)
 CHILD_POST_SETTLEMENT = r'''
 import io, os, sys, time
 sys.path.insert(0, __CREDIT_QA_APP_ROOT__)
@@ -457,7 +460,7 @@ client.post("/api/analizar", data={
  headers={"X-Credit-Analysis-ID": os.environ["CREDIT_QA_ANALYSIS_ID"]})
 os._exit(1)
 '''
-launch_cut(CHILD_POST_SETTLEMENT, owner_id, post_settlement_id, CSV, 93)
+launch_cut(CHILD_POST_SETTLEMENT, owner_id, post_settlement_id, post_settlement_raw, 93)
 with app.app_context():
     assert CreditAnalysis.query.filter_by(id=post_settlement_id, status="consumed").count() == 1
     assert CreditLedgerEntry.query.filter_by(reference_id=post_settlement_id,
