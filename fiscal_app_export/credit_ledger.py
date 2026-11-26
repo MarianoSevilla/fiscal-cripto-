@@ -16,6 +16,7 @@ from models import (
     CreditStripeEventReceipt, CreditReportArtifact,
 )
 from credit_pricing import PACKAGES
+from credit_execution import AnalysisExecutionLock
 
 
 class CreditError(ValueError):
@@ -190,8 +191,12 @@ def reserve_analysis(*, user_id: int, analysis_id: str | None = None,
     duplicate_query = CreditAnalysis.query.filter_by(
         user_id=user_id, exchange=exchange[:40], fiscal_years=fiscal_years[:50],
         file_fingerprint=file_fingerprint,
-    ).filter(CreditAnalysis.status.in_(("reserved", "consumed")))
-    if duplicate_query.filter_by(status="reserved").first():
+    ).filter(CreditAnalysis.status.in_(
+        ("reserved", "processing", "consumed", "execution_unknown", "settlement_unknown")
+    ))
+    if duplicate_query.filter(CreditAnalysis.status.in_(
+            ("reserved", "processing", "execution_unknown", "settlement_unknown")
+    )).first():
         raise CreditError("Ya existe un análisis idéntico en curso. Espera a que termine antes de repetirlo.")
     acquired_duplicate = (duplicate_query.filter_by(status="consumed")
                           .join(CreditReportArtifact,
@@ -231,8 +236,28 @@ def reserve_analysis(*, user_id: int, analysis_id: str | None = None,
     return analysis
 
 
-def settle_analysis(*, analysis_id: str, user_id: int, result_type: str,
+def begin_analysis(*, analysis_id: str, user_id: int,
+                   execution_lock: AnalysisExecutionLock) -> CreditAnalysis:
+    """Atomically move an unstarted reservation into an execution claim."""
+    if not execution_lock.matches(user_id=user_id, analysis_id=analysis_id):
+        raise CreditError("No se posee el bloqueo de ejecución del análisis.")
+    analysis = db.session.execute(
+        select(CreditAnalysis).where(CreditAnalysis.id == analysis_id,
+                                    CreditAnalysis.user_id == user_id).with_for_update()
+    ).scalar_one_or_none()
+    if not analysis or analysis.status != "reserved":
+        raise CreditError("La reserva ya no está disponible para iniciar.")
+    analysis.status = "processing"
+    analysis.execution_started_at = datetime.utcnow()
+    db.session.commit()
+    return analysis
+
+
+def settle_analysis(*, analysis_id: str, user_id: int,
+                    execution_lock: AnalysisExecutionLock, result_type: str,
                     actual_credits: int | None = None) -> CreditAnalysis:
+    if not execution_lock.matches(user_id=user_id, analysis_id=analysis_id):
+        raise CreditError("No se posee el bloqueo de ejecución del análisis.")
     if result_type not in {"definitive", "provisional"}:
         raise CreditError("Solo un análisis completado puede consumir créditos.")
     analysis = db.session.execute(
@@ -243,7 +268,7 @@ def settle_analysis(*, analysis_id: str, user_id: int, result_type: str,
         raise CreditError("Reserva no encontrada.")
     if analysis.status == "consumed":
         return analysis
-    if analysis.status != "reserved":
+    if analysis.status != "processing":
         raise CreditError("La reserva no está activa.")
     charge = (0 if analysis.correction_of_id else analysis.reserved_credits) if actual_credits is None else actual_credits
     if isinstance(charge, bool) or not isinstance(charge, int) or charge < 0 or charge > analysis.reserved_credits:
@@ -264,7 +289,28 @@ def settle_analysis(*, analysis_id: str, user_id: int, result_type: str,
     return analysis
 
 
+def _release_analysis_row(analysis: CreditAnalysis, *, user_id: int) -> CreditAnalysis:
+    wallet = _wallet_for_update(user_id)
+    if wallet.reserved_credits < analysis.reserved_credits:
+        raise CreditError("Saldo reservado inconsistente.")
+    wallet.reserved_credits -= analysis.reserved_credits
+    wallet.available_credits += analysis.reserved_credits
+    analysis.status = "released"
+    analysis.charged_credits = 0
+    # A result artifact is never downloadable unless the analysis is consumed.
+    # Remove any partial artifact from a failed settlement in the same commit.
+    db.session.query(CreditReportArtifact).filter_by(
+        analysis_id=analysis.id
+    ).delete(synchronize_session=False)
+    if analysis.reserved_credits:
+        _append(user_id, "release", analysis.reserved_credits,
+                -analysis.reserved_credits, "release:" + analysis.id, analysis.id)
+    db.session.commit()
+    return analysis
+
+
 def release_analysis(*, analysis_id: str, user_id: int) -> CreditAnalysis:
+    """Release only an analysis that never claimed execution."""
     analysis = db.session.execute(
         select(CreditAnalysis).where(CreditAnalysis.id == analysis_id,
                                     CreditAnalysis.user_id == user_id).with_for_update()
@@ -274,18 +320,56 @@ def release_analysis(*, analysis_id: str, user_id: int) -> CreditAnalysis:
     if analysis.status == "released":
         return analysis
     if analysis.status != "reserved":
-        raise CreditError("La reserva no puede liberarse en este estado.")
-    wallet = _wallet_for_update(user_id)
-    if wallet.reserved_credits < analysis.reserved_credits:
-        raise CreditError("Saldo reservado inconsistente.")
-    wallet.reserved_credits -= analysis.reserved_credits
-    wallet.available_credits += analysis.reserved_credits
-    analysis.status = "released"
-    analysis.charged_credits = 0
-    if analysis.reserved_credits:
-        _append(user_id, "release", analysis.reserved_credits,
-                -analysis.reserved_credits, "release:" + analysis.id, analysis.id)
-    db.session.commit()
+        raise CreditError("Solo puede liberarse automáticamente una reserva no iniciada.")
+    return _release_analysis_row(analysis, user_id=user_id)
+
+
+def release_processing_analysis(*, analysis_id: str, user_id: int,
+                                execution_lock: AnalysisExecutionLock) -> CreditAnalysis:
+    """Release a known failed execution while its request still owns the lock."""
+    if not execution_lock.matches(user_id=user_id, analysis_id=analysis_id):
+        raise CreditError("No se posee el bloqueo de ejecución del análisis.")
+    analysis = db.session.execute(
+        select(CreditAnalysis).where(CreditAnalysis.id == analysis_id,
+                                    CreditAnalysis.user_id == user_id).with_for_update()
+    ).scalar_one_or_none()
+    if not analysis:
+        raise CreditError("Reserva no encontrada.")
+    if analysis.status == "released":
+        return analysis
+    if analysis.status != "processing":
+        raise CreditError("La ejecución no puede liberarse en este estado.")
+    return _release_analysis_row(analysis, user_id=user_id)
+
+
+def recover_analysis(*, analysis_id: str, user_id: int,
+                     execution_lock: AnalysisExecutionLock) -> CreditAnalysis:
+    """Recover unstarted work or quarantine an interrupted execution.
+
+    The advisory lock proves no request for this analysis is currently active.
+    An execution already marked `processing` is never released automatically;
+    it becomes `execution_unknown` and the wallet is frozen for reconciliation.
+    """
+    if not execution_lock.matches(user_id=user_id, analysis_id=analysis_id):
+        raise CreditError("No se posee el bloqueo de ejecución del análisis.")
+    analysis = db.session.execute(
+        select(CreditAnalysis).where(CreditAnalysis.id == analysis_id,
+                                    CreditAnalysis.user_id == user_id).with_for_update()
+    ).scalar_one_or_none()
+    if not analysis:
+        raise CreditError("Análisis no encontrado.")
+    if analysis.status == "reserved":
+        return _release_analysis_row(analysis, user_id=user_id)
+    if analysis.status == "processing":
+        wallet = db.session.execute(
+            select(CreditWallet).where(CreditWallet.user_id == user_id).with_for_update()
+        ).scalar_one_or_none()
+        if wallet is None:
+            raise CreditError("Monedero no encontrado durante la recuperación.")
+        analysis.status = "execution_unknown"
+        wallet.frozen = True
+        db.session.commit()
+        return analysis
     return analysis
 
 
@@ -295,7 +379,7 @@ def quarantine_unknown_analysis(*, analysis_id: str, user_id: int) -> bool:
         select(CreditAnalysis).where(CreditAnalysis.id == analysis_id,
                                     CreditAnalysis.user_id == user_id).with_for_update()
     ).scalar_one_or_none()
-    if not analysis or analysis.status != "reserved":
+    if not analysis or analysis.status not in {"reserved", "processing"}:
         return False
     wallet = db.session.execute(
         select(CreditWallet).where(CreditWallet.user_id == user_id).with_for_update()

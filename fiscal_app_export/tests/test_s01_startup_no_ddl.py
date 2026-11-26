@@ -33,14 +33,16 @@ def test_procfile_only_verifies_schema_before_gunicorn():
     assert "db.create_all" not in proc
 
 
-def test_startup_gate_remains_readonly_and_accepts_only_two_transition_heads():
+def test_startup_gate_remains_readonly_and_accepts_only_known_transition_heads():
     source = GATE.read_text(encoding="utf-8")
     assert 'PRE_CREDITS_HEAD = "z9a0b1c2d3e4"' in source
-    assert 'POST_CREDITS_HEAD = "a2b3c4d5e6f7"' in source
+    assert 'CREDITS_MVP_HEAD = "a2b3c4d5e6f7"' in source
+    assert 'POST_CREDITS_HEAD = "b4c5d6e7f8a9"' in source
     assert "pre-credit schema contains partial credit tables" in source
     assert "database revision is not an approved transition state" in source
-    assert "EXPECTED_GRAPH_HEAD = \"a2b3c4d5e6f7\"" in source
-    assert "post_credits.down_revision != PRE_CREDITS_HEAD" in source
+    assert "EXPECTED_GRAPH_HEAD = \"b4c5d6e7f8a9\"" in source
+    assert "credits_mvp.down_revision != PRE_CREDITS_HEAD" in source
+    assert "post_credits.down_revision != CREDITS_MVP_HEAD" in source
     assert "SET TRANSACTION READ ONLY" in source
     assert "transaction.rollback()" in source
     assert "REQUIRED_CONSTRAINTS" in source

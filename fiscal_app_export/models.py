@@ -471,7 +471,7 @@ class CreditStripeEventReceipt(db.Model):
 class CreditAnalysis(db.Model):
     __tablename__ = "credit_analyses"
     __table_args__ = (
-        db.CheckConstraint("status IN ('reserved','consumed','released','settlement_unknown')", name="ck_credit_analysis_status"),
+        db.CheckConstraint("status IN ('reserved','processing','consumed','released','execution_unknown','settlement_unknown')", name="ck_credit_analysis_status"),
         db.CheckConstraint("reserved_credits >= 0 AND charged_credits >= 0 AND charged_credits <= reserved_credits", name="ck_credit_analysis_amounts"),
         db.UniqueConstraint("user_id", "idempotency_key", name="uq_credit_analysis_user_key"),
         db.UniqueConstraint("correction_of_id", name="uq_credit_analysis_free_correction"),
@@ -490,6 +490,7 @@ class CreditAnalysis(db.Model):
     charged_credits = db.Column(db.Integer, nullable=False, default=0)
     status = db.Column(db.String(24), nullable=False, default="reserved")
     result_type = db.Column(db.String(24), nullable=True)
+    execution_started_at = db.Column(db.DateTime, nullable=True)
     correction_of_id = db.Column(db.String(36), db.ForeignKey("credit_analyses.id", ondelete="RESTRICT"), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     correction_expires_at = db.Column(db.DateTime, nullable=False)

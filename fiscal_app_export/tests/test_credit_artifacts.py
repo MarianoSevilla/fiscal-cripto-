@@ -7,7 +7,8 @@ import pytest
 from flask import Flask
 
 from models import db, User, CreditWallet
-from credit_ledger import reserve_analysis, settle_analysis
+from credit_ledger import reserve_analysis, begin_analysis, settle_analysis
+from credit_execution import try_acquire_analysis_lock
 from credit_artifacts import store_artifact, load_artifact
 
 
@@ -38,6 +39,9 @@ def ctx(tmp_path):
 
 def test_report_is_authenticated_encrypted_repeatable_and_expiring(ctx):
     owner, other, analysis_id = ctx
+    lock = try_acquire_analysis_lock(user_id=owner, analysis_id=analysis_id)
+    assert lock is not None
+    begin_analysis(analysis_id=analysis_id, user_id=owner, execution_lock=lock)
     pdf = b"%PDF-1.4\nsynthetic private report\n"
     created = datetime(2026, 1, 1)
     artifact = store_artifact(analysis_id=analysis_id, user_id=owner,
@@ -45,7 +49,9 @@ def test_report_is_authenticated_encrypted_repeatable_and_expiring(ctx):
     assert pdf not in artifact.ciphertext
     assert load_artifact(analysis_id=analysis_id, user_id=owner,
                          encoded_key=KEY, now=created + timedelta(days=1)) is None
-    settle_analysis(analysis_id=analysis_id, user_id=owner, result_type="definitive")
+    settle_analysis(analysis_id=analysis_id, user_id=owner, execution_lock=lock,
+                    result_type="definitive")
+    lock.release()
     assert load_artifact(analysis_id=analysis_id, user_id=other,
                          encoded_key=KEY, now=created + timedelta(days=1)) is None
     assert load_artifact(analysis_id=analysis_id, user_id=owner,
@@ -56,9 +62,14 @@ def test_report_is_authenticated_encrypted_repeatable_and_expiring(ctx):
 
 def test_wrong_encryption_key_fails_closed(ctx):
     owner, _, analysis_id = ctx
+    lock = try_acquire_analysis_lock(user_id=owner, analysis_id=analysis_id)
+    assert lock is not None
+    begin_analysis(analysis_id=analysis_id, user_id=owner, execution_lock=lock)
     store_artifact(analysis_id=analysis_id, user_id=owner,
                    pdf_bytes=b"%PDF-1.4\nx", encoded_key=KEY)
-    settle_analysis(analysis_id=analysis_id, user_id=owner, result_type="provisional")
+    settle_analysis(analysis_id=analysis_id, user_id=owner, execution_lock=lock,
+                    result_type="provisional")
+    lock.release()
     wrong = base64.urlsafe_b64encode(b"b" * 32).decode().rstrip("=")
     with pytest.raises(Exception):
         load_artifact(analysis_id=analysis_id, user_id=owner, encoded_key=wrong)

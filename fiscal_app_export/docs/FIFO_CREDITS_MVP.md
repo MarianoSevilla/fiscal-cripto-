@@ -26,9 +26,21 @@ Los importes de paquete permanecen como hipótesis editables en `credit_pricing.
 - Una descarga repetida no consume créditos. Los PDF adquiridos se guardan cifrados con AES-256-GCM, asociados a una cuenta y análisis, durante 365 días. No se guardan los CSV. Tras esa ventana el PDF deja de estar disponible; conservarlo más tiempo o regenerarlo sin coste requeriría cambiar esta política antes de activar el piloto.
 - Se permite una corrección gratuita del mismo informe dentro de 30 días. La primera corrección se vincula al informe original; no se encadenan correcciones gratuitas. Otra corrección o un análisis distinto se cotiza normalmente. Esta limitación busca equilibrio económico y debe validarse antes de la oferta pública.
 
+## Reserva, ejecución y recuperación
+
+- `reserved` significa que el usuario autorizó el máximo, pero el endpoint FIFO aún no reclamó la ejecución. El propietario puede recuperar esta reserva una vez que el servidor confirma que no existe una petición activa; se devuelve el saldo con un asiento idempotente.
+- Antes de entrar al procesador, la petición obtiene un bloqueo de ejecución de PostgreSQL y cambia el estado a `processing` dentro de una transacción. El mismo bloqueo impide que un reintento libere la reserva de un proceso activo.
+- La huella de archivos también bloquea autorizaciones duplicadas mientras la primera petición esté reservada o procesándose, incluso si el navegador generó una clave de reintento nueva.
+- Si el proceso termina después de comenzar y antes de confirmar un resultado, la reserva pasa a `execution_unknown` al solicitar recuperación y el monedero se congela. No se libera ni se cobra automáticamente; requiere conciliación de soporte.
+- Si el resultado y el artefacto se liquidaron antes de perderse la respuesta, el estado `consumed` permite recuperar el PDF sin otro cargo.
+- El endpoint autenticado de operaciones pendientes permite consultar el estado del titular. La interfaz solo consulta esta información cuando el piloto está habilitado.
+- La migración aditiva `b4c5d6e7f8a9` añade `execution_started_at` y estados de ejecución. El arranque admite temporalmente las revisiones `a2b3c4d5e6f7` y `b4c5d6e7f8a9`; los endpoints de créditos permanecen cerrados hasta que la revisión nueva esté aplicada. No se ejecuta DDL al arrancar.
+
 ## Stripe, saldo y reembolsos
 
 Checkout utiliza `mode=payment` y cantidades fijas derivadas del catálogo del servidor. La concesión se produce solo tras verificar la firma del webhook y comprobar modo test, sesión, estado de pago, importe, moneda y compra. La URL de éxito no concede créditos. Los handlers deduplican por compra/evento y las transiciones de saldo usan bloqueos transaccionales PostgreSQL.
+
+La prueba PostgreSQL 18 del MVP usa una carga útil y una firma sintéticas para recorrer el endpoint real de webhook y verificar una concesión idempotente. También valida los parámetros de Checkout, pero no contacta con el proveedor ni representa una compra real en Stripe Test; esa integración seguirá pendiente hasta validar el circuito con una cuenta test autorizada.
 
 Un evento de reembolso no resta créditos a ciegas: congela el monedero y marca la compra para revisión manual, porque parte de los créditos podría haberse gastado. El saldo se conserva hasta conciliación. Las compras no crean renovaciones. Los créditos comprados no caducan y pueden acumularse; por tanto, el efectivo cobrado por paquetes sin consumir representa una obligación y no beneficio realizado.
 

@@ -16,9 +16,10 @@ from sqlalchemy import inspect, text
 from app import app, db
 
 
-EXPECTED_GRAPH_HEAD = "a2b3c4d5e6f7"
+EXPECTED_GRAPH_HEAD = "b4c5d6e7f8a9"
 PRE_CREDITS_HEAD = "z9a0b1c2d3e4"
-POST_CREDITS_HEAD = "a2b3c4d5e6f7"
+CREDITS_MVP_HEAD = "a2b3c4d5e6f7"
+POST_CREDITS_HEAD = "b4c5d6e7f8a9"
 BASE_SCHEMA_TABLES = (
     "s01_stripe_checkout_attempts",
     "s01_stripe_event_receipts",
@@ -101,7 +102,9 @@ def _migration_graph_head() -> str:
     if tuple(heads) != (EXPECTED_GRAPH_HEAD,):
         raise StartupSchemaError("migration graph is not the approved application single head")
     post_credits = script.get_revision(POST_CREDITS_HEAD)
-    if post_credits is None or post_credits.down_revision != PRE_CREDITS_HEAD:
+    credits_mvp = script.get_revision(CREDITS_MVP_HEAD)
+    if (credits_mvp is None or credits_mvp.down_revision != PRE_CREDITS_HEAD
+            or post_credits is None or post_credits.down_revision != CREDITS_MVP_HEAD):
         raise StartupSchemaError("migration graph is not the approved application single head")
     return EXPECTED_GRAPH_HEAD
 
@@ -126,7 +129,7 @@ def verify_schema_readonly() -> None:
                 tables = set(inspector.get_table_names(schema="public"))
                 versions = conn.execute(text("SELECT version_num FROM public.alembic_version")).scalars().all()
                 if len(versions) != 1 or versions[0] not in {
-                    PRE_CREDITS_HEAD, POST_CREDITS_HEAD,
+                    PRE_CREDITS_HEAD, CREDITS_MVP_HEAD, POST_CREDITS_HEAD,
                 }:
                     raise StartupSchemaError("database revision is not an approved transition state")
                 revision = versions[0]
@@ -161,7 +164,15 @@ def verify_schema_readonly() -> None:
                     known_columns = {
                         col["name"] for col in inspector.get_columns(table, schema="public")
                     }
-                    if not {c.name for c in model.columns}.issubset(known_columns):
+                    expected_columns = {c.name for c in model.columns}
+                    if (revision == CREDITS_MVP_HEAD
+                            and table == "credit_analyses"):
+                        # Transitional release accepts the already deployed
+                        # credit schema until the additive recovery migration
+                        # is explicitly applied. The commercial gate remains
+                        # false on this revision.
+                        expected_columns.discard("execution_started_at")
+                    if not expected_columns.issubset(known_columns):
                         raise StartupSchemaError("model columns are missing from PostgreSQL")
 
                 advice_columns = {
