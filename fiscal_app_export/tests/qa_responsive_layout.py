@@ -16,6 +16,7 @@ from qa_home_redesign import run_home_redesign
 from qa_herramientas_redesign import run_herramientas_apple
 from qa_como_funciona_apple import run_como_funciona_apple
 from qa_advisory_apple import run_advisory_apple
+from qa_advisory_request_apple import run_advisory_request_apple
 from qa_recursos_apple import run_recursos_apple
 from qa_faq_apple import run_faq_apple
 from qa_privacidad_apple import run_privacidad_apple
@@ -41,6 +42,7 @@ SUITES = {
     "herramientas": run_herramientas_apple,
     "como_funciona": run_como_funciona_apple,
     "advisory_apple": run_advisory_apple,
+    "advisory_request_apple": run_advisory_request_apple,
     "recursos": run_recursos_apple,
 }
 SUITE_TIMEOUT_SECONDS = 180
