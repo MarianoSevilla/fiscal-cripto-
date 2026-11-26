@@ -74,9 +74,6 @@ def _run_program(program: str) -> str:
         "STRIPE_WEBHOOK_SECRET", "RESEND_API_KEY",
     ):
         env.pop(name, None)
-    program = program.replace("__CREDIT_QA_APP_ROOT__", repr(str(ROOT)))
-    if "__CREDIT_QA_APP_ROOT__" in program:
-        raise AssertionError("application root placeholder was not resolved")
     result = subprocess.run(
         [sys.executable, "-c", program], cwd=ROOT, env=env,
         text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -363,13 +360,17 @@ def launch_cut(program, user_id, analysis_id, raw, exit_code):
     os.environ["CREDIT_QA_ANALYSIS_ID"] = analysis_id
     os.environ["CREDIT_QA_CSV"] = raw.decode()
     env = os.environ.copy()
+    app_root = env["PYTHONPATH"]
+    program = program.replace("__CREDIT_QA_APP_ROOT__", repr(app_root))
+    if "__CREDIT_QA_APP_ROOT__" in program:
+        raise AssertionError("crash-worker application root placeholder was not resolved")
     for name in ("RAILWAY_ENVIRONMENT_ID", "RAILWAY_ENVIRONMENT_NAME", "RAILWAY_PROJECT_ID",
                  "RAILWAY_SERVICE_ID", "RAILWAY_DEPLOYMENT_ID", "RAILWAY_PUBLIC_DOMAIN",
                  "RAILWAY_PRIVATE_DOMAIN", "PORT", "SERVER_SOFTWARE", "STRIPE_SECRET_KEY",
                  "STRIPE_WEBHOOK_SECRET", "RESEND_API_KEY"):
         env.pop(name, None)
     child = subprocess.run([sys.executable, "-c", program],
-                           cwd=__CREDIT_QA_APP_ROOT__, env=env, text=True,
+                           cwd=app_root, env=env, text=True,
                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=45)
     assert child.returncode == exit_code, (child.returncode, child.stdout[-800:])
     return child.stdout
