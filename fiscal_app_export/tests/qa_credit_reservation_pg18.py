@@ -243,8 +243,8 @@ provisional_id = authorize(owner_client, PROVISIONAL_CSV)
 provisional = submit(owner_client, provisional_id, PROVISIONAL_CSV)
 assert provisional.status_code == 422, provisional.get_data(as_text=True)[:800]
 assert provisional.json["result_type"] == "provisional"
-assert provisional.json["borrador_binance"]["no_es_informe_fiscal"] is True
-assert provisional.json["borrador_binance"]["ganancias_y_perdidas_eur"] is None
+assert provisional.json["borrador_fifo"]["no_es_informe_fiscal"] is True
+assert provisional.json["borrador_fifo"]["ganancias_y_perdidas_eur"] is None
 assert provisional.json["credits_charged"] == 50
 provisional_download = owner_client.get(provisional.json["download_url"])
 assert provisional_download.status_code == 200 and provisional_download.data.startswith(b"%PDF-")
