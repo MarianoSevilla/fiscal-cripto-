@@ -66,6 +66,7 @@ def _run_program(program: str) -> str:
         "FIFO_CREDITS_REPORT_KEY": base64.urlsafe_b64encode(b"a" * 32).decode().rstrip("="),
         "APP_BASE_URL": "https://marianosevilla.com",
         "PYTHONPATH": str(ROOT), "PYTHONDONTWRITEBYTECODE": "1",
+        "CREDIT_QA_APP_ROOT": str(ROOT),
     })
     for name in (
         "RAILWAY_ENVIRONMENT_ID", "RAILWAY_ENVIRONMENT_NAME", "RAILWAY_PROJECT_ID",
@@ -332,7 +333,8 @@ finally:
 # reading the upload, before begin_analysis commits. Its session lock disappears.
 validation_id = authorize(owner_client, csv_bytes("VALIDATION-CUT"))
 CHILD_VALIDATION = r'''
-import io, os, time
+import io, os, sys, time
+sys.path.insert(0, os.environ["CREDIT_QA_APP_ROOT"])
 from app import app
 import credits_routes
 uid = int(os.environ["CREDIT_QA_USER_ID"])
@@ -363,7 +365,8 @@ def launch_cut(program, user_id, analysis_id, raw, exit_code):
                  "RAILWAY_PRIVATE_DOMAIN", "PORT", "SERVER_SOFTWARE", "STRIPE_SECRET_KEY",
                  "STRIPE_WEBHOOK_SECRET", "RESEND_API_KEY"):
         env.pop(name, None)
-    child = subprocess.run([sys.executable, "-c", program], env=env, text=True,
+    child = subprocess.run([sys.executable, "-c", program],
+                           cwd=env["CREDIT_QA_APP_ROOT"], env=env, text=True,
                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=45)
     assert child.returncode == exit_code, (child.returncode, child.stdout[-800:])
     return child.stdout
@@ -379,7 +382,8 @@ assert validation_recovered.json["status"] == "released"
 # is uncertain: retain reserved credits, record the state and freeze the wallet.
 unknown_id = authorize(other_client, csv_bytes("FIFO-CRASH"))
 CHILD_FIFO_CRASH = r'''
-import io, os, time
+import io, os, sys, time
+sys.path.insert(0, os.environ["CREDIT_QA_APP_ROOT"])
 from app import app
 import app as application
 uid = int(os.environ["CREDIT_QA_USER_ID"])
@@ -415,7 +419,8 @@ with app.app_context():
 # result must remain recoverable as a free repeat download, never another debit.
 post_settlement_id = authorize(owner_client, csv_bytes("SETTLED-RESPONSE-CUT"))
 CHILD_POST_SETTLEMENT = r'''
-import io, os, time
+import io, os, sys, time
+sys.path.insert(0, os.environ["CREDIT_QA_APP_ROOT"])
 from app import app
 import credits_routes
 uid = int(os.environ["CREDIT_QA_USER_ID"])
