@@ -18,7 +18,7 @@ def checkout_session_params(*, purchase, base_url: str) -> dict:
         raise CreditError("Esta compra no está pendiente.")
     return {
         "mode": "payment",
-        "payment_method_types": ["card"],
+        "allowed_payment_method_types": ["card"],
         "line_items": [{
             "price_data": {
                 "currency": "eur", "unit_amount": purchase.amount_cents,
