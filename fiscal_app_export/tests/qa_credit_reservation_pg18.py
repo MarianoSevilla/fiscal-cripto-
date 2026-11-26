@@ -395,8 +395,9 @@ validation_recovered = owner_client.post(
 assert validation_recovered.status_code == 200
 assert validation_recovered.json["status"] == "released"
 
-# Terminate after the real FIFO work and PDF construction started. The outcome
-# is uncertain: retain reserved credits, record the state and freeze the wallet.
+# Terminate after the real FIFO work has started rendering its PDF. Draw one
+# real ReportLab flowable, then kill the worker before the document can finish
+# or the route can settle; the outcome is uncertain and must stay quarantined.
 unknown_raw = csv_bytes("FIFO-CRASH")
 unknown_id = authorize(other_client, unknown_raw)
 CHILD_FIFO_CRASH = r'''
@@ -404,16 +405,18 @@ import io, os, sys, time
 sys.path.insert(0, __CREDIT_QA_APP_ROOT__)
 from app import app
 import app as application
+from reportlab.platypus import Paragraph
 uid = int(os.environ["CREDIT_QA_USER_ID"])
 client = app.test_client(); now = int(time.time())
 with client.session_transaction() as s:
  s["_user_id"] = os.environ["CREDIT_QA_USER_IDENTITY"]; s["_fresh"] = True
  s["auth_started_at"] = now; s["auth_last_activity_at"] = now
-real = application.generar_pdf
-def cut(*args, **kwargs):
- result = real(*args, **kwargs)
+real_draw = Paragraph.draw
+def cut_during_pdf_render(self, *args, **kwargs):
+ result = real_draw(self, *args, **kwargs)
+ os.write(1, b"PDF_RENDER_FLOWABLE_DRAWN\n")
  os._exit(92)
-application.generar_pdf = cut
+Paragraph.draw = cut_during_pdf_render
 client.post("/api/analizar", data={
  "credit_analysis_id": os.environ["CREDIT_QA_ANALYSIS_ID"], "nombre":"Synthetic",
  "ejercicio":"2025", "exchange":"binance", "alcance_datos":"solo_binance",
@@ -422,7 +425,8 @@ client.post("/api/analizar", data={
  headers={"X-Credit-Analysis-ID": os.environ["CREDIT_QA_ANALYSIS_ID"]})
 os._exit(1)
 '''
-launch_cut(CHILD_FIFO_CRASH, other_id, unknown_id, unknown_raw, 92)
+pdf_cut_output = launch_cut(CHILD_FIFO_CRASH, other_id, unknown_id, unknown_raw, 92)
+assert "PDF_RENDER_FLOWABLE_DRAWN" in pdf_cut_output
 unknown_recovered = other_client.post(
     f"/api/credits/analyses/{unknown_id}/recover",
     headers={"X-Credits-CSRF": csrf(other_client)})
