@@ -317,7 +317,13 @@ def run_first_attempt():
 try:
     with ThreadPoolExecutor(max_workers=1) as pool:
         first_future = pool.submit(run_first_attempt)
-        assert entered_pdf.wait(30), "first execution did not reach the real PDF generator"
+        if not entered_pdf.wait(30):
+            if first_future.done():
+                raise AssertionError(
+                    "first request ended before PDF generation: "
+                    f"{first_future.result()!r}"
+                )
+            raise AssertionError("first execution did not reach the real PDF generator")
         retry = submit(owner_client, concurrent_id, concurrent_raw)
         assert retry.status_code == 409 and retry.json["credit_state"] == "processing"
         duplicate_authorization, _ = quote_and_authorize(owner_client, concurrent_raw)
