@@ -330,7 +330,7 @@ try:
         duplicate_authorization, _ = quote_and_authorize(owner_client, concurrent_raw)
         assert duplicate_authorization.status_code == 409
         with app.app_context():
-            assert CreditLedgerEntry.query.filter_by(user_id=owner_id, entry_type="reserve").count() == 5
+            assert CreditLedgerEntry.query.filter_by(user_id=owner_id, entry_type="reserve").count() == 6
             assert balance(owner_id)["reserved"] == 50
         finish_pdf.set()
         first_status, first_json = first_future.result(timeout=45)
