@@ -229,6 +229,9 @@ for _ in range(2):
 assert other_client.get(report_url).status_code == 404
 with app.app_context():
     assert balance(owner_id) == {"available": 180, "reserved": 0, "frozen": False}
+    persisted_definitive = db.session.get(CreditAnalysis, definitive_id)
+    assert persisted_definitive.status == "consumed"
+    assert persisted_definitive.execution_started_at is not None
 
 # Real missing-inventory response is provisional, has no tax figures, and its
 # diagnostic PDF is retained encrypted for the purchased operation.
@@ -252,6 +255,10 @@ assert error.json["balance"] == {"available": 130, "reserved": 0, "frozen": Fals
 
 # After authorization and before sending any file: read state and reclaim once.
 never_sent_id = authorize(owner_client, csv_bytes("NEVER-SENT"))
+with app.app_context():
+    never_sent = db.session.get(CreditAnalysis, never_sent_id)
+    assert never_sent.status == "reserved"
+    assert never_sent.execution_started_at is None
 pending = owner_client.get("/api/credits/analyses/pending")
 assert any(row["id"] == never_sent_id and row["status"] == "reserved"
            for row in pending.json["operations"])
@@ -402,6 +409,7 @@ assert unknown_recovered.json["status"] == "execution_unknown"
 with app.app_context():
     assert balance(other_id) == {"available": 180, "reserved": 50, "frozen": True}
     assert CreditLedgerEntry.query.filter_by(user_id=other_id, entry_type="release").count() == 0
+    assert db.session.get(CreditAnalysis, unknown_id).execution_started_at is not None
 
 # Terminate after settlement commits but before the HTTP response. The consumed
 # result must remain recoverable as a free repeat download, never another debit.

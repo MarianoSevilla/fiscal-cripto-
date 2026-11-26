@@ -202,6 +202,7 @@ def test_unconfirmed_settlement_quarantines_wallet_and_blocks_new_charges(ctx):
 def test_recovery_releases_only_never_started_reservations(ctx):
     _buy(ctx, package="basic")
     analysis = _reserve(ctx, credits=50)
+    assert analysis.execution_started_at is None
     lock = try_acquire_analysis_lock(user_id=ctx, analysis_id=analysis.id)
     assert lock is not None
     try:
@@ -220,6 +221,7 @@ def test_interrupted_execution_is_quarantined_not_refunded(ctx):
     _buy(ctx, package="basic")
     analysis = _reserve(ctx, credits=50)
     worker_lock = _start(ctx, analysis)
+    assert analysis.execution_started_at is not None
     # Releasing the session lock models worker termination; `processing`
     # remains persisted and must not be treated as an unused authorization.
     worker_lock.release()
