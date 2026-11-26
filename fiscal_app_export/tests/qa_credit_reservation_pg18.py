@@ -99,6 +99,7 @@ from credits_stripe import checkout_session_params
 import app as application
 
 app.config.update(TESTING=True, RATELIMIT_ENABLED=False, WTF_CSRF_ENABLED=False)
+application.limiter.enabled = False
 
 with app.app_context():
     assert db.engine.dialect.name == "postgresql"
