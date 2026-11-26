@@ -113,7 +113,7 @@ def run_dashboard_apple(browser,origin):
             assert p.locator('#dashSearch').evaluate('e=>parseFloat(getComputedStyle(e).fontSize)')>=16
             assert p.locator('link[href*="fonts.googleapis"]').count()==0
             assert p.locator('#dashManagement').is_visible()==(role!='user')
-            assert p.locator('#dashRoleLinks li').count()=={'user':0,'advisor':1,'admin':6}[role]
+            assert p.locator('#dashRoleLinks li').count()=={'user':0,'advisor':2,'admin':6}[role]
             for img in p.locator('#dashExchanges img').all():assert img.evaluate('e=>e.complete&&e.naturalWidth>0')
             assert p.locator('#snavItemPlanes,a[href="/pricing"]').count()==0
             assert p.locator('#snavItemDash').inner_text()=='Mi espacio fiscal'
