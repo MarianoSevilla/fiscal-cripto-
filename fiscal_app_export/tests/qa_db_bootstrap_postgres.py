@@ -18,7 +18,8 @@ HOST = "127.0.0.1"
 PORT = 5432
 USER = "postgres"
 PASSWORD = "ci-only-test-password"
-HEAD = "a2b3c4d5e6f7"  # FIFO credit pilot ledger
+HEAD = "b4c5d6e7f8a9"  # FIFO credit execution recovery
+PRE_RECOVERY_HEAD = "a2b3c4d5e6f7"
 PRE_CREDITS_HEAD = "z9a0b1c2d3e4"
 CREDIT_TABLES = (
     "credit_wallets", "credit_ledger_entries", "credit_purchases",
@@ -146,6 +147,15 @@ with app.app_context():
 """)
 
 
+def _upgrade_to_pre_recovery_head(name: str) -> None:
+    _run(name, f"""
+from app import app
+from flask_migrate import upgrade
+with app.app_context():
+    upgrade(revision={PRE_RECOVERY_HEAD!r})
+""")
+
+
 def main() -> None:
     # 1. Fresh PostgreSQL: importing Flask or entering Gunicorn MUST NOT
     # auto-create tables, indexes, constraints, or any other database objects.
@@ -192,6 +202,10 @@ def main() -> None:
     with _db_conn(transition) as conn, conn.cursor() as cur:
         cur.execute("DROP TABLE credit_wallets")
     _startup(transition)  # recovery to known old schema; no automatic repair
+    _upgrade_to_pre_recovery_head(transition)
+    _assert_version(transition, PRE_RECOVERY_HEAD)
+    _startup(transition)  # app can roll out before the additive recovery migration
+    _healthz(transition)
     _upgrade_to_credit_head(transition)
     _assert_version(transition)
     _startup(transition)  # fresh process == service restart on migrated schema

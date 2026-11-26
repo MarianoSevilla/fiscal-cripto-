@@ -27,7 +27,7 @@ DB_NAME = "s01_local_rehearsal"
 DB_USER = "postgres"
 PORT = 55435
 PRE_REV = "v5w6x7y8z9a0"
-POST_REV = "a2b3c4d5e6f7"
+POST_REV = "b4c5d6e7f8a9"
 NEW_TABLES = (
     "s01_stripe_checkout_attempts",
     "s01_stripe_event_receipts",

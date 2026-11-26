@@ -32,7 +32,7 @@ def store_artifact(*, analysis_id: str, user_id: int, pdf_bytes: bytes,
         select(CreditAnalysis).where(CreditAnalysis.id == analysis_id,
                                     CreditAnalysis.user_id == user_id).with_for_update()
     ).scalar_one_or_none()
-    if not analysis or analysis.status != "reserved" or not isinstance(pdf_bytes, bytes) or not pdf_bytes.startswith(b"%PDF-"):
+    if not analysis or analysis.status != "processing" or not isinstance(pdf_bytes, bytes) or not pdf_bytes.startswith(b"%PDF-"):
         raise ValueError("Documento no elegible para persistencia")
     now = now or datetime.utcnow()
     nonce = os.urandom(12)

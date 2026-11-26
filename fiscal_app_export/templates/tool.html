@@ -362,6 +362,12 @@
     </a>
   </div>
   <p id="creditsUsageNotice" role="status" aria-live="polite" hidden></p>
+  <section id="creditsRecoveryNotice" role="status" aria-live="polite" hidden
+           style="margin:12px 0;padding:14px 16px;border:1px solid var(--border,#d8dde1);border-radius:12px;background:var(--surface,#fff);">
+    <strong>Estado de tus análisis</strong>
+    <div id="creditsRecoveryItems" style="margin-top:8px;"></div>
+    <p id="creditsRecoveryFeedback" style="margin:8px 0 0;"></p>
+  </section>
 
   <!-- ESTADO VACÍO -->
   <div class="empty-state" id="emptyState">
@@ -2141,6 +2147,72 @@
     return authorization.analysis_id;
   }
 
+  async function refreshCreditRecoveryNotice() {
+    if (!creditsPilotEnabled) return;
+    const panel = document.getElementById('creditsRecoveryNotice');
+    const items = document.getElementById('creditsRecoveryItems');
+    const feedback = document.getElementById('creditsRecoveryFeedback');
+    if (!panel || !items) return;
+    try {
+      const response = await fetch('/api/credits/analyses/pending', { credentials: 'same-origin' });
+      if (!response.ok) return;
+      const payload = await response.json();
+      items.replaceChildren();
+      const operations = Array.isArray(payload.operations) ? payload.operations : [];
+      panel.hidden = operations.length === 0;
+      operations.forEach((operation) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:8px;';
+        const copy = document.createElement('span');
+        const label = `${operation.exchange || 'FIFO'} · ${operation.fiscal_years || 'ejercicio indicado'}`;
+        if (operation.status === 'reserved') {
+          copy.textContent = `${label}: reserva pendiente; el análisis todavía no había empezado.`;
+        } else if (operation.status === 'processing') {
+          copy.textContent = `${label}: análisis en curso o interrumpido; se comprobará antes de cambiar el saldo.`;
+        } else {
+          copy.textContent = `${label}: resultado incierto; el saldo está bloqueado para revisión.`;
+        }
+        row.appendChild(copy);
+        if (operation.status === 'reserved' || operation.status === 'processing') {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'btn-retry';
+          button.textContent = operation.status === 'reserved' ? 'Liberar reserva' : 'Comprobar estado';
+          button.addEventListener('click', async () => {
+            button.disabled = true;
+            if (feedback) feedback.textContent = 'Comprobando el estado de la operación…';
+            try {
+              const csrf = await fetch('/api/credits/csrf', { credentials: 'same-origin' }).then(r => r.json());
+              const result = await fetch(`/api/credits/analyses/${encodeURIComponent(operation.id)}/recover`, {
+                method: 'POST', credentials: 'same-origin',
+                headers: { 'X-Credits-CSRF': csrf.csrf_token },
+              });
+              const detail = await result.json().catch(() => ({}));
+              if (detail.download_url) {
+                window.location.assign(detail.download_url);
+                return;
+              }
+              if (feedback) feedback.textContent = detail.message || 'No se pudo confirmar la recuperación. No repitas el análisis.';
+              await refreshCreditRecoveryNotice();
+            } catch (_) {
+              if (feedback) feedback.textContent = 'No se pudo consultar la operación. No repitas el análisis; vuelve a comprobar el estado.';
+            } finally { button.disabled = false; }
+          });
+          row.appendChild(button);
+        } else {
+          const support = document.createElement('a');
+          support.href = '/contacto';
+          support.textContent = 'Contactar con soporte';
+          row.appendChild(support);
+        }
+        items.appendChild(row);
+      });
+    } catch (_) {
+      // Recovery status is optional UI; the existing free workflow remains usable.
+    }
+  }
+  refreshCreditRecoveryNotice();
+
   // ── SUBMIT ───────────────────────────────
   btnAnalizar.addEventListener('click', async () => {
     if (isKucoinPage) {
@@ -2197,6 +2269,7 @@
       if (creditsPilotEnabled && !creditAnalysisId) return;
     } catch (creditError) {
       mostrarErrorApi(creditError.message || 'No se ha podido autorizar el análisis.');
+      await refreshCreditRecoveryNotice();
       showState('error'); actualizarBoton(); return;
     }
 
@@ -2224,7 +2297,12 @@
     if (creditAnalysisId) formData.append('credit_analysis_id', creditAnalysisId);
 
     try {
-      const res  = await fetch(endpoint, { method: 'POST', body: formData, credentials: 'include' });
+      const analysisHeaders = creditAnalysisId
+        ? { 'X-Credit-Analysis-ID': creditAnalysisId }
+        : {};
+      const res  = await fetch(endpoint, {
+        method: 'POST', body: formData, credentials: 'include', headers: analysisHeaders
+      });
       const data = await res.json();
 
       if (EXCHANGE_PAGE !== 'binance' && res.status === 422
@@ -2240,6 +2318,7 @@
         // Análisis ya en proceso: mostrar aviso y conservar el fichero seleccionado
         // para que el usuario pueda reintentar cuando termine.
         mostrarErrorApi(data.error, null, res.status);
+        await refreshCreditRecoveryNotice();
         showState('error');
         actualizarBoton();
         return;
@@ -2265,6 +2344,11 @@
       }
 
       if (!res.ok || !data.ok) {
+        if (data.download_url && Number.isInteger(data.credits_charged)) {
+          btnDownload.href = data.download_url;
+          btnDownload.download = `resultado_fifo_${selectedExchange}.pdf`;
+          showDownload();
+        }
         mostrarErrorApi([data.error, data.credit_message].filter(Boolean).join(' '), res.status === 429 ? {
           status: res.status,
           body: data.retry_after_seconds,
@@ -2275,10 +2359,12 @@
           renderBorradorBinance(data.borrador_binance, data.token_pdf_diagnostico, data.download_url);
         }
         showState('error');
+        await refreshCreditRecoveryNotice();
         if (![401, 403, 409, 413, 429].includes(res.status)) {
           offerDiagnostic(isMultiPage ? selectedFiles : [selectedFile]);
         }
-      const creditStateUnknown = String(data.credit_message || '').includes('No se ha podido confirmar el estado');
+      const creditStateUnknown = String(data.credit_message || '').includes('No se ha podido confirmar el estado')
+        || ['execution_unknown', 'settlement_unknown', 'unknown'].includes(data.credit_state);
       const canRetrySameFiles = !creditStateUnknown && (res.status === 429 || res.status >= 500);
         if (!canRetrySameFiles) {
           selectedFile = null; csvInput.value = ''; hideFile();
@@ -2303,6 +2389,7 @@
 
     } catch (err) {
       mostrarErrorApi('__servidor__');
+      await refreshCreditRecoveryNotice();
       showState('error');
       if ((isMultiPage && selectedFiles.length) || selectedFile) {
         csvInput.value = '';

@@ -13,8 +13,9 @@ import pytest
 from flask import Flask, jsonify, request, render_template_string
 from flask_login import LoginManager, login_required
 
-from models import db, User, CreditWallet, CreditPurchase, CreditAnalysis
-from credit_ledger import attach_checkout_session, confirm_test_payment
+from models import db, User, CreditWallet, CreditPurchase, CreditAnalysis, CreditLedgerEntry
+from credit_ledger import attach_checkout_session, confirm_test_payment, balance, begin_analysis
+from credit_execution import try_acquire_analysis_lock
 from credits_routes import credits_bp, register_analysis_hooks
 
 
@@ -112,6 +113,10 @@ def test_fifo_tool_ui_has_no_status_poll_for_disabled_credit_pilot():
     source = template.read_text(encoding="utf-8")
     assert "creditsPilotEnabled = {{ credits_pilot_enabled | tojson }}" in source
     assert "fetch('/api/credits/status'" not in source
+    assert "async function refreshCreditRecoveryNotice()" in source
+    assert "if (!creditsPilotEnabled) return;" in source
+    assert "fetch('/api/credits/analyses/pending'" in source
+    assert "'X-Credit-Analysis-ID': creditAnalysisId" in source
 
 
 def _file(data=b"Date,Symbol,Amount\n2025-01-01,BTC,1\n"):
@@ -204,7 +209,7 @@ def test_http_changed_file_is_released_before_fifo_and_owner_binding_is_enforced
         "exchange": "binance", "ejercicio": "2025", "test_result": "definitive",
         "credit_analysis_id": auth.json["analysis_id"], "csv": _file(),
     }, content_type="multipart/form-data")
-    assert denied.status_code == 402
+    assert denied.status_code == 404
 
     changed = client_a.post("/api/analizar", data={
         "exchange": "binance", "ejercicio": "2025", "test_result": "definitive",
@@ -212,6 +217,160 @@ def test_http_changed_file_is_released_before_fifo_and_owner_binding_is_enforced
     }, content_type="multipart/form-data")
     assert changed.status_code == 409
     assert changed.json["credit_message"] == "No se han consumido créditos. Tu saldo permanece intacto"
+
+
+def test_http_user_can_release_authorized_reservation_that_never_started(web):
+    app, (user_id, _) = web
+    client = app.test_client(); _login(client, user_id)
+    csrf = client.get("/api/credits/csrf").json["csrf_token"]
+    quote = _quote(client).json
+    authorization = _authorize(client, quote, csrf)
+    analysis_id = authorization.json["analysis_id"]
+
+    pending = client.get("/api/credits/analyses/pending")
+    assert pending.status_code == 200
+    assert [(row["id"], row["status"]) for row in pending.json["operations"]] == [
+        (analysis_id, "reserved")
+    ]
+    other_client = app.test_client(); _login(other_client, 2)
+    assert other_client.get("/api/credits/analyses/pending").json["operations"] == []
+    recovered = client.post(
+        f"/api/credits/analyses/{analysis_id}/recover",
+        headers={"X-Credits-CSRF": csrf},
+    )
+    assert recovered.status_code == 200
+    assert recovered.json["status"] == "released"
+    assert recovered.json["balance"] == {"available": 460, "reserved": 0, "frozen": False}
+    repeated = client.post(
+        f"/api/credits/analyses/{analysis_id}/recover",
+        headers={"X-Credits-CSRF": csrf},
+    )
+    assert repeated.status_code == 200
+    with app.app_context():
+        assert balance(user_id) == {"available": 460, "reserved": 0, "frozen": False}
+        assert CreditLedgerEntry.query.filter_by(entry_type="release").count() == 1
+
+
+def test_http_truncated_multipart_upload_leaves_a_recoverable_reservation(web):
+    app, (user_id, _) = web
+    client = app.test_client(); _login(client, user_id)
+    csrf = client.get("/api/credits/csrf").json["csrf_token"]
+    quote = _quote(client).json
+    authorization = _authorize(client, quote, csrf)
+    analysis_id = authorization.json["analysis_id"]
+    truncated = (
+        b'--interrupted-upload\r\n'
+        b'Content-Disposition: form-data; name="csv"; filename="partial.csv"\r\n'
+        b'Content-Type: text/csv\r\n\r\n'
+        b'not,a,valid,binance,export\r\n1,2025'
+    )
+
+    response = client.post(
+        "/api/analizar", data=truncated,
+        content_type="multipart/form-data; boundary=interrupted-upload",
+        headers={"X-Credit-Analysis-ID": analysis_id},
+    )
+    assert response.status_code >= 400
+    if response.is_json and response.json.get("credit_message"):
+        assert response.json["credit_message"] == (
+            "No se han consumido créditos. Tu saldo permanece intacto"
+        )
+
+    recovered = client.post(
+        f"/api/credits/analyses/{analysis_id}/recover",
+        headers={"X-Credits-CSRF": csrf},
+    )
+    assert recovered.status_code == 200
+    assert recovered.json["status"] == "released"
+    assert recovered.json["balance"] == {"available": 460, "reserved": 0, "frozen": False}
+    with app.app_context():
+        assert CreditLedgerEntry.query.filter_by(entry_type="release").count() == 1
+
+
+def test_http_active_retry_cannot_steal_reservation_and_interrupted_work_is_quarantined(web):
+    app, (user_id, _) = web
+    owner = app.test_client(); _login(owner, user_id)
+    csrf = owner.get("/api/credits/csrf").json["csrf_token"]
+    quote = _quote(owner).json
+    authorization = _authorize(owner, quote, csrf)
+    analysis_id = authorization.json["analysis_id"]
+
+    with app.app_context():
+        active_lock = try_acquire_analysis_lock(user_id=user_id, analysis_id=analysis_id)
+        assert active_lock is not None
+        begin_analysis(analysis_id=analysis_id, user_id=user_id, execution_lock=active_lock)
+    try:
+        retry = owner.post("/api/analizar", data={
+            "exchange": "binance", "ejercicio": "2025", "test_result": "definitive",
+            "credit_analysis_id": analysis_id, "csv": _file(),
+        }, content_type="multipart/form-data")
+        assert retry.status_code == 409
+        assert retry.json["credit_state"] == "processing"
+        with app.app_context():
+            assert balance(user_id) == {"available": 410, "reserved": 50, "frozen": False}
+        recover_active = owner.post(
+            f"/api/credits/analyses/{analysis_id}/recover",
+            headers={"X-Credits-CSRF": csrf},
+        )
+        assert recover_active.status_code == 409
+        assert recover_active.json["status"] == "processing"
+    finally:
+        active_lock.release()
+
+    recovered = owner.post(
+        f"/api/credits/analyses/{analysis_id}/recover",
+        headers={"X-Credits-CSRF": csrf},
+    )
+    assert recovered.status_code == 409
+    assert recovered.json["status"] == "execution_unknown"
+    with app.app_context():
+        assert balance(user_id) == {"available": 410, "reserved": 50, "frozen": True}
+        assert CreditLedgerEntry.query.filter_by(entry_type="release").count() == 0
+
+
+def test_http_known_validation_failure_releases_and_reports_confirmed_balance(web, monkeypatch):
+    import credits_routes
+
+    app, (user_id, _) = web
+    client = app.test_client(); _login(client, user_id)
+    csrf = client.get("/api/credits/csrf").json["csrf_token"]
+    quote = _quote(client).json
+    authorization = _authorize(client, quote, csrf)
+
+    monkeypatch.setattr(credits_routes, "inspect_credit_uploads",
+                        lambda _files: (_ for _ in ()).throw(ValueError("synthetic invalid CSV")))
+    response = _analysis(client, authorization.json["analysis_id"], "definitive")
+    assert response.status_code == 400
+    assert response.json["credit_message"] == "No se han consumido créditos. Tu saldo permanece intacto"
+    assert response.json["balance"] == {"available": 460, "reserved": 0, "frozen": False}
+
+
+def test_http_response_lost_after_settlement_can_recover_paid_document(web, monkeypatch):
+    import credits_routes
+
+    app, (user_id, _) = web
+    client = app.test_client(); _login(client, user_id)
+    csrf = client.get("/api/credits/csrf").json["csrf_token"]
+    quote = _quote(client).json
+    authorization = _authorize(client, quote, csrf)
+    settle = credits_routes.settle_analysis
+
+    def settle_then_connection_drop(**kwargs):
+        result = settle(**kwargs)
+        raise RuntimeError("synthetic connection dropped after commit")
+
+    monkeypatch.setattr(credits_routes, "settle_analysis", settle_then_connection_drop)
+    response = _analysis(client, authorization.json["analysis_id"], "definitive")
+    assert response.status_code == 500
+    assert response.json["credit_analysis_id"] == authorization.json["analysis_id"]
+    assert "estado está confirmado" in response.json["credit_message"]
+    assert response.json["download_url"]
+    assert response.json["balance"] == {"available": 410, "reserved": 0, "frozen": False}
+    monkeypatch.setattr(credits_routes, "settle_analysis", settle)
+    downloaded = client.get(response.json["download_url"])
+    assert downloaded.status_code == 200 and downloaded.data.startswith(b"%PDF-")
+    with app.app_context():
+        assert CreditLedgerEntry.query.filter_by(entry_type="settle").count() == 1
 
 
 def test_http_one_free_correction_is_explicit_and_never_debits_wallet(web):
