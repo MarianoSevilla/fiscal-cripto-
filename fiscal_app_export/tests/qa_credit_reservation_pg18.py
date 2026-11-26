@@ -166,9 +166,10 @@ def authorize(client, raw, *, year="2025"):
     return response.json["analysis_id"]
 
 def submit(client, analysis_id, raw, *, filename="binance-synthetic.csv"):
-    return client.post("/api/binance/analizar", data={
+    return client.post("/api/analizar", data={
         "credit_analysis_id": analysis_id, "nombre": "Synthetic test",
-        "ejercicio": "2025", "alcance_datos": "solo_binance",
+        "ejercicio": "2025", "exchange": "binance",
+        "alcance_datos": "solo_binance",
         "csv": (io.BytesIO(raw), filename),
     }, content_type="multipart/form-data",
        headers={"X-Credit-Analysis-ID": analysis_id})
@@ -348,9 +349,9 @@ def cut(files):
  next(f for f in files if f.filename).stream.read(1)
  os._exit(91)
 credits_routes.inspect_credit_uploads = cut
-client.post("/api/binance/analizar", data={
+client.post("/api/analizar", data={
  "credit_analysis_id": os.environ["CREDIT_QA_ANALYSIS_ID"], "nombre":"Synthetic",
- "ejercicio":"2025", "alcance_datos":"solo_binance",
+ "ejercicio":"2025", "exchange":"binance", "alcance_datos":"solo_binance",
  "csv": (io.BytesIO(os.environ["CREDIT_QA_CSV"].encode()), "crash.csv")},
  content_type="multipart/form-data",
  headers={"X-Credit-Analysis-ID": os.environ["CREDIT_QA_ANALYSIS_ID"]})
@@ -404,9 +405,9 @@ def cut(*args, **kwargs):
  result = real(*args, **kwargs)
  os._exit(92)
 application.generar_pdf = cut
-client.post("/api/binance/analizar", data={
+client.post("/api/analizar", data={
  "credit_analysis_id": os.environ["CREDIT_QA_ANALYSIS_ID"], "nombre":"Synthetic",
- "ejercicio":"2025", "alcance_datos":"solo_binance",
+ "ejercicio":"2025", "exchange":"binance", "alcance_datos":"solo_binance",
  "csv": (io.BytesIO(os.environ["CREDIT_QA_CSV"].encode()), "crash.csv")},
  content_type="multipart/form-data",
  headers={"X-Credit-Analysis-ID": os.environ["CREDIT_QA_ANALYSIS_ID"]})
@@ -441,9 +442,9 @@ def settle_then_die(**kwargs):
  result = real(**kwargs)
  os._exit(93)
 credits_routes.settle_analysis = settle_then_die
-client.post("/api/binance/analizar", data={
+client.post("/api/analizar", data={
  "credit_analysis_id": os.environ["CREDIT_QA_ANALYSIS_ID"], "nombre":"Synthetic",
- "ejercicio":"2025", "alcance_datos":"solo_binance",
+ "ejercicio":"2025", "exchange":"binance", "alcance_datos":"solo_binance",
  "csv": (io.BytesIO(os.environ["CREDIT_QA_CSV"].encode()), "settled.csv")},
  content_type="multipart/form-data",
  headers={"X-Credit-Analysis-ID": os.environ["CREDIT_QA_ANALYSIS_ID"]})
