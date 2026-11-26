@@ -117,8 +117,10 @@ with app.app_context():
 
 def login(client, user_id):
     now = int(time.time())
+    with app.app_context():
+        identity = db.session.get(User, user_id).get_id()
     with client.session_transaction() as sess:
-        sess["_user_id"] = str(user_id)
+        sess["_user_id"] = identity
         sess["_fresh"] = True
         sess["auth_started_at"] = now
         sess["auth_last_activity_at"] = now
@@ -340,7 +342,7 @@ import credits_routes
 uid = int(os.environ["CREDIT_QA_USER_ID"])
 client = app.test_client(); now = int(time.time())
 with client.session_transaction() as s:
- s["_user_id"] = str(uid); s["_fresh"] = True
+ s["_user_id"] = os.environ["CREDIT_QA_USER_IDENTITY"]; s["_fresh"] = True
  s["auth_started_at"] = now; s["auth_last_activity_at"] = now
 def cut(files):
  next(f for f in files if f.filename).stream.read(1)
@@ -359,6 +361,8 @@ def launch_cut(program, user_id, analysis_id, raw, exit_code):
     os.environ["CREDIT_QA_USER_ID"] = str(user_id)
     os.environ["CREDIT_QA_ANALYSIS_ID"] = analysis_id
     os.environ["CREDIT_QA_CSV"] = raw.decode()
+    with app.app_context():
+        os.environ["CREDIT_QA_USER_IDENTITY"] = db.session.get(User, user_id).get_id()
     env = os.environ.copy()
     app_root = env["PYTHONPATH"]
     program = program.replace("__CREDIT_QA_APP_ROOT__", repr(app_root))
@@ -393,7 +397,7 @@ import app as application
 uid = int(os.environ["CREDIT_QA_USER_ID"])
 client = app.test_client(); now = int(time.time())
 with client.session_transaction() as s:
- s["_user_id"] = str(uid); s["_fresh"] = True
+ s["_user_id"] = os.environ["CREDIT_QA_USER_IDENTITY"]; s["_fresh"] = True
  s["auth_started_at"] = now; s["auth_last_activity_at"] = now
 real = application.generar_pdf
 def cut(*args, **kwargs):
@@ -430,7 +434,7 @@ import credits_routes
 uid = int(os.environ["CREDIT_QA_USER_ID"])
 client = app.test_client(); now = int(time.time())
 with client.session_transaction() as s:
- s["_user_id"] = str(uid); s["_fresh"] = True
+ s["_user_id"] = os.environ["CREDIT_QA_USER_IDENTITY"]; s["_fresh"] = True
  s["auth_started_at"] = now; s["auth_last_activity_at"] = now
 real = credits_routes.settle_analysis
 def settle_then_die(**kwargs):
