@@ -66,7 +66,6 @@ def _run_program(program: str) -> str:
         "FIFO_CREDITS_REPORT_KEY": base64.urlsafe_b64encode(b"a" * 32).decode().rstrip("="),
         "APP_BASE_URL": "https://marianosevilla.com",
         "PYTHONPATH": str(ROOT), "PYTHONDONTWRITEBYTECODE": "1",
-        "CREDIT_QA_APP_ROOT": str(ROOT),
     })
     for name in (
         "RAILWAY_ENVIRONMENT_ID", "RAILWAY_ENVIRONMENT_NAME", "RAILWAY_PROJECT_ID",
@@ -92,6 +91,7 @@ import csv, hashlib, hmac, io, json, os, subprocess, sys, threading, time
 from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 
+assert os.path.isfile(os.path.join(os.getcwd(), "app.py"))
 from app import app
 from models import db, User, CreditWallet, CreditAnalysis, CreditLedgerEntry
 from credit_ledger import create_purchase, attach_checkout_session, balance
@@ -334,7 +334,7 @@ finally:
 validation_id = authorize(owner_client, csv_bytes("VALIDATION-CUT"))
 CHILD_VALIDATION = r'''
 import io, os, sys, time
-sys.path.insert(0, os.environ["CREDIT_QA_APP_ROOT"])
+sys.path.insert(0, os.getcwd())
 from app import app
 import credits_routes
 uid = int(os.environ["CREDIT_QA_USER_ID"])
@@ -366,7 +366,7 @@ def launch_cut(program, user_id, analysis_id, raw, exit_code):
                  "STRIPE_WEBHOOK_SECRET", "RESEND_API_KEY"):
         env.pop(name, None)
     child = subprocess.run([sys.executable, "-c", program],
-                           cwd=env["CREDIT_QA_APP_ROOT"], env=env, text=True,
+                           cwd=os.getcwd(), env=env, text=True,
                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=45)
     assert child.returncode == exit_code, (child.returncode, child.stdout[-800:])
     return child.stdout
@@ -383,7 +383,7 @@ assert validation_recovered.json["status"] == "released"
 unknown_id = authorize(other_client, csv_bytes("FIFO-CRASH"))
 CHILD_FIFO_CRASH = r'''
 import io, os, sys, time
-sys.path.insert(0, os.environ["CREDIT_QA_APP_ROOT"])
+sys.path.insert(0, os.getcwd())
 from app import app
 import app as application
 uid = int(os.environ["CREDIT_QA_USER_ID"])
@@ -420,7 +420,7 @@ with app.app_context():
 post_settlement_id = authorize(owner_client, csv_bytes("SETTLED-RESPONSE-CUT"))
 CHILD_POST_SETTLEMENT = r'''
 import io, os, sys, time
-sys.path.insert(0, os.environ["CREDIT_QA_APP_ROOT"])
+sys.path.insert(0, os.getcwd())
 from app import app
 import credits_routes
 uid = int(os.environ["CREDIT_QA_USER_ID"])
