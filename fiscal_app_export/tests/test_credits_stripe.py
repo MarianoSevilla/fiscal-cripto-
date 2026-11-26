@@ -54,6 +54,8 @@ def test_checkout_is_one_time_server_priced_and_contains_no_customer_tax_data(pa
     _, purchase = paid_context
     params = checkout_session_params(purchase=purchase, base_url="https://marianosevilla.com")
     assert params["mode"] == "payment"
+    assert params["allowed_payment_method_types"] == ["card"]
+    assert "payment_method_types" not in params
     assert params["line_items"][0]["price_data"]["unit_amount"] == 4990
     assert "subscription_data" not in params
     assert params["metadata"] == {"credits_purchase_id": purchase.id}
