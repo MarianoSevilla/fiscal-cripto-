@@ -86,7 +86,7 @@ def _run_program(program: str) -> str:
     return result.stdout
 
 
-PROGRAM = r'''
+PROGRAM = r"""
 import csv, hashlib, hmac, io, json, os, subprocess, sys, threading, time
 from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
@@ -461,7 +461,7 @@ with app.app_context():
     assert CreditLedgerEntry.query.filter_by(user_id=owner_id, entry_type="settle").count() == 4
     assert CreditLedgerEntry.query.filter_by(user_id=owner_id, entry_type="release").count() == 4
 print("CREDITS_REAL_FLASK_FIFO_PG18: PASS synthetic-webhook definitive provisional error recovery concurrency crash-cuts downloads")
-'''
+"""
 
 
 def main() -> None:
