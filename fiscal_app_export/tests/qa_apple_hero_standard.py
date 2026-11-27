@@ -39,6 +39,18 @@ def compare_mid_cta(page,reference,width,name):
     selector=".content-main.prose > .cta-mid"
     assert card.evaluate("e=>Array.from(e.children,c=>c.tagName+':'+c.className).join('|')")==mid_cta(reference).evaluate("e=>Array.from(e.children,c=>c.tagName+':'+c.className).join('|')"),(name,width,"CTA structure")
     assert card.locator(".cta-micro-text").count()==0
+    assert page.locator(".sidebar-note").count()==0
+    first=".content-main.prose > .asistencia-block"
+    assert page.locator(first).count()==1
+    standard_badge=page.locator(first+" .asistencia-badge").inner_text().strip()
+    for target in (selector,".cta-final .cta-mid"):
+        assert page.locator(target+" .asistencia-badge").inner_text().strip()==standard_badge,(name,width,target,"green label")
+        compare(page,target,page,first,["background-color","border-radius","border-top-width","border-top-color","padding-top","padding-right","padding-bottom","padding-left"],width,name)
+        compare(page,target+" .asistencia-badge",page,first+" .asistencia-badge",["font-family","font-size","font-weight","line-height","color","margin-bottom","padding-top"],width,name)
+        compare(page,target+" .cta-mid-title",page,first+" p strong",["font-size","font-weight","line-height","color","margin-bottom"],width,name)
+        compare(page,target+" .cta-benefits",page,first+" .asistencia-bullets",["gap","margin-top","margin-bottom","padding-left"],width,name)
+        compare(page,target+" .cta-benefits > li:first-child",page,first+" .asistencia-bullets > li:first-child",["font-size","color","letter-spacing"],width,name)
+        assert page.locator(target).evaluate("e=>e.scrollWidth<=e.clientWidth+1"),(name,width,target,"overflow")
     assert card.locator(".cta-benefits > li").count()==3
     assert card.locator(".cta-buttons > a").count()==2
     assert card.locator(".btn-cta").get_attribute("href")=="/"+name
@@ -52,6 +64,7 @@ def compare_mid_cta(page,reference,width,name):
     pairs=[
         ("",["background-color","border-radius","border-top-width","border-top-color","padding-top","padding-right","padding-bottom","padding-left","margin-top","margin-bottom","text-align"]),
         (" .cta-mid-title",["font-family","font-size","font-weight","line-height","letter-spacing","color","margin-bottom"]),
+        (" .asistencia-badge",["font-family","font-size","font-weight","color","margin-bottom"]),
         (" > p",["font-family","font-size","line-height","color","margin-bottom"]),
         (" .cta-benefits",["display","flex-direction","gap","margin-top","margin-bottom","padding-left"]),
         (" .cta-benefits > li:first-child",["font-family","font-size","line-height","color","gap"]),
@@ -70,6 +83,8 @@ def compare_mid_cta(page,reference,width,name):
     # The shared layout, bottom spacing and control styles must not change.
     if width in (390,768,1440):
         card.screenshot(path=str(ART/f"home_apple_mid_cta_{name}_{width}.png"),animations="disabled")
+        page.locator(".cta-final .cta-mid").screenshot(path=str(ART/f"home_apple_final_cta_{name}_{width}.png"),animations="disabled")
+        page.locator(first).screenshot(path=str(ART/f"home_apple_first_cta_{name}_{width}.png"),animations="disabled")
 
 
 def run_apple_hero_standard(browser,origin):

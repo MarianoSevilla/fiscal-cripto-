@@ -65,12 +65,15 @@ def test_security_and_cancellation_content():
     assert re.findall(r'href="([^"]+)"',main)==["/pedir-asesoramiento-fiscal","/","/contacto"]
 
 
-def test_exchange_mid_ctas_follow_bitvavo_structure():
+def test_exchange_ctas_follow_approved_fifo_structure():
     for name in ("binance","bitvavo","kraken","coinbase","nexo","cryptocom","bit2me"):
         html=get(f"exchanges/{name}.html")
         assert 'class="cta-micro-text"' not in html,name
         blocks=html.split('<div class="cta-mid">')
         assert len(blocks)==3,name
+        badge = re.search(r'<div class="asistencia-badge">([^<]+)</div>', blocks[0]).group(1)
+        assert all(f'<div class="asistencia-badge">{badge}</div>' in block for block in blocks[1:]),name
+        assert "Crea tu cuenta gratis y sube" not in html,name
         mid=blocks[1].split('<div class="cta-buttons">',1)
         assert len(mid)==2,name
         assert mid[0].count("<li>")==3,name
