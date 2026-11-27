@@ -42,6 +42,12 @@ def compare_mid_cta(page,reference,width,name):
     assert card.locator(".cta-benefits > li").count()==3
     assert card.locator(".cta-buttons > a").count()==2
     assert card.locator(".btn-cta").get_attribute("href")=="/"+name
+    exchange_names={"binance":"Binance","bitvavo":"Bitvavo","kraken":"Kraken","coinbase":"Coinbase","nexo":"Nexo","cryptocom":"Crypto.com","bit2me":"Bit2Me"}
+    expected_label="Subir CSV de "+exchange_names[name]
+    assert card.locator(".btn-cta").inner_text().strip()==expected_label,(name,width,"mid CTA label")
+    final=page.locator('.cta-final .btn-cta')
+    assert final.count()==1 and final.inner_text().strip()==expected_label,(name,width,"final CTA label")
+    assert final.get_attribute("href")=="/"+name
     assert card.locator(".btn-outline").get_attribute("href")=="/asesoramiento-fiscal-criptomonedas"
     pairs=[
         ("",["background-color","border-radius","border-top-width","border-top-color","padding-top","padding-right","padding-bottom","padding-left","margin-top","margin-bottom","text-align"]),

@@ -78,3 +78,11 @@ def test_exchange_mid_ctas_follow_bitvavo_structure():
         assert re.findall(r'href="([^"]+)"',buttons)==["/"+name,"/asesoramiento-fiscal-criptomonedas"],name
         assert tail.lstrip().startswith("</div>"),name
         assert 'class="cta-micro"' in blocks[2],name
+
+
+def test_exchange_upload_button_labels():
+    names = {"binance": "Binance", "bitvavo": "Bitvavo", "kraken": "Kraken", "coinbase": "Coinbase", "nexo": "Nexo", "cryptocom": "Crypto.com", "bit2me": "Bit2Me"}
+    for slug, name in names.items():
+        html = get(f"exchanges/{slug}.html")
+        buttons = re.findall(r'<a href="/' + slug + r'" class="btn-cta">([^<]+)</a>', html)
+        assert buttons == [f"Subir CSV de {name}"] * 2, (slug, buttons)
