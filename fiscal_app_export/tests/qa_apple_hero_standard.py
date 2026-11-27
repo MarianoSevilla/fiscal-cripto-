@@ -52,6 +52,11 @@ def run_apple_hero_standard(browser,origin):
             assert abs(gap-expected)<1,(name,width,gap,expected)
             assert abs(hero["y"]-nav["y"]-nav["height"])<1,(name,width,hero,nav)
             assert page.locator(".hero h1 br").count()==0,(name,width,"forced break")
+            assert page.locator(".hero .hero-snippet").count()==0,(name,width,"editorial card inside intro")
+            if name=="coinbase":
+                snippet=page.locator(".content-main #definicion")
+                assert snippet.count()==1 and snippet.is_visible(),(name,width,"editorial definition missing")
+                assert snippet.bounding_box()["y"]>=hero["y"]+hero["height"]-1,(name,width,"definition overlaps intro")
             assert page.locator(".hero").evaluate("e=>e.scrollWidth<=e.clientWidth+1"),(name,width,"hero overflow")
             assert not errors and not violations,(name,width,errors,violations)
             if width in (390,768,1440):
