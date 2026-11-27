@@ -20,6 +20,9 @@ from qa_advisory_request_apple import run_advisory_request_apple
 from qa_apple_public_batch import run_apple_public_batch
 from qa_apple_hero_standard import run_apple_hero_standard
 from qa_recursos_apple import run_recursos_apple
+from qa_modelo721_guide_apple import run_modelo721_guide_apple
+from qa_apple_fiscal_guides import run_apple_fiscal_guides
+from qa_unsubscribe_apple import run_unsubscribe_apple
 from qa_private_workspace_apple import run_private_workspace_apple
 from qa_faq_apple import run_faq_apple
 from qa_privacidad_apple import run_privacidad_apple
@@ -49,6 +52,9 @@ SUITES = {
     "apple_public_batch": run_apple_public_batch,
     "apple_hero_standard": run_apple_hero_standard,
     "recursos": run_recursos_apple,
+    "modelo721_guide_apple": run_modelo721_guide_apple,
+    "apple_fiscal_guides": run_apple_fiscal_guides,
+    "unsubscribe_apple": run_unsubscribe_apple,
     "private_workspace_apple": run_private_workspace_apple,
 }
 SUITE_TIMEOUT_SECONDS = 180

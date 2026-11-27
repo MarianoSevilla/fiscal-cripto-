@@ -26,9 +26,6 @@
 <link rel="icon" href="/static/favicon.ico">
 <link rel="manifest" href="/static/site.webmanifest">
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/nav.css">
 <link rel="preload" href="/static/nav.js" as="script">
 
@@ -193,454 +190,16 @@
 }
 </script>
 
-<style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-:root {
-  --bg:          #0b1220;
-  --bg2:         #101829;
-  --surface:     #141f32;
-  --surface2:    #1a2540;
-  --border:      rgba(255,255,255,0.07);
-  --border2:     rgba(255,255,255,0.13);
-  --text:        #eef2ff;
-  --muted:       #7a8aa8;
-  --accent:      #00C896;
-  --accent-dim:  rgba(0,200,150,0.12);
-  --accent-glow: rgba(0,200,150,0.25);
-  --footer-bg:   #070e1a;
-  --max-w:       1280px;
-  --pad-x:       3rem;
-  --font-display:'Syne', sans-serif;
-  --font-body:   'DM Sans', sans-serif;
-}
-
-html { scroll-behavior: smooth; }
-body {
-  background: var(--bg); color: var(--text);
-  font-family: var(--font-body); font-size: 16px; line-height: 1.7;
-  min-height: 100vh; -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
-}
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
-
-.wrap { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x); }
-.section { padding: 5rem 0; }
-.section + .section { border-top: 1px solid var(--border); }
-
-.kicker {
-  font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
-  text-transform: uppercase; color: var(--accent);
-  margin-bottom: 0.85rem; display: block;
-}
-
-/* ── HERO ─────────────────────────────────── */
-.hero {
-  padding: 5rem 0 4rem;
-  border-bottom: 1px solid var(--border);
-}
-.hero-inner { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x); }
-
-.breadcrumb {
-  display: flex; align-items: center; gap: 0.5rem;
-  font-size: 13px; color: var(--muted); margin-bottom: 2rem;
-  flex-wrap: wrap;
-}
-.breadcrumb a { color: var(--muted); }
-.breadcrumb a:hover { color: var(--accent); }
-.breadcrumb span { color: var(--border2); }
-
-.hero h1 {
-  font-family: var(--font-display); font-size: clamp(2rem, 4.5vw, 3.4rem);
-  font-weight: 800; letter-spacing: -0.03em; line-height: 1.08;
-  margin-bottom: 1.25rem;
-}
-.hero h1 em { color: var(--accent); font-style: normal; }
-
-.hero-meta {
-  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
-  font-size: 13px; color: var(--muted); margin-bottom: 1.5rem;
-}
-.hero-meta .tag {
-  background: var(--accent-dim); color: var(--accent);
-  border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 600;
-}
-
-.hero-deck {
-  font-size: 1.05rem; color: var(--muted);
-  line-height: 1.75; margin-bottom: 2rem;
-}
-
-.toc {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 14px; padding: 1.5rem 1.75rem; margin-bottom: 2.5rem;
-  max-width: 680px;
-}
-.toc-title {
-  font-size: 12px; font-weight: 700; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--muted); margin-bottom: 1rem;
-}
-.toc ol {
-  list-style: decimal; padding-left: 1.25rem;
-  display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem 2rem;
-}
-.toc ol li { font-size: 14px; }
-.toc ol li a { color: var(--muted); }
-.toc ol li a:hover { color: var(--accent); }
-
-.btn-hero {
-  display: inline-flex; align-items: center; gap: 0.5rem;
-  background: var(--accent); color: #000; font-weight: 700;
-  font-size: 15px; padding: 0.75rem 1.75rem; border-radius: 8px;
-  text-decoration: none; transition: opacity 0.2s;
-}
-.btn-hero:hover { opacity: 0.88; text-decoration: none; }
-
-/* ── CONTENT LAYOUT ───────────────────────── */
-.content-layout {
-  display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: 4rem; align-items: start;
-  padding: 5rem 0;
-}
-.content-main {}
-.content-sidebar {
-  position: sticky; top: 5rem;
-}
-
-/* ── PROSE ────────────────────────────────── */
-.prose h2 {
-  font-family: var(--font-display); font-size: 1.65rem; font-weight: 800;
-  letter-spacing: -0.025em; line-height: 1.2;
-  margin: 3.5rem 0 1.25rem; color: var(--text);
-  scroll-margin-top: 6rem;
-}
-.prose h2:first-child { margin-top: 0; }
-.prose h3 {
-  font-family: var(--font-display); font-size: 1.15rem; font-weight: 700;
-  margin: 2rem 0 0.75rem; color: var(--text);
-}
-.prose p { margin-bottom: 1.1rem; color: var(--muted); line-height: 1.8; }
-.prose p strong { color: var(--text); }
-.prose ul, .prose ol { padding-left: 1.4rem; margin-bottom: 1.25rem; }
-.prose ul li, .prose ol li { color: var(--muted); margin-bottom: 0.4rem; line-height: 1.75; }
-.prose ul li strong, .prose ol li strong { color: var(--text); }
-
-/* ── CALLOUT BOX ──────────────────────────── */
-.callout {
-  background: var(--surface2); border: 1px solid var(--border2);
-  border-left: 4px solid var(--accent); border-radius: 0 12px 12px 0;
-  padding: 1.25rem 1.5rem; margin: 1.75rem 0;
-}
-.callout p { color: var(--muted); font-size: 14.5px; margin: 0; line-height: 1.7; }
-.callout p + p { margin-top: 0.75rem; }
-.callout p strong { color: var(--text); }
-.callout-title {
-  font-size: 12px; font-weight: 700; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--accent); margin-bottom: 0.5rem;
-}
-
-.callout-legal {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 10px; padding: 1rem 1.5rem;
-  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
-  margin: 1.5rem 0;
-}
-.callout-legal span {
-  font-size: 13px; color: var(--muted);
-  border-right: 1px solid var(--border2); padding-right: 1rem;
-}
-.callout-legal span:last-child { border-right: none; padding-right: 0; }
-.callout-legal span strong { color: var(--accent); }
-
-.error-callout {
-  background: rgba(229, 85, 85, 0.08); border: 1px solid rgba(229,85,85,0.25);
-  border-left: 4px solid #e55; border-radius: 0 12px 12px 0;
-  padding: 1.25rem 1.5rem; margin: 1.5rem 0;
-}
-.error-callout p { color: var(--muted); font-size: 14.5px; margin: 0; }
-.error-callout .callout-title { color: #e55; }
-
-/* ── TABLES ───────────────────────────────── */
-.fifo-table {
-  width: 100%; border-collapse: collapse;
-  margin: 1.5rem 0; font-size: 14px;
-}
-.fifo-table th {
-  text-align: left; font-size: 11px; font-weight: 700;
-  letter-spacing: 0.07em; text-transform: uppercase;
-  color: var(--muted); padding: 0.6rem 0.9rem;
-  border-bottom: 1px solid var(--border2);
-}
-.fifo-table td {
-  padding: 0.7rem 0.9rem; color: var(--muted);
-  border-bottom: 1px solid var(--border);
-}
-.fifo-table td strong { color: var(--text); }
-.fifo-table td.accent { color: var(--accent); font-weight: 600; }
-.fifo-table td.green { color: var(--accent); }
-.fifo-table td.red { color: #e55; }
-.fifo-table tr:last-child td { border-bottom: none; }
-.fifo-table tr.highlight td { background: var(--accent-dim); }
-
-/* ── RESULT CARDS ─────────────────────────── */
-.fifo-result {
-  margin-top: 1.5rem; display: grid;
-  grid-template-columns: repeat(3, 1fr); gap: 1rem;
-}
-.result-card {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 10px; padding: 1rem 1.25rem; text-align: center;
-}
-.result-card-label { font-size: 12px; color: var(--muted); margin-bottom: 0.3rem; }
-.result-card-val {
-  font-family: var(--font-display); font-size: 1.2rem; font-weight: 800;
-  color: var(--text);
-}
-.result-card-val.green { color: var(--accent); }
-.result-card-val.red { color: #e55; }
-
-/* ── STEP LIST ────────────────────────────── */
-.step-list { list-style: none; padding: 0; margin: 1.5rem 0; }
-.step-item {
-  display: flex; gap: 1rem; margin-bottom: 1.25rem;
-  align-items: flex-start;
-}
-.step-num {
-  background: var(--accent-dim); color: var(--accent); font-weight: 800;
-  font-family: var(--font-display); font-size: 0.9rem;
-  width: 32px; height: 32px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; margin-top: 2px;
-}
-.step-body {}
-.step-title { font-weight: 600; color: var(--text); margin-bottom: 0.2rem; }
-.step-desc { font-size: 14.5px; color: var(--muted); line-height: 1.7; }
-
-/* ── COMPARISON TABLE ─────────────────────── */
-.comparison-wrap { overflow-x: auto; margin: 1.5rem 0; }
-.comparison-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-.comparison-table th {
-  text-align: left; font-size: 11px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.07em;
-  color: var(--muted); padding: 0.6rem 1rem;
-  border-bottom: 1px solid var(--border2);
-}
-.comparison-table td {
-  padding: 0.85rem 1rem; color: var(--muted);
-  border-bottom: 1px solid var(--border);
-  vertical-align: top;
-}
-.comparison-table td:first-child { font-weight: 700; color: var(--text); white-space: nowrap; }
-.comparison-table tr:last-child td { border-bottom: none; }
-.badge-yes  { background: var(--accent-dim); color: var(--accent); border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 700; white-space: nowrap; }
-.badge-no   { background: rgba(229,85,85,0.1); color: #e55; border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 700; white-space: nowrap; }
-.badge-warn { background: rgba(245,166,35,0.1); color: #f5a623; border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 700; white-space: nowrap; }
-
-/* ── CASILLA BOX ──────────────────────────── */
-.casilla-box {
-  background: var(--surface2); border: 1px solid var(--border2);
-  border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0;
-  display: grid; grid-template-columns: auto 1fr; gap: 1rem;
-  align-items: center;
-}
-.casilla-num {
-  font-family: var(--font-display); font-size: 2rem; font-weight: 800;
-  color: var(--accent); line-height: 1; white-space: nowrap;
-}
-.casilla-desc { font-size: 14px; color: var(--muted); line-height: 1.65; }
-.casilla-desc strong { color: var(--text); }
-
-/* ── FAQ ──────────────────────────────────── */
-.faq-list { margin-top: 1rem; }
-.faq-item {
-  border-bottom: 1px solid var(--border);
-  padding: 0.25rem 0;
-}
-.faq-item:last-child { border-bottom: none; }
-.faq-q {
-  font-size: 15.5px; font-weight: 600; color: var(--text);
-  cursor: pointer; padding: 1rem 0;
-  list-style: none; display: flex; justify-content: space-between; align-items: center;
-  gap: 1rem;
-}
-.faq-q::after {
-  content: '+'; color: var(--accent); font-size: 20px;
-  font-weight: 400; flex-shrink: 0; line-height: 1;
-}
-details[open] .faq-q::after { content: '−'; }
-.faq-a {
-  color: var(--muted); font-size: 14.5px; line-height: 1.8;
-  padding-bottom: 1rem;
-}
-.faq-a a { color: var(--accent); }
-
-/* ── SIDEBAR ──────────────────────────────── */
-.sidebar-card {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 14px; padding: 1.5rem; margin-bottom: 1.5rem;
-}
-.sidebar-card-title {
-  font-family: var(--font-display); font-size: 0.95rem; font-weight: 800;
-  color: var(--text); margin-bottom: 1rem;
-}
-.sidebar-links { list-style: none; padding: 0; }
-.sidebar-links li { margin-bottom: 0.5rem; }
-.sidebar-links li a {
-  color: var(--muted); font-size: 14px;
-  display: flex; align-items: center; gap: 0.4rem;
-}
-.sidebar-links li a:hover { color: var(--accent); text-decoration: none; }
-.sidebar-links li a::before { content: '→'; color: var(--accent); font-size: 12px; }
-
-.author-card {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 14px; padding: 1.25rem 1.5rem;
-}
-.author-name { font-weight: 700; color: var(--text); font-size: 14.5px; margin-bottom: 0.2rem; }
-.author-role { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
-
-/* ── CTA MID ──────────────────────────────── */
-.cta-mid {
-  background: var(--surface2); border: 1px solid var(--border2);
-  border-radius: 14px; padding: 2rem 2.25rem; margin: 3rem 0;
-  text-align: center;
-}
-.cta-mid-title {
-  font-family: var(--font-display); font-size: 1.35rem; font-weight: 800;
-  color: var(--text); margin-bottom: 0.75rem;
-}
-.cta-mid p { color: var(--muted); margin-bottom: 1.25rem; }
-.cta-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
-.btn-cta {
-  background: var(--accent); color: #000; font-weight: 700;
-  padding: 0.7rem 1.6rem; border-radius: 8px; font-size: 14.5px;
-  text-decoration: none; transition: opacity 0.2s;
-}
-.btn-cta:hover { opacity: 0.88; text-decoration: none; }
-.btn-outline {
-  border: 1.5px solid var(--border2); color: var(--muted);
-  padding: 0.7rem 1.6rem; border-radius: 8px; font-size: 14.5px;
-  text-decoration: none; transition: border-color 0.2s, color 0.2s;
-}
-.btn-outline:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
-.cta-micro-text { font-size: 12px; color: var(--muted); margin-top: 0.75rem; margin-bottom: 0; }
-
-/* ── AUTHOR BIO ───────────────────────────── */
-.author-bio {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 14px; padding: 1.75rem 2rem;
-  display: flex; gap: 1.5rem; align-items: flex-start;
-  margin: 3rem 0 2rem;
-}
-.author-avatar {
-  width: 52px; height: 52px; border-radius: 50%;
-  background: var(--accent-dim); border: 2px solid rgba(0,200,150,0.3);
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-display); font-weight: 800; font-size: 1.1rem;
-  color: var(--accent); flex-shrink: 0;
-}
-.author-bio-name { font-weight: 700; color: var(--text); margin-bottom: 0.25rem; }
-.author-bio-role { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 0.5rem; }
-.author-bio-text { font-size: 13.5px; color: var(--muted); line-height: 1.7; }
-
-/* ── RELATED GUIDES ───────────────────────── */
-.related-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
-  margin-top: 1.5rem;
-}
-.related-card {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 10px; padding: 1rem 1.25rem;
-  text-decoration: none; display: block;
-  transition: border-color 0.2s;
-}
-.related-card:hover { border-color: var(--accent); text-decoration: none; }
-.related-card-label { font-size: 11px; color: var(--accent); font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 0.4rem; }
-.related-card-title { font-size: 14px; font-weight: 600; color: var(--text); line-height: 1.4; }
-
-/* ── FOOTER ───────────────────────────────── */
-footer {
-  background: var(--footer-bg); border-top: 1px solid var(--border);
-  padding: 3rem 0; margin-top: 4rem;
-}
-.footer-inner {
-  max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x);
-  display: flex; justify-content: space-between; align-items: flex-start;
-  gap: 2rem; flex-wrap: wrap;
-}
-.footer-brand { font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; color: var(--text); }
-.footer-copy { font-size: 13px; color: var(--muted); margin-top: 0.4rem; }
-.footer-links { display: flex; flex-direction: column; gap: 0.35rem; }
-.footer-links a { font-size: 13px; color: var(--muted); }
-.footer-links a:hover { color: var(--accent); }
-.disclaimer {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 8px; padding: 1rem 1.25rem; margin-top: 2rem;
-  font-size: 12.5px; color: var(--muted); line-height: 1.65;
-}
-
-@media (max-width: 900px) {
-  :root { --pad-x: 1.25rem; }
-  .content-layout { grid-template-columns: 1fr; gap: 3rem; }
-  .content-sidebar { position: static; }
-  .toc ol { grid-template-columns: 1fr; }
-  .fifo-result { grid-template-columns: 1fr 1fr; }
-  .related-grid { grid-template-columns: 1fr; }
-  .casilla-box { grid-template-columns: 1fr; }
-}
-@media (max-width: 600px) {
-  .hero h1 { font-size: 1.6rem; }
-  .fifo-result { grid-template-columns: 1fr; }
-}
-
-/* ── ASISTENCIA BLOCK (= home canonical) ──────── */
-.asistencia-badge {
-  display: inline-flex; align-items: center;
-  font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--muted); border: 1px solid var(--border2);
-  border-radius: 100px; padding: 3px 10px;
-  margin-bottom: 0.6rem;
-}
-.asistencia-block {
-  background: var(--surface);
-  border: 1px solid var(--border2);
-  border-radius: 12px;
-  padding: 1.1rem 1.25rem;
-  margin-bottom: 2rem;
-  max-width: 680px;
-}
-.asistencia-block p {
-  font-size: 0.88rem; color: var(--muted); line-height: 1.55;
-  margin-bottom: 0.85rem;
-}
-.asistencia-block p strong { color: var(--text); display: block; margin-bottom: 3px; font-size: 0.95rem; }
-.asistencia-bullets {
-  list-style: none; margin: 0 0 1rem;
-  display: flex; flex-direction: column; gap: 5px;
-}
-.asistencia-bullets li {
-  font-size: 0.82rem; color: var(--accent);
-  letter-spacing: 0.01em;
-}
-.btn-asistencia {
-  display: flex; align-items: center; gap: 10px; width: 100%;
-  justify-content: center;
-  background: none; color: var(--accent);
-  border: 1.5px solid var(--accent); border-radius: 10px;
-  padding: 13px 24px;
-  font-family: var(--font-display); font-size: 1rem; font-weight: 700;
-  cursor: pointer; transition: background 0.15s;
-  text-decoration: none; letter-spacing: -0.01em;
-}
-.btn-asistencia:hover { background: var(--accent-dim); text-decoration: none; }
-</style>
+<link rel="stylesheet" href="/static/landing_apple.css">
+<link rel="stylesheet" href="/static/como_funciona_apple.css">
+<link rel="stylesheet" href="/static/legal_apple.css">
+<link rel="stylesheet" href="/static/exchange_guide_apple.css">
+<link rel="stylesheet" href="/static/apple_cta.css">
 </head>
-<body>
-
-<!-- Navigation -->
-<nav id="site-nav">
+<body class="apple-home apple-how-page apple-exchange-guide">
+<a class="apple-skip" href="#contenido">Saltar al contenido</a>
+<nav id="site-nav" aria-label="Principal">
   <div class="snav-inner">
     <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
     <ul class="snav-links">
@@ -655,37 +214,70 @@ footer {
     </div>
   </div>
 </nav>
-<script src="/static/nav.js" defer></script>
-
-<!-- ── HERO ──────────────────────────────────── -->
-<header class="hero">
-  <div class="hero-inner">
-
-    <nav class="breadcrumb" aria-label="Ruta de navegación">
+<script src="/static/nav.js"></script>
+<noscript>
+<style>
+/* Native mobile disclosure: useful in HTML viewers without JavaScript too. */
+.apple-home .snav-right{display:none}
+.apple-home .apple-noscript-menu{display:none}
+@media (min-width:1201px){
+  .apple-home #site-nav{position:static;height:auto}
+  .apple-home .snav-inner{flex-wrap:wrap;padding-block:16px;gap:16px}
+  .apple-home .snav-links{display:flex;position:static;transform:none;flex-wrap:wrap;gap:12px}
+  .apple-home .apple-intro-inner{padding-top:48px}
+}
+@media (max-width:1200px){
+  .apple-home .apple-noscript-access{display:none}
+  .apple-home .apple-noscript-menu{display:block;position:absolute;top:8px;right:var(--apple-pad);z-index:1001}
+  .apple-home .apple-noscript-menu>summary{display:flex;align-items:center;justify-content:center;width:44px;height:44px;list-style:none;border:1px solid #d8e1dd;border-radius:9px;background:#f3f6f5;color:var(--text);cursor:pointer}
+  .apple-home .apple-noscript-menu>summary::-webkit-details-marker{display:none}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon{background:transparent}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::before{transform:translateY(6px) rotate(45deg)}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::after{transform:translateY(-6px) rotate(-45deg)}
+  .apple-home .apple-noscript-panel{position:absolute;top:56px;left:auto;right:calc(-1 * var(--apple-pad));width:100vw;display:flex;flex-direction:column;gap:4px;padding:12px var(--apple-pad) 18px;max-height:calc(100vh - 64px);max-height:calc(100dvh - 64px);overflow-y:auto;overscroll-behavior:contain;background:#fff;border-top:1px solid var(--border);box-shadow:0 14px 28px rgba(20,34,30,.1)}
+  .apple-home .apple-noscript-panel>a{display:flex;align-items:center;min-height:44px;padding:11px 14px;border-radius:8px;color:var(--muted);font-size:.9375rem;line-height:1.4;text-decoration:none}
+  .apple-home .apple-noscript-panel>a:hover{background:#f1f5f3;color:var(--text)}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary{justify-content:center;min-height:48px;border-radius:999px;background:var(--accent);color:#fff;font-weight:600}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary:hover{background:#00533f}
+  .apple-home .apple-noscript-menu .snav-menu-icon{width:19px}
+  .apple-home #site-nav .snav-logo{max-width:calc(100% - 60px)}
+}
+</style>
+<details class="apple-noscript-menu">
+  <summary><span class="snav-menu-icon" aria-hidden="true"></span><span class="apple-sr-only">Menú principal</span></summary>
+  <nav class="apple-noscript-panel" aria-label="Navegación móvil">
+    <a href="/herramientas">Herramientas</a>
+    <a href="/como-funciona">Cómo funciona</a>
+    <a href="/recursos">Recursos</a>
+    <a href="/faq">FAQ</a>
+    <a href="/contacto">Contacto</a>
+    <a href="/login/">Iniciar sesión</a>
+    <a href="/signup/" class="snav-mobile-link-primary">Crear cuenta</a>
+  </nav>
+</details>
+<div class="apple-noscript-access"><a href="/login/">Iniciar sesión</a><a href="/signup/">Crear cuenta</a></div>
+</noscript>
+<main id="contenido" tabindex="-1">
+<section class="how-intro" aria-labelledby="guide-title"><div class="apple-container">
+<nav class="breadcrumb" aria-label="Ruta de navegación">
       <a href="/">Inicio</a>
-      <span>›</span>
+      <span class="breadcrumb-sep">›</span>
       <a href="/metodo-fifo-criptomonedas">Método FIFO</a>
-      <span>›</span>
+      <span class="breadcrumb-sep">›</span>
       <span>Staking criptomonedas IRPF</span>
     </nav>
-
-    <h1>Staking de criptomonedas en el IRPF:<br>qué dice Hacienda y cómo <em>declararlo correctamente</em></h1>
-
-    <div class="hero-meta">
-      <span class="tag">Guía fiscal</span>
-      <span>Por Rafael Ramos Martínez · Economista Colegiado nº&nbsp;4.579</span>
-      <span>Actualizado: junio 2026</span>
-    </div>
-
-    <p class="hero-deck">
+<p class="apple-eyebrow">Guía fiscal</p>
+<h1 id="guide-title">Staking de criptomonedas en el IRPF: qué dice Hacienda y cómo <em>declararlo correctamente</em></h1>
+<p class="how-lead">
       Las <strong>recompensas de staking de criptomonedas tributan en España como rendimientos del capital mobiliario</strong>
       según el <strong>art.&nbsp;25.4 LIRPF</strong>, confirmado por la DGT en la consulta vinculante
       <strong>V1069-19</strong>. Se imputan al ejercicio en que se reciben y se integran en la base del ahorro.
       Esta guía explica exactamente el cálculo, las casillas y los errores más frecuentes.
     </p>
-
-    <nav class="toc" aria-label="Contenidos">
-      <div class="toc-title">Contenidos</div>
+</div></section>
+<div class="apple-legal-page"><div class="apple-container legal-layout">
+<aside class="legal-index" aria-label="Contenidos">
+      <h2>Contenidos</h2>
       <ol>
         <li><a href="#que-es">¿Qué es el staking y por qué tributa?</a></li>
         <li><a href="#clasificacion">Cómo clasifica Hacienda las recompensas</a></li>
@@ -698,37 +290,24 @@ footer {
         <li><a href="#errores">Errores frecuentes</a></li>
         <li><a href="#faq">Preguntas frecuentes</a></li>
       </ol>
-    </nav>
-
-    <div class="asistencia-block">
-      <div class="asistencia-badge">Asistencia especializada</div>
+    </aside>
+<article class="legal-document">
+<section class="legal-section"><p class="how-small">Por Rafael Ramos Martínez · Economista Colegiado nº&nbsp;4.579 · Actualizado: junio 2026</p><div class="apple-cta">
+      <p class="apple-cta-eyebrow">Asistencia especializada</p>
       <p>
         <strong>¿Necesitas ayuda con tu declaración?</strong>
         Asistencia fiscal especializada para usuarios con criptomonedas, supervisada por economista colegiado.
       </p>
-      <ul class="asistencia-bullets">
+      <ul class="apple-cta-benefits">
         <li>✓ Consulta inicial sin compromiso</li>
         <li>✓ Casos complejos de criptomonedas</li>
         <li>✓ Supervisado por economista colegiado</li>
       </ul>
-      <a href="/pedir-asesoramiento" class="btn-asistencia">
+      <a href="/pedir-asesoramiento" class="apple-button">
         Solicitar asistencia fiscal
       </a>
-    </div>
-
-  </div>
-</header>
-
-<!-- ── MAIN CONTENT ───────────────────────────── -->
-<main>
-  <div class="wrap">
-    <div class="content-layout">
-
-      <!-- PROSE -->
-      <article class="prose">
-
-        <!-- ─── 1. QUÉ ES ──────────────────────────── -->
-        <h2 id="que-es">¿Qué es el staking de criptomonedas y por qué tributa en España?</h2>
+    </div></section>
+<section class="legal-section"><h2 id="que-es">¿Qué es el staking de criptomonedas y por qué tributa en España?</h2>
 
         <p>
           El <strong>staking de criptomonedas</strong> es el proceso mediante el cual un titular
@@ -745,11 +324,11 @@ footer {
           del artículo 25.4 de la Ley 35/2006 del IRPF: <em>"otros rendimientos del capital mobiliario"</em>.
         </p>
 
-        <div class="callout-legal">
-          <span><strong>Base legal:</strong> Art. 25.4 LIRPF</span>
-          <span><strong>Imputación:</strong> Art. 14.1.a) LIRPF</span>
-          <span><strong>DGT:</strong> V1069-19</span>
-          <span><strong>DGT:</strong> V2225-23</span>
+        <div class="legal-callout">
+          <p><strong>Base legal:</strong> Art. 25.4 LIRPF</p>
+          <p><strong>Imputación:</strong> Art. 14.1.a) LIRPF</p>
+          <p><strong>DGT:</strong> V1069-19</p>
+          <p><strong>DGT:</strong> V2225-23</p>
         </div>
 
         <h3>¿Por qué no son ganancias patrimoniales?</h3>
@@ -763,10 +342,10 @@ footer {
         </p>
 
         <!-- ─── 2. CLASIFICACIÓN ────────────────────── -->
-        <h2 id="clasificacion">Cómo clasifica Hacienda las recompensas de staking</h2>
+        </section><section class="legal-section"><h2 id="clasificacion">Cómo clasifica Hacienda las recompensas de staking</h2>
 
-        <div class="callout">
-          <div class="callout-title">Respuesta directa — optimizada para AI Overview</div>
+        <div class="legal-callout">
+          <h3>Respuesta directa — optimizada para AI Overview</h3>
           <p>
             <strong>Las recompensas de staking de criptomonedas tributan en España como rendimientos del capital mobiliario</strong>
             según el artículo&nbsp;25.4 LIRPF, confirmado por la DGT en consulta V1069-19 y ratificado en V2225-23.
@@ -781,8 +360,7 @@ footer {
           La clasificación depende del <strong>modo en que se realiza el staking</strong>:
         </p>
 
-        <div class="comparison-wrap">
-          <table class="comparison-table" aria-label="Clasificación fiscal según tipo de staking">
+        <div class="files-table-wrap" tabindex="0" role="region" aria-label="Tabla de ejemplo fiscal; desplazable horizontalmente"><table class="files-table" aria-label="Clasificación fiscal según tipo de staking">
             <thead>
               <tr>
                 <th>Tipo de staking</th>
@@ -817,8 +395,7 @@ footer {
                 <td>Art. 27</td>
               </tr>
             </tbody>
-          </table>
-        </div>
+          </table></div>
 
         <p>
           La distinción entre <strong>staking como particular</strong> y <strong>staking como
@@ -829,42 +406,30 @@ footer {
         </p>
 
         <!-- ─── 3. CUÁNDO TRIBUTA ───────────────────── -->
-        <h2 id="cuando-tributa">¿Cuándo tributa el staking: al recibir las recompensas o al venderlas?</h2>
+        </section><section class="legal-section"><h2 id="cuando-tributa">¿Cuándo tributa el staking: al recibir las recompensas o al venderlas?</h2>
 
         <p>
           Esta es la duda más frecuente entre los usuarios con staking. La respuesta es
           <strong>en dos momentos distintos y por conceptos distintos</strong>:
         </p>
 
-        <ul class="step-list">
-          <li class="step-item">
-            <span class="step-num">1</span>
-            <div class="step-body">
-              <div class="step-title">Al recibir las recompensas → Rendimiento del Capital Mobiliario</div>
-              <p class="step-desc">
+        <ol class="how-list">
+          <li><strong>Al recibir las recompensas → Rendimiento del Capital Mobiliario</strong><p>
                 En el momento en que las recompensas aparecen en tu wallet o saldo del exchange,
                 nace la obligación fiscal. Se imputan al <strong>período impositivo de exigibilidad</strong>
                 (Art.&nbsp;14.1.a) LIRPF). Valor: el precio de mercado en la fecha exacta de recepción
                 (Art.&nbsp;35 LIRPF). Ese valor es también tu coste de adquisición de esas monedas.
-              </p>
-            </div>
-          </li>
-          <li class="step-item">
-            <span class="step-num">2</span>
-            <div class="step-body">
-              <div class="step-title">Al vender o permutar las recompensas → Ganancia / Pérdida Patrimonial</div>
-              <p class="step-desc">
+              </p></li>
+          <li><strong>Al vender o permutar las recompensas → Ganancia / Pérdida Patrimonial</strong><p>
                 Cuando vendes a euros o intercambias por otra cripto las monedas obtenidas en staking,
                 la diferencia entre el precio de venta y el coste de adquisición asignado al recibirlas
                 genera una ganancia o pérdida patrimonial (Art.&nbsp;33 LIRPF), integrada también
                 en la base del ahorro.
-              </p>
-            </div>
-          </li>
-        </ul>
+              </p></li>
+        </ol>
 
-        <div class="callout">
-          <div class="callout-title">Ejemplo de doble tributación</div>
+        <div class="legal-callout">
+          <h3>Ejemplo de doble tributación</h3>
           <p>
             Recibes <strong>0,15 ETH</strong> como recompensa cuando ETH cotiza a <strong>2.400&nbsp;€/ETH</strong>.
             Valor de la recompensa: <strong>360&nbsp;€</strong> → tributan ese año como RCM
@@ -877,7 +442,7 @@ footer {
         </div>
 
         <!-- ─── 4. CÁLCULO ─────────────────────────── -->
-        <h2 id="calculo">Cómo se calcula la base imponible del staking</h2>
+        </section><section class="legal-section"><h2 id="calculo">Cómo se calcula la base imponible del staking</h2>
 
         <p>
           El cálculo es directo: <strong>cada recompensa recibida se valora a precio de mercado
@@ -885,8 +450,8 @@ footer {
           constituye el rendimiento bruto de capital mobiliario que se integra en la base del ahorro.
         </p>
 
-        <div class="callout">
-          <div class="callout-title">Fórmula base imponible staking</div>
+        <div class="legal-callout">
+          <h3>Fórmula base imponible staking</h3>
           <p>
             <strong>Rendimiento bruto</strong> = Σ (cantidad recompensa × precio de mercado en fecha de recepción)<br><br>
             <strong>Rendimiento neto</strong> = Rendimiento bruto − gastos deducibles (comisiones directas)<br><br>
@@ -900,7 +465,7 @@ footer {
           una rentabilidad media del 3,5% anual (~0,35 ETH en recompensas recibidas a lo largo del año):
         </p>
 
-        <table class="fifo-table" aria-label="Ejemplo cálculo staking anual">
+        <div class="files-table-wrap" tabindex="0" role="region" aria-label="Tabla de ejemplo fiscal; desplazable horizontalmente"><table class="files-table" aria-label="Ejemplo cálculo staking anual">
           <thead>
             <tr>
               <th>Fecha recepción</th>
@@ -934,31 +499,31 @@ footer {
               <td>2.900</td>
               <td>232,00</td>
             </tr>
-            <tr class="highlight">
+            <tr>
               <td><strong>TOTAL 2025</strong></td>
               <td><strong>0,35 ETH</strong></td>
               <td>—</td>
-              <td class="accent"><strong>875,50 €</strong></td>
+              <td><strong>875,50 €</strong></td>
             </tr>
           </tbody>
-        </table>
+        </table></div>
 
-        <div class="fifo-result">
-          <div class="result-card">
-            <div class="result-card-label">Rendimiento bruto</div>
-            <div class="result-card-val">875,50 €</div>
+        <div class="apple-catalog-grid">
+          <div class="apple-catalog-card">
+            <h3>Rendimiento bruto</h3>
+            <div class="mock-kpi-value">875,50 €</div>
           </div>
-          <div class="result-card">
-            <div class="result-card-label">Tipo aplicable</div>
-            <div class="result-card-val">19%</div>
+          <div class="apple-catalog-card">
+            <h3>Tipo aplicable</h3>
+            <div class="mock-kpi-value">19%</div>
           </div>
-          <div class="result-card">
-            <div class="result-card-label">Cuota IRPF estimada</div>
-            <div class="result-card-val green">166,35 €</div>
+          <div class="apple-catalog-card">
+            <h3>Cuota IRPF estimada</h3>
+            <div class="mock-kpi-value green">166,35 €</div>
           </div>
         </div>
 
-        <p style="margin-top:1.25rem;">
+        <p>
           <strong>Coste de adquisición registrado</strong> para esos 0,35&nbsp;ETH:
           875,50&nbsp;€ (distribuidos según la fecha de cada entrega). Este valor es crítico
           para calcular correctamente la ganancia o pérdida en la futura venta.
@@ -981,7 +546,7 @@ footer {
         </p>
 
         <!-- ─── 5. CASILLAS ────────────────────────── -->
-        <h2 id="casillas">En qué casilla de la renta se declara el staking</h2>
+        </section><section class="legal-section"><h2 id="casillas">En qué casilla de la renta se declara el staking</h2>
 
         <p>
           Las recompensas de staking se declaran en las <strong>casillas de rendimientos del
@@ -989,9 +554,9 @@ footer {
           extranjeros no practican retención en España.
         </p>
 
-        <div class="casilla-box">
-          <div class="casilla-num">033</div>
-          <div class="casilla-desc">
+        <div class="legal-callout">
+          <h3>033</h3>
+          <div class="how-muted">
             <strong>Rendimientos del capital mobiliario — Otros rendimientos</strong><br>
             Casillas del grupo "Otros rendimientos del capital mobiliario" (Art.&nbsp;25.4 LIRPF).
             Sin retención si el pagador es un exchange extranjero (Binance, Kraken, Coinbase, Bitvavo).
@@ -1003,39 +568,15 @@ footer {
           El proceso en el <strong>Borrador de la Renta (Renta Web)</strong>:
         </p>
 
-        <ul class="step-list">
-          <li class="step-item">
-            <span class="step-num">1</span>
-            <div class="step-body">
-              <div class="step-title">Accede a: Rendimientos del capital mobiliario → Otros rendimientos</div>
-              <p class="step-desc">Dentro del Modelo 100, apartado F, subapartado "Otros rendimientos del capital mobiliario" que no procedan de la participación en fondos propios de entidades.</p>
-            </div>
-          </li>
-          <li class="step-item">
-            <span class="step-num">2</span>
-            <div class="step-body">
-              <div class="step-title">Introduce el rendimiento bruto total del ejercicio</div>
-              <p class="step-desc">Suma de todas las recompensas de staking recibidas durante el año, valoradas a precio de mercado en cada fecha de recepción.</p>
-            </div>
-          </li>
-          <li class="step-item">
-            <span class="step-num">3</span>
-            <div class="step-body">
-              <div class="step-title">Introduce los gastos deducibles (si los hay)</div>
-              <p class="step-desc">Comisiones directas de staking documentadas con informes de la plataforma.</p>
-            </div>
-          </li>
-          <li class="step-item">
-            <span class="step-num">4</span>
-            <div class="step-body">
-              <div class="step-title">Retenciones: 0 € si el exchange es extranjero</div>
-              <p class="step-desc">Binance, Kraken, Coinbase, Bitvavo y la mayoría de exchanges internacionales no aplican retención a cuenta en España. Indica 0 € en el campo de retenciones a cuenta.</p>
-            </div>
-          </li>
-        </ul>
+        <ol class="how-list">
+          <li><strong>Accede a: Rendimientos del capital mobiliario → Otros rendimientos</strong><p>Dentro del Modelo 100, apartado F, subapartado "Otros rendimientos del capital mobiliario" que no procedan de la participación en fondos propios de entidades.</p></li>
+          <li><strong>Introduce el rendimiento bruto total del ejercicio</strong><p>Suma de todas las recompensas de staking recibidas durante el año, valoradas a precio de mercado en cada fecha de recepción.</p></li>
+          <li><strong>Introduce los gastos deducibles (si los hay)</strong><p>Comisiones directas de staking documentadas con informes de la plataforma.</p></li>
+          <li><strong>Retenciones: 0 € si el exchange es extranjero</strong><p>Binance, Kraken, Coinbase, Bitvavo y la mayoría de exchanges internacionales no aplican retención a cuenta en España. Indica 0 € en el campo de retenciones a cuenta.</p></li>
+        </ol>
 
         <!-- ─── 6. TIPOS DE STAKING ────────────────── -->
-        <h2 id="tipos">Tipos de staking y su tratamiento fiscal diferente</h2>
+        </section><section class="legal-section"><h2 id="tipos">Tipos de staking y su tratamiento fiscal diferente</h2>
 
         <h3>Staking delegado en exchange</h3>
         <p>
@@ -1061,8 +602,8 @@ footer {
           de liquidez</em> que representa su posición de staking más las recompensas acumuladas.
         </p>
 
-        <div class="callout">
-          <div class="callout-title">Atención — Liquid staking: posible doble hecho imponible</div>
+        <div class="legal-callout">
+          <h3>Atención — Liquid staking: posible doble hecho imponible</h3>
           <p>
             <strong>Hecho imponible 1:</strong> el canje de ETH por stETH puede ser una permuta
             (Art. 37.1.h) LIRPF) si Hacienda considera que son activos distintos. La DGT no ha
@@ -1081,8 +622,7 @@ footer {
           organización de medios materiales y personales. Las implicaciones son significativas:
         </p>
 
-        <div class="comparison-wrap">
-          <table class="comparison-table">
+        <div class="files-table-wrap" tabindex="0" role="region" aria-label="Tabla de ejemplo fiscal; desplazable horizontalmente"><table class="files-table">
             <thead>
               <tr>
                 <th>Aspecto</th>
@@ -1112,11 +652,10 @@ footer {
                 <td>130/131 + 100</td>
               </tr>
             </tbody>
-          </table>
-        </div>
+          </table></div>
 
         <!-- ─── 7. EXCHANGES ───────────────────────── -->
-        <h2 id="exchanges">Staking en exchanges: Binance, Coinbase, Kraken, Bitvavo</h2>
+        </section><section class="legal-section"><h2 id="exchanges">Staking en exchanges: Binance, Coinbase, Kraken, Bitvavo</h2>
 
         <p>
           La forma de tratar las recompensas es <strong>idéntica con independencia del exchange</strong>.
@@ -1159,7 +698,7 @@ footer {
         </p>
 
         <!-- ─── 8. VENTA DE RECOMPENSAS ────────────── -->
-        <h2 id="venta">Qué pasa cuando vendes las recompensas de staking</h2>
+        </section><section class="legal-section"><h2 id="venta">Qué pasa cuando vendes las recompensas de staking</h2>
 
         <p>
           Cuando vendes (o permutaz) las criptomonedas obtenidas como recompensas de staking,
@@ -1195,10 +734,10 @@ footer {
         </p>
 
         <!-- ─── 9. ERRORES ─────────────────────────── -->
-        <h2 id="errores">Errores frecuentes al declarar el staking de criptomonedas</h2>
+        </section><section class="legal-section"><h2 id="errores">Errores frecuentes al declarar el staking de criptomonedas</h2>
 
-        <div class="error-callout">
-          <div class="callout-title">Error 1 — Declarar solo cuando se vende</div>
+        <div class="warning-box">
+          <h3 class="warning-text">Error 1 — Declarar solo cuando se vende</h3>
           <p>
             El error más habitual: creer que el staking solo tributa al convertir a euros.
             <strong>Incorrecto.</strong> Las recompensas tributan como RCM en el ejercicio en que se
@@ -1207,8 +746,8 @@ footer {
           </p>
         </div>
 
-        <div class="error-callout">
-          <div class="callout-title">Error 2 — Declarar como ganancia patrimonial en lugar de RCM</div>
+        <div class="warning-box">
+          <h3 class="warning-text">Error 2 — Declarar como ganancia patrimonial en lugar de RCM</h3>
           <p>
             Declarar las recompensas en las casillas de ganancias patrimoniales (1800–1814) en lugar
             de las de RCM. Son conceptos distintos, con casillas distintas. Las ganancias patrimoniales
@@ -1216,8 +755,8 @@ footer {
           </p>
         </div>
 
-        <div class="error-callout">
-          <div class="callout-title">Error 3 — No registrar el coste de adquisición de las recompensas</div>
+        <div class="warning-box">
+          <h3 class="warning-text">Error 3 — No registrar el coste de adquisición de las recompensas</h3>
           <p>
             Recibir recompensas de staking sin anotar el precio de mercado en la fecha de cada
             entrega. Al vender esas monedas años después, sin ese registro el coste de adquisición
@@ -1225,8 +764,8 @@ footer {
           </p>
         </div>
 
-        <div class="error-callout">
-          <div class="callout-title">Error 4 — Confundir liquid staking con staking tradicional</div>
+        <div class="warning-box">
+          <h3 class="warning-text">Error 4 — Confundir liquid staking con staking tradicional</h3>
           <p>
             Tratar stETH exactamente igual que el staking delegado sin considerar el posible hecho
             imponible del canje inicial (permuta ETH → stETH). El liquid staking requiere análisis
@@ -1234,8 +773,8 @@ footer {
           </p>
         </div>
 
-        <div class="error-callout">
-          <div class="callout-title">Error 5 — No sumar todas las recompensas del ejercicio</div>
+        <div class="warning-box">
+          <h3 class="warning-text">Error 5 — No sumar todas las recompensas del ejercicio</h3>
           <p>
             Los exchanges distribuyen recompensas de forma muy frecuente (diaria, semanal). Usar
             solo el extracto del último trimestre o ignorar los primeros meses del año. El rendimiento
@@ -1244,8 +783,8 @@ footer {
           </p>
         </div>
 
-        <div class="error-callout">
-          <div class="callout-title">Error 6 — Creer que Hacienda no lo sabe</div>
+        <div class="warning-box">
+          <h3 class="warning-text">Error 6 — Creer que Hacienda no lo sabe</h3>
           <p>
             Desde 2023, los modelos 172 y 173 obligan a los exchanges a reportar saldos y operaciones
             de sus usuarios residentes en España. Hacienda tiene acceso a los datos de staking de
@@ -1255,120 +794,120 @@ footer {
         </div>
 
         <!-- ─── CTA MID ─────────────────────────────────── -->
-        <div class="asistencia-block" style="max-width:580px;margin:3rem 0;">
-          <div class="asistencia-badge">Asistencia especializada</div>
+        <div class="apple-cta">
+          <p class="apple-cta-eyebrow">Asistencia especializada</p>
           <p>
             <strong>¿Necesitas ayuda con tu declaración?</strong>
             Asistencia fiscal especializada para usuarios con criptomonedas, supervisada por economista colegiado.
           </p>
-          <ul class="asistencia-bullets">
+          <ul class="apple-cta-benefits">
             <li>✓ Consulta inicial sin compromiso</li>
             <li>✓ Casos complejos de criptomonedas</li>
             <li>✓ Supervisado por economista colegiado</li>
           </ul>
-          <a href="/pedir-asesoramiento" class="btn-asistencia">
+          <a href="/pedir-asesoramiento" class="apple-button">
             Solicitar asistencia fiscal
           </a>
         </div>
 
         <!-- ─── 10. FAQ ────────────────────────────── -->
-        <h2 id="faq">Preguntas frecuentes sobre staking y Hacienda</h2>
+        </section><section class="legal-section"><h2 id="faq">Preguntas frecuentes sobre staking y Hacienda</h2>
 
-        <div class="faq-list">
+        <div class="how-faq-list">
 
-          <details class="faq-item">
-            <summary class="faq-q">¿Las recompensas de staking son rendimiento del capital mobiliario o del trabajo?</summary>
-            <p class="faq-a">
+          <details class="apple-faq-item">
+            <summary>¿Las recompensas de staking son rendimiento del capital mobiliario o del trabajo?</summary>
+            <div class="apple-faq-answer"><p>
               Son <strong>rendimientos del capital mobiliario</strong> según el artículo 25.4 LIRPF,
               confirmado por la DGT en la consulta V1069-19. Solo serían rendimientos de
               actividad económica (Art. 27 LIRPF) si el contribuyente opera un nodo validador
               propio con organización empresarial de medios materiales. El staking delegado en
               exchanges —la modalidad más habitual— es siempre RCM.
-            </p>
+            </p></div>
           </details>
 
-          <details class="faq-item">
-            <summary class="faq-q">¿En qué casilla de la renta se declara el staking?</summary>
-            <p class="faq-a">
+          <details class="apple-faq-item">
+            <summary>¿En qué casilla de la renta se declara el staking?</summary>
+            <div class="apple-faq-answer"><p>
               En las casillas de <strong>otros rendimientos del capital mobiliario</strong> del
               Modelo 100 (grupo Art. 25.4 LIRPF). Si el exchange es extranjero y no practica
               retención (Binance, Kraken, Coinbase, Bitvavo), se declara sin retención. Si hubiera
               retención en origen de una entidad española, se indica el importe retenido.
-            </p>
+            </p></div>
           </details>
 
-          <details class="faq-item">
-            <summary class="faq-q">¿El staking tributa cuando se reciben las recompensas o cuando se venden?</summary>
-            <p class="faq-a">
+          <details class="apple-faq-item">
+            <summary>¿El staking tributa cuando se reciben las recompensas o cuando se venden?</summary>
+            <div class="apple-faq-answer"><p>
               <strong>En dos momentos distintos:</strong> al recibir las recompensas tributan como
               RCM en ese ejercicio (Art. 14.1.a) LIRPF). Al venderlas, la diferencia entre el precio
               de venta y el valor de mercado asignado al recibirlas tributa como ganancia o pérdida
               patrimonial (Art. 33 LIRPF). Son dos hechos imponibles independientes.
-            </p>
+            </p></div>
           </details>
 
-          <details class="faq-item">
-            <summary class="faq-q">¿Qué valor se asigna a las recompensas de staking al recibirlas?</summary>
-            <p class="faq-a">
+          <details class="apple-faq-item">
+            <summary>¿Qué valor se asigna a las recompensas de staking al recibirlas?</summary>
+            <div class="apple-faq-answer"><p>
               El <strong>valor de mercado en el momento exacto de la recepción</strong> (Art. 35 LIRPF).
               Ese mismo valor es el coste de adquisición para futuras ventas. Para obtener el precio
               histórico, la DGT acepta fuentes objetivas como CoinGecko o CoinMarketCap
               (consulta V3513-19).
-            </p>
+            </p></div>
           </details>
 
-          <details class="faq-item">
-            <summary class="faq-q">¿El liquid staking tributa igual que el staking tradicional?</summary>
-            <p class="faq-a">
+          <details class="apple-faq-item">
+            <summary>¿El liquid staking tributa igual que el staking tradicional?</summary>
+            <div class="apple-faq-answer"><p>
               No necesariamente. En el liquid staking (stETH, rETH, cbETH), la entrega del token
               original a cambio del token de liquidez puede ser una <a href="/permuta-criptomonedas-irpf">permuta</a>
               (Art. 37.1.h) LIRPF) con su propio hecho imponible. Además, las recompensas
               incorporadas siguen siendo RCM Art. 25.4. La DGT no ha emitido resolución definitiva;
               se recomienda consultar con un asesor especializado.
-            </p>
+            </p></div>
           </details>
 
-          <details class="faq-item">
-            <summary class="faq-q">¿Tengo que declarar el staking si el importe total es bajo?</summary>
-            <p class="faq-a">
+          <details class="apple-faq-item">
+            <summary>¿Tengo que declarar el staking si el importe total es bajo?</summary>
+            <div class="apple-faq-answer"><p>
               Depende del total de RCM del ejercicio. Si el conjunto de rendimientos del capital
               mobiliario supera <strong>1.600&nbsp;€</strong> hay obligación de declarar. Para importes
               menores puede no haber obligación de declarar si no se tiene por otros conceptos.
               Pero si ya se está obligado a declarar (por rendimientos del trabajo, por ejemplo),
               hay que incluir las recompensas aunque sean pequeñas.
-            </p>
+            </p></div>
           </details>
 
-          <details class="faq-item">
-            <summary class="faq-q">¿Puedo deducir las comisiones de la plataforma de staking?</summary>
-            <p class="faq-a">
+          <details class="apple-faq-item">
+            <summary>¿Puedo deducir las comisiones de la plataforma de staking?</summary>
+            <div class="apple-faq-answer"><p>
               Sí. Las comisiones directamente asociadas a la obtención de recompensas son
               <strong>gastos deducibles del RCM</strong> (Art. 26.1 LIRPF). Es necesario documentarlas
               con el historial de la plataforma. El resultado a declarar es el rendimiento
               neto (rendimiento bruto − gastos deducibles).
-            </p>
+            </p></div>
           </details>
 
-          <details class="faq-item">
-            <summary class="faq-q">¿El staking en Binance, Kraken, Coinbase o Bitvavo se declara igual?</summary>
-            <p class="faq-a">
+          <details class="apple-faq-item">
+            <summary>¿El staking en Binance, Kraken, Coinbase o Bitvavo se declara igual?</summary>
+            <div class="apple-faq-answer"><p>
               Sí. Con independencia de la plataforma, las recompensas son siempre RCM Art. 25.4.
               La diferencia práctica: los exchanges extranjeros no aplican retención, por lo que
               pagas el <strong>100% del impuesto en la declaración</strong> sin anticipos previos.
               Si tus recompensas totales anuales son significativas, puede ser aconsejable hacer
               ingresos a cuenta para evitar sorpresas al presentar la renta.
-            </p>
+            </p></div>
           </details>
 
         </div>
 
         <!-- ─── AUTHOR BIO ─────────────────────────── -->
-        <div class="author-bio">
-          <div class="author-avatar">RR</div>
+        <div class="legal-purpose">
+          <p class="how-small">RR</p>
           <div>
-            <div class="author-bio-name">Rafael Ramos Martínez</div>
-            <div class="author-bio-role">Economista Colegiado nº&nbsp;4.579 · Colegio de Economistas de Valencia</div>
-            <p class="author-bio-text">
+            <h3>Rafael Ramos Martínez</h3>
+            <div class="how-small">Economista Colegiado nº&nbsp;4.579 · Colegio de Economistas de Valencia</div>
+            <p class="how-muted">
               Más de 25 años de experiencia en fiscalidad empresarial y personal. Supervisa los
               criterios fiscales de todas las guías de marianosevilla.com: tratamiento de staking,
               permutas, DeFi, liquid staking y operaciones complejas según la normativa española
@@ -1377,7 +916,7 @@ footer {
           </div>
         </div>
 
-        <div class="disclaimer">
+        <div class="legal-callout">
           <strong>Aviso legal:</strong> Esta guía tiene fines informativos. El contenido ha sido
           supervisado por un economista colegiado pero no constituye asesoramiento fiscal
           individualizado para tu situación concreta. El tratamiento del liquid staking y de los
@@ -1386,30 +925,27 @@ footer {
         </div>
 
         <!-- Related guides -->
-        <h3 style="margin-top:2.5rem;margin-bottom:1rem;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;font-weight:700;">Guías relacionadas</h3>
-        <div class="related-grid">
-          <a href="/metodo-fifo-criptomonedas" class="related-card">
-            <div class="related-card-label">Método de valoración</div>
-            <div class="related-card-title">Método FIFO en criptomonedas: obligatorio, cálculo y base legal</div>
+        <h3>Guías relacionadas</h3>
+        <div class="apple-catalog-grid">
+          <a href="/metodo-fifo-criptomonedas" class="apple-catalog-card">
+            <p>Método de valoración</p>
+            <h3>Método FIFO en criptomonedas: obligatorio, cálculo y base legal</h3>
           </a>
-          <a href="/permuta-criptomonedas-irpf" class="related-card">
-            <div class="related-card-label">Permuta cripto</div>
-            <div class="related-card-title">Permuta de criptomonedas en el IRPF: cómo tributa el swap cripto a cripto</div>
+          <a href="/permuta-criptomonedas-irpf" class="apple-catalog-card">
+            <p>Permuta cripto</p>
+            <h3>Permuta de criptomonedas en el IRPF: cómo tributa el swap cripto a cripto</h3>
           </a>
-          <a href="/perdidas-patrimoniales-criptomonedas" class="related-card">
-            <div class="related-card-label">Pérdidas</div>
-            <div class="related-card-title">Pérdidas patrimoniales por criptomonedas: casillas y cómo declararlas</div>
+          <a href="/perdidas-patrimoniales-criptomonedas" class="apple-catalog-card">
+            <p>Pérdidas</p>
+            <h3>Pérdidas patrimoniales por criptomonedas: casillas y cómo declararlas</h3>
           </a>
         </div>
+</section>
+<section class="legal-section" aria-label="Recursos relacionados">
 
-      </article>
-
-      <!-- SIDEBAR -->
-      <aside class="content-sidebar" aria-label="Recursos relacionados">
-
-        <div class="sidebar-card">
-          <div class="sidebar-card-title">Silo FIFO — Guías relacionadas</div>
-          <ul class="sidebar-links">
+        <div class="legal-purpose">
+          <h3>Silo FIFO — Guías relacionadas</h3>
+          <ul class="how-list">
             <li><a href="/metodo-fifo-criptomonedas">Método FIFO en criptomonedas</a></li>
             <li><a href="/bienes-homogeneos-criptomonedas">Bienes homogéneos y FIFO</a></li>
             <li><a href="/perdidas-patrimoniales-criptomonedas">Pérdidas patrimoniales</a></li>
@@ -1419,9 +955,9 @@ footer {
           </ul>
         </div>
 
-        <div class="sidebar-card">
-          <div class="sidebar-card-title">Recursos fiscales</div>
-          <ul class="sidebar-links">
+        <div class="legal-purpose">
+          <h3>Recursos fiscales</h3>
+          <ul class="how-list">
             <li><a href="/modelo-721-criptomonedas">Modelo 721 cripto</a></li>
             <li><a href="/exchanges">Exchanges compatibles</a></li>
             <li><a href="/como-funciona">Cómo funciona la herramienta</a></li>
@@ -1430,37 +966,54 @@ footer {
           </ul>
         </div>
 
-        <div class="author-card">
-          <div class="author-name">Rafael Ramos Martínez</div>
-          <div class="author-role">Economista Colegiado nº&nbsp;4.579<br>Colegio de Economistas de Valencia<br>+25 años en fiscalidad empresarial</div>
+        <div class="legal-purpose">
+          <h3>Rafael Ramos Martínez</h3>
+          <div class="how-muted">Economista Colegiado nº&nbsp;4.579<br>Colegio de Economistas de Valencia<br>+25 años en fiscalidad empresarial</div>
         </div>
 
-      </aside>
+      </section>
+</article></div></div>
 
-    </div>
-  </div>
 </main>
-
-<!-- ── FOOTER ─────────────────────────────────── -->
-<footer>
-  <div class="footer-inner">
-    <div>
-      <div class="footer-brand">Mariano Sevilla</div>
-      <div class="footer-copy">Herramienta fiscal para criptomonedas · marianosevilla.com</div>
+<footer class="apple-footer">
+  <div class="apple-container">
+    <div class="apple-footer-top">
+      <div class="apple-footer-brand">
+        <a href="/" class="apple-footer-logo">mariano<span>sevilla</span>.com</a>
+        <p>Informes FIFO de criptomonedas.</p>
+      </div>
+      <nav aria-labelledby="apple-footer-explore">
+        <h2 id="apple-footer-explore">Explorar</h2>
+        <ul>
+          <li><a href="/herramientas">Herramientas</a></li>
+          <li><a href="/como-funciona">Cómo funciona</a></li>
+          <li><a href="/exchanges">Exchanges compatibles</a></li>
+        </ul>
+      </nav>
+      <nav aria-labelledby="apple-footer-help">
+        <h2 id="apple-footer-help">Ayuda</h2>
+        <ul>
+          <li><a href="/faq">Preguntas frecuentes</a></li>
+          <li><a href="/contacto">Contacto</a></li>
+          <li><a href="/about">Equipo</a></li>
+        </ul>
+      </nav>
     </div>
-    <div class="footer-links">
-      <a href="/">Inicio</a>
-      <a href="/exchanges">Exchanges</a>
-      <a href="/como-funciona">Cómo funciona</a>
-      <a href="/modelo-721-criptomonedas">Modelo 721</a>
-      <a href="/asesoramiento-fiscal-criptomonedas">Asesoramiento</a>
-      <a href="/privacidad">Privacidad</a>
-      <a href="/terminos">Términos</a>
-      <a href="/aviso-legal">Aviso legal</a>
-      <a href="/about">About</a>
+    <div class="apple-footer-legal">
+      <p class="apple-footer-disclaimer">Herramienta de generación de informes FIFO para usuarios con criptomonedas. No constituye asesoramiento fiscal ni legal.</p>
+      <div class="apple-footer-bottom">
+        <p class="apple-footer-copyright">© <span class="apple-footer-year">2026</span> Mariano Sevilla</p>
+        <nav aria-label="Información legal">
+          <ul>
+            <li><a href="/privacidad">Privacidad</a></li>
+            <li><a href="/terminos">Términos</a></li>
+            <li><a href="/cookies">Cookies</a></li>
+            <li><a href="/aviso-legal">Aviso legal</a></li>
+          </ul>
+        </nav>
+      </div>
     </div>
   </div>
 </footer>
-
-</body>
-</html>
+<script src="/static/landing_apple.js" defer></script>
+</body></html>

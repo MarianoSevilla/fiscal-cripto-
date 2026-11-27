@@ -8,173 +8,158 @@
 <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
 <link rel="icon" href="/static/favicon.ico">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/nav.css">
+<link rel="stylesheet" href="/static/landing_apple.css">
+<link rel="stylesheet" href="/static/como_funciona_apple.css">
+<link rel="stylesheet" href="/static/account_apple.css">
+</head>
+<body class="apple-home apple-how-page">
+<a class="apple-skip" href="#contenido">Saltar al contenido</a>
+<nav id="site-nav" aria-label="Principal">
+  <div class="snav-inner">
+    <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
+    <ul class="snav-links">
+      <li><a href="/herramientas">Herramientas</a></li>
+      <li><a href="/como-funciona">Cómo funciona</a></li>
+      <li><a href="/recursos">Recursos</a></li>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/contacto">Contacto</a></li>
+    </ul>
+    <div class="snav-right">
+      <div class="snav-skeleton" aria-hidden="true"></div>
+    </div>
+  </div>
+</nav>
+<script src="/static/nav.js"></script>
+<noscript>
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --bg:      #0b1220;
-  --surface: #141f32;
-  --surf2:   #1a2540;
-  --border:  rgba(255,255,255,0.08);
-  --border2: rgba(255,255,255,0.14);
-  --text:    #eef0f6;
-  --muted:   #7a8099;
-  --sub:     #9aa0b8;
-  --accent:  #00C896;
-  --danger:  #f87171;
-  --ff-h:    'Syne', sans-serif;
-  --ff-b:    'DM Sans', sans-serif;
-  --footer-bg: #070e1a;
-  --max-w:     1280px;
-  --pad-x:     3rem;
+/* Native mobile disclosure: useful in HTML viewers without JavaScript too. */
+.apple-home .snav-right{display:none}
+.apple-home .apple-noscript-menu{display:none}
+@media (min-width:1201px){
+  .apple-home #site-nav{position:static;height:auto}
+  .apple-home .snav-inner{flex-wrap:wrap;padding-block:16px;gap:16px}
+  .apple-home .snav-links{display:flex;position:static;transform:none;flex-wrap:wrap;gap:12px}
+  .apple-home .apple-intro-inner{padding-top:48px}
 }
-html, body {
-  min-height: 100%; background: var(--bg);
-  font-family: var(--ff-b); color: var(--text);
-}
-body {
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  min-height: 100vh; padding: 40px 20px;
-}
-
-.logo-wrap {
-  margin-bottom: 32px; text-align: center;
-}
-.logo {
-  font-family: var(--ff-h); font-weight: 800; font-size: 20px;
-  color: var(--text); letter-spacing: -.02em; text-decoration: none;
-}
-.logo span { color: var(--accent); }
-
-.card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 14px; padding: 40px 36px;
-  width: 100%; max-width: 420px; text-align: center;
-}
-
-.card-icon   { font-size: 40px; margin-bottom: 18px; line-height: 1; }
-.card-title  { font-family: var(--ff-h); font-weight: 700; font-size: 20px; color: var(--text); margin-bottom: 10px; }
-.card-desc   { font-size: 14px; color: var(--muted); line-height: 1.7; margin-bottom: 22px; }
-
-.email-pill {
-  background: var(--surf2); border: 1px solid var(--border);
-  border-radius: 8px; padding: 10px 14px;
-  font-size: 14px; color: var(--sub); font-weight: 600;
-  margin-bottom: 20px; word-break: break-all;
-}
-
-.btn-danger {
-  width: 100%; background: var(--danger); color: #fff;
-  font-family: var(--ff-b); font-weight: 700; font-size: 14px;
-  padding: 12px; border: none; border-radius: 8px; cursor: pointer;
-  transition: background .15s; margin-bottom: 10px;
-}
-.btn-danger:hover    { background: #ef4444; }
-.btn-danger:disabled { opacity: .5; cursor: not-allowed; }
-
-.btn-ghost {
-  width: 100%; background: none; border: 1px solid var(--border);
-  color: var(--sub); font-family: var(--ff-b); font-weight: 600; font-size: 14px;
-  padding: 12px; border-radius: 8px; cursor: pointer;
-  transition: all .15s; display: block; text-decoration: none; text-align: center;
-}
-.btn-ghost:hover { border-color: var(--border2); color: var(--text); }
-
-.reassure {
-  font-size: 11px; color: var(--muted); margin-top: 18px; line-height: 1.65;
-}
-
-.error-msg {
-  background: rgba(248,113,113,.1); border: 1px solid rgba(248,113,113,.25);
-  color: var(--danger); border-radius: 8px; padding: 11px 14px;
-  font-size: 13px; margin-top: 12px; display: none;
-}
-
-/* Success state */
-#state-success { display: none; }
-#state-confirm { display: block; }
-
-.success-icon  { font-size: 40px; margin-bottom: 16px; }
-.success-title { font-family: var(--ff-h); font-weight: 700; font-size: 20px; color: var(--text); margin-bottom: 10px; }
-.success-desc  { font-size: 14px; color: var(--muted); line-height: 1.7; margin-bottom: 24px; }
-
-.link-account {
-  color: var(--accent); font-size: 13px; text-decoration: none; font-weight: 500;
-}
-.link-account:hover { text-decoration: underline; }
-
-/* Invalid token state */
-#state-invalid { display: none; }
-
-@media (max-width: 480px) {
-  .card { padding: 28px 20px; }
-}
-
-/* ── FOOTER ─────────────────────── */
-.page-footer { background: var(--footer-bg); border-top: 1px solid var(--border); padding: 2rem 0; margin-top: auto; }
-.footer-inner { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x); display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
-.footer-copy { font-size: 13px; color: var(--muted); }
-.footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
-.footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; }
-.footer-links a:hover { color: var(--text); }
-@media (max-width: 640px) {
-  .footer-inner { flex-direction: column; align-items: flex-start; }
-  :root { --pad-x: 1.5rem; }
+@media (max-width:1200px){
+  .apple-home .apple-noscript-access{display:none}
+  .apple-home .apple-noscript-menu{display:block;position:absolute;top:8px;right:var(--apple-pad);z-index:1001}
+  .apple-home .apple-noscript-menu>summary{display:flex;align-items:center;justify-content:center;width:44px;height:44px;list-style:none;border:1px solid #d8e1dd;border-radius:9px;background:#f3f6f5;color:var(--text);cursor:pointer}
+  .apple-home .apple-noscript-menu>summary::-webkit-details-marker{display:none}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon{background:transparent}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::before{transform:translateY(6px) rotate(45deg)}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::after{transform:translateY(-6px) rotate(-45deg)}
+  .apple-home .apple-noscript-panel{position:absolute;top:56px;left:auto;right:calc(-1 * var(--apple-pad));width:100vw;display:flex;flex-direction:column;gap:4px;padding:12px var(--apple-pad) 18px;max-height:calc(100vh - 64px);max-height:calc(100dvh - 64px);overflow-y:auto;overscroll-behavior:contain;background:#fff;border-top:1px solid var(--border);box-shadow:0 14px 28px rgba(20,34,30,.1)}
+  .apple-home .apple-noscript-panel>a{display:flex;align-items:center;min-height:44px;padding:11px 14px;border-radius:8px;color:var(--muted);font-size:.9375rem;line-height:1.4;text-decoration:none}
+  .apple-home .apple-noscript-panel>a:hover{background:#f1f5f3;color:var(--text)}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary{justify-content:center;min-height:48px;border-radius:999px;background:var(--accent);color:#fff;font-weight:600}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary:hover{background:#00533f}
+  .apple-home .apple-noscript-menu .snav-menu-icon{width:19px}
+  .apple-home #site-nav .snav-logo{max-width:calc(100% - 60px)}
 }
 </style>
-</head>
-<body>
-
-<a href="/" class="logo-wrap" style="text-decoration:none">
-  <div class="logo">Mariano<span>.</span></div>
-</a>
-
+<details class="apple-noscript-menu">
+  <summary><span class="snav-menu-icon" aria-hidden="true"></span><span class="apple-sr-only">Menú principal</span></summary>
+  <nav class="apple-noscript-panel" aria-label="Navegación móvil">
+    <a href="/herramientas">Herramientas</a>
+    <a href="/como-funciona">Cómo funciona</a>
+    <a href="/recursos">Recursos</a>
+    <a href="/faq">FAQ</a>
+    <a href="/contacto">Contacto</a>
+    <a href="/login/">Iniciar sesión</a>
+    <a href="/signup/" class="snav-mobile-link-primary">Crear cuenta</a>
+  </nav>
+</details>
+<div class="apple-noscript-access"><a href="/login/">Iniciar sesión</a><a href="/signup/">Crear cuenta</a></div>
+</noscript>
+<main id="contenido" tabindex="-1">
+<section class="how-intro" aria-labelledby="communications-title"><div class="apple-container"><h1 id="communications-title">Gestionar <em>comunicaciones</em></h1></div></section>
+<div class="apple-account"><div class="account-container">
 <!-- STATE: CONFIRM UNSUBSCRIBE -->
-<div class="card" id="state-confirm">
-  <div class="card-icon">📭</div>
-  <div class="card-title">¿Deseas desuscribirte?</div>
-  <div class="card-desc">
+<section class="section" id="state-confirm" style="display:block">
+  <h2 class="section-title">¿Deseas desuscribirte?</h2>
+  <p class="danger-desc">
     Dejarás de recibir actualizaciones, novedades y comunicaciones de producto.<br>
     Tu cuenta seguirá activa y podrás usar la plataforma con total normalidad.
-  </div>
-  <div class="email-pill" id="unsub-email">cargando…</div>
-  <button class="btn-danger" id="btn-confirm" onclick="confirmUnsub()">
+  </p>
+  <p class="account-loading" id="unsub-email">cargando…</p>
+  <button class="btn btn-danger" id="btn-confirm" onclick="confirmUnsub()">
     Confirmar desuscripción
   </button>
-  <a href="/" class="btn-ghost">Mantener suscripción</a>
-  <div class="error-msg" id="error-msg">Error al procesar la solicitud. Intenta de nuevo.</div>
-  <div class="reassure">
+  <a href="/" class="btn btn-muted">Mantener suscripción</a>
+  <div class="form-msg err" id="error-msg" role="alert" style="display:none">Error al procesar la solicitud. Intenta de nuevo.</div>
+  <div class="field-hint">
     No compartimos tu dirección de email con terceros.<br>
     Puedes volver a activar las comunicaciones desde tu cuenta.
   </div>
-</div>
+</section>
 
 <!-- STATE: SUCCESS -->
-<div class="card" id="state-success">
-  <div class="success-icon">✅</div>
-  <div class="success-title">Desuscripción confirmada</div>
-  <div class="success-desc">
+<section class="section" id="state-success" style="display:none">
+  <h2 class="section-title">Desuscripción confirmada</h2>
+  <p class="danger-desc">
     Has sido eliminado de nuestra lista de comunicaciones de producto.<br><br>
     No recibirás más actualizaciones. Si en algún momento quieres volver a recibirlas,
     puedes reactivarlas desde tu cuenta.
-  </div>
-  <a href="/account" class="link-account">← Ir a mi cuenta</a>
-</div>
+  </p>
+  <a href="/account" class="btn btn-muted">← Ir a mi cuenta</a>
+</section>
 
 <!-- STATE: INVALID TOKEN -->
-<div class="card" id="state-invalid">
-  <div class="card-icon" style="opacity:.4">🔗</div>
-  <div class="card-title" style="color:var(--muted)">Enlace no válido</div>
-  <div class="card-desc">
+<section class="section" id="state-invalid" style="display:none">
+  <h2 class="section-title">Enlace no válido</h2>
+  <p class="danger-desc">
     El enlace de desuscripción no es válido o ya ha sido usado.<br>
     Si quieres gestionar tus comunicaciones, accede a tu cuenta.
-  </div>
-  <a href="/account" class="btn-ghost" style="margin-top:8px">Ir a mi cuenta</a>
-</div>
+  </p>
+  <a href="/account" class="btn btn-muted">Ir a mi cuenta</a>
+</section>
 
+
+<noscript><p class="account-loading">Necesitas JavaScript para confirmar la desuscripción. Puedes gestionar las comunicaciones desde <a href="/account">tu cuenta</a>.</p></noscript>
+</div></div>
+</main>
+<footer class="apple-footer">
+  <div class="apple-container">
+    <div class="apple-footer-top">
+      <div class="apple-footer-brand">
+        <a href="/" class="apple-footer-logo">mariano<span>sevilla</span>.com</a>
+        <p>Informes FIFO de criptomonedas.</p>
+      </div>
+      <nav aria-labelledby="apple-footer-explore">
+        <h2 id="apple-footer-explore">Explorar</h2>
+        <ul>
+          <li><a href="/herramientas">Herramientas</a></li>
+          <li><a href="/como-funciona">Cómo funciona</a></li>
+          <li><a href="/exchanges">Exchanges compatibles</a></li>
+        </ul>
+      </nav>
+      <nav aria-labelledby="apple-footer-help">
+        <h2 id="apple-footer-help">Ayuda</h2>
+        <ul>
+          <li><a href="/faq">Preguntas frecuentes</a></li>
+          <li><a href="/contacto">Contacto</a></li>
+          <li><a href="/about">Equipo</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="apple-footer-legal">
+      <p class="apple-footer-disclaimer">Herramienta de generación de informes FIFO para usuarios con criptomonedas. No constituye asesoramiento fiscal ni legal.</p>
+      <div class="apple-footer-bottom">
+        <p class="apple-footer-copyright">© <span class="apple-footer-year">2026</span> Mariano Sevilla</p>
+        <nav aria-label="Información legal">
+          <ul>
+            <li><a href="/privacidad">Privacidad</a></li>
+            <li><a href="/terminos">Términos</a></li>
+            <li><a href="/cookies">Cookies</a></li>
+            <li><a href="/aviso-legal">Aviso legal</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+</footer>
 <script>
 const params = new URLSearchParams(window.location.search);
 const token  = (params.get('token') || '').trim();
@@ -220,19 +205,5 @@ async function confirmUnsub() {
   }
 }
 </script>
-
-<!-- ── FOOTER ───────────────────── -->
-<footer class="page-footer">
-  <div class="footer-inner">
-    <span class="footer-copy">© 2025 marianosevilla.com — No constituye asesoramiento fiscal ni legal.</span>
-    <div class="footer-links">
-      <a href="/privacidad">Privacidad</a>
-      <a href="/terminos">Términos</a>
-      <a href="/cookies">Cookies</a>
-      <a href="/aviso-legal">Aviso legal</a>
-      <a href="/faq">FAQ</a>
-    </div>
-  </div>
-</footer>
-</body>
-</html>
+<script src="/static/landing_apple.js" defer></script>
+</body></html>
