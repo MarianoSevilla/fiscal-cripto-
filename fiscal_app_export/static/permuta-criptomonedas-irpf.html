@@ -198,7 +198,7 @@
 <link rel="stylesheet" href="/static/exchange_guide_apple.css">
 <link rel="stylesheet" href="/static/apple_cta.css">
 </head>
-<body class="apple-home apple-how-page">
+<body class="apple-home apple-how-page apple-exchange-guide">
 <a class="apple-skip" href="#contenido">Saltar al contenido</a>
 <nav id="site-nav" aria-label="Principal">
   <div class="snav-inner">
@@ -260,15 +260,15 @@
 </noscript>
 <main id="contenido" tabindex="-1">
 <section class="how-intro" aria-labelledby="guide-title"><div class="apple-container">
-<div class="apple-exchange-guide" style="background:transparent;color:inherit"><nav class="breadcrumb" aria-label="Ruta de navegación">
+<nav class="breadcrumb" aria-label="Ruta de navegación">
       <a href="/">Inicio</a>
-      <span>›</span>
+      <span class="breadcrumb-sep">›</span>
       <a href="/herramientas">Herramientas</a>
-      <span>›</span>
+      <span class="breadcrumb-sep">›</span>
       <a href="/metodo-fifo-criptomonedas">Método FIFO</a>
-      <span>›</span>
+      <span class="breadcrumb-sep">›</span>
       <span>Permuta criptomonedas IRPF</span>
-    </nav></div>
+    </nav>
 <p class="apple-eyebrow">Guía fiscal</p>
 <h1 id="guide-title">Permuta de criptomonedas en el IRPF: cómo tributa el <em>intercambio cripto a cripto</em></h1>
 <p class="how-lead">
@@ -427,7 +427,7 @@
 
         <p>Un trader tiene el siguiente historial de Bitcoin en su cartera global:</p>
 
-        <div class="apple-exchange-guide"><div class="files-table-wrap" tabindex="0" role="region" aria-label="Tabla de ejemplo fiscal; desplazable horizontalmente"><table class="files-table" aria-label="Historial de compras de Bitcoin para el ejemplo de permuta">
+        <div class="files-table-wrap" tabindex="0" role="region" aria-label="Tabla de ejemplo fiscal; desplazable horizontalmente"><table class="files-table" aria-label="Historial de compras de Bitcoin para el ejemplo de permuta">
           <thead>
             <tr>
               <th>Lote</th>
@@ -443,24 +443,24 @@
               <td>mar 2023</td>
               <td>0,10 BTC</td>
               <td>24.000 €/BTC</td>
-              <td class="accent">2.400 €</td>
+              <td>2.400 €</td>
             </tr>
             <tr>
               <td><strong>Lote 2</strong></td>
               <td>sep 2023</td>
               <td>0,10 BTC</td>
               <td>25.500 €/BTC</td>
-              <td class="accent">2.550 €</td>
+              <td>2.550 €</td>
             </tr>
             <tr>
               <td><strong>Lote 3</strong></td>
               <td>ene 2024</td>
               <td>0,10 BTC</td>
               <td>39.000 €/BTC</td>
-              <td class="accent">3.900 €</td>
+              <td>3.900 €</td>
             </tr>
           </tbody>
-        </table></div></div>
+        </table></div>
 
         <p>
           El 20 de junio de 2025 realiza la siguiente permuta en su exchange:
@@ -471,7 +471,7 @@
           Valores de mercado en el momento de la permuta (fuente: CoinMarketCap, 20 jun 2025):
         </p>
 
-        <div class="apple-exchange-guide"><div class="files-table-wrap" tabindex="0" role="region" aria-label="Tabla de ejemplo fiscal; desplazable horizontalmente"><table class="files-table" aria-label="Valores de mercado en la fecha de la permuta">
+        <div class="files-table-wrap" tabindex="0" role="region" aria-label="Tabla de ejemplo fiscal; desplazable horizontalmente"><table class="files-table" aria-label="Valores de mercado en la fecha de la permuta">
           <thead>
             <tr>
               <th>Activo</th>
@@ -485,16 +485,16 @@
               <td><strong>BTC entregado</strong></td>
               <td>90.000 €/BTC</td>
               <td>0,05 BTC</td>
-              <td class="accent">4.500 €</td>
+              <td>4.500 €</td>
             </tr>
             <tr>
               <td><strong>ETH recibido</strong></td>
               <td>2.900 €/ETH</td>
               <td>1,5 ETH</td>
-              <td class="accent">4.350 €</td>
+              <td>4.350 €</td>
             </tr>
           </tbody>
-        </table></div></div>
+        </table></div>
 
         <ol class="how-list">
           <li><strong>Identificar el lote FIFO del BTC entregado</strong><p>Se entregan 0,05 BTC. Por FIFO, salen del <strong>Lote 1</strong> (mar 2023, el más antiguo). Coste: 0,05 BTC × 24.000 €/BTC = <strong>1.200 €</strong>.</p></li>
@@ -564,7 +564,7 @@
           inherentes a la transmisión</em>. Esto incluye los siguientes costes en una permuta:
         </p>
 
-        <div class="apple-exchange-guide"><div class="files-table-wrap" tabindex="0" role="region" aria-label="Tabla de ejemplo fiscal; desplazable horizontalmente"><table class="files-table" aria-label="Deducibilidad de comisiones en permutas de criptomonedas">
+        <div class="files-table-wrap" tabindex="0" role="region" aria-label="Tabla de ejemplo fiscal; desplazable horizontalmente"><table class="files-table" aria-label="Deducibilidad de comisiones en permutas de criptomonedas">
             <thead>
               <tr>
                 <th>Tipo de comisión</th>
@@ -576,25 +576,25 @@
               <tr>
                 <td>Trading fee del exchange (taker/maker)</td>
                 <td>Reduce el valor de transmisión de la permuta</td>
-                <td><span class="badge-yes">Sí — reduce ganancia</span></td>
+                <td><span>Sí — reduce ganancia</span></td>
               </tr>
               <tr>
                 <td>Gas fee (on-chain, DeFi swap)</td>
                 <td>Gasto inherente a la transmisión; puede ser pérdida patrimonial separada si se paga en ETH</td>
-                <td><span class="badge-yes">Sí — pérdida declarable</span></td>
+                <td><span>Sí — pérdida declarable</span></td>
               </tr>
               <tr>
                 <td>Slippage (deslizamiento de precio)</td>
                 <td>Ya está reflejado en el precio de mercado ejecutado</td>
-                <td><span class="badge-warn">Implícito — no por separado</span></td>
+                <td><span>Implícito — no por separado</span></td>
               </tr>
               <tr>
                 <td>Comisión de retiro a wallet propia</td>
                 <td>No hay transmisión, no hay gasto deducible en ese momento</td>
-                <td><span class="badge-no">No en el momento del retiro</span></td>
+                <td><span>No en el momento del retiro</span></td>
               </tr>
             </tbody>
-          </table></div></div>
+          </table></div>
 
         <h3>Gas fees en permutas DeFi (Uniswap, Curve, etc.)</h3>
         <p>
@@ -728,8 +728,8 @@
               </p></li>
         </ol>
 
-        <div class="legal-callout">
-          <h3>Riesgo real — La AEAT cruza datos</h3>
+        <div class="warning-box">
+          <h3 class="warning-text">Riesgo real — La AEAT cruza datos</h3>
           <p>
             Desde 2023, los exchanges con presencia en España reportan operaciones mediante los
             modelos 172 y 173. Declarar solo las ventas a euros e ignorar las permutas genera
@@ -920,7 +920,7 @@
       <h3 class="apple-cta-title">Calcula tus impuestos cripto con el método FIFO</h3>
       <p>Importa el historial de tu exchange y genera tu informe FIFO para Hacienda, o explora todas las herramientas del silo fiscal.</p>
       <div class="how-actions">
-        <a href="/signup/" class="apple-button">Calcular gratis con FIFO</a>
+        <a href="/signup/" class="apple-button">Crear cuenta</a>
         <a href="/herramientas" class="apple-text-link">Ver todas las herramientas</a>
       </div>
     </div>

@@ -197,7 +197,7 @@
 <link rel="stylesheet" href="/static/exchange_guide_apple.css">
 <link rel="stylesheet" href="/static/apple_cta.css">
 </head>
-<body class="apple-home apple-how-page">
+<body class="apple-home apple-how-page apple-exchange-guide">
 <a class="apple-skip" href="#contenido">Saltar al contenido</a>
 <nav id="site-nav" aria-label="Principal">
   <div class="snav-inner">
@@ -259,13 +259,13 @@
 </noscript>
 <main id="contenido" tabindex="-1">
 <section class="how-intro" aria-labelledby="guide-title"><div class="apple-container">
-<div class="apple-exchange-guide" style="background:transparent;color:inherit"><nav class="breadcrumb" aria-label="Ruta de navegación">
+<nav class="breadcrumb" aria-label="Ruta de navegación">
       <a href="/">Inicio</a>
-      <span>›</span>
+      <span class="breadcrumb-sep">›</span>
       <a href="/metodo-fifo-criptomonedas">Método FIFO</a>
-      <span>›</span>
+      <span class="breadcrumb-sep">›</span>
       <span>Staking criptomonedas IRPF</span>
-    </nav></div>
+    </nav>
 <p class="apple-eyebrow">Guía fiscal</p>
 <h1 id="guide-title">Staking de criptomonedas en el IRPF: qué dice Hacienda y cómo <em>declararlo correctamente</em></h1>
 <p class="how-lead">
@@ -360,7 +360,7 @@
           La clasificación depende del <strong>modo en que se realiza el staking</strong>:
         </p>
 
-        <div class="apple-exchange-guide"><div class="files-table-wrap" tabindex="0" role="region" aria-label="Tabla de ejemplo fiscal; desplazable horizontalmente"><table class="files-table" aria-label="Clasificación fiscal según tipo de staking">
+        <div class="files-table-wrap" tabindex="0" role="region" aria-label="Tabla de ejemplo fiscal; desplazable horizontalmente"><table class="files-table" aria-label="Clasificación fiscal según tipo de staking">
             <thead>
               <tr>
                 <th>Tipo de staking</th>
@@ -395,7 +395,7 @@
                 <td>Art. 27</td>
               </tr>
             </tbody>
-          </table></div></div>
+          </table></div>
 
         <p>
           La distinción entre <strong>staking como particular</strong> y <strong>staking como
@@ -465,7 +465,7 @@
           una rentabilidad media del 3,5% anual (~0,35 ETH en recompensas recibidas a lo largo del año):
         </p>
 
-        <div class="apple-exchange-guide"><div class="files-table-wrap" tabindex="0" role="region" aria-label="Tabla de ejemplo fiscal; desplazable horizontalmente"><table class="files-table" aria-label="Ejemplo cálculo staking anual">
+        <div class="files-table-wrap" tabindex="0" role="region" aria-label="Tabla de ejemplo fiscal; desplazable horizontalmente"><table class="files-table" aria-label="Ejemplo cálculo staking anual">
           <thead>
             <tr>
               <th>Fecha recepción</th>
@@ -499,14 +499,14 @@
               <td>2.900</td>
               <td>232,00</td>
             </tr>
-            <tr class="highlight">
+            <tr>
               <td><strong>TOTAL 2025</strong></td>
               <td><strong>0,35 ETH</strong></td>
               <td>—</td>
-              <td class="accent"><strong>875,50 €</strong></td>
+              <td><strong>875,50 €</strong></td>
             </tr>
           </tbody>
-        </table></div></div>
+        </table></div>
 
         <div class="apple-catalog-grid">
           <div class="apple-catalog-card">
@@ -622,7 +622,7 @@
           organización de medios materiales y personales. Las implicaciones son significativas:
         </p>
 
-        <div class="apple-exchange-guide"><div class="files-table-wrap" tabindex="0" role="region" aria-label="Tabla de ejemplo fiscal; desplazable horizontalmente"><table class="files-table">
+        <div class="files-table-wrap" tabindex="0" role="region" aria-label="Tabla de ejemplo fiscal; desplazable horizontalmente"><table class="files-table">
             <thead>
               <tr>
                 <th>Aspecto</th>
@@ -652,7 +652,7 @@
                 <td>130/131 + 100</td>
               </tr>
             </tbody>
-          </table></div></div>
+          </table></div>
 
         <!-- ─── 7. EXCHANGES ───────────────────────── -->
         </section><section class="legal-section"><h2 id="exchanges">Staking en exchanges: Binance, Coinbase, Kraken, Bitvavo</h2>
@@ -736,8 +736,8 @@
         <!-- ─── 9. ERRORES ─────────────────────────── -->
         </section><section class="legal-section"><h2 id="errores">Errores frecuentes al declarar el staking de criptomonedas</h2>
 
-        <div class="legal-callout">
-          <h3>Error 1 — Declarar solo cuando se vende</h3>
+        <div class="warning-box">
+          <h3 class="warning-text">Error 1 — Declarar solo cuando se vende</h3>
           <p>
             El error más habitual: creer que el staking solo tributa al convertir a euros.
             <strong>Incorrecto.</strong> Las recompensas tributan como RCM en el ejercicio en que se
@@ -746,8 +746,8 @@
           </p>
         </div>
 
-        <div class="legal-callout">
-          <h3>Error 2 — Declarar como ganancia patrimonial en lugar de RCM</h3>
+        <div class="warning-box">
+          <h3 class="warning-text">Error 2 — Declarar como ganancia patrimonial en lugar de RCM</h3>
           <p>
             Declarar las recompensas en las casillas de ganancias patrimoniales (1800–1814) en lugar
             de las de RCM. Son conceptos distintos, con casillas distintas. Las ganancias patrimoniales
@@ -755,8 +755,8 @@
           </p>
         </div>
 
-        <div class="legal-callout">
-          <h3>Error 3 — No registrar el coste de adquisición de las recompensas</h3>
+        <div class="warning-box">
+          <h3 class="warning-text">Error 3 — No registrar el coste de adquisición de las recompensas</h3>
           <p>
             Recibir recompensas de staking sin anotar el precio de mercado en la fecha de cada
             entrega. Al vender esas monedas años después, sin ese registro el coste de adquisición
@@ -764,8 +764,8 @@
           </p>
         </div>
 
-        <div class="legal-callout">
-          <h3>Error 4 — Confundir liquid staking con staking tradicional</h3>
+        <div class="warning-box">
+          <h3 class="warning-text">Error 4 — Confundir liquid staking con staking tradicional</h3>
           <p>
             Tratar stETH exactamente igual que el staking delegado sin considerar el posible hecho
             imponible del canje inicial (permuta ETH → stETH). El liquid staking requiere análisis
@@ -773,8 +773,8 @@
           </p>
         </div>
 
-        <div class="legal-callout">
-          <h3>Error 5 — No sumar todas las recompensas del ejercicio</h3>
+        <div class="warning-box">
+          <h3 class="warning-text">Error 5 — No sumar todas las recompensas del ejercicio</h3>
           <p>
             Los exchanges distribuyen recompensas de forma muy frecuente (diaria, semanal). Usar
             solo el extracto del último trimestre o ignorar los primeros meses del año. El rendimiento
@@ -783,8 +783,8 @@
           </p>
         </div>
 
-        <div class="legal-callout">
-          <h3>Error 6 — Creer que Hacienda no lo sabe</h3>
+        <div class="warning-box">
+          <h3 class="warning-text">Error 6 — Creer que Hacienda no lo sabe</h3>
           <p>
             Desde 2023, los modelos 172 y 173 obligan a los exchanges a reportar saldos y operaciones
             de sus usuarios residentes en España. Hacienda tiene acceso a los datos de staking de
@@ -794,18 +794,18 @@
         </div>
 
         <!-- ─── CTA MID ─────────────────────────────────── -->
-        <div class="asistencia-block">
-          <div class="asistencia-badge">Asistencia especializada</div>
+        <div class="apple-cta">
+          <p class="apple-cta-eyebrow">Asistencia especializada</p>
           <p>
             <strong>¿Necesitas ayuda con tu declaración?</strong>
             Asistencia fiscal especializada para usuarios con criptomonedas, supervisada por economista colegiado.
           </p>
-          <ul class="asistencia-bullets">
+          <ul class="apple-cta-benefits">
             <li>✓ Consulta inicial sin compromiso</li>
             <li>✓ Casos complejos de criptomonedas</li>
             <li>✓ Supervisado por economista colegiado</li>
           </ul>
-          <a href="/pedir-asesoramiento" class="btn-asistencia">
+          <a href="/pedir-asesoramiento" class="apple-button">
             Solicitar asistencia fiscal
           </a>
         </div>

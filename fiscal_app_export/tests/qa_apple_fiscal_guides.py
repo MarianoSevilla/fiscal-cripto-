@@ -29,6 +29,16 @@ def run_apple_fiscal_guides(browser,origin):
             ]:
                 assert styles(page,sel,props)==styles(ref,sel,props),(name,width,sel,styles(page,sel,props),styles(ref,sel,props))
             assert page.locator("#snavBtnSignup").text_content()=="Crear cuenta"
+            for sel in (".how-intro h1",".how-lead"):
+                a=page.locator(sel).bounding_box()
+                c=page.locator(".how-intro .apple-container")
+                b=c.bounding_box()
+                pads=c.evaluate("e=>[parseFloat(getComputedStyle(e).paddingLeft),parseFloat(getComputedStyle(e).paddingRight)]")
+                assert abs(a["x"]-b["x"]-pads[0])<1 and abs(a["width"]-b["width"]+sum(pads))<1,(name,width,sel,a,b,pads)
+            for button in page.locator(".apple-cta .apple-button").all():
+                assert button.evaluate("e=>getComputedStyle(e).borderRadius") == "999px"
+                assert button.evaluate("e=>getComputedStyle(e).backgroundColor") == "rgb(0, 107, 84)"
+                assert button.evaluate("e=>getComputedStyle(e).color") == "rgb(255, 255, 255)"
             assert page.locator(".how-intro h1 br").count()==0
             assert page.locator(".how-intro .apple-cta").count()==0
             hero=page.locator(".how-intro").bounding_box()
