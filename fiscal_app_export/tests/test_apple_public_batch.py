@@ -10,8 +10,8 @@ def css(s):return re.findall(r'<link rel="stylesheet" href="([^"]+)"',s)
 def test_public_batch_reuses_reference_styles():
     groups={
         "exchanges/kraken.html":["exchanges/nexo.html","exchanges/cryptocom.html"],
-        "terminos.html":["aviso-legal.html","cookies.html"],
-        "asesoramiento-fiscal.html":["preferencias.html","asesoramiento-confirmado.html","pagar.html"],
+        "terminos.html":["aviso-legal.html","cookies.html","seguridad.html"],
+        "asesoramiento-fiscal.html":["preferencias.html","asesoramiento-confirmado.html","pagar.html","asesoramiento-cancelado.html"],
     }
     for ref,pages in groups.items():
         for path in pages:
@@ -46,3 +46,20 @@ def test_batch_preserves_public_contract():
         assert "<form" not in main and "<button" not in main
         assert re.findall(r'href="([^"]+)"',main)==["/"]
     assert 'id="financialSuspension"' in get("pagar.html")
+
+
+def test_security_and_cancellation_content():
+    s=get("seguridad.html")
+    assert 'href="https://marianosevilla.com/seguridad"' in s
+    assert 'href="/privacidad#conservacion"' in s
+    assert "archivos temporales" in s and "Algunos registros del análisis" in s
+    assert "Nunca se guarda en disco" not in s
+    assert "No guardamos en ninguna base de datos" not in s
+    assert "Vulnerabilidad de seguridad" in s
+    c=get("asesoramiento-cancelado.html")
+    assert '<meta name="robots" content="noindex">' in c
+    main=c.split('<main ',1)[1].split('</main>',1)[0]
+    assert "PayPal" not in main and "No se ha realizado ningún cargo" not in main
+    assert "temporalmente suspendidos" in main
+    assert "<form" not in main and "<button" not in main
+    assert re.findall(r'href="([^"]+)"',main)==["/pedir-asesoramiento-fiscal","/","/contacto"]

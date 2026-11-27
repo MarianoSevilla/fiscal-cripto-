@@ -1,282 +1,123 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Seguridad | Mariano Sevilla</title>
-<meta name="description" content="Cómo protegemos tu cuenta y tus datos en la herramienta fiscal para criptomonedas de Mariano Sevilla.">
-<meta name="robots" content="index, follow">
-<link rel="canonical" href="https://marianosevilla.com/seguridad">
-
-<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
-<link rel="icon" href="/static/favicon.ico">
-<link rel="manifest" href="/static/site.webmanifest">
-
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
-
-<style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --black:       #0a0a0a;
-  --surface:     #111111;
-  --surface2:    #1a1a1a;
-  --border:      rgba(255,255,255,0.07);
-  --text:        #f0ede6;
-  --muted:       #888580;
-  --muted2:      #5a5754;
-  --accent:      #00C896;
-  --accent-dim:  rgba(0,200,150,0.08);
-  --font-d: 'Syne', sans-serif;
-  --font-b: 'DM Sans', sans-serif;
-  --max: 1080px;
-  --footer-bg: #070e1a;
-  --max-w:     1280px;
-  --pad-x:     3rem;
-}
-
-html { scroll-behavior: smooth; }
-body {
-  background: var(--black); color: var(--text);
-  font-family: var(--font-b); font-size: 16px; line-height: 1.7;
-  min-height: 100vh; -webkit-font-smoothing: antialiased;
-}
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
-
-nav {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
-  border-bottom: 1px solid var(--border);
-  background: rgba(10,10,10,0.88); backdrop-filter: blur(14px);
-}
-.nav-inner {
-  max-width: var(--max); margin: 0 auto; padding: 0 2rem;
-  height: 64px; display: flex; align-items: center; justify-content: space-between;
-}
-.nav-logo {
-  font-family: var(--font-d); font-weight: 800; font-size: 0.95rem;
-  letter-spacing: -0.02em; color: var(--text);
-}
-.nav-logo span { color: var(--accent); }
-.nav-back { font-size: 14px; color: var(--muted); transition: color .15s; }
-.nav-back:hover { color: var(--text); text-decoration: none; }
-
-.page-wrap {
-  max-width: 720px; margin: 0 auto;
-  padding: 7rem 2rem 5rem;
-}
-.page-kicker {
-  font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
-  text-transform: uppercase; color: var(--accent);
-  margin-bottom: 1rem; display: block;
-}
-.page-wrap h1 {
-  font-family: var(--font-d); font-size: clamp(1.8rem, 4vw, 2.4rem);
-  font-weight: 800; line-height: 1.2; margin-bottom: 0.5rem;
-}
-.page-meta {
-  font-size: 13px; color: var(--muted);
-  margin-bottom: 3rem; padding-bottom: 2rem;
-  border-bottom: 1px solid var(--border);
-}
-
-/* ── GRID DE TARJETAS ── */
-.security-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin-bottom: 3rem;
-}
-.sec-card {
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 12px; padding: 1.25rem 1.5rem;
-}
-.sec-card-icon {
-  font-size: 1.5rem; margin-bottom: 0.6rem; display: block;
-}
-.sec-card h3 {
-  font-family: var(--font-d); font-size: 0.9rem; font-weight: 700;
-  color: var(--text); margin-bottom: 0.4rem;
-}
-.sec-card p {
-  font-size: 13px; color: var(--muted); line-height: 1.5;
-}
-
-/* ── SECCIONES ── */
-.policy-section { margin-bottom: 2.5rem; }
-.policy-section h2 {
-  font-family: var(--font-d); font-size: 1.1rem; font-weight: 700;
-  color: var(--text); margin-bottom: 0.75rem;
-  padding-bottom: 0.4rem; border-bottom: 1px solid var(--border);
-}
-.policy-section p {
-  color: var(--muted); font-size: 15px; margin-bottom: 0.75rem;
-}
-.policy-section p:last-child { margin-bottom: 0; }
-.policy-section ul {
-  list-style: none; padding: 0;
-  display: flex; flex-direction: column; gap: 0.5rem;
-  margin-bottom: 0.75rem;
-}
-.policy-section ul li {
-  font-size: 15px; color: var(--muted);
-  padding-left: 1.5rem; position: relative;
-}
-.policy-section ul li::before {
-  content: "✓"; position: absolute; left: 0;
-  color: var(--accent); font-size: 13px; font-weight: 700;
-}
-
-/* ── AVISO REPORTE ── */
-.report-box {
-  background: var(--accent-dim); border: 1px solid rgba(0,200,150,0.2);
-  border-radius: 12px; padding: 1.5rem;
-  margin-top: 2rem;
-}
-.report-box h3 {
-  font-family: var(--font-d); font-size: 1rem; font-weight: 700;
-  color: var(--text); margin-bottom: 0.5rem;
-}
-.report-box p { font-size: 14px; color: var(--muted); margin-bottom: 0.5rem; }
-.report-box p:last-child { margin-bottom: 0; }
-
-footer { border-top: 1px solid var(--border); padding: 2rem; text-align: center; }
-.footer-legal { font-size: 12px; color: var(--muted2); line-height: 1.6; }
-.footer-legal a { color: var(--muted); }
-.footer-legal a:hover { color: var(--text); text-decoration: underline; }
-
-@media (max-width: 640px) {
-  .page-wrap { padding: 6rem 1.25rem 3rem; }
-  .security-grid { grid-template-columns: 1fr; }
-}
-
-/* ── FOOTER ─────────────────────── */
-.page-footer { background: var(--footer-bg); border-top: 1px solid var(--border); padding: 2rem 0; margin-top: auto; }
-.footer-inner { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x); display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
-.footer-copy { font-size: 13px; color: var(--muted); }
-.footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
-.footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; }
-.footer-links a:hover { color: var(--text); }
-@media (max-width: 640px) {
-  .footer-inner { flex-direction: column; align-items: flex-start; }
-  :root { --pad-x: 1.5rem; }
-}
-</style>
-</head>
-<body>
-
-<nav>
-  <div class="nav-inner">
-    <a href="/" class="nav-logo">mariano<span>sevilla</span>.com</a>
-    <a href="/" class="nav-back">← Volver al inicio</a>
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Seguridad | Mariano Sevilla</title><meta name="description" content="Cómo protegemos tu cuenta y tus datos en la herramienta fiscal para criptomonedas de Mariano Sevilla."><meta name="robots" content="index, follow"><link rel="canonical" href="https://marianosevilla.com/seguridad"><link rel="icon" href="/static/favicon.ico"><link rel="stylesheet" href="/static/nav.css"><link rel="stylesheet" href="/static/landing_apple.css"><link rel="stylesheet" href="/static/legal_apple.css"></head><body class="apple-home apple-legal-page">
+<a class="apple-skip" href="#contenido">Saltar al contenido</a>
+<nav id="site-nav" aria-label="Principal">
+  <div class="snav-inner">
+    <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
+    <ul class="snav-links">
+      <li><a href="/herramientas">Herramientas</a></li>
+      <li><a href="/como-funciona">Cómo funciona</a></li>
+      <li><a href="/recursos">Recursos</a></li>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/contacto">Contacto</a></li>
+    </ul>
+    <div class="snav-right">
+      <div class="snav-skeleton" aria-hidden="true"></div>
+    </div>
   </div>
 </nav>
-
-<div class="page-wrap">
-
-  <span class="page-kicker">Seguridad</span>
-  <h1>Cómo protegemos tus datos</h1>
-  <p class="page-meta">Última actualización: mayo de 2026</p>
-
-  <!-- GRID RESUMEN -->
-  <div class="security-grid">
-    <div class="sec-card">
-      <span class="sec-card-icon">🔒</span>
-      <h3>Sin almacenamiento de CSVs</h3>
-      <p>Tu historial de operaciones se procesa en memoria y se elimina inmediatamente. Nunca se guarda en disco.</p>
-    </div>
-    <div class="sec-card">
-      <span class="sec-card-icon">🗑</span>
-      <h3>PDFs de un solo uso</h3>
-      <p>El informe PDF se borra automáticamente en cuanto lo descargas. Nadie más puede acceder a él.</p>
-    </div>
-    <div class="sec-card">
-      <span class="sec-card-icon">🔑</span>
-      <h3>Contraseñas hasheadas</h3>
-      <p>Las contraseñas se almacenan con bcrypt (factor de coste ≥ 12). Nunca en texto plano ni reversible.</p>
-    </div>
-    <div class="sec-card">
-      <span class="sec-card-icon">🛡</span>
-      <h3>Conexión cifrada</h3>
-      <p>Todo el tráfico viaja por HTTPS/TLS. HSTS activado para evitar conexiones no seguras.</p>
-    </div>
-  </div>
-
-  <!-- 1 -->
-  <div class="policy-section">
-    <h2>Tus datos financieros</h2>
-    <p>
-      El CSV con tu historial de transacciones es la información más sensible que manejas en esta herramienta. Hemos diseñado el sistema para que nunca quede expuesto:
-    </p>
-    <ul>
-      <li>El fichero CSV se carga, se procesa en memoria del servidor y se elimina del disco de forma inmediata, antes de devolver el resultado.</li>
-      <li>El informe PDF generado se asocia de forma exclusiva a tu sesión: ningún otro usuario puede descargarlo aunque conozca la URL.</li>
-      <li>El PDF se borra automáticamente del servidor en cuanto se descarga. No hay copias de seguridad ni registros históricos de tus informes.</li>
-      <li>No guardamos en ninguna base de datos tus operaciones, saldos, activos ni resultados fiscales.</li>
-    </ul>
-  </div>
-
-  <!-- 2 -->
-  <div class="policy-section">
-    <h2>Seguridad de la cuenta</h2>
-    <ul>
+<script src="/static/nav.js"></script>
+<noscript>
+<style>
+/* Native mobile disclosure: useful in HTML viewers without JavaScript too. */
+.apple-home .snav-right{display:none}
+.apple-home .apple-noscript-menu{display:none}
+@media (min-width:1201px){
+  .apple-home #site-nav{position:static;height:auto}
+  .apple-home .snav-inner{flex-wrap:wrap;padding-block:16px;gap:16px}
+  .apple-home .snav-links{display:flex;position:static;transform:none;flex-wrap:wrap;gap:12px}
+  .apple-home .apple-intro-inner{padding-top:48px}
+}
+@media (max-width:1200px){
+  .apple-home .apple-noscript-access{display:none}
+  .apple-home .apple-noscript-menu{display:block;position:absolute;top:8px;right:var(--apple-pad);z-index:1001}
+  .apple-home .apple-noscript-menu>summary{display:flex;align-items:center;justify-content:center;width:44px;height:44px;list-style:none;border:1px solid #d8e1dd;border-radius:9px;background:#f3f6f5;color:var(--text);cursor:pointer}
+  .apple-home .apple-noscript-menu>summary::-webkit-details-marker{display:none}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon{background:transparent}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::before{transform:translateY(6px) rotate(45deg)}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::after{transform:translateY(-6px) rotate(-45deg)}
+  .apple-home .apple-noscript-panel{position:absolute;top:56px;left:auto;right:calc(-1 * var(--apple-pad));width:100vw;display:flex;flex-direction:column;gap:4px;padding:12px var(--apple-pad) 18px;max-height:calc(100vh - 64px);max-height:calc(100dvh - 64px);overflow-y:auto;overscroll-behavior:contain;background:#fff;border-top:1px solid var(--border);box-shadow:0 14px 28px rgba(20,34,30,.1)}
+  .apple-home .apple-noscript-panel>a{display:flex;align-items:center;min-height:44px;padding:11px 14px;border-radius:8px;color:var(--muted);font-size:.9375rem;line-height:1.4;text-decoration:none}
+  .apple-home .apple-noscript-panel>a:hover{background:#f1f5f3;color:var(--text)}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary{justify-content:center;min-height:48px;border-radius:999px;background:var(--accent);color:#fff;font-weight:600}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary:hover{background:#00533f}
+  .apple-home .apple-noscript-menu .snav-menu-icon{width:19px}
+  .apple-home #site-nav .snav-logo{max-width:calc(100% - 60px)}
+}
+</style>
+<details class="apple-noscript-menu">
+  <summary><span class="snav-menu-icon" aria-hidden="true"></span><span class="apple-sr-only">Menú principal</span></summary>
+  <nav class="apple-noscript-panel" aria-label="Navegación móvil">
+    <a href="/herramientas">Herramientas</a>
+    <a href="/como-funciona">Cómo funciona</a>
+    <a href="/recursos">Recursos</a>
+    <a href="/faq">FAQ</a>
+    <a href="/contacto">Contacto</a>
+    <a href="/login/">Iniciar sesión</a>
+    <a href="/signup/" class="snav-mobile-link-primary">Crear cuenta</a>
+  </nav>
+</details>
+<div class="apple-noscript-access"><a href="/login/">Iniciar sesión</a><a href="/signup/">Crear cuenta</a></div>
+</noscript>
+<main id="contenido" tabindex="-1"><section class="legal-intro" aria-labelledby="legal-title"><div class="apple-container"><p class="apple-eyebrow">Seguridad</p><h1 id="legal-title">Cómo protegemos tus datos</h1><p class="legal-lead">Conoce las medidas de protección de tu cuenta, tus archivos y la aplicación.</p></div></section><div class="apple-container legal-layout"><nav class="legal-index" aria-label="Índice de seguridad"><h2>En esta página</h2><ol><li><a href="#datos-financieros">Tus datos financieros</a></li><li><a href="#seguridad-cuenta">Seguridad de la cuenta</a></li><li><a href="#seguridad-aplicacion">Seguridad de la aplicación</a></li><li><a href="#infraestructura">Infraestructura</a></li><li><a href="#reportar-vulnerabilidad">¿Has encontrado una vulnerabilidad?</a></li></ol></nav><article class="legal-document" aria-label="Información de seguridad"><section class="legal-section" id="datos-financieros" aria-labelledby="datos-financieros-title"><h2 id="datos-financieros-title">Tus datos financieros</h2><p>Utilizamos los archivos de operaciones que aportas para generar tus informes.</p><div class="legal-purposes"><article class="legal-purpose"><h3>Archivos de entrada</h3><p>Los CSV o Excel se procesan en el servidor con archivos temporales. Las rutas de análisis intentan eliminarlos al finalizar el procesamiento.</p></article><article class="legal-purpose"><h3>Informes PDF</h3><p>El PDF se guarda temporalmente para permitir su descarga. La caducidad del enlace no garantiza por sí sola la eliminación física inmediata del archivo.</p></article></div><div class="legal-callout"><h3>Registros de informes</h3><p>Algunos registros del análisis y diagnóstico se conservan asociados a tu cuenta, incluso después de descargar el informe. Consulta nuestra <a href="/privacidad#conservacion">Política de privacidad</a> para conocer cómo se conservan y eliminan los datos.</p></div></section>
+<section class="legal-section" id="seguridad-cuenta" aria-labelledby="seguridad-cuenta-title"><h2 id="seguridad-cuenta-title">Seguridad de la cuenta</h2><ul>
       <li><strong>Hash de contraseñas con bcrypt:</strong> las contraseñas se transforman con un algoritmo de hash unidireccional con factor de coste elevado. Ni nosotros mismos podemos recuperar tu contraseña.</li>
       <li><strong>Autenticación con Google:</strong> si usas «Continuar con Google», la contraseña nunca pasa por nuestros servidores. Google gestiona íntegramente la autenticación.</li>
       <li><strong>Cookies de sesión seguras:</strong> las sesiones viajan solo por HTTPS (Secure), son inaccesibles desde JavaScript (HttpOnly) y están protegidas contra ataques CSRF (SameSite=Lax).</li>
       <li><strong>Rate limiting por usuario:</strong> los intentos de inicio de sesión están limitados para bloquear ataques de fuerza bruta.</li>
-    </ul>
-  </div>
-
-  <!-- 3 -->
-  <div class="policy-section">
-    <h2>Seguridad de la aplicación</h2>
-    <ul>
+    </ul></section>
+<section class="legal-section" id="seguridad-aplicacion" aria-labelledby="seguridad-aplicacion-title"><h2 id="seguridad-aplicacion-title">Seguridad de la aplicación</h2><ul>
       <li><strong>Cabeceras de seguridad HTTP:</strong> Content Security Policy (CSP), X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, Cross-Origin-Opener-Policy y Strict-Transport-Security (HSTS con preload).</li>
       <li><strong>Protección contra inyección SQL:</strong> todas las consultas a la base de datos se realizan a través de un ORM con consultas parametrizadas. No se construyen consultas SQL con datos del usuario.</li>
       <li><strong>Protección contra XSS:</strong> los datos introducidos por el usuario se sanean antes de procesarse. La CSP limita la ejecución de scripts no autorizados.</li>
       <li><strong>Validación estricta de ficheros:</strong> los CSV se validan por extensión, tamaño (máx. 10 MB), contenido y formato antes de procesarse. Se detectan y rechazan intentos de inyección de fórmulas.</li>
       <li><strong>CORS restringido:</strong> la API solo acepta peticiones desde los dominios oficiales de marianosevilla.com.</li>
       <li><strong>Protección path traversal:</strong> los tokens de descarga de PDF son validados con una expresión regular estricta para evitar acceso a ficheros fuera del directorio permitido.</li>
-    </ul>
-  </div>
-
-  <!-- 4 -->
-  <div class="policy-section">
-    <h2>Infraestructura</h2>
-    <p>
+    </ul></section>
+<section class="legal-section" id="infraestructura" aria-labelledby="infraestructura-title"><h2 id="infraestructura-title">Infraestructura</h2><p>
       La aplicación se despliega sobre <a href="https://railway.app" target="_blank" rel="noopener noreferrer">Railway</a>, una plataforma de infraestructura en la nube con aislamiento de contenedores y actualizaciones de seguridad automatizadas. Las variables de entorno sensibles (claves de API, secreto de sesión) nunca están en el código fuente y se gestionan como secretos de entorno cifrados.
-    </p>
-  </div>
-
-  <!-- 5 — REPORTE -->
-  <div class="report-box">
-    <h3>¿Has encontrado una vulnerabilidad?</h3>
-    <p>
+    </p></section>
+<section class="legal-section" id="reportar-vulnerabilidad" aria-labelledby="reportar-vulnerabilidad-title"><h2 id="reportar-vulnerabilidad-title">¿Has encontrado una vulnerabilidad?</h2><p>
       Si descubres un problema de seguridad en este sitio, te pedimos que nos lo comuniques de forma responsable antes de hacerlo público. Apreciamos enormemente la colaboración de la comunidad para mantener el servicio seguro.
     </p>
     <p>
       Escríbenos a <a href="mailto:colab.marianosevilla@gmail.com">colab.marianosevilla@gmail.com</a> con el asunto <strong>«Vulnerabilidad de seguridad»</strong> y una descripción del problema. Nos comprometemos a responder en un plazo máximo de 72 horas.
-    </p>
-  </div>
-
-</div>
-
-<footer class="page-footer">
-  <div class="footer-inner">
-    <span class="footer-copy">© 2025 marianosevilla.com — No constituye asesoramiento fiscal ni legal.</span>
-    <div class="footer-links">
-      <a href="/privacidad">Privacidad</a>
-      <a href="/terminos">Términos</a>
-      <a href="/cookies">Cookies</a>
-      <a href="/aviso-legal">Aviso legal</a>
-      <a href="/faq">FAQ</a>
+    </p></section></article></div></main><footer class="apple-footer">
+  <div class="apple-container">
+    <div class="apple-footer-top">
+      <div class="apple-footer-brand">
+        <a href="/" class="apple-footer-logo">mariano<span>sevilla</span>.com</a>
+        <p>Informes FIFO de criptomonedas.</p>
+      </div>
+      <nav aria-labelledby="apple-footer-explore">
+        <h2 id="apple-footer-explore">Explorar</h2>
+        <ul>
+          <li><a href="/herramientas">Herramientas</a></li>
+          <li><a href="/como-funciona">Cómo funciona</a></li>
+          <li><a href="/exchanges">Exchanges compatibles</a></li>
+        </ul>
+      </nav>
+      <nav aria-labelledby="apple-footer-help">
+        <h2 id="apple-footer-help">Ayuda</h2>
+        <ul>
+          <li><a href="/faq">Preguntas frecuentes</a></li>
+          <li><a href="/contacto">Contacto</a></li>
+          <li><a href="/about">Equipo</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="apple-footer-legal">
+      <p class="apple-footer-disclaimer">Herramienta de generación de informes FIFO para usuarios con criptomonedas. No constituye asesoramiento fiscal ni legal.</p>
+      <div class="apple-footer-bottom">
+        <p class="apple-footer-copyright">© <span class="apple-footer-year">2026</span> Mariano Sevilla</p>
+        <nav aria-label="Información legal">
+          <ul>
+            <li><a href="/privacidad">Privacidad</a></li>
+            <li><a href="/terminos">Términos</a></li>
+            <li><a href="/cookies">Cookies</a></li>
+            <li><a href="/aviso-legal">Aviso legal</a></li>
+          </ul>
+        </nav>
+      </div>
     </div>
   </div>
-</footer>
-
-</body>
-</html>
+</footer><script src="/static/landing_apple.js" defer></script></body></html>
