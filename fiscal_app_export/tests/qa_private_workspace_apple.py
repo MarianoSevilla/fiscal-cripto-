@@ -57,6 +57,14 @@ def run_private_workspace_apple(browser,origin):
             else:
                 page.locator("#content").wait_for(state="visible")
                 assert page.locator("#kpiUsuariosHoy").inner_text()=="0"
+                # Empty datasets intentionally leave these canvases uninitialized.
+                # Check their actual geometry as well as initialized monthly charts.
+                assert page.locator("#chartExchange,#chartEjercicio,#chartVolumen").count()==3
+                overflowing=page.locator(".chart-wrap canvas").evaluate_all("""canvases=>canvases.flatMap(c=>{
+                    const r=c.getBoundingClientRect(),p=c.parentElement.getBoundingClientRect();
+                    return r.left<p.left-1||r.right>p.right+1?[{id:c.id,width:r.width,available:p.width}]:[];
+                })""")
+                assert not overflowing,(name,width,"canvas overflow",overflowing)
             assert page.evaluate("document.documentElement.scrollWidth<=innerWidth+1"),(name,width,"overflow")
             for b in page.locator(".action-btn,.btn-new,.card-cta").all():
                 if b.is_visible():

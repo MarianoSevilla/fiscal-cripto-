@@ -54,6 +54,9 @@
 .apple-admin-workspace .stats-content { max-width:none; padding:0; margin:0; }
 .apple-admin-workspace .stats-content .kpi-top { flex-wrap:wrap; gap:8px; }
 .apple-admin-workspace .stats-content .kpi-spark { max-width:100%; }
+/* An empty chart retains the intrinsic 300px canvas width. Constrain its
+   rendered width to the card, including while Chart.js is not initialized. */
+.apple-admin-workspace .stats-content .chart-wrap canvas { max-width:100%; }
 .apple-admin-workspace .page-wrap { width:100%; max-width:848px; padding:0; margin-inline:auto; }
 .apple-admin-workspace .state-msg { padding:var(--apple-card-pad); }
 .apple-admin-workspace :is(.tab-btn,.seg-btn,.mode-btn) { min-height:44px; }
