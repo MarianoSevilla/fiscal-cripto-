@@ -33,6 +33,10 @@ def run_apple_hero_standard(browser,origin):
             errors=[]
             page.on("pageerror",lambda e:errors.append(str(e)))
             assert page.goto(origin+"/static/exchanges/"+name+".html",wait_until="networkidle").status==200
+            assert page.locator("#snavBtnSignup").text_content()==ref.locator("#snavBtnSignup").text_content()=="Crear cuenta",(name,width,"signup label")
+            compare(page,"#site-nav",ref,"#site-nav",["background-color","min-height","position"],width,name)
+            if width>1200:
+                compare(page,"#snavBtnSignup",ref,"#snavBtnSignup",["background-color","color","font-family","font-size","font-weight","padding-left","padding-right","border-radius","width","height"],width,name)
             compare(page,".hero",ref,".how-intro",["padding-top","padding-bottom","background-color","color"],width,name)
             compare(page,".hero .wrap",ref,".how-intro .apple-container",["width","max-width","padding-left","padding-right"],width,name)
             compare(page,".hero h1",ref,".how-intro h1",["font-family","font-size","font-weight","line-height","letter-spacing","max-width","width","margin-bottom","text-wrap"],width,name)
@@ -51,7 +55,7 @@ def run_apple_hero_standard(browser,origin):
             assert page.locator(".hero").evaluate("e=>e.scrollWidth<=e.clientWidth+1"),(name,width,"hero overflow")
             assert not errors and not violations,(name,width,errors,violations)
             if width in (390,768,1440):
-                page.locator(".hero").screenshot(path=str(ART/f"apple_hero_{name}_{width}.png"),animations="disabled")
+                page.locator(".hero").screenshot(path=str(ART/f"home_apple_hero_{name}_{width}.png"),animations="disabled")
             page.close()
         ctx.close()
     print(f"APPLE_HERO_STANDARD: PASS ({len(GUIDES)} guides × {len(WIDTHS)} widths; canonical cross-family equality)")
