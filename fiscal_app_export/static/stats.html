@@ -10,52 +10,18 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
 <link rel="icon" href="/static/favicon.ico">
 <link rel="manifest" href="/static/site.webmanifest">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/nav.css">
 <link rel="preload" href="/static/nav.js" as="script">
 <script src="/static/chart.umd.min.js"></script>
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-:root {
-  --black:       #0b1220;
-  --surface:     #141f32;
-  --surface2:    #1a2540;
-  --surface3:    #1f2d4a;
-  --border:      rgba(255,255,255,0.07);
-  --border-hi:   rgba(255,255,255,0.15);
-  --text:        #f0f0f0;
-  --muted:       #888888;
-  --muted2:      #555555;
-  --accent:      #00C896;
-  --accent-dim:  rgba(0,200,150,0.10);
-  --yellow:      #fbbf24;
-  --yellow-dim:  rgba(251,191,36,0.12);
-  --red:         #f87171;
-  --red-dim:     rgba(248,113,113,0.10);
-  --blue:        #60a5fa;
-  --blue-dim:    rgba(96,165,250,0.10);
-  --indigo:      #818cf8;
-  --indigo-dim:  rgba(129,140,248,0.10);
-  --max:         1100px;
-  --r:           12px;
-  --font-d:      'Syne', sans-serif;
-  --font-b:      'DM Sans', sans-serif;
-}
 
-html, body {
-  min-height: 100%; background: var(--black);
-  font-family: var(--font-b); color: var(--text);
-  font-size: 15px; line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
-}
+
+
 a { color: inherit; text-decoration: none; }
 
 /* ── MAIN ── */
-main { max-width: var(--max); margin: 0 auto; padding: 4.5rem 1.5rem 4rem; }
+.stats-content { max-width: var(--max); margin: 0 auto; padding: 4.5rem 1.5rem 4rem; }
 
 /* ── PAGE HEADER (compact) ── */
 .pg-header {
@@ -107,10 +73,10 @@ main { max-width: var(--max); margin: 0 auto; padding: 4.5rem 1.5rem 4rem; }
 }
 .kpi-card:hover { border-color: var(--border-hi); }
 .kpi-card.clickable { cursor: pointer; }
-.kpi-card.clickable:hover { border-color: var(--border-hi); background: #19253d; }
-.kpi-card.hi   { border-color: rgba(0,200,150,0.22); }
-.kpi-card.warn { border-color: rgba(251,191,36,0.22); }
-.kpi-card.crit { border-color: rgba(248,113,113,0.22); }
+.kpi-card.clickable:hover { border-color: var(--border-hi); background: var(--surface2); }
+.kpi-card.hi   { border-color: rgba(0,107,84,0.22); }
+.kpi-card.warn { border-color: rgba(128,80,0,0.22); }
+.kpi-card.crit { border-color: rgba(180,35,24,0.22); }
 
 .kpi-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2px; }
 .kpi-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; line-height: 1.2; }
@@ -185,7 +151,7 @@ tbody tr:hover { background: var(--surface2); }
 .badge-red    { background: var(--red-dim);     color: var(--red); }
 .badge-blue   { background: var(--blue-dim);    color: var(--blue); }
 .badge-indigo { background: var(--indigo-dim);  color: var(--indigo); }
-.badge-muted  { background: rgba(255,255,255,0.05); color: var(--muted); }
+.badge-muted  { background: var(--border); color: var(--muted); }
 
 /* ── PROGRESS BAR ── */
 .pct-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
@@ -252,13 +218,17 @@ tbody tr:hover { background: var(--surface2); }
 .divider { height: 1px; background: var(--border); margin: 0.5rem 0 1rem; }
 .mb { margin-bottom: 0.75rem; }
 </style>
+<link rel="stylesheet" href="/static/landing_apple.css">
+<link rel="stylesheet" href="/static/como_funciona_apple.css">
+<link rel="stylesheet" href="/static/apple_admin_workspace.css">
 </head>
-<body>
-
-<nav id="site-nav">
+<body class="apple-home apple-how-page apple-admin-workspace">
+<a class="apple-skip" href="#contenido">Saltar al contenido</a>
+<nav id="site-nav" aria-label="Principal">
   <div class="snav-inner">
     <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
     <ul class="snav-links">
+      <li><a href="/herramientas">Herramientas</a></li>
       <li><a href="/como-funciona">Cómo funciona</a></li>
       <li><a href="/recursos">Recursos</a></li>
       <li><a href="/faq">FAQ</a></li>
@@ -270,8 +240,51 @@ tbody tr:hover { background: var(--surface2); }
   </div>
 </nav>
 <script src="/static/nav.js"></script>
+<noscript>
+<style>
+/* Native mobile disclosure: useful in HTML viewers without JavaScript too. */
+.apple-home .snav-right{display:none}
+.apple-home .apple-noscript-menu{display:none}
+@media (min-width:1201px){
+  .apple-home #site-nav{position:static;height:auto}
+  .apple-home .snav-inner{flex-wrap:wrap;padding-block:16px;gap:16px}
+  .apple-home .snav-links{display:flex;position:static;transform:none;flex-wrap:wrap;gap:12px}
+  .apple-home .apple-intro-inner{padding-top:48px}
+}
+@media (max-width:1200px){
+  .apple-home .apple-noscript-access{display:none}
+  .apple-home .apple-noscript-menu{display:block;position:absolute;top:8px;right:var(--apple-pad);z-index:1001}
+  .apple-home .apple-noscript-menu>summary{display:flex;align-items:center;justify-content:center;width:44px;height:44px;list-style:none;border:1px solid #d8e1dd;border-radius:9px;background:#f3f6f5;color:var(--text);cursor:pointer}
+  .apple-home .apple-noscript-menu>summary::-webkit-details-marker{display:none}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon{background:transparent}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::before{transform:translateY(6px) rotate(45deg)}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::after{transform:translateY(-6px) rotate(-45deg)}
+  .apple-home .apple-noscript-panel{position:absolute;top:56px;left:auto;right:calc(-1 * var(--apple-pad));width:100vw;display:flex;flex-direction:column;gap:4px;padding:12px var(--apple-pad) 18px;max-height:calc(100vh - 64px);max-height:calc(100dvh - 64px);overflow-y:auto;overscroll-behavior:contain;background:#fff;border-top:1px solid var(--border);box-shadow:0 14px 28px rgba(20,34,30,.1)}
+  .apple-home .apple-noscript-panel>a{display:flex;align-items:center;min-height:44px;padding:11px 14px;border-radius:8px;color:var(--muted);font-size:.9375rem;line-height:1.4;text-decoration:none}
+  .apple-home .apple-noscript-panel>a:hover{background:#f1f5f3;color:var(--text)}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary{justify-content:center;min-height:48px;border-radius:999px;background:var(--accent);color:#fff;font-weight:600}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary:hover{background:#00533f}
+  .apple-home .apple-noscript-menu .snav-menu-icon{width:19px}
+  .apple-home #site-nav .snav-logo{max-width:calc(100% - 60px)}
+}
+</style>
+<details class="apple-noscript-menu">
+  <summary><span class="snav-menu-icon" aria-hidden="true"></span><span class="apple-sr-only">Menú principal</span></summary>
+  <nav class="apple-noscript-panel" aria-label="Navegación móvil">
+    <a href="/herramientas">Herramientas</a>
+    <a href="/como-funciona">Cómo funciona</a>
+    <a href="/recursos">Recursos</a>
+    <a href="/faq">FAQ</a>
+    <a href="/contacto">Contacto</a>
+    <a href="/login/">Iniciar sesión</a>
+    <a href="/signup/" class="snav-mobile-link-primary">Crear cuenta</a>
+  </nav>
+</details>
+<div class="apple-noscript-access"><a href="/login/">Iniciar sesión</a><a href="/signup/">Crear cuenta</a></div>
+</noscript>
+<main id="contenido" tabindex="-1"><section class="how-intro" aria-labelledby="workspace-title"><div class="apple-container"><p class="apple-eyebrow">Administración</p><h1 id="workspace-title">Estadísticas</h1></div></section><div class="apple-container workspace-content">
 
-<main>
+<div class="stats-content">
 
   <!-- COMPACT HEADER -->
   <div class="pg-header">
@@ -701,8 +714,50 @@ tbody tr:hover { background: var(--surface2); }
     </div>
 
   </div><!-- #content -->
-</main>
+</div>
 
+
+</div></main>
+<footer class="apple-footer">
+  <div class="apple-container">
+    <div class="apple-footer-top">
+      <div class="apple-footer-brand">
+        <a href="/" class="apple-footer-logo">mariano<span>sevilla</span>.com</a>
+        <p>Informes FIFO de criptomonedas.</p>
+      </div>
+      <nav aria-labelledby="apple-footer-explore">
+        <h2 id="apple-footer-explore">Explorar</h2>
+        <ul>
+          <li><a href="/herramientas">Herramientas</a></li>
+          <li><a href="/como-funciona">Cómo funciona</a></li>
+          <li><a href="/exchanges">Exchanges compatibles</a></li>
+        </ul>
+      </nav>
+      <nav aria-labelledby="apple-footer-help">
+        <h2 id="apple-footer-help">Ayuda</h2>
+        <ul>
+          <li><a href="/faq">Preguntas frecuentes</a></li>
+          <li><a href="/contacto">Contacto</a></li>
+          <li><a href="/about">Equipo</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="apple-footer-legal">
+      <p class="apple-footer-disclaimer">Herramienta de generación de informes FIFO para usuarios con criptomonedas. No constituye asesoramiento fiscal ni legal.</p>
+      <div class="apple-footer-bottom">
+        <p class="apple-footer-copyright">© <span class="apple-footer-year">2026</span> Mariano Sevilla</p>
+        <nav aria-label="Información legal">
+          <ul>
+            <li><a href="/privacidad">Privacidad</a></li>
+            <li><a href="/terminos">Términos</a></li>
+            <li><a href="/cookies">Cookies</a></li>
+            <li><a href="/aviso-legal">Aviso legal</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+</footer>
 <script>
 // ── Auth check (solo admin) ────────────────────────────────────────────────
 (async () => {
@@ -1430,6 +1485,5 @@ async function loadStats() {
 document.getElementById('btnRefresh').addEventListener('click', loadStats);
 loadStats();
 </script>
-</body>
-</html>
-
+<script src="/static/landing_apple.js" defer></script>
+</body></html>

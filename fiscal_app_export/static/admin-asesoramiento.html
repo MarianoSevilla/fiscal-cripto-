@@ -10,28 +10,12 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
 <link rel="icon" href="/static/favicon.ico">
 <link rel="manifest" href="/static/site.webmanifest">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/nav.css">
 <link rel="preload" href="/static/nav.js" as="script">
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --bg:      #0b1220;
-  --surface: #141f32;
-  --surf2:   #1a2540;
-  --border:  rgba(255,255,255,0.08);
-  --text:    #eef0f6;
-  --muted:   #7a8099;
-  --sub:     #9aa0b8;
-  --accent:  #00C896;
-  --accent2: #00a87e;
-  --ff-h:    'Syne', sans-serif;
-  --ff-b:    'DM Sans', sans-serif;
-}
-html, body { min-height: 100%; background: var(--bg); font-family: var(--ff-b); color: var(--text); overflow-x: hidden; }
-body { padding-top: 64px; } /* espacio para el nav fixed unificado */
+
+
+ /* espacio para el nav fixed unificado */
 
 /* LAYOUT */
 .layout { display: flex; height: calc(100vh - 64px); }
@@ -51,14 +35,14 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
   padding: 7px 10px; border-radius: 7px; outline: none;
 }
 .sidebar-search::placeholder { color: var(--muted); }
-.sidebar-search:focus { border-color: rgba(0,200,150,0.4); }
+.sidebar-search:focus { border-color: rgba(0,107,84,0.4); }
 .sidebar-filter-row { display: flex; gap: 8px; }
 .sidebar-filters select {
   flex: 1; min-width: 100px; background: var(--surf2); border: 1px solid var(--border);
   color: var(--text); font-family: var(--ff-b); font-size: 13px;
   padding: 7px 10px; border-radius: 7px; outline: none; appearance: none;
 }
-.sidebar-filters select:focus { border-color: rgba(0,200,150,0.4); }
+.sidebar-filters select:focus { border-color: rgba(0,107,84,0.4); }
 .sidebar-list { flex: 1; overflow-y: auto; }
 .sidebar-list::-webkit-scrollbar { width: 4px; }
 .sidebar-list::-webkit-scrollbar-track { background: transparent; }
@@ -69,31 +53,31 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
   cursor: pointer; transition: background .15s;
 }
 .request-item:hover { background: var(--surf2); }
-.request-item.active { background: rgba(0,200,150,0.07); border-left: 3px solid var(--accent); }
+.request-item.active { background: rgba(0,107,84,0.07); border-left: 3px solid var(--accent); }
 .req-name { font-weight: 600; font-size: 14px; color: var(--text); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .req-meta { font-size: 12px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .req-badge {
   font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px;
   white-space: nowrap;
 }
-.badge-submitted        { background: rgba(56,189,248,0.15);  color: #38bdf8; }
-.badge-pendiente_info   { background: rgba(167,139,250,0.15); color: #a78bfa; }
-.badge-quote_sent       { background: rgba(251,191,36,0.15);  color: #fbbf24; }
-.badge-paid_received    { background: rgba(0,200,150,0.15);   color: #00C896; }
-.badge-under_review     { background: rgba(99,102,241,0.15);  color: #818cf8; }
-.badge-waiting_user_info{ background: rgba(251,146,60,0.15);  color: #fb923c; }
-.badge-in_progress      { background: rgba(56,189,248,0.15);  color: #38bdf8; }
-.badge-completed        { background: rgba(34,197,94,0.15);   color: #4ade80; }
-.badge-cancelled        { background: rgba(226,75,74,0.15);   color: #f87171; }
-.badge-refunded         { background: rgba(156,163,175,0.15); color: #9ca3af; }
-.badge-archived         { background: rgba(100,116,139,0.15); color: #94a3b8; }
-.badge-test             { background: rgba(251,191,36,0.12);  color: #fbbf24; font-style: italic; }
+.badge-submitted        { background: rgba(0,95,204,0.15);  color: #005fcc; }
+.badge-pendiente_info   { background: rgba(83,97,107,0.15); color: #53616b; }
+.badge-quote_sent       { background: rgba(128,80,0,0.15);  color: #805000; }
+.badge-paid_received    { background: rgba(0,107,84,0.15);   color: var(--accent); }
+.badge-under_review     { background: rgba(83,97,107,0.15);  color: #53616b; }
+.badge-waiting_user_info{ background: rgba(128,80,0,0.15);  color: #805000; }
+.badge-in_progress      { background: rgba(0,95,204,0.15);  color: #005fcc; }
+.badge-completed        { background: rgba(20,92,66,0.15);   color: #145c42; }
+.badge-cancelled        { background: rgba(180,35,24,0.15);   color: #b42318; }
+.badge-refunded         { background: rgba(156,163,175,0.15); color: #53616b; }
+.badge-archived         { background: rgba(100,116,139,0.15); color: #53616b; }
+.badge-test             { background: rgba(128,80,0,0.12);  color: #805000; font-style: italic; }
 
 /* Is-test pill */
 .test-pill {
   display: inline-flex; align-items: center; gap: 5px;
-  background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.25);
-  color: #fbbf24; font-size: 11px; font-weight: 600; padding: 2px 8px;
+  background: rgba(128,80,0,0.1); border: 1px solid rgba(128,80,0,0.25);
+  color: #805000; font-size: 11px; font-weight: 600; padding: 2px 8px;
   border-radius: 20px; letter-spacing: .04em;
 }
 
@@ -107,7 +91,7 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
   padding: 9px 12px; border-radius: 7px; outline: none; transition: border-color .2s;
 }
 .reply-field textarea { resize: vertical; min-height: 100px; }
-.reply-field textarea:focus, .reply-field input[type=number]:focus { border-color: rgba(0,200,150,0.4); }
+.reply-field textarea:focus, .reply-field input[type=number]:focus { border-color: rgba(0,107,84,0.4); }
 .reply-check-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--sub); cursor: pointer; margin-bottom: 10px; }
 .reply-check-row input[type=checkbox] { accent-color: var(--accent); width: 15px; height: 15px; flex-shrink: 0; }
 .reply-amount-wrap { overflow: hidden; max-height: 0; opacity: 0; transition: max-height .2s ease, opacity .2s ease; }
@@ -120,13 +104,13 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
   width: 100%; font-family: var(--ff-b); font-weight: 700; font-size: 14px;
   padding: 10px; border: none; border-radius: 7px; cursor: pointer; transition: background .2s;
 }
-.reply-send-btn.mode-msg   { background: var(--accent); color: #0b1220; }
-.reply-send-btn.mode-quote { background: #fbbf24;       color: #1a1200; }
+.reply-send-btn.mode-msg   { background: var(--accent); color: #fff; }
+.reply-send-btn.mode-quote { background: #805000;       color: #fff; }
 .reply-send-btn:hover:not(:disabled).mode-msg   { background: var(--accent2); }
-.reply-send-btn:hover:not(:disabled).mode-quote { background: #f59e0b; }
+.reply-send-btn:hover:not(:disabled).mode-quote { background: #805000; }
 .reply-send-btn:disabled { opacity: .55; cursor: not-allowed; }
-.reply-ok  { font-size: 13px; color: #4ade80; margin-top: 8px; display: none; }
-.reply-err { font-size: 13px; color: #f87171; margin-top: 8px; display: none; }
+.reply-ok  { font-size: 13px; color: #145c42; margin-top: 8px; display: none; }
+.reply-err { font-size: 13px; color: #b42318; margin-top: 8px; display: none; }
 
 /* DETAIL PANEL */
 .detail-panel {
@@ -171,7 +155,7 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
   padding: 10px 14px; text-decoration: none; color: var(--text);
   font-size: 13px; margin-bottom: 8px; transition: border-color .2s;
 }
-.file-link:hover { border-color: rgba(0,200,150,0.35); }
+.file-link:hover { border-color: rgba(0,107,84,0.35); }
 .file-icon { font-size: 18px; flex-shrink: 0; }
 .file-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
@@ -200,11 +184,11 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
   padding: 9px 12px; border-radius: 7px; outline: none; appearance: none;
 }
 .action-select:focus, .action-input:focus, .action-textarea:focus {
-  border-color: rgba(0,200,150,0.4);
+  border-color: rgba(0,107,84,0.4);
 }
 .action-textarea { resize: vertical; min-height: 80px; }
 .action-btn {
-  background: var(--accent); color: #0b1220; font-family: var(--ff-b);
+  background: var(--accent); color: #fff; font-family: var(--ff-b);
   font-weight: 600; font-size: 13px; padding: 9px 18px; border: none;
   border-radius: 7px; cursor: pointer; white-space: nowrap; transition: background .2s;
   flex-shrink: 0;
@@ -212,7 +196,7 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
 .action-btn:hover { background: var(--accent2); }
 .action-btn:disabled { opacity: .5; cursor: not-allowed; }
 .msg-ok  { font-size: 13px; color: var(--accent); margin-top: 8px; }
-.msg-err { font-size: 13px; color: #f87171; margin-top: 8px; }
+.msg-err { font-size: 13px; color: #b42318; margin-top: 8px; }
 
 /* Loading / empty */
 .list-loading { padding: 24px 16px; text-align: center; color: var(--muted); font-size: 14px; }
@@ -223,10 +207,10 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
   width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 5px;
   transition: background .2s;
 }
-.priority-dot.p-high    { background: #fb923c; }   /* paid_received, under_review */
-.priority-dot.p-active  { background: #38bdf8; }   /* in_progress */
-.priority-dot.p-payment { background: #fbbf24; }   /* pending_payment */
-.priority-dot.p-waiting { background: #6b7280; }   /* waiting_user_info */
+.priority-dot.p-high    { background: #805000; }   /* paid_received, under_review */
+.priority-dot.p-active  { background: #005fcc; }   /* in_progress */
+.priority-dot.p-payment { background: #805000; }   /* pending_payment */
+.priority-dot.p-waiting { background: #53616b; }   /* waiting_user_info */
 .priority-dot.p-done    { background: transparent; border: 1px solid var(--border); } /* completed, cancelled, refunded */
 
 /* Last activity line */
@@ -241,13 +225,13 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
   color: var(--text); font-family: var(--ff-b); font-size: 13px;
   padding: 9px 12px; border-radius: 7px; outline: none; resize: vertical; min-height: 72px;
 }
-.note-input:focus { border-color: rgba(0,200,150,0.4); }
+.note-input:focus { border-color: rgba(0,107,84,0.4); }
 .note-input::placeholder { color: var(--muted); }
 .note-item {
   padding: 12px 14px; border-radius: 9px; margin-bottom: 10px;
   background: var(--surf2); border: 1px solid var(--border);
 }
-.note-item.note-new { border-color: rgba(0,200,150,0.25); animation: noteIn .25s ease; }
+.note-item.note-new { border-color: rgba(0,107,84,0.25); animation: noteIn .25s ease; }
 @keyframes noteIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 .note-header { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
 .note-author { font-size: 12px; font-weight: 600; color: var(--accent); }
@@ -257,12 +241,12 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
 
 /* Danger button */
 .btn-danger {
-  background: transparent; color: #f87171; font-family: var(--ff-b);
+  background: transparent; color: #b42318; font-family: var(--ff-b);
   font-weight: 600; font-size: 13px; padding: 9px 18px;
-  border: 1px solid rgba(248,113,113,0.35);
+  border: 1px solid rgba(180,35,24,0.35);
   border-radius: 7px; cursor: pointer; white-space: nowrap; transition: all .2s;
 }
-.btn-danger:hover { background: rgba(248,113,113,0.08); border-color: rgba(248,113,113,0.6); }
+.btn-danger:hover { background: rgba(180,35,24,0.08); border-color: rgba(180,35,24,0.6); }
 .btn-danger:disabled { opacity: .4; cursor: not-allowed; }
 
 /* Delete confirm modal */
@@ -284,22 +268,22 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
   color: var(--text); font-family: var(--ff-b); font-size: 14px; font-weight: 600;
   letter-spacing: .05em; padding: 9px 12px; border-radius: 7px; outline: none;
 }
-.modal-confirm-input:focus { border-color: rgba(248,113,113,0.5); }
+.modal-confirm-input:focus { border-color: rgba(180,35,24,0.5); }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
 .modal-cancel-btn {
   background: transparent; color: var(--muted); font-family: var(--ff-b);
   font-size: 13px; font-weight: 600; padding: 9px 18px;
   border: 1px solid var(--border); border-radius: 7px; cursor: pointer; transition: all .2s;
 }
-.modal-cancel-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+.modal-cancel-btn:hover { color: var(--text); border-color: var(--border); }
 .modal-delete-btn {
-  background: #ef4444; color: #fff; font-family: var(--ff-b);
+  background: #b42318; color: #fff; font-family: var(--ff-b);
   font-size: 13px; font-weight: 700; padding: 9px 20px;
   border: none; border-radius: 7px; cursor: pointer; transition: background .2s;
 }
-.modal-delete-btn:hover:not(:disabled) { background: #dc2626; }
+.modal-delete-btn:hover:not(:disabled) { background: #a2271d; }
 .modal-delete-btn:disabled { opacity: .4; cursor: not-allowed; }
-.modal-err { font-size: 13px; color: #f87171; margin-top: 10px; text-align: right; }
+.modal-err { font-size: 13px; color: #b42318; margin-top: 10px; text-align: right; }
 /* C2-R02: mobile administration shows list above full-width detail. */
 @media (max-width: 700px) {
   .layout { flex-direction: column; height: auto; min-height: calc(100dvh - 64px); }
@@ -317,14 +301,19 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
   .action-card, .detail-field, .detail-section { min-width: 0; }
 }
 </style>
+<link rel="stylesheet" href="/static/landing_apple.css">
+<link rel="stylesheet" href="/static/como_funciona_apple.css">
+<link rel="stylesheet" href="/static/apple_admin_workspace.css">
 </head>
-<body>
-
-<nav id="site-nav">
+<body class="apple-home apple-how-page apple-admin-workspace">
+<a class="apple-skip" href="#contenido">Saltar al contenido</a>
+<nav id="site-nav" aria-label="Principal">
   <div class="snav-inner">
     <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
     <ul class="snav-links">
+      <li><a href="/herramientas">Herramientas</a></li>
       <li><a href="/como-funciona">Cómo funciona</a></li>
+      <li><a href="/recursos">Recursos</a></li>
       <li><a href="/faq">FAQ</a></li>
       <li><a href="/contacto">Contacto</a></li>
     </ul>
@@ -334,6 +323,49 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
   </div>
 </nav>
 <script src="/static/nav.js"></script>
+<noscript>
+<style>
+/* Native mobile disclosure: useful in HTML viewers without JavaScript too. */
+.apple-home .snav-right{display:none}
+.apple-home .apple-noscript-menu{display:none}
+@media (min-width:1201px){
+  .apple-home #site-nav{position:static;height:auto}
+  .apple-home .snav-inner{flex-wrap:wrap;padding-block:16px;gap:16px}
+  .apple-home .snav-links{display:flex;position:static;transform:none;flex-wrap:wrap;gap:12px}
+  .apple-home .apple-intro-inner{padding-top:48px}
+}
+@media (max-width:1200px){
+  .apple-home .apple-noscript-access{display:none}
+  .apple-home .apple-noscript-menu{display:block;position:absolute;top:8px;right:var(--apple-pad);z-index:1001}
+  .apple-home .apple-noscript-menu>summary{display:flex;align-items:center;justify-content:center;width:44px;height:44px;list-style:none;border:1px solid #d8e1dd;border-radius:9px;background:#f3f6f5;color:var(--text);cursor:pointer}
+  .apple-home .apple-noscript-menu>summary::-webkit-details-marker{display:none}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon{background:transparent}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::before{transform:translateY(6px) rotate(45deg)}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::after{transform:translateY(-6px) rotate(-45deg)}
+  .apple-home .apple-noscript-panel{position:absolute;top:56px;left:auto;right:calc(-1 * var(--apple-pad));width:100vw;display:flex;flex-direction:column;gap:4px;padding:12px var(--apple-pad) 18px;max-height:calc(100vh - 64px);max-height:calc(100dvh - 64px);overflow-y:auto;overscroll-behavior:contain;background:#fff;border-top:1px solid var(--border);box-shadow:0 14px 28px rgba(20,34,30,.1)}
+  .apple-home .apple-noscript-panel>a{display:flex;align-items:center;min-height:44px;padding:11px 14px;border-radius:8px;color:var(--muted);font-size:.9375rem;line-height:1.4;text-decoration:none}
+  .apple-home .apple-noscript-panel>a:hover{background:#f1f5f3;color:var(--text)}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary{justify-content:center;min-height:48px;border-radius:999px;background:var(--accent);color:#fff;font-weight:600}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary:hover{background:#00533f}
+  .apple-home .apple-noscript-menu .snav-menu-icon{width:19px}
+  .apple-home #site-nav .snav-logo{max-width:calc(100% - 60px)}
+}
+</style>
+<details class="apple-noscript-menu">
+  <summary><span class="snav-menu-icon" aria-hidden="true"></span><span class="apple-sr-only">Menú principal</span></summary>
+  <nav class="apple-noscript-panel" aria-label="Navegación móvil">
+    <a href="/herramientas">Herramientas</a>
+    <a href="/como-funciona">Cómo funciona</a>
+    <a href="/recursos">Recursos</a>
+    <a href="/faq">FAQ</a>
+    <a href="/contacto">Contacto</a>
+    <a href="/login/">Iniciar sesión</a>
+    <a href="/signup/" class="snav-mobile-link-primary">Crear cuenta</a>
+  </nav>
+</details>
+<div class="apple-noscript-access"><a href="/login/">Iniciar sesión</a><a href="/signup/">Crear cuenta</a></div>
+</noscript>
+<main id="contenido" tabindex="-1"><section class="how-intro" aria-labelledby="workspace-title"><div class="apple-container"><p class="apple-eyebrow">Administración</p><h1 id="workspace-title">Gestión de asesoramiento</h1></div></section><div class="apple-container workspace-content">
 
 <div class="layout">
   <!-- SIDEBAR -->
@@ -374,6 +406,48 @@ body { padding-top: 64px; } /* espacio para el nav fixed unificado */
   </div>
 </div>
 
+
+</div></main>
+<footer class="apple-footer">
+  <div class="apple-container">
+    <div class="apple-footer-top">
+      <div class="apple-footer-brand">
+        <a href="/" class="apple-footer-logo">mariano<span>sevilla</span>.com</a>
+        <p>Informes FIFO de criptomonedas.</p>
+      </div>
+      <nav aria-labelledby="apple-footer-explore">
+        <h2 id="apple-footer-explore">Explorar</h2>
+        <ul>
+          <li><a href="/herramientas">Herramientas</a></li>
+          <li><a href="/como-funciona">Cómo funciona</a></li>
+          <li><a href="/exchanges">Exchanges compatibles</a></li>
+        </ul>
+      </nav>
+      <nav aria-labelledby="apple-footer-help">
+        <h2 id="apple-footer-help">Ayuda</h2>
+        <ul>
+          <li><a href="/faq">Preguntas frecuentes</a></li>
+          <li><a href="/contacto">Contacto</a></li>
+          <li><a href="/about">Equipo</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="apple-footer-legal">
+      <p class="apple-footer-disclaimer">Herramienta de generación de informes FIFO para usuarios con criptomonedas. No constituye asesoramiento fiscal ni legal.</p>
+      <div class="apple-footer-bottom">
+        <p class="apple-footer-copyright">© <span class="apple-footer-year">2026</span> Mariano Sevilla</p>
+        <nav aria-label="Información legal">
+          <ul>
+            <li><a href="/privacidad">Privacidad</a></li>
+            <li><a href="/terminos">Términos</a></li>
+            <li><a href="/cookies">Cookies</a></li>
+            <li><a href="/aviso-legal">Aviso legal</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+</footer>
 <script>
 let currentId    = null;
 let _allItems    = [];   // caché de la última carga para búsqueda client-side
@@ -923,6 +997,5 @@ async function confirmDelete(id) {
 // Init
 loadList();
 </script>
-</body>
-</html>
-
+<script src="/static/landing_apple.js" defer></script>
+</body></html>
