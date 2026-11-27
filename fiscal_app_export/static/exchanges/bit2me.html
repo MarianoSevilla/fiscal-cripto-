@@ -226,28 +226,13 @@ a:hover { text-decoration: underline; }
 .hero-cta-group {
   display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;
 }
-.btn-cta {
-  display: inline-flex; align-items: center; gap: 10px;
-  background: var(--accent); color: #0a0a0a;
-  border: none; border-radius: 10px; padding: 17px 48px;
-  font-family: var(--font-display); font-size: 1.05rem; font-weight: 700;
-  cursor: pointer; transition: opacity 0.15s, transform 0.1s;
-  text-decoration: none; letter-spacing: -0.01em;
-}
-.btn-cta:hover { opacity: 0.88; text-decoration: none; }
-.btn-cta:active { transform: scale(0.98); }
+
+
 /* override .prose a specificity for CTA buttons inside prose */
-.prose .btn-cta { color: #0a0a0a; }
-.prose .btn-outline { color: var(--accent); }
-.btn-outline {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: none; color: var(--accent);
-  border: 1.5px solid var(--accent); border-radius: 10px; padding: 13px 28px;
-  font-family: var(--font-display); font-size: 0.97rem; font-weight: 700;
-  cursor: pointer; transition: background 0.15s;
-  text-decoration: none; letter-spacing: -0.01em;
-}
-.btn-outline:hover { background: var(--accent-dim); text-decoration: none; }
+
+
+
+
 .hero-micro {
   font-size: 13px; color: var(--muted); margin-top: 1rem; opacity: 0.8;
 }
@@ -311,25 +296,30 @@ a:hover { text-decoration: underline; }
 }
 .sidebar-links a:hover { color: var(--text); text-decoration: none; }
 .sidebar-links a::before { content: '→'; color: var(--accent); font-size: 0.8rem; }
-
 /* ── PROSE SECTIONS ──────────────── */
-.prose h2 {
+.prose h2:not(:where(.asistencia-block *)) {
   font-family: var(--font-display); font-size: 1.55rem; font-weight: 800;
   letter-spacing: -0.025em; line-height: 1.2;
   margin: 3rem 0 1rem; color: var(--text);
 }
-.prose h2:first-child { margin-top: 0; }
-.prose h3 {
+
+.prose h2:first-child:not(:where(.asistencia-block *)) { margin-top: 0; }
+
+.prose h3:not(:where(.asistencia-block *)) {
   font-family: var(--font-display); font-size: 1.1rem; font-weight: 700;
   letter-spacing: -0.015em; margin: 2rem 0 0.65rem; color: var(--text);
 }
-.prose p {
+
+.prose p:not(:where(.asistencia-block *)) {
   font-size: 0.97rem; color: var(--muted); line-height: 1.78;
   margin-bottom: 1rem;
 }
-.prose p:last-child { margin-bottom: 0; }
-.prose strong { color: var(--text); font-weight: 600; }
-.prose a { color: var(--accent); }
+
+.prose p:last-child:not(:where(.asistencia-block *)) { margin-bottom: 0; }
+
+.prose strong:not(:where(.asistencia-block *)) { color: var(--text); font-weight: 600; }
+
+.prose a:not(:where(.asistencia-block *)) { color: var(--accent); }
 
 /* ── ARCHIVOS TABLE ──────────────── */
 .files-table-wrap {
@@ -462,23 +452,12 @@ details[open] .faq-q::after { transform: rotate(45deg); }
   padding: 0 0 1.2rem;
   font-size: 0.93rem; color: var(--muted); line-height: 1.7;
 }
-.faq-a a { color: var(--accent); }
+.faq-a a { color: var(--accent); }/* ── CTA MID-PAGE ────────────────── */
 
-/* ── CTA MID-PAGE ────────────────── */
-.cta-mid {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 16px; padding: 2rem 2.25rem;
-  margin: 2.5rem 0; text-align: left;
-}
-.cta-mid-title {
-  font-family: var(--font-display); font-size: 1.3rem; font-weight: 800;
-  letter-spacing: -0.02em; margin-bottom: 0.65rem; color: var(--text);
-}
-.cta-mid-title em { font-style: normal; color: var(--accent); }
-.cta-mid p { font-size: 0.93rem; color: var(--muted); margin-bottom: 1.5rem; line-height: 1.65; }
-.cta-buttons {
-  display: flex; gap: 1rem; justify-content: flex-start; flex-wrap: wrap;
-}
+
+
+
+
 .cta-micro-text {
   font-size: 12px; color: var(--muted); margin-top: 0.75rem; opacity: 0.8;
 }
@@ -488,13 +467,16 @@ details[open] .faq-q::after { transform: rotate(45deg); }
   text-align: center; padding: 5rem 0 4rem;
   border-top: 1px solid var(--border);
 }
-.cta-final h2 {
+
+.cta-final h2:not(:where(.asistencia-block *)) {
   font-family: var(--font-display); font-size: clamp(1.8rem, 4vw, 2.6rem);
   font-weight: 800; letter-spacing: -0.03em; line-height: 1.15;
   margin-bottom: 1rem;
 }
-.cta-final h2 em { font-style: normal; color: var(--accent); }
-.cta-final p {
+
+.cta-final h2 em:not(:where(.asistencia-block *)) { font-style: normal; color: var(--accent); }
+
+.cta-final p:not(:where(.asistencia-block *)) {
   font-size: 1rem; color: var(--muted); max-width: 480px;
   margin: 0 auto 2.25rem; line-height: 1.7;
 }
@@ -502,49 +484,18 @@ details[open] .faq-q::after { transform: rotate(45deg); }
   font-size: 13px; color: var(--muted); margin-top: 2.5rem; opacity: 0.75;
 }
 .cta-economist-link { color: var(--accent); text-decoration: none; }
-.cta-economist-link:hover { text-decoration: underline; }
-/* reset .cta-final p cascade leak into nested .cta-mid */
-.cta-final .cta-mid { text-align: left; }
-.cta-final .cta-mid p:not(.cta-micro) { max-width: none; margin: 0 0 0.85rem; font-size: 0.88rem; }
-.cta-final .cta-mid .cta-micro { margin-top: 2.5rem; max-width: none; margin-left: 0; margin-right: 0; }
+.cta-economist-link:hover { text-decoration: underline; }/* reset .cta-final p cascade leak into nested .cta-mid */
+
 
 /* ── CTA CARD (patrón asistencia — mismo que home) ── */
-.asistencia-badge {
-  display: inline-flex; align-items: center;
-  font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--muted); border: 1px solid var(--border2);
-  border-radius: 100px; padding: 3px 10px;
-  margin-bottom: 0.6rem;
-}
-.asistencia-block {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 12px; padding: 1.1rem 1.25rem;
-  max-width: 680px; margin-top: 2rem;
-}
-.asistencia-block p {
-  font-size: 0.88rem; color: var(--muted); line-height: 1.55;
-  margin-bottom: 0.85rem;
-}
-.asistencia-block p strong { color: var(--text); display: block; margin-bottom: 3px; font-size: 0.95rem; }
-.asistencia-bullets {
-  list-style: none; margin: 0 0 1rem;
-  display: flex; flex-direction: column; gap: 5px;
-}
-.asistencia-bullets li {
-  font-size: 0.82rem; color: var(--accent);
-  letter-spacing: 0.01em;
-}
-.btn-asistencia {
-  display: flex; align-items: center; gap: 10px; width: 100%;
-  justify-content: center;
-  background: none; color: var(--accent);
-  border: 1.5px solid var(--accent); border-radius: 10px;
-  padding: 13px 24px;
-  font-family: var(--font-display); font-size: 1rem; font-weight: 700;
-  cursor: pointer; transition: background 0.15s;
-  text-decoration: none; letter-spacing: -0.01em;
-}
-.btn-asistencia:hover { background: var(--accent-dim); text-decoration: none; }
+
+
+
+
+
+
+
+
 
 /* ── HERO TRUST SIGNALS ──────────── */
 .hero-trust {
@@ -557,19 +508,10 @@ details[open] .faq-q::after { transform: rotate(45deg); }
 }
 .hero-trust-item::before {
   content: '✓'; color: var(--accent); font-weight: 700; font-size: 11px;
-}
+}/* ── CTA BENEFITS ────────────────── */
 
-/* ── CTA BENEFITS ────────────────── */
-.cta-benefits {
-  list-style: none; display: flex; flex-direction: column; gap: 0.45rem;
-  margin: 1rem 0 1.5rem; text-align: left;
-}
-.cta-benefits li {
-  font-size: 0.88rem; color: var(--muted); display: flex; align-items: center; gap: 8px;
-}
-.cta-benefits li::before {
-  content: '✓'; color: var(--accent); font-weight: 700; font-size: 11px; flex-shrink: 0;
-}
+
+
 
 /* ── FOOTER ──────────────────────── */
 /* ── LEGAL BAR (footer estándar, igual que la home) ── */
@@ -615,7 +557,8 @@ details[open] .faq-q::after { transform: rotate(45deg); }
   :root { --pad-x: 1.25rem; }
   .hero { padding: 5rem 0 3.5rem; }
   .hero h1 { font-size: 1.85rem; }
-  .prose h2 { font-size: 1.35rem; }
+
+.prose h2:not(:where(.asistencia-block *)) { font-size: 1.35rem; }
   .section { padding: 3.5rem 0; }
 }
 
@@ -685,10 +628,10 @@ details[open] .faq-q::after { transform: rotate(45deg); }
     <div class="content-grid">
 
       <!-- ── CONTENIDO PRINCIPAL ─────── -->
-      <div class="content-main prose">
+      <div class="content-main prose apple-assistance">
 
     <div class="asistencia-block">
-      <div class="asistencia-badge">INFORME FIFO BIT2ME</div>
+      <h2 class="asistencia-badge">INFORME FIFO BIT2ME</h2>
       <p>
         <strong>Genera tu informe FIFO de Bit2me</strong>
         Sube el historial de actividad de Bit2me y obtén un PDF fiscal listo para revisar.
@@ -948,18 +891,18 @@ details[open] .faq-q::after { transform: rotate(45deg); }
         </div>
 
         <!-- CTA mid-page -->
-        <div class="cta-mid">
-          <div class="asistencia-badge">INFORME FIFO BIT2ME</div>
-          <h3 class="cta-mid-title">Genera tu informe fiscal de Bit2me</h3>
-          <p>Sube el historial de actividad y genera un informe FIFO listo para revisar tus operaciones antes de presentar Hacienda.</p>
-          <ul class="cta-benefits">
+        <div class="cta-mid asistencia-block">
+          <h2 class="asistencia-badge">INFORME FIFO BIT2ME</h2>
+          <p><strong>Genera tu informe fiscal de Bit2me</strong>
+Sube el historial de actividad y genera un informe FIFO listo para revisar tus operaciones antes de presentar Hacienda.</p>
+          <ul class="cta-benefits asistencia-bullets">
             <li>✓ Detecta compras, ventas y permutas</li>
             <li>✓ Separa los rendimientos de Earn</li>
             <li>✓ Genera PDF descargable</li>
           </ul>
-          <div class="cta-buttons">
-            <a href="/bit2me" class="btn-cta">Subir CSV de Bit2Me</a>
-            <a href="/asesoramiento-fiscal-criptomonedas" class="btn-outline">Solicitar asesoramiento fiscal</a>
+          <div class="cta-buttons apple-hero-actions">
+            <a href="/bit2me" class="btn-cta btn-asistencia">Subir CSV de Bit2Me</a>
+            <a href="/asesoramiento-fiscal-criptomonedas" class="btn-outline apple-text-link">Solicitar asesoramiento fiscal</a>
           </div>
         </div>
 
@@ -1059,22 +1002,23 @@ details[open] .faq-q::after { transform: rotate(45deg); }
 <section class="cta-final">
   <div class="wrap">
     <div class="content-grid">
-      <div class="content-main">
-        <div class="cta-mid">
-          <div class="asistencia-badge">INFORME FIFO BIT2ME</div>
-          <h3 class="cta-mid-title">Genera tu informe fiscal de Bit2me hoy</h3>
-          <p>Sube el historial de Bit2me, revisa tus operaciones y descarga un informe FIFO preparado para Hacienda.</p>
-          <ul class="cta-benefits">
+      <div class="content-main apple-assistance">
+        <div class="cta-mid asistencia-block">
+          <h2 class="asistencia-badge">INFORME FIFO BIT2ME</h2>
+          <p><strong>Genera tu informe fiscal de Bit2me hoy</strong>
+Sube el historial de Bit2me, revisa tus operaciones y descarga un informe FIFO preparado para Hacienda.</p>
+          <ul class="cta-benefits asistencia-bullets">
             <li>✓ Historial de Bit2me</li>
             <li>✓ Método FIFO automático</li>
             <li>✓ PDF descargable</li>
           </ul>
-          <div class="cta-buttons">
-            <a href="/bit2me" class="btn-cta">Subir CSV de Bit2Me</a>
-            <a href="/asesoramiento-fiscal-criptomonedas" class="btn-outline">Solicitar asesoramiento fiscal</a>
+          <div class="cta-buttons apple-hero-actions">
+            <a href="/bit2me" class="btn-cta btn-asistencia">Subir CSV de Bit2Me</a>
+            <a href="/asesoramiento-fiscal-criptomonedas" class="btn-outline apple-text-link">Solicitar asesoramiento fiscal</a>
           </div>
-          <p class="cta-micro">Supervisado por <a href="/about" class="cta-economist-link">Rafael Ramos Martínez</a>, economista colegiado nº&nbsp;4.579 · Colegio de Economistas de Valencia</p>
+          
         </div>
+<p class="cta-micro">Supervisado por <a href="/about" class="cta-economist-link">Rafael Ramos Martínez</a>, economista colegiado nº&nbsp;4.579 · Colegio de Economistas de Valencia</p>
       </div>
     </div>
   </div>

@@ -14,13 +14,13 @@
 .apple-legal-page .legal-document{min-width:0}
 .apple-legal-page .legal-section{min-width:0;scroll-margin-top:24px;padding-block:32px;border-top:1px solid var(--border)}
 .apple-legal-page .legal-section:first-child{padding-top:0;border-top:0}
-.apple-legal-page .legal-section h2{font-size:clamp(1.375rem,2vw,1.875rem);line-height:1.25;letter-spacing:-.025em;margin-bottom:16px}
-.apple-legal-page .legal-section p,.apple-legal-page .legal-section li{font-size:1rem;line-height:1.75;color:var(--muted)}
-.apple-legal-page .legal-section p+p,.apple-legal-page .legal-section ul+p,.apple-legal-page .legal-section p+ul{margin-top:12px}
-.apple-legal-page .legal-section ul{padding-left:1.25rem}
-.apple-legal-page .legal-section li+li{margin-top:8px}
-.apple-legal-page .legal-section strong{color:var(--text);font-weight:650}
-.apple-legal-page .legal-section a{overflow-wrap:anywhere;text-decoration:underline}
+.apple-legal-page .legal-section h2:not(:where(.asistencia-block *)){font-size:clamp(1.375rem,2vw,1.875rem);line-height:1.25;letter-spacing:-.025em;margin-bottom:16px}
+.apple-legal-page .legal-section p:not(:where(.asistencia-block *)),.apple-legal-page .legal-section li:not(:where(.asistencia-block *)){font-size:1rem;line-height:1.75;color:var(--muted)}
+.apple-legal-page .legal-section p+p:not(:where(.asistencia-block *)),.apple-legal-page .legal-section ul+p:not(:where(.asistencia-block *)),.apple-legal-page .legal-section p+ul:not(:where(.asistencia-block *)){margin-top:12px}
+.apple-legal-page .legal-section ul:not(:where(.asistencia-block *)){padding-left:1.25rem}
+.apple-legal-page .legal-section li+li:not(:where(.asistencia-block *)){margin-top:8px}
+.apple-legal-page .legal-section strong:not(:where(.asistencia-block *)){color:var(--text);font-weight:650}
+.apple-legal-page .legal-section a:not(:where(.asistencia-block *)){overflow-wrap:anywhere;text-decoration:underline}
 .apple-legal-page .legal-purposes{display:grid;gap:16px;margin-block:24px}
 .apple-legal-page .legal-purpose{border:1px solid var(--border);border-radius:16px;padding:20px;background:var(--surface)}
 .apple-legal-page .legal-purpose h3{margin-bottom:12px}
