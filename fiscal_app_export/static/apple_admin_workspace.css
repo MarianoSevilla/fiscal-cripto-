@@ -1,0 +1,76 @@
+/* Shared private-workspace adapter. Visual declarations are taken from
+   approved account_apple.css and landing_apple.css; legacy JS IDs and layout
+   contracts remain intact. Only these six pages opt in. */
+.apple-admin-workspace {
+ --surf2:var(--surface2); --surf3:var(--bg2); --surface3:var(--bg2);
+ --sub:var(--muted); --muted2:var(--muted); --border-hi:var(--border2);
+ --accent2:#00533f; --accent-dim:#e8f3ef;
+ --yellow:#805000; --warning:#805000; --yellow-dim:#fff7e5;
+ --red:#b42318; --danger:#b42318; --red-dim:#fff1ef;
+ --blue:#005fcc; --info:#005fcc; --indigo:#53616b;
+ --blue-dim:#f0f3f2; --indigo-dim:#f0f3f2;
+ --black:var(--bg); --ff-h:var(--font-display); --ff-b:var(--font-body);
+ --font-d:var(--font-display); --font-b:var(--font-body);
+ --max-w:var(--apple-max); --max:var(--apple-max); --pad-x:var(--apple-pad); --r:16px;
+}
+.apple-admin-workspace .workspace-content { padding-block:var(--apple-section-space); min-width:0; }
+.apple-admin-workspace :is(.layout,.app-shell) { border:1px solid var(--border); border-radius:16px; background:var(--surface); min-width:0; }
+.apple-admin-workspace :is(.sidebar,.left-panel,.composer-panel,.detail-panel,.main-area,.preview-panel,.sidebar-list,.campaign-list,.detail-field,.action-row,.stats-content,.kpi-card,.card,.chart-box,.health-card,.insight-box) { min-width:0; overflow-wrap:anywhere; }
+.apple-admin-workspace :is(.action-row,.sidebar-filter-row,.btn-row,.modal-actions,.panel-header,.left-header-top) { flex-wrap:wrap; }
+.apple-admin-workspace :is(.request-card,.action-card,.reply-section,.page-footer-note,.stats-content .card,.stats-content .chart-box,.stats-content .kpi-card,.stats-content .health-card,.stats-content .insight-box) { background: #fff; border: 1px solid #e1e7e3; border-radius: 18px;
+  padding: clamp(22px, 3.8vw, 32px);  }
+.apple-admin-workspace :is(.detail-field,.text-block,.recipients-bar) { padding:16px; min-width:0; background:#f4f7f5; border-radius:12px; border:1px solid var(--border); }
+.apple-admin-workspace :is(.detail-section-title,.stats-content .section-title,.sidebar-title,.left-title,.panel-title,.action-title,.card-service) { margin:0 0 12px; color: var(--text);
+  font-size: 1.25rem; line-height: 1.3; letter-spacing: -.02em;
+  font-weight: 650; text-transform: none; }
+.apple-admin-workspace :is(.detail-field-label,.field-label,.kpi-label,.card-label,.health-label) { font-size:.9375rem; line-height:1.5; color:var(--muted); text-transform:none; letter-spacing:normal; }
+.apple-admin-workspace :is(.kpi-value,.card-value,.health-value,.rec-count) { font-size:clamp(1.125rem,2.1vw,1.75rem); line-height:1.2; letter-spacing:-.035em; font-weight:650; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.apple-admin-workspace :is(.action-btn,.reply-send-btn,.btn-new,.btn-secondary,.btn-primary,.btn-danger,.btn-danger-soft,.btn-modal-cancel,.btn-modal-confirm,.btn-delete-confirm,.modal-cancel-btn,.modal-delete-btn,.btn-copy-errors,.pg-btn,.pg-refresh-btn,.card-cta,.state-msg a) { display:inline-flex; align-items:center; justify-content:center;
+  min-height: 48px; padding: 11px 22px; border-radius:999px;
+  border:1px solid transparent; font:600 1rem/1.4 var(--font-body);
+  text-align:center; cursor:pointer; transition:background .15s,border-color .15s; max-width:100%; white-space:normal; text-decoration:none; }
+.apple-admin-workspace :is(.action-btn,.reply-send-btn,.btn-new,.btn-primary,.btn-modal-confirm,.state-msg a) { background:var(--accent); color:#fff; border-color:var(--accent); }
+.apple-admin-workspace :is(.action-btn.secondary,.btn-secondary,.btn-modal-cancel,.modal-cancel-btn,.btn-copy-errors,.pg-btn,.pg-refresh-btn,.card-cta) { background:#fff; border-color:#a7b8b0; color:#25372e; }
+.apple-admin-workspace :is(.action-btn.danger,.btn-danger,.btn-danger-soft,.btn-delete-confirm,.modal-delete-btn) { background:#fff; border-color:#b42318; color:#a2271d; }
+.apple-admin-workspace :is(.action-btn,.reply-send-btn,.btn-new,.btn-secondary,.btn-primary,.btn-danger,.btn-danger-soft,.btn-modal-cancel,.btn-modal-confirm,.btn-delete-confirm,.modal-cancel-btn,.modal-delete-btn,.btn-copy-errors,.pg-btn,.pg-refresh-btn):disabled { background:#e1e7e3; border-color:#e1e7e3; color:#536660; opacity:1; cursor:wait; }
+.apple-admin-workspace :is(.sidebar-search,.sidebar-filters select,.action-select,.action-input,.action-textarea,.note-input,.field-input,.field-textarea,.reply-field textarea,.reply-field input[type=number],.modal-confirm-input) { display:block; width:100%; min-width:0; min-height:48px; padding:11px 14px;
+  border:1px solid #82918e; border-radius:10px;
+  background:#fff; color:var(--text);
+  font:400 1rem/1.5 var(--font-body);
+  transition:border-color .15s, box-shadow .15s; max-width:100%; }
+.apple-admin-workspace :is(.sidebar-search,.sidebar-filters select,.action-select,.action-input,.action-textarea,.note-input,.field-input,.field-textarea,.reply-field textarea,.reply-field input[type=number],.modal-confirm-input):focus { border-color:var(--accent); box-shadow:0 0 0 2px #e2f3ec; }
+.apple-admin-workspace :is(.note-input,.action-textarea,.field-textarea,.reply-field textarea) { resize:vertical; }
+.apple-admin-workspace :is(.status-badge,.req-badge,.badge,.test-pill) { display:inline-flex; align-items:center; gap:5px; border-radius:999px;
+  padding: 5px 11px; font-size: .8125rem; font-weight: 600; line-height:1.4; text-transform:none; letter-spacing:normal; white-space:normal; }
+.apple-admin-workspace :is(.badge-paid_received,.badge-completed,.badge-respondido,.badge-sent) { background:#e7f3ec; color:#145c42; }
+.apple-admin-workspace :is(.badge-under_review,.badge-in_progress,.badge-submitted,.badge-archived,.badge-archivado,.badge-refunded,.badge-draft,.badge-cancelled) { background:#eff2f1; color:#46564e; }
+.apple-admin-workspace :is(.badge-failed,.tl-cancelled) { background:#fff1ef; color:#9a2920; border:1px solid #f5d5cf; }
+.apple-admin-workspace :is(.badge-pending_payment,.badge-pendiente_info,.badge-quote_sent,.badge-waiting_user_info,.badge-nuevo,.badge-sending,.badge-partial_success,.test-pill,.preview-banner) { background:#fff7e5; color:#805000; border-color:#e7c8c3; }
+.apple-admin-workspace .preview-banner strong { color:inherit; }
+.apple-admin-workspace :is(.msg-ok,.reply-ok) { background:#e7f3ec; border:1px solid #b6dcca; color:#145c42; }
+.apple-admin-workspace :is(.msg-err,.reply-err,.modal-err) { background:#fff1ef; border:1px solid #f2c4bc; color:#9a2920; }
+.apple-admin-workspace :is(.stats-content .table-box,.timeline-steps) { max-width:100%; overflow-x:auto; }
+.apple-admin-workspace :is(.stats-content .grid-2,.stats-content .grid-3,.stats-content .grid-4,.kpi-strip,.health-grid,.detail-grid)>* { min-width:0; }
+.apple-admin-workspace .stats-content { max-width:none; padding:0; margin:0; }
+.apple-admin-workspace .stats-content .kpi-top { flex-wrap:wrap; gap:8px; }
+.apple-admin-workspace .stats-content .kpi-spark { max-width:100%; }
+/* An empty chart retains the intrinsic 300px canvas width. Constrain its
+   rendered width to the card, including while Chart.js is not initialized. */
+.apple-admin-workspace .stats-content .chart-wrap canvas { max-width:100%; }
+.apple-admin-workspace .page-wrap { width:100%; max-width:848px; padding:0; margin-inline:auto; }
+.apple-admin-workspace .state-msg { padding:var(--apple-card-pad); }
+.apple-admin-workspace :is(.tab-btn,.seg-btn,.mode-btn) { min-height:44px; }
+.apple-admin-workspace :is(.layout,.app-shell) { height:calc(100dvh - 64px); }
+@media(max-width:900px){
+ .apple-admin-workspace :is(.layout,.app-shell) { flex-direction:column; height:auto; min-height:0; overflow:visible; }
+ .apple-admin-workspace :is(.sidebar,.left-panel) { width:100%; height:290px; flex-shrink:0; border-right:0; border-bottom:1px solid var(--border); }
+ .apple-admin-workspace :is(.detail-panel,.main-area) { width:100%; overflow:visible; }
+ .apple-admin-workspace .composer-panel { width:100%; border-right:0; }
+ .apple-admin-workspace .detail-grid { grid-template-columns:minmax(0,1fr); }
+}
+@media(max-width:640px){
+ .apple-admin-workspace :is(.action-btn,.reply-send-btn,.btn-primary,.btn-secondary,.btn-danger,.card-cta) { max-width:100%; }
+ .apple-admin-workspace :is(.detail-grid,.stats-content .grid-2,.stats-content .grid-3,.stats-content .grid-4,.health-grid,.kpi-strip) { grid-template-columns:minmax(0,1fr); }
+ .apple-admin-workspace .detail-panel { padding:var(--apple-card-pad); }
+}
+@media(prefers-reduced-motion:reduce){.apple-admin-workspace *, .apple-admin-workspace *::before,.apple-admin-workspace *::after { animation:none!important; transition:none!important; }}

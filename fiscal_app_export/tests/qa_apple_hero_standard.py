@@ -5,6 +5,7 @@ All traffic stays on the isolated local server; no real accounts or payments.
 from pathlib import Path
 from qa_home_redesign import WIDTHS, context
 from qa_advisory_apple import styles
+from qa_apple_panel_standard import assert_home_panels
 
 GUIDES=("binance","bit2me","bitvavo","coinbase","kraken","nexo","cryptocom")
 REF="/como-funciona"
@@ -22,12 +23,81 @@ def full_width(page,selector,container):
     assert abs(a["x"]-b["x"]-pads[0])<1,(selector,a,b,pads)
     assert abs(a["width"]-(b["width"]-sum(pads)))<1,(selector,a,b,pads)
 
+
+def mid_cta(page):
+    card=page.locator(".content-main.prose > .cta-mid")
+    assert card.count()==1
+    return card
+
+def cta_bottom_gap(page):
+    card=mid_cta(page)
+    a=card.bounding_box()
+    b=card.locator(".cta-buttons").bounding_box()
+    return a["y"]+a["height"]-b["y"]-b["height"]
+
+def compare_mid_cta(page,reference,width,name):
+    card=mid_cta(page)
+    selector=".content-main.prose > .cta-mid"
+    assert card.evaluate("e=>Array.from(e.children,c=>c.tagName+':'+c.className).join('|')")==mid_cta(reference).evaluate("e=>Array.from(e.children,c=>c.tagName+':'+c.className).join('|')"),(name,width,"CTA structure")
+    assert card.locator(".cta-micro-text").count()==0
+    assert page.locator(".sidebar-note").count()==0
+    first=".content-main.prose > .asistencia-block:not(.cta-mid)"
+    assert page.locator(first).count()==1
+    standard_badge=page.locator(first+" .asistencia-badge").inner_text().strip()
+    for target in (selector,".cta-final .cta-mid"):
+        assert page.locator(target+" .asistencia-badge").inner_text().strip()==standard_badge,(name,width,target,"green label")
+        compare(page,target,page,first,["background-color","border-radius","border-top-width","border-top-color","padding-top","padding-right","padding-bottom","padding-left"],width,name)
+        compare(page,target+" .asistencia-badge",page,first+" .asistencia-badge",["font-family","font-size","font-weight","line-height","color","margin-bottom","padding-top"],width,name)
+        compare(page,target+" p strong",page,first+" p strong",["font-size","font-weight","line-height","color","margin-bottom"],width,name)
+        compare(page,target+" .cta-benefits",page,first+" .asistencia-bullets",["gap","margin-top","margin-bottom","padding-left"],width,name)
+        compare(page,target+" .cta-benefits > li:first-child",page,first+" .asistencia-bullets > li:first-child",["font-size","color","letter-spacing"],width,name)
+        assert page.locator(target).evaluate("e=>e.scrollWidth<=e.clientWidth+1"),(name,width,target,"overflow")
+    assert card.locator(".cta-benefits > li").count()==3
+    assert card.locator(".cta-buttons > a").count()==2
+    assert card.locator(".btn-cta").get_attribute("href")=="/"+name
+    exchange_names={"binance":"Binance","bitvavo":"Bitvavo","kraken":"Kraken","coinbase":"Coinbase","nexo":"Nexo","cryptocom":"Crypto.com","bit2me":"Bit2Me"}
+    expected_label="Subir CSV de "+exchange_names[name]
+    assert card.locator(".btn-cta").inner_text().strip()==expected_label,(name,width,"mid CTA label")
+    final=page.locator('.cta-final .btn-cta')
+    assert final.count()==1 and final.inner_text().strip()==expected_label,(name,width,"final CTA label")
+    assert final.get_attribute("href")=="/"+name
+    assert card.locator(".btn-outline").get_attribute("href")=="/asesoramiento-fiscal-criptomonedas"
+    pairs=[
+        ("",["background-color","border-radius","border-top-width","border-top-color","padding-top","padding-right","padding-bottom","padding-left","margin-top","margin-bottom","text-align"]),
+        (" p strong",["font-family","font-size","font-weight","line-height","letter-spacing","color","margin-bottom"]),
+        (" .asistencia-badge",["font-family","font-size","font-weight","color","margin-bottom"]),
+        (" > p",["font-family","font-size","line-height","color","margin-bottom"]),
+        (" .cta-benefits",["display","flex-direction","gap","margin-top","margin-bottom","padding-left"]),
+        (" .cta-benefits > li:first-child",["font-family","font-size","line-height","color","gap"]),
+        (" .cta-buttons",["display","flex-direction","flex-wrap","gap","justify-content"]),
+        (" .btn-cta",["font-family","font-size","font-weight","line-height","border-radius","min-height","padding-top","padding-bottom","padding-left","padding-right","background-color","color"]),
+        (" .btn-outline",["font-family","font-size","font-weight","line-height","border-radius","min-height","padding-top","padding-bottom","padding-left","padding-right","background-color","color"]),
+    ]
+    for suffix,props in pairs:
+        compare(page,selector+suffix,reference,selector+suffix,props,width,name)
+    gap=cta_bottom_gap(page)
+    expected=cta_bottom_gap(reference)
+    assert abs(gap-expected)<1,(name,width,"space below buttons",gap,expected)
+    assert abs(card.bounding_box()["width"]-mid_cta(reference).bounding_box()["width"])<1,(name,width,"card width")
+    assert card.evaluate("e=>e.scrollWidth<=e.clientWidth+1"),(name,width,"CTA overflow")
+    # Content-specific button labels and wrapping may change the card height.
+    # The shared layout, bottom spacing and control styles must not change.
+    if width in (390,768,1440):
+        card.screenshot(path=str(ART/f"home_apple_mid_cta_{name}_{width}.png"),animations="disabled")
+        page.locator(".cta-final .cta-mid").screenshot(path=str(ART/f"home_apple_final_cta_{name}_{width}.png"),animations="disabled")
+        page.locator(first).screenshot(path=str(ART/f"home_apple_first_cta_{name}_{width}.png"),animations="disabled")
+
+
 def run_apple_hero_standard(browser,origin):
     ART.mkdir(exist_ok=True)
     for width in WIDTHS:
         ctx,violations=context(browser,width=width,height=900)
         ref=ctx.new_page()
         assert ref.goto(origin+REF,wait_until="networkidle").status==200
+        home=ctx.new_page()
+        assert home.goto(origin+"/",wait_until="networkidle").status==200
+        cta_reference=ctx.new_page()
+        assert cta_reference.goto(origin+"/static/exchanges/bitvavo.html",wait_until="networkidle").status==200
         for name in GUIDES:
             page=ctx.new_page()
             errors=[]
@@ -58,6 +128,8 @@ def run_apple_hero_standard(browser,origin):
                 assert snippet.count()==1 and snippet.is_visible(),(name,width,"editorial definition missing")
                 assert snippet.bounding_box()["y"]>=hero["y"]+hero["height"]-1,(name,width,"definition overlaps intro")
             assert page.locator(".hero").evaluate("e=>e.scrollWidth<=e.clientWidth+1"),(name,width,"hero overflow")
+            compare_mid_cta(page,cta_reference,width,name)
+            assert_home_panels(page,home,width,name,3)
             assert not errors and not violations,(name,width,errors,violations)
             if width in (390,768,1440):
                 page.locator(".hero").screenshot(path=str(ART/f"home_apple_hero_{name}_{width}.png"),animations="disabled")

@@ -9,32 +9,11 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
 <link rel="icon" href="/static/favicon.ico">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/nav.css">
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --bg:      #0b1220;
-  --surface: #141f32;
-  --surf2:   #1a2540;
-  --surf3:   #1f2d48;
-  --border:  rgba(255,255,255,0.08);
-  --border2: rgba(255,255,255,0.14);
-  --text:    #eef0f6;
-  --muted:   #7a8099;
-  --sub:     #9aa0b8;
-  --accent:  #00C896;
-  --accent2: #00a87e;
-  --danger:  #f87171;
-  --warning: #fbbf24;
-  --info:    #38bdf8;
-  --ff-h:    'Syne', sans-serif;
-  --ff-b:    'DM Sans', sans-serif;
-}
-html, body { min-height: 100%; background: var(--bg); font-family: var(--ff-b); color: var(--text); overflow-x: hidden; }
-body { padding-top: 64px; }
+
+
+
 
 /* ── LAYOUT ── */
 .app-shell { display: flex; height: calc(100vh - 64px); overflow: hidden; }
@@ -55,7 +34,7 @@ body { padding-top: 64px; }
 .left-title { font-family: var(--ff-h); font-weight: 700; font-size: 14px; color: var(--text); }
 .btn-new {
   display: flex; align-items: center; gap: 5px;
-  background: var(--accent); color: #0b1220;
+  background: var(--accent); color: #fff;
   font-family: var(--ff-b); font-weight: 600; font-size: 12px;
   padding: 6px 11px; border: none; border-radius: 7px; cursor: pointer; transition: background .15s;
 }
@@ -79,7 +58,7 @@ body { padding-top: 64px; }
   cursor: pointer; transition: background .12s; position: relative;
 }
 .campaign-item:hover { background: var(--surf2); }
-.campaign-item.active { background: rgba(0,200,150,0.06); border-left: 2px solid var(--accent); padding-left: 14px; }
+.campaign-item.active { background: rgba(0,107,84,0.06); border-left: 2px solid var(--accent); padding-left: 14px; }
 
 .ci-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; margin-bottom: 3px; }
 .ci-subject {
@@ -103,11 +82,11 @@ body { padding-top: 64px; }
   padding: 2px 7px; border-radius: 20px;
 }
 .badge-draft    { background: rgba(122,128,153,.12); color: var(--muted); }
-.badge-queued   { background: rgba(56,189,248,.12);  color: var(--info); }
-.badge-sending  { background: rgba(251,191,36,.12);  color: var(--warning); }
-.badge-sent            { background: rgba(0,200,150,.12);   color: var(--accent); }
-.badge-partial_success { background: rgba(251,191,36,.12);  color: var(--warning); }
-.badge-failed          { background: rgba(248,113,113,.12); color: var(--danger); }
+.badge-queued   { background: rgba(0,95,204,.12);  color: var(--info); }
+.badge-sending  { background: rgba(128,80,0,.12);  color: var(--warning); }
+.badge-sent            { background: rgba(0,107,84,.12);   color: var(--accent); }
+.badge-partial_success { background: rgba(128,80,0,.12);  color: var(--warning); }
+.badge-failed          { background: rgba(180,35,24,.12); color: var(--danger); }
 .badge-cancelled       { background: rgba(122,128,153,.10); color: var(--muted); }
 
 /* ── MAIN AREA ── */
@@ -142,7 +121,7 @@ body { padding-top: 64px; }
   transition: border-color .15s;
 }
 .field-input::placeholder, .field-textarea::placeholder { color: var(--muted); }
-.field-input:focus, .field-textarea:focus { border-color: rgba(0,200,150,.4); }
+.field-input:focus, .field-textarea:focus { border-color: rgba(0,107,84,.4); }
 .field-textarea { resize: vertical; min-height: 200px; line-height: 1.65; }
 .field-hint { font-size: 11px; color: var(--muted); }
 
@@ -161,7 +140,7 @@ body { padding-top: 64px; }
 .btn-row { display: flex; gap: 8px; }
 .btn-primary {
   flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
-  background: var(--accent); color: #0b1220;
+  background: var(--accent); color: #fff;
   font-family: var(--ff-b); font-weight: 700; font-size: 13px;
   padding: 10px; border: none; border-radius: 8px; cursor: pointer; transition: background .15s;
 }
@@ -243,19 +222,19 @@ body { padding-top: 64px; }
 
 /* ── SENDING PROGRESS ── */
 .sending-progress {
-  background: var(--surface); border: 1px solid rgba(251,191,36,.2); border-radius: 10px;
+  background: var(--surface); border: 1px solid rgba(128,80,0,.2); border-radius: 10px;
   padding: 15px 17px; margin-bottom: 16px;
 }
 .sp-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .sp-title  { font-size: 13px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; }
 .sp-spinner {
-  width: 13px; height: 13px; border: 2px solid rgba(251,191,36,.2); border-top-color: var(--warning);
+  width: 13px; height: 13px; border: 2px solid rgba(128,80,0,.2); border-top-color: var(--warning);
   border-radius: 50%; animation: spin .7s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 .sp-count { font-size: 12px; color: var(--muted); }
 .progress-track { height: 4px; background: var(--surf2); border-radius: 2px; overflow: hidden; }
-.progress-fill  { height: 100%; background: linear-gradient(90deg, var(--warning), #f59e0b); border-radius: 2px; transition: width .4s ease; }
+.progress-fill  { height: 100%; background: linear-gradient(90deg, var(--warning), #805000); border-radius: 2px; transition: width .4s ease; }
 .sp-note { font-size: 11px; color: var(--muted); margin-top: 8px; }
 
 /* ── MODAL ── */
@@ -287,10 +266,10 @@ body { padding-top: 64px; }
 
 .modal-warn {
   display: flex; align-items: flex-start; gap: 9px;
-  background: rgba(251,191,36,.07); border: 1px solid rgba(251,191,36,.2);
+  background: rgba(128,80,0,.07); border: 1px solid rgba(128,80,0,.2);
   border-radius: 8px; padding: 11px 13px; margin-bottom: 4px;
 }
-.modal-warn-text { font-size: 12px; color: #fbbf24; line-height: 1.6; }
+.modal-warn-text { font-size: 12px; color: #805000; line-height: 1.6; }
 
 .modal-footer { padding: 12px 22px 18px; display: flex; gap: 9px; }
 .btn-modal-cancel {
@@ -300,7 +279,7 @@ body { padding-top: 64px; }
 }
 .btn-modal-cancel:hover { border-color: var(--border2); color: var(--text); }
 .btn-modal-confirm {
-  flex: 2; background: var(--accent); color: #0b1220;
+  flex: 2; background: var(--accent); color: #fff;
   font-family: var(--ff-b); font-weight: 700; font-size: 13.5px;
   padding: 10px; border: none; border-radius: 8px; cursor: pointer; transition: background .15s;
   display: flex; align-items: center; justify-content: center; gap: 6px;
@@ -371,19 +350,19 @@ body { padding-top: 64px; }
 
 /* ── DELETE BUTTON ── */
 .btn-danger-soft {
-  background: none; border: 1px solid rgba(248,113,113,.25);
+  background: none; border: 1px solid rgba(180,35,24,.25);
   color: var(--danger); font-family: var(--ff-b); font-weight: 500; font-size: 12px;
   padding: 7px 12px; border-radius: 7px; cursor: pointer; transition: all .15s;
 }
-.btn-danger-soft:hover { background: rgba(248,113,113,.08); border-color: rgba(248,113,113,.55); }
+.btn-danger-soft:hover { background: rgba(180,35,24,.08); border-color: rgba(180,35,24,.55); }
 
 .btn-delete-confirm {
-  flex: 2; background: #ef4444; color: #fff;
+  flex: 2; background: #b42318; color: #fff;
   font-family: var(--ff-b); font-weight: 700; font-size: 13.5px;
   padding: 10px; border: none; border-radius: 8px; cursor: pointer; transition: background .15s;
   display: flex; align-items: center; justify-content: center;
 }
-.btn-delete-confirm:not(:disabled):hover { background: #dc2626; }
+.btn-delete-confirm:not(:disabled):hover { background: #a2271d; }
 .btn-delete-confirm:disabled { opacity: .35; cursor: not-allowed; }
 
 /* ── SEGMENT SELECTOR ── */
@@ -397,13 +376,13 @@ body { padding-top: 64px; }
   padding: 6px 8px; border-radius: 5px; cursor: pointer; transition: all .12s; text-align: center;
 }
 .seg-btn:hover  { background: var(--surf3); color: var(--sub); }
-.seg-btn.active { background: var(--accent); color: #0b1220; font-weight: 700; }
+.seg-btn.active { background: var(--accent); color: #fff; font-weight: 700; }
 .seg-hint { font-size: 11px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
 
 /* ── SEGMENT BADGES (list + detail) ── */
 .badge-seg-all        { background: rgba(122,128,153,.12); color: var(--sub); }
-.badge-seg-verified   { background: rgba(0,200,150,.12);   color: var(--accent); }
-.badge-seg-unverified { background: rgba(251,191,36,.12);  color: var(--warning); }
+.badge-seg-verified   { background: rgba(0,107,84,.12);   color: var(--accent); }
+.badge-seg-unverified { background: rgba(128,80,0,.12);  color: var(--warning); }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 900px) {
@@ -418,14 +397,19 @@ body { padding-top: 64px; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
 }
 </style>
+<link rel="stylesheet" href="/static/landing_apple.css">
+<link rel="stylesheet" href="/static/como_funciona_apple.css">
+<link rel="stylesheet" href="/static/apple_admin_workspace.css">
 </head>
-<body>
-
-<nav id="site-nav">
+<body class="apple-home apple-how-page apple-admin-workspace">
+<a class="apple-skip" href="#contenido">Saltar al contenido</a>
+<nav id="site-nav" aria-label="Principal">
   <div class="snav-inner">
     <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
     <ul class="snav-links">
+      <li><a href="/herramientas">Herramientas</a></li>
       <li><a href="/como-funciona">Cómo funciona</a></li>
+      <li><a href="/recursos">Recursos</a></li>
       <li><a href="/faq">FAQ</a></li>
       <li><a href="/contacto">Contacto</a></li>
     </ul>
@@ -435,6 +419,49 @@ body { padding-top: 64px; }
   </div>
 </nav>
 <script src="/static/nav.js"></script>
+<noscript>
+<style>
+/* Native mobile disclosure: useful in HTML viewers without JavaScript too. */
+.apple-home .snav-right{display:none}
+.apple-home .apple-noscript-menu{display:none}
+@media (min-width:1201px){
+  .apple-home #site-nav{position:static;height:auto}
+  .apple-home .snav-inner{flex-wrap:wrap;padding-block:16px;gap:16px}
+  .apple-home .snav-links{display:flex;position:static;transform:none;flex-wrap:wrap;gap:12px}
+  .apple-home .apple-intro-inner{padding-top:48px}
+}
+@media (max-width:1200px){
+  .apple-home .apple-noscript-access{display:none}
+  .apple-home .apple-noscript-menu{display:block;position:absolute;top:8px;right:var(--apple-pad);z-index:1001}
+  .apple-home .apple-noscript-menu>summary{display:flex;align-items:center;justify-content:center;width:44px;height:44px;list-style:none;border:1px solid #d8e1dd;border-radius:9px;background:#f3f6f5;color:var(--text);cursor:pointer}
+  .apple-home .apple-noscript-menu>summary::-webkit-details-marker{display:none}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon{background:transparent}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::before{transform:translateY(6px) rotate(45deg)}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::after{transform:translateY(-6px) rotate(-45deg)}
+  .apple-home .apple-noscript-panel{position:absolute;top:56px;left:auto;right:calc(-1 * var(--apple-pad));width:100vw;display:flex;flex-direction:column;gap:4px;padding:12px var(--apple-pad) 18px;max-height:calc(100vh - 64px);max-height:calc(100dvh - 64px);overflow-y:auto;overscroll-behavior:contain;background:#fff;border-top:1px solid var(--border);box-shadow:0 14px 28px rgba(20,34,30,.1)}
+  .apple-home .apple-noscript-panel>a{display:flex;align-items:center;min-height:44px;padding:11px 14px;border-radius:8px;color:var(--muted);font-size:.9375rem;line-height:1.4;text-decoration:none}
+  .apple-home .apple-noscript-panel>a:hover{background:#f1f5f3;color:var(--text)}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary{justify-content:center;min-height:48px;border-radius:999px;background:var(--accent);color:#fff;font-weight:600}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary:hover{background:#00533f}
+  .apple-home .apple-noscript-menu .snav-menu-icon{width:19px}
+  .apple-home #site-nav .snav-logo{max-width:calc(100% - 60px)}
+}
+</style>
+<details class="apple-noscript-menu">
+  <summary><span class="snav-menu-icon" aria-hidden="true"></span><span class="apple-sr-only">Menú principal</span></summary>
+  <nav class="apple-noscript-panel" aria-label="Navegación móvil">
+    <a href="/herramientas">Herramientas</a>
+    <a href="/como-funciona">Cómo funciona</a>
+    <a href="/recursos">Recursos</a>
+    <a href="/faq">FAQ</a>
+    <a href="/contacto">Contacto</a>
+    <a href="/login/">Iniciar sesión</a>
+    <a href="/signup/" class="snav-mobile-link-primary">Crear cuenta</a>
+  </nav>
+</details>
+<div class="apple-noscript-access"><a href="/login/">Iniciar sesión</a><a href="/signup/">Crear cuenta</a></div>
+</noscript>
+<main id="contenido" tabindex="-1"><section class="how-intro" aria-labelledby="workspace-title"><div class="apple-container"><p class="apple-eyebrow">Administración</p><h1 id="workspace-title">Comunicaciones</h1></div></section><div class="apple-container workspace-content">
 
 <div class="app-shell">
 
@@ -634,6 +661,48 @@ body { padding-top: 64px; }
 <!-- ── TOAST ── -->
 <div class="toast" id="toast"><span class="toast-dot"></span><span id="toast-msg"></span></div>
 
+
+</div></main>
+<footer class="apple-footer">
+  <div class="apple-container">
+    <div class="apple-footer-top">
+      <div class="apple-footer-brand">
+        <a href="/" class="apple-footer-logo">mariano<span>sevilla</span>.com</a>
+        <p>Informes FIFO de criptomonedas.</p>
+      </div>
+      <nav aria-labelledby="apple-footer-explore">
+        <h2 id="apple-footer-explore">Explorar</h2>
+        <ul>
+          <li><a href="/herramientas">Herramientas</a></li>
+          <li><a href="/como-funciona">Cómo funciona</a></li>
+          <li><a href="/exchanges">Exchanges compatibles</a></li>
+        </ul>
+      </nav>
+      <nav aria-labelledby="apple-footer-help">
+        <h2 id="apple-footer-help">Ayuda</h2>
+        <ul>
+          <li><a href="/faq">Preguntas frecuentes</a></li>
+          <li><a href="/contacto">Contacto</a></li>
+          <li><a href="/about">Equipo</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="apple-footer-legal">
+      <p class="apple-footer-disclaimer">Herramienta de generación de informes FIFO para usuarios con criptomonedas. No constituye asesoramiento fiscal ni legal.</p>
+      <div class="apple-footer-bottom">
+        <p class="apple-footer-copyright">© <span class="apple-footer-year">2026</span> Mariano Sevilla</p>
+        <nav aria-label="Información legal">
+          <ul>
+            <li><a href="/privacidad">Privacidad</a></li>
+            <li><a href="/terminos">Términos</a></li>
+            <li><a href="/cookies">Cookies</a></li>
+            <li><a href="/aviso-legal">Aviso legal</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+</footer>
 <script>
 /* ═══════════════════════════════════════════════════════════════════════════
    STATE
@@ -1495,6 +1564,5 @@ document.getElementById('modal-delete').addEventListener('click', function(e) {
   if (e.target === this) closeDeleteModal();
 });
 </script>
-</body>
-</html>
-
+<script src="/static/landing_apple.js" defer></script>
+</body></html>

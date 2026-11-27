@@ -13,6 +13,8 @@ PAGES={
     "preferencias.html":("how","preferencias"),
     "asesoramiento-confirmado.html":("how","confirmado"),
     "pagar.html":("how","pagar"),
+    "seguridad.html":("legal","seguridad"),
+    "asesoramiento-cancelado.html":("how","cancelado"),
 }
 REF={"guide":"/static/exchanges/kraken.html","legal":"/terminos","how":"/static/asesoramiento-fiscal.html"}
 
@@ -55,11 +57,11 @@ def run_apple_public_batch(browser,origin):
                               (".content-grid",".content-grid",["grid-template-columns","gap"]),
                               (".btn-asistencia",".btn-asistencia",["min-height","border-radius","font-size","background-color","color"]),
                               (".files-table-wrap",".files-table-wrap",["overflow-x","border-radius"])])
-                assert page.locator(".content-main > .asistencia-block").count()==1
+                assert page.locator(".content-main.prose > .asistencia-block:not(.cta-mid)").count()==1
                 faq=page.locator("details.faq-item").first
                 faq.locator("summary").click();assert faq.get_attribute("open") is not None
                 faq.locator("summary").click()
-                assert page.locator(".btn-asistencia").get_attribute("href")=="/"+name
+                assert page.locator(".content-main.prose > .asistencia-block:not(.cta-mid) .btn-asistencia").get_attribute("href")=="/"+name
             elif kind=="legal":
                 pairs.extend([(".legal-intro",".legal-intro",["background-color","padding-top","padding-bottom"]),
                               (".legal-layout",".legal-layout",["max-width","grid-template-columns","gap","padding-top","padding-bottom"]),
@@ -82,6 +84,11 @@ def run_apple_public_batch(browser,origin):
                 elif name=="pagar":
                     assert page.locator("#financialSuspension").is_visible()
                     assert "Pagos temporalmente suspendidos" in page.locator("h1").inner_text()
+                elif name=="cancelado":
+                    assert page.locator("main a[href='/pedir-asesoramiento-fiscal']").count()==1
+                    assert page.locator("main a[href='/']").count()==1
+                    assert "Pago cancelado" in page.locator("h1").inner_text()
+                    assert "PayPal" not in page.locator("main").inner_text()
                 else:
                     assert "no acredita que se haya recibido" in page.locator("main").inner_text()
             for sel,rsel,props in pairs:

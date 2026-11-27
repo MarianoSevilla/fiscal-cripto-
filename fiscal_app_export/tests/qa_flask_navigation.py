@@ -23,10 +23,11 @@ APP_DIR = Path(__file__).resolve().parents[1]
 ROUTES = (
     "/", "/como-funciona", "/faq", "/contacto",
     "/dashboard", "/account", "/admin/asesoramiento",
-    "/stats", "/mis-solicitudes-fiscales",
+    "/stats", "/mis-solicitudes-fiscales", "/admin/contactos", "/admin/recursos", "/admin/comunicaciones",
 )
 PRIVATE_PAGES = (
     "/dashboard", "/account", "/admin/asesoramiento", "/stats",
+    "/mis-solicitudes-fiscales", "/admin/contactos", "/admin/recursos", "/admin/comunicaciones",
 )
 ROLES = ("visitante", "usuario", "asesor", "administrador")
 WIDTHS = (320, 375, 768, 1024, 1280)
@@ -39,11 +40,11 @@ def expected_http(role, path):
         return 302
     if path in ("/dashboard", "/account"):
         return 200
-    if path == "/admin/asesoramiento":
+    if path in ("/admin/asesoramiento", "/admin/recursos"):
         return 200 if role in ("asesor", "administrador") else 302
-    if path == "/stats":
+    if path in ("/stats", "/admin/contactos"):
         return 200 if role == "administrador" else 302
-    if path == "/mis-solicitudes-fiscales":
+    if path in ("/mis-solicitudes-fiscales", "/admin/comunicaciones"):
         return 200 if role == "administrador" else 404
     raise AssertionError(path)
 
