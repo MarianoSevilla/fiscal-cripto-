@@ -18,6 +18,7 @@ from qa_como_funciona_apple import run_como_funciona_apple
 from qa_advisory_apple import run_advisory_apple
 from qa_advisory_request_apple import run_advisory_request_apple
 from qa_apple_public_batch import run_apple_public_batch
+from qa_apple_hero_standard import run_apple_hero_standard
 from qa_recursos_apple import run_recursos_apple
 from qa_faq_apple import run_faq_apple
 from qa_privacidad_apple import run_privacidad_apple
@@ -45,6 +46,7 @@ SUITES = {
     "advisory_apple": run_advisory_apple,
     "advisory_request_apple": run_advisory_request_apple,
     "apple_public_batch": run_apple_public_batch,
+    "apple_hero_standard": run_apple_hero_standard,
     "recursos": run_recursos_apple,
 }
 SUITE_TIMEOUT_SECONDS = 180
