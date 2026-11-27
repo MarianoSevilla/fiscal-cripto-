@@ -69,12 +69,12 @@ def test_exchange_ctas_follow_approved_fifo_structure():
     for name in ("binance","bitvavo","kraken","coinbase","nexo","cryptocom","bit2me"):
         html=get(f"exchanges/{name}.html")
         assert 'class="cta-micro-text"' not in html,name
-        blocks=html.split('<div class="cta-mid">')
+        blocks=html.split('<div class="cta-mid asistencia-block">')
         assert len(blocks)==3,name
-        badge = re.search(r'<div class="asistencia-badge">([^<]+)</div>', blocks[0]).group(1)
-        assert all(f'<div class="asistencia-badge">{badge}</div>' in block for block in blocks[1:]),name
+        badge = re.search(r'<h2 class="asistencia-badge">([^<]+)</h2>', blocks[0]).group(1)
+        assert all(f'<h2 class="asistencia-badge">{badge}</h2>' in block for block in blocks[1:]),name
         assert "Crea tu cuenta gratis y sube" not in html,name
-        mid=blocks[1].split('<div class="cta-buttons">',1)
+        mid=blocks[1].split('<div class="cta-buttons apple-hero-actions">',1)
         assert len(mid)==2,name
         assert mid[0].count("<li>")==3,name
         buttons,tail=mid[1].split("</div>",1)
@@ -87,5 +87,5 @@ def test_exchange_upload_button_labels():
     names = {"binance": "Binance", "bitvavo": "Bitvavo", "kraken": "Kraken", "coinbase": "Coinbase", "nexo": "Nexo", "cryptocom": "Crypto.com", "bit2me": "Bit2Me"}
     for slug, name in names.items():
         html = get(f"exchanges/{slug}.html")
-        buttons = re.findall(r'<a href="/' + slug + r'" class="btn-cta">([^<]+)</a>', html)
+        buttons = re.findall(r'<a href="/' + slug + r'" class="btn-cta btn-asistencia">([^<]+)</a>', html)
         assert buttons == [f"Subir CSV de {name}"] * 2, (slug, buttons)

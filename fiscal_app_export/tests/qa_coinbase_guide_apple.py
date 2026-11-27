@@ -123,17 +123,17 @@ def run_coinbase_guide_apple(origin, cookie_name, cookie_value):
                     # 04-A1: el hero verde contiene solo textos editoriales;
                     # el bloque CTA está en el área blanca anterior al artículo.
                     assert page.locator(".hero .asistencia-block").count() == 0
-                    assert page.locator(".content-main > .asistencia-block").count() == 1
-                    assert page.locator(".content-main > .asistencia-block").is_visible()
+                    assert page.locator(".content-main.prose > .asistencia-block:not(.cta-mid)").count() == 1
+                    assert page.locator(".content-main.prose > .asistencia-block:not(.cta-mid)").is_visible()
                     assert page.locator(".hero .hero-desc").count() == 1
-                    assert page.locator(".content-main > .asistencia-block").evaluate(
+                    assert page.locator(".content-main.prose > .asistencia-block:not(.cta-mid)").evaluate(
                         "el => el.getBoundingClientRect().top >= "
                         "document.querySelector('.hero').getBoundingClientRect().bottom"
                     ), (width, "CTA dentro de franja verde")
-                    assert page.locator(".content-main > .asistencia-block").evaluate(
+                    assert page.locator(".content-main.prose > .asistencia-block:not(.cta-mid)").evaluate(
                         "el => getComputedStyle(el).backgroundColor"
-                    ) == "rgb(245, 248, 246)"
-                    assert page.locator('.content-main > .asistencia-block .btn-asistencia').evaluate(
+                    ) == "rgb(237, 245, 240)"
+                    assert page.locator('.content-main.prose > .asistencia-block:not(.cta-mid) .btn-asistencia').evaluate(
                         "el => getComputedStyle(el).color"
                     ) == "rgb(255, 255, 255)"
 

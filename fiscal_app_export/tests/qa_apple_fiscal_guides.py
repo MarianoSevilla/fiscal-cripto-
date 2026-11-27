@@ -4,6 +4,7 @@ Synthetic visitor only; no production, provider or write requests.
 from pathlib import Path
 from qa_home_redesign import WIDTHS,context
 from qa_advisory_apple import styles
+from qa_apple_panel_standard import assert_home_panels
 
 PAGES={"permuta-criptomonedas-irpf":{"tables":3,"faq":8,"sections":["que-es","cuando-tributa","como-calcular","valor-adquisicion","comisiones","como-declarar","perdidas","errores","faq"],"rows":12},"staking-criptomonedas-irpf":{"tables":3,"faq":8,"sections":["que-es","clasificacion","cuando-tributa","calculo","casillas","tipos","exchanges","venta","errores","faq"],"rows":16},"metodo-fifo-criptomonedas":{"tables":4,"rows":21,"faq":7,"sections":["que-es","por-que-obligatorio","como-calcular","pool-global","comisiones","fifo-vs-lifo","tsjpv-2025","errores","calculadora","faq"]},"bienes-homogeneos-criptomonedas":{"tables":3,"rows":17,"faq":6,"sections":["que-son","fifo","pool-global","vs-valores","norma-antiaplicacion","doctrina-foral","posiciones","ejemplos","faq"]},"perdidas-patrimoniales-criptomonedas":{"tables":4,"rows":20,"faq":6,"sections":["que-son","cuando-se-generan","casillas","como-declarar","calcular","obligacion","especiales","errores","faq"]},"compensar-perdidas-criptomonedas":{"tables":9,"rows":49,"faq":6,"sections":["mecanismo","compensacion-cruzada","capital-mobiliario","arrastre","precondicion","calculo-perdida","errores","casos","faq"]},"regla-dos-meses-criptomonedas":{"tables":4,"rows":21,"faq":6,"sections":["normativa","dgt","aeat","mecanismo","fifo","ejemplos","declarar","debate","faq","herramienta"]}}
 
@@ -11,6 +12,8 @@ def run_apple_fiscal_guides(browser,origin):
     out=Path("qa-artifacts");out.mkdir(exist_ok=True)
     for width in WIDTHS:
         ctx,violations=context(browser,width=width,height=900)
+        home=ctx.new_page()
+        assert home.goto(origin+"/",wait_until="networkidle").status==200
         ref=ctx.new_page()
         assert ref.goto(origin+"/como-funciona",wait_until="networkidle").status==200
         for name,expected in PAGES.items():
@@ -35,6 +38,8 @@ def run_apple_fiscal_guides(browser,origin):
                 b=c.bounding_box()
                 pads=c.evaluate("e=>[parseFloat(getComputedStyle(e).paddingLeft),parseFloat(getComputedStyle(e).paddingRight)]")
                 assert abs(a["x"]-b["x"]-pads[0])<1 and abs(a["width"]-b["width"]+sum(pads))<1,(name,width,sel,a,b,pads)
+            counts={"metodo-fifo-criptomonedas":4,"bienes-homogeneos-criptomonedas":2,"permuta-criptomonedas-irpf":3,"staking-criptomonedas-irpf":2,"perdidas-patrimoniales-criptomonedas":2,"compensar-perdidas-criptomonedas":4,"regla-dos-meses-criptomonedas":3}
+            assert_home_panels(page,home,width,name,counts[name])
             for button in page.locator(".apple-cta .apple-button").all():
                 assert button.evaluate("e=>getComputedStyle(e).borderRadius") == "999px"
                 assert button.evaluate("e=>getComputedStyle(e).backgroundColor") == "rgb(0, 107, 84)"

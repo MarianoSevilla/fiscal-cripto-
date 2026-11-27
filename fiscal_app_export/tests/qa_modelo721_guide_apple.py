@@ -4,6 +4,7 @@ No fiscal assertions beyond preservation of the previously published content.
 from pathlib import Path
 from qa_home_redesign import WIDTHS,context,geometry
 from qa_advisory_apple import styles
+from qa_apple_panel_standard import assert_home_panels
 
 PAGE="/static/modelo-721-criptomonedas.html"
 REFERENCE="/como-funciona"
@@ -13,6 +14,8 @@ def run_modelo721_guide_apple(browser,origin):
     for width in WIDTHS:
         ctx,violations=context(browser,width=width,height=900)
         page=ctx.new_page();ref=ctx.new_page();errors=[]
+        home=ctx.new_page()
+        assert home.goto(origin+"/",wait_until="networkidle").status==200
         for p,path in ((page,PAGE),(ref,REFERENCE)):
             p.on("pageerror",lambda e:errors.append(str(e)))
             assert p.goto(origin+path,wait_until="networkidle").status==200
@@ -41,6 +44,7 @@ def run_modelo721_guide_apple(browser,origin):
             b=c.bounding_box()
             pads=c.evaluate("e=>[parseFloat(getComputedStyle(e).paddingLeft),parseFloat(getComputedStyle(e).paddingRight)]")
             assert abs(a["x"]-b["x"]-pads[0])<1 and abs(a["width"]-b["width"]+sum(pads))<1,(width,sel,a,b,pads)
+        assert_home_panels(page,home,width,"modelo-721-criptomonedas",1)
         assert not geometry(page,width),(width,geometry(page,width))
         assert page.locator("#quien-debe-presentar-modelo-721 .apple-catalog-card").count()==6
         assert page.locator("#como-funciona-herramienta-721 .apple-catalog-card").count()==4
