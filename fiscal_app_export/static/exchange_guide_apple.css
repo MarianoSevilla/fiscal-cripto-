@@ -14,8 +14,8 @@
   --border:#dce2e5;
   --border2:#cbd4d8;
   --footer-bg:#f5f7f6;
-  --max-w:1160px;
-  --pad-x:clamp(20px,4vw,48px);
+  --max-w:var(--apple-max);
+  --pad-x:var(--apple-pad);
   --font-display:system-ui,-apple-system,"Segoe UI",sans-serif;
   --font-body:system-ui,-apple-system,"Segoe UI",sans-serif;
   background:#fff;
@@ -29,40 +29,41 @@
   min-width:0;
 }
 .apple-exchange-guide .hero {
-  padding:108px 0 68px;
-  background:#073c32;
-  color:#fff;
+  padding-block:40px 32px;
+  background:var(--intro-bg);
+  color:var(--intro-text);
   animation:none;
 }
 .apple-exchange-guide .hero .wrap { min-width:0; }
 .apple-exchange-guide .breadcrumb {
   display:flex; flex-wrap:wrap; align-items:center;
-  gap:7px; margin-bottom:34px;
+  gap:7px; margin-bottom:12px;
   color:#c3dbd1; font-size:.875rem; line-height:1.5;
 }
 .apple-exchange-guide .breadcrumb a { color:#dcebe5; text-decoration:underline; }
 .apple-exchange-guide .breadcrumb a:hover { color:#fff; }
 .apple-exchange-guide .breadcrumb-sep { color:#a6cbbd; }
 .apple-exchange-guide .hero-badge {
-  display:inline-flex; padding:0; border:0; border-radius:0;
-  background:none; color:#a6edcf; box-shadow:none;
-  font:.875rem/1.5 var(--font-body);
-  font-weight:650; letter-spacing:.015em;
-  text-transform:none; margin-bottom:14px;
+  display:block; padding:0; border:0; border-radius:0;
+  background:none; color:var(--intro-accent); box-shadow:none;
+  font:650 .875rem/1.65 var(--font-body);
+  letter-spacing:.025em; text-transform:none; margin-bottom:12px;
 }
-.apple-exchange-guide .hero-badge::before { box-shadow:none; background:#a6edcf; }
+.apple-exchange-guide .hero-badge::before { display:none; }
 .apple-exchange-guide .hero h1 {
-  max-width:27ch; margin:0 0 24px;
-  font:700 clamp(2.125rem,4.7vw,3.65rem)/1.1 var(--font-display);
-  letter-spacing:-.043em;
-  text-wrap:balance; overflow-wrap:normal;
-  color:#fff;
+  width:100%; max-width:none; margin:0 0 20px;
+  font:700 clamp(2rem,4.5vw,3.5rem)/1.1 var(--font-display);
+  letter-spacing:-.045em;
+  text-wrap:wrap; overflow-wrap:anywhere;
+  color:var(--intro-text);
 }
-.apple-exchange-guide .hero h1 em { color:#a6edcf; }
+.apple-exchange-guide .hero h1 em { color:var(--intro-accent); font-style:normal; }
 .apple-exchange-guide .hero-desc {
-  max-width:75ch; margin:0 0 32px;
-  color:#c3dbd1; font-size:1.0625rem; line-height:1.7;
+  width:100%; max-width:none; margin:0;
+  color:var(--intro-muted); font-size:1.125rem; line-height:1.6;
+  text-wrap:wrap;
 }
+.apple-exchange-guide .hero-desc a { color:var(--intro-accent); }
 .apple-exchange-guide .content-main > .asistencia-block {
   max-width:none; margin:0 0 36px;
   background:#f5f8f6; color:var(--text);
@@ -293,10 +294,17 @@
     position:static; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px;
   }
 }
-@media(max-width:720px){
-  .apple-exchange-guide .hero { padding:100px 0 48px; }
-  .apple-exchange-guide .hero h1 { max-width:none; font-size:clamp(2rem,8vw,2.8rem); }
+/* The green intro follows the approved Cómo funciona / Recursos measurements,
+   including the exact shared container, not the old fixed-header offsets. */
+@media(min-width:641px) and (max-width:1200px){
+  .apple-exchange-guide .hero { padding-top:32px; }
+}
+@media(max-width:640px){
+  .apple-exchange-guide .hero { padding-block:36px 24px; }
+  .apple-exchange-guide .hero h1 { font-size:clamp(2rem,8.4vw,3rem); margin-bottom:16px; letter-spacing:-.04em; }
   .apple-exchange-guide .hero-desc { font-size:1rem; }
+}
+@media(max-width:720px){
   .apple-exchange-guide .section { padding:36px 0 48px; }
   .apple-exchange-guide .sidebar { grid-template-columns:minmax(0,1fr); }
   .apple-exchange-guide .files-table { min-width:590px; }
