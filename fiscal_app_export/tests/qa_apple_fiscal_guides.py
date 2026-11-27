@@ -8,9 +8,9 @@ from qa_apple_panel_standard import assert_home_panels
 
 PAGES={"permuta-criptomonedas-irpf":{"tables":3,"faq":8,"sections":["que-es","cuando-tributa","como-calcular","valor-adquisicion","comisiones","como-declarar","perdidas","errores","faq"],"rows":12},"staking-criptomonedas-irpf":{"tables":3,"faq":8,"sections":["que-es","clasificacion","cuando-tributa","calculo","casillas","tipos","exchanges","venta","errores","faq"],"rows":16},"metodo-fifo-criptomonedas":{"tables":4,"rows":21,"faq":7,"sections":["que-es","por-que-obligatorio","como-calcular","pool-global","comisiones","fifo-vs-lifo","tsjpv-2025","errores","calculadora","faq"]},"bienes-homogeneos-criptomonedas":{"tables":3,"rows":17,"faq":6,"sections":["que-son","fifo","pool-global","vs-valores","norma-antiaplicacion","doctrina-foral","posiciones","ejemplos","faq"]},"perdidas-patrimoniales-criptomonedas":{"tables":4,"rows":20,"faq":6,"sections":["que-son","cuando-se-generan","casillas","como-declarar","calcular","obligacion","especiales","errores","faq"]},"compensar-perdidas-criptomonedas":{"tables":9,"rows":49,"faq":6,"sections":["mecanismo","compensacion-cruzada","capital-mobiliario","arrastre","precondicion","calculo-perdida","errores","casos","faq"]},"regla-dos-meses-criptomonedas":{"tables":4,"rows":21,"faq":6,"sections":["normativa","dgt","aeat","mecanismo","fifo","ejemplos","declarar","debate","faq","herramienta"]}}
 
-def run_apple_fiscal_guides(browser,origin):
+def run_apple_fiscal_guides(browser,origin, widths=WIDTHS):
     out=Path("qa-artifacts");out.mkdir(exist_ok=True)
-    for width in WIDTHS:
+    for width in widths:
         ctx,violations=context(browser,width=width,height=900)
         home=ctx.new_page()
         assert home.goto(origin+"/",wait_until="networkidle").status==200
@@ -72,4 +72,4 @@ def run_apple_fiscal_guides(browser,origin):
             assert not errors and not violations,(name,width,errors,violations)
             page.close()
         ctx.close()
-    print(f"APPLE_FISCAL_GUIDES: PASS ({len(PAGES)} pages × {len(WIDTHS)} widths)")
+    print(f"APPLE_FISCAL_GUIDES: PASS ({len(PAGES)} pages × {len(widths)} widths)")
