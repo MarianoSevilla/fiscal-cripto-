@@ -46,3 +46,18 @@ def test_batch_preserves_public_contract():
         assert "<form" not in main and "<button" not in main
         assert re.findall(r'href="([^"]+)"',main)==["/"]
     assert 'id="financialSuspension"' in get("pagar.html")
+
+
+def test_exchange_mid_ctas_follow_bitvavo_structure():
+    for name in ("binance","bitvavo","kraken","coinbase","nexo","cryptocom","bit2me"):
+        html=get(f"exchanges/{name}.html")
+        assert 'class="cta-micro-text"' not in html,name
+        blocks=html.split('<div class="cta-mid">')
+        assert len(blocks)==3,name
+        mid=blocks[1].split('<div class="cta-buttons">',1)
+        assert len(mid)==2,name
+        assert mid[0].count("<li>")==3,name
+        buttons,tail=mid[1].split("</div>",1)
+        assert re.findall(r'href="([^"]+)"',buttons)==["/"+name,"/asesoramiento-fiscal-criptomonedas"],name
+        assert tail.lstrip().startswith("</div>"),name
+        assert 'class="cta-micro"' in blocks[2],name

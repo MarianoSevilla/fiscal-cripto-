@@ -16,3 +16,7 @@ Referencia canónica de la banda verde editorial: /como-funciona y /recursos. Ho
 - La publicación solo se considera comprobada con Railway SUCCESS y el commit esperado. No presentar capturas automáticas como revisión humana.
 
 La suite qa_apple_hero_standard.py compara las siete guías existentes con /como-funciona. Toda nueva página editorial con banda verde debe integrarse en este control o uno equivalente contra la misma referencia, no contra una nueva variante.
+
+### CTA intermedia de las guías de exchanges
+
+Referencia del propietario: /exchanges/bitvavo (27-11-2026). En las siete guías la tarjeta intermedia contiene título, descripción, tres beneficios y dos botones, sin microtexto adicional debajo. Conservar los nombres, formatos de archivo, beneficios y destinos específicos de cada exchange. No eliminar el texto de supervisión de la CTA final. Comprobar estilos computados, ancho y distancia real entre el final de los botones y el borde inferior contra Bitvavo en los 13 anchos del CI; conservar capturas de 390, 768 y 1440 px. El alto total puede variar solo por el salto natural de los textos o botones. No fijar alturas ni introducir variantes de CSS.
