@@ -12,7 +12,7 @@ import time
 
 from playwright.sync_api import sync_playwright
 from qa_responsive_nav import server
-from qa_home_redesign import run_home_redesign
+from qa_home_redesign import WIDTHS, run_home_redesign
 from qa_herramientas_redesign import run_herramientas_apple
 from qa_como_funciona_apple import run_como_funciona_apple
 from qa_advisory_apple import run_advisory_apple
@@ -53,7 +53,9 @@ SUITES = {
     "apple_hero_standard": run_apple_hero_standard,
     "recursos": run_recursos_apple,
     "modelo721_guide_apple": run_modelo721_guide_apple,
-    "apple_fiscal_guides": run_apple_fiscal_guides,
+    "apple_fiscal_guides_1": lambda browser, origin: run_apple_fiscal_guides(browser, origin, WIDTHS[:4]),
+    "apple_fiscal_guides_2": lambda browser, origin: run_apple_fiscal_guides(browser, origin, WIDTHS[4:8]),
+    "apple_fiscal_guides_3": lambda browser, origin: run_apple_fiscal_guides(browser, origin, WIDTHS[8:]),
     "unsubscribe_apple": run_unsubscribe_apple,
     "private_workspace_apple": run_private_workspace_apple,
 }
