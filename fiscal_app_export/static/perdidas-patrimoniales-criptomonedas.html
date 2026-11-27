@@ -26,9 +26,6 @@
 <link rel="icon" href="/static/favicon.ico">
 <link rel="manifest" href="/static/site.webmanifest">
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/nav.css">
 <link rel="preload" href="/static/nav.js" as="script">
 
@@ -186,478 +183,84 @@
 }
 </script>
 
+
+<link rel="stylesheet" href="/static/landing_apple.css">
+<link rel="stylesheet" href="/static/como_funciona_apple.css">
+<link rel="stylesheet" href="/static/legal_apple.css">
+<link rel="stylesheet" href="/static/exchange_guide_apple.css">
+<link rel="stylesheet" href="/static/apple_cta.css">
+</head>
+<body class="apple-home apple-how-page apple-exchange-guide">
+<a class="apple-skip" href="#contenido">Saltar al contenido</a>
+<nav id="site-nav" aria-label="Principal">
+  <div class="snav-inner">
+    <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
+    <ul class="snav-links">
+      <li><a href="/herramientas">Herramientas</a></li>
+      <li><a href="/como-funciona">Cómo funciona</a></li>
+      <li><a href="/recursos">Recursos</a></li>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/contacto">Contacto</a></li>
+    </ul>
+    <div class="snav-right">
+      <div class="snav-skeleton" aria-hidden="true"></div>
+    </div>
+  </div>
+</nav>
+<script src="/static/nav.js"></script>
+<noscript>
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --bg:          #0b1220;
-  --bg2:         #101829;
-  --surface:     #141f32;
-  --surface2:    #1a2540;
-  --border:      rgba(255,255,255,0.07);
-  --border2:     rgba(255,255,255,0.13);
-  --text:        #eef2ff;
-  --muted:       #7a8aa8;
-  --accent:      #00C896;
-  --accent-dim:  rgba(0,200,150,0.12);
-  --accent-glow: rgba(0,200,150,0.25);
-  --red:         #e55;
-  --red-dim:     rgba(229,85,85,0.1);
-  --warn:        #f5a623;
-  --warn-dim:    rgba(245,166,35,0.07);
-  --footer-bg:   #070e1a;
-  --max-w:       1280px;
-  --pad-x:       3rem;
-  --font-display:'Syne', sans-serif;
-  --font-body:   'DM Sans', sans-serif;
+/* Native mobile disclosure: useful in HTML viewers without JavaScript too. */
+.apple-home .snav-right{display:none}
+.apple-home .apple-noscript-menu{display:none}
+@media (min-width:1201px){
+  .apple-home #site-nav{position:static;height:auto}
+  .apple-home .snav-inner{flex-wrap:wrap;padding-block:16px;gap:16px}
+  .apple-home .snav-links{display:flex;position:static;transform:none;flex-wrap:wrap;gap:12px}
+  .apple-home .apple-intro-inner{padding-top:48px}
 }
-
-html { scroll-behavior: smooth; }
-body {
-  background: var(--bg); color: var(--text);
-  font-family: var(--font-body); font-size: 16px; line-height: 1.7;
-  min-height: 100vh; -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
-}
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
-
-.wrap { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x); }
-.section { padding: 5rem 0; }
-.section + .section { border-top: 1px solid var(--border); }
-
-.kicker {
-  font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
-  text-transform: uppercase; color: var(--accent);
-  margin-bottom: 0.85rem; display: block;
-}
-
-/* ── HERO ─────────────────────────────────── */
-.hero {
-  padding: 7rem 0 4rem;
-  border-bottom: 1px solid var(--border);
-}
-.hero-inner { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x); }
-
-.breadcrumb {
-  display: flex; align-items: center; gap: 0.5rem;
-  font-size: 13px; color: var(--muted); margin-bottom: 2rem;
-  flex-wrap: wrap;
-}
-.breadcrumb a { color: var(--muted); }
-.breadcrumb a:hover { color: var(--accent); }
-.breadcrumb span { color: var(--border2); }
-
-.hero h1 {
-  font-family: var(--font-display); font-size: clamp(2rem, 4.5vw, 3.4rem);
-  font-weight: 800; letter-spacing: -0.03em; line-height: 1.08;
-  margin-bottom: 1.25rem;
-}
-.hero h1 em { color: var(--accent); font-style: normal; }
-
-.hero-meta {
-  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
-  font-size: 13px; color: var(--muted); margin-bottom: 1.25rem;
-}
-.hero-meta .tag {
-  background: var(--accent-dim); color: var(--accent);
-  border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 600;
-}
-
-.hero-snippet {
-  font-size: 1.08rem; color: var(--text);
-  line-height: 1.75; margin-bottom: 1.25rem;
-  padding: 1.25rem 1.5rem;
-  background: var(--surface); border: 1px solid var(--border2);
-  border-left: 4px solid var(--accent); border-radius: 0 12px 12px 0;
-}
-.hero-snippet strong { color: var(--accent); }
-
-.hero-deck {
-  font-size: 1.0rem; color: var(--muted);
-  line-height: 1.75; margin-bottom: 2rem;
-}
-
-.toc {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 14px; padding: 1.5rem 1.75rem; margin-bottom: 2.5rem;
-  max-width: 680px;
-}
-.toc-title {
-  font-size: 12px; font-weight: 700; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--muted); margin-bottom: 1rem;
-}
-.toc ol {
-  list-style: decimal; padding-left: 1.25rem;
-  display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem 2rem;
-}
-.toc ol li { font-size: 14px; }
-.toc ol li a { color: var(--muted); }
-.toc ol li a:hover { color: var(--accent); }
-
-.btn-hero {
-  display: inline-flex; align-items: center; gap: 0.5rem;
-  background: var(--accent); color: #000; font-weight: 700;
-  font-size: 15px; padding: 0.75rem 1.75rem; border-radius: 8px;
-  text-decoration: none; transition: opacity 0.2s;
-}
-.btn-hero:hover { opacity: 0.88; text-decoration: none; }
-
-/* ── CONTENT LAYOUT ───────────────────────── */
-.content-layout {
-  display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: 4rem; align-items: start;
-  padding: 5rem 0;
-}
-.content-main {}
-.content-sidebar { position: sticky; top: 5rem; }
-
-/* ── PROSE ────────────────────────────────── */
-.prose h2 {
-  font-family: var(--font-display); font-size: 1.65rem; font-weight: 800;
-  letter-spacing: -0.025em; line-height: 1.2;
-  margin: 3.5rem 0 1.25rem; color: var(--text);
-  scroll-margin-top: 6rem;
-}
-.prose h2:first-child { margin-top: 0; }
-.prose h3 {
-  font-family: var(--font-display); font-size: 1.15rem; font-weight: 700;
-  margin: 2rem 0 0.75rem; color: var(--text);
-  scroll-margin-top: 6rem;
-}
-.prose p { margin-bottom: 1.1rem; color: var(--muted); line-height: 1.8; }
-.prose p strong { color: var(--text); }
-.prose ul, .prose ol { padding-left: 1.4rem; margin-bottom: 1.25rem; }
-.prose ul li, .prose ol li { color: var(--muted); margin-bottom: 0.4rem; line-height: 1.75; }
-.prose ul li strong, .prose ol li strong { color: var(--text); }
-
-/* ── CALLOUT BOX ──────────────────────────── */
-.callout {
-  background: var(--surface2); border: 1px solid var(--border2);
-  border-left: 4px solid var(--accent); border-radius: 0 12px 12px 0;
-  padding: 1.25rem 1.5rem; margin: 1.75rem 0;
-}
-.callout p { color: var(--muted); font-size: 14.5px; margin: 0; line-height: 1.7; }
-.callout p + p { margin-top: 0.6rem; }
-.callout-title {
-  font-size: 12px; font-weight: 700; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--accent); margin-bottom: 0.5rem;
-}
-
-.callout-warning {
-  background: var(--warn-dim); border: 1px solid rgba(245,166,35,0.25);
-  border-left: 4px solid var(--warn); border-radius: 0 12px 12px 0;
-  padding: 1.25rem 1.5rem; margin: 1.75rem 0;
-}
-.callout-warning .callout-title { color: var(--warn); }
-.callout-warning p { color: var(--muted); font-size: 14.5px; margin: 0; line-height: 1.7; }
-.callout-warning p + p { margin-top: 0.6rem; }
-
-.callout-error {
-  background: var(--red-dim); border: 1px solid rgba(229,85,85,0.25);
-  border-left: 4px solid var(--red); border-radius: 0 12px 12px 0;
-  padding: 1.25rem 1.5rem; margin: 1.75rem 0;
-}
-.callout-error .callout-title { color: var(--red); }
-.callout-error p { color: var(--muted); font-size: 14.5px; margin: 0; line-height: 1.7; }
-
-.callout-legal {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 10px; padding: 1rem 1.5rem;
-  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
-  margin: 1.5rem 0;
-}
-.callout-legal span {
-  font-size: 13px; color: var(--muted);
-  border-right: 1px solid var(--border2); padding-right: 1rem;
-}
-.callout-legal span:last-child { border-right: none; padding-right: 0; }
-.callout-legal span strong { color: var(--accent); }
-
-/* ── TABLES ───────────────────────────────── */
-.table-wrap { overflow-x: auto; margin: 1.5rem 0; }
-.fifo-table {
-  width: 100%; border-collapse: collapse;
-  margin: 0; font-size: 14px;
-}
-.fifo-table th {
-  text-align: left; font-size: 11px; font-weight: 700;
-  letter-spacing: 0.07em; text-transform: uppercase;
-  color: var(--muted); padding: 0.6rem 0.9rem;
-  border-bottom: 1px solid var(--border2);
-}
-.fifo-table td {
-  padding: 0.7rem 0.9rem; color: var(--muted);
-  border-bottom: 1px solid var(--border);
-}
-.fifo-table td strong { color: var(--text); }
-.fifo-table td.accent { color: var(--accent); font-weight: 600; }
-.fifo-table td.green { color: var(--accent); font-weight: 600; }
-.fifo-table td.red { color: var(--red); font-weight: 600; }
-.fifo-table tr:last-child td { border-bottom: none; }
-.fifo-table tr.highlight td { background: var(--accent-dim); }
-.fifo-table tr.highlight-warn td { background: var(--warn-dim); }
-
-/* ── STEPS LIST ───────────────────────────── */
-.steps-list {
-  list-style: none; padding: 0; margin: 1.5rem 0;
-}
-.steps-list li {
-  display: flex; gap: 1.25rem; align-items: flex-start;
-  padding: 1.1rem 0; border-bottom: 1px solid var(--border);
-}
-.steps-list li:last-child { border-bottom: none; }
-.step-num {
-  flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%;
-  background: var(--accent-dim); border: 1.5px solid rgba(0,200,150,0.35);
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-display); font-size: 14px; font-weight: 800;
-  color: var(--accent);
-}
-.step-body { flex: 1; }
-.step-title {
-  font-family: var(--font-display); font-size: 1rem; font-weight: 700;
-  color: var(--text); margin-bottom: 0.35rem;
-}
-.step-body p { color: var(--muted); font-size: 14.5px; margin: 0; line-height: 1.7; }
-
-/* ── CASILLA BOX ──────────────────────────── */
-.casilla-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr));
-  gap: 1rem; margin: 1.5rem 0;
-}
-.casilla-card {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 12px; padding: 1.25rem 1.4rem;
-}
-.casilla-card.current { border-color: rgba(0,200,150,0.4); background: var(--accent-dim); }
-.casilla-card.obsolete { border-color: rgba(229,85,85,0.35); background: var(--red-dim); }
-.casilla-num {
-  font-family: var(--font-display); font-size: 1.6rem; font-weight: 800;
-  letter-spacing: -0.02em; margin-bottom: 0.3rem;
-}
-.casilla-card.current .casilla-num { color: var(--accent); }
-.casilla-card.obsolete .casilla-num { color: var(--red); }
-.casilla-label {
-  font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 0.5rem;
-}
-.casilla-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
-.casilla-badge {
-  display: inline-block; margin-top: 0.75rem;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
-  text-transform: uppercase; border-radius: 4px; padding: 2px 8px;
-}
-.casilla-card.current .casilla-badge { background: var(--accent-dim); color: var(--accent); }
-.casilla-card.obsolete .casilla-badge { background: var(--red-dim); color: var(--red); }
-
-/* ── ERROR CARDS ──────────────────────────── */
-.error-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr));
-  gap: 1rem; margin: 1.5rem 0;
-}
-.error-card {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 12px; padding: 1.25rem 1.4rem;
-  border-top: 3px solid var(--red);
-}
-.error-card h3 {
-  font-family: var(--font-display); font-size: 0.95rem; font-weight: 700;
-  color: var(--text); margin: 0 0 0.5rem;
-}
-.error-card p { font-size: 13.5px; color: var(--muted); margin: 0; line-height: 1.65; }
-
-/* ── EXAMPLE BOX ──────────────────────────── */
-.example-box {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 14px; padding: 1.5rem 1.75rem; margin: 1.5rem 0;
-}
-.example-label {
-  font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--muted); margin-bottom: 0.75rem;
-}
-.example-title {
-  font-family: var(--font-display); font-size: 1rem; font-weight: 700;
-  color: var(--text); margin-bottom: 1rem;
-}
-.example-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 0.5rem 0; border-bottom: 1px solid var(--border);
-  font-size: 14px;
-}
-.example-row:last-child { border-bottom: none; }
-.example-row .label { color: var(--muted); }
-.example-row .value { font-weight: 600; color: var(--text); }
-.example-row .value.green { color: var(--accent); }
-.example-row .value.red { color: var(--red); }
-
-/* ── RELATED GRID ─────────────────────────── */
-.related-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(250px,1fr));
-  gap: 1rem; margin: 1.5rem 0;
-}
-.related-card {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 12px; padding: 1.25rem 1.4rem;
-  transition: border-color 0.2s;
-  text-decoration: none; display: block;
-}
-.related-card:hover { border-color: rgba(0,200,150,0.4); text-decoration: none; }
-.related-card .rc-kicker {
-  font-size: 11px; font-weight: 700; letter-spacing: 0.07em;
-  text-transform: uppercase; color: var(--accent); margin-bottom: 0.4rem;
-}
-.related-card .rc-title {
-  font-family: var(--font-display); font-size: 0.95rem; font-weight: 700;
-  color: var(--text); line-height: 1.3; margin-bottom: 0.4rem;
-}
-.related-card .rc-desc { font-size: 13px; color: var(--muted); line-height: 1.55; }
-
-/* ── SIDEBAR ──────────────────────────────── */
-.sidebar-card {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 14px; padding: 1.5rem; margin-bottom: 1.5rem;
-}
-.sidebar-card h3 {
-  font-family: var(--font-display); font-size: 0.9rem; font-weight: 700;
-  color: var(--text); margin-bottom: 1rem; letter-spacing: -0.01em;
-}
-.sidebar-card ul { list-style: none; padding: 0; }
-.sidebar-card ul li { margin-bottom: 0.5rem; }
-.sidebar-card ul li a {
-  font-size: 13.5px; color: var(--muted);
-  display: flex; align-items: center; gap: 0.4rem;
-}
-.sidebar-card ul li a:hover { color: var(--accent); text-decoration: none; }
-.sidebar-card ul li a::before { content: "→"; color: var(--accent); font-size: 12px; }
-
-.sidebar-cta {
-  background: linear-gradient(135deg, var(--surface2), var(--surface));
-  border: 1px solid rgba(0,200,150,0.3); border-radius: 14px;
-  padding: 1.5rem; text-align: center; margin-bottom: 1.5rem;
-}
-.sidebar-cta p { font-size: 13.5px; color: var(--muted); margin-bottom: 1rem; line-height: 1.6; }
-.sidebar-cta a {
-  display: block; background: var(--accent); color: #000;
-  font-weight: 700; font-size: 14px; padding: 0.7rem 1rem;
-  border-radius: 8px; text-decoration: none; transition: opacity 0.2s;
-}
-.sidebar-cta a:hover { opacity: 0.88; text-decoration: none; }
-.sidebar-author {
-  display: flex; align-items: center; gap: 0.75rem; margin-top: 1.25rem;
-  padding-top: 1.25rem; border-top: 1px solid var(--border);
-}
-.author-avatar {
-  width: 40px; height: 40px; border-radius: 50%;
-  background: var(--accent-dim); border: 2px solid rgba(0,200,150,0.35);
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-display); font-size: 14px; font-weight: 800;
-  color: var(--accent); flex-shrink: 0;
-}
-.author-info .name { font-size: 13px; font-weight: 600; color: var(--text); }
-.author-info .cred { font-size: 12px; color: var(--muted); }
-
-/* ── FAQ ──────────────────────────────────── */
-.faq-list { margin: 1.5rem 0; }
-.faq-item {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 12px; margin-bottom: 0.75rem; overflow: hidden;
-}
-.faq-q {
-  width: 100%; text-align: left; background: none; border: none; cursor: pointer;
-  padding: 1.1rem 1.4rem; display: flex; justify-content: space-between;
-  align-items: center; gap: 1rem;
-  font-family: var(--font-body); font-size: 15px; font-weight: 600;
-  color: var(--text); line-height: 1.4;
-}
-.faq-q:hover { color: var(--accent); }
-.faq-icon {
-  flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
-  background: var(--accent-dim); border: 1.5px solid rgba(0,200,150,0.35);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px; color: var(--accent); transition: transform 0.2s;
-}
-.faq-item.open .faq-icon { transform: rotate(45deg); }
-.faq-a {
-  display: none; padding: 0 1.4rem 1.1rem;
-  font-size: 14.5px; color: var(--muted); line-height: 1.75;
-}
-.faq-item.open .faq-a { display: block; }
-
-/* ── FOOTER ───────────────────────────────── */
-footer {
-  background: var(--footer-bg); border-top: 1px solid var(--border);
-  padding: 3rem 0; margin-top: 4rem;
-}
-.footer-inner {
-  max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x);
-  display: flex; justify-content: space-between; align-items: flex-start;
-  gap: 2rem; flex-wrap: wrap;
-}
-.footer-brand { font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; color: var(--text); }
-.footer-copy { font-size: 13px; color: var(--muted); margin-top: 0.4rem; }
-.footer-links { display: flex; flex-direction: column; gap: 0.35rem; }
-.footer-links a { font-size: 13px; color: var(--muted); }
-.footer-links a:hover { color: var(--accent); }
-
-/* ── RESPONSIVE ───────────────────────────── */
-@media (max-width: 900px) {
-  :root { --pad-x: 1.5rem; }
-  .content-layout { grid-template-columns: 1fr; gap: 2.5rem; }
-  .content-sidebar { position: static; }
-  .toc ol { grid-template-columns: 1fr; }
-  .casilla-grid { grid-template-columns: 1fr; }
-  .error-grid { grid-template-columns: 1fr; }
-  .related-grid { grid-template-columns: 1fr; }
-}
-@media (max-width: 600px) {
-  :root { --pad-x: 1rem; }
-  .hero { padding: 5rem 0 2.5rem; }
-  .prose h2 { font-size: 1.35rem; }
-  .footer-inner { gap: 2rem; }
+@media (max-width:1200px){
+  .apple-home .apple-noscript-access{display:none}
+  .apple-home .apple-noscript-menu{display:block;position:absolute;top:8px;right:var(--apple-pad);z-index:1001}
+  .apple-home .apple-noscript-menu>summary{display:flex;align-items:center;justify-content:center;width:44px;height:44px;list-style:none;border:1px solid #d8e1dd;border-radius:9px;background:#f3f6f5;color:var(--text);cursor:pointer}
+  .apple-home .apple-noscript-menu>summary::-webkit-details-marker{display:none}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon{background:transparent}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::before{transform:translateY(6px) rotate(45deg)}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::after{transform:translateY(-6px) rotate(-45deg)}
+  .apple-home .apple-noscript-panel{position:absolute;top:56px;left:auto;right:calc(-1 * var(--apple-pad));width:100vw;display:flex;flex-direction:column;gap:4px;padding:12px var(--apple-pad) 18px;max-height:calc(100vh - 64px);max-height:calc(100dvh - 64px);overflow-y:auto;overscroll-behavior:contain;background:#fff;border-top:1px solid var(--border);box-shadow:0 14px 28px rgba(20,34,30,.1)}
+  .apple-home .apple-noscript-panel>a{display:flex;align-items:center;min-height:44px;padding:11px 14px;border-radius:8px;color:var(--muted);font-size:.9375rem;line-height:1.4;text-decoration:none}
+  .apple-home .apple-noscript-panel>a:hover{background:#f1f5f3;color:var(--text)}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary{justify-content:center;min-height:48px;border-radius:999px;background:var(--accent);color:#fff;font-weight:600}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary:hover{background:#00533f}
+  .apple-home .apple-noscript-menu .snav-menu-icon{width:19px}
+  .apple-home #site-nav .snav-logo{max-width:calc(100% - 60px)}
 }
 </style>
-</head>
-<body>
-
-<!-- ── NAVIGATION ── -->
-<nav id="site-nav"></nav>
-<script src="/static/nav.js" defer></script>
-
-<!-- ── HERO ── -->
-<header class="hero">
-  <div class="hero-inner">
-
-    <nav class="breadcrumb" aria-label="Breadcrumb">
+<details class="apple-noscript-menu">
+  <summary><span class="snav-menu-icon" aria-hidden="true"></span><span class="apple-sr-only">Menú principal</span></summary>
+  <nav class="apple-noscript-panel" aria-label="Navegación móvil">
+    <a href="/herramientas">Herramientas</a>
+    <a href="/como-funciona">Cómo funciona</a>
+    <a href="/recursos">Recursos</a>
+    <a href="/faq">FAQ</a>
+    <a href="/contacto">Contacto</a>
+    <a href="/login/">Iniciar sesión</a>
+    <a href="/signup/" class="snav-mobile-link-primary">Crear cuenta</a>
+  </nav>
+</details>
+<div class="apple-noscript-access"><a href="/login/">Iniciar sesión</a><a href="/signup/">Crear cuenta</a></div>
+</noscript>
+<main id="contenido" tabindex="-1"><section class="how-intro" aria-labelledby="guide-title"><div class="apple-container"><nav class="breadcrumb" aria-label="Breadcrumb">
       <a href="/">Inicio</a>
-      <span>›</span>
+      <span class="breadcrumb-sep">›</span>
       <a href="/herramientas">Herramientas</a>
-      <span>›</span>
+      <span class="breadcrumb-sep">›</span>
       <span>Pérdidas patrimoniales de criptomonedas</span>
-    </nav>
-
-    <span class="kicker">Guía fiscal · Art. 33.1 LIRPF · Actualizado junio 2026</span>
-
-    <h1>Pérdidas patrimoniales de criptomonedas en el IRPF: <em>qué son</em>, cuándo se generan y cómo declararlas</h1>
-
-    <div class="hero-meta">
-      <span class="tag">BASE DEL AHORRO</span>
-      <span class="tag">CASILLA 1804</span>
-      <span>Por Rafael Ramos Martínez, Economista Colegiado nº 4.579</span>
-      <span>7 jun 2026</span>
-    </div>
-
-    <!-- GEO BLOCK A — featured snippet target KW1 -->
-    <div class="hero-snippet">
-      Las <strong>pérdidas patrimoniales de criptomonedas</strong> se generan cuando vendes, permutas o usas cripto para pagar y obtienes menos de lo que pagaste. Se declaran en las <strong>casillas 1800–1814 del Modelo 100 (casilla 1804)</strong> y se integran en la base imponible del ahorro. Base legal: <strong>art. 33.1 y 37.2 LIRPF</strong>. La casilla 1626 ya no aplica a criptomonedas desde el ejercicio 2022.
-    </div>
-
-    <p class="hero-deck">
+    </nav><p class="apple-eyebrow">Guía fiscal · Art. 33.1 LIRPF · Actualizado junio 2026</p><h1 id="guide-title">Pérdidas patrimoniales de criptomonedas en el IRPF: <em>qué son</em>, cuándo se generan y cómo declararlas</h1><p class="how-lead">
       Esta guía cubre cuándo se genera la pérdida, qué casillas usar en Renta Web (y por qué la 1626 está obsoleta para cripto), el cálculo con el método FIFO obligatorio, la obligación de declarar aunque no haya ganancias ese año, y los casos especiales como estafas o quiebra de exchange.
-    </p>
-
-    <div class="toc">
-      <div class="toc-title">Contenidos</div>
+    </p></div></section>
+<div class="apple-legal-page"><div class="apple-container legal-layout"><aside class="legal-index" aria-label="Contenidos">
+      <h2>Contenidos</h2>
       <ol>
         <li><a href="#que-son">¿Qué son las pérdidas patrimoniales?</a></li>
         <li><a href="#cuando-se-generan">¿Cuándo se genera la pérdida?</a></li>
@@ -668,23 +271,9 @@ footer {
         <li><a href="#especiales">Estafas, quiebras y pérdidas no realizadas</a></li>
         <li><a href="#errores">Errores frecuentes</a></li>
         <li><a href="#faq">Preguntas frecuentes</a></li>
-      </ol>
-    </div>
-
-  </div>
-</header>
-
-<!-- ── CONTENT ── -->
-<div class="wrap">
-  <div class="content-layout">
-
-    <!-- ── MAIN ── -->
-    <main class="content-main prose">
-
-      <!-- ══════════════════════════════════════════
-           H2 #que-son
-      ══════════════════════════════════════════ -->
-      <h2 id="que-son">¿Qué son las pérdidas patrimoniales de criptomonedas?</h2>
+      </ol></aside><article class="legal-document"><section class="legal-section"><p class="how-small">BASE DEL AHORRO · CASILLA 1804 · Por Rafael Ramos Martínez, Economista Colegiado nº 4.579 · 7 jun 2026</p><div class="legal-callout">
+      Las <strong>pérdidas patrimoniales de criptomonedas</strong> se generan cuando vendes, permutas o usas cripto para pagar y obtienes menos de lo que pagaste. Se declaran en las <strong>casillas 1800–1814 del Modelo 100 (casilla 1804)</strong> y se integran en la base imponible del ahorro. Base legal: <strong>art. 33.1 y 37.2 LIRPF</strong>. La casilla 1626 ya no aplica a criptomonedas desde el ejercicio 2022.
+    </div></section><section class="legal-section"><h2 id="que-son">¿Qué son las pérdidas patrimoniales de criptomonedas?</h2>
 
       <p>
         Según el <strong>artículo 33.1 de la Ley 35/2006 del IRPF</strong>, son ganancias o pérdidas patrimoniales las variaciones en el valor del patrimonio del contribuyente que se pongan de manifiesto con ocasión de cualquier alteración en la composición de dicho patrimonio. Cuando esa variación es negativa —el valor obtenido es inferior al coste de adquisición— estamos ante una <strong>pérdida patrimonial</strong>.
@@ -694,7 +283,7 @@ footer {
         Aplicado a criptomonedas: si compraste 1 ETH a 2.500 € y lo vendiste a 1.800 €, has generado una pérdida patrimonial de <strong>700 €</strong> (más comisiones). Esta pérdida es real a efectos fiscales desde el momento en que se produce la transmisión, no desde que el precio baja.
       </p>
 
-      <div class="callout-legal">
+      <div class="legal-callout">
         <span><strong>Art. 33.1 LIRPF</strong> — Concepto de ganancia/pérdida patrimonial</span>
         <span><strong>Art. 37.2 LIRPF</strong> — Valoración de monedas virtuales y método FIFO</span>
         <span><strong>DGT V0999-18 y V1604-18</strong> — Permutas como hecho imponible</span>
@@ -706,8 +295,7 @@ footer {
         No todas las pérdidas en cripto son pérdidas patrimoniales. Existe una segunda categoría: las <strong>pérdidas de rendimientos del capital mobiliario</strong>, que aplican cuando hay rendimientos negativos de staking, lending o ciertos airdrops. Estas últimas van a la casilla 0033 y tienen reglas de compensación diferentes.
       </p>
 
-      <div class="table-wrap">
-        <table class="fifo-table">
+      <div class="files-table-wrap" tabindex="0" role="region" aria-label="Tabla fiscal desplazable"><table class="files-table">
           <thead>
             <tr>
               <th>Origen</th>
@@ -720,19 +308,19 @@ footer {
             <tr>
               <td><strong>Venta de BTC con pérdida</strong></td>
               <td>Pérdida patrimonial</td>
-              <td class="accent">1804</td>
+              <td class="green">1804</td>
               <td>Con ganancias patrimoniales o 25% cap. mobiliario</td>
             </tr>
             <tr>
               <td><strong>Permuta ETH→SOL con pérdida</strong></td>
               <td>Pérdida patrimonial</td>
-              <td class="accent">1804</td>
+              <td class="green">1804</td>
               <td>Con ganancias patrimoniales o 25% cap. mobiliario</td>
             </tr>
             <tr>
               <td><strong>Pago con cripto (valor &lt; coste)</strong></td>
               <td>Pérdida patrimonial</td>
-              <td class="accent">1804</td>
+              <td class="green">1804</td>
               <td>Con ganancias patrimoniales o 25% cap. mobiliario</td>
             </tr>
             <tr>
@@ -742,8 +330,7 @@ footer {
               <td>Solo con rendimientos positivos de capital mobiliario</td>
             </tr>
           </tbody>
-        </table>
-      </div>
+        </table></div>
 
       <p>
         Esta guía se centra exclusivamente en las <strong>pérdidas patrimoniales de transmisión</strong> (casilla 1804). Si tienes pérdidas de staking o DeFi, consulta la sección de <a href="/asesoramiento-fiscal-criptomonedas">asesoramiento personalizado</a>.
@@ -753,7 +340,8 @@ footer {
       <!-- ══════════════════════════════════════════
            H2 #cuando-se-generan
       ══════════════════════════════════════════ -->
-      <h2 id="cuando-se-generan">¿Cuándo se genera una pérdida patrimonial en cripto?</h2>
+      </section>
+<section class="legal-section"><h2 id="cuando-se-generan">¿Cuándo se genera una pérdida patrimonial en cripto?</h2>
 
       <p>
         La pérdida patrimonial se genera en el <strong>momento de la transmisión efectiva</strong>, no cuando el precio de mercado baja. Mientras no transmites —no vendes, no permutas, no usas como pago— no existe hecho imponible y no hay pérdida computable a efectos del IRPF.
@@ -777,8 +365,8 @@ footer {
         <li><strong>Pérdida de contraseña o extravío de claves privadas</strong> — sin transmisión efectiva acreditada, la AEAT generalmente no acepta la pérdida como computable</li>
       </ul>
 
-      <div class="callout-warning">
-        <div class="callout-title">⚠ Las pérdidas no realizadas no son deducibles</div>
+      <div class="warning-box">
+        <h3 class="section-title">⚠ Las pérdidas no realizadas no son deducibles</h3>
         <p>El portfolio baja un 40% desde tu compra pero no has vendido. Esa pérdida <strong>no existe a efectos fiscales</strong> hasta que transmitas las monedas. No se puede incluir en la declaración mientras no haya transmisión efectiva. Esta es una de las consultas más frecuentes y el error más común al planificar la declaración.</p>
       </div>
 
@@ -786,45 +374,46 @@ footer {
       <!-- ══════════════════════════════════════════
            H2 #casillas — GEO BLOCK B
       ══════════════════════════════════════════ -->
-      <h2 id="casillas">Las casillas del Modelo 100: qué ha cambiado y dónde declarar ahora</h2>
+      </section>
+<section class="legal-section"><h2 id="casillas">Las casillas del Modelo 100: qué ha cambiado y dónde declarar ahora</h2>
 
       <!-- GEO BLOCK B — citable por IA sobre cambio de casillas -->
       <p>
         Desde el ejercicio fiscal <strong>2022</strong> (declaración presentada en primavera de 2023), las criptomonedas tienen un <strong>bloque dedicado propio</strong> en el Modelo 100: las casillas 1800–1814. Esta sección, denominada «Monedas Virtuales» en Renta Web, reemplazó al tratamiento anterior donde las criptos se incluían en el apartado de «otros elementos patrimoniales». Si ves guías que mencionan la casilla 1626 para declarar pérdidas de cripto, esa información está desactualizada para ejercicios 2022 en adelante.
       </p>
 
-      <div class="casilla-grid">
-        <div class="casilla-card current">
-          <div class="casilla-num">1804</div>
-          <div class="casilla-label">Ganancias y pérdidas — Monedas Virtuales</div>
-          <div class="casilla-desc">Casilla actual para transmisiones de criptomonedas (ventas, permutas, pagos). Aquí va cada operación individual con su fecha, valor de transmisión y valor de adquisición.</div>
-          <span class="casilla-badge">✓ CORRECTO desde 2022</span>
+      <div class="apple-catalog-grid">
+        <div class="apple-catalog-card">
+          <div class="mock-kpi-value">1804</div>
+          <div class="apple-eyebrow">Ganancias y pérdidas — Monedas Virtuales</div>
+          <div class="how-muted">Casilla actual para transmisiones de criptomonedas (ventas, permutas, pagos). Aquí va cada operación individual con su fecha, valor de transmisión y valor de adquisición.</div>
+          <span class="how-small">✓ CORRECTO desde 2022</span>
         </div>
-        <div class="casilla-card current">
-          <div class="casilla-num">1800–1814</div>
-          <div class="casilla-label">Bloque completo — Monedas Virtuales</div>
-          <div class="casilla-desc">Apartado «F2 — Monedas Virtuales» en Renta Web. Incluye identificación del activo, contraprestación, valor de adquisición, valor de transmisión y resultado neto.</div>
-          <span class="casilla-badge">✓ SECCIÓN ACTIVA</span>
+        <div class="apple-catalog-card">
+          <div class="mock-kpi-value">1800–1814</div>
+          <div class="apple-eyebrow">Bloque completo — Monedas Virtuales</div>
+          <div class="how-muted">Apartado «F2 — Monedas Virtuales» en Renta Web. Incluye identificación del activo, contraprestación, valor de adquisición, valor de transmisión y resultado neto.</div>
+          <span class="how-small">✓ SECCIÓN ACTIVA</span>
         </div>
-        <div class="casilla-card obsolete">
-          <div class="casilla-num">1626</div>
-          <div class="casilla-label">Otros elementos patrimoniales (anterior)</div>
-          <div class="casilla-desc">Reservada actualmente para derivados financieros, futuros, CFDs y contratos perpetuos. No se debe usar para criptomonedas desde el ejercicio fiscal 2022.</div>
-          <span class="casilla-badge">✗ OBSOLETO para cripto</span>
+        <div class="apple-catalog-card">
+          <div class="mock-kpi-value">1626</div>
+          <div class="apple-eyebrow">Otros elementos patrimoniales (anterior)</div>
+          <div class="how-muted">Reservada actualmente para derivados financieros, futuros, CFDs y contratos perpetuos. No se debe usar para criptomonedas desde el ejercicio fiscal 2022.</div>
+          <span class="how-small">✗ OBSOLETO para cripto</span>
         </div>
-        <div class="casilla-card">
-          <div class="casilla-num">0033</div>
-          <div class="casilla-label">Rendimientos del capital mobiliario</div>
-          <div class="casilla-desc">Para staking, lending y airdrops declarados como rendimientos. No es una casilla de pérdidas patrimoniales: tiene reglas de compensación distintas a la 1804.</div>
-          <span class="casilla-badge" style="background:var(--surface2);color:var(--muted);">STAKING / LENDING</span>
+        <div class="apple-catalog-card">
+          <div class="mock-kpi-value">0033</div>
+          <div class="apple-eyebrow">Rendimientos del capital mobiliario</div>
+          <div class="how-muted">Para staking, lending y airdrops declarados como rendimientos. No es una casilla de pérdidas patrimoniales: tiene reglas de compensación distintas a la 1804.</div>
+          <span class="how-small">STAKING / LENDING</span>
         </div>
       </div>
 
       <h3 id="casilla-1626-criptomonedas">La casilla 1626 ya no aplica a criptomonedas desde 2022</h3>
 
       <!-- FEATURED SNIPPET TARGET — KW3 "casilla 1626 criptomonedas" -->
-      <div class="callout">
-        <div class="callout-title">Aclaración: casilla 1626 y criptomonedas</div>
+      <div class="legal-callout">
+        <h3 class="section-title">Aclaración: casilla 1626 y criptomonedas</h3>
         <p><strong>La casilla 1626 ya no se utiliza para criptomonedas desde el ejercicio fiscal 2022.</strong> Las transmisiones de monedas virtuales —ventas, permutas, pagos con cripto— se declaran en las casillas 1800–1814 del Modelo 100, específicamente en la <strong>casilla 1804</strong>. La casilla 1626 queda reservada para derivados financieros, futuros, CFDs y contratos perpetuos. Declarar cripto en la 1626 puede generar incidencias con la AEAT o con el pre-declaración de datos fiscales.</p>
       </div>
 
@@ -832,8 +421,7 @@ footer {
         El cambio se produjo porque la AEAT introdujo un bloque específico para monedas virtuales (casillas 1800–1814) al modificar el Modelo 100 para el ejercicio fiscal 2022. Desde entonces, las criptomonedas tienen su propio apartado en el programa Renta Web bajo la sección <strong>«F2 — Ganancias y pérdidas patrimoniales derivadas de la transmisión de elementos patrimoniales — Monedas Virtuales»</strong>.
       </p>
 
-      <div class="table-wrap">
-        <table class="fifo-table">
+      <div class="files-table-wrap" tabindex="0" role="region" aria-label="Tabla fiscal desplazable"><table class="files-table">
           <thead>
             <tr>
               <th>Ejercicio fiscal</th>
@@ -849,21 +437,21 @@ footer {
               <td>F2 — Otros elementos patrimoniales</td>
               <td>Casilla genérica, ya cerrada</td>
             </tr>
-            <tr class="highlight">
+            <tr>
               <td><strong>2022 en adelante</strong></td>
-              <td class="accent"><strong>1804 (bloque 1800–1814)</strong></td>
+              <td class="green"><strong>1804 (bloque 1800–1814)</strong></td>
               <td>F2 — Monedas Virtuales</td>
               <td><strong>Casilla correcta actualmente</strong></td>
             </tr>
           </tbody>
-        </table>
-      </div>
+        </table></div>
 
 
       <!-- ══════════════════════════════════════════
            H2 #como-declarar — GEO BLOCK C
       ══════════════════════════════════════════ -->
-      <h2 id="como-declarar">Cómo declarar las pérdidas en Renta Web: paso a paso</h2>
+      </section>
+<section class="legal-section"><h2 id="como-declarar">Cómo declarar las pérdidas en Renta Web: paso a paso</h2>
 
       <!-- GEO BLOCK C — featured snippet target KW2 "cómo declarar pérdidas criptomonedas" -->
       <p>
@@ -908,8 +496,8 @@ footer {
         </li>
       </ol>
 
-      <div class="callout-warning">
-        <div class="callout-title">⚠ Una operación por fila, no el total</div>
+      <div class="warning-box">
+        <h3 class="section-title">⚠ Una operación por fila, no el total</h3>
         <p>Renta Web requiere introducir <strong>cada transmisión individualmente</strong>, no el resultado agregado. Si vendiste BTC 15 veces durante el año, son 15 filas distintas, cada una con su propia fecha, valor de transmisión y valor de adquisición FIFO. Introducir solo el neto final es un error que puede generar requerimientos.</p>
       </div>
 
@@ -917,7 +505,8 @@ footer {
       <!-- ══════════════════════════════════════════
            H2 #calcular
       ══════════════════════════════════════════ -->
-      <h2 id="calcular">Cómo calcular la pérdida antes de declararla</h2>
+      </section>
+<section class="legal-section"><h2 id="calcular">Cómo calcular la pérdida antes de declararla</h2>
 
       <p>
         La fórmula base es simple: <strong>Valor de transmisión − Valor de adquisición FIFO = Ganancia / Pérdida</strong>. Pero el «valor de adquisición FIFO» requiere un cálculo previo correcto porque depende del orden cronológico de las compras y de la acumulación del pool global.
@@ -933,16 +522,16 @@ footer {
         Además, el <strong>pool es global</strong>: si tienes BTC en Binance, Kraken y una cold wallet, todos forman un único pool FIFO a efectos fiscales. No existen pools separados por exchange o por wallet (DGT V0975-22 y V2520-22). Los fundamentos legales de la homogeneidad y el pool global están desarrollados en la guía sobre <a href="/bienes-homogeneos-criptomonedas">bienes homogéneos en criptomonedas</a>.
       </p>
 
-      <div class="example-box">
-        <div class="example-label">Ejemplo práctico</div>
-        <div class="example-title">Cálculo FIFO de una venta de ETH con pérdida</div>
-        <div class="example-row"><span class="label">Compra 1 (enero 2023)</span><span class="value">2 ETH a 1.600 €/u = coste 3.200 €</span></div>
-        <div class="example-row"><span class="label">Compra 2 (marzo 2023)</span><span class="value">1 ETH a 1.900 €/u = coste 1.900 €</span></div>
-        <div class="example-row"><span class="label">Venta (diciembre 2023)</span><span class="value">2 ETH a 1.200 €/u = ingresos 2.400 €</span></div>
-        <div class="example-row"><span class="label">Lote FIFO aplicado</span><span class="value">Los 2 ETH de enero 2023 → coste 3.200 €</span></div>
-        <div class="example-row"><span class="label">Comisión de venta</span><span class="value red">−15 €</span></div>
-        <div class="example-row"><span class="label">Valor de transmisión neto</span><span class="value">2.400 − 15 = 2.385 €</span></div>
-        <div class="example-row"><span class="label">Pérdida patrimonial</span><span class="value red">2.385 − 3.200 = −815 €</span></div>
+      <div class="legal-purpose">
+        <div class="apple-eyebrow">Ejemplo práctico</div>
+        <h3 class="section-title">Cálculo FIFO de una venta de ETH con pérdida</h3>
+        <div class="how-copy"><span class="how-muted">Compra 1 (enero 2023)</span><span class="mock-kpi-value">2 ETH a 1.600 €/u = coste 3.200 €</span></div>
+        <div class="how-copy"><span class="how-muted">Compra 2 (marzo 2023)</span><span class="mock-kpi-value">1 ETH a 1.900 €/u = coste 1.900 €</span></div>
+        <div class="how-copy"><span class="how-muted">Venta (diciembre 2023)</span><span class="mock-kpi-value">2 ETH a 1.200 €/u = ingresos 2.400 €</span></div>
+        <div class="how-copy"><span class="how-muted">Lote FIFO aplicado</span><span class="mock-kpi-value">Los 2 ETH de enero 2023 → coste 3.200 €</span></div>
+        <div class="how-copy"><span class="how-muted">Comisión de venta</span><span class="mock-kpi-value red">−15 €</span></div>
+        <div class="how-copy"><span class="how-muted">Valor de transmisión neto</span><span class="mock-kpi-value">2.400 − 15 = 2.385 €</span></div>
+        <div class="how-copy"><span class="how-muted">Pérdida patrimonial</span><span class="mock-kpi-value red">2.385 − 3.200 = −815 €</span></div>
       </div>
 
       <p>
@@ -951,8 +540,7 @@ footer {
 
       <h3>Resumen de los elementos del cálculo</h3>
 
-      <div class="table-wrap">
-        <table class="fifo-table">
+      <div class="files-table-wrap" tabindex="0" role="region" aria-label="Tabla fiscal desplazable"><table class="files-table">
           <thead>
             <tr><th>Elemento</th><th>Incluir</th><th>Nota</th></tr>
           </thead>
@@ -988,14 +576,14 @@ footer {
               <td>Son mayor coste de adquisición del lote receptor, no pérdida independiente</td>
             </tr>
           </tbody>
-        </table>
-      </div>
+        </table></div>
 
 
       <!-- ══════════════════════════════════════════
            H2 #obligacion
       ══════════════════════════════════════════ -->
-      <h2 id="obligacion">¿Hay que declarar aunque no haya ganancias ese año?</h2>
+      </section>
+<section class="legal-section"><h2 id="obligacion">¿Hay que declarar aunque no haya ganancias ese año?</h2>
 
       <p>
         <strong>Sí, y es uno de los errores más costosos que cometen los inversores en cripto.</strong> La obligación de declarar las pérdidas no depende de que haya ganancias en el mismo ejercicio. La pérdida debe constar en la declaración del ejercicio en que se generó. Si no se declara ese año, <strong>se pierde el derecho a arrastrarla a los cuatro ejercicios siguientes</strong>.
@@ -1005,8 +593,8 @@ footer {
         Supongamos que en 2022 vendiste cripto con una pérdida de 8.000 € pero no declaraste porque «total no pago nada». En 2024 y 2025 tienes importantes ganancias. Esa pérdida de 2022 no declarada <strong>no puede compensar nada</strong>: el plazo de arrastre sería 2022–2026, pero como no consta en la declaración original de 2022, no existe a efectos de la AEAT.
       </p>
 
-      <div class="callout">
-        <div class="callout-title">Regla práctica</div>
+      <div class="legal-callout">
+        <h3 class="section-title">Regla práctica</h3>
         <p>Si en un ejercicio tienes más pérdidas que ganancias en cripto, el resultado neto de la base del ahorro puede ser cero o negativo. Presentar la declaración en estos casos no te genera una deuda tributaria pero <strong>preserva el arrastre de la pérdida durante 4 años</strong>, que puede valer miles de euros en ejercicios futuros de mayores ganancias.</p>
       </div>
 
@@ -1016,8 +604,7 @@ footer {
         Existe la posibilidad de rectificar la autoliquidación original dentro del <strong>plazo de prescripción de 4 años</strong> desde la finalización del plazo de presentación (art. 120.3 LGT). Si la declaración de 2021 se presentó antes del 30 de junio de 2022, el plazo para rectificarla vence en torno al <strong>30 de junio de 2026</strong>. Pasada esa fecha, la pérdida de 2021 queda definitivamente inutilizable.
       </p>
 
-      <div class="table-wrap">
-        <table class="fifo-table">
+      <div class="files-table-wrap" tabindex="0" role="region" aria-label="Tabla fiscal desplazable"><table class="files-table">
           <thead>
             <tr>
               <th>Pérdidas de ejercicio</th>
@@ -1026,10 +613,10 @@ footer {
             </tr>
           </thead>
           <tbody>
-            <tr class="highlight-warn">
+            <tr class="how-muted">
               <td><strong>2021</strong></td>
               <td>~30 junio 2026</td>
-              <td class="accent">⚡ Urgente — quedan días</td>
+              <td class="green">⚡ Urgente — quedan días</td>
             </tr>
             <tr>
               <td><strong>2022</strong></td>
@@ -1047,11 +634,10 @@ footer {
               <td>Disponible (3 años)</td>
             </tr>
           </tbody>
-        </table>
-      </div>
+        </table></div>
 
-      <div class="callout-warning">
-        <div class="callout-title">⚡ Atención — Pérdidas de 2021 prescriben en semanas</div>
+      <div class="warning-box">
+        <h3 class="section-title">⚡ Atención — Pérdidas de 2021 prescriben en semanas</h3>
         <p>Si tienes pérdidas cripto de 2021 que no declaraste en la Renta de ese año, el plazo para rectificar la autoliquidación mediante el procedimiento del art. 120.3 LGT vence en junio o julio de 2026. Una vez prescrito el plazo, esas pérdidas no podrán recuperarse por ninguna vía. <a href="/asesoramiento-fiscal-criptomonedas">Consulta con un economista colegiado</a> si tienes esta situación.</p>
       </div>
 
@@ -1063,7 +649,8 @@ footer {
       <!-- ══════════════════════════════════════════
            H2 #especiales
       ══════════════════════════════════════════ -->
-      <h2 id="especiales">Pérdidas especiales: estafas, quiebras y pérdidas no realizadas</h2>
+      </section>
+<section class="legal-section"><h2 id="especiales">Pérdidas especiales: estafas, quiebras y pérdidas no realizadas</h2>
 
       <h3>Pérdidas por estafa o hack</h3>
 
@@ -1081,8 +668,8 @@ footer {
         Los afectados por la quiebra de exchanges como FTX (noviembre 2022) o Celsius (julio 2022) se encuentran en una situación jurídicamente compleja. Hasta que no existe <strong>resolución concursal firme</strong> que acredite la pérdida total o parcial de los fondos, la pérdida patrimonial no es computable con plenas garantías. Algunos contribuyentes han optado por un enfoque conservador: esperar a la resolución y declarar en ese ejercicio. Para casos con importes significativos, la consulta a un asesor fiscal especializado es imprescindible.
       </p>
 
-      <div class="callout">
-        <div class="callout-title">Documentación que refuerza la posición ante la AEAT</div>
+      <div class="legal-callout">
+        <h3 class="section-title">Documentación que refuerza la posición ante la AEAT</h3>
         <p>En caso de pérdida por estafa o quiebra: <strong>(1)</strong> denuncia policial o judicial con sello de registro, <strong>(2)</strong> capturas de pantalla fechadas de la plataforma mostrando el saldo antes del incidente, <strong>(3)</strong> comunicaciones oficiales del exchange (correos, anuncios de cese), <strong>(4)</strong> documentación del procedimiento concursal si aplica. Conserva todos estos documentos durante al menos 10 años.</p>
       </div>
 
@@ -1100,30 +687,31 @@ footer {
       <!-- ══════════════════════════════════════════
            H2 #errores
       ══════════════════════════════════════════ -->
-      <h2 id="errores">Errores frecuentes al declarar pérdidas de criptomonedas</h2>
+      </section>
+<section class="legal-section"><h2 id="errores">Errores frecuentes al declarar pérdidas de criptomonedas</h2>
 
-      <div class="error-grid">
-        <div class="error-card">
+      <div class="apple-catalog-grid">
+        <div class="apple-catalog-card">
           <h3>Usar la casilla 1626 en lugar de la 1804</h3>
           <p>Para ejercicios 2022 en adelante, la casilla correcta es la 1804 dentro del bloque 1800–1814. Declarar en la 1626 puede generar discrepancias con los datos que la AEAT recibe de los exchanges vía DAC8/DAC7 y provocar requerimientos.</p>
         </div>
-        <div class="error-card">
+        <div class="apple-catalog-card">
           <h3>No declarar las pérdidas por «no pagar nada»</h3>
           <p>El mayor error. Si no declaras la pérdida en el ejercicio en que se genera, pierdes el derecho a arrastrarla y compensarla en los 4 años siguientes. Una pérdida de 10.000 € puede valer 1.900–2.600 € de ahorro fiscal en futuros ejercicios de ganancias.</p>
         </div>
-        <div class="error-card">
+        <div class="apple-catalog-card">
           <h3>No incluir las permutas entre criptomonedas</h3>
           <p>Cambiar BTC por ETH es un hecho imponible aunque no conviertas a euros. Muchos contribuyentes omiten las permutas por desconocimiento y declaran únicamente las ventas a fiat, incumpliendo las consultas vinculantes DGT V0999-18 y V1604-18.</p>
         </div>
-        <div class="error-card">
+        <div class="apple-catalog-card">
           <h3>No aplicar el pool global FIFO</h3>
           <p>El método FIFO no es por exchange sino por activo a nivel global: todos tus BTC (en Binance + Kraken + cold wallet) forman un solo pool. Calcular el FIFO por exchange es incorrecto y genera valores de adquisición erróneos.</p>
         </div>
-        <div class="error-card">
+        <div class="apple-catalog-card">
           <h3>Olvidar las comisiones en el cálculo</h3>
           <p>Las comisiones de compra (aumentan el coste de adquisición) y de venta (reducen el valor de transmisión) son computables. Omitirlas infla las ganancias o reduce artificialmente las pérdidas, perjudicando siempre al contribuyente.</p>
         </div>
-        <div class="error-card">
+        <div class="apple-catalog-card">
           <h3>Confundir pérdida patrimonial con pérdida de cap. mobiliario</h3>
           <p>Las pérdidas de staking o lending van a la casilla 0033 (capital mobiliario), no a la 1804 (pérdida patrimonial). Mezclarlas en la casilla equivocada puede generar un resultado fiscal incorrecto y posibles sanciones.</p>
         </div>
@@ -1133,136 +721,117 @@ footer {
       <!-- ══════════════════════════════════════════
            H2 #faq
       ══════════════════════════════════════════ -->
-      <h2 id="faq">Preguntas frecuentes</h2>
+      </section>
+<section class="legal-section"><h2 id="faq">Preguntas frecuentes</h2>
 
-      <div class="faq-list">
+      <div class="how-faq-list">
 
-        <div class="faq-item open">
-          <button class="faq-q" onclick="toggleFaq(this)">
+        <details class="apple-faq-item" open><summary>
             ¿Qué son las pérdidas patrimoniales de criptomonedas?
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-a">
+            
+          </summary><div class="apple-faq-answer">
             Son las pérdidas que resultan de transmitir criptomonedas —vender, permutar por otra cripto o usar como medio de pago— por un valor inferior al de adquisición. Están reguladas en el artículo 33.1 de la Ley 35/2006 del IRPF y se integran en la base imponible del ahorro. El cálculo sigue el <strong>método FIFO obligatorio</strong> según el artículo 37.2 LIRPF: primero se vende lo que primero se compró, aplicando el coste de esa partida específica más las comisiones de compra y venta.
-          </div>
-        </div>
+          </div></details>
 
-        <div class="faq-item">
-          <button class="faq-q" onclick="toggleFaq(this)">
+        <details class="apple-faq-item"><summary>
             ¿En qué casilla se declaran las pérdidas de criptomonedas? ¿Es la 1626?
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-a">
+            
+          </summary><div class="apple-faq-answer">
             No. La casilla 1626 ya no se utiliza para criptomonedas <strong>desde el ejercicio fiscal 2022</strong>. Las transmisiones de monedas virtuales se declaran en las <strong>casillas 1800–1814 del Modelo 100</strong>, específicamente en la casilla 1804 para ganancias y pérdidas patrimoniales de transmisión. La casilla 1626 se reserva actualmente para derivados financieros, futuros, CFDs y contratos perpetuos. Acceder a esta sección en Renta Web: <em>Apartado F2 → Ganancias y pérdidas patrimoniales → Monedas virtuales</em>.
-          </div>
-        </div>
+          </div></details>
 
-        <div class="faq-item">
-          <button class="faq-q" onclick="toggleFaq(this)">
+        <details class="apple-faq-item"><summary>
             ¿Es obligatorio declarar pérdidas de criptomonedas si no hay ganancias ese año?
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-a">
+            
+          </summary><div class="apple-faq-answer">
             Sí. Declarar las pérdidas es obligatorio y estratégicamente esencial aunque en ese ejercicio no haya ganancias que compensar. Si no se declaran en el ejercicio en que se generan, se pierde el derecho a arrastrarlas a los cuatro años siguientes. Una pérdida no declarada en su momento queda inutilizable a efectos fiscales, salvo que se rectifique la autoliquidación original dentro del plazo de prescripción de cuatro años desde el fin del plazo de presentación (art. 120.3 LGT).
-          </div>
-        </div>
+          </div></details>
 
-        <div class="faq-item">
-          <button class="faq-q" onclick="toggleFaq(this)">
+        <details class="apple-faq-item"><summary>
             ¿Las permutas entre criptomonedas generan pérdida patrimonial aunque no convierta a euros?
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-a">
+            
+          </summary><div class="apple-faq-answer">
             Sí. Cambiar Bitcoin por Ethereum, o cualquier otra permuta entre criptomonedas distintas, es un hecho imponible que genera ganancia o pérdida patrimonial en el momento del intercambio. La base legal es el artículo 33.1 LIRPF en relación con el artículo 37.2 y las consultas vinculantes <strong>DGT V0999-18 y V1604-18</strong>. El valor de transmisión es el precio de mercado de la cripto entregada en el momento del swap; el valor de adquisición sigue el método FIFO del pool global.
-          </div>
-        </div>
+          </div></details>
 
-        <div class="faq-item">
-          <button class="faq-q" onclick="toggleFaq(this)">
+        <details class="apple-faq-item"><summary>
             ¿Las pérdidas por estafa o quiebra de exchange son deducibles?
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-a">
+            
+          </summary><div class="apple-faq-answer">
             Es una zona jurídica compleja. La AEAT exige una transmisión efectiva acreditada para computar la pérdida. Sin sentencia judicial ni resolución concursal firme, la pérdida generalmente no es computable ese año. La estrategia más conservadora es declarar la pérdida en el ejercicio en que se hace efectiva la resolución del procedimiento. Para casos con importes significativos (FTX, Celsius, etc.) se recomienda <a href="/asesoramiento-fiscal-criptomonedas">consulta con un economista colegiado</a>.
-          </div>
-        </div>
+          </div></details>
 
-        <div class="faq-item">
-          <button class="faq-q" onclick="toggleFaq(this)">
+        <details class="apple-faq-item"><summary>
             ¿Qué diferencia hay entre pérdida patrimonial y pérdida de rendimientos de capital mobiliario en cripto?
-            <span class="faq-icon">+</span>
-          </button>
-          <div class="faq-a">
+            
+          </summary><div class="apple-faq-answer">
             Son dos categorías fiscales distintas. La <strong>pérdida patrimonial</strong> surge de transmitir (vender, permutar, pagar) criptomonedas: va a casilla 1804, base del ahorro, y se compensa con ganancias patrimoniales. La <strong>pérdida de rendimientos de capital mobiliario</strong> puede surgir de staking o lending negativos: va a casilla 0033 y solo puede compensar directamente rendimientos positivos de la misma categoría. No se pueden mezclar directamente, salvo mediante el mecanismo limitado del artículo 49 LIRPF (25% del capital mobiliario positivo).
-          </div>
-        </div>
+          </div></details>
 
       </div>
 
       <!-- CTA final -->
-      <div style="margin-top:3rem; padding:2rem; background:var(--surface2); border:1px solid rgba(0,200,150,0.25); border-radius:14px; text-align:center;">
-        <p style="font-family:var(--font-display); font-size:1.2rem; font-weight:700; color:var(--text); margin-bottom:0.75rem;">¿Necesitas ayuda con tu declaración?</p>
-        <p style="color:var(--muted); font-size:14.5px; margin-bottom:1.25rem; max-width:520px; margin-left:auto; margin-right:auto;">Rafael Ramos Martínez, Economista Colegiado nº 4.579, revisa tu historial completo: pérdidas no declaradas, cálculo FIFO multi-exchange, norma antiaplicación y rectificaciones.</p>
-        <a href="/asesoramiento-fiscal-criptomonedas" class="btn-hero">Solicitar asesoramiento</a>
+      <div>
+        <p>¿Necesitas ayuda con tu declaración?</p>
+        <p>Rafael Ramos Martínez, Economista Colegiado nº 4.579, revisa tu historial completo: pérdidas no declaradas, cálculo FIFO multi-exchange, norma antiaplicación y rectificaciones.</p>
+        <a href="/asesoramiento-fiscal-criptomonedas" class="apple-button">Solicitar asesoramiento</a>
       </div>
 
       <!-- Silo links -->
-      <h2 style="margin-top:3.5rem;">Guías relacionadas del silo fiscal</h2>
-      <div class="related-grid">
-        <a href="/staking-criptomonedas-irpf" class="related-card">
-          <div class="rc-kicker">Staking y Hacienda</div>
-          <div class="rc-title">Staking de criptomonedas en el IRPF: recompensas como RCM</div>
-          <div class="rc-desc">Las recompensas de staking tributan al recibirlas (RCM Art. 25.4) y al venderlas (G/P Art. 33). DGT V1069-19, cálculo y casillas exactas.</div>
+      </section>
+<section class="legal-section"><h2>Guías relacionadas del silo fiscal</h2>
+      <div class="apple-catalog-grid">
+        <a href="/staking-criptomonedas-irpf" class="apple-catalog-card">
+          <div class="apple-eyebrow">Staking y Hacienda</div>
+          <h3 class="section-title">Staking de criptomonedas en el IRPF: recompensas como RCM</h3>
+          <div class="how-muted">Las recompensas de staking tributan al recibirlas (RCM Art. 25.4) y al venderlas (G/P Art. 33). DGT V1069-19, cálculo y casillas exactas.</div>
         </a>
-        <a href="/permuta-criptomonedas-irpf" class="related-card">
-          <div class="rc-kicker">Permuta cripto a cripto</div>
-          <div class="rc-title">Permuta de criptomonedas en el IRPF: cómo tributa el intercambio cripto a cripto</div>
-          <div class="rc-desc">El intercambio entre criptomonedas tributa aunque no pases por euros. Art. 37.1.h) LIRPF, DGT V0999-18, ejemplo con BTC→ETH y casillas 1800-1814.</div>
+        <a href="/permuta-criptomonedas-irpf" class="apple-catalog-card">
+          <div class="apple-eyebrow">Permuta cripto a cripto</div>
+          <h3 class="section-title">Permuta de criptomonedas en el IRPF: cómo tributa el intercambio cripto a cripto</h3>
+          <div class="how-muted">El intercambio entre criptomonedas tributa aunque no pases por euros. Art. 37.1.h) LIRPF, DGT V0999-18, ejemplo con BTC→ETH y casillas 1800-1814.</div>
         </a>
-        <a href="/compensar-perdidas-criptomonedas" class="related-card">
-          <div class="rc-kicker">Siguiente paso</div>
-          <div class="rc-title">Cómo compensar pérdidas de criptomonedas en el IRPF</div>
-          <div class="rc-desc">Una vez declarada la pérdida, cómo usarla: mecanismo 4 pasos (art. 49 LIRPF), arrastre 4 años y compensación cruzada.</div>
+        <a href="/compensar-perdidas-criptomonedas" class="apple-catalog-card">
+          <div class="apple-eyebrow">Siguiente paso</div>
+          <h3 class="section-title">Cómo compensar pérdidas de criptomonedas en el IRPF</h3>
+          <div class="how-muted">Una vez declarada la pérdida, cómo usarla: mecanismo 4 pasos (art. 49 LIRPF), arrastre 4 años y compensación cruzada.</div>
         </a>
-        <a href="/metodo-fifo-criptomonedas" class="related-card">
-          <div class="rc-kicker">Cálculo previo</div>
-          <div class="rc-title">Método FIFO para criptomonedas en España</div>
-          <div class="rc-desc">Guía completa del método FIFO obligatorio: base legal, pool global, ejemplos con BTC y cómo calcular el coste de adquisición de cada lote.</div>
+        <a href="/metodo-fifo-criptomonedas" class="apple-catalog-card">
+          <div class="apple-eyebrow">Cálculo previo</div>
+          <h3 class="section-title">Método FIFO para criptomonedas en España</h3>
+          <div class="how-muted">Guía completa del método FIFO obligatorio: base legal, pool global, ejemplos con BTC y cómo calcular el coste de adquisición de cada lote.</div>
         </a>
-        <a href="/regla-dos-meses-criptomonedas" class="related-card">
-          <div class="rc-kicker">Limitación a conocer</div>
-          <div class="rc-title">Norma antiaplicación (regla 12 meses) en cripto</div>
-          <div class="rc-desc">Art. 33.5.g LIRPF: cuándo la pérdida queda bloqueada si recompras el mismo activo en los 12 meses anteriores o posteriores a la venta.</div>
+        <a href="/regla-dos-meses-criptomonedas" class="apple-catalog-card">
+          <div class="apple-eyebrow">Limitación a conocer</div>
+          <h3 class="section-title">Norma antiaplicación (regla 12 meses) en cripto</h3>
+          <div class="how-muted">Art. 33.5.g LIRPF: cuándo la pérdida queda bloqueada si recompras el mismo activo en los 12 meses anteriores o posteriores a la venta.</div>
         </a>
-        <a href="/asesoramiento-fiscal-criptomonedas" class="related-card">
-          <div class="rc-kicker">Casos complejos</div>
-          <div class="rc-title">Asesoramiento fiscal personalizado</div>
-          <div class="rc-desc">DeFi, staking multi-plataforma, quiebras de exchanges, territorios forales, pérdidas no declaradas en años anteriores.</div>
+        <a href="/asesoramiento-fiscal-criptomonedas" class="apple-catalog-card">
+          <div class="apple-eyebrow">Casos complejos</div>
+          <h3 class="section-title">Asesoramiento fiscal personalizado</h3>
+          <div class="how-muted">DeFi, staking multi-plataforma, quiebras de exchanges, territorios forales, pérdidas no declaradas en años anteriores.</div>
         </a>
       </div>
 
-      <p class="disclaimer">
+      <p class="legal-callout">
         El contenido de esta guía es de carácter informativo y ha sido supervisado por Rafael Ramos Martínez, Economista Colegiado nº 4.579 (Colegio de Economistas de Valencia). No constituye asesoramiento fiscal individualizado. Cada caso puede presentar particularidades que requieran análisis específico. Última actualización: junio 2026.
       </p>
 
-    </main>
+    </section><section class="legal-section" aria-label="Recursos relacionados">
 
-    <!-- ── SIDEBAR ── -->
-    <aside class="content-sidebar">
-
-      <div class="sidebar-cta">
+      <div class="apple-cta">
         <p>¿Tienes pérdidas de años anteriores sin declarar? El plazo para 2021 vence en semanas.</p>
         <a href="/asesoramiento-fiscal-criptomonedas">Hablar con el economista →</a>
-        <div class="sidebar-author">
-          <div class="author-avatar">RR</div>
-          <div class="author-info">
-            <div class="name">Rafael Ramos Martínez</div>
-            <div class="cred">Economista Colegiado nº 4.579</div>
+        <div class="legal-purpose">
+          <div class="how-small">RR</div>
+          <div class="how-muted">
+            <h3 class="section-title">Rafael Ramos Martínez</h3>
+            <div class="how-small">Economista Colegiado nº 4.579</div>
           </div>
         </div>
       </div>
 
-      <div class="sidebar-card">
+      <div class="legal-purpose">
         <h3>En esta guía</h3>
         <ul>
           <li><a href="#que-son">¿Qué son las pérdidas?</a></li>
@@ -1277,7 +846,7 @@ footer {
         </ul>
       </div>
 
-      <div class="sidebar-card">
+      <div class="legal-purpose">
         <h3>Base legal aplicada</h3>
         <ul>
           <li><a href="https://www.boe.es/buscar/act.php?id=BOE-A-2006-20764" target="_blank" rel="noopener">Art. 33.1 LIRPF — Concepto</a></li>
@@ -1287,7 +856,7 @@ footer {
         </ul>
       </div>
 
-      <div class="sidebar-card">
+      <div class="legal-purpose">
         <h3>Guías del silo</h3>
         <ul>
           <li><a href="/compensar-perdidas-criptomonedas">Compensar pérdidas (art. 49 LIRPF)</a></li>
@@ -1298,51 +867,54 @@ footer {
         </ul>
       </div>
 
-    </aside>
-
-  </div><!-- .content-layout -->
-</div><!-- .wrap -->
-
-<!-- ── CTA SILO /herramientas ── -->
-<section style="border-top:1px solid var(--border2);">
-  <div style="max-width:920px;margin:0 auto;padding:3rem 1.5rem;text-align:center;">
-    <p style="font-family:var(--font-display);font-weight:700;color:var(--text);font-size:1.15rem;margin-bottom:.6rem;">Calcula tus impuestos cripto con el método FIFO</p>
-    <p style="color:var(--muted);font-size:.95rem;margin-bottom:1.5rem;">Importa el historial de tu exchange y genera tu informe FIFO para Hacienda, o explora todas las herramientas del silo fiscal.</p>
-    <div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;">
-      <a href="/signup/" style="display:inline-block;background:var(--accent);color:#0a0a0a;border-radius:8px;padding:13px 30px;font-family:var(--font-display);font-weight:700;font-size:15px;text-decoration:none;">Calcular gratis con FIFO</a>
-      <a href="/herramientas" style="display:inline-block;border:1.5px solid var(--accent);color:var(--accent);border-radius:8px;padding:13px 28px;font-family:var(--font-display);font-weight:700;font-size:15px;text-decoration:none;">Ver todas las herramientas →</a>
+    </section></article></div></div><section class="apple-cta-section"><div class="apple-container"><div class="apple-cta">
+  <div>
+    <p>Calcula tus impuestos cripto con el método FIFO</p>
+    <p>Importa el historial de tu exchange y genera tu informe FIFO para Hacienda, o explora todas las herramientas del silo fiscal.</p>
+    <div>
+      <a class="apple-button" href="/signup/">Calcular gratis con FIFO</a>
+      <a class="apple-text-link" href="/herramientas">Ver todas las herramientas →</a>
     </div>
   </div>
-</section>
-
-<!-- ── FOOTER ── -->
-<footer>
-  <div class="footer-inner">
-    <div>
-      <div class="footer-brand">Mariano Sevilla</div>
-      <div class="footer-copy">Herramienta fiscal para criptomonedas · marianosevilla.com</div>
+</div></div></section></main><footer class="apple-footer">
+  <div class="apple-container">
+    <div class="apple-footer-top">
+      <div class="apple-footer-brand">
+        <a href="/" class="apple-footer-logo">mariano<span>sevilla</span>.com</a>
+        <p>Informes FIFO de criptomonedas.</p>
+      </div>
+      <nav aria-labelledby="apple-footer-explore">
+        <h2 id="apple-footer-explore">Explorar</h2>
+        <ul>
+          <li><a href="/herramientas">Herramientas</a></li>
+          <li><a href="/como-funciona">Cómo funciona</a></li>
+          <li><a href="/exchanges">Exchanges compatibles</a></li>
+        </ul>
+      </nav>
+      <nav aria-labelledby="apple-footer-help">
+        <h2 id="apple-footer-help">Ayuda</h2>
+        <ul>
+          <li><a href="/faq">Preguntas frecuentes</a></li>
+          <li><a href="/contacto">Contacto</a></li>
+          <li><a href="/about">Equipo</a></li>
+        </ul>
+      </nav>
     </div>
-    <div class="footer-links">
-      <a href="/">Inicio</a>
-      <a href="/exchanges">Exchanges</a>
-      <a href="/como-funciona">Cómo funciona</a>
-      <a href="/modelo-721-criptomonedas">Modelo 721</a>
-      <a href="/asesoramiento-fiscal-criptomonedas">Asesoramiento</a>
-      <a href="/privacidad">Privacidad</a>
-      <a href="/terminos">Términos</a>
-      <a href="/aviso-legal">Aviso legal</a>
-      <a href="/about">About</a>
+    <div class="apple-footer-legal">
+      <p class="apple-footer-disclaimer">Herramienta de generación de informes FIFO para usuarios con criptomonedas. No constituye asesoramiento fiscal ni legal.</p>
+      <div class="apple-footer-bottom">
+        <p class="apple-footer-copyright">© <span class="apple-footer-year">2026</span> Mariano Sevilla</p>
+        <nav aria-label="Información legal">
+          <ul>
+            <li><a href="/privacidad">Privacidad</a></li>
+            <li><a href="/terminos">Términos</a></li>
+            <li><a href="/cookies">Cookies</a></li>
+            <li><a href="/aviso-legal">Aviso legal</a></li>
+          </ul>
+        </nav>
+      </div>
     </div>
   </div>
 </footer>
-
-<script>
-function toggleFaq(btn) {
-  const item = btn.closest('.faq-item');
-  item.classList.toggle('open');
-}
-</script>
-
-</body>
-</html>
-
+<script src="/static/landing_apple.js" defer></script>
+</body></html>

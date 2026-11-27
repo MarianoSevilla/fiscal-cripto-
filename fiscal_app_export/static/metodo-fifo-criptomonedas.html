@@ -26,9 +26,6 @@
 <link rel="icon" href="/static/favicon.ico">
 <link rel="manifest" href="/static/site.webmanifest">
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/nav.css">
 <link rel="preload" href="/static/nav.js" as="script">
 
@@ -160,491 +157,87 @@
 }
 </script>
 
+
+<link rel="stylesheet" href="/static/landing_apple.css">
+<link rel="stylesheet" href="/static/como_funciona_apple.css">
+<link rel="stylesheet" href="/static/legal_apple.css">
+<link rel="stylesheet" href="/static/exchange_guide_apple.css">
+<link rel="stylesheet" href="/static/apple_cta.css">
+</head>
+<body class="apple-home apple-how-page apple-exchange-guide">
+<a class="apple-skip" href="#contenido">Saltar al contenido</a>
+<nav id="site-nav" aria-label="Principal">
+  <div class="snav-inner">
+    <a href="/" class="snav-logo">mariano<span>sevilla</span>.com</a>
+    <ul class="snav-links">
+      <li><a href="/herramientas">Herramientas</a></li>
+      <li><a href="/como-funciona">Cómo funciona</a></li>
+      <li><a href="/recursos">Recursos</a></li>
+      <li><a href="/faq">FAQ</a></li>
+      <li><a href="/contacto">Contacto</a></li>
+    </ul>
+    <div class="snav-right">
+      <div class="snav-skeleton" aria-hidden="true"></div>
+    </div>
+  </div>
+</nav>
+<script src="/static/nav.js"></script>
+<noscript>
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --bg:          #0b1220;
-  --bg2:         #101829;
-  --surface:     #141f32;
-  --surface2:    #1a2540;
-  --border:      rgba(255,255,255,0.07);
-  --border2:     rgba(255,255,255,0.13);
-  --text:        #eef2ff;
-  --muted:       #7a8aa8;
-  --accent:      #00C896;
-  --accent-dim:  rgba(0,200,150,0.12);
-  --accent-glow: rgba(0,200,150,0.25);
-  --footer-bg:   #070e1a;
-  --max-w:       1280px;
-  --pad-x:       3rem;
-  --font-display:'Syne', sans-serif;
-  --font-body:   'DM Sans', sans-serif;
+/* Native mobile disclosure: useful in HTML viewers without JavaScript too. */
+.apple-home .snav-right{display:none}
+.apple-home .apple-noscript-menu{display:none}
+@media (min-width:1201px){
+  .apple-home #site-nav{position:static;height:auto}
+  .apple-home .snav-inner{flex-wrap:wrap;padding-block:16px;gap:16px}
+  .apple-home .snav-links{display:flex;position:static;transform:none;flex-wrap:wrap;gap:12px}
+  .apple-home .apple-intro-inner{padding-top:48px}
 }
-
-html { scroll-behavior: smooth; }
-body {
-  background: var(--bg); color: var(--text);
-  font-family: var(--font-body); font-size: 16px; line-height: 1.7;
-  min-height: 100vh; -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
-}
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
-
-.wrap { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x); }
-.section { padding: 5rem 0; }
-.section + .section { border-top: 1px solid var(--border); }
-
-.kicker {
-  font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
-  text-transform: uppercase; color: var(--accent);
-  margin-bottom: 0.85rem; display: block;
-}
-
-/* ── HERO ─────────────────────────────────── */
-.hero {
-  padding: 7rem 0 4rem;
-  border-bottom: 1px solid var(--border);
-}
-.hero-inner { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x); }
-
-.breadcrumb {
-  display: flex; align-items: center; gap: 0.5rem;
-  font-size: 13px; color: var(--muted); margin-bottom: 2rem;
-  flex-wrap: wrap;
-}
-.breadcrumb a { color: var(--muted); }
-.breadcrumb a:hover { color: var(--accent); }
-.breadcrumb span { color: var(--border2); }
-
-.hero h1 {
-  font-family: var(--font-display); font-size: clamp(2rem, 4.5vw, 3.4rem);
-  font-weight: 800; letter-spacing: -0.03em; line-height: 1.08;
-  margin-bottom: 1.25rem;
-}
-.hero h1 em { color: var(--accent); font-style: normal; }
-
-.hero-meta {
-  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
-  font-size: 13px; color: var(--muted); margin-bottom: 1.5rem;
-}
-.hero-meta .tag {
-  background: var(--accent-dim); color: var(--accent);
-  border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 600;
-}
-
-.hero-deck {
-  font-size: 1.05rem; color: var(--muted);
-  line-height: 1.75; margin-bottom: 2rem;
-}
-
-.toc {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 14px; padding: 1.5rem 1.75rem; margin-bottom: 2.5rem;
-  max-width: 680px;
-}
-.toc-title {
-  font-size: 12px; font-weight: 700; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--muted); margin-bottom: 1rem;
-}
-.toc ol {
-  list-style: decimal; padding-left: 1.25rem;
-  display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem 2rem;
-}
-.toc ol li { font-size: 14px; }
-.toc ol li a { color: var(--muted); }
-.toc ol li a:hover { color: var(--accent); }
-
-.btn-hero {
-  display: inline-flex; align-items: center; gap: 0.5rem;
-  background: var(--accent); color: #000; font-weight: 700;
-  font-size: 15px; padding: 0.75rem 1.75rem; border-radius: 8px;
-  text-decoration: none; transition: opacity 0.2s;
-}
-.btn-hero:hover { opacity: 0.88; text-decoration: none; }
-
-/* ── CONTENT LAYOUT ───────────────────────── */
-.content-layout {
-  display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: 4rem; align-items: start;
-  padding: 5rem 0;
-}
-.content-main {}
-.content-sidebar {
-  position: sticky; top: 5rem;
-}
-
-/* ── PROSE ────────────────────────────────── */
-.prose h2 {
-  font-family: var(--font-display); font-size: 1.65rem; font-weight: 800;
-  letter-spacing: -0.025em; line-height: 1.2;
-  margin: 3.5rem 0 1.25rem; color: var(--text);
-  scroll-margin-top: 6rem;
-}
-.prose h2:first-child { margin-top: 0; }
-.prose h3 {
-  font-family: var(--font-display); font-size: 1.15rem; font-weight: 700;
-  margin: 2rem 0 0.75rem; color: var(--text);
-}
-.prose p { margin-bottom: 1.1rem; color: var(--muted); line-height: 1.8; }
-.prose p strong { color: var(--text); }
-.prose ul, .prose ol { padding-left: 1.4rem; margin-bottom: 1.25rem; }
-.prose ul li, .prose ol li { color: var(--muted); margin-bottom: 0.4rem; line-height: 1.75; }
-.prose ul li strong, .prose ol li strong { color: var(--text); }
-
-/* ── CALLOUT BOX ──────────────────────────── */
-.callout {
-  background: var(--surface2); border: 1px solid var(--border2);
-  border-left: 4px solid var(--accent); border-radius: 0 12px 12px 0;
-  padding: 1.25rem 1.5rem; margin: 1.75rem 0;
-}
-.callout p { color: var(--muted); font-size: 14.5px; margin: 0; line-height: 1.7; }
-.callout p strong { color: var(--text); }
-.callout-title {
-  font-size: 12px; font-weight: 700; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--accent); margin-bottom: 0.5rem;
-}
-
-.callout-legal {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 10px; padding: 1rem 1.5rem;
-  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
-  margin: 1.5rem 0;
-}
-.callout-legal span {
-  font-size: 13px; color: var(--muted);
-  border-right: 1px solid var(--border2); padding-right: 1rem;
-}
-.callout-legal span:last-child { border-right: none; padding-right: 0; }
-.callout-legal span strong { color: var(--accent); }
-
-.error-callout {
-  background: rgba(229, 85, 85, 0.08); border: 1px solid rgba(229,85,85,0.25);
-  border-left: 4px solid #e55; border-radius: 0 12px 12px 0;
-  padding: 1.25rem 1.5rem; margin: 1.5rem 0;
-}
-.error-callout p { color: var(--muted); font-size: 14.5px; margin: 0; }
-.error-callout .callout-title { color: #e55; }
-
-/* ── FIFO FLOW DIAGRAM ────────────────────── */
-.fifo-flow {
-  margin: 2rem 0;
-  overflow-x: auto;
-}
-.fifo-flow-inner {
-  display: flex; align-items: stretch; gap: 0;
-  min-width: 520px;
-}
-.flow-node {
-  flex: 1; background: var(--surface);
-  border: 1px solid var(--border2); border-radius: 10px;
-  padding: 1rem 0.75rem; text-align: center;
-  position: relative;
-}
-.flow-node + .flow-node { border-left: none; border-radius: 0 10px 10px 0; }
-.flow-node:first-child { border-radius: 10px 0 0 10px; }
-.flow-node.flow-sale {
-  background: var(--accent-dim); border-color: rgba(0,200,150,0.3);
-}
-.flow-arrow {
-  display: flex; align-items: center; justify-content: center;
-  width: 28px; flex-shrink: 0; color: var(--muted); font-size: 18px;
-  position: relative; z-index: 1;
-}
-.flow-node-label {
-  font-size: 11px; font-weight: 600; letter-spacing: 0.07em;
-  text-transform: uppercase; color: var(--muted); margin-bottom: 0.35rem;
-}
-.flow-node-date { font-size: 12px; color: var(--muted); margin-bottom: 0.2rem; }
-.flow-node-units {
-  font-family: var(--font-display); font-size: 1.05rem; font-weight: 800;
-  color: var(--text); margin-bottom: 0.2rem;
-}
-.flow-node-price { font-size: 12px; color: var(--muted); }
-.flow-node-total {
-  font-size: 12px; font-weight: 600;
-  color: var(--accent); margin-top: 0.35rem;
-}
-.flow-node.flow-sale .flow-node-label { color: var(--accent); }
-.flow-node.flow-sale .flow-node-units { color: var(--accent); }
-
-.fifo-result {
-  margin-top: 1.5rem; display: grid;
-  grid-template-columns: repeat(3, 1fr); gap: 1rem;
-}
-.result-card {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 10px; padding: 1rem 1.25rem; text-align: center;
-}
-.result-card-label { font-size: 12px; color: var(--muted); margin-bottom: 0.3rem; }
-.result-card-val {
-  font-family: var(--font-display); font-size: 1.2rem; font-weight: 800;
-  color: var(--text);
-}
-.result-card-val.green { color: var(--accent); }
-.result-card-val.red { color: #e55; }
-
-/* ── TABLES ───────────────────────────────── */
-.fifo-table {
-  width: 100%; border-collapse: collapse;
-  margin: 1.5rem 0; font-size: 14px;
-}
-.fifo-table th {
-  text-align: left; font-size: 11px; font-weight: 700;
-  letter-spacing: 0.07em; text-transform: uppercase;
-  color: var(--muted); padding: 0.6rem 0.9rem;
-  border-bottom: 1px solid var(--border2);
-}
-.fifo-table td {
-  padding: 0.7rem 0.9rem; color: var(--muted);
-  border-bottom: 1px solid var(--border);
-}
-.fifo-table td strong { color: var(--text); }
-.fifo-table td.accent { color: var(--accent); font-weight: 600; }
-.fifo-table td.green { color: var(--accent); }
-.fifo-table td.red { color: #e55; }
-.fifo-table tr:last-child td { border-bottom: none; }
-.fifo-table tr.highlight td { background: var(--accent-dim); }
-
-/* ── STEP LIST ────────────────────────────── */
-.step-list { list-style: none; padding: 0; margin: 1.5rem 0; }
-.step-item {
-  display: flex; gap: 1rem; margin-bottom: 1.25rem;
-  align-items: flex-start;
-}
-.step-num {
-  background: var(--accent-dim); color: var(--accent); font-weight: 800;
-  font-family: var(--font-display); font-size: 0.9rem;
-  width: 32px; height: 32px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; margin-top: 2px;
-}
-.step-body {}
-.step-title { font-weight: 600; color: var(--text); margin-bottom: 0.2rem; }
-.step-desc { font-size: 14.5px; color: var(--muted); line-height: 1.7; }
-
-/* ── COMPARISON TABLE ─────────────────────── */
-.comparison-wrap { overflow-x: auto; margin: 1.5rem 0; }
-.comparison-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-.comparison-table th {
-  text-align: left; font-size: 11px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.07em;
-  color: var(--muted); padding: 0.6rem 1rem;
-  border-bottom: 1px solid var(--border2);
-}
-.comparison-table td {
-  padding: 0.85rem 1rem; color: var(--muted);
-  border-bottom: 1px solid var(--border);
-  vertical-align: top;
-}
-.comparison-table td:first-child { font-weight: 700; color: var(--text); white-space: nowrap; }
-.comparison-table tr:last-child td { border-bottom: none; }
-.badge-yes { background: var(--accent-dim); color: var(--accent); border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 700; white-space: nowrap; }
-.badge-no  { background: rgba(229,85,85,0.1); color: #e55; border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 700; white-space: nowrap; }
-.badge-warn { background: rgba(245,166,35,0.1); color: #f5a623; border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 700; white-space: nowrap; }
-
-/* ── NEWS BOX (TSJPV) ─────────────────────── */
-.news-box {
-  background: var(--surface2);
-  border: 1px solid rgba(245,166,35,0.3);
-  border-left: 4px solid #f5a623;
-  border-radius: 0 14px 14px 0;
-  padding: 1.25rem 1.5rem; margin: 1.5rem 0;
-}
-.news-box-header {
-  display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;
-  flex-wrap: wrap;
-}
-.news-badge {
-  background: rgba(245,166,35,0.15); color: #f5a623;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
-  text-transform: uppercase; border-radius: 4px; padding: 2px 8px;
-}
-.news-box p { color: var(--muted); font-size: 14.5px; margin-bottom: 0.75rem; line-height: 1.7; }
-.news-box p:last-child { margin-bottom: 0; }
-.news-box p strong { color: var(--text); }
-
-/* ── FAQ ──────────────────────────────────── */
-.faq-list { margin-top: 1rem; }
-.faq-item {
-  border-bottom: 1px solid var(--border);
-  padding: 0.25rem 0;
-}
-.faq-item:last-child { border-bottom: none; }
-.faq-q {
-  font-size: 15.5px; font-weight: 600; color: var(--text);
-  cursor: pointer; padding: 1rem 0;
-  list-style: none; display: flex; justify-content: space-between; align-items: center;
-  gap: 1rem;
-}
-.faq-q::after {
-  content: '+'; color: var(--accent); font-size: 20px;
-  font-weight: 400; flex-shrink: 0; line-height: 1;
-}
-details[open] .faq-q::after { content: '−'; }
-.faq-a {
-  color: var(--muted); font-size: 14.5px; line-height: 1.8;
-  padding-bottom: 1rem;
-}
-.faq-a a { color: var(--accent); }
-
-/* ── SIDEBAR ──────────────────────────────── */
-.sidebar-card {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 14px; padding: 1.5rem; margin-bottom: 1.5rem;
-}
-.sidebar-card-title {
-  font-family: var(--font-display); font-size: 0.95rem; font-weight: 800;
-  color: var(--text); margin-bottom: 1rem;
-}
-.sidebar-links { list-style: none; padding: 0; }
-.sidebar-links li { margin-bottom: 0.5rem; }
-.sidebar-links li a {
-  color: var(--muted); font-size: 14px;
-  display: flex; align-items: center; gap: 0.4rem;
-}
-.sidebar-links li a:hover { color: var(--accent); text-decoration: none; }
-.sidebar-links li a::before { content: '→'; color: var(--accent); font-size: 12px; }
-
-.author-card {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 14px; padding: 1.25rem 1.5rem;
-}
-.author-name { font-weight: 700; color: var(--text); font-size: 14.5px; margin-bottom: 0.2rem; }
-.author-role { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
-
-/* ── CTA MID ──────────────────────────────── */
-.cta-mid {
-  background: var(--surface2); border: 1px solid var(--border2);
-  border-radius: 14px; padding: 2rem 2.25rem; margin: 3rem 0;
-  text-align: center;
-}
-.cta-mid-title {
-  font-family: var(--font-display); font-size: 1.35rem; font-weight: 800;
-  color: var(--text); margin-bottom: 0.75rem;
-}
-.cta-mid p { color: var(--muted); margin-bottom: 1.25rem; }
-.cta-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
-.btn-cta {
-  background: var(--accent); color: #000; font-weight: 700;
-  padding: 0.7rem 1.6rem; border-radius: 8px; font-size: 14.5px;
-  text-decoration: none; transition: opacity 0.2s;
-}
-.btn-cta:hover { opacity: 0.88; text-decoration: none; }
-.btn-outline {
-  border: 1.5px solid var(--border2); color: var(--muted);
-  padding: 0.7rem 1.6rem; border-radius: 8px; font-size: 14.5px;
-  text-decoration: none; transition: border-color 0.2s, color 0.2s;
-}
-.btn-outline:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
-.cta-micro-text { font-size: 12px; color: var(--muted); margin-top: 0.75rem; margin-bottom: 0; }
-
-/* ── AUTHOR FOOTER ────────────────────────── */
-.author-bio {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 14px; padding: 1.75rem 2rem;
-  display: flex; gap: 1.5rem; align-items: flex-start;
-  margin: 3rem 0 2rem;
-}
-.author-avatar {
-  width: 52px; height: 52px; border-radius: 50%;
-  background: var(--accent-dim); border: 2px solid rgba(0,200,150,0.3);
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-display); font-weight: 800; font-size: 1.1rem;
-  color: var(--accent); flex-shrink: 0;
-}
-.author-bio-name { font-weight: 700; color: var(--text); margin-bottom: 0.25rem; }
-.author-bio-role { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 0.5rem; }
-.author-bio-text { font-size: 13.5px; color: var(--muted); line-height: 1.7; }
-
-/* ── RELATED GUIDES ───────────────────────── */
-.related-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
-  margin-top: 1.5rem;
-}
-.related-card {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 10px; padding: 1rem 1.25rem;
-  text-decoration: none; display: block;
-  transition: border-color 0.2s;
-}
-.related-card:hover { border-color: var(--accent); text-decoration: none; }
-.related-card-label { font-size: 11px; color: var(--accent); font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 0.4rem; }
-.related-card-title { font-size: 14px; font-weight: 600; color: var(--text); line-height: 1.4; }
-
-/* ── FOOTER ───────────────────────────────── */
-footer {
-  background: var(--footer-bg); border-top: 1px solid var(--border);
-  padding: 3rem 0; margin-top: 4rem;
-}
-.footer-inner {
-  max-width: var(--max-w); margin: 0 auto; padding: 0 var(--pad-x);
-  display: flex; justify-content: space-between; align-items: flex-start;
-  gap: 2rem; flex-wrap: wrap;
-}
-.footer-brand { font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; color: var(--text); }
-.footer-copy { font-size: 13px; color: var(--muted); margin-top: 0.4rem; }
-.footer-links { display: flex; flex-direction: column; gap: 0.35rem; }
-.footer-links a { font-size: 13px; color: var(--muted); }
-.footer-links a:hover { color: var(--accent); }
-.disclaimer {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 8px; padding: 1rem 1.25rem; margin-top: 2rem;
-  font-size: 12.5px; color: var(--muted); line-height: 1.65;
-}
-
-@media (max-width: 900px) {
-  :root { --pad-x: 1.25rem; }
-  .content-layout { grid-template-columns: 1fr; gap: 3rem; }
-  .content-sidebar { position: static; }
-  .toc ol { grid-template-columns: 1fr; }
-  .fifo-result { grid-template-columns: 1fr 1fr; }
-  .related-grid { grid-template-columns: 1fr; }
-}
-@media (max-width: 600px) {
-  .hero h1 { font-size: 1.6rem; }
-  .fifo-result { grid-template-columns: 1fr; }
-  .fifo-flow-inner { min-width: 480px; }
+@media (max-width:1200px){
+  .apple-home .apple-noscript-access{display:none}
+  .apple-home .apple-noscript-menu{display:block;position:absolute;top:8px;right:var(--apple-pad);z-index:1001}
+  .apple-home .apple-noscript-menu>summary{display:flex;align-items:center;justify-content:center;width:44px;height:44px;list-style:none;border:1px solid #d8e1dd;border-radius:9px;background:#f3f6f5;color:var(--text);cursor:pointer}
+  .apple-home .apple-noscript-menu>summary::-webkit-details-marker{display:none}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon{background:transparent}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::before{transform:translateY(6px) rotate(45deg)}
+  .apple-home .apple-noscript-menu[open] .snav-menu-icon::after{transform:translateY(-6px) rotate(-45deg)}
+  .apple-home .apple-noscript-panel{position:absolute;top:56px;left:auto;right:calc(-1 * var(--apple-pad));width:100vw;display:flex;flex-direction:column;gap:4px;padding:12px var(--apple-pad) 18px;max-height:calc(100vh - 64px);max-height:calc(100dvh - 64px);overflow-y:auto;overscroll-behavior:contain;background:#fff;border-top:1px solid var(--border);box-shadow:0 14px 28px rgba(20,34,30,.1)}
+  .apple-home .apple-noscript-panel>a{display:flex;align-items:center;min-height:44px;padding:11px 14px;border-radius:8px;color:var(--muted);font-size:.9375rem;line-height:1.4;text-decoration:none}
+  .apple-home .apple-noscript-panel>a:hover{background:#f1f5f3;color:var(--text)}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary{justify-content:center;min-height:48px;border-radius:999px;background:var(--accent);color:#fff;font-weight:600}
+  .apple-home .apple-noscript-panel>a.snav-mobile-link-primary:hover{background:#00533f}
+  .apple-home .apple-noscript-menu .snav-menu-icon{width:19px}
+  .apple-home #site-nav .snav-logo{max-width:calc(100% - 60px)}
 }
 </style>
-</head>
-<body>
-
-<!-- Navigation -->
-<nav id="site-nav"></nav>
-<script src="/static/nav.js" defer></script>
-
-<!-- ── HERO ──────────────────────────────────── -->
-<header class="hero">
-  <div class="hero-inner">
-
-    <nav class="breadcrumb" aria-label="Ruta de navegación">
+<details class="apple-noscript-menu">
+  <summary><span class="snav-menu-icon" aria-hidden="true"></span><span class="apple-sr-only">Menú principal</span></summary>
+  <nav class="apple-noscript-panel" aria-label="Navegación móvil">
+    <a href="/herramientas">Herramientas</a>
+    <a href="/como-funciona">Cómo funciona</a>
+    <a href="/recursos">Recursos</a>
+    <a href="/faq">FAQ</a>
+    <a href="/contacto">Contacto</a>
+    <a href="/login/">Iniciar sesión</a>
+    <a href="/signup/" class="snav-mobile-link-primary">Crear cuenta</a>
+  </nav>
+</details>
+<div class="apple-noscript-access"><a href="/login/">Iniciar sesión</a><a href="/signup/">Crear cuenta</a></div>
+</noscript>
+<main id="contenido" tabindex="-1"><section class="how-intro" aria-labelledby="guide-title"><div class="apple-container"><nav class="breadcrumb" aria-label="Ruta de navegación">
       <a href="/">Inicio</a>
-      <span>›</span>
+      <span class="breadcrumb-sep">›</span>
       <a href="/herramientas">Herramientas</a>
-      <span>›</span>
+      <span class="breadcrumb-sep">›</span>
       <span>Método FIFO criptomonedas</span>
-    </nav>
-
-    <h1>Método FIFO en criptomonedas: qué es, cómo se calcula<br>y por qué <em>Hacienda lo exige</em></h1>
-
-    <div class="hero-meta">
-      <span class="tag">Guía fiscal</span>
-      <span>Por Rafael Ramos Martínez · Economista Colegiado nº&nbsp;4.579</span>
-      <span>Actualizado: junio 2026</span>
-    </div>
-
-    <p class="hero-deck">
+    </nav><p class="apple-eyebrow">Guía fiscal</p><h1 id="guide-title">Método FIFO en criptomonedas: qué es, cómo se calcula y por qué <em>Hacienda lo exige</em></h1><p class="how-lead">
       El método FIFO (<em>First In, First Out</em>) es el único sistema válido en España para calcular las ganancias
       y pérdidas patrimoniales de criptomonedas. Obligatorio por ley desde 2018 según el art.&nbsp;37.2 LIRPF y las
       consultas vinculantes de la DGT. Esta guía explica su base legal, cómo se calcula con ejemplos reales y
       qué cambia en 2025 tras la sentencia del TSJPV.
-    </p>
-
-    <nav class="toc" aria-label="Contenidos">
-      <div class="toc-title">Contenidos</div>
+    </p></div></section>
+<div class="apple-legal-page"><div class="apple-container legal-layout"><aside class="legal-index" aria-label="Contenidos">
+      <h2>Contenidos</h2>
       <ol>
         <li><a href="#que-es">¿Qué es el método FIFO?</a></li>
         <li><a href="#por-que-obligatorio">Por qué es obligatorio en España</a></li>
@@ -656,24 +249,7 @@ footer {
         <li><a href="#errores">Errores más comunes</a></li>
         <li><a href="#calculadora">Calculadora FIFO automática</a></li>
         <li><a href="#faq">Preguntas frecuentes</a></li>
-      </ol>
-    </nav>
-
-    <a href="#calculadora" class="btn-hero">Calcular mi FIFO ahora</a>
-
-  </div>
-</header>
-
-<!-- ── MAIN CONTENT ───────────────────────────── -->
-<main>
-  <div class="wrap">
-    <div class="content-layout">
-
-      <!-- PROSE -->
-      <article class="prose">
-
-        <!-- ─── 1. QUÉ ES EL MÉTODO FIFO ─────────── -->
-        <h2 id="que-es">¿Qué es el método FIFO en criptomonedas?</h2>
+      </ol></aside><article class="legal-document"><section class="legal-section"><p class="how-small">Por Rafael Ramos Martínez · Economista Colegiado nº&nbsp;4.579 · Actualizado: junio 2026</p><div class="apple-cta"><a href="#calculadora" class="apple-button">Calcular mi FIFO ahora</a></div></section><section class="legal-section"><h2 id="que-es">¿Qué es el método FIFO en criptomonedas?</h2>
 
         <p>
           El método FIFO (<em>First In, First Out</em>, "primero en entrar, primero en salir") es el sistema de
@@ -682,7 +258,7 @@ footer {
           homogéneos adquiridos en distintas fechas, se considera vendido primero el lote comprado en primer lugar.
         </p>
 
-        <div class="callout-legal">
+        <div class="legal-callout">
           <span><strong>Base legal:</strong> Art. 37.2 LIRPF</span>
           <span><strong>DGT:</strong> V0999-18 (9 may 2018)</span>
           <span><strong>DGT:</strong> V1604-18</span>
@@ -705,7 +281,8 @@ footer {
         </p>
 
         <!-- ─── 2. POR QUÉ ES OBLIGATORIO ─────────── -->
-        <h2 id="por-que-obligatorio">Por qué el FIFO es obligatorio en España: la base legal</h2>
+        </section>
+<section class="legal-section"><h2 id="por-que-obligatorio">Por qué el FIFO es obligatorio en España: la base legal</h2>
 
         <h3>Las criptomonedas como "bienes homogéneos"</h3>
         <p>
@@ -716,8 +293,8 @@ footer {
           se transmiten las más antiguas primero.
         </p>
 
-        <div class="callout">
-          <div class="callout-title">Consultas vinculantes DGT</div>
+        <div class="legal-callout">
+          <h3 class="section-title">Consultas vinculantes DGT</h3>
           <p>
             <strong>V0999-18 (9 de mayo de 2018):</strong> primera consulta vinculante que aplica el criterio FIFO
             del art.&nbsp;37.2 LIRPF al Bitcoin. La DGT confirma que las monedas virtuales son bienes
@@ -735,7 +312,8 @@ footer {
         </p>
 
         <!-- ─── 3. CÓMO CALCULAR ────────────────────── -->
-        <h2 id="como-calcular">Cómo se calcula el método FIFO: ejemplo paso a paso</h2>
+        </section>
+<section class="legal-section"><h2 id="como-calcular">Cómo se calcula el método FIFO: ejemplo paso a paso</h2>
 
         <p>
           El cálculo FIFO requiere ordenar todas las compras cronológicamente y, en cada venta, imputar
@@ -745,7 +323,7 @@ footer {
 
         <h3>El historial de compras</h3>
 
-        <table class="fifo-table" aria-label="Historial de compras y venta de Bitcoin">
+        <div class="files-table-wrap" tabindex="0" role="region" aria-label="Tabla fiscal desplazable"><table class="files-table" aria-label="Historial de compras y venta de Bitcoin">
           <thead>
             <tr>
               <th>Operación</th>
@@ -761,23 +339,23 @@ footer {
               <td>ene 2023</td>
               <td>0,10 BTC</td>
               <td>18.000 €</td>
-              <td class="accent">1.800 €</td>
+              <td class="green">1.800 €</td>
             </tr>
             <tr>
               <td><strong>Compra 2</strong></td>
               <td>jun 2023</td>
               <td>0,10 BTC</td>
               <td>27.000 €</td>
-              <td class="accent">2.700 €</td>
+              <td class="green">2.700 €</td>
             </tr>
             <tr>
               <td><strong>Compra 3</strong></td>
               <td>ene 2024</td>
               <td>0,10 BTC</td>
               <td>38.000 €</td>
-              <td class="accent">3.800 €</td>
+              <td class="green">3.800 €</td>
             </tr>
-            <tr class="highlight">
+            <tr>
               <td><strong>Venta</strong></td>
               <td>sep 2024</td>
               <td>0,15 BTC</td>
@@ -785,49 +363,49 @@ footer {
               <td class="green"><strong>8.250 €</strong></td>
             </tr>
           </tbody>
-        </table>
+        </table></div>
 
         <h3>Visualización del flujo FIFO</h3>
         <p>La venta de 0,15 BTC consume primero el lote más antiguo (Compra 1) y luego parte del siguiente (Compra 2):</p>
 
-        <div class="fifo-flow" role="img" aria-label="Diagrama de flujo FIFO: las ventas consumen los lotes más antiguos primero">
-          <div class="fifo-flow-inner">
-            <div class="flow-node">
-              <div class="flow-node-label">Compra 1</div>
-              <div class="flow-node-date">ene 2023</div>
-              <div class="flow-node-units">0,10 BTC</div>
-              <div class="flow-node-price">18.000 €/BTC</div>
-              <div class="flow-node-total">Coste: 1.800 €</div>
+        <div class="legal-purpose" role="img" aria-label="Diagrama de flujo FIFO: las ventas consumen los lotes más antiguos primero">
+          <div class="how-copy">
+            <div class="apple-catalog-card">
+              <div class="apple-eyebrow">Compra 1</div>
+              <div class="how-small">ene 2023</div>
+              <div class="mock-kpi-value">0,10 BTC</div>
+              <div class="how-muted">18.000 €/BTC</div>
+              <div class="how-muted">Coste: 1.800 €</div>
             </div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-node">
-              <div class="flow-node-label">Compra 2</div>
-              <div class="flow-node-date">jun 2023</div>
-              <div class="flow-node-units">0,10 BTC</div>
-              <div class="flow-node-price">27.000 €/BTC</div>
-              <div class="flow-node-total">Coste: 2.700 €</div>
+            <div class="how-small">→</div>
+            <div class="apple-catalog-card">
+              <div class="apple-eyebrow">Compra 2</div>
+              <div class="how-small">jun 2023</div>
+              <div class="mock-kpi-value">0,10 BTC</div>
+              <div class="how-muted">27.000 €/BTC</div>
+              <div class="how-muted">Coste: 2.700 €</div>
             </div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-node">
-              <div class="flow-node-label">Compra 3</div>
-              <div class="flow-node-date">ene 2024</div>
-              <div class="flow-node-units">0,10 BTC</div>
-              <div class="flow-node-price">38.000 €/BTC</div>
-              <div class="flow-node-total">Coste: 3.800 €</div>
+            <div class="how-small">→</div>
+            <div class="apple-catalog-card">
+              <div class="apple-eyebrow">Compra 3</div>
+              <div class="how-small">ene 2024</div>
+              <div class="mock-kpi-value">0,10 BTC</div>
+              <div class="how-muted">38.000 €/BTC</div>
+              <div class="how-muted">Coste: 3.800 €</div>
             </div>
-            <div class="flow-arrow">→</div>
-            <div class="flow-node flow-sale">
-              <div class="flow-node-label">Venta FIFO</div>
-              <div class="flow-node-date">sep 2024</div>
-              <div class="flow-node-units">0,15 BTC</div>
-              <div class="flow-node-price">55.000 €/BTC</div>
-              <div class="flow-node-total">8.250 €</div>
+            <div class="how-small">→</div>
+            <div class="apple-catalog-card">
+              <div class="apple-eyebrow">Venta FIFO</div>
+              <div class="how-small">sep 2024</div>
+              <div class="mock-kpi-value">0,15 BTC</div>
+              <div class="how-muted">55.000 €/BTC</div>
+              <div class="how-muted">8.250 €</div>
             </div>
           </div>
         </div>
 
-        <div class="callout">
-          <div class="callout-title">Qué consume la venta</div>
+        <div class="legal-callout">
+          <h3 class="section-title">Qué consume la venta</h3>
           <p>
             La venta de 0,15 BTC consume: <strong>todo el lote de Compra 1</strong> (0,10 BTC) +
             <strong>la mitad del lote de Compra 2</strong> (0,05 BTC de los 0,10 disponibles).
@@ -837,7 +415,7 @@ footer {
 
         <h3>Cálculo de la ganancia patrimonial</h3>
 
-        <ul class="step-list">
+        <ul class="steps-list">
           <li class="step-item">
             <div class="step-num">1</div>
             <div class="step-body">
@@ -875,26 +453,27 @@ footer {
           </li>
         </ul>
 
-        <div class="fifo-result">
-          <div class="result-card">
-            <div class="result-card-label">Valor de transmisión</div>
-            <div class="result-card-val">8.250 €</div>
+        <div class="apple-catalog-grid">
+          <div class="apple-catalog-card">
+            <div class="mock-kpi-label">Valor de transmisión</div>
+            <div class="mock-kpi-value">8.250 €</div>
           </div>
-          <div class="result-card">
-            <div class="result-card-label">Coste FIFO asignado</div>
-            <div class="result-card-val">3.150 €</div>
+          <div class="apple-catalog-card">
+            <div class="mock-kpi-label">Coste FIFO asignado</div>
+            <div class="mock-kpi-value">3.150 €</div>
           </div>
-          <div class="result-card">
-            <div class="result-card-label">Ganancia patrimonial</div>
-            <div class="result-card-val green">5.100 €</div>
+          <div class="apple-catalog-card">
+            <div class="mock-kpi-label">Ganancia patrimonial</div>
+            <div class="mock-kpi-value green">5.100 €</div>
           </div>
         </div>
 
         <!-- ─── 4. POOL GLOBAL ──────────────────────── -->
-        <h2 id="pool-global">El pool global: FIFO entre todos tus exchanges y wallets</h2>
+        </section>
+<section class="legal-section"><h2 id="pool-global">El pool global: FIFO entre todos tus exchanges y wallets</h2>
 
-        <div class="error-callout">
-          <div class="callout-title">Error muy frecuente</div>
+        <div class="warning-box">
+          <h3 class="section-title">Error muy frecuente</h3>
           <p>Calcular el FIFO de forma independiente en cada exchange. <strong>Eso es incorrecto.</strong></p>
         </div>
 
@@ -906,17 +485,17 @@ footer {
           plataforma, el FIFO se aplica sobre ese pool global.
         </p>
 
-        <table class="fifo-table" aria-label="Ejemplo de pool global FIFO entre exchanges">
+        <div class="files-table-wrap" tabindex="0" role="region" aria-label="Tabla fiscal desplazable"><table class="files-table" aria-label="Ejemplo de pool global FIFO entre exchanges">
           <thead>
             <tr><th>Compra</th><th>Exchange</th><th>Fecha</th><th>Unidades</th><th>Precio</th><th>Posición en pool global</th></tr>
           </thead>
           <tbody>
-            <tr><td><strong>Compra A</strong></td><td>Binance</td><td>ene 2022</td><td>0,05 BTC</td><td>38.000 €</td><td class="accent">1ª (más antigua)</td></tr>
-            <tr><td><strong>Compra B</strong></td><td>Bitvavo</td><td>ago 2022</td><td>0,05 BTC</td><td>21.000 €</td><td class="accent">2ª</td></tr>
-            <tr><td><strong>Compra C</strong></td><td>Kraken</td><td>ene 2023</td><td>0,05 BTC</td><td>18.000 €</td><td class="accent">3ª</td></tr>
-            <tr class="highlight"><td><strong>Venta</strong></td><td>Binance</td><td>dic 2024</td><td>0,07 BTC</td><td>90.000 €</td><td><strong>Consume A (0,05) + parte de B (0,02)</strong></td></tr>
+            <tr><td><strong>Compra A</strong></td><td>Binance</td><td>ene 2022</td><td>0,05 BTC</td><td>38.000 €</td><td class="green">1ª (más antigua)</td></tr>
+            <tr><td><strong>Compra B</strong></td><td>Bitvavo</td><td>ago 2022</td><td>0,05 BTC</td><td>21.000 €</td><td class="green">2ª</td></tr>
+            <tr><td><strong>Compra C</strong></td><td>Kraken</td><td>ene 2023</td><td>0,05 BTC</td><td>18.000 €</td><td class="green">3ª</td></tr>
+            <tr><td><strong>Venta</strong></td><td>Binance</td><td>dic 2024</td><td>0,07 BTC</td><td>90.000 €</td><td><strong>Consume A (0,05) + parte de B (0,02)</strong></td></tr>
           </tbody>
-        </table>
+        </table></div>
 
         <p>
           En este ejemplo, aunque la venta se ejecuta en Binance, el FIFO se calcula sobre el pool
@@ -924,8 +503,8 @@ footer {
           imputan —no solo las compras realizadas en Binance.
         </p>
 
-        <div class="callout">
-          <div class="callout-title">Implicación práctica</div>
+        <div class="legal-callout">
+          <h3 class="section-title">Implicación práctica</h3>
           <p>
             Para hacer el cálculo correctamente necesitas el <strong>historial completo de todos tus exchanges
             y wallets</strong> desde tu primera compra. Importar solo el CSV del exchange donde vendiste
@@ -935,15 +514,15 @@ footer {
         </div>
 
         <!-- ─── 5. COMISIONES ──────────────────────────── -->
-        <h2 id="comisiones">Comisiones en el cálculo FIFO: qué suma y qué resta</h2>
+        </section>
+<section class="legal-section"><h2 id="comisiones">Comisiones en el cálculo FIFO: qué suma y qué resta</h2>
 
         <p>
           Las comisiones forman parte del coste de adquisición y del valor de transmisión. Incluirlas
           correctamente reduce la ganancia patrimonial declarada. Aquí cómo se trata cada tipo:
         </p>
 
-        <div class="comparison-wrap">
-          <table class="comparison-table" aria-label="Efecto de las comisiones en el cálculo FIFO">
+        <div class="files-table-wrap" tabindex="0" role="region" aria-label="Tabla fiscal desplazable"><table class="files-table" aria-label="Efecto de las comisiones en el cálculo FIFO">
             <thead>
               <tr>
                 <th>Tipo de comisión</th>
@@ -955,31 +534,30 @@ footer {
               <tr>
                 <td>Comisión de compra (exchange fee)</td>
                 <td>Aumenta el precio de adquisición del lote</td>
-                <td><span class="badge-yes">Reduce ganancia futura</span></td>
+                <td><span class="green">Reduce ganancia futura</span></td>
               </tr>
               <tr>
                 <td>Comisión de venta (taker/maker fee)</td>
                 <td>Reduce el valor de transmisión</td>
-                <td><span class="badge-yes">Reduce ganancia del ejercicio</span></td>
+                <td><span class="green">Reduce ganancia del ejercicio</span></td>
               </tr>
               <tr>
                 <td>Comisión de red (gas fee en ETH)</td>
                 <td>Pérdida patrimonial separada (no modifica el lote)</td>
-                <td><span class="badge-yes">Pérdida declarable</span></td>
+                <td><span class="green">Pérdida declarable</span></td>
               </tr>
               <tr>
                 <td>Comisión de retirada (withdrawal fee)</td>
                 <td>Aumenta el coste de adquisición de las unidades correspondientes</td>
-                <td><span class="badge-yes">Reduce ganancia futura</span></td>
+                <td><span class="green">Reduce ganancia futura</span></td>
               </tr>
               <tr>
                 <td>Comisión en BNB (Binance)</td>
                 <td>La fracción de BNB usada como comisión es un hecho imponible independiente</td>
-                <td><span class="badge-warn">Tributación propia</span></td>
+                <td><span class="how-muted">Tributación propia</span></td>
               </tr>
             </tbody>
-          </table>
-        </div>
+          </table></div>
 
         <h3>Ejemplo con comisión de compra</h3>
         <p>
@@ -991,10 +569,10 @@ footer {
         </p>
 
         <!-- ─── 6. FIFO VS LIFO VS HIFO ─────────────── -->
-        <h2 id="fifo-vs-lifo">FIFO vs LIFO vs HIFO: por qué solo el FIFO es válido en España</h2>
+        </section>
+<section class="legal-section"><h2 id="fifo-vs-lifo">FIFO vs LIFO vs HIFO: por qué solo el FIFO es válido en España</h2>
 
-        <div class="comparison-wrap">
-          <table class="comparison-table" aria-label="Comparativa FIFO, LIFO, HIFO y coste real para criptomonedas en España">
+        <div class="files-table-wrap" tabindex="0" role="region" aria-label="Tabla fiscal desplazable"><table class="files-table" aria-label="Comparativa FIFO, LIFO, HIFO y coste real para criptomonedas en España">
             <thead>
               <tr>
                 <th>Método</th>
@@ -1007,30 +585,29 @@ footer {
               <tr>
                 <td>FIFO</td>
                 <td>Se vende primero lo comprado primero</td>
-                <td><span class="badge-yes">Sí — obligatorio (territorio común)</span></td>
+                <td><span class="green">Sí — obligatorio (territorio común)</span></td>
                 <td>Penaliza al inversor: los lotes más baratos se imputan primero</td>
               </tr>
               <tr>
                 <td>LIFO</td>
                 <td>Se vende primero lo comprado último</td>
-                <td><span class="badge-no">No — rechazado por la AEAT</span></td>
+                <td><span class="red">No — rechazado por la AEAT</span></td>
                 <td>Favorece al inversor: reduce la ganancia en mercado alcista</td>
               </tr>
               <tr>
                 <td>HIFO</td>
                 <td>Se vende primero el lote más caro</td>
-                <td><span class="badge-no">No — rechazado por la AEAT</span></td>
+                <td><span class="red">No — rechazado por la AEAT</span></td>
                 <td>Minimiza la ganancia declarada en cada venta</td>
               </tr>
               <tr>
                 <td>Coste real / identificación específica</td>
                 <td>El inversor elige qué lote específico vende</td>
-                <td><span class="badge-warn">Solo territorios forales (post-TSJPV 2025)</span></td>
+                <td><span class="how-muted">Solo territorios forales (post-TSJPV 2025)</span></td>
                 <td>Óptima si se documenta correctamente</td>
               </tr>
             </tbody>
-          </table>
-        </div>
+          </table></div>
 
         <p>
           Utilizar LIFO o HIFO en una declaración de IRPF en territorio común sin respaldo jurídico
@@ -1040,12 +617,13 @@ footer {
         </p>
 
         <!-- ─── 7. TSJPV 2025 ───────────────────────── -->
-        <h2 id="tsjpv-2025">La sentencia TSJPV de enero 2025: ¿cambia algo para ti?</h2>
+        </section>
+<section class="legal-section"><h2 id="tsjpv-2025">La sentencia TSJPV de enero 2025: ¿cambia algo para ti?</h2>
 
-        <div class="news-box">
-          <div class="news-box-header">
-            <span class="news-badge">Actualización jurisprudencial</span>
-            <span style="font-size:13px;color:var(--muted);">STSJ PV 37/2025 · 9 de enero de 2025 · Sala de lo Contencioso-Administrativo</span>
+        <div class="legal-callout">
+          <div class="how-muted">
+            <span class="apple-eyebrow">Actualización jurisprudencial</span>
+            <span>STSJ PV 37/2025 · 9 de enero de 2025 · Sala de lo Contencioso-Administrativo</span>
           </div>
           <p>
             En enero de 2025, el Tribunal Superior de Justicia del País Vasco emitió la primera
@@ -1066,8 +644,8 @@ footer {
 
         <h3>¿Afecta al territorio común (el resto de España)?</h3>
 
-        <div class="callout">
-          <div class="callout-title">Respuesta directa</div>
+        <div class="legal-callout">
+          <h3 class="section-title">Respuesta directa</h3>
           <p>
             <strong>No directamente.</strong> Las sentencias del TSJPV son doctrina aplicable en los
             territorios forales (Álava, Gipuzkoa, Bizkaia) y no son vinculantes para la AEAT en
@@ -1089,16 +667,17 @@ footer {
           sin excepciones, para todos los contribuyentes con criptomonedas.
         </p>
 
-        <div class="cta-mid" style="text-align:left; padding: 1.5rem 1.75rem; margin: 2rem 0;">
-          <p style="margin-bottom:0.5rem;"><strong style="color:var(--text);">¿Tributas en el País Vasco?</strong></p>
+        <div class="apple-cta">
+          <p><strong>¿Tributas en el País Vasco?</strong></p>
           <p>Si tu domicilio fiscal está en Álava, Gipuzkoa o Bizkaia, la situación es especialmente compleja en este momento. Consulta con Rafael Ramos Martínez antes de presentar tu declaración.</p>
-          <a href="/asesoramiento-fiscal-criptomonedas" class="btn-cta" style="display:inline-flex;margin-top:0.75rem;">Solicitar consulta personalizada</a>
+          <a href="/asesoramiento-fiscal-criptomonedas" class="apple-button">Solicitar consulta personalizada</a>
         </div>
 
         <!-- ─── 8. ERRORES ─────────────────────────── -->
-        <h2 id="errores">Los errores más comunes al aplicar el FIFO</h2>
+        </section>
+<section class="legal-section"><h2 id="errores">Los errores más comunes al aplicar el FIFO</h2>
 
-        <ul class="step-list">
+        <ul class="steps-list">
           <li class="step-item">
             <div class="step-num">1</div>
             <div class="step-body">
@@ -1159,8 +738,8 @@ footer {
         </ul>
 
         <!-- ─── NORMA ANTIAPLICACIÓN CALLOUT ─────── -->
-        <div class="callout">
-          <p class="callout-title">¿Has vendido con pérdidas y recomprado el mismo activo?</p>
+        <div class="legal-callout">
+          <p class="section-title">¿Has vendido con pérdidas y recomprado el mismo activo?</p>
           <p>
             El método FIFO determina si tienes una pérdida patrimonial, pero hay una regla adicional
             que puede bloquear su declaración: la norma antiaplicación del art.&nbsp;33.5 LIRPF.
@@ -1173,7 +752,8 @@ footer {
         </div>
 
         <!-- ─── 9. CALCULADORA ─────────────────────── -->
-        <h2 id="calculadora">Cómo calcular tu FIFO automáticamente</h2>
+        </section>
+<section class="legal-section"><h2 id="calculadora">Cómo calcular tu FIFO automáticamente</h2>
 
         <p>
           Hacer el cálculo FIFO manualmente sobre un historial con cientos o miles de operaciones
@@ -1198,118 +778,119 @@ footer {
           ofrece respaldo profesional ante cualquier requerimiento de la AEAT.
         </p>
 
-        <div class="cta-mid">
-          <div class="cta-mid-title">Calculadora FIFO — supervisada por economista colegiado</div>
+        <div class="apple-cta">
+          <h3 class="apple-cta-title">Calculadora FIFO — supervisada por economista colegiado</h3>
           <p>
             Sube el CSV de tu exchange, la herramienta aplica el método FIFO según el art.&nbsp;37.2
             LIRPF y genera el informe PDF con los importes exactos para las casillas 1626 y 1627
             de la declaración de la renta.
           </p>
-          <div class="cta-buttons">
-            <a href="/exchanges/binance" class="btn-cta">CSV de Binance</a>
-            <a href="/exchanges/kraken" class="btn-cta">CSV de Kraken</a>
-            <a href="/exchanges/bitvavo" class="btn-cta">CSV de Bitvavo</a>
-            <a href="/exchanges" class="btn-outline">Ver todos los exchanges</a>
+          <div class="how-actions">
+            <a href="/exchanges/binance" class="apple-button">CSV de Binance</a>
+            <a href="/exchanges/kraken" class="apple-button">CSV de Kraken</a>
+            <a href="/exchanges/bitvavo" class="apple-button">CSV de Bitvavo</a>
+            <a href="/exchanges" class="apple-text-link">Ver todos los exchanges</a>
           </div>
-          <p class="cta-micro-text">
+          <p class="apple-cta-notice">
             Compatible con Binance, Kraken, Bitvavo, Coinbase, Bit2Me, Nexo, Crypto.com, Uphold, MEXC y Bitget.
             Supervisado por Rafael Ramos Martínez, Economista Colegiado nº&nbsp;4.579.
           </p>
         </div>
 
         <!-- ─── 10. FAQ ─────────────────────────────── -->
-        <h2 id="faq">Preguntas frecuentes sobre el método FIFO</h2>
+        </section>
+<section class="legal-section"><h2 id="faq">Preguntas frecuentes sobre el método FIFO</h2>
 
-        <div class="faq-list">
+        <div class="how-faq-list">
 
-          <details class="faq-item">
-            <summary class="faq-q">¿Es obligatorio el método FIFO para criptomonedas en España?</summary>
-            <p class="faq-a">
+          <details class="apple-faq-item">
+            <summary>¿Es obligatorio el método FIFO para criptomonedas en España?</summary>
+            <div class="apple-faq-answer"><p>
               Sí, el método FIFO es obligatorio en España para declarar las ganancias y pérdidas por
               transmisión de criptomonedas. El artículo 37.2 de la Ley del IRPF establece que, para
               bienes homogéneos adquiridos en distintas fechas, se entiende transmitido primero el
               adquirido en primer lugar. La Dirección General de Tributos confirmó en las consultas
               vinculantes V0999-18 y V1604-18 que las criptomonedas quedan sujetas a esta regla. No
               existe posibilidad de elegir LIFO, HIFO u otro método alternativo en territorio común.
-            </p>
+            </p></div>
           </details>
 
-          <details class="faq-item">
-            <summary class="faq-q">¿El método FIFO se aplica por exchange o de forma global?</summary>
-            <p class="faq-a">
+          <details class="apple-faq-item">
+            <summary>¿El método FIFO se aplica por exchange o de forma global?</summary>
+            <div class="apple-faq-answer"><p>
               El método FIFO se aplica de forma global sobre el pool completo de cada criptomoneda,
               sin importar en qué exchange o wallet se encuentren. Todas tus compras de BTC —en
               Binance, Kraken, Bitvavo o una wallet fría— forman una única cola FIFO cronológica. El
               error más común es calcular el FIFO de forma independiente en cada plataforma: eso
               es incorrecto y produce resultados distintos a los que exige la AEAT.
-            </p>
+            </p></div>
           </details>
 
-          <details class="faq-item">
-            <summary class="faq-q">¿Cómo afectan las comisiones al cálculo FIFO?</summary>
-            <p class="faq-a">
+          <details class="apple-faq-item">
+            <summary>¿Cómo afectan las comisiones al cálculo FIFO?</summary>
+            <div class="apple-faq-answer"><p>
               Las comisiones de compra aumentan el precio de adquisición del lote (reducen la ganancia
               futura). Las comisiones de venta reducen el valor de transmisión (reducen la ganancia del
               ejercicio). Las comisiones de red (gas fees en Ethereum) pueden constituir una pérdida
               patrimonial separada. Las comisiones de retirada a wallet propia no son gasto deducible
               porque no hay transmisión, aunque sí debes registrarlas para mantener el coste del activo.
               Incluir todas las comisiones aplicables es legal y reduce la base imponible.
-            </p>
+            </p></div>
           </details>
 
-          <details class="faq-item">
-            <summary class="faq-q">¿Puedo usar LIFO o HIFO en lugar del FIFO?</summary>
-            <p class="faq-a">
+          <details class="apple-faq-item">
+            <summary>¿Puedo usar LIFO o HIFO en lugar del FIFO?</summary>
+            <div class="apple-faq-answer"><p>
               No en territorio común. La AEAT aplica exclusivamente el método FIFO para
               criptomonedas, conforme al artículo 37.2 LIRPF y las consultas vinculantes DGT V0999-18
               y V1604-18. Utilizar LIFO o HIFO sin respaldo jurídico sólido implica riesgo de
               regularización. En los territorios forales vascos, la situación está en revisión
               tras las sentencias del TSJPV de 2025.
-            </p>
+            </p></div>
           </details>
 
-          <details class="faq-item">
-            <summary class="faq-q">¿Qué cambió con la sentencia del TSJPV de enero de 2025?</summary>
-            <p class="faq-a">
+          <details class="apple-faq-item">
+            <summary>¿Qué cambió con la sentencia del TSJPV de enero de 2025?</summary>
+            <div class="apple-faq-answer"><p>
               El Tribunal Superior de Justicia del País Vasco emitió en enero de 2025 la sentencia
               STSJ PV 37/2025, que rechaza la aplicación obligatoria del FIFO para criptomonedas en
               los territorios forales vascos (Álava, Gipuzkoa, Bizkaia). Esta resolución <strong>no
               afecta directamente a los contribuyentes en territorio común</strong> (el resto de
               España), donde el FIFO sigue siendo obligatorio según la DGT.
-            </p>
+            </p></div>
           </details>
 
-          <details class="faq-item">
-            <summary class="faq-q">¿Se aplica el FIFO también al intercambio de una cripto por otra?</summary>
-            <p class="faq-a">
+          <details class="apple-faq-item">
+            <summary>¿Se aplica el FIFO también al intercambio de una cripto por otra?</summary>
+            <div class="apple-faq-answer"><p>
               Sí. El intercambio de una criptomoneda por otra distinta (permuta) es un hecho imponible
               en el IRPF y el método FIFO se aplica para identificar el coste del activo que se entrega.
               Si intercambias BTC por ETH, la DGT considera que se vende el BTC al valor de mercado en
               ese momento. El FIFO determina qué lotes de BTC se transmiten: los más antiguos primero.
               Ver guía completa: <a href="/permuta-criptomonedas-irpf">cómo tributa la permuta de criptomonedas en el IRPF →</a>
-            </p>
+            </p></div>
           </details>
 
-          <details class="faq-item">
-            <summary class="faq-q">¿Qué herramienta puedo usar para calcular el FIFO automáticamente?</summary>
-            <p class="faq-a">
+          <details class="apple-faq-item">
+            <summary>¿Qué herramienta puedo usar para calcular el FIFO automáticamente?</summary>
+            <div class="apple-faq-answer"><p>
               La calculadora FIFO de marianosevilla.com aplica el método FIFO según los criterios de
               la AEAT. Está supervisada por <strong>Rafael Ramos Martínez</strong>, economista colegiado
               nº&nbsp;4.579. Acepta CSV de Binance, Kraken, Bitvavo, Coinbase, Bit2Me, Nexo, Crypto.com,
               Uphold, MEXC y Bitget. Genera el informe PDF con los importes exactos para las casillas
               1626 y 1627 de la declaración de la renta. <a href="/exchanges">Ver guías por exchange →</a>
-            </p>
+            </p></div>
           </details>
 
         </div>
 
         <!-- ─── AUTHOR BIO ─────────────────────────── -->
-        <div class="author-bio">
-          <div class="author-avatar">RR</div>
+        <div class="legal-purpose">
+          <div class="how-small">RR</div>
           <div>
-            <div class="author-bio-name">Rafael Ramos Martínez</div>
-            <div class="author-bio-role">Economista Colegiado nº&nbsp;4.579 · Colegio de Economistas de Valencia</div>
-            <p class="author-bio-text">
+            <h3 class="section-title">Rafael Ramos Martínez</h3>
+            <div class="how-small">Economista Colegiado nº&nbsp;4.579 · Colegio de Economistas de Valencia</div>
+            <p class="how-muted">
               Más de 25 años de experiencia en fiscalidad empresarial. Supervisa los criterios fiscales
               aplicados en cada informe generado con marianosevilla.com: tratamiento de swaps, staking,
               transfers entre exchanges y operaciones complejas según la normativa española vigente.
@@ -1317,7 +898,7 @@ footer {
           </div>
         </div>
 
-        <div class="disclaimer">
+        <div class="legal-callout">
           <strong>Aviso legal:</strong> Esta guía tiene fines informativos. El contenido ha sido supervisado
           por un economista colegiado pero no constituye asesoramiento fiscal individualizado para tu situación
           concreta. Para casos complejos —DeFi, múltiples ejercicios sin declarar, permutas frecuentes—
@@ -1325,30 +906,27 @@ footer {
         </div>
 
         <!-- Related guides -->
-        <h3 style="margin-top:2.5rem;margin-bottom:1rem;font-size:1rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;font-size:11px;font-weight:700;">Guías relacionadas</h3>
-        <div class="related-grid">
-          <a href="/staking-criptomonedas-irpf" class="related-card">
-            <div class="related-card-label">Staking y Hacienda</div>
-            <div class="related-card-title">Staking criptomonedas IRPF: cómo tributan las recompensas</div>
+        <h3>Guías relacionadas</h3>
+        <div class="apple-catalog-grid">
+          <a href="/staking-criptomonedas-irpf" class="apple-catalog-card">
+            <div class="apple-eyebrow">Staking y Hacienda</div>
+            <h3 class="section-title">Staking criptomonedas IRPF: cómo tributan las recompensas</h3>
           </a>
-          <a href="/permuta-criptomonedas-irpf" class="related-card">
-            <div class="related-card-label">Permuta cripto a cripto</div>
-            <div class="related-card-title">Permuta de criptomonedas en el IRPF: cómo tributa el intercambio cripto a cripto</div>
+          <a href="/permuta-criptomonedas-irpf" class="apple-catalog-card">
+            <div class="apple-eyebrow">Permuta cripto a cripto</div>
+            <h3 class="section-title">Permuta de criptomonedas en el IRPF: cómo tributa el intercambio cripto a cripto</h3>
           </a>
-          <a href="/regla-dos-meses-criptomonedas" class="related-card">
-            <div class="related-card-label">Norma antiaplicación</div>
-            <div class="related-card-title">Regla de los dos meses en cripto: AEAT, DGT y riesgo fiscal</div>
+          <a href="/regla-dos-meses-criptomonedas" class="apple-catalog-card">
+            <div class="apple-eyebrow">Norma antiaplicación</div>
+            <h3 class="section-title">Regla de los dos meses en cripto: AEAT, DGT y riesgo fiscal</h3>
           </a>
         </div>
 
-      </article>
+      </section><section class="legal-section" aria-label="Recursos relacionados">
 
-      <!-- SIDEBAR -->
-      <aside class="content-sidebar" aria-label="Recursos relacionados">
-
-        <div class="sidebar-card">
-          <div class="sidebar-card-title">Guías por exchange</div>
-          <ul class="sidebar-links">
+        <div class="legal-purpose">
+          <h3 class="section-title">Guías por exchange</h3>
+          <ul class="how-list">
             <li><a href="/exchanges/binance">Declarar Binance en Hacienda</a></li>
             <li><a href="/exchanges/kraken">Declarar Kraken en Hacienda</a></li>
             <li><a href="/exchanges/bitvavo">Declarar Bitvavo en Hacienda</a></li>
@@ -1356,9 +934,9 @@ footer {
           </ul>
         </div>
 
-        <div class="sidebar-card">
-          <div class="sidebar-card-title">Recursos fiscales</div>
-          <ul class="sidebar-links">
+        <div class="legal-purpose">
+          <h3 class="section-title">Recursos fiscales</h3>
+          <ul class="how-list">
             <li><a href="/regla-dos-meses-criptomonedas">Regla de los dos meses en cripto</a></li>
             <li><a href="/modelo-721-criptomonedas">Modelo 721 cripto</a></li>
             <li><a href="/como-funciona">Cómo funciona la herramienta</a></li>
@@ -1367,52 +945,61 @@ footer {
           </ul>
         </div>
 
-        <div class="author-card">
-          <div class="author-name">Rafael Ramos Martínez</div>
-          <div class="author-role">Economista Colegiado nº&nbsp;4.579<br>Colegio de Economistas de Valencia<br>+25 años en fiscalidad empresarial</div>
+        <div class="legal-purpose">
+          <h3 class="section-title">Rafael Ramos Martínez</h3>
+          <div class="how-muted">Economista Colegiado nº&nbsp;4.579<br>Colegio de Economistas de Valencia<br>+25 años en fiscalidad empresarial</div>
         </div>
 
-      </aside>
-
-    </div>
-  </div>
-</main>
-
-<!-- ── CTA SILO /herramientas ─────────────────── -->
-<section style="border-top:1px solid var(--border2);">
-  <div style="max-width:920px;margin:0 auto;padding:3rem 1.5rem;">
-    <div class="cta-mid">
-      <div class="cta-mid-title">Calcula tus impuestos cripto con el método FIFO</div>
+      </section></article></div></div><section class="apple-cta-section"><div class="apple-container">
+  <div>
+    <div class="apple-cta">
+      <h3 class="apple-cta-title">Calcula tus impuestos cripto con el método FIFO</h3>
       <p>Importa el historial de tu exchange y genera tu informe FIFO para Hacienda, o explora todas las herramientas del silo fiscal.</p>
-      <div class="cta-buttons">
-        <a href="/signup/" class="btn-cta">Calcular gratis con FIFO</a>
-        <a href="/herramientas" class="btn-outline">Ver todas las herramientas</a>
+      <div class="how-actions">
+        <a href="/signup/" class="apple-button">Calcular gratis con FIFO</a>
+        <a href="/herramientas" class="apple-text-link">Ver todas las herramientas</a>
       </div>
     </div>
   </div>
-</section>
-
-<!-- ── FOOTER ─────────────────────────────────── -->
-<footer>
-  <div class="footer-inner">
-    <div>
-      <div class="footer-brand">Mariano Sevilla</div>
-      <div class="footer-copy">Herramienta fiscal para criptomonedas · marianosevilla.com</div>
+</div></section></main><footer class="apple-footer">
+  <div class="apple-container">
+    <div class="apple-footer-top">
+      <div class="apple-footer-brand">
+        <a href="/" class="apple-footer-logo">mariano<span>sevilla</span>.com</a>
+        <p>Informes FIFO de criptomonedas.</p>
+      </div>
+      <nav aria-labelledby="apple-footer-explore">
+        <h2 id="apple-footer-explore">Explorar</h2>
+        <ul>
+          <li><a href="/herramientas">Herramientas</a></li>
+          <li><a href="/como-funciona">Cómo funciona</a></li>
+          <li><a href="/exchanges">Exchanges compatibles</a></li>
+        </ul>
+      </nav>
+      <nav aria-labelledby="apple-footer-help">
+        <h2 id="apple-footer-help">Ayuda</h2>
+        <ul>
+          <li><a href="/faq">Preguntas frecuentes</a></li>
+          <li><a href="/contacto">Contacto</a></li>
+          <li><a href="/about">Equipo</a></li>
+        </ul>
+      </nav>
     </div>
-    <div class="footer-links">
-      <a href="/">Inicio</a>
-      <a href="/exchanges">Exchanges</a>
-      <a href="/como-funciona">Cómo funciona</a>
-      <a href="/modelo-721-criptomonedas">Modelo 721</a>
-      <a href="/asesoramiento-fiscal-criptomonedas">Asesoramiento</a>
-      <a href="/privacidad">Privacidad</a>
-      <a href="/terminos">Términos</a>
-      <a href="/aviso-legal">Aviso legal</a>
-      <a href="/about">About</a>
+    <div class="apple-footer-legal">
+      <p class="apple-footer-disclaimer">Herramienta de generación de informes FIFO para usuarios con criptomonedas. No constituye asesoramiento fiscal ni legal.</p>
+      <div class="apple-footer-bottom">
+        <p class="apple-footer-copyright">© <span class="apple-footer-year">2026</span> Mariano Sevilla</p>
+        <nav aria-label="Información legal">
+          <ul>
+            <li><a href="/privacidad">Privacidad</a></li>
+            <li><a href="/terminos">Términos</a></li>
+            <li><a href="/cookies">Cookies</a></li>
+            <li><a href="/aviso-legal">Aviso legal</a></li>
+          </ul>
+        </nav>
+      </div>
     </div>
   </div>
 </footer>
-
-</body>
-</html>
-
+<script src="/static/landing_apple.js" defer></script>
+</body></html>

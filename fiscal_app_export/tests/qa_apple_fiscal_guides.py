@@ -5,7 +5,7 @@ from pathlib import Path
 from qa_home_redesign import WIDTHS,context
 from qa_advisory_apple import styles
 
-PAGES={"permuta-criptomonedas-irpf":{"tables":3,"faq":8,"sections":["que-es","cuando-tributa","como-calcular","valor-adquisicion","comisiones","como-declarar","perdidas","errores","faq"],"rows":12},"staking-criptomonedas-irpf":{"tables":3,"faq":8,"sections":["que-es","clasificacion","cuando-tributa","calculo","casillas","tipos","exchanges","venta","errores","faq"],"rows":16}}
+PAGES={"permuta-criptomonedas-irpf":{"tables":3,"faq":8,"sections":["que-es","cuando-tributa","como-calcular","valor-adquisicion","comisiones","como-declarar","perdidas","errores","faq"],"rows":12},"staking-criptomonedas-irpf":{"tables":3,"faq":8,"sections":["que-es","clasificacion","cuando-tributa","calculo","casillas","tipos","exchanges","venta","errores","faq"],"rows":16},"metodo-fifo-criptomonedas":{"tables":4,"rows":21,"faq":7,"sections":["que-es","por-que-obligatorio","como-calcular","pool-global","comisiones","fifo-vs-lifo","tsjpv-2025","errores","calculadora","faq"]},"bienes-homogeneos-criptomonedas":{"tables":3,"rows":17,"faq":6,"sections":["que-son","fifo","pool-global","vs-valores","norma-antiaplicacion","doctrina-foral","posiciones","ejemplos","faq"]},"perdidas-patrimoniales-criptomonedas":{"tables":4,"rows":20,"faq":6,"sections":["que-son","cuando-se-generan","casillas","como-declarar","calcular","obligacion","especiales","errores","faq"]},"compensar-perdidas-criptomonedas":{"tables":9,"rows":49,"faq":6,"sections":["mecanismo","compensacion-cruzada","capital-mobiliario","arrastre","precondicion","calculo-perdida","errores","casos","faq"]},"regla-dos-meses-criptomonedas":{"tables":4,"rows":21,"faq":6,"sections":["normativa","dgt","aeat","mecanismo","fifo","ejemplos","declarar","debate","faq","herramienta"]}}
 
 def run_apple_fiscal_guides(browser,origin):
     out=Path("qa-artifacts");out.mkdir(exist_ok=True)
@@ -53,10 +53,12 @@ def run_apple_fiscal_guides(browser,origin):
                 assert page.locator('[id="'+anchor+'"]').count()==1
                 assert page.locator('.legal-index a[href="#'+anchor+'"]').count()==1
             faq=page.locator(".apple-faq-item").first
+            initial=faq.get_attribute("open") is not None
+            if initial: faq.locator("summary").click()
             faq.locator("summary").click()
             assert faq.get_attribute("open") is not None and faq.locator(".apple-faq-answer").is_visible()
-            faq.locator("summary").click()
-            assert faq.get_attribute("open") is None
+            if not initial: faq.locator("summary").click()
+            assert (faq.get_attribute("open") is not None)==initial
             assert page.evaluate("document.documentElement.scrollWidth<=innerWidth+1"),(name,width,"document overflow")
             assert page.evaluate("""() => [...document.querySelectorAll('.files-table-wrap')].every(e=>{const r=e.getBoundingClientRect();return r.left>=-1&&r.right<=innerWidth+1})"""),(name,width,"table wrapper overflow")
             if width in (390,768,1440):
