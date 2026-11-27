@@ -13,6 +13,8 @@ PAGES={
     "preferencias.html":("how","preferencias"),
     "asesoramiento-confirmado.html":("how","confirmado"),
     "pagar.html":("how","pagar"),
+    "seguridad.html":("legal","seguridad"),
+    "asesoramiento-cancelado.html":("how","cancelado"),
 }
 REF={"guide":"/static/exchanges/kraken.html","legal":"/terminos","how":"/static/asesoramiento-fiscal.html"}
 
@@ -82,6 +84,11 @@ def run_apple_public_batch(browser,origin):
                 elif name=="pagar":
                     assert page.locator("#financialSuspension").is_visible()
                     assert "Pagos temporalmente suspendidos" in page.locator("h1").inner_text()
+                elif name=="cancelado":
+                    assert page.locator("main a[href='/pedir-asesoramiento-fiscal']").count()==1
+                    assert page.locator("main a[href='/']").count()==1
+                    assert "Pago cancelado" in page.locator("h1").inner_text()
+                    assert "PayPal" not in page.locator("main").inner_text()
                 else:
                     assert "no acredita que se haya recibido" in page.locator("main").inner_text()
             for sel,rsel,props in pairs:
