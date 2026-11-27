@@ -21,8 +21,8 @@ def test_modelo721_editorial_apple():
     assert s.count('class="apple-catalog-card"')==16
     assert "50.000 €" in s and "20.000 €" in s
     assert 'no presenta el Modelo 721 ante la AEAT' in s
-    assert re.search(r'<a\\b(?=[^>]*href="/signup/")(?=[^>]*class="[^"]*apple-button)[^>]*>Crear cuenta',s)
-    assert re.search(r'<a\\b[^>]*href="/como-funciona"[^>]*>Cómo funciona',s)
+    assert re.search(r'<a\b(?=[^>]*href="/signup/")(?=[^>]*class="[^"]*apple-button)[^>]*>Crear cuenta',s)
+    assert re.search(r'<a\b[^>]*href="/como-funciona"[^>]*>Cómo funciona',s)
     assert 'href="/exchanges"' in s
     assert 'src="/static/landing_apple.js"' in s
     schema=json.loads(re.search(r'<script type="application/ld\+json">([\s\S]*?)</script>',s).group(1))
